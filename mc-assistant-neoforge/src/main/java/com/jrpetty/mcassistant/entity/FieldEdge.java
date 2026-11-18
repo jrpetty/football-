@@ -77,8 +77,9 @@ public final class FieldEdge {
             if (ok && got[0] == null) got[0] = s.copyWithCount(1);
             return ok;
         }, 1);
-        if (!have || got[0] == null) return 0;
-        Block b = ((BlockItem) got[0].getItem()).getBlock();
+        Block b = have && got[0] != null ? ((BlockItem) got[0].getItem()).getBlock() : null;
+        if (b == null) b = fromPlanks(level, v, gate);                                // none made: cut from the stores' boards
+        if (b == null) return 0;
         BlockState st = b.defaultBlockState();
         if (gate && st.hasProperty(FenceGateBlock.FACING)) st = st.setValue(FenceGateBlock.FACING, facing);
         if (torch != null) level.setBlock(at, Blocks.AIR.defaultBlockState(), 2 | 16);
@@ -86,6 +87,24 @@ public final class FieldEdge {
         if (torch != null && !gate) level.setBlockAndUpdate(at.above(), Blocks.TORCH.defaultBlockState());
         else if (torch != null) Market.intoStores(level, v.id(), new ItemStack(net.minecraft.world.item.Items.TORCH));
         return 1;
+    }
+
+    /**
+     * No fences made in the stores: the farmer cuts a post out of the stores' boards (a plank a post, as three fences come
+     * of four planks and two sticks; two for a gate), of the boards' own wood. Null if there are none.
+     */
+    static Block fromPlanks(ServerLevel level, Villages.Village v, boolean gate) {
+        Block[] wood = new Block[1];
+        boolean have = Crafts.take(level, v, s -> {
+            if (!s.is(ItemTags.PLANKS) || !(s.getItem() instanceof BlockItem bi)) return false;
+            String path = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(bi.getBlock()).getPath();
+            net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.withDefaultNamespace(
+                path.replace("_planks", gate ? "_fence_gate" : "_fence"));
+            if (!net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(id)) return false;
+            if (wood[0] == null) wood[0] = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(id);
+            return true;
+        }, gate ? 2 : 1);
+        return have ? wood[0] : null;
     }
 
     /** A post (or gate) of the town's own standing inside a field: up, into the stores. */

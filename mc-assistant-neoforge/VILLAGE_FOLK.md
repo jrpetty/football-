@@ -13446,6 +13446,32 @@ What the audit found, and what changed:
   master smith on fifteen a day left its anvil for four. It costs the folk's own day's wage and a quarter over now, four
   at the least.
 
+* **The founding's levelled bowl.** On a mountainside the founding cuts the heart level and slopes its edge back into
+  the hill. A miner's or woodcutter's work chest set down on the hill before the cut reached it was taken for somebody's
+  building, and its whole column was left standing: thin pillars of rock with a chest on top, the felled trees' crowns
+  floating over them, stood up out of the cut. The town's own work chests are carried down with the ground now (lifted
+  out with their goods and set down on the new top). And the cut steps of the edge kept the bare rock or snow they were
+  cut from, so the cut stood round the town as a white stone amphitheatre; a step the cut makes is turfed in the town's
+  soil now (grass where the town's ground is rock or snow), with earth under it: green terraces down to the town.
+* **Roofs while a storey goes up.** In the Iron Age the great buildings go up a storey: the old roof comes off, then the
+  new walls and roof go up a layer at a time. A dozen blocks a visit left the hall of every town in the audit open to
+  the sky for days, a hundred roof cells and more. The builders lay as much of it as a visit allows now (four times the
+  visit's budget, forty-eight at least), layer on layer, so the roof is back on the day after it came off.
+* **Water for every square of a field.** A field is laid out as anybody lays one out: a hole in the middle of each
+  nine-by-nine square, filled from a bucket, wets the eighty squares round it. Only a farmer that happened to carry a full
+  bucket dug one, and a town's farmers seldom did: they tilled the ground dry, and a fifth to a third of every town's
+  farmland lay four or more from water, its crops at a third of the pace. (The irrigation channels the town once cut were
+  only ever cut for the showcase.) A town's farmer fills a square's hole from the town's well now (or an empty bucket it
+  carries), and on its rounds it waters any farmland left dry: a hole in the middle of its square where that lies at its
+  level, else beside it on its own step.
+* **Fields fenced.** Each field is fenced on the farmer's rounds, a few posts at a time out of the stores: a fence round
+  its edge one block out from the furrows, on the ground as it goes, a gate in the middle of the side that faces the
+  town, and the field's torches set on the posts. Never across a road or anything built; when the field grows, the old
+  fence inside it comes up again into the stores.
+* **The square's gateways.** Each of the square wall's four gateways over the avenues has an arch now: a lintel of the
+  wall's stone four up from pillar to pillar (a cart goes under it), with a coping of slabs, so the opening reads as a
+  gate and not a breach. The corners were always closed.
+
 **Measured** (four days, three towns of twenty-four; before is the tree as it was, after is this batch). Before: no
 floating floors, hollow footings, earth or litter in rooms, blocked doors or banked walls in any town; the hillside lots
 (ba02) showed six cells of dirt for a footing's face; the square's walls had 126 gaps between the three towns (the
