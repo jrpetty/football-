@@ -1,0 +1,42 @@
+{
+  "_comment": "Per-player skills (co-op: each player has their own). Doing the work earns XP; levels make you faster and unlock perks. xp_levels[i] = XP needed for level i+1 (level 1 = start). speed[i] = work-speed multiplier at level i+1 (timers and hold times divide by it), so level 1 is deliberately slow and level 10 is quick. repair_tiers: the fault repair_level (1-3) -> the Repair skill level needed. Perks: unlocked at `level` in `skill`; effects are read by Sim/stations via has_perk().",
+  "max_level": 10,
+  "xp_levels": [0, 150, 400, 800, 1400, 2300, 3600, 5400, 8000, 12000],
+  "speed": [0.55, 0.65, 0.75, 0.86, 1.0, 1.12, 1.25, 1.4, 1.55, 1.75],
+  "carry": [2, 2, 3, 3, 4, 4, 4, 5, 5, 5],
+  "repair_tiers": {"1": 1, "2": 4, "3": 7},
+  "purchase_discount_per_level": 0.01,
+  "sales_traffic_per_level": 0.04,
+  "skills": [
+    {"id": "hauling",    "name": "Hauling",    "icon": "⇪", "colour": "#d9822b", "desc": "Carrying stock. More hands-free trips per stack, and pallet work gets easier."},
+    {"id": "testing",    "name": "Testing",    "icon": "✓", "colour": "#2e7dd1", "desc": "Diagnostics on the test bench. Faster tests and smarter bench habits."},
+    {"id": "imaging",    "name": "Imaging",    "icon": "◫", "colour": "#21a0a0", "desc": "Secure wipe and PaneOS deployment."},
+    {"id": "repair",     "name": "Repair",     "icon": "⚙", "colour": "#c0392b", "desc": "Fixing faults. Unlocks level 2 repairs at skill 4 and board-level repairs at skill 7."},
+    {"id": "grading",    "name": "Grading",    "icon": "★", "colour": "#8e44ad", "desc": "Honest cosmetic grading, listing photos and light refurb touch-ups."},
+    {"id": "packing",    "name": "Packing",    "icon": "▣", "colour": "#7f8c8d", "desc": "Boxing orders safely and quickly."},
+    {"id": "purchasing", "name": "Purchasing", "icon": "£", "colour": "#2f80ed", "desc": "Buying lots. Discounts and a feel for which lots are worth it."},
+    {"id": "sales",      "name": "Sales",      "icon": "↗", "colour": "#e84393", "desc": "Selling and dispatch. More buyer traffic for the whole company."}
+  ],
+  "perks": [
+    {"id": "carry_3",        "skill": "hauling",    "level": 3, "name": "Steady arms",      "desc": "Carry 3 laptops at once."},
+    {"id": "carry_4",        "skill": "hauling",    "level": 5, "name": "Stack master",     "desc": "Carry 4 at once."},
+    {"id": "pallet_pro",     "skill": "hauling",    "level": 4, "name": "Pallet pro",       "desc": "Pallet trucks roll 30% faster in your hands."},
+    {"id": "carry_5",        "skill": "hauling",    "level": 8, "name": "Strong back",      "desc": "Carry 5 at once."},
+    {"id": "pre_check",      "skill": "testing",    "level": 3, "name": "Pre-check",        "desc": "Hover an untested unit to see whether it powers on and a rough battery reading."},
+    {"id": "auto_chain",     "skill": "testing",    "level": 6, "name": "Auto-chain",       "desc": "A bench you started switches to its parked PaneOS USB and images straight after a PASS."},
+    {"id": "bench_whisper",  "skill": "testing",    "level": 9, "name": "Bench whisperer",  "desc": "Tests you start finish 15% faster on top of your level."},
+    {"id": "data_cert",      "skill": "imaging",    "level": 5, "name": "Data certificates","desc": "Units you image ship with a wipe certificate: +2% on their guide price."},
+    {"id": "fast_wipe",      "skill": "imaging",    "level": 8, "name": "Fast wipe",        "desc": "Imaging jobs you start run 15% faster on top of your level."},
+    {"id": "salvage",        "skill": "repair",     "level": 5, "name": "Salvage",          "desc": "25% chance a repair doesn't use up its part (careful removal and reuse)."},
+    {"id": "board_hands",    "skill": "repair",     "level": 9, "name": "Board hands",      "desc": "Board-level repairs take half the time."},
+    {"id": "keen_eye",       "skill": "grading",    "level": 3, "name": "Keen eye",         "desc": "Hover an imaged unit to see the grade it will get."},
+    {"id": "touch_up",       "skill": "grading",    "level": 5, "name": "Touch-up",         "desc": "Grading cleans off light wear (scuffs, residue, asset tags, dust, shiny keys) first, often lifting the grade."},
+    {"id": "photo_pro",      "skill": "grading",    "level": 8, "name": "Photo pro",        "desc": "Your listings photograph well: buyers accept prices 5% above guide without slowing down."},
+    {"id": "careful_packer", "skill": "packing",    "level": 4, "name": "Careful packer",   "desc": "On-time orders you pack earn +50% reputation."},
+    {"id": "bulk_supplies",  "skill": "packing",    "level": 7, "name": "Bulk supplies",    "desc": "Packing supplies cost 25% less in the Shop."},
+    {"id": "insider",        "skill": "purchasing", "level": 3, "name": "Insider",          "desc": "LotFinder shows each lot's likely quality (bargain gamble / fair / premium)."},
+    {"id": "bulk_deal",      "skill": "purchasing", "level": 6, "name": "Bulk deal",        "desc": "Lots of 15+ units cost an extra 5% less."},
+    {"id": "repeat_buyers",  "skill": "sales",      "level": 4, "name": "Repeat buyers",    "desc": "Happy customers come back: +10% buyer traffic company-wide."},
+    {"id": "trade_buyers",   "skill": "sales",      "level": 7, "name": "Trade buyers",     "desc": "Business buyers sometimes take two of the same model at once."}
+  ]
+}

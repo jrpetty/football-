@@ -1,0 +1,33 @@
+{
+  "_comment": "Training. staff: send a member of staff on a course from the Staff app — they're away (still paid) for days_base + floor(level / days_per_levels) working days and come back one level up in that skill (cap: skills.json max_level). Price = cost_base + cost_per_level × their current level. online: courses the players buy for themselves in the Skills app — instant XP in that skill; each repeat of the same skill's course is worth repeat_factor × the last one (never below min_xp). Every course costs company cash (ledger category 'training').",
+  "staff": {
+    "cost_base": 250,
+    "cost_per_level": 140,
+    "days_base": 1,
+    "days_per_levels": 4,
+    "courses": [
+      {"skill": "hauling", "name": "Manual Handling & Pallet Truck Certificate", "provider": "Pennine Safety Training"},
+      {"skill": "testing", "name": "DiagnostiKit Certified Technician", "provider": "DiagnostiKit Academy"},
+      {"skill": "imaging", "name": "PaneOS Deployment Specialist", "provider": "Pane Systems Learning"},
+      {"skill": "repair", "name": "Board-Level Repair Bootcamp", "provider": "Solder & Spanner, Sheffield"},
+      {"skill": "grading", "name": "Cosmetic Grading Standards", "provider": "UK Refurbishers' Guild"},
+      {"skill": "packing", "name": "Safe Shipping & Packaging", "provider": "Zippd Courier School"},
+      {"skill": "purchasing", "name": "Asset Disposal Buying", "provider": "LotFinder Pro Training"},
+      {"skill": "sales", "name": "Marketplace Selling Masterclass", "provider": "Flogit Seller Academy"}
+    ]
+  },
+  "online": {
+    "repeat_factor": 0.65,
+    "min_xp": 40,
+    "courses": [
+      {"skill": "hauling", "name": "Lift Smarter: Safe Handling (online)", "price": 60, "xp": 220, "hours": "2 h of videos"},
+      {"skill": "testing", "name": "DiagnostiKit Fundamentals (online)", "price": 95, "xp": 260, "hours": "4 h course"},
+      {"skill": "imaging", "name": "PaneOS Imaging Essentials (online)", "price": 90, "xp": 260, "hours": "3 h course"},
+      {"skill": "repair", "name": "Laptop Repair Foundations (online)", "price": 140, "xp": 320, "hours": "6 h course"},
+      {"skill": "grading", "name": "Grading Like a Pro (online)", "price": 70, "xp": 220, "hours": "2 h course"},
+      {"skill": "packing", "name": "Packing for the Courier (online)", "price": 50, "xp": 200, "hours": "90 min course"},
+      {"skill": "purchasing", "name": "Reading a Lot Listing (online)", "price": 110, "xp": 280, "hours": "3 h course"},
+      {"skill": "sales", "name": "Flogit Seller Masterclass (online)", "price": 120, "xp": 280, "hours": "4 h course"}
+    ]
+  }
+}

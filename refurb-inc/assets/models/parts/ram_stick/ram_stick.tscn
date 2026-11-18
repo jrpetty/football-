@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/parts/ram_stick/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/parts/ram_stick/material.tres" id="2"]
+
+
+[node name="RamStick" type="Node3D"]
+metadata/footprint = Vector3(0.13300, 0.03327, 0.00694)
+metadata/source_tier = "Memory module"
+metadata/surfaces = [[0.030, 1.00, -0.066, 0.066, -0.003, 0.003]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

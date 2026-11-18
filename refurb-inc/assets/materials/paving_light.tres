@@ -1,0 +1,18 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/block_paving/albedo.png" id="1_vd8uo"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/block_paving/normal.png" id="2_mg8y1"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/block_paving/roughness.png" id="3_xqyix"]
+
+[resource]
+resource_name = "paving_light"
+albedo_texture = ExtResource("1_vd8uo")
+metallic_specular = 0.3
+roughness_texture = ExtResource("3_xqyix")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_mg8y1")
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5

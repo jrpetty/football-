@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "car_silver"
+albedo_color = Color(0.7, 0.72, 0.74, 1)
+metallic = 0.75
+roughness = 0.25

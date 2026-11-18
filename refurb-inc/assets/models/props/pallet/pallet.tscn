@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/props/pallet/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/props/pallet/material.tres" id="2"]
+
+
+[node name="Pallet" type="Node3D"]
+metadata/footprint = Vector3(1.20000, 0.14400, 0.80000)
+metadata/source_tier = "EUR pallet"
+metadata/surfaces = [[0.120, 0.84, -0.596, 0.599, -0.396, 0.399]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

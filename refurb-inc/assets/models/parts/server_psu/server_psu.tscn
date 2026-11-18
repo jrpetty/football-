@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/parts/server_psu/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/parts/server_psu/material.tres" id="2"]
+
+
+[node name="ServerPsu" type="Node3D"]
+metadata/footprint = Vector3(0.20000, 0.04286, 0.05460)
+metadata/source_tier = "Hot-plug server PSU"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/peripherals/keyboard/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/peripherals/keyboard/material.tres" id="2"]
+
+
+[node name="Keyboard" type="Node3D"]
+metadata/footprint = Vector3(0.44000, 0.09864, 0.11078)
+metadata/source_tier = "Desktop keyboard"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

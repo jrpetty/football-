@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/mobile/phone/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/mobile/phone/material.tres" id="2"]
+
+
+[node name="Phone" type="Node3D"]
+metadata/footprint = Vector3(0.07236, 0.00921, 0.15000)
+metadata/source_tier = "Smartphone"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

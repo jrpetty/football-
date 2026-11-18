@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/items/usb_stick/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/items/usb_stick/material.tres" id="2"]
+
+
+[node name="UsbStick" type="Node3D"]
+metadata/footprint = Vector3(0.02018, 0.01023, 0.06000)
+metadata/source_tier = "Rugged USB stick"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

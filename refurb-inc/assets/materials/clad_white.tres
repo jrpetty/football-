@@ -1,0 +1,19 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/cladding_profiled/albedo.png" id="1_2nki6"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/cladding_profiled/normal.png" id="2_rgf52"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/cladding_profiled/roughness.png" id="3_g7fjm"]
+
+[resource]
+resource_name = "clad_white"
+albedo_color = Color(0.93, 0.94, 0.95, 1)
+albedo_texture = ExtResource("1_2nki6")
+metallic = 0.3
+roughness_texture = ExtResource("3_g7fjm")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_rgf52")
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5

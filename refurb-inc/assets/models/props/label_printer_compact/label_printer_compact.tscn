@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/props/label_printer_compact/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/props/label_printer_compact/material.tres" id="2"]
+
+
+[node name="LabelPrinterCompact" type="Node3D"]
+metadata/footprint = Vector3(0.19000, 0.13171, 0.27490)
+metadata/source_tier = "Compact label printer"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

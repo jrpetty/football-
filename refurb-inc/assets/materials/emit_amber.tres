@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "emit_amber"
+albedo_color = Color(1, 0.65, 0.1, 1)
+roughness = 0.6
+emission_enabled = true
+emission = Color(1, 0.6, 0.1, 1)
+emission_energy_multiplier = 3.0

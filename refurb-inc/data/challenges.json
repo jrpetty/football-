@@ -1,0 +1,123 @@
+{
+  "_comment": "Challenge scenarios (title screen → Challenges) and the daily run. start: cash, reputation, building (premises id), fixtures (extra equipment types, laid out by the level), staff [{role, level}], stock [{seller, models, count, quality, state: untested|graded}] (left on pallets in goods-in, already paid for), parts {part id: n}, consumables, items [{kind, slot}] (slot may use {fixture_type} = the first extra fixture of that type), licences [ids]. rules: no_staff (hiring is blocked). goal.kind: process (every unit of the starting stock graded, sold or recycled), building (reach premises tier), profit (cash gained since the start), cash (balance), ship (orders shipped), score_profit / score_ship (no target — the score when the days run out). days = working-day limit. medals: for target goals the day you finish by (lower is better); for score goals the score you need (higher is better). Local records live in user://challenge_records.json, one board per challenge (CHALLENGE_<ID>) and per daily run (DAILY_<yyyymmdd>), ready for Steam leaderboards.",
+  "challenges": [
+    {
+      "id": "council_refresh",
+      "name": "The council refresh",
+      "icon": "🏛",
+      "difficulty": "Hard",
+      "desc": "Thornbury Borough Council has dumped its whole three-year laptop refresh on you: 200 laptops on pallets in the yard, all needing testing, wiping and grading before the council's auditors visit. You've got the industrial unit, a network test rack, a network imaging rack and a small crew.",
+      "start": {
+        "cash": 12000,
+        "reputation": 35,
+        "building": "industrial",
+        "fixtures": ["rack_test", "rack_image", "test_bench", "grading_desk", "metal_shelf", "metal_shelf"],
+        "staff": [{"role": "tester", "level": 6}, {"role": "repair_tech", "level": 5}, {"role": "grader", "level": 5}, {"role": "hauler", "level": 5}],
+        "stock": [{"seller": "thornbury_council", "models": ["corvex_prospect_5420", "halden_folio_840", "corvex_vantage_3510"], "count": 200, "quality": 0.55, "state": "untested"}],
+        "parts": {"ram_ddr4_8": 10, "ssd_nvme_256": 10, "ssd_sata_256": 8},
+        "items": [{"kind": "usb_test", "slot": "{test_bench}:park_a"}, {"kind": "usb_image", "slot": "{test_bench}:park_b"}]
+      },
+      "goal": {"kind": "process", "count": 200},
+      "days": 5,
+      "medals": {"gold": 3, "silver": 4, "bronze": 5}
+    },
+    {
+      "id": "garage_to_lockup",
+      "name": "Out of the garage",
+      "icon": "🚪",
+      "difficulty": "Medium",
+      "desc": "The classic start with a little more in the bank. Earn the £10,000 removals and deposit and move into the railway-arch lock-up before your uncle wants his garage back.",
+      "start": {"cash": 7500},
+      "goal": {"kind": "building", "value": "lockup"},
+      "days": 15,
+      "medals": {"gold": 9, "silver": 12, "bronze": 15}
+    },
+    {
+      "id": "lone_wolf",
+      "name": "Lone wolf",
+      "icon": "🐺",
+      "difficulty": "Medium",
+      "desc": "No staff. No help. Just you (and your mates in co-op), a lock-up with two test benches and a decent reputation. Make £3,000 profit.",
+      "start": {
+        "cash": 6000,
+        "reputation": 25,
+        "building": "lockup",
+        "fixtures": ["test_bench"],
+        "items": [{"kind": "usb_test", "slot": "{test_bench}:park_a"}, {"kind": "usb_image", "slot": "{test_bench}:park_b"}]
+      },
+      "rules": {"no_staff": true},
+      "goal": {"kind": "profit", "value": 3000},
+      "days": 10,
+      "medals": {"gold": 6, "silver": 8, "bronze": 10}
+    },
+    {
+      "id": "overdraft_escape",
+      "name": "Overdraft escape",
+      "icon": "🏦",
+      "difficulty": "Medium",
+      "desc": "You bought one lot too many. You're £300 overdrawn, the bank is twitchy and there are 24 untested laptops on the drive. Turn them into £2,000 in the bank.",
+      "start": {
+        "cash": -300,
+        "fixtures": ["test_bench"],
+        "stock": [{"seller": "pennine_mutual", "models": ["halden_folio_840", "corvex_prospect_5420", "northstar_meridian_t14"], "count": 24, "quality": 0.6, "state": "untested"}],
+        "parts": {"ram_ddr4_8": 4, "ssd_nvme_256": 4, "ssd_sata_256": 2},
+        "items": [{"kind": "usb_test", "slot": "{test_bench}:park_a"}, {"kind": "usb_image", "slot": "{test_bench}:park_b"}]
+      },
+      "goal": {"kind": "cash", "value": 2000},
+      "days": 6,
+      "medals": {"gold": 4, "silver": 5, "bronze": 6}
+    },
+    {
+      "id": "flogit_frenzy",
+      "name": "Flogit frenzy",
+      "icon": "📦",
+      "difficulty": "Easy",
+      "desc": "Thirty graded laptops are already listed and your reputation is up. The orders are about to pour in: pack them, get them on the courier shelf, and keep the pipeline fed. Ship 40 orders.",
+      "start": {
+        "cash": 1500,
+        "reputation": 30,
+        "stock": [{"seller": "northgate_bank", "models": ["corvex_prospect_5420", "corvex_prospect_7390", "northstar_meridian_x13"], "count": 30, "quality": 0.75, "state": "graded"}],
+        "consumables": {"boxes": 45, "labels": 250, "tape": 60}
+      },
+      "goal": {"kind": "ship", "value": 40},
+      "days": 5,
+      "medals": {"gold": 3, "silver": 4, "bronze": 5}
+    },
+    {
+      "id": "deadline_night",
+      "name": "Deadline night",
+      "icon": "🌙",
+      "difficulty": "Hard",
+      "desc": "Swiftline Couriers want 40 laptops processed by Thursday and you've only got the garage. You do have a night shift licence, a second test bench and one tester. Keep the lights on.",
+      "start": {
+        "cash": 4000,
+        "reputation": 15,
+        "fixtures": ["test_bench"],
+        "staff": [{"role": "tester", "level": 5}],
+        "licences": ["night_shift"],
+        "stock": [{"seller": "swiftline_couriers", "models": ["kestrel_swift_14", "northstar_edge_e15", "corvex_vantage_3510"], "count": 40, "quality": 0.6, "state": "untested"}],
+        "parts": {"ram_ddr4_8": 4, "ssd_nvme_256": 4, "ssd_sata_256": 4},
+        "items": [{"kind": "usb_test", "slot": "{test_bench}:park_a"}, {"kind": "usb_image", "slot": "{test_bench}:park_b"}]
+      },
+      "goal": {"kind": "process", "count": 40},
+      "days": 4,
+      "medals": {"gold": 2, "silver": 3, "bronze": 4}
+    }
+  ],
+  "daily": {
+    "_comment": "The daily run: the same seed and start for everyone on a given (UTC) date, one attempt per day. The date seeds which variant, premises, cash, reputation and starting stock you get; medals scale with the premises (medal_mult).",
+    "days": 5,
+    "buildings": [
+      {"id": "garage", "medal_mult": 1.0},
+      {"id": "lockup", "medal_mult": 1.6, "fixtures": ["test_bench"], "items": [{"kind": "usb_test", "slot": "{test_bench}:park_a"}, {"kind": "usb_image", "slot": "{test_bench}:park_b"}]}
+    ],
+    "cash": [3000, 9000],
+    "reputation": [8, 32],
+    "stock_count": [8, 24],
+    "stock_sellers": ["northgate_bank", "ashby_council", "st_wilfrids", "harrow_lyle", "pennine_mutual", "quayside_logistics"],
+    "variants": [
+      {"id": "profit", "name": "Profit sprint", "icon": "💷", "desc": "Make as much profit as you can in five working days. Score = cash gained since the start.", "goal": {"kind": "score_profit"}, "medals": {"gold": 2500, "silver": 1200, "bronze": 400}},
+      {"id": "dispatch", "name": "Dispatch dash", "icon": "🚚", "desc": "Ship as many orders as you can in five working days. Score = orders shipped.", "goal": {"kind": "score_ship"}, "medals": {"gold": 30, "silver": 18, "bronze": 8}}
+    ]
+  }
+}

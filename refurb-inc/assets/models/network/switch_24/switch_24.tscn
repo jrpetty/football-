@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/network/switch_24/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/network/switch_24/material.tres" id="2"]
+
+
+[node name="Switch24" type="Node3D"]
+metadata/footprint = Vector3(0.44000, 0.05698, 0.25622)
+metadata/source_tier = "24-port network switch"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

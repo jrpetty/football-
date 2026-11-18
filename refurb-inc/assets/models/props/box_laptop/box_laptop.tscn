@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/props/box_laptop/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/props/box_laptop/material.tres" id="2"]
+
+
+[node name="BoxLaptop" type="Node3D"]
+metadata/footprint = Vector3(0.44000, 0.12000, 0.34000)
+metadata/source_tier = "Laptop shipping box"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

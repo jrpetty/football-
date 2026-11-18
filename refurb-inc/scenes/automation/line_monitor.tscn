@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/automation/line_monitor_view.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/automation/line_monitor_stand.tscn" id="3"]
+
+[node name="LineMonitor" type="Node3D"]
+script = ExtResource("1")
+display_name = "Line monitor"
+
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2")
+model_scene = ExtResource("3")

@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "glass_blue"
+transparency = 1
+cull_mode = 2
+albedo_color = Color(0.25, 0.4, 0.55, 0.55)
+metallic = 0.35
+roughness = 0.02

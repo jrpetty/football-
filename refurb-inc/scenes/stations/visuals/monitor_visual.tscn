@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/peripherals/monitor_27/monitor_27.tscn" id="1"]
+
+[sub_resource type="QuadMesh" id="screen_quad"]
+size = Vector2(0.596, 0.342)
+
+[node name="MonitorVisual" type="Node3D"]
+
+[node name="Monitor" parent="." instance=ExtResource("1")]
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.419, 0.0372)
+mesh = SubResource("screen_quad")

@@ -1,0 +1,26 @@
+{
+  "_comment": "Campaign milestones, in the order they're shown. Each is timed in working days from the start of the company, and the fastest times are kept as local records (Steam leaderboards when GodotSteam lands). The end goal needs BOTH the mega plant and £20M lifetime revenue. kind: revenue (lifetime £), sold (units), building (premises id reached), reputation, fixture (own one of this type), brews (tea rounds made).",
+  "end_goal": {"id": "empire", "name": "Refurb empire", "desc": "Run the business from the mega plant and pass £20,000,000 in lifetime revenue.", "all": ["building_megaplant", "revenue_20m"]},
+  "milestones": [
+    {"id": "first_sale", "name": "First sale", "kind": "sold", "value": 1, "desc": "Sell your first refurbished unit."},
+    {"id": "revenue_10k", "name": "£10k in sales", "kind": "revenue", "value": 10000, "desc": "Lifetime revenue passes £10,000."},
+    {"id": "building_lockup", "name": "Out of the garage", "kind": "building", "value": "lockup", "desc": "Move into the lock-up."},
+    {"id": "sold_100", "name": "100 units sold", "kind": "sold", "value": 100, "desc": "A hundred happy customers."},
+    {"id": "revenue_50k", "name": "£50k in sales", "kind": "revenue", "value": 50000, "desc": "Lifetime revenue passes £50,000."},
+    {"id": "building_industrial", "name": "Business park", "kind": "building", "value": "industrial", "desc": "Move into the small industrial unit."},
+    {"id": "rep_100", "name": "Five-star seller", "kind": "reputation", "value": 100, "desc": "Max out your reputation."},
+    {"id": "revenue_250k", "name": "£250k in sales", "kind": "revenue", "value": 250000, "desc": "Lifetime revenue passes £250,000."},
+    {"id": "first_robot", "name": "Robots welcome", "kind": "fixture", "value": "robot_arm", "desc": "Buy your first pick-and-place robot arm."},
+    {"id": "building_warehouse", "name": "Warehouse", "kind": "building", "value": "warehouse", "desc": "Move into the warehouse."},
+    {"id": "sold_1000", "name": "1,000 units sold", "kind": "sold", "value": 1000, "desc": "Four figures."},
+    {"id": "revenue_1m", "name": "Millionaire", "kind": "revenue", "value": 1000000, "desc": "Lifetime revenue passes £1,000,000."},
+    {"id": "building_distribution", "name": "Distribution centre", "kind": "building", "value": "distribution", "desc": "Move into the distribution centre."},
+    {"id": "revenue_5m", "name": "£5M in sales", "kind": "revenue", "value": 5000000, "desc": "Lifetime revenue passes £5,000,000."},
+    {"id": "building_facility", "name": "Refurb Inc. HQ", "kind": "building", "value": "facility", "desc": "Move into the refurb facility."},
+    {"id": "sold_10000", "name": "10,000 units sold", "kind": "sold", "value": 10000, "desc": "Industrial scale."},
+    {"id": "building_megaplant", "name": "The mega plant", "kind": "building", "value": "megaplant", "desc": "Move into the mega plant — the top tier."},
+    {"id": "revenue_10m", "name": "£10M in sales", "kind": "revenue", "value": 10000000, "desc": "Lifetime revenue passes £10,000,000."},
+    {"id": "revenue_20m", "name": "£20M in sales", "kind": "revenue", "value": 20000000, "desc": "Lifetime revenue passes £20,000,000."},
+    {"id": "brews_100", "name": "Chief tea maker", "kind": "brews", "value": 100, "desc": "Make 100 cups of tea for the team."}
+  ]
+}

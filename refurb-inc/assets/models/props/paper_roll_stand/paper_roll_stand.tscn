@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/props/paper_roll_stand/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/props/paper_roll_stand/material.tres" id="2"]
+
+
+[node name="PaperRollStand" type="Node3D"]
+metadata/footprint = Vector3(0.62000, 0.56599, 0.30956)
+metadata/source_tier = "Packing paper dispenser"
+metadata/surfaces = [[0.360, 1.00, -0.295, 0.291, -0.090, 0.107], [0.490, 0.18, -0.212, 0.212, -0.034, 0.012]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

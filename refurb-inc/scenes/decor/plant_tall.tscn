@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/decor_prop.gd" id="1_dp"]
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_dp"]
+
+[node name="PlantTall" type="Node3D"]
+script = ExtResource("1_dp")
+kind = "plant_tall"
+display_name = "Office plant"
+description = "A big leafy yucca."
+
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2_dp")
+placeholder = "decor"
+placeholder_params = {
+"kind": "plant_tall"
+}
