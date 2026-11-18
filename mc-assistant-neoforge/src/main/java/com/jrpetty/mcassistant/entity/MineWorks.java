@@ -427,7 +427,8 @@ public final class MineWorks {
         if (s.getDestroySpeed(level, pos) < 0 || s.hasBlockEntity()) return false;
         // In the works' own ground anything the rock holds is cut through (a cave's tuff and calcite, an old mineshaft's
         // timbers, its own cobblestone seals); what holds something (a chest, a spawner) never.
-        return inGround(level, w, pos.getX(), pos.getZ()) || Math.max(Math.abs(pos.getX() - w.sx), Math.abs(pos.getZ() - w.sz)) <= RING;
+        // The shaft and its landings (the works' own core, on the mine's first face) always; the drifts in the mine's ground.
+        return Math.max(Math.abs(pos.getX() - w.sx), Math.abs(pos.getZ() - w.sz)) <= ROOM_OFF + ROOM_HALF + 1 || inGround(level, w, pos.getX(), pos.getZ());
     }
 
     private static boolean inShaftTop(Works w, BlockPos pos) {
