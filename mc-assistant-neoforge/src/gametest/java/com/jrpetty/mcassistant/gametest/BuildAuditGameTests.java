@@ -200,13 +200,15 @@ public class BuildAuditGameTests {
         BlockPos heart = Kit.surface(level, cx, cz);
         com.jrpetty.mcassistant.entity.VillageFolkEntity hand = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(hand != null, "a village");
-        // (A town's wall rings its builder's home, the heart: BuildGoal.)
-        BlockPos anchor = hand.getHome() != null ? hand.getHome() : heart;
+        // Out past the town's reach (its square is the street works' ground, not a builder's).
+        BlockPos anchor = Kit.surface(level, cx, cz + 150);
+        Kit.hold(level, anchor.getX(), anchor.getZ(), 16);
+        Kit.prepare(level, anchor.getX(), anchor.getZ(), 16);
         // Cobble paving over the west half of the ground the ring runs over.
         for (int dx = -8; dx <= 0; dx++) for (int dz = -8; dz <= 8; dz++) {
             level.setBlock(Kit.surface(level, anchor.getX() + dx, anchor.getZ() + dz).below(), Blocks.COBBLESTONE.defaultBlockState(), 2 | 16);
         }
-        List<BuildGoal.Placement> plan = BuildGoal.plan("fortify", anchor, Direction.NORTH, 0);
+        List<BuildGoal.Placement> plan = BuildGoal.plan("fortify", anchor, Direction.NORTH, 5);   // (a job with no radius rings at five)
         Map<Long, Integer> colH = new HashMap<>();                  // each column's blocks as drawn
         for (BuildGoal.Placement p : plan) if (p.part() == BuildGoal.Part.BLOCK) colH.merge(BlockPos.asLong(p.pos().getX(), 0, p.pos().getZ()), 1, Integer::sum);
         Set<Long> cols = colH.keySet();
@@ -223,7 +225,11 @@ public class BuildAuditGameTests {
                     BlockState st = level.getBlockState(new BlockPos(x, y, z));
                     if (holds(st) && !Terraform.earth(st)) stack++;
                 }
-                if (stack < 3) gaps++;
+                if (stack < 3 && gaps++ == 0) {
+                    StringBuilder col = new StringBuilder();
+                    for (int y = anchor.getY() - 2; y < anchor.getY() + 7; y++) col.append(y).append('=').append(level.getBlockState(new BlockPos(x, y, z)).getBlock().getName().getString()).append(' ');
+                    Kit.log("[VT] ba03 run " + run + " a gap at " + x + "," + z + ": " + col);
+                }
                 if (stack > colH.get(k) + 1) tall++;                   // (+1: the cobble it stands on)
             }
             heights[run] = new int[]{ gaps, tall };
