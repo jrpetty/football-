@@ -96,7 +96,7 @@ public class WorksGoal extends Goal {
         blocks.clear();
         vein.clear();
         veinSeen.clear();
-        walking = null;
+        // (where it was walking kept: a restart does not forget a walk that is stuck)
         tasks = 0;
         shiftTicks = 0;
         oreTaken = 0;
@@ -122,7 +122,7 @@ public class WorksGoal extends Goal {
         task = null;
         job = null;
         digging = null;
-        walking = null;
+        // (where it was walking kept: a restart does not forget a walk that is stuck)
         a.getNavigation().stop();
     }
 
@@ -152,6 +152,7 @@ public class WorksGoal extends Goal {
             case CUT -> cut(level);
             case OUT -> {
                 if (follow()) finish(bye);
+                else if (++outTicks > 3000) finish(bye);    // no way up it can walk: the town's rescues see to it
             }
         }
     }
@@ -202,7 +203,8 @@ public class WorksGoal extends Goal {
         List<BlockPos> up = a.level() instanceof ServerLevel sl ? MineWorks.wayUp(sl, a) : null;
         route = up == null ? List.of() : up;
         ri = 0;
-        walking = null;
+        if (phase != Phase.OUT) outTicks = 0;
+        // (where it was walking kept: a restart does not forget a walk that is stuck)
         phase = Phase.OUT;
     }
 
@@ -211,6 +213,8 @@ public class WorksGoal extends Goal {
         if (!message.isEmpty()) a.sayRoutine(message);
         if (!outJob) a.noteJobOutcome(oreTaken > 0 || broke > 8);
         a.pollJob();
+        outTicks = 0;
+        phase = Phase.NEXT;
         job = null;
         task = null;
         a.getNavigation().stop();
@@ -495,8 +499,7 @@ public class WorksGoal extends Goal {
         }
         if (spot == null || !bare(level, v)) {
             vein.poll();
-            // Behind other ore not yet broken: back in the queue once the rest is out (bounded by the vein's size).
-            if (!bare(level, v) && hasBareNeighbourInVein(v)) vein.add(v); else LEFT++;
+            LEFT++;                                          // buried behind ore it could not get at, or out of reach
             return;
         }
         // At the spot already and still out of reach (or a walk that went nowhere): left for another day.
@@ -510,13 +513,9 @@ public class WorksGoal extends Goal {
     }
 
     private int veinWalks;
+    private int outTicks;
     /** The cell it goes back to after a walk back by the way down. */
     private int resumeAt;
-
-    private boolean hasBareNeighbourInVein(BlockPos v) {
-        for (BlockPos o : vein) if (o.distManhattan(v) <= 2) return true;
-        return false;
-    }
 
     private boolean bare(ServerLevel level, BlockPos p) {
         for (Direction d : Direction.values()) {
