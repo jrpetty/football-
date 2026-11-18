@@ -230,6 +230,7 @@ public final class FolkCredit {
             }
         }
         loans(level, v, day);
+        playerInterest(level, id, day);
         CapitalBook.dirty();
     }
 
