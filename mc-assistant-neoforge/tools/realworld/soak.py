@@ -378,6 +378,16 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
         sprint_to(r, 6000, 5000)
         say("MONSTERS at noon after the raid, day %d: %s" % (day, monsters(r, x, z)))
         sprint_to(r, 18000, 12000)
+    elif day % 5 == 3:
+        # [long6] The raid's leftovers go on the third morning. Summoned to stay (nothing despawns on a server nobody is
+        # on), the ones a young town's watch never got to piled up raid on raid: thirteen about the meadow town of
+        # eight every morning, its folk indoors from creepers a fifth of each day. A night's monsters are gone by then
+        # in a world with a player in it.
+        sprint_to(r, 1500, 1000)
+        left = re.search(r"count: (\d+)", r.cmd("execute if entity @e[tag=raid]"))
+        r.cmd("kill @e[tag=raid]")
+        say("MONSTERS the raid's leftovers cleared on day %d: %s" % (day, left.group(1) if left else "0"))
+        sprint_to(r, 18000, 16500)
     else:
         sprint_to(r, 18000, 17000)
     night(r, x, z, "the long game, night %d" % day)
