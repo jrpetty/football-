@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>So the plan's streets and the square are walked from the heart the way a folk walks them (a block up, three down,
  * never through water: a bridge or a causeway the town lays carries the street on), and a lot is offered to a building
  * only if the street before its door is reached ({@link #reaches}). A town with nothing else left (an island) takes one
- * of the rest after four looks that found nothing ({@link #hungry}), and is particular again after it. Worked out again every two minutes at most, and only when a
+ * of the rest after twelve looks in a row that found nothing ({@link #hungry}), and is particular again after it. Worked out again every two minutes at most, and only when a
  * building is being sited: a few thousand columns, never on a folk's tick.
  */
 public final class CityPlan {
@@ -61,9 +61,9 @@ public final class CityPlan {
         NETS.remove(village);
     }
 
-    /** Looks in a row that found nothing but lots off the streets, by town: four, and the next look takes one of them. */
+    /** Looks in a row that found nothing but lots off the streets, by town: twelve, and the next look takes one of them. */
     private static final Map<UUID, Integer> HUNGRY = new ConcurrentHashMap<>();
-    static final int PATIENCE = 4;
+    static final int PATIENCE = 12;
 
     /** Has this town gone so many looks with nothing on its streets that it may take a lot off them (an island)? */
     public static boolean hungry(UUID village) {

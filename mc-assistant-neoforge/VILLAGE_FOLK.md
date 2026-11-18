@@ -13826,7 +13826,7 @@ between them and the town or not. Five changes make it read as a place that grew
   no bar. A building is offered a lot (Villages.siteFor, and a household's own
   house in the housing market) only if the street before its door is reached that way, so no house goes up on the far
   bank of a lake or the top of a cliff a street's length from the town. A town with nothing else left (an island, a
-  mountain top) takes one of the rest after four looks in a row that found nothing, and is particular again after it. Walked afresh every two minutes at most, and
+  mountain top) takes one of the rest after twelve looks in a row that found nothing, and is particular again after it. Walked afresh every two minutes at most, and
   only while a building is being sited (a few thousand columns, never on a folk's tick).
 - **Blocks turned here and there** (TownPlan). Every lot of a block touches a street on two sides. About two blocks of
   homes in five (never the first ring round the square) are turned to their cross street, their four houses still back
