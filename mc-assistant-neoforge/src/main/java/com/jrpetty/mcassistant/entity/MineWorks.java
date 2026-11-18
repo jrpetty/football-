@@ -1309,6 +1309,7 @@ public final class MineWorks {
         Works w = works(level, v.id());
         if (w == null || !Land.areaLoaded(level, new BlockPos(w.sx, w.top, w.sz), 12)) return;
         boolean changed = false;
+        clearing(level, w, 96);
         if (!w.head && w.sunk >= 4) {
             headframe(level, v, w);
             w.head = true;
@@ -1322,6 +1323,32 @@ public final class MineWorks {
             changed = true;
         }
         if (changed) save(w);
+    }
+
+    /**
+     * The pithead cleared of the trees over it (the trunks and the crowns standing within seven blocks of the shaft's
+     * middle, from the top of the shaft up), no more than so many blocks a look: a pithead in a wood had its headframe
+     * lost in the leaves and a tree growing out of the pillar.
+     */
+    static void clearing(ServerLevel level, Works w, int most) {
+        int n = 0;
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int y = w.top + 24; y >= w.top - 1 && n < most; y--) {
+            for (int dx = -7; dx <= 7 && n < most; dx++) {
+                for (int dz = -7; dz <= 7 && n < most; dz++) {
+                    p.set(w.sx + dx, y, w.sz + dz);
+                    BlockState s = level.getBlockState(p);
+                    boolean leaf = s.is(BlockTags.LEAVES);
+                    boolean trunk = s.is(BlockTags.LOGS) && com.jrpetty.mcassistant.entity.goal.BuildGoal.isTreeLog(level, p);
+                    if (!leaf && !trunk) continue;
+                    boolean frame = Math.abs(dx) <= 1 && Math.abs(dz) <= 1
+                        && (Math.abs(dx) == 1 && Math.abs(dz) == 1 && y >= w.top && y <= w.top + 3 || y == w.top + 4);
+                    if (trunk && frame && w.head) continue;                                        // the headframe's own timbers
+                    level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+                    n++;
+                }
+            }
+        }
     }
 
     /** Over the pillar: four posts, a frame of beams on them, a beam across with the lantern hung from it. */
