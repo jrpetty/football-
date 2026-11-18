@@ -198,7 +198,14 @@ public final class CityDress {
         Item logItem = logWood == null ? null : item(logWood + "_log");
         if (!free) {
             if (planks > 0 && (plankItem == null || Market.stock(level, id, s -> s.is(plankItem)) < planks + KEEP)) return no("short of planks or stone");
-            if (logs > 0 && (logItem == null || Market.stock(level, id, s -> s.is(logItem)) < logs + KEEP)) return no("short of logs");
+            if (logs > 0 && (logItem == null || Market.stock(level, id, s -> s.is(logItem)) < logs + KEEP)) {
+                // Short of the timber: the frame stays as built and the roof goes ahead (the frame never holds it up).
+                int roofCells = stairs + slabs;
+                at = new ArrayList<>(at.subList(0, roofCells));
+                put = new ArrayList<>(put.subList(0, roofCells));
+                logs = 0;
+                if (at.isEmpty()) return no("short of logs");
+            }
             for (BlockPos p : at) if (!TownBlocks.mayBuild(level, v, p, b.anchor(), TownBlocks.Why.RENOVATE)) return no("the gate");   // its own cells
             // The gardens' hand (it is at the houses already): a crew of its own went without a hand in a town of ninety.
             if (!TownJobs.atWork(level, v, "gardens", b.anchor(), "giving a house its own roof and timbers")) return -1;
