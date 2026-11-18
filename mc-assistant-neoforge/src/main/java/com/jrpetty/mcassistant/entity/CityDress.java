@@ -64,6 +64,14 @@ public final class CityDress {
         return h;
     }
 
+    /** Why the last house looked at was not dressed (the board, the tests). */
+    private static volatile String lastWhy = "";
+
+    private static int no(String why) {
+        lastWhy = why;
+        return 0;
+    }
+
     /** The board's line: how many of the town's houses are dressed, kept as built, or waiting (and why, the first). */
     public static String line(UUID id) {
         int dressed = 0, kept = 0, waiting = 0;
@@ -74,7 +82,7 @@ public final class CityDress {
             else if (n.endsWith(":kept")) kept++;
             else dressed++;
         }
-        return dressed + " dressed, " + kept + " kept as built, " + waiting + " to see to";
+        return dressed + " dressed, " + kept + " kept as built, " + waiting + " to see to" + (waiting > 0 && !lastWhy.isEmpty() ? " (last: " + lastWhy + ")" : "");
     }
 
     /** Which roof this house has: 0 as built, 1 another of the town's roofing woods, 2 stone. */
@@ -125,10 +133,10 @@ public final class CityDress {
     public static int dress(ServerLevel level, Villages.Village v, Ledger.Building b, boolean free) {
         UUID id = v.id();
         String done = Ledger.note(id, noteKey(b));
-        if (done != null && done.startsWith(drawing(id, b) + ":")) return 0;     // dressed for the drawing it stands to now
-        if (!Land.areaLoaded(level, b.anchor(), 7)) return 0;
-        if (HousingMarket.isPrivate(id, b.anchor()) || Beliefs.untouchable(id, b) || Grow.raisingNow(id, b.anchor())) return 0;
-        if (PlayerBlocks.placed(level, b.anchor())) return 0;
+        if (done != null && done.startsWith(drawing(id, b) + ":")) return no("dressed");     // dressed for the drawing it stands to now
+        if (!Land.areaLoaded(level, b.anchor(), 7)) return no("not loaded");
+        if (HousingMarket.isPrivate(id, b.anchor()) || Beliefs.untouchable(id, b) || Grow.raisingNow(id, b.anchor())) return no("private, the founders' or going up");
+        if (PlayerBlocks.placed(level, b.anchor())) return no("a player's");
         String drawing = drawing(id, b);
         boolean iron = Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal();
         int roofChoice = roofChoice(b.anchor());
@@ -137,7 +145,7 @@ public final class CityDress {
         String roofWood = null;
         if (roofChoice == 1) {
             roofWood = altWood(level, v, b, free);
-            if (roofWood == null && !free) return 0;                          // none to spare yet: later
+            if (roofWood == null && !free) return no("no roofing wood to spare");                          // none to spare yet: later
         } else if (roofChoice == 2) {
             roofWood = iron ? "stone_brick" : "cobblestone";
         }
@@ -189,15 +197,15 @@ public final class CityDress {
             : roofWood.equals("cobblestone") ? Items.COBBLESTONE : item(roofWood + "_planks");
         Item logItem = logWood == null ? null : item(logWood + "_log");
         if (!free) {
-            if (planks > 0 && (plankItem == null || Market.stock(level, id, s -> s.is(plankItem)) < planks + KEEP)) return 0;
-            if (logs > 0 && (logItem == null || Market.stock(level, id, s -> s.is(logItem)) < logs + KEEP)) return 0;
-            for (BlockPos p : at) if (!TownBlocks.mayBuild(level, v, p, b.anchor(), TownBlocks.Why.RENOVATE)) return 0;   // its own cells
+            if (planks > 0 && (plankItem == null || Market.stock(level, id, s -> s.is(plankItem)) < planks + KEEP)) return no("short of planks or stone");
+            if (logs > 0 && (logItem == null || Market.stock(level, id, s -> s.is(logItem)) < logs + KEEP)) return no("short of logs");
+            for (BlockPos p : at) if (!TownBlocks.mayBuild(level, v, p, b.anchor(), TownBlocks.Why.RENOVATE)) return no("the gate");   // its own cells
             // The gardens' hand (it is at the houses already): a crew of its own went without a hand in a town of ninety.
             if (!TownJobs.atWork(level, v, "gardens", b.anchor(), "giving a house its own roof and timbers")) return -1;
-            if (planks > 0 && !Crafts.take(level, v, s -> s.is(plankItem), planks)) return 0;
+            if (planks > 0 && !Crafts.take(level, v, s -> s.is(plankItem), planks)) return no("the stores");
             if (logs > 0 && !Crafts.take(level, v, s -> s.is(logItem), logs)) {
                 if (planks > 0) Crafts.store(level, v, new ItemStack(plankItem, planks));
-                return 0;
+                return no("the stores");
             }
         }
         for (int i = 0; i < at.size(); i++) {
@@ -228,7 +236,7 @@ public final class CityDress {
             if (w == null || w.equals(own)) continue;
             if (free) return w;
             Item planks = item(w + "_planks");
-            if (planks != null && Market.stock(level, v.id(), s -> s.is(planks)) >= 40 + KEEP) return w;
+            if (planks != null && Market.stock(level, v.id(), s -> s.is(planks)) >= 96 + KEEP) return w;   // a two-storey roof's worth besides
         }
         return null;
     }
