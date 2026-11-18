@@ -425,7 +425,8 @@ public final class MineWorks {
         Works w = village == null ? null : works(level, village);
         if (w == null || pos.getY() >= w.top - 1 && !inShaftTop(w, pos)) return false;
         if (s.getDestroySpeed(level, pos) < 0 || s.hasBlockEntity()) return false;
-        if (!com.jrpetty.mcassistant.entity.goal.MineGoal.wild(level, pos, s) && !s.is(BlockTags.LOGS) && !(s.getBlock() instanceof StairBlock)) return false;
+        // In the works' own ground anything the rock holds is cut through (a cave's tuff and calcite, an old mineshaft's
+        // timbers, its own cobblestone seals); what holds something (a chest, a spawner) never.
         return inGround(level, w, pos.getX(), pos.getZ()) || Math.max(Math.abs(pos.getX() - w.sx), Math.abs(pos.getZ() - w.sz)) <= RING;
     }
 
@@ -1111,8 +1112,7 @@ public final class MineWorks {
             }
             if (s.isAir() || s.canBeReplaced()) { open++; continue; }
             if (s.getDestroySpeed(level, p) < 0) return "rock";
-            if (!com.jrpetty.mcassistant.entity.goal.MineGoal.wild(level, p, s) && !(s.getBlock() instanceof StairBlock) && !s.is(BlockTags.LOGS)
-                && !s.is(Blocks.TORCH) && !s.is(Blocks.WALL_TORCH)) return "made";
+            if (s.hasBlockEntity()) return "made";
         }
         if (tunnel && open >= t.height) {
             // Open already: one of the works' own tunnels (it has met it), or a cave.

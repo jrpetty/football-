@@ -103,6 +103,7 @@ public class WorksGoal extends Goal {
         broke = 0;
         saidSealed = false;
         resumeAt = 0;
+        teleports = 0;
         if (!(a.level() instanceof ServerLevel)) { finish(""); return; }
         if (outJob) { beginOut("Out of the works."); return; }
         a.equipBestTool(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
