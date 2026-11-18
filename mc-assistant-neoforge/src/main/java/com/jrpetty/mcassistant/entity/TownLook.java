@@ -72,6 +72,7 @@ public final class TownLook {
     public static void tick(ServerLevel level, Villages.Village v) {
         if (Raids.underAlarm(v.id()) || !level.isLoaded(v.centre())) return;
         Avenues.tick(level, v);
+        CityGreen.tick(level, v);                     // [city9] the greens in the square's corners
         StreetFurniture.tick(level, v);
         Orchard.tick(level, v);
         Allotments.tick(level, v);

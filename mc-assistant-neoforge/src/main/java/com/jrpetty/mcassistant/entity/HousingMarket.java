@@ -554,6 +554,8 @@ public final class HousingMarket {
             }
             if (taken) continue;
             if (Footways.crowds(id, d.siteKey(), x, z, Villages.direction(lot.back()))) continue;   // [paths] never wall to wall
+            Villages.Village town = Villages.get(id);                                         // [city9] on a street the town walks
+            if (town != null && level.hasChunk(x >> 4, z >> 4) && !CityPlan.reaches(level, town, lot)) continue;
             Direction back = Villages.direction(lot.back());
             boolean turned = back.getAxis() == Direction.Axis.X;
             int hx = turned ? half[1] : half[0], hz = turned ? half[0] : half[1];

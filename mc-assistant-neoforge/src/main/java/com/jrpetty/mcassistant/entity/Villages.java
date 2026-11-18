@@ -506,6 +506,8 @@ public final class Villages {
         ShopsHomes.resetAllForTests();                              // [shops-homes] counters, queues, lists, trips, homes' and workshops' stores
         Dining.resetForTests();                                     // [dining] the orders, the hands at work, the diners, the wash
         Palettes.resetForTests();
+        CityPlan.resetForTests();                                   // [city9] the walked streets
+        CityGreen.resetForTests();                                  // [city9] the square's greens
         Court.resetForTests();
         School.resetForTests();
         Annals.resetForTests();
@@ -3060,6 +3062,9 @@ public final class Villages {
                 // of chunks round a new village comes in over its first minute, and every lot
                 // looked at before that used to be written off for good.
                 if (!lotLoaded(level, x, z, hx, hz)) { waiting = true; continue; }
+                // [city9] Only where the street before its door is walked from the heart (CityPlan): never a lot over the
+                // water or up a cliff from the town, until a few looks have found nothing else (an island town).
+                if (laps < 4 && !CityPlan.reaches(level, v, lot)) continue;
                 // The great buildings (the hall above all: no Iron Age without one) want the most
                 // ground of anything, and on a mountainside found none flat to six blocks across
                 // twenty: a town of fifty-eight sat in the Stone Age for want of one. Missed on

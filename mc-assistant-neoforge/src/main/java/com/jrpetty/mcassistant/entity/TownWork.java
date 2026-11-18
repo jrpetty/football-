@@ -101,6 +101,7 @@ public final class TownWork {
         // Not up a hill or down a hole from the heart: those are somebody's to sort out by hand.
         if (Math.abs(top.getY() + 1 - v.centre().getY()) > 10) return 0;
         boolean square = TownPlan.isSquare(dx, dz);
+        if (square && CityGreen.bed(dx, dz)) return 0;                     // [city9] the square's greens are turf, not paving
         boolean avenue = !square && (Math.abs(dx) <= TownPlan.AVENUE || Math.abs(dz) <= TownPlan.AVENUE
             || ring(dx, dz));
         boolean stoneAge = age.ordinal() >= Villages.Age.STONE.ordinal();

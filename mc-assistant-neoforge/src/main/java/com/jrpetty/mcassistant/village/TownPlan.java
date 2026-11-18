@@ -143,9 +143,6 @@ public final class TownPlan {
                 boolean alongX = Math.abs(x) > Math.abs(z);       // (a tie: the door faces north or south)
                 int[] main = alongX ? bx : bz;
                 boolean inward = main[1] == 1;
-                int back;
-                if (alongX) back = (x > 0) == inward ? EAST : WEST;   // door toward the heart if inward
-                else back = (z > 0) == inward ? SOUTH : NORTH;
                 boolean byTheSquare = main[2] == 0 && Math.abs(alongX ? z : x) <= PLAZA;   // beside an avenue, first block
                 boolean corner = main[2] == 0 && bx[2] == 0 && bz[2] == 0 && bx[1] == 1 && bz[1] == 1;
                 // North and south of the square: the trades, facing it. East and west: the two
@@ -154,6 +151,17 @@ public final class TownPlan {
                     : byTheSquare && !alongX && inward ? "civic"
                     : byTheSquare && alongX ? "great-half"
                     : "home";
+                // [city9] Every lot of a block touches a street on two sides. A block of homes here and there is
+                // turned to its cross street (its four houses still back to back in two pairs), so the roofs and
+                // the fronts along a street are not all one way, as in a town that grew rather than was drawn.
+                if (use.equals("home") && turnedBlock(bx, bz)) {
+                    alongX = !alongX;
+                    main = alongX ? bx : bz;
+                    inward = main[1] == 1;
+                }
+                int back;
+                if (alongX) back = (x > 0) == inward ? EAST : WEST;   // door toward the heart if inward
+                else back = (z > 0) == inward ? SOUTH : NORTH;
                 out.add(new Lot(x, z, back, Kind.LOT, LOT / 2, LOT / 2, new long[]{ cellKey(x, z) }, use));
             }
         }
@@ -181,6 +189,19 @@ public final class TownPlan {
             .thenComparingInt(Lot::x).thenComparingInt(Lot::z));
         ALL = List.copyOf(out);
         return ALL;
+    }
+
+    /**
+     * [city9] Is the block of homes these two bands make turned to its cross street? About two blocks in five, in
+     * a fixed scatter (the same in every town, so a lot keeps its way round from one look to the next). Never the
+     * first ring of blocks, which frames the square and its avenues.
+     */
+    static boolean turnedBlock(int[] bx, int[] bz) {
+        if (bx[2] < 1 && bz[2] < 1) return false;
+        int h = Integer.signum(bx[0]) * 7 + bx[2] * 31 + Integer.signum(bz[0]) * 131 + bz[2] * 517;
+        h ^= h >>> 3;
+        h *= 0x9E3779B1;
+        return Math.floorMod(h >>> 7, 5) < 2;
     }
 
     /** Spots on the square itself: the well to the south of the camp, monuments round it. */
