@@ -1249,7 +1249,19 @@ public class BuildGoal extends Goal {
      * are put right by the survey, Restore).
      */
     private boolean wrongHere(BlockState st, Placement p) {
-        if (ownAnchor == null || !assistant.isSettler() || p.part() == Part.CLEAR || p.part() == Part.STOREHOUSE) return false;
+        if (ownAnchor == null || !assistant.isSettler()) return false;
+        return wrongInCell(st, p);                                           // [long6] shared with the stocking
+    }
+
+    /**
+     * [long6] A foreign block in a town building's cell, that its builder takes out and lays the drawing's own in place of
+     * (wrongHere): so the cell still wants its part. The builder's stocking (VillageFolkEntity.stillToLay) counted soft
+     * cells only, so a cell where a bench was drawn and the hillside's stone stood asked for no bench: the builder came
+     * with none, and "Before I can build the house I still need: 1 crafting table" every half minute for days (a meadow
+     * town on seed 424242 stood at five buildings from day nine).
+     */
+    public static boolean wrongInCell(BlockState st, Placement p) {
+        if (p.part() == Part.CLEAR || p.part() == Part.STOREHOUSE) return false;
         if (soft(st) || st.hasBlockEntity()) return false;
         if (st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock
                 || st.getBlock() instanceof net.minecraft.world.level.block.BedBlock) return false;

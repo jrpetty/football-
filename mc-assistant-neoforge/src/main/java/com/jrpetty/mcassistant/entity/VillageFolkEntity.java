@@ -7344,7 +7344,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!Land.areaLoaded(server, site.anchor(), reach)) return null;
         java.util.Map<BuildGoal.Part, Integer> still = new java.util.EnumMap<>(BuildGoal.Part.class);
         for (BuildGoal.Placement p : BuildGoal.plan(project, site.anchor(), site.facing(), site.radius())) {
-            if (BuildGoal.soft(server.getBlockState(p.pos()))) still.merge(p.part(), 1, Integer::sum);
+            net.minecraft.world.level.block.state.BlockState there = server.getBlockState(p.pos());
+            // [long6] A foreign block the builder will take out wants its part too (BuildGoal.wrongInCell).
+            if (BuildGoal.soft(there) || BuildGoal.wrongInCell(there, p)) still.merge(p.part(), 1, Integer::sum);
         }
         return still;
     }

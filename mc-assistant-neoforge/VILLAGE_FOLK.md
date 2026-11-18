@@ -13677,3 +13677,55 @@ Tests (BuildAuditGameTests, x 3,500,000 to 3,600,000, z 90000): ba01 the audit (
 minutes; every count above must be nought); ba02 the hillside lots; ba03 the wall raised twice. VillageGameTests t37
 hires at the folk's own price.
 
+
+## Towns that go on with nobody near, for hundreds of days (long-6)
+
+- **Why the four-hundred-day town did nothing.** The run on 0.315.0 read the same numbers every day from day one to four
+  hundred: eight folk, none loaded, no buildings, no food. Its server log says why, five seconds after the founding:
+  "Rushscar sleeps (nobody near): 273 forced chunks let go". A town with no player near goes to sleep (TownLod) and is
+  simulated at the rates it was measured to work at while watched; a town nobody had ever watched had no rates (and on a
+  server where no town had been watched, no mean of the others either), so it slept at nothing a day, for ever. Asleep,
+  nothing is built either. The same server and seed with the town kept awake grew from the first day (eight folk, four
+  buildings and eleven hundred meals put by on day five). The run itself held nothing loaded (the other scenarios
+  force-load their towns, the hundred days did not), and its raids were summoned into unloaded ground ("RAID at dusk: Test
+  failed").
+- **Kept awake with nobody near (TownWake).** A town too young to have rates of its own (watched for fewer than three
+  days) does not sleep: its own chunk keeping holds its ground. A sleeping town has a day of its own in full every
+  `townLodWakeDays` days asleep (two, by default; two towns at a time, in turn): its folk farm, build and raise children
+  for real, and the day's measurement goes into its rates as a running mean, so they follow it as it grows. A town whose
+  heart an operator force-loaded (`/forceload`) runs in full. The status says which: "(8 loaded; awake with nobody near,
+  too young to sleep: no rates of its own yet)", "(0 loaded; asleep, nobody near)". On the game tests' server none of it is
+  in force unless a test asks.
+- **The camp.** A founding party set down on unfit ground looks for better within forty blocks. Set down on a slope of
+  the plains at y 71, a party camped on a knoll at y 95, thirty-five blocks off, read its land as mountains, and staked its
+  fields in the valley. It now looks within twelve blocks up or down of where it was set down first (a hill or a hollow
+  only when nothing at its level is fit), charges every block of climb past four, and the move is logged with both scores
+  ("[MCA-FOUND] the party camps at ...: better ground (1472 against -50000 there)").
+- **The builder's bench.** The builder's stocking counted only a building's empty cells; the builder also takes out a
+  foreign block in a cell (the hillside's stone where a bench is drawn) and lays the drawing's own. So a house over a slope
+  wanted a crafting table nobody fetched: "Before I can build the house I still need: 1 crafting table" every half minute,
+  and a meadow town stood at five buildings from day nine with three hundred logs in its stores. Both now ask
+  BuildGoal.wrongInCell.
+- **The harness.** soak.py's hundred days hold the town's real heart (read from its status after the founding) with
+  `/forceload` as the other scenarios do, and raid and read from it. FrozenWatch fails the leg, loudly, when the town is
+  frozen: the same numbers five days running, no new building and no new folk for twenty-five days (HUNDRED_STALL_DAYS),
+  or not one folk loaded two days running with its heart held; the legs after a frozen one do nothing. HUNDRED_HOLD=0 runs
+  it with nothing held (the town keeps itself); a biome may be named; SOAK_RCON_PORT for a local server.
+- **The raid's leftovers.** The long game's raids summon their monsters to stay, and nothing despawns on a server nobody
+  is on: the ones a young town's watch never reached piled up raid on raid (eleven to thirteen about the meadow town of
+  eight every morning, its folk indoors from creepers a fifth to a third of each day). They are cleared on the third
+  morning after each raid now, and counted ("the raid's leftovers cleared on day 3: 7").
+- **Measured** (a local dedicated server, soak.py hundred, the town of eight):
+  - Plains, seed 7331, held: day 1 8 folk, no buildings; day 9 8 folk, 3 buildings, 1994 meals put by; day 15 12 folk, 6;
+    day 21 19 folk, the Stone Age, 10; day 32 31 folk, 20 buildings, 1861 meals. The heart at -64, 152 (y 80), "on a river".
+  - Meadow by the mountains, seed 424242 (the spot where an earlier town starved), held, raids cleared: day 6 8 folk, 4
+    buildings; day 12 11 folk, the Stone Age, 7; day 18 25 folk, 12; day 30 38 folk, 16 buildings, 4090 meals. The same
+    town before the raids were cleared stood at 8 folk and 4 buildings on day 31, and before the bench was fetched at 5
+    buildings from day 9.
+  - Plains, seed 7331, nothing held, nobody near: awake its first three days (8 folk, a building, 615 meals), then asleep
+    two days and a day of its own in turn; 4 buildings and 2195 meals by day 16, its treasury from 42 coins to 426 (still
+    8 folk: a house comes first). Asleep, its status reads its chests as empty (they are not loaded); its kept stores
+    answer the market and come into the chests when it wakes.
+  - Tests: LongGameTests lg01 (too young to sleep; sleeps with rates; its own day after two days asleep, and asleep again
+    after it; awake with its heart force-loaded; the status says which) and lg02 (a town of eight with nobody near, two
+    days on: awake, its folk loaded, its stores moving).

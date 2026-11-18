@@ -583,6 +583,8 @@ public final class VillageSpawner {
 
     /** A founding site this good is kept as it is: most of the ground about it walkable. */
     private static final int FIT_SITE = 1500;
+    /** [long6] How far up or down from where it was set down a party looks for its camp first. */
+    private static final int CAMP_LEVEL = 12;
 
     /**
      * Where a founding party makes its camp: where it was set down, if the ground there is fit for
@@ -596,18 +598,31 @@ public final class VillageSpawner {
         if (here >= FIT_SITE) return at;
         BlockPos chosen = at;
         int best = here + 800;                                   // only for clearly better ground
-        for (int r = 8; r <= 40; r += 8) {
-            for (int dx = -r; dx <= r; dx += 8) {
-                for (int dz = -r; dz <= r; dz += 8) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
-                    int x = at.getX() + dx, z = at.getZ() + dz;
-                    if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) continue;
-                    BlockPos g = groundAt(level, x, z);
-                    if (g == null) continue;
-                    int s = siteScore(level, g) - r * 10;          // the nearer the better, all else equal
-                    if (s > best) { best = s; chosen = g; }
+        // [long6] Ground near the level it was set down on first (within CAMP_LEVEL blocks up or down); a hill or a
+        // hollow only if there is no fit ground at that level. A party set down on a slope of the plains (y 71) camped
+        // on a knoll 35 blocks off at y 95, read its land as mountains, and staked its fields in the valley below.
+        for (int pass = 0; pass < 2 && chosen == at; pass++) {
+            for (int r = 8; r <= 40; r += 8) {
+                for (int dx = -r; dx <= r; dx += 8) {
+                    for (int dz = -r; dz <= r; dz += 8) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                        int x = at.getX() + dx, z = at.getZ() + dz;
+                        if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) continue;
+                        BlockPos g = groundAt(level, x, z);
+                        if (g == null) continue;
+                        int climb = Math.abs(g.getY() - at.getY());
+                        if (pass == 0 && climb > CAMP_LEVEL) continue;
+                        int s = siteScore(level, g) - r * 10;          // the nearer the better, all else equal
+                        s -= 40 * Math.max(0, climb - 4);              // [long6] and the nearer its level
+                        if (s > best) { best = s; chosen = g; }
+                    }
                 }
             }
+        }
+        if (chosen != at) {                                       // [long6] the move, and why, in the log
+            com.mojang.logging.LogUtils.getLogger().info(
+                "[MCA-FOUND] the party camps at {}, {}, {} (set down at {}, {}, {}): better ground ({} against {} there)",
+                chosen.getX(), chosen.getY(), chosen.getZ(), at.getX(), at.getY(), at.getZ(), best, here);
         }
         return chosen;
     }

@@ -116,6 +116,9 @@ public final class TownLod {
         final Map<String, Double> byOthers = new HashMap<>();
         long othersFrom;
         int coinsFrom, coinsByStep;
+        // [long6] Kept awake with nobody near (TownWake): why, and the end of its own day (0: none).
+        TownWake.Why heldFor = TownWake.Why.NONE;
+        long ownDayUntil;
     }
 
     /** A watched town's daily count: when, its stores item by item, its treasury and its roll. */
@@ -257,6 +260,7 @@ public final class TownLod {
         Town t = town(v.id());
         long time = level.getGameTime();
         Lod want = forced != null ? forced : !live(server) ? Lod.FULL : reckon(level, v);
+        if (want == Lod.AWAY && forced == null) want = keptAwake(level, v, t, time);     // [long6]
         if (want != Lod.AWAY) {
             t.lastNear = time;
             Lod was = t.lod;
@@ -279,6 +283,50 @@ public final class TownLod {
             return;
         }
         if (time - t.lastStep >= AssistantConfig.townLodStepSeconds() * 20L || now) step(v, t, time);
+    }
+
+    /** [long6] Nobody near, but the town kept awake all the same (TownWake says why): FULL, or else AWAY. */
+    private static Lod keptAwake(ServerLevel level, Villages.Village v, Town t, long time) {
+        int onOwnDay = 0;
+        for (Town o : TOWNS.values()) if (o != t && o.ownDayUntil > time) onOwnDay++;
+        TownWake.Why why = TownWake.why(level, v, t.lod == Lod.AWAY, rates(v.id(), t).days(), t.sleptAt, t.ownDayUntil,
+            time, onOwnDay);
+        if (why == TownWake.Why.OWN_DAY && t.ownDayUntil <= time) t.ownDayUntil = time + TownWake.OWN_DAY_TICKS;
+        if (why != t.heldFor) {
+            if (why != TownWake.Why.NONE) LOG.info("[MCA-LOD] {} kept awake with nobody near: {}", Villages.name(v.id()),
+                TownWake.words(why));
+            t.heldFor = why;
+        }
+        return why == TownWake.Why.NONE ? Lod.AWAY : Lod.FULL;
+    }
+
+    /** [long6] Why the town is awake with nobody near, in words, or null if it is not (the status). */
+    @Nullable
+    public static String keptAwakeWhy(UUID village) {
+        Town t = TOWNS.get(village);
+        return t == null || t.heldFor == TownWake.Why.NONE || t.lod == Lod.AWAY ? null : TownWake.words(t.heldFor);
+    }
+
+    /** [long6] Tests: every town looked at now by the players' reckoning (no wait), as if its turn had come. */
+    public static void lookForTests(MinecraftServer server) {
+        forced = null;
+        for (Villages.Village v : Villages.every()) look(server, v, true);
+    }
+
+    /** [long6] Tests: the town went to sleep this many days ago (its own day due after townLodWakeDays). */
+    public static void sleptDaysAgoForTests(UUID village, double days) {
+        Town t = TOWNS.get(village);
+        if (t == null) return;
+        t.sleptAt -= Math.round(days * 24000);
+        t.ownDayUntil = 0;
+    }
+
+    /** [long6] Tests: the end of the town's own day, moved this many ticks earlier (0 for none). */
+    public static long ownDayLeftForTests(UUID village, long earlier) {
+        Town t = TOWNS.get(village);
+        if (t == null) return 0;
+        if (earlier > 0 && t.ownDayUntil > 0) t.ownDayUntil -= earlier;
+        return t.ownDayUntil;
     }
 
     /** Where the players are, against this town's ground. */
@@ -645,7 +693,16 @@ public final class TownLod {
         while (t.counts.size() > COUNTS_KEPT) t.counts.removeFirst();
         if (t.counts.size() < 2) return;
         Rates measured = trend(t.counts);
-        if (measured.days() < MIN_TREND_DAYS && rates(v.id(), t).days() > 0) return;
+        if (measured.days() < MIN_TREND_DAYS && rates(v.id(), t).days() > 0) {
+            // [long6] Its own day (TownWake): a day's trend is all there is, so it goes into the rates it has as a
+            // running mean, and its rates follow it as it grows.
+            if (t.ownDayUntil > time && measured.days() >= MIN_OWN_DAYS) {
+                t.rates = merge(rates(v.id(), t), measured);
+                Ledger.note(v.id(), RATES_NOTE, write(t.rates));
+                t.counts.clear();
+            }
+            return;
+        }
         t.rates = measured;
         Ledger.note(v.id(), RATES_NOTE, write(measured));
     }
