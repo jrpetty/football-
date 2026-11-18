@@ -146,7 +146,8 @@ public class CityLookGameTests {
             if (day != lastDay) {
                 lastDay = day;
                 stock(level, v);
-                Kit.log("[VT] ct01 " + ground + " day " + day + ": " + Villages.headcount(id) + " folk, " + Ledger.buildings(id).size() + " buildings");
+                Kit.log("[VT] ct01 " + ground + " day " + day + ": " + Villages.headcount(id) + " folk, " + Ledger.buildings(id).size() + " buildings, "
+                    + paved(level, v) + " street cells laid");
             }
             // The town's growth hurried along: its next wanted building put up on the lot its plan gives it (the admin's
             // "build all", a building a minute), while its own hands lay its streets, gardens and greens as they would.
@@ -287,6 +288,17 @@ public class CityLookGameTests {
         out.put("farmlandAmongHomes", farmInHomes);
         out.put("bareEarth", scars);
         out.put("squareGreens", greens);
+        out.put("streetsLaid", paved(level, v));
+        out.put("flowingWater", flowing(level, h, reach + 10));
+        int worksByHomes = 0;
+        for (Ledger.Building b : Ledger.buildings(id)) {
+            if (!WORKS.contains(b.structure())) continue;
+            for (Ledger.Building o : Ledger.buildings(id)) {
+                if (HOMES.contains(o.structure()) && Math.abs(o.anchor().getX() - b.anchor().getX()) <= TownPlan.LOT + 2
+                        && Math.abs(o.anchor().getZ() - b.anchor().getZ()) <= TownPlan.LOT + 2) { worksByHomes++; break; }
+            }
+        }
+        out.put("worksNextToHomes", worksByHomes);
         return out;
     }
 
@@ -299,6 +311,34 @@ public class CityLookGameTests {
             if (st.is(BlockTags.FENCES)) n[0]++;
             else if (st.is(BlockTags.FENCE_GATES)) n[1]++;
             else if (st.is(BlockTags.WALLS) || st.is(BlockTags.LEAVES)) n[2]++;
+        }
+        return n;
+    }
+
+    /** Street and square cells within the town's reach laid: worn to a path or paved (gravel, cobbles, stone bricks),
+     *  as "laid/of (pct%)". */
+    static String paved(ServerLevel level, Villages.Village v) {
+        BlockPos h = v.centre();
+        int reach = Villages.townReach(v.id()), cells = 0, laid = 0;
+        for (int dx = -reach; dx <= reach; dx++) for (int dz = -reach; dz <= reach; dz++) {
+            if (!TownPlan.isStreet(dx, dz) && !(TownPlan.isSquare(dx, dz) && Math.max(Math.abs(dx), Math.abs(dz)) > 4)) continue;
+            int x = h.getX() + dx, z = h.getZ() + dz;
+            if (!level.hasChunk(x >> 4, z >> 4)) continue;
+            BlockState top = level.getBlockState(new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z));
+            if (top.getFluidState().isEmpty()) cells++;
+            if (top.is(Blocks.DIRT_PATH) || top.is(Blocks.GRAVEL) || top.is(Blocks.COBBLESTONE) || top.is(Blocks.STONE_BRICKS)) laid++;
+        }
+        return laid + "/" + cells + " (" + (cells == 0 ? 0 : 100 * laid / cells) + "%)";
+    }
+
+    /** Flowing water (not a source) at the top of the ground within this reach. */
+    static int flowing(ServerLevel level, BlockPos h, int reach) {
+        int n = 0;
+        for (int dx = -reach; dx <= reach; dx++) for (int dz = -reach; dz <= reach; dz++) {
+            int x = h.getX() + dx, z = h.getZ() + dz;
+            if (!level.hasChunk(x >> 4, z >> 4)) continue;
+            var f = level.getFluidState(new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1, z));
+            if (f.is(net.minecraft.tags.FluidTags.WATER) && !f.isSource()) n++;
         }
         return n;
     }

@@ -84,7 +84,7 @@ public final class TownWork {
                     if (square || TownPlan.isStreet(x, z)) out.add(new int[]{ x, z });
                 }
             }
-            out.sort(Comparator.comparingInt(c -> Math.max(Math.abs(c[0]), Math.abs(c[1]))));
+            CityStreets.order(out);                // [city9] in walking order: the square, the avenues, the ring, the lanes
             return out;
         });
     }
@@ -165,28 +165,8 @@ public final class TownWork {
             level.setBlockAndUpdate(top.above(2), Blocks.TORCH.defaultBlockState());
             return 1;
         }
-        if (!earth(ground) && !(ground.is(Blocks.DIRT_PATH) && (square ? stoneAge : avenue && ironAge))) return 0;
-        if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return 0;
-        if (!TownBlocks.mayPlace(level, v, top, TownBlocks.Why.ROAD)) return 0;                                    // [integrity] not a building's floor
-        BlockState paving = null;
-        if (square && stoneAge) {
-            Predicate<ItemStack> stone = ironAge ? s -> s.is(Items.STONE_BRICKS) : s -> s.is(Items.COBBLESTONE);
-            if (take(level, v, stone, 1)) paving = ironAge ? Blocks.STONE_BRICKS.defaultBlockState() : Blocks.COBBLESTONE.defaultBlockState();
-            else if (ironAge && take(level, v, s -> s.is(Items.COBBLESTONE), 1)) paving = Blocks.COBBLESTONE.defaultBlockState();
-        } else if (avenue && ironAge) {
-            if (take(level, v, s -> s.is(Items.COBBLESTONE), 1)) paving = Blocks.COBBLESTONE.defaultBlockState();
-        }
-        if (paving == null) {
-            if (ground.is(Blocks.DIRT_PATH)) return 0;
-            paving = Blocks.DIRT_PATH.defaultBlockState();
-        }
-        if (!TownJobs.atWork(level, v, "streets", top, paving.is(Blocks.DIRT_PATH) ? "laying the streets" : "paving the streets")) {
-            if (!paving.is(Blocks.DIRT_PATH)) give(level, v, new ItemStack(paving.getBlock().asItem()));   // the stone back, till a hand is there
-            return -1;
-        }
-        if (!above.isAir()) level.removeBlock(top.above(), false);   // the grass and flowers in the way
-        level.setBlockAndUpdate(top, paving);
-        return 1;
+        // [city9] Worn or paved in what the age lays (a path, gravel, cobbles, stone bricks), never at the builders' cost (CityStreets).
+        return CityStreets.pave(level, v, top, ground, above, square, avenue, age);
     }
 
     /**
