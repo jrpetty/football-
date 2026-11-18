@@ -20,7 +20,8 @@ import java.util.Map;
 
 /**
  * [terra10] The founding's ground looked over once the levelling is done: everything a player walking it
- * would call a fault, counted (TerraformGameTests, and /village groundcheck on a live server).
+ * would call a fault, counted (TerraformGameTests, and /village groundcheck on a live server). heldOff: columns of the
+ * square the plan itself kept off the level (the bank of kept water, the ground round something built).
  *
  * <p>The square is every column the plan levelled; the edge every column of the band it cut or built up.
  * Columns the plan left as they were on purpose (water it kept, ground round anything built, a village of
@@ -78,7 +79,7 @@ public final class TerraformAudit {
     public static Map<String, Integer> scan(ServerLevel level, Done d) {
         FIRST.clear();
         Map<String, Integer> c = new LinkedHashMap<>();
-        for (String k : new String[]{ "square", "offLevel", "holes", "crust", "pits", "oddTop", "oddTopDirt", "oddTopRock",
+        for (String k : new String[]{ "square", "heldOff", "offLevel", "holes", "crust", "pits", "oddTop", "oddTopDirt", "oddTopRock",
                 "oddTopOre", "oddTopGravel", "growthOnSquare", "floatLeaves", "floatLogs", "stumps", "floatVines", "sheer",
                 "steps2", "rawEdge", "flowing", "lava", "junk", "falling", "items" }) c.put(k, 0);
         FoundingPlan.Ground g = d.ground;
@@ -98,6 +99,7 @@ public final class TerraformAudit {
             boolean ours = k == FoundingPlan.LAND || k == FoundingPlan.FILL;
             boolean square = FoundingPlan.levelled(dx, dz, d.radius, d.seed);
             sq[i] = square && ours && g.target != null && g.target[i] == d.level;
+            if (square && ours && g.target != null && g.target[i] != d.level) c.merge("heldOff", 1, Integer::sum);   // the plan kept it off the level
             worked[i] = ours && g.target != null && (sq[i] || g.target[i] != g.ground[i]);
             counted[i] = ours;
             if (top[i] != Integer.MIN_VALUE) {
