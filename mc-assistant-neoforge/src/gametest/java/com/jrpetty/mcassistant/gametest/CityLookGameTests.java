@@ -58,6 +58,8 @@ public class CityLookGameTests {
     private static final double DAYS = Double.parseDouble(System.getProperty("ct.days", "3"));
     private static final int FOLK = Integer.getInteger("ct.folk", 40);
     private static final String GROUNDS = System.getProperty("ct.grounds", "lake,hills");
+    /** A building put up every so many ticks of the growth (-Dct.build). */
+    private static final int BUILD_EVERY = Integer.getInteger("ct.build", 1500);
 
     // ============================================================ ct01: the audit
 
@@ -104,6 +106,7 @@ public class CityLookGameTests {
         final BlockPos heart;
         UUID id;
         long began = -1;
+        long nextBuild = -1;
         int lastDay = -1;
         boolean done;
         String failure;
@@ -144,6 +147,13 @@ public class CityLookGameTests {
                 lastDay = day;
                 stock(level, v);
                 Kit.log("[VT] ct01 " + ground + " day " + day + ": " + Villages.headcount(id) + " folk, " + Ledger.buildings(id).size() + " buildings");
+            }
+            // The town's growth hurried along: its next wanted building put up on the lot its plan gives it (the admin's
+            // "build all", a building a minute), while its own hands lay its streets, gardens and greens as they would.
+            if (t >= nextBuild && ran < (long) (DAYS * 24000L) - 4000L) {
+                nextBuild = t + BUILD_EVERY;
+                String p = com.jrpetty.mcassistant.entity.AdminTools.nextProject(id);
+                if (p != null) com.jrpetty.mcassistant.entity.AdminTools.buildProject(level, v, p, false);
             }
             if (ran >= (long) (DAYS * 24000L)) {
                 Map<String, Object> a = audit(level, v);
@@ -191,6 +201,7 @@ public class CityLookGameTests {
         boolean[][] walked = walk(level, h, TownPlan.reach() + TownPlan.STREET + 1);
         int off = TownPlan.reach() + TownPlan.STREET + 1;
         int planned = 0, onStreets = 0, homes = 0, homesX = 0, works = 0, worksInCore = 0;
+        int homesTurned = 0, fenced = 0, walled = 0, openPlots = 0;
         int maxHome = 0;
         List<String> offList = new ArrayList<>();
         java.util.Set<Long> footprint = new java.util.HashSet<>();
@@ -207,6 +218,11 @@ public class CityLookGameTests {
             if (HOMES.contains(b.structure())) {
                 homes++;
                 if (b.facing().getAxis() == Direction.Axis.X) homesX++;
+                if ((b.facing().getAxis() == Direction.Axis.X) != (Math.abs(dx) > Math.abs(dz))) homesTurned++;
+                int[] e = plotEdges(level, b.anchor());
+                if (e[0] + e[1] >= 8) fenced++;
+                else if (e[2] >= 8) walled++;
+                else openPlots++;
                 maxHome = Math.max(maxHome, Math.max(Math.abs(dx), Math.abs(dz)));
             }
             TownPlan.Lot lot = null;
@@ -261,12 +277,27 @@ public class CityLookGameTests {
         out.put("streetsWalkedPct", cells == 0 ? 0 : 100 * walkedCells / cells);
         out.put("homes", homes);
         out.put("homesFacingXPct", homes == 0 ? 0 : 100 * homesX / homes);
+        out.put("homesTurned", homesTurned);
+        out.put("plotsFencedWalledOpen", fenced + "/" + walled + "/" + openPlots);
         out.put("works", works);
         out.put("worksInCore", worksInCore);
         out.put("farmlandAmongHomes", farmInHomes);
         out.put("bareEarth", scars);
         out.put("squareGreens", greens);
         return out;
+    }
+
+    /** Round a plot's edge (five out from the house's middle): fences and gates, walls, hedges. */
+    static int[] plotEdges(ServerLevel level, BlockPos a) {
+        int[] n = new int[3];
+        for (int dx = -5; dx <= 5; dx++) for (int dz = -5; dz <= 5; dz++) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) != 5) continue;
+            BlockState st = level.getBlockState(a.offset(dx, 0, dz));
+            if (st.is(BlockTags.FENCES)) n[0]++;
+            else if (st.is(BlockTags.FENCE_GATES)) n[1]++;
+            else if (st.is(BlockTags.WALLS) || st.is(BlockTags.LEAVES)) n[2]++;
+        }
+        return n;
     }
 
     /** The cell straight out from a lot's door, from the heart. */
@@ -331,10 +362,10 @@ public class CityLookGameTests {
     @GameTest(template = "empty", timeoutTicks = 400, batch = "ct02_lot_over_water")
     public static void ct02_lot_over_water(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        int cx = 3960000, cz = Z;
-        VillageFolkEntity first = founder(helper, cx, cz);
+        VillageFolkEntity first = founder(helper, 3960000, Z);
         UUID id = first.ownerId();
         Villages.Village v = Villages.get(id);
+        int cx = v.centre().getX(), cz = v.centre().getZ();               // the heart, where the founders camped
         int r = TownPlan.reach() + 6;
         channel(level, cx, cz, r);
         com.jrpetty.mcassistant.entity.CityPlan.forget(id);
@@ -366,10 +397,11 @@ public class CityLookGameTests {
     @GameTest(template = "empty", timeoutTicks = 400, batch = "ct03_square_greens")
     public static void ct03_square_greens(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        int cx = 3980000, cz = Z;
-        VillageFolkEntity first = founder(helper, cx, cz);
+        VillageFolkEntity first = founder(helper, 3980000, Z);
         UUID id = first.ownerId();
-        BlockPos heart = Kit.surface(level, cx, cz);
+        Villages.Village v0 = Villages.get(id);
+        final int cx = v0.centre().getX(), cz = v0.centre().getZ();      // the heart, where the founders camped
+        BlockPos heart = v0.centre();
         for (int i = 0; i < 5; i++) VillageFolkSpawnerBlock.raise(level, Kit.surface(level, cx + 5 + 2 * i, cz + 5), 0.0F);
         helper.runAtTickTime(5, () -> {
             Villages.Village v = Villages.get(id);
@@ -446,10 +478,10 @@ public class CityLookGameTests {
     @GameTest(template = "empty", timeoutTicks = 400, batch = "ct04_plot_edges")
     public static void ct04_plot_edges(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        int cx = 3940000, cz = Z;
-        VillageFolkEntity first = founder(helper, cx, cz);
+        VillageFolkEntity first = founder(helper, 3940000, Z);
         UUID id = first.ownerId();
         Villages.Village v = Villages.get(id);
+        int cx = v.centre().getX(), cz = v.centre().getZ();               // the heart, where the founders camped
         int y = Kit.surface(level, cx, cz).getY();
         // Houses on the plan's lots, side by side as they stand: two fenced neighbours, one walled and one open.
         int[] pairs = { 22, 47, 72, -33, -58, -83 };                     // the nearer of two lots side by side (22 and 33, ...)
