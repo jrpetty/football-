@@ -150,7 +150,7 @@ public class CityLookGameTests {
                 lastDay = day;
                 stock(level, v);
                 Kit.log("[VT] ct01 " + ground + " day " + day + ": " + Villages.headcount(id) + " folk, " + Ledger.buildings(id).size() + " buildings, "
-                    + paved(level, v) + " street cells laid");
+                    + paved(level, v) + " street cells laid" + pavingNote(level, id));
             }
             // The town's growth hurried along: its next wanted building put up on the lot its plan gives it (the admin's
             // "build all", a building a minute), while its own hands lay its streets, gardens and greens as they would.
@@ -332,6 +332,17 @@ public class CityLookGameTests {
             if (top.is(Blocks.DIRT_PATH) || top.is(Blocks.GRAVEL) || top.is(Blocks.COBBLESTONE) || top.is(Blocks.STONE_BRICKS)) laid++;
         }
         return laid + "/" + cells + " (" + (cells == 0 ? 0 : 100 * laid / cells) + "%)";
+    }
+
+    /** Who is at the paving and where (the newer build only; empty on the older). */
+    static String pavingNote(ServerLevel level, UUID id) {
+        try {
+            VillageFolkEntity hand = com.jrpetty.mcassistant.entity.TownJobs.handAt(level, id, "paving");
+            return "; the paving's hand " + (hand == null ? "none" : hand.blockPosition().toShortString())
+                + ", cells passed over " + com.jrpetty.mcassistant.entity.CityStreets.passedOver(id);
+        } catch (LinkageError older) {
+            return "";
+        }
     }
 
     /** Flowing water (not a source) at the top of the ground within this reach. */

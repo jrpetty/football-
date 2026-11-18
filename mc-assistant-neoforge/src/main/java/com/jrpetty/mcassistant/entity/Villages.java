@@ -510,6 +510,7 @@ public final class Villages {
         CityGreen.resetForTests();                                  // [city9] the square's greens
         CityWater.resetForTests();                                  // [city9] the water swept
         CityDress.resetForTests();                                  // [city9] the houses dressed
+        CityStreets.resetForTests();                                // [city9] the paving's waits
         Court.resetForTests();
         School.resetForTests();
         Annals.resetForTests();

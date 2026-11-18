@@ -68,7 +68,10 @@ public final class TownWork {
         for (int looked = 0; looked < 400 && done < budget; looked++) {
             int[] c = cells.get(Math.floorMod(cursor, cells.size()));
             int r = work(level, v, c[0], c[1], age);
-            if (r < 0) break;                       // a hand is on its way to it: the work waits there
+            // [city9] A hand on its way: the work waits there, but not for ever. A cell no hand gets to (shut in, up a bank)
+            // held up every street of a town of ninety for days; after a minute it is passed over till the next time round.
+            if (r < 0 && !CityStreets.givenUp(id, cursor, now)) break;
+            if (r >= 0) CityStreets.reached(id);
             cursor++;
             if (r > 0) done++;
         }

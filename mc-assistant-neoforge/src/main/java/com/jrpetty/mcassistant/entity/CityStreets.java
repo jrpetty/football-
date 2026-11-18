@@ -92,6 +92,42 @@ public final class CityStreets {
         return 1;
     }
 
+    /** Each town's paving: the cell it waits on (its place in the round) and since when. */
+    private record Wait(int cursor, long since) {}
+
+    private static final java.util.Map<java.util.UUID, Wait> WAITING = new java.util.concurrent.ConcurrentHashMap<>();
+    /** How long the paving waits on one cell for a hand before it passes it over (ticks). */
+    static final long PATIENCE = 1200;
+    private static final java.util.Map<java.util.UUID, Integer> PASSED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** The paving waits on the cell at this place in its round: has it waited long enough to pass it over? */
+    static boolean givenUp(java.util.UUID village, int cursor, long now) {
+        Wait w = WAITING.get(village);
+        if (w == null || w.cursor() != cursor || now < w.since()) {
+            WAITING.put(village, new Wait(cursor, now));
+            return false;
+        }
+        if (now - w.since() < PATIENCE) return false;
+        WAITING.remove(village);
+        PASSED.merge(village, 1, Integer::sum);
+        return true;
+    }
+
+    /** A cell seen to (or nothing to do there): the wait is over. */
+    static void reached(java.util.UUID village) {
+        WAITING.remove(village);
+    }
+
+    /** Tests and the books: how many cells the paving has passed over for want of a hand getting there. */
+    public static int passedOver(java.util.UUID village) {
+        return PASSED.getOrDefault(village, 0);
+    }
+
+    public static void resetForTests() {
+        WAITING.clear();
+        PASSED.clear();
+    }
+
     /** The cells (offsets from the heart) in walking order: the square, the avenues outward, the ring, the side streets. */
     static void order(List<int[]> cells) {
         cells.sort(Comparator.comparingLong(CityStreets::key));
