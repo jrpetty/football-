@@ -357,6 +357,7 @@ public final class TownLook {
         StringBuilder sb = new StringBuilder("THE TOWN'S LOOK " + Villages.name(id) + ":");
         sb.append(" | avenues: ").append(Avenues.line(level, v));
         sb.append(" | furniture: ").append(StreetFurniture.line(level, v));
+        sb.append(" | the square's greens: ").append(CityGreen.trees(level, v)).append(" of 4 planted");   // [city9]
         sb.append(" | allotments: ").append(Allotments.line(level, v));
         sb.append(" | orchard: ").append(Orchard.line(level, v));
         sb.append(" | windmill: ").append(Windmill.line(level, v));

@@ -13843,6 +13843,7 @@ between them and the town or not. Five changes make it read as a place that grew
   Never in the courtyard before the board or where anything stands; only what the stores can spare (the saplings the
   households' gardens and the avenues keep come first). A grown tree's leaves lower than three blocks over the square
   are trimmed off, what they drop into the stores; the tree is never felled. The streets' paving leaves the beds alone.
+  `/village townlook` says how many of the four are planted.
 - **Each plot closed in its own way** (CityPlots, in Grow.garden). A house's garden used to be a fence all round and a
   gate for every house, and two fences side by side between neighbours. Now each plot is settled once, by where it
   stands: a fence with a gate (about two in five), a low wall of the stores' cobblestone (stone bricks from the Iron
