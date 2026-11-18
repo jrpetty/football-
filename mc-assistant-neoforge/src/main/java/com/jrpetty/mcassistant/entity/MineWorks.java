@@ -979,12 +979,23 @@ public final class MineWorks {
     private static final java.util.concurrent.ConcurrentLinkedDeque<String> EVENTS = new java.util.concurrent.ConcurrentLinkedDeque<>();
 
     public static void event(AssistantEntity a, String what) {
-        EVENTS.addLast(a.level().getGameTime() + " " + a.getName().getString() + ": " + what);
-        while (EVENTS.size() > 40) EVENTS.pollFirst();
+        UUID v = villageOf(a);
+        EVENTS.addLast((v == null ? "-" : v.toString()) + "|" + a.level().getGameTime() + " " + a.displayNameCap() + ": " + what);
+        while (EVENTS.size() > 60) EVENTS.pollFirst();
+    }
+
+    /** The last few things done in this town's works, latest last. */
+    static List<String> lately(UUID village, int most) {
+        List<String> out = new ArrayList<>();
+        String key = village.toString() + "|";
+        for (String e : EVENTS) if (e.startsWith(key)) out.add(e.substring(key.length()));
+        return out.subList(Math.max(0, out.size() - most), out.size());
     }
 
     public static List<String> eventsForTests() {
-        return new ArrayList<>(EVENTS);
+        List<String> out = new ArrayList<>();
+        for (String e : EVENTS) out.add(e.substring(e.indexOf('|') + 1));
+        return out;
     }
 
     /** The task worked: the record brought up to date, the claim let go. */
@@ -1496,6 +1507,7 @@ public final class MineWorks {
             for (AssistantEntity a : Villages.folkOf(village)) if (a.getUUID().equals(c.by())) out.add(a.displayNameCap() + " is sinking the main shaft.");
         }
         out.addAll(MineDemand.lines(level, w, plan));
+        for (String e : lately(village, 4)) out.add("Lately: " + e.substring(e.indexOf(' ') + 1));
         return out;
     }
 
