@@ -313,7 +313,10 @@ public class WorksGoal extends Goal {
         // Not where it stands to work: there first.
         BlockPos stand = t.stand.get(Math.min(ci, t.stand.size() - 1));
         if (!vein.isEmpty()) { followVein(level, t); return; }
-        if (!at(stand) && a.distanceToSqr(Vec3.atBottomCenterOf(stand)) > 2.2) {
+        // Where it stands to work, unless what is next to break is in its reach from where it is.
+        BlockPos nextBlock = blocks.peek();
+        boolean inReach = nextBlock != null && a.getEyePosition().distanceTo(Vec3.atCenterOf(nextBlock)) <= REACH;
+        if (!inReach && !at(stand) && a.distanceToSqr(Vec3.atBottomCenterOf(stand)) > 2.2) {
             if (!walk(stand)) return;
         }
         while (!blocks.isEmpty()) {

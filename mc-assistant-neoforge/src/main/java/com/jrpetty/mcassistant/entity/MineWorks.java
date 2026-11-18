@@ -158,6 +158,7 @@ public final class MineWorks {
         boolean head;
         final List<Drift> drifts = new ArrayList<>();
         String raw;
+        int approachY = Integer.MIN_VALUE;   // the ground at the way in, read when the works are read
 
         Works(UUID village) { this.village = village; }
     }
@@ -183,6 +184,7 @@ public final class MineWorks {
         if (raw != null && !raw.isEmpty()) {
             w = parse(village, raw);
             if (w != null) {
+                groundAtTheWayIn(level, w);
                 CACHE.put(village, w);
                 return w;
             }
@@ -196,9 +198,18 @@ public final class MineWorks {
         w.top = Integer.MAX_VALUE;
         for (int dx = 2; dx <= 3; dx++) for (int dz = 2; dz <= 3; dz++)
             w.top = Math.min(w.top, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, w.sx - dx, w.sz - dz));
+        groundAtTheWayIn(level, w);
         save(w);
         Villages.tell(village, level.getDayTime() / 24000L, "the town's miners began the main shaft of the mine, at " + w.sx + ", " + w.sz);
         return w;
+    }
+
+    /** The way in stands on the ground there (a slope may stand over the first landing). */
+    private static void groundAtTheWayIn(ServerLevel level, Works w) {
+        if (level.hasChunk((w.sx - 4) >> 4, (w.sz - 2) >> 4)) {
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, w.sx - 4, w.sz - 2);
+            w.approachY = y <= w.top + 3 ? y : w.top;      // never on something built up there
+        }
     }
 
     static void save(Works w) {
@@ -327,7 +338,7 @@ public final class MineWorks {
 
     /** The way in from the surface: beside the first landing, to the west. */
     static BlockPos approach(Works w) {
-        return new BlockPos(w.sx - 4, w.top, w.sz - 2);
+        return new BlockPos(w.sx - 4, Math.max(w.top, w.approachY), w.sz - 2);
     }
 
     // ------------------------------------------------------------------ the levels

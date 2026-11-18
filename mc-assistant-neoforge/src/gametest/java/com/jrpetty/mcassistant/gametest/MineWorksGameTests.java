@@ -329,7 +329,7 @@ public class MineWorksGameTests {
             keepAtIt(r, m);
             List<int[]> drifts = MineWorks.driftsForTests(level, r.v);
             int[] d = drifts.isEmpty() ? null : drifts.get(0);
-            if (d != null && !wet[0] && d[3] >= 4) {
+            if (d != null && !wet[0] && d[3] >= 10) {
                 // Water three blocks ahead of the face, in the way it is going.
                 List<BlockPos> cells = MineWorks.cellsForTests(level, r.v, MineWorks.COAL);
                 BlockPos tip = cells.get(d[3] - 1), prev = cells.get(d[3] - 2);
