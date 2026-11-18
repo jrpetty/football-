@@ -477,7 +477,7 @@ public final class MineWorks {
     private static boolean claim(Works w, String key, VillageFolkEntity f, long now, int level, String words) {
         Map<String, Claim> m = CLAIMS.computeIfAbsent(w.village, k -> new ConcurrentHashMap<>());
         Claim c = m.get(key);
-        if (c != null && c.until() > now && !c.by().equals(f.getUUID())) return false;
+        if (c != null && c.until() > now && !c.by().equals(f.getUUID()) && onShift(w.village, c.by())) return false;
         m.values().removeIf(x -> x.by().equals(f.getUUID()) || x.until() <= now);
         m.put(key, new Claim(f.getUUID(), now + CLAIM_TICKS, level, words));
         return true;
@@ -486,7 +486,15 @@ public final class MineWorks {
     private static boolean claimed(Works w, String key, VillageFolkEntity f, long now) {
         Map<String, Claim> m = CLAIMS.get(w.village);
         Claim c = m == null ? null : m.get(key);
-        return c != null && c.until() > now && !c.by().equals(f.getUUID());
+        return c != null && c.until() > now && !c.by().equals(f.getUUID()) && onShift(w.village, c.by());
+    }
+
+    /** Is this miner on a shift in the works now? A claim held by one called away to other work is let go. */
+    private static boolean onShift(UUID village, UUID by) {
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a.getUUID().equals(by)) return a.running(com.jrpetty.mcassistant.entity.goal.WorksGoal.class);
+        }
+        return false;
     }
 
     /** Its claim let go (its shift over, or broken off). */
