@@ -357,7 +357,7 @@ public final class WindowBoxes {
         if (home == null) return;
         VillageFolkEntity g = gardener(id, home);
         if (g == null || ERRANDS.containsKey(g.getUUID())) return;
-        if (TownBudget.oneCrew(id)) return;                                // [capital] short of money: the boxes wait for the rain
+        if (TownBudget.frugal(id)) return;                                 // [capital] careful of its money: the boxes wait for the rain
         // The town's copper can with water in it first (FieldTools: the farmers' and the gardeners'), else a bucket.
         ItemStack water = Crafts.takeOne(level, v, s -> s.getItem() instanceof com.jrpetty.mcassistant.item.WateringCanItem
             && com.jrpetty.mcassistant.item.WateringCanItem.water(s) > 0);

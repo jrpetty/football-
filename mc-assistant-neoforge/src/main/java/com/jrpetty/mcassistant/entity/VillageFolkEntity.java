@@ -7648,11 +7648,13 @@ public class VillageFolkEntity extends AssistantEntity {
         int masonry = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY, 0);
         int brick = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.BRICK, 0);
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> brickBlocks = st -> st.is(net.minecraft.world.item.Items.BRICKS);
-        topUp(heart, brickBlocks, brick, r);
-        if (countCarried(brickBlocks) < brick && level() instanceof net.minecraft.server.level.ServerLevel server
+        // [capital] A town careful of its money builds its chimneys of rough stone, not bought brick.
+        int brickWant = ownerId() != null && MarketMaker.live(ownerId()) && TownBudget.frugal(ownerId()) ? Math.min(brick, countCarried(brickBlocks)) : brick;
+        topUp(heart, brickBlocks, brickWant, r);
+        if (countCarried(brickBlocks) < brickWant && level() instanceof net.minecraft.server.level.ServerLevel server
                 && ownerId() != null && Villages.get(ownerId()) != null) {
             Villages.Village vill = Villages.get(ownerId());
-            int more = Math.min(brick - countCarried(brickBlocks),
+            int more = Math.min(brickWant - countCarried(brickBlocks),
                 Market.stock(server, ownerId(), st -> st.is(net.minecraft.world.item.Items.BRICK)) / 4);
             if (more > 0 && Masonry.take(server, vill, net.minecraft.world.item.Items.BRICKS, more)) {
                 net.minecraft.world.item.ItemStack left = insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BRICKS, more));

@@ -206,7 +206,7 @@ public final class Grow {
         UUID id = v.id();
         Villages.Age age = Villages.ageOf(id);
         if (age.ordinal() < Villages.Age.STONE.ordinal()) return 0;
-        if (TownBudget.oneCrew(id)) return 0;                              // [capital] short of money: its gardens and makeovers wait
+        if (TownBudget.frugal(id)) return 0;                               // [capital] careful of its money: its gardens and makeovers wait
         int done = 0;
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (!b.structure().equals("house") || !Land.areaLoaded(level, b.anchor(), 7)) continue;
