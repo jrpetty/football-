@@ -93,7 +93,8 @@ public class BusinessScreen extends Screen {
         UiStyle.headerBand(g, left, top, w, HEAD - 6);
         int x = left + PAD, inner = w - PAD * 2;
         if (list()) {
-            UiStyle.title(g, font, "Businesses of " + data.getString("town"), x, top + 6);
+            UiStyle.title(g, font, UiStyle.clip(font, "Businesses of " + data.getString("town"), inner - 50), x, top + 6);
+            button(g, "Close", left + w - PAD - 40, top + 6, 40, mx, my, this::onClose);   // [ui] a way out besides Esc
             small(g, "Click a business for its books. Every coin is counted: " + data.getString("census"), x, top + 18, UiStyle.TEXT_MUTED, inner);
             drawList(g, x, top + HEAD, inner, mx, my);
         } else {
@@ -129,7 +130,7 @@ public class BusinessScreen extends Screen {
     }
 
     private void drawList(GuiGraphics g, int x, int y, int inner, int mx, int my) {
-        int[] cols = { 0, 120, 210, 250, 300, 350 };
+        int[] cols = { 0, inner * 29 / 100, inner * 50 / 100, inner * 60 / 100, inner * 72 / 100, inner * 84 / 100 };   // [ui] to the panel's width
         String[] heads = { "Business", "Owner", "Staff", "Week took", "Week net", "Till" };
         for (int i = 0; i < heads.length; i++) small(g, heads[i], x + cols[i], y, UiStyle.TEXT_FAINT, 200);
         y += 10;
@@ -139,8 +140,8 @@ public class BusinessScreen extends Screen {
             CompoundTag r = rows.getCompound(i);
             boolean over = mx >= x && mx < x + inner && my >= y - 1 && my < y + 10;
             if (over) g.fill(x - 2, y - 1, x + inner, y + 9, UiStyle.TILE_HOVER);
-            small(g, r.getString("name") + (r.getBoolean("open") ? "" : " (closed)"), x + cols[0], y, UiStyle.TEXT, 115);
-            small(g, r.getBoolean("town") ? "the town" : r.getString("owner"), x + cols[1], y, r.getBoolean("town") ? UiStyle.INFO : UiStyle.TEXT_MUTED, 85);
+            small(g, r.getString("name") + (r.getBoolean("open") ? "" : " (closed)"), x + cols[0], y, UiStyle.TEXT, cols[1] - 5);
+            small(g, r.getBoolean("town") ? "the town" : r.getString("owner"), x + cols[1], y, r.getBoolean("town") ? UiStyle.INFO : UiStyle.TEXT_MUTED, cols[2] - cols[1] - 5);
             small(g, Integer.toString(r.getInt("staff")), x + cols[2], y, UiStyle.TEXT_MUTED, 30);
             small(g, p(r.getLong("rev7")), x + cols[3], y, UiStyle.TEXT, 50);
             long net = r.getLong("net7");
@@ -151,7 +152,11 @@ public class BusinessScreen extends Screen {
             y += 11;
             shown++;
         }
-        if (rows.isEmpty()) small(g, "No businesses yet: a café, a shop or a tavern built makes the first.", x, y, UiStyle.TEXT_MUTED, inner);
+        if (rows.isEmpty()) {                                           // [ui] an empty state, not a lone line
+            int bh = top + h - PAD - y;
+            UiStyle.well(g, x - 2, y, inner + 4, bh, UiStyle.PAGE);
+            UiStyle.empty(g, font, "No businesses yet", "A café, a shop or a tavern built makes the first.", x - 2, y, inner + 4, bh);
+        }
     }
 
     private void summary(GuiGraphics g, int x, int y, int inner, int mx, int my) {

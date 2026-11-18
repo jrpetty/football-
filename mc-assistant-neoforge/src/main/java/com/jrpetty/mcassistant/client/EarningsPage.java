@@ -162,18 +162,19 @@ public final class EarningsPage {
             List<int[]> buttons = new ArrayList<>();
             String action = wy.getString("action");
             if (action.equals("take")) {
-                bx = button(g, font, "Every day", bx, ry + 6, !blocked || wy.getString("why").startsWith("Opens"), mx, my, buttons);
+                bx = button(g, font, rw < 300 ? "Daily" : "Every day", bx, ry + 6, !blocked || wy.getString("why").startsWith("Opens"), mx, my, buttons);
                 bx = button(g, font, "Take", bx, ry + 6, !blocked, mx, my, buttons);
             } else if (action.equals("contract")) {
                 bx = button(g, font, "Accept", bx, ry + 6, true, mx, my, buttons);
             }
             boolean hasAt = wy.contains("at");
-            if (hasAt) bx = button(g, font, "Marker", bx, ry + 6, true, mx, my, buttons);
+            if (hasAt) bx = button(g, font, rw < 300 ? "Mark" : "Marker", bx, ry + 6, true, mx, my, buttons);   // [ui] short on a narrow page
             int textR = bx - 4;
             g.drawString(font, Ui.clip(font, wy.getString("title"), textR - rx - 10 - rwid), rx + 6, ry + 3, blocked ? Ui.FAINT : Ui.INK, false);
             g.drawString(font, reward, textR - rwid, ry + 3, blocked ? Ui.FAINT : Ui.GOOD, false);
             String sub = blocked ? wy.getString("why") : wy.getString("detail");
             String far = (wy.contains("distance") ? wy.getInt("distance") + "m" : "") + (wy.getString("deadline").isEmpty() ? "" : " · " + wy.getString("deadline"));
+            far = Ui.clip(font, far, Math.max(0, (textR - rx - 12) / 2));   // [ui] the distance and hours never run off the row's left
             g.drawString(font, Ui.clip(font, sub, textR - rx - 12 - font.width(far)), rx + 6, ry + 13, blocked ? Ui.BAD : Ui.FAINT, false);
             Ui.right(g, font, far, textR, ry + 13, Ui.FAINT);
             // The clicks: each button, and the row itself for the marker.

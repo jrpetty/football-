@@ -109,7 +109,7 @@ public final class Ui {
 
     /** A small-caps heading over a group of controls, with a hairline rule. */
     public static void section(GuiGraphics g, Font font, String label, int x, int y, int w) {
-        String caps = label.toUpperCase();
+        String caps = clip(font, label.toUpperCase(), Math.max(10, w - 5));   // [ui] never into the next column
         g.fill(x, y + 1, x + 2, y + 8, ACCENT);           // a small tick of colour
         g.drawString(font, caps, x + 5, y, FAINT, false);
         int textEnd = x + 5 + font.width(caps) + 4;

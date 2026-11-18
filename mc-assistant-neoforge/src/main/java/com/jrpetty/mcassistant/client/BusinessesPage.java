@@ -28,7 +28,11 @@ public final class BusinessesPage {
         int cy = y + 12;
         ListTag rows = t.getList("rows", Tag.TAG_COMPOUND);
         if (rows.isEmpty()) {
-            TaxesPage.small(g, font, "None yet: a café, a shop, a tavern or a smithy built opens the first, owned by whoever puts up the money.", x + 2, cy, Ui.FAINT);
+            for (net.minecraft.util.FormattedCharSequence line : TextCache.splitPlain(font,      // [ui] wrapped to the page
+                    "None yet: a café, a shop, a tavern or a smithy built opens the first, owned by whoever puts up the money.", (int) ((w - 6) / 0.75F))) {
+                TaxesPage.small(g, font, line, x + 2, cy, Ui.FAINT);
+                cy += 9;
+            }
             return null;
         }
         int[] cols = { 0, w * 30 / 100, w * 55 / 100, w * 64 / 100, w * 76 / 100, w * 88 / 100 };

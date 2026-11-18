@@ -51,7 +51,8 @@ public final class TaxesPage {
                 int px = x + lw - 40 + p * 9;
                 g.fill(px, cy, px + 7, cy + 6, p < rate ? (rate >= 3 ? ANGRY : rate == 2 ? GRUMBLE : CALM) : 0x40000000);
             }
-            small(g, font, Ui.clip(font, r.getString("words"), (int) ((lw - 50) / 0.75F) - 70), x + 3 + (int) (font.width(r.getString("lever")) * 0.75F) + 6, cy,
+            int leverW = (int) (font.width(r.getString("lever")) * 0.75F);   // [ui] its words stop short of the three marks
+            small(g, font, Ui.clip(font, r.getString("words"), (int) (Math.max(0, lw - 44 - leverW - 12) / 0.75F)), x + 3 + leverW + 6, cy,
                 rate == 0 ? Ui.FAINT : Ui.MUTED);
             small(g, font, Ui.clip(font, r.getString("does"), (int) ((lw - 6) / 0.75F)), x + 3, cy + 8, Ui.FAINT);
             if (mx >= x && mx < x + lw && my >= cy - 1 && my < cy + 17) {
@@ -62,9 +63,10 @@ public final class TaxesPage {
             cy += 19;
         }
         long day = m.getLong("day"), taxDay = m.getLong("taxDay"), sitting = m.getLong("sitting");
-        small(g, font, (taxDay == day ? "Tax day is today" + (m.getBoolean("roundOpen") && !m.getString("collector").isEmpty()
+        small(g, font, Ui.clip(font, (taxDay == day ? "Tax day is today" + (m.getBoolean("roundOpen") && !m.getString("collector").isEmpty()
             ? ": " + m.getString("collector") + " is going round." : ".") : "Next tax day: day " + taxDay + ".")
-            + "  The council sits on the taxes " + (sitting == day ? "this evening." : "on day " + sitting + "."), x + 2, cy, Ui.MUTED);
+            + "  The council sits on the taxes " + (sitting == day ? "this evening." : "on day " + sitting + "."), (int) ((lw - 4) / 0.75F)),
+            x + 2, cy, Ui.MUTED);   // [ui] kept to its column
         cy += 12;
         // ------------------------------------------------ the take
         section(g, font, "What they take: " + m.getInt("week") + " coins this week", x, cy, lw);
@@ -94,7 +96,8 @@ public final class TaxesPage {
                 Component.literal("75, a protest refused: they rise, refuse to pay and strike"));
         }
         ry += 11;
-        small(g, font, "Unrest " + level + " of 100 · the taxes take " + u.getInt("burden") + " in a hundred of a wage", rx + 2, ry, Ui.MUTED);
+        small(g, font, Ui.clip(font, "Unrest " + level + " of 100 · the taxes take " + u.getInt("burden") + " in a hundred of a wage",
+            (int) ((rw - 6) / 0.75F)), rx + 2, ry, Ui.MUTED);   // [ui] kept to its column
         ry += 9;
         List<String[]> body = new ArrayList<>();
         ListTag why = u.getList("why", Tag.TAG_STRING);

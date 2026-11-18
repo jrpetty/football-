@@ -865,7 +865,7 @@ public class CityScreen extends Screen {
         ty += 10;
         String[] heads = { "Mortgage", "Owes", "A week", "Left", "Payments" };
         int[] cols = { 0, w * 44 / 100, w * 58 / 100, w * 71 / 100, w * 81 / 100 };
-        for (int i = 0; i < heads.length; i++) small(g, heads[i], x + cols[i] + (i == 0 ? 2 : 0), ty, Ui.FAINT);
+        heads(g, heads, cols, x, ty);   // [ui] each head kept to its column
         ty += 9;
         List<CompoundTag> loans = new ArrayList<>();
         ListTag ll = bank.getList("loans", Tag.TAG_COMPOUND);
@@ -1132,6 +1132,8 @@ public class CityScreen extends Screen {
     // ------------------------------------------------------------------ [econ-prices] the prices
 
     private static final String[] PRICE_HEADS = { "Good", "Today", "Usual", "", "Week", "Stock", "Made a day", "Wanted a day", "Why" };
+    /** [ui] The same, short, for a narrow page. */
+    private static final String[] PRICE_HEADS_SHORT = { "Good", "Today", "Usual", "", "Week", "Stock", "Made", "Wanted", "Why" };
 
     /** [market] The gap between rows of cards on a page. */
     private static final int CARD_GAP = 4;
@@ -1192,13 +1194,24 @@ public class CityScreen extends Screen {
         if (!p.getString("lean").isEmpty()) notes.add(p.getString("lean"));               // [market] production follows prices
         ListTag moves = p.getList("moves", Tag.TAG_STRING);
         for (int i = 0; i < moves.size(); i++) notes.add("~" + moves.getString(i) + ".");
+        // [ui] The notes leave room for the table's head and three rows over the foot line, the rest said in one line.
+        int noteRoom = Math.max(1, (y + ch - 10 - ty - 10 - 30) / 10);
+        if (notes.size() > noteRoom) {
+            int more = notes.size() - noteRoom + 1;
+            notes = new ArrayList<>(notes.subList(0, noteRoom - 1));
+            notes.add("~and " + more + " more price moves (the mouse over a good for its own)");
+        }
         for (String n : notes) {
             int colour = n.startsWith("!") ? Ui.BAD : n.startsWith("~") ? PURPLE : Ui.MUTED;
             small(g, Ui.clip(font, n.startsWith("!") || n.startsWith("~") ? n.substring(1) : n, wrap), x, ty, colour);
             ty += 10;
         }
         int[] cols = { 0, cw * 22 / 100, cw * 31 / 100, cw * 40 / 100, cw * 44 / 100, cw * 52 / 100, cw * 60 / 100, cw * 70 / 100, cw * 81 / 100 };
-        for (int i = 0; i < PRICE_HEADS.length; i++) small(g, PRICE_HEADS[i], x + cols[i], ty, Ui.FAINT);
+        for (int i = 0; i < PRICE_HEADS.length; i++) {                  // [ui] short heads on a narrow page, each kept to its column
+            String head = cw < 520 ? PRICE_HEADS_SHORT[i] : PRICE_HEADS[i];
+            int room = (i + 1 < cols.length ? cols[i + 1] : cw) - cols[i] - 2;
+            small(g, Ui.clip(font, head, (int) (room / 0.75)), x + cols[i], ty, Ui.FAINT);
+        }
         ty += 10;
         ListTag rows = p.getList("goods", Tag.TAG_COMPOUND);
         int rowsFit = Math.max(1, (y + ch - 10 - ty) / 10);
@@ -1248,6 +1261,8 @@ public class CityScreen extends Screen {
     // ------------------------------------------------------------------ the shops
 
     private static final String[] SHOP_HEADS = { "Ware", "Stock / target", "Sold 7d", "Missed", "Made 7d", "Price", "Cost", "Note" };
+    /** [ui] The same, short, for a narrow page. */
+    private static final String[] SHOP_HEADS_SHORT = { "Ware", "Stock/target", "Sold", "Miss", "Made", "Price", "Cost", "Note" };
 
     /**
      * The village's sellers and their books: the shop, the café, the tavern, the market and the
@@ -1281,8 +1296,13 @@ public class CityScreen extends Screen {
         // The sellers, along the top.
         int kx = x;
         boolean workshop = "workshop".equals(shopSeller);
+        // [ui] Too many for the row with their "(none yet)": the ones not built say it by their faint ink alone.
+        int want = 0;
+        for (CompoundTag t : sellers) want += (int) (font.width(capital(t.getString("name")) + (t.getBoolean("built") ? "" : " (none yet)")) * 0.75) + 13;
+        if (!data.getCompound("workshop").isEmpty()) want += (int) (font.width("The shop's workshop (no shop yet)") * 0.75) + 13;
+        boolean tight = want > cw;
         for (CompoundTag t : sellers) {
-            String label = capital(t.getString("name")) + (t.getBoolean("built") ? "" : " (none yet)");
+            String label = capital(t.getString("name")) + (t.getBoolean("built") || tight ? "" : " (none yet)");
             int kw = (int) (font.width(label) * 0.75) + 10;
             boolean on = t == pick && !workshop;
             g.fill(kx, y, kx + kw, y + 11, on ? Ui.ROW_PICK : Ui.ROW);
@@ -1295,7 +1315,7 @@ public class CityScreen extends Screen {
         // The shop's workshop (Workshop): its makers, its order book and what the age lets it make, a tab of its own.
         CompoundTag ws = data.getCompound("workshop");
         if (!ws.isEmpty()) {
-            String label = "The shop's workshop" + (ws.getBoolean("built") ? "" : " (no shop yet)");
+            String label = (tight ? "Workshop" : "The shop's workshop") + (ws.getBoolean("built") || tight ? "" : " (no shop yet)");
             int kw = (int) (font.width(label) * 0.75) + 10;
             g.fill(kx, y, kx + kw, y + 11, workshop ? Ui.ROW_PICK : Ui.ROW);
             g.renderOutline(kx, y, kw, 11, Ui.EDGE_SOFT);
@@ -1348,7 +1368,11 @@ public class CityScreen extends Screen {
         }
         // The wares.
         int[] cols = { 0, cw * 24 / 100, cw * 44 / 100, cw * 52 / 100, cw * 60 / 100, cw * 68 / 100, cw * 77 / 100, cw * 84 / 100 };
-        for (int i = 0; i < SHOP_HEADS.length; i++) small(g, SHOP_HEADS[i], x + cols[i], ty, Ui.FAINT);
+        for (int i = 0; i < SHOP_HEADS.length; i++) {                   // [ui] short heads on a narrow page, never run together
+            String head = cw < 520 ? SHOP_HEADS_SHORT[i] : SHOP_HEADS[i];
+            int room = (i + 1 < cols.length ? cols[i + 1] : cw) - cols[i] - 2;
+            small(g, Ui.clip(font, head, (int) (room / 0.75)), x + cols[i], ty, Ui.FAINT);
+        }
         ty += 10;
         List<CompoundTag> wares = new ArrayList<>();
         ListTag wl = pick.getList("wares", Tag.TAG_COMPOUND);
@@ -1435,7 +1459,7 @@ public class CityScreen extends Screen {
             // The wares.
             String[] heads = { "Ware", "In stall", "Price (a lot)", "Going", "Sold 7d", "" };
             int[] cols = { 0, cw * 30 / 100, cw * 42 / 100, cw * 58 / 100, cw * 68 / 100, cw * 80 / 100 };
-            for (int i = 0; i < heads.length; i++) small(g, heads[i], x + cols[i], sy, Ui.FAINT);
+            heads(g, heads, cols, x, sy);   // [ui] each head kept to its column
             sy += 10;
             ListTag wares = s.getList("wares", Tag.TAG_COMPOUND);
             for (int i = 0; i < wares.size() && sy < bottom - 30; i++) {
@@ -1553,7 +1577,7 @@ public class CityScreen extends Screen {
         // The order book against the stock.
         int ty = top;
         int[] cols = { 0, rw * 36 / 100, rw * 60 / 100, rw * 78 / 100 };
-        for (int i = 0; i < WORKSHOP_HEADS.length; i++) small(g, WORKSHOP_HEADS[i], rx + cols[i], ty, Ui.FAINT);
+        heads(g, WORKSHOP_HEADS, cols, rx, ty);   // [ui] each head kept to its column
         ty += 10;
         ListTag book = ws.getList("book", Tag.TAG_COMPOUND);
         int rowsFit = Math.max(1, (bottom - ty) / 10);
@@ -1642,7 +1666,7 @@ public class CityScreen extends Screen {
         int tableH = Math.min(ch / 2 + 20, 14 + jobs.size() * 11);
         String[] heads = { "Trade", "Hands", "Lvl", "Pay", "Yesterday", "Week", "Per hand", "Return", "Share of the week's output" };
         int[] cols = { 0, 92, 124, 146, 174, 220, 258, 298, 336 };
-        for (int i = 0; i < heads.length; i++) small(g, heads[i], x + cols[i], y, Ui.FAINT);
+        heads(g, heads, cols, x, y);   // [ui] each head kept to its column
         int ry = y + 9;
         int maxRows = (tableH - 9) / 11;
         int start = Math.max(0, Math.min(scroll, Math.max(0, jobs.size() - maxRows)));
@@ -1905,7 +1929,7 @@ public class CityScreen extends Screen {
             small(g, "Players", x, py, Ui.FAINT);
             String[] heads = { "Loose money", "Houses owned", "Rent owed them", "Net worth" };
             int[] at = { cw * 30 / 100, cw * 48 / 100, cw * 66 / 100, cw * 82 / 100 };
-            for (int i = 0; i < heads.length; i++) small(g, heads[i], x + at[i], py, Ui.FAINT);
+            heads(g, heads, at, x, py);   // [ui] each head kept to its column
             py += 10;
             for (int i = 0; i < playerRows; i++) {
                 CompoundTag p = players.get(i);
@@ -2087,13 +2111,18 @@ public class CityScreen extends Screen {
             { "Furnished", String.format(java.util.Locale.ROOT, "%.1f", data.getCompound("decor").getInt("avg10") / 10.0) + "/10, "
                 + data.getCompound("decor").getInt("well") + " well" },
             { "Mortgaged", mortgages.size() + (bank.getBoolean("open") ? "" : " (no bank)") } };
-        int colW = cw / 5;
+        // [ui] As many columns as the widest figure lets fit (five on a wide page), so none runs into the next.
+        int widest = 0;
+        for (String[] f : figures) widest = Math.max(widest, (int) (font.width(f[0] + ": " + f[1]) * 0.75) + 8);
+        int perRow = Math.max(2, Math.min(5, cw / Math.max(1, widest)));
+        int colW = cw / perRow;
         for (int i = 0; i < figures.length; i++) {
-            int cx = x + (i % 5) * colW, cy = ty + (i / 5) * 10;
+            int cx = x + (i % perRow) * colW, cy = ty + (i / perRow) * 10;
             small(g, figures[i][0] + ":", cx, cy, Ui.FAINT);
-            small(g, figures[i][1], cx + (int) (font.width(figures[i][0] + ": ") * 0.75), cy, Ui.INK);
+            int vx = (int) (font.width(figures[i][0] + ": ") * 0.75);
+            small(g, Ui.clip(font, figures[i][1], (int) ((colW - vx - 4) / 0.75)), cx + vx, cy, Ui.INK);
         }
-        int by = ty + 10 * ((figures.length + 4) / 5) + 2;
+        int by = ty + 10 * ((figures.length + perRow - 1) / perRow) + 2;
         small(g, "Beds", x, by, Ui.FAINT);
         Ui.bar(g, x + 22, by, cw / 4, 6, hm.getInt("folk") == 0 ? 0 : hm.getInt("bedded") / (float) Math.max(1, hm.getInt("folk")), GREEN);
         small(g, Ui.clip(font, hm.getInt("bedded") + " of " + hm.getInt("folk") + " folk have a bed, " + hm.getInt("beds_made") + " made up, room for "
@@ -2106,7 +2135,11 @@ public class CityScreen extends Screen {
         int hy = housingMarket(g, hm.getCompound("market"), x, by + 11, cw, mx, my) + 2;
         // Every household.
         int[] cols = { 0, cw * 26 / 100, cw * 42 / 100, cw * 55 / 100, cw * 61 / 100, cw * 80 / 100 };
-        for (int i = 0; i < HOME_HEADS.length; i++) small(g, HOME_HEADS[i], x + cols[i], hy, Ui.FAINT);
+        for (int i = 0; i < HOME_HEADS.length; i++) {                   // [ui] each head kept to its column
+            int room = (i + 1 < cols.length ? cols[i + 1] : cw) - cols[i] - 2;
+            String head = cw < 520 && i == 4 ? "Put by" : HOME_HEADS[i];
+            small(g, Ui.clip(font, head, (int) (room / 0.75)), x + cols[i], hy, Ui.FAINT);
+        }
         hy += 10;
         List<CompoundTag> rows = new ArrayList<>();
         ListTag rl = hm.getList("rows", Tag.TAG_COMPOUND);
@@ -2757,9 +2790,12 @@ public class CityScreen extends Screen {
         List<String> types = new ArrayList<>(nat.getAllKeys());
         types.sort(Comparator.comparingInt(nat::getInt).reversed());
         int grown = Math.max(1, so.getInt("grown"));
+        int natW = 0;                                                    // [ui] the bars start past the longest name
+        for (int i = 0; i < types.size() && i < 6; i++) natW = Math.max(natW, (int) Math.ceil(font.width(types.get(i)) * 0.75F) + 4);
+        natW = Math.min(col / 2, Math.max(50, natW));
         for (int i = 0; i < types.size() && i < 6; i++) {
             small(g, types.get(i), cx, cy + 1, Ui.MUTED);
-            Ui.bar(g, cx + 50, cy, col - 50 - 22, 7, nat.getInt(types.get(i)) / (float) grown, PALETTE[i % PALETTE.length]);
+            Ui.bar(g, cx + natW, cy, col - natW - 22, 7, nat.getInt(types.get(i)) / (float) grown, PALETTE[i % PALETTE.length]);
             Ui.right(g, font, Integer.toString(nat.getInt(types.get(i))), cx + col, cy, Ui.MUTED);
             cy += 9;
         }
@@ -2778,9 +2814,12 @@ public class CityScreen extends Screen {
         String[] lv = { "Novice", "Apprentice", "Journeyman", "Skilled", "Expert", "Master" };
         String[] lvRange = { "0-4", "5-9", "10-14", "15-19", "20-29", "30+" };
         int[] levels = so.getIntArray("levels");
+        int lvW = 0;                                                     // [ui] the bars start past the longest label
+        for (int i = 0; i < levels.length && i < lv.length; i++) lvW = Math.max(lvW, (int) Math.ceil(font.width(lv[i] + " " + lvRange[i]) * 0.75F) + 4);
+        lvW = Math.min(col * 3 / 5, Math.max(72, lvW));
         for (int i = levels.length - 1; i >= 0 && cy < bottom - 8; i--) {
             small(g, lv[i] + " " + lvRange[i], cx, cy + 1, Ui.MUTED);
-            Ui.bar(g, cx + 72, cy, col - 72 - 22, 7, levels[i] / (float) grown, PALETTE[(i + 2) % PALETTE.length]);
+            Ui.bar(g, cx + lvW, cy, col - lvW - 22, 7, levels[i] / (float) grown, PALETTE[(i + 2) % PALETTE.length]);
             Ui.right(g, font, Integer.toString(levels[i]), cx + col, cy, Ui.MUTED);
             cy += 9;
         }
@@ -2875,7 +2914,7 @@ public class CityScreen extends Screen {
         int[] cols = { 0, 66, 90, 152, 172, tw - 82, tw - 52 };
         Ui.section(g, font, "The children", tx, y, tw);
         int ry = y + 12;
-        for (int i = 0; i < SCHOOL_HEADS.length; i++) small(g, SCHOOL_HEADS[i], tx + cols[i], ry, Ui.FAINT);
+        heads(g, SCHOOL_HEADS, cols, tx, ry);   // [ui] each head kept to its column
         ry += 9;
         List<CompoundTag> pupils = new ArrayList<>();
         ListTag pl = s.getList("pupils", Tag.TAG_COMPOUND);
@@ -3877,6 +3916,14 @@ public class CityScreen extends Screen {
         if (Math.abs(v) >= 10000) return (v / 1000) + "k";
         if (Math.abs(v) >= 1000) return String.format(Locale.ROOT, "%.1fk", v / 1000.0);
         return Integer.toString(v);
+    }
+
+    /** [ui] A table's heads at their columns, each clipped to the room before the next (the last left whole). */
+    private void heads(GuiGraphics g, String[] heads, int[] cols, int x, int y) {
+        for (int i = 0; i < heads.length && i < cols.length; i++) {
+            String h = i + 1 < cols.length ? Ui.clip(font, heads[i], (int) ((cols[i + 1] - cols[i] - 2) / 0.75)) : heads[i];
+            small(g, h, x + cols[i] + (i == 0 && cols[0] == 0 ? 0 : 0), y, Ui.FAINT);
+        }
     }
 
     private void small(GuiGraphics g, String s, int x, int y, int colour) {

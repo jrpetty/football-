@@ -51,8 +51,12 @@ public final class CasesPage {
         cy += chartH + 10;
         if (cases.isEmpty()) {
             head(g, font, "No cases", x, cy, w);
-            small(g, font, "Nothing has been reported to the watch. Folk who are poor, hungry, low or bitter, and not honest enough to let it go,", x + 4, cy + 14, Ui.FAINT);
-            small(g, font, "may pick a purse, take from a chest or break a window. The watch looks into it, and the council tries the culprit.", x + 4, cy + 23, Ui.FAINT);
+            int ly = cy + 14;                                            // [ui] wrapped to the page, not run off its edge
+            for (FormattedCharSequence part : wrap(font, "Nothing has been reported to the watch. Folk who are poor, hungry, low or bitter, and not honest "
+                    + "enough to let it go, may pick a purse, take from a chest or break a window. The watch looks into it, and the council tries the culprit.", w - 8)) {
+                small(g, font, part, x + 4, ly, Ui.FAINT);
+                ly += 9;
+            }
             return tip;
         }
         // The list.

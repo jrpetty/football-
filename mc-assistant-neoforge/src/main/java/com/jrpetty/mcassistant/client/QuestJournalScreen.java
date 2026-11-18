@@ -23,9 +23,11 @@ import java.util.Locale;
 public class QuestJournalScreen extends Screen {
 
     private static final int PAD = 8, HEADER = 34, TAB_H = 16, ROW = 22, LINE = 10, LIST_W = 136;
-    private static final int BG = 0xF0181B22, BAND = 0xFF20242E, EDGE = 0xFF8A7A50, SOFT = 0xFF3A3F4C, GOLD = 0xFFE8C46A, INK = 0xFFEDEDED,
-        MUTED = 0xFF9AA3B2, DONE = 0xFF86C98A, BAD = 0xFFE08B8B, TAB = 0xFF2A2F3A, TAB_ON = 0xFF51441F, PICK = 0xFF2F3A4A, LOG = 0x80000000,
-        WHERE = 0xFF9EC3EA;
+    // [ui] The house look (UiStyle): a light panel with dark ink, the journal's gold kept for its marks and headings.
+    private static final int BG = UiStyle.PANEL, BAND = UiStyle.PANEL_HEADER, EDGE = UiStyle.EDGE, SOFT = UiStyle.EDGE_SOFT,
+        GOLD = UiStyle.WARNING, INK = UiStyle.TEXT, MUTED = UiStyle.TEXT_MUTED, DONE = UiStyle.SUCCESS, BAD = UiStyle.DANGER,
+        TAB = UiStyle.PANEL_HEADER, TAB_ON = UiStyle.PANEL, PICK = UiStyle.TILE_SELECTED, LOG = UiStyle.PAGE,
+        WHERE = UiStyle.INFO;
 
     private record StepRow(int status, String chapter, String text, String x, String y, String z, String dim, String radius, String note, String who) {}
 
@@ -215,18 +217,15 @@ public class QuestJournalScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
-        g.fill(left, top, left + w, top + h, BG);
-        g.fill(left, top, left + w, top + HEADER, BAND);
-        g.fill(left, top, left + w, top + 1, EDGE);
-        g.fill(left, top + h - 1, left + w, top + h, EDGE);
-        g.fill(left, top, left + 1, top + h, EDGE);
-        g.fill(left + w - 1, top, left + w, top + h, EDGE);
+        UiStyle.shadow(g, left, top, w, h);                               // [ui] the house panel and header band
+        UiStyle.panel(g, left, top, w, h);
+        UiStyle.headerBand(g, left, top, w, HEADER - 2);
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        g.drawString(font, "Quest Journal", left + PAD, top + 7, GOLD, true);
+        UiStyle.title(g, font, "Quest Journal", left + PAD, top + 7);
         String who = player.isEmpty() ? "" : player;
         g.drawString(font, who, left + w - PAD - font.width(who), top + 7, MUTED, false);
         g.drawString(font, Ui.clip(font, titles.isEmpty() ? "No titles yet: do the towns a good turn or two." : titles, w - 2 * PAD), left + PAD, top + 20,
@@ -237,9 +236,8 @@ public class QuestJournalScreen extends Screen {
         for (int i = 0; i < 2; i++) {
             int tw = font.width(labels[i]) + 14;
             boolean on = doneTab == (i == 1);
-            g.fill(x, ty, x + tw, ty + TAB_H, on ? TAB_ON : TAB);
-            if (on) g.fill(x, ty + TAB_H - 2, x + tw, ty + TAB_H, GOLD);
-            g.drawString(font, labels[i], x + 7, ty + 4, on ? GOLD : INK, false);
+            UiStyle.topTab(g, x, ty, tw, TAB_H, UiStyle.State.of(true, on, false));   // [ui]
+            g.drawString(font, labels[i], x + 7, ty + 4, on ? INK : MUTED, false);
             x += tw + 2;
         }
         list(g, mouseX, mouseY);
@@ -248,7 +246,7 @@ public class QuestJournalScreen extends Screen {
 
     private void list(GuiGraphics g, int mouseX, int mouseY) {
         int x0 = left + PAD, y0 = listTop(), y1 = listBottom();
-        g.fill(x0, y0, x0 + LIST_W, y1, LOG);
+        UiStyle.well(g, x0, y0, LIST_W, y1 - y0, LOG);                       // [ui] recessed, as every list
         List<Entry> s = shown();
         if (s.isEmpty()) {
             for (FormattedCharSequence l : TextCache.splitPlain(font, doneTab ? "Nothing done yet." : "No quests under way. Look for a gold \"!\" over a folk's head, and ask it \"Any work for me?\"", LIST_W - 8)) {
@@ -263,7 +261,7 @@ public class QuestJournalScreen extends Screen {
             int y = y0 + i * ROW;
             boolean pick = listScroll + i == selected;
             boolean hover = mouseX >= x0 && mouseX < x0 + LIST_W && mouseY >= y && mouseY < y + ROW;
-            if (pick || hover) g.fill(x0, y, x0 + LIST_W, y + ROW - 1, pick ? PICK : 0x40FFFFFF);
+            if (pick || hover) g.fill(x0, y, x0 + LIST_W, y + ROW - 1, pick ? PICK : UiStyle.TILE_HOVER);
             if (pick) g.fill(x0, y, x0 + 2, y + ROW - 1, GOLD);
             int ink = e.state.equals("DONE") ? DONE : e.state.equals("ACTIVE") ? (e.story ? GOLD : INK) : BAD;
             String mark = e.state.equals("DONE") ? "✓ " : e.state.equals("ACTIVE") ? (e.story ? "★ " : "") : "✗ ";
@@ -275,9 +273,13 @@ public class QuestJournalScreen extends Screen {
 
     private void page(GuiGraphics g) {
         int x0 = left + PAD + LIST_W + 6, x1 = left + w - PAD, y0 = listTop(), y1 = listBottom();
-        g.fill(x0, y0, x1, y1, LOG);
+        UiStyle.well(g, x0, y0, x1 - x0, y1 - y0, LOG);                      // [ui]
         List<Entry> s = shown();
-        if (selected < 0 || selected >= s.size()) return;
+        if (selected < 0 || selected >= s.size()) {                          // [ui] an empty state, not a blank
+            UiStyle.empty(g, font, s.isEmpty() ? "Nothing here yet" : "Pick a quest", s.isEmpty() ? "Quests you take up are written down here."
+                : "Its story and its steps show here.", x0, y0, x1 - x0, y1 - y0);
+            return;
+        }
         Entry e = s.get(selected);
         int inner = x1 - x0 - 10, cx = x0 + 5;
         g.enableScissor(x0, y0, x1, y1);
@@ -292,7 +294,7 @@ public class QuestJournalScreen extends Screen {
         } else {
             y = wrap(g, QuestTitleCase.state(e.state) + (e.outcome.isEmpty() ? "" : ": " + e.outcome), cx, y, inner, e.state.equals("DONE") ? DONE : BAD);
         }
-        if (!e.offer.isEmpty()) y = wrap(g, "\"" + e.offer + "\"", cx, y + 2, inner, 0xFFB8B0A0);
+        if (!e.offer.isEmpty()) y = wrap(g, "\"" + e.offer + "\"", cx, y + 2, inner, UiStyle.TEXT_MUTED);
         y += 4;
         y = heading(g, e.story ? "Chapters" : "Steps", cx, y, inner);
         String chapter = "";
@@ -311,7 +313,7 @@ public class QuestJournalScreen extends Screen {
         if (!e.ending.isEmpty()) {
             y += 4;
             y = heading(g, "Ending", cx, y, inner);
-            y = wrap(g, e.ending, cx, y, inner, 0xFFE0D6B8);
+            y = wrap(g, e.ending, cx, y, inner, UiStyle.WARNING);
         }
         g.disableScissor();
         int content = y + pageScroll - y0 + 4;
