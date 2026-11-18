@@ -104,6 +104,9 @@ public final class TownWork {
         if (square && CityGreen.bed(dx, dz)) return 0;                     // [city9] the square's greens are turf, not paving
         boolean avenue = !square && (Math.abs(dx) <= TownPlan.AVENUE || Math.abs(dz) <= TownPlan.AVENUE
             || ring(dx, dz));
+        // [city9] A side street is laid as the town comes to it: within a block of a building standing or going up (CityPlan),
+        // not as a grid of paths out over the empty meadow. The avenues and the ring street are the town's from the first.
+        if (!square && !avenue && !CityPlan.served(v, dx, dz, level.getGameTime())) return 0;
         boolean stoneAge = age.ordinal() >= Villages.Age.STONE.ordinal();
         boolean ironAge = age.ordinal() >= Villages.Age.IRON.ordinal();
         // A lamp post along the avenues and round the ring street.

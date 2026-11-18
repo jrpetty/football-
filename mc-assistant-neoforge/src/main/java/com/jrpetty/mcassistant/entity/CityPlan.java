@@ -52,6 +52,7 @@ public final class CityPlan {
 
     public static void resetForTests() {
         NETS.clear();
+        SERVED.clear();
     }
 
     /** Forget a town's walk, so the next look walks it afresh (a test that changed the ground). */
@@ -161,6 +162,40 @@ public final class CityPlan {
         for (int k = -2; k <= 2; k++) {
             int x = alongX ? f[0] + k : f[0], z = alongX ? f[1] : f[1] + k;
             if (n.has(x, z)) return true;
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------ the streets laid as the town comes
+
+    /** A side street within this of a building (a lot and a street and a lot: the next block out) is laid. */
+    static final int SERVE = TownPlan.PERIOD;
+
+    /** Each town's buildings' and sites' anchors, as offsets, and when they were looked at. */
+    private record Served(long at, int[] xs, int[] zs) {}
+
+    private static final Map<UUID, Served> SERVED = new ConcurrentHashMap<>();
+
+    /**
+     * Is a side street's cell here by the built-up town: a building standing or going up within a block of it? Looked
+     * at afresh every half minute at most.
+     */
+    public static boolean served(Villages.Village v, int dx, int dz, long now) {
+        Served s = SERVED.get(v.id());
+        if (s == null || now - s.at() > 600L || now < s.at()) {
+            java.util.List<BlockPos> at = new java.util.ArrayList<>();
+            for (Ledger.Building b : Ledger.buildings(v.id())) at.add(b.anchor());
+            for (Villages.Site site : Villages.sitesOf(v.id()).values()) at.add(site.anchor());
+            int[] xs = new int[at.size()], zs = new int[at.size()];
+            for (int i = 0; i < at.size(); i++) {
+                xs[i] = at.get(i).getX() - v.centre().getX();
+                zs[i] = at.get(i).getZ() - v.centre().getZ();
+            }
+            s = new Served(now, xs, zs);
+            SERVED.put(v.id(), s);
+        }
+        for (int i = 0; i < s.xs().length; i++) {
+            if (Math.abs(s.xs()[i] - dx) <= SERVE && Math.abs(s.zs()[i] - dz) <= SERVE) return true;
         }
         return false;
     }
