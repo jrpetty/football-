@@ -15,8 +15,8 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
- * The town's mine: one stretch of rock out beyond the town, fifty to a hundred-odd blocks from the heart,
- * where all its miners work side by side.
+ * The town's mine: one stretch of rock out beyond the town, beyond the whole of its plan (a hundred-odd blocks
+ * from the heart, TownDigs), where all its miners work side by side.
  *
  * <p>Each miner used to find its own plot, wherever its look round happened to land, just outside the town
  * as it stood that day. The town grew and the plots did not move: a staircase cut down from the middle of a
@@ -46,7 +46,7 @@ public final class TownMine {
 
     /**
      * The middle of the mine's first face, chosen once and kept with the world: on the best rock in a ring
-     * fifty to a hundred and ten blocks out (further when the town is big), outside the town, off the
+     * a hundred-odd blocks out, beyond the whole of the town's plan ([mine7] TownDigs.PLAN_REACH), outside the town, off the
      * farmland, short of the border with a neighbour, never on water. The rock is weighed by `stony` (the
      * caller's look at the stone under a spot) and by height, a hill having more rock above the seams.
      * Null when no ground round about is loaded and fit.
@@ -54,9 +54,13 @@ public final class TownMine {
     @Nullable
     public static BlockPos site(ServerLevel level, UUID village, BlockPos heart, Predicate<BlockPos> stony) {
         BlockPos kept = kept(village);
-        if (kept != null) return kept;
-        int near = Math.max(NEAREST, Villages.townReach(village) + PITCH / 2 + 8);
-        int far = Math.max(FARTHEST, near + 40);
+        // [mine7] A mine of an older world in the town's ground (its whole plan: the town grows over it) is moved out;
+        // the town fills in the stairs it left there (TownDigs.seal).
+        if (kept != null && !TownDigs.inPlan(village, heart, kept, PITCH / 2)) return kept;
+        // [mine7] Beyond the town's whole plan, as it will grow (three rings of lots), with a margin: the mine was
+        // opened just past the town of the day, and the town grew over its stairs.
+        int near = Math.max(Math.max(NEAREST, Villages.townReach(village) + PITCH / 2 + 8), TownDigs.PLAN_REACH + TownDigs.MARGIN + PITCH / 2 + 2);
+        int far = Math.max(FARTHEST, near + 60);
         BlockPos best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (int d = near; d <= far; d += 8) {
@@ -74,9 +78,15 @@ public final class TownMine {
                 }
             }
         }
-        if (best == null) return null;
+        if (best == null) return null;                              // [mine7] nowhere fit loaded yet: the miners wait
+        if (kept != null) {                                         // [mine7] the old mine out of the town's way
+            Ledger.note(village, "mine.old", kept.getX() + "," + kept.getZ());
+            Ledger.note(village, "mine.spent", "");
+            Villages.tell(village, level.getDayTime() / 24000L, "the town's mine was moved out of the town's way, from "
+                + kept.getX() + ", " + kept.getZ() + " to " + best.getX() + ", " + best.getZ());
+        }
         Ledger.note(village, "mine.site", best.getX() + "," + best.getZ());
-        Villages.tell(village, level.getDayTime() / 24000L, "the town's mine was opened, out at " + best.getX() + ", " + best.getZ());
+        if (kept == null) Villages.tell(village, level.getDayTime() / 24000L, "the town's mine was opened, out at " + best.getX() + ", " + best.getZ());
         return best;
     }
 
@@ -85,6 +95,7 @@ public final class TownMine {
         int r = PITCH / 2;
         if (!Villages.outsideTown(village, heart, top, r)) return false;
         if (Villages.onFarmland(village, heart, top, r)) return false;
+        if (TownDigs.inTownGround(level, village, heart, top, r)) return false;   // [mine7] the town's ground as it will grow
         if (Bonds.overBorder(village, heart, top, r)) return false;
         return level.getFluidState(top.below()).isEmpty() && level.getFluidState(top).isEmpty();
     }
@@ -378,6 +389,7 @@ public final class TownMine {
     public static void forgetForTests(UUID village) {
         Ledger.note(village, "mine.site", "");
         Ledger.note(village, "mine.spent", "");
+        Ledger.note(village, "mine.old", "");   // [mine7]
         BUILT.remove(village);
         BUILT_AT.remove(village);
     }

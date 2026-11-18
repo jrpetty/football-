@@ -1697,6 +1697,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         publishJobState();
     }
 
+    /** [mine7] Off its plot, keeping its trade and its autonomy: it looks for new ground (a miner whose plot was in the
+     *  town's ground, with no face of the mine to go to yet). */
+    public void dropPlotKeepTrade() {
+        StationTask trade = stationTask;
+        this.patchName = "";
+        setWorkZone(null);
+        if (trade != StationTask.NONE) stationTask = trade;
+        clearQueue();
+        publishJobState();
+    }
+
     // ---- one order of memory: the book's Undo ----
     @Nullable private WorkZone prevOrderZone;
     private String prevOrderPatch = "";
@@ -7331,6 +7342,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // zone's depth setting is the floor it digs down to.
                 int targetY = workZone != null ? workZone.depth()
                     : (bestPickTier() >= 3 ? -54 : 12);
+                // [mine7] Never a mine in the town's ground: the miner moves out to a face of the town's mine (VillageFolkEntity.seekTheSeam).
+                if (isSettler() && workZone != null && TownDigs.plotInTown(this)) {
+                    if (this instanceof VillageFolkEntity vf) vf.seekTheSeamForTests();
+                    brain("no mine in the town's ground: waiting for a face of the town's mine");
+                    return false;
+                }
                 if (isSettler() && workZone != null) {
                     // A village's miner digs from the MIDDLE of its plot, facing the
                     // rock, and a different way each run. The zone leash only sends
@@ -8266,7 +8283,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         for (BlockPos pos : BlockPos.betweenClosed(lo, hi)) {
             if (!inZone(pos)) continue; // the goal filters by zone; so must we
-            if (kind.matches(level().getBlockState(pos)) && (!kind.isOre() || OreSight.exposed(level(), pos))) return true;   // [mines] ore that shows
+            if (kind.matches(level().getBlockState(pos)) && (!kind.isOre() || OreSight.exposed(level(), pos))
+                && TownDigs.mayCut(this, kind, pos)) return true;   // [mines] ore that shows; [mine7] never in the town's ground
         }
         return false;
     }

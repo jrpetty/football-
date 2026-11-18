@@ -49,6 +49,8 @@ public final class MineStairs extends SavedData {
     private final HashMap<Long, Integer> floors = new HashMap<>();
     /** [mines] When each staircase was last walked, up or down (game time): the ways nobody uses are let go. */
     private final HashMap<Long, Long> used = new HashMap<>();
+    /** [mine7] Whose folk cut each staircase (the village), where known: the town fills in only its own. */
+    private final HashMap<Long, UUID> owners = new HashMap<>();
 
     /** [mines] The kinds of way a key names, by its y: a mine's main stairs (a plot's), stairs a folk cut to get out,
      *  footholds kept as a way down. Only the main stairs are kept for good. */
@@ -208,6 +210,7 @@ public final class MineStairs extends SavedData {
         for (long key : gone) {
             List<Long> list = m.stairs.remove(key);
             m.used.remove(key);
+            m.owners.remove(key);   // [mine7]
             if (list == null) continue;
             for (long s : list) m.unfloor(s);
             if (kindOf(key) == Kind.KEPT) {
@@ -217,6 +220,36 @@ public final class MineStairs extends SavedData {
             }
             m.setDirty();
         }
+    }
+
+    /** [mine7] This staircase was cut by a folk of this village. */
+    public static void own(ServerLevel level, long key, @Nullable UUID village) {
+        if (village == null) return;
+        MineStairs m = of(level);
+        if (village.equals(m.owners.get(key))) return;
+        m.owners.put(key, village);
+        m.setDirty();
+    }
+
+    /** [mine7] The village whose folk cut this staircase, or null (not known: an older world's, or a player's helper). */
+    @Nullable
+    public static UUID owner(ServerLevel level, long key) {
+        return of(level).owners.get(key);
+    }
+
+    /** [mine7] Every staircase's key, oldest first. */
+    public static List<Long> keys(ServerLevel level) {
+        return new ArrayList<>(of(level).stairs.keySet());
+    }
+
+    /** [mine7] A staircase let go for good (filled in): its steps no longer spared, its record gone. */
+    public static void forget(ServerLevel level, long key) {
+        MineStairs m = of(level);
+        List<Long> list = m.stairs.remove(key);
+        if (list != null) for (long s : list) m.unfloor(s);
+        m.used.remove(key);
+        m.owners.remove(key);
+        m.setDirty();
     }
 
     /** [mine-safety] The head of the staircase at this key (its first step, at the top), or null. */
@@ -254,6 +287,7 @@ public final class MineStairs extends SavedData {
             Long oldest = stairs.keySet().iterator().next();
             for (long s : stairs.remove(oldest)) unfloor(s);
             used.remove(oldest);   // [mines]
+            owners.remove(oldest); // [mine7]
         }
     }
 
@@ -372,6 +406,7 @@ public final class MineStairs extends SavedData {
             }
             m.stairs.put(one.getLong("Key"), list);
             if (one.contains("Used")) m.used.put(one.getLong("Key"), one.getLong("Used"));   // [mines]
+            if (one.hasUUID("Village")) m.owners.put(one.getLong("Key"), one.getUUID("Village"));   // [mine7]
         }
         return m;
     }
@@ -387,6 +422,8 @@ public final class MineStairs extends SavedData {
             one.putLongArray("Steps", steps);
             Long at = used.get(e.getKey());
             if (at != null) one.putLong("Used", at);   // [mines]
+            UUID by = owners.get(e.getKey());
+            if (by != null) one.putUUID("Village", by);   // [mine7]
             all.add(one);
         }
         tag.put("Stairs", all);
@@ -398,6 +435,7 @@ public final class MineStairs extends SavedData {
         m.stairs.clear();
         m.floors.clear();
         m.used.clear();   // [mines]
+        m.owners.clear(); // [mine7]
         m.setDirty();
         BELOW.clear();
         SENT.clear();
@@ -409,6 +447,16 @@ public final class MineStairs extends SavedData {
         List<Long> list = of(level).stairs.get(key);
         if (list != null) for (long s : list) out.add(BlockPos.of(s));
         return out;
+    }
+
+    /** [mine7] Tests: the stairs written out and read back in, as on a save and a load (the world's copy replaced). */
+    public static void reloadForTests(ServerLevel level) {
+        MineStairs m = of(level);
+        CompoundTag tag = m.save(new CompoundTag(), level.registryAccess());
+        MineStairs back = load(tag, level.registryAccess());
+        level.getDataStorage().set(ID, back);
+        cached = back;
+        cachedFor = level;
     }
 
     /** Tests: every staircase's key. */

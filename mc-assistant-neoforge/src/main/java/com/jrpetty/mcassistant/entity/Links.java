@@ -246,7 +246,10 @@ public final class Links {
         BlockPos heart = v.centre();
         int reach = Villages.townReach(village);
         int dug = 0;
-        for (int ring = 4; ring <= reach + 48 && dug < 8; ring += 2) {
+        // [mine7] Only beyond the town's ground (its whole plan as it will grow, its farmland, its roads): a bed dug in a
+        // town pond or a beach the town will build along is a hole in the town.
+        int out = TownDigs.PLAN_REACH + TownDigs.MARGIN + 1;
+        for (int ring = out; ring <= Math.max(reach, out) + 48 && dug < 8; ring += 2) {
             if (!Land.areaLoaded(level, heart, ring)) break;
             boolean beyond = ring > reach + 1;
             for (int dx = -ring; dx <= ring && dug < 8; dx += 2) {
@@ -257,6 +260,7 @@ public final class Links {
                     BlockState st = level.getBlockState(p);
                     if (!st.is(Blocks.SAND) && !st.is(Blocks.RED_SAND)) continue;
                     if (Land.inABuilding(village, p) || !level.getBlockState(p.below()).isSolid()) continue;
+                    if (TownDigs.inTownGround(level, village, heart, p, 0)) continue;                       // [mine7]
                     boolean wet = level.getBlockState(p.above()).is(Blocks.WATER);
                     if (wet) {
                         // A bed with water over it and nothing open beside it: the water only fills the hole.
@@ -354,7 +358,8 @@ public final class Links {
         BlockPos heart = v.centre();
         int reach = Villages.townReach(village);
         int dug = 0;
-        for (int ring = 4; ring <= reach + 48 && dug < 4; ring += 2) {
+        int out = TownDigs.PLAN_REACH + TownDigs.MARGIN + 1;                                      // [mine7] beyond the town's ground
+        for (int ring = out; ring <= Math.max(reach, out) + 48 && dug < 4; ring += 2) {
             if (!Land.areaLoaded(level, heart, ring)) break;
             for (int dx = -ring; dx <= ring && dug < 4; dx += 2) {
                 for (int dz = -ring; dz <= ring && dug < 4; dz += 2) {
@@ -364,6 +369,7 @@ public final class Links {
                     if (!level.getBlockState(p).is(Blocks.CLAY)) continue;
                     if (!level.getBlockState(p.above()).is(Blocks.WATER)) continue;          // a bed under water
                     if (Land.inABuilding(village, p) || !level.getBlockState(p.below()).isSolid()) continue;
+                    if (TownDigs.inTownGround(level, village, heart, p, 0)) continue;                       // [mine7]
                     boolean open = false;
                     for (Direction d : Direction.Plane.HORIZONTAL) open |= level.getBlockState(p.relative(d)).isAir();
                     if (open) continue;                                                       // the water only fills the hole

@@ -4313,13 +4313,21 @@ public class VillageFolkEntity extends AssistantEntity {
         // instead, at the depth it was working (TownMine). Staircases cut down from plots the town had
         // built over took up a house's floor, and once the square's. (An old plot of its own out of the
         // town's way is worked out first, and its next ground is a face of the mine.)
+        // [mine7] ...or in the town's ground at all (its whole plan as it will grow, its farmland, its roads), or off the
+        // town's mine: a plot staked before the mine was moved out of the town's way.
+        boolean inTown = TownDigs.plotInTown(this);
         if (villageCentre != null && level() instanceof net.minecraft.server.level.ServerLevel mineLevel
-                && TownMine.underTheTown(TownMine.builtGround(village, villageCentre, level().getGameTime()), zone.center(), zone.radius() + 2)) {
+                && (inTown || TownMine.underTheTown(TownMine.builtGround(village, villageCentre, level().getGameTime()), zone.center(), zone.radius() + 2))) {
             BlockPos face = TownMine.faceFor(mineLevel, this, villageCentre, this::diggable);
             if (face != null) {
                 assignPlot(WorkZone.around(face, radiusFor(StationTask.MINE), zone.depth()), patchNameFor(StationTask.MINE));
                 setAutonomous(true);
                 brain("moved to a face of the town's mine");
+                return true;
+            }
+            if (inTown) {                                        // [mine7] no face yet: off the plot, to wait for one
+                dropPlotKeepTrade();
+                brain("off a plot in the town's ground; waiting for a face of the town's mine");
                 return true;
             }
         }
@@ -5129,7 +5137,9 @@ public class VillageFolkEntity extends AssistantEntity {
             case MINE -> {
                 BlockPos face = town != null && level() instanceof net.minecraft.server.level.ServerLevel minesLevel
                     ? TownMine.faceFor(minesLevel, this, heart, p -> clear.test(p) && diggable(p)) : null;
-                yield face != null ? face : scan(from, SCAN, 6, radius, p -> clear.test(p) && diggable(p));
+                // [mine7] No face to be had (the ground out there not loaded yet, or none fit): the miner waits. Its own
+                // plot just past the houses of the day was where the town grew over its stairs.
+                yield face != null || town != null ? face : scan(from, SCAN, 6, radius, p -> clear.test(p) && diggable(p));
             }
             // A pen goes where the animals already are and a jetty goes on
             // water — both were staking the village square, where a rancher

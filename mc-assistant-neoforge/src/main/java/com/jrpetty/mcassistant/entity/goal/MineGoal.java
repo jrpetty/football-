@@ -212,6 +212,14 @@ public class MineGoal extends Goal {
         com.jrpetty.mcassistant.entity.WorkZone plot = assistant.workZone();
         this.stairsKey = com.jrpetty.mcassistant.entity.MineStairs.plotKey(plot != null ? plot.center() : cursor);
         this.townGround = townGroundNow();
+        // [mine7] The stairs are the town's own (TownDigs fills in only its own); and no village mine is opened in the town's ground.
+        if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity vf && assistant.level() instanceof net.minecraft.server.level.ServerLevel own) {
+            if (!outJob) com.jrpetty.mcassistant.entity.MineStairs.own(own, stairsKey, vf.ownerId());
+            if (!outJob && !com.jrpetty.mcassistant.entity.TownDigs.mayRunFrom(assistant, cursor)) {
+                finish("Not here — this is the town's ground. The mine's out past the houses.");
+                return;
+            }
+        }
         com.jrpetty.mcassistant.entity.WorkTools.newRun(assistant);   // [workitems] its props counted from the foot of its stairs again
         if (outJob) {
             this.phase = Phase.RETURN;
@@ -1860,6 +1868,8 @@ public class MineGoal extends Goal {
             java.util.Collections.reverse(headFirst);
             BlockPos top = headFirst.get(0);
             com.jrpetty.mcassistant.entity.MineStairs.record(sl, com.jrpetty.mcassistant.entity.MineStairs.outKey(top), headFirst);
+            if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity vf)                      // [mine7] the town's own
+                com.jrpetty.mcassistant.entity.MineStairs.own(sl, com.jrpetty.mcassistant.entity.MineStairs.outKey(top), vf.ownerId());
         }
         String done = returnReason != null ? returnReason : "Dug my way out — " + oresMined + " ore.";
         finish(done);

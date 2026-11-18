@@ -508,6 +508,7 @@ public class GatherGoal extends Goal {
         if (assistant.level().getBlockEntity(p) != null) return false; // don't smash chests/etc.
         if (!diggable(st)) return false;  // only the ground: never a wall, a floor or a house
         if (com.jrpetty.mcassistant.entity.MineStairs.isFloor(assistant.level(), p)) return false;   // nor a step of the mine stairs
+        if (!com.jrpetty.mcassistant.entity.TownDigs.mayCut(assistant, Kind.STONE, p)) return false;   // [mine7] nor the town's ground
         assistant.getLookControl().setLookAt(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
         assistant.equipBestTool(st);
         if (assistant.level().destroyBlock(p, true, assistant)) {
@@ -684,6 +685,9 @@ public class GatherGoal extends Goal {
             // Never the step of somebody's mine stairs: the nearest stone to a plot's middle was the head
             // of its own stairs, and the miner came back up to a drop it could not climb (MineStairs).
             if (com.jrpetty.mcassistant.entity.MineStairs.isFloor(assistant.level(), pos)) continue;
+            // [mine7] A village's hand never cuts stone, earth, sand or gravel in the town's ground (TownDigs): a hand sent for
+            // stone took it from under its own feet, in the middle of town.
+            if (!com.jrpetty.mcassistant.entity.TownDigs.mayCut(assistant, request.kind(), pos)) continue;
             // Crew checks last: they cost a map lookup each, and the block
             // test above rejects all but a handful of positions.
             if (respectCrew && assistant.takenByCrew(pos)) continue;

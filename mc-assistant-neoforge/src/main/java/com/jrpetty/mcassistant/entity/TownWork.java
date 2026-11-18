@@ -50,6 +50,7 @@ public final class TownWork {
         DoorWays.tick(level, v);                    // a way in a folk can walk at every door
         Restore.tick(level, v);                     // [integrity] the buildings looked over and mended to their drawings
         MineSafety.tick(level, v);                  // [mine-safety] the mine's stair heads fenced, the sign up
+        TownDigs.tick(level, v);                    // [mine7] old stairs in the town filled in; the mine's portals and its path
         TownLook.tick(level, v);                    // [batchE] the trees, benches, allotments, orchard, mill, bakery and inn
         Store.tick(level, v);                       // [econ-store] the shop's staff, its stock book and its deliveries
         WorkTools.rounds(level, v);                 // [workitems] the milestones, the window boxes, the thatch, the shop's book
