@@ -1367,6 +1367,10 @@ public final class MineWorks {
                 for (int dz = -1; dz <= 1; dz++) {
                     long n = BlockPos.asLong(ox + dx, 0, oz + dz);
                     if (open.contains(n) || way.contains(n) || !done.add(n)) continue;
+                    // Never on a step of the stair (its first steps are the way down, open at head height): round the
+                    // outside of the shaft and on the edge of the pillar only.
+                    int ring = Math.max(Math.abs(ox + dx - w.sx), Math.abs(oz + dz - w.sz));
+                    if (ring == 2 || ring == 3) continue;
                     BlockPos p = new BlockPos(ox + dx, w.top, oz + dz);
                     if (!level.getBlockState(p).canBeReplaced() || !level.getBlockState(p.below()).isFaceSturdy(level, p.below(), Direction.UP)) continue;
                     put(level, v, p, Block.updateFromNeighbourShapes(fence.defaultBlockState(), level, p));

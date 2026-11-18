@@ -457,4 +457,42 @@ public class MineWorksGameTests {
             return true;
         });
     }
+
+    /** The landing of a level cut by a miner once the shaft reaches it: furnished, and the level's first drift begun. */
+    @GameTest(template = "empty", timeoutTicks = 5000, batch = "mw08_landing")
+    public static void mw08_landing(GameTestHelper helper) {
+        Rig r = rig(helper, 3830000, 1);
+        ServerLevel level = r.level;
+        VillageFolkEntity m = r.miners.get(0);
+        MineDemand.stockForTests(r.v, plenty());
+        kit(m, Items.IRON_PICKAXE);
+        zone(r, m, 88);
+        int y = MineWorks.levelY(level, r.v, MineWorks.COAL);
+        tower(r, y - 3);
+        bed(r, y, 20, Blocks.COAL_ORE, 30, 99L);
+        MineWorks.sinkForTests(level, r.v, 4 * ((TOP - y) / 3) + 1, m);
+        m.teleportTo(r.sx - 5.5, TOP, r.sz - 1.5);
+        fast(level);
+        final int[] tick = { 0 };
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            keepAtIt(r, m);
+            int[] s = MineWorks.shaftForTests(level, r.v);
+            boolean room = (s[5] & 1) != 0;
+            List<int[]> drifts = MineWorks.driftsForTests(level, r.v);
+            if ((!room || drifts.isEmpty() || drifts.get(0)[3] < 2) && tick[0] < 4500) {
+                if (tick[0] % 500 == 0) Kit.log("[VT] mw08 @" + tick[0] + " at " + m.blockPosition().toShortString() + ": " + WorksGoal.stateForTests(m));
+                return false;
+            }
+            int[] o = { -1, -1 };
+            BlockPos chest = new BlockPos(r.sx + 8 * o[0], y, r.sz + 8 * o[1]);
+            boolean furnished = level.getBlockState(chest).is(Blocks.CHEST) && level.getBlockState(new BlockPos(r.sx - 6, y + 2, r.sz - 6)).is(Blocks.LANTERN);
+            Kit.log("[VT] mw08 after " + tick[0] + " ticks: the landing cut " + room + ", furnished " + furnished + ", drifts " + drifts.size()
+                + " | " + String.join(" | ", MineWorks.eventsForTests()));
+            helper.assertTrue(room && furnished, "the landing cut and furnished");
+            helper.assertTrue(!drifts.isEmpty() && drifts.get(0)[3] >= 2, "a drift begun from it");
+            done(helper);
+            return true;
+        });
+    }
 }
