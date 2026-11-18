@@ -13479,12 +13479,18 @@ meadow's had one, being raised before the square was paved); ba03 (a wall raised
 its 39 columns unbuilt and then stacked 19 of them past their height. After: every one of those counts nought in all three towns and
 on the hillside lots, the square's walls whole and none too tall, ba03 nought gaps and nought too tall at both raisings.
 
-**Left as they are, with the reason.** Roof cells open on one great building a town (the hall or the workshop, a hundred
-or so cells) at the end of four days, in the tree before and after alike: the gate allows those cells (the audit asks
-it), so it is the builders' own order of work or a storey going up, for another batch to follow. Farmland four or more
-from water (a fifth to a third of it, on hills more) and the torches and flowers of the strewn meadow standing on the
-plan's streets where no street is paved yet: the fields' own watering and the road works' rounds see to those as they
-reach them. A square's wall stacked or gapped in an old save stays as it is until its builders next come to it.
+**After the second look** (the same audit): farmland four or more from water down from a fifth to a third of it (137 of
+611 before) to 3 of 655; the one great building with roof cells open is a storey still going up at the end of the
+fourth day (47 cells, against 110 to 153 before); the square's walls whole with an arch at each gateway; the levelled
+bowl with no pillars left standing in it. The fields are being fenced, a gate on each, as the stores' fences and boards
+allow (half of the 31 fields had their gate by the fourth day; the rest of their edges go up a dozen posts a visit).
+
+**Left as they are, with the reason.** The torches and flowers of the strewn meadow standing on the plan's streets
+where no street is paved yet (the road works' rounds take them up as they reach them). A square's wall stacked or
+gapped in an old save stays as it is until its builders next come to it. Where the founding filled the heart up over a
+river or a valley its edge can still stand as a cliff on the water side (the levelling slopes its edge only over
+land), and a mountain town's fields can lie out past that edge where its farmers cannot walk to them: for another
+batch, with the founding's plan.
 
 Tests (BuildAuditGameTests, x 3,500,000 to 3,600,000, z 90000): ba01 the audit (not required: it runs for some
 minutes; every count above must be nought); ba02 the hillside lots; ba03 the wall raised twice. VillageGameTests t37
