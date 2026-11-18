@@ -93,6 +93,8 @@ public class MineWorksGameTests {
     }
 
     static void kit(VillageFolkEntity m, Item pick) {
+        m.removeMatching(st -> st.is(net.minecraft.tags.ItemTags.PICKAXES), 64);
+        if (m.getMainHandItem().is(net.minecraft.tags.ItemTags.PICKAXES)) m.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         m.insertItem(new ItemStack(pick));
         m.insertItem(new ItemStack(Items.TORCH, 64));
         m.insertItem(new ItemStack(Items.COBBLESTONE, 64));
@@ -161,7 +163,7 @@ public class MineWorksGameTests {
                 List<BlockPos> step = MineWorks.stepForTests(level, r.v, i);
                 for (BlockPos c : step) {
                     cells++;
-                    if (level.getBlockState(c).isAir() && level.getBlockState(c.above()).isAir() && level.getBlockState(c.above(2)).isAir()) open++;
+                    if (clear(level, c) && clear(level, c.above()) && clear(level, c.above(2))) open++;
                     if (i % 4 != 0) {
                         slices++;
                         if (level.getBlockState(c.below()).getBlock() instanceof StairBlock) stairs++;
@@ -200,6 +202,11 @@ public class MineWorksGameTests {
         MineWorks.sinkForTests(r.level, r.v, corner + 1, dresser);
         MineWorks.roomForTests(r.level, r.v, id);
         return y;
+    }
+
+    /** Nothing to bump into here (air, a torch on the wall). */
+    static boolean clear(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).getCollisionShape(level, p).isEmpty() && level.getFluidState(p).isEmpty();
     }
 
     static int carried(VillageFolkEntity m, java.util.function.Predicate<ItemStack> what) {
@@ -338,7 +345,7 @@ public class MineWorksGameTests {
             for (BlockPos c : cells) {
                 if (!MineGround.reserved(r.v, c.getX(), c.getZ())) out++;
                 if (TownDigs.inTownGroundRaw(level, r.v, r.heart, c, 0)) inTown++;
-                if (level.getBlockState(c).isAir() && level.getBlockState(c.above()).isAir()) open++;
+                if (clear(level, c) && clear(level, c.above())) open++;
             }
             String path = d == null ? "" : String.valueOf(d[3]);
             int longest = 0;
