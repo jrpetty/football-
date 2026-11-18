@@ -299,8 +299,8 @@ public final class TownJobs {
         // unmade and no child born for want of one.
         boolean extra = (essential(works) || works.equals(TIDY)) && busy < cap + 1;   // [tidy] the crew is never starved of its one hand
         // [city9] Nor the streets: a town of ninety had its hands all at its signs, beds and gardens, and four days on not a
-        // yard of street laid. Their one hand may be past the eighth, and the tidy crew's.
-        if (works.equals("streets") && busy < cap + 2) extra = true;
+        // yard of street laid. The paving's hand and the doors' ways' may each be past the eighth, with the tidy crew's.
+        if ((works.equals("streets") || works.equals("paving")) && busy < cap + 3) extra = true;
         if (busy >= cap && !extra) {
             if (busy >= Math.max(1, adults / 4)) return null;
             over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);

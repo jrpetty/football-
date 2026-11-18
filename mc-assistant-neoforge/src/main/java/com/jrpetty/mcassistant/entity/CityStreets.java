@@ -79,7 +79,8 @@ public final class CityStreets {
             if (Market.stock(level, v.id(), s -> s.is(it)) > KEEP) { lay = g; break; }
         }
         if (lay < 0) return 0;
-        if (!TownJobs.atWork(level, v, "streets", top, lay == 1 ? "laying the streets" : "paving the streets")) return -1;
+        // Its own hand ("paving"): the doors' ways and lamps keep theirs ("streets"), and the one no longer waits on the other.
+        if (!TownJobs.atWork(level, v, "paving", top, lay == 1 ? "laying the streets" : "paving the streets")) return -1;
         if (PAID[lay] != null) {
             Item it = PAID[lay];
             if (!TownWork.take(level, v, s -> s.is(it), 1)) return 0;
