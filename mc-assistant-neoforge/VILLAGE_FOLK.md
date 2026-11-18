@@ -13871,8 +13871,9 @@ between them and the town or not. Five changes make it read as a place that grew
   open sides) and waits without stone; a building's own water (a fountain's spring may run into its own bowl) and a
   farmer's water hole likewise. On the town's rounds, one building a visit, water in a building's water cells that would
   not stay is taken up, so an older town's stream dries up ("the water running off the allotments was stopped").
-- **Each house its own** (CityDress). The houses go up to one drawing from one stock of wood. Once one stands (in the
-  Iron Age, once it has its second storey) the town's hands dress it once, by where it stands: its roof kept, laid
+- **Each house its own** (CityDress). The houses go up to one drawing from one stock of wood. Once one stands the
+  town's hands (the gardens' hand) dress it once, by where it stands (and the same way again once it has its second
+  storey and its new roof): its roof kept, laid
   again in another of the town's roofing woods (its look's list) that the stores have to spare, or in stone, the slate
   look (cobblestone, stone bricks from the Iron Age); and its posts and beams kept, stripped to the bare wood, or in a
   dark timber; two neighbours are seldom alike. Paid in planks or stone (a stair a block and a half, a slab half) and

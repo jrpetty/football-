@@ -29,8 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * alike.
  *
  * <p>A town's houses all go up to one drawing out of one stock of wood, so a street of them was a row of the same
- * house. Once a house stands (and, in the Iron Age, once it has its second storey), the town's hands dress it once, by
- * where it stands, so that two neighbours are seldom the same:
+ * house. Once a house stands, the town's hands dress it once, by where it stands (and the same way again once it has
+ * its second storey and its new roof), so that two neighbours are seldom the same:
  * <ul>
  * <li><b>its roof</b> kept as built (about one in three), laid again in another of the town's roofing woods (its
  *     look's list: Palettes) that the stores have to spare, or in stone, the slate look: cobblestone, and stone bricks
@@ -70,8 +70,8 @@ public final class CityDress {
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (!house(b.structure())) continue;
             String n = Ledger.note(id, noteKey(b));
-            if (n == null) waiting++;
-            else if (n.equals("kept")) kept++;
+            if (n == null || !n.startsWith(drawing(id, b) + ":")) waiting++;
+            else if (n.endsWith(":kept")) kept++;
             else dressed++;
         }
         return dressed + " dressed, " + kept + " kept as built, " + waiting + " to see to";
@@ -124,13 +124,13 @@ public final class CityDress {
      */
     public static int dress(ServerLevel level, Villages.Village v, Ledger.Building b, boolean free) {
         UUID id = v.id();
-        if (Ledger.note(id, noteKey(b)) != null) return 0;
+        String done = Ledger.note(id, noteKey(b));
+        if (done != null && done.startsWith(drawing(id, b) + ":")) return 0;     // dressed for the drawing it stands to now
         if (!Land.areaLoaded(level, b.anchor(), 7)) return 0;
         if (HousingMarket.isPrivate(id, b.anchor()) || Beliefs.untouchable(id, b) || Grow.raisingNow(id, b.anchor())) return 0;
         if (PlayerBlocks.placed(level, b.anchor())) return 0;
         String drawing = drawing(id, b);
         boolean iron = Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal();
-        if (iron && drawing.equals("house") && !free) return 0;                 // its second storey first: the roof comes off for it
         int roofChoice = roofChoice(b.anchor());
         // The roof's make: 1, a wood of the town's roofing list other than the house's own that the stores can spare;
         // 2, stone (cobblestone, stone bricks from the Iron Age), the slate look of the better streets.
@@ -181,7 +181,7 @@ public final class CityDress {
             }
         }
         if (at.isEmpty()) {
-            Ledger.note(id, noteKey(b), "kept");
+            Ledger.note(id, noteKey(b), drawing + ":kept");
             return 0;
         }
         int planks = (stairs * 3 + 1) / 2 + (slabs + 1) / 2;
@@ -209,7 +209,7 @@ public final class CityDress {
                 if (back != Items.AIR) Crafts.store(level, v, new ItemStack(back));
             }
         }
-        Ledger.note(id, noteKey(b), roofWood == null ? "frame" : roofWood);
+        Ledger.note(id, noteKey(b), drawing + ":" + (roofWood == null ? "frame" : roofWood));
         return 1;
     }
 
