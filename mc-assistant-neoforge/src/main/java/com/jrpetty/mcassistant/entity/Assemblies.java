@@ -134,6 +134,17 @@ public final class Assemblies {
     /** Who built what, for the opening. */
     private static final Map<String, String> BUILDERS = new ConcurrentHashMap<>();
 
+    /** [health320] Tests: where a town's gathering is (kind, phase, the line it is at of how many, who came of how many), or null. */
+    @Nullable
+    public static String stateForTests(UUID village, long now) {
+        Assembly a = NOW.get(village);
+        if (a == null) return null;
+        StringBuilder sb = new StringBuilder(a.kind + " " + a.phase + " for " + (now - a.phaseAt) + " ticks, line " + a.line + "/" + a.script.size()
+            + ", " + a.seated.size() + " of " + a.expected + " come:");
+        for (Line l : a.script) sb.append(" | ").append(l.text());
+        return sb.toString();
+    }
+
     public static void resetForTests() {
         OPENED.clear();
         NOW.clear();
