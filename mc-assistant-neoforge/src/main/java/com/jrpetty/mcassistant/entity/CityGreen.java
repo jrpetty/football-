@@ -37,8 +37,8 @@ public final class CityGreen {
 
     private CityGreen() {}
 
-    /** The middle of each bed, from the heart: three in from the square's corner. */
-    static final int AT = TownPlan.PLAZA - 4;
+    /** The middle of each bed, from the heart: four in from the square's inner corner. */
+    static final int AT = TownPlan.PLAZA - 5;                   // [city9] five in, a crown's width clear of the wall
     /** Leaves lower than this over the square come off. */
     static final int HEADROOM = 3;
 
@@ -150,11 +150,13 @@ public final class CityGreen {
             TownBlocks.traced(v, f, TownBlocks.Why.CIVIC);
             return 1;
         }
-        // A grown tree's low leaves over the square.
+        // A grown tree's low leaves over the square, and any of its crown reaching over the square's wall or up against
+        // it (a wide oak's crown stood where the wall was going up and left its upper courses out: ba01).
         java.util.List<BlockPos> low = new java.util.ArrayList<>();
-        for (int ox = -3; ox <= 3; ox++) {
-            for (int oz = -3; oz <= 3; oz++) {
-                for (int h = 1; h < 1 + HEADROOM; h++) {
+        for (int ox = -5; ox <= 5; ox++) {
+            for (int oz = -5; oz <= 5; oz++) {
+                boolean byWall = Math.max(Math.abs(m[0] + ox), Math.abs(m[1] + oz)) >= TownPlan.PLAZA - 1;
+                for (int h = 1; h < (byWall ? 14 : 1 + HEADROOM); h++) {
                     BlockPos q = new BlockPos(hx + m[0] + ox, floor + h, hz + m[1] + oz);
                     if (level.getBlockState(q).getBlock() instanceof LeavesBlock) low.add(q);
                 }
