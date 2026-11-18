@@ -508,6 +508,7 @@ public final class Villages {
         Palettes.resetForTests();
         CityPlan.resetForTests();                                   // [city9] the walked streets
         CityGreen.resetForTests();                                  // [city9] the square's greens
+        CityWater.resetForTests();                                  // [city9] the water swept
         Court.resetForTests();
         School.resetForTests();
         Annals.resetForTests();

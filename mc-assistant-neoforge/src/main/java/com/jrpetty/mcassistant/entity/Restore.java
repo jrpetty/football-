@@ -717,6 +717,7 @@ public final class Restore {
             return true;
         }
         if (want.part() == BuildGoal.Part.WATER) {
+            if (!CityWater.holds(level, at, CityWater.own(j.building, CityWater.waterCells(j.building)))) return false;   // [city9] never water that runs off
             level.setBlockAndUpdate(at, Blocks.WATER.defaultBlockState());
             return true;
         }

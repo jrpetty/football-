@@ -415,6 +415,9 @@ public class FarmGoal extends Goal {
     /** Carve a 1-deep basin at farmland level and set a contained water source
      *  so the surrounding tilled plot stays hydrated; convert the bucket to empty. */
     private void doPlaceWater(BlockPos pos) {
+        // [city9] Never a water hole that would run off: firm under it and on every side (CityWater).
+        if (assistant.level() instanceof net.minecraft.server.level.ServerLevel sl
+                && !com.jrpetty.mcassistant.entity.CityWater.holds(sl, pos, java.util.List.of())) return;
         boolean full = assistant.removeMatching(s -> s.is(Items.WATER_BUCKET), 1) == 1;
         boolean town = !full && com.jrpetty.mcassistant.entity.FieldWater.fromTheTown(assistant);   // [build5] the well's water
         if (!full && !town) return;

@@ -171,6 +171,9 @@ public final class Allotments {
                 if (level.getFluidState(p).is(FluidTags.WATER) || !level.getBlockState(p).isAir()) continue;
                 if (Market.stock(level, v.id(), s -> s.is(Items.WATER_BUCKET)) < 1) return false;
                 if (!TownJobs.atWork(level, v, "allotments", p, "watering the allotments")) return false;
+                // [city9] Only into a channel that will hold it: its bed and sides lined from the stores first (CityWater).
+                java.util.List<BlockPos> basin = CityWater.waterCells(b);
+                if (!CityWater.holds(level, p, basin) && !CityWater.line(level, v, p, basin)) return false;
                 if (!Crafts.take(level, v, s -> s.is(Items.WATER_BUCKET), 1)) return false;
                 Crafts.store(level, v, new ItemStack(Items.BUCKET));
                 level.setBlock(p, Blocks.WATER.defaultBlockState(), 3);
