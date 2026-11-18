@@ -13858,8 +13858,12 @@ between them and the town or not. Five changes make it read as a place that grew
   to door; it was one hand in eight among a dozen works; and one cell it could not get to (shut in by the camp, up a
   bank) held up every street behind it for good. Now the cells go in walking order (the square round, each avenue from
   its gate outward, the ring street round, then the lanes one after another along their length, nearest first, each once
-  the town has come to it), so a hand lays a run where it stands; the paving has its own hand, which with the doors'
-  may be past the eighth; and a cell no hand reaches in a minute is passed over till the next time round. The surface
+  the town has come to it), so a hand lays a run where it stands; the streets have their own round every three seconds
+  once the town is settled (the rest of the town's works keep their quarter of a minute); the paving has its own hand,
+  which with the doors' ways' is on top of the town's one hand in eight and not counted against the other works' (never
+  a post's holder, the wheelwright or the planner, whose stints would wait on it); the street lamps go up by the hand
+  laying the street; no street is laid within three blocks of a building going up (its builders ease the ground round
+  it first); and a cell no hand reaches in a minute is passed over till the next time round. The surface
   goes by the age: a path; gravel on the avenues and the ring from the Stone Age; cobbles there and gravel in the lanes
   from the Iron Age; stone bricks on the avenues and the ring from the Diamond Age (the square cobbled, then in stone
   bricks, as before). A cell is only laid again in something better (what comes up goes back to the stores), and the
@@ -13894,7 +13898,7 @@ smithy, the inn and three houses), no block of homes turned, no green on the squ
 greens planted in the three days, more plots closed in (fence, wall: 3 and 1 by the water, 5 and 2 on the hills, against
 3 and 0, 2 and 0). Unchanged: no works in the heart, no buildings off the streets on the hills. The streets (the same
 audit, the streets' cells within the town's reach laid by the third day): before 108 by the water and 259 on the hills
-(one or two in a hundred of them); after 1,802 and 1,933 (about a third: the avenues, the ring, the square and the lanes
+(one or two in a hundred of them); after 1,527 and 1,916 (about a third: the avenues, the ring, the square and the lanes
 the town has come to). The trace (ct07, a town of sixteen in the Iron Age, half a day): 96 cells laid before, 573 after.
 The works stood by houses about as before (2 of 4, 1 of 3: the craft quarter's lots border the homes'), no farmland
 within a lot of a house, and no flowing water on the town's ground in either.
