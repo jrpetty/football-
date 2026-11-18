@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -91,6 +92,65 @@ public final class SiteWork {
             || st.is(Blocks.MOSSY_STONE_BRICKS) || st.is(Blocks.CRACKED_STONE_BRICKS) || st.is(Blocks.DIRT_PATH)
             || st.is(Blocks.SMOOTH_STONE) || st.is(Blocks.POLISHED_ANDESITE) || st.is(Blocks.GRAVEL);
         return paving && !(level instanceof ServerLevel sl && PlayerBlocks.placed(sl, pos));
+    }
+
+    // ------------------------------------------------------------------ the founding's levelling and the work chests
+
+    /**
+     * A town's own work chest (a "Village Store" chest or barrel a hand set down on its plot), standing on ground the
+     * founding has still to level. The levelling took any block that was not the world's own for somebody's building
+     * and left the whole column standing as it was: on a mountainside the miners had set their chests on the hill
+     * before the cut reached them, and five columns of rock stood up out of the levelled bowl, each with a chest on
+     * top and the felled trees' crowns hanging over it. Such a chest is carried down with the ground now (Terraform).
+     */
+    public static boolean townChest(net.minecraft.world.level.chunk.LevelChunk chunk, BlockPos pos, BlockState st) {
+        if (!(st.getBlock() instanceof net.minecraft.world.level.block.ChestBlock)
+                && !(st.getBlock() instanceof net.minecraft.world.level.block.BarrelBlock)) return false;
+        if (chunk.getLevel() instanceof ServerLevel sl && PlayerBlocks.placed(sl, pos)) return false;
+        net.minecraft.world.level.block.entity.BlockEntity be = chunk.getBlockEntity(pos);
+        return be != null && ZoneChests.isVillageStore(be);
+    }
+
+    /**
+     * What a step of the founding's sloped edge is dressed in where it is cut into the hill. It kept whatever the column
+     * had been, and on a mountain that was bare rock or a drift of snow: the cut stood round the town as a raw stone
+     * bowl, an amphitheatre of white steps. A cut step is turfed now in the town's own soil (grass where the town's
+     * ground is snow or rock), with earth under it, so the hill comes down to the town in green terraces; a step built
+     * up, or one the cut never reached, keeps its own.
+     */
+    public static Block edgeTop(Block own, Block townSurface, boolean cut) {
+        if (!cut || !(own == Blocks.STONE || own == Blocks.SNOW_BLOCK || own == Blocks.GRAVEL)) return own;
+        return townSurface == Blocks.STONE || townSurface == Blocks.SNOW_BLOCK || townSurface == Blocks.GRAVEL
+            ? Blocks.GRASS_BLOCK : townSurface;
+    }
+
+    /** A work chest lifted out of a column (its block and what it holds), to be set down again on the new ground. */
+    public record Carried(BlockState state, net.minecraft.nbt.CompoundTag tag) {}
+
+    /** Lift a town's work chest out of the world, what is in it kept with it (nothing spills). */
+    public static Carried lift(ServerLevel level, BlockPos pos) {
+        BlockState st = level.getBlockState(pos);
+        net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
+        net.minecraft.nbt.CompoundTag tag = be == null ? new net.minecraft.nbt.CompoundTag() : be.saveWithoutMetadata(level.registryAccess());
+        if (be instanceof net.minecraft.world.Container c) c.clearContent();           // so nothing drops as it goes
+        level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+        return new Carried(st, tag);
+    }
+
+    /** Set a lifted work chest down at the first free cell at or over {@code at}, its goods back in it. */
+    public static void setDown(ServerLevel level, BlockPos at, Carried c) {
+        BlockPos p = at;
+        for (int i = 0; i < 4 && !level.getBlockState(p).canBeReplaced(); i++) p = p.above();
+        BlockState st = c.state();
+        if (st.hasProperty(net.minecraft.world.level.block.ChestBlock.TYPE)) {
+            st = st.setValue(net.minecraft.world.level.block.ChestBlock.TYPE, net.minecraft.world.level.block.state.properties.ChestType.SINGLE);
+        }
+        level.setBlock(p, st, Block.UPDATE_ALL);
+        net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(p);
+        if (be != null) {
+            be.loadWithComponents(c.tag(), level.registryAccess());
+            be.setChanged();
+        }
     }
 
     // ------------------------------------------------------------------ the square's wall on its ground
