@@ -73,7 +73,7 @@ public final class CityGreen {
             int[] m = middles()[Math.floorMod(cursor + k, 4)];
             int r = corner(level, v, m);
             if (r != 0) {
-                CURSOR.put(id, cursor + k + (r > 0 ? 0 : 1));
+                CURSOR.put(id, cursor + k);                         // this bed again next visit (its hand on the way, or more to do)
                 return r > 0;
             }
         }

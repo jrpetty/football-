@@ -14,8 +14,8 @@ import net.minecraft.world.level.block.state.BlockState;
  *
  * <p>A house's garden (Grow.garden) used to be the same for every house: a fence all round the plot and a gate in
  * front, so every street was a row of fenced boxes, and between two neighbours stood two fences side by side. Now each
- * plot is closed in its own way, settled once by where it stands (the same every time it is looked at, and different
- * from its neighbours' more often than not):
+ * plot is closed in its own way, settled once by where it stands (the same every time it is looked at, whatever its
+ * neighbours have):
  * <ul>
  * <li><b>a fence</b> all round with a gate in front (about two plots in five);</li>
  * <li><b>a low wall</b> of the stores' stone (cobblestone, or stone bricks once the town dresses its stone), with a gap
@@ -33,8 +33,13 @@ public final class CityPlots {
 
     /** How this house's plot is closed in. */
     public static Edge edge(Ledger.Building b) {
-        long h = b.anchor().asLong() * 0x9E3779B97F4A7C15L;
-        int k = (int) Math.floorMod(h >>> 29, 20L);
+        long h = b.anchor().asLong();                          // mixed well: a neighbour eleven along is anything
+        h ^= h >>> 33;
+        h *= 0xff51afd7ed558ccdL;
+        h ^= h >>> 33;
+        h *= 0xc4ceb9fe1a85ec53L;
+        h ^= h >>> 33;
+        int k = (int) Math.floorMod(h, 20L);
         return k < 8 ? Edge.FENCE : k < 13 ? Edge.WALL : Edge.OPEN;
     }
 
