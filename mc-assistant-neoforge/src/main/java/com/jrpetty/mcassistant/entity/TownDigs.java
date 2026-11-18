@@ -211,12 +211,20 @@ public final class TownDigs {
         }
     }
 
-    /** Somebody in the stairs, or a miner of the town still on a plot round them: left for now. */
+    /** Somebody down the stairs or in the galleries off them (sixteen blocks round the whole staircase), or a miner of the
+     *  town still on a plot round them: left for now. */
     private static boolean inUse(ServerLevel level, UUID village, BlockPos head, List<BlockPos> steps) {
-        BlockPos low = steps.get(Math.min(steps.size() - 1, 12));
-        AABB box = new AABB(Math.min(head.getX(), low.getX()) - 3, Math.min(head.getY(), low.getY()) - 3, Math.min(head.getZ(), low.getZ()) - 3,
-            Math.max(head.getX(), low.getX()) + 4, head.getY() + 4, Math.max(head.getZ(), low.getZ()) + 4);
-        if (!level.getEntitiesOfClass(LivingEntity.class, box, e -> e.isAlive()).isEmpty()) return true;
+        int x0 = head.getX(), x1 = head.getX(), z0 = head.getZ(), z1 = head.getZ(), y0 = head.getY();
+        for (BlockPos s : steps) {
+            x0 = Math.min(x0, s.getX()); x1 = Math.max(x1, s.getX());
+            z0 = Math.min(z0, s.getZ()); z1 = Math.max(z1, s.getZ());
+            y0 = Math.min(y0, s.getY());
+        }
+        AABB box = new AABB(x0 - 16, y0 - 6, z0 - 16, x1 + 17, head.getY() + 4, z1 + 17);
+        if (!level.getEntitiesOfClass(LivingEntity.class, box,
+                e -> e.isAlive() && (e instanceof net.minecraft.world.entity.player.Player || e instanceof AssistantEntity)).isEmpty()) return true;
+        AABB tight = new AABB(x0 - 1, y0 - 1, z0 - 1, x1 + 2, head.getY() + 3, z1 + 2);   // a beast in the stairs themselves
+        if (!level.getEntitiesOfClass(LivingEntity.class, tight, e -> e.isAlive()).isEmpty()) return true;
         for (AssistantEntity a : Villages.folkOf(village)) {
             WorkZone z = a.workZone();
             if (a.stationTask() == AssistantEntity.StationTask.MINE && z != null && z.containsColumn(head)) return true;

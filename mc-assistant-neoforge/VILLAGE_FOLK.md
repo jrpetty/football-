@@ -13729,3 +13729,59 @@ hires at the folk's own price.
   - Tests: LongGameTests lg01 (too young to sleep; sleeps with rates; its own day after two days asleep, and asleep again
     after it; awake with its heart force-loaded; the status says which) and lg02 (a town of eight with nobody near, two
     days on: awake, its folk loaded, its stores moving).
+
+## Mines and every other dig kept out of the town (mine-7)
+
+Players saw towns dig their mines in the middle of town and ruin its look. The causes, found in the code and measured:
+
+- **The mine was chosen against the town of the day.** TownMine opened the town's one mine "outside the town": outside
+  its reach as it stood (Villages.townReach, forty-one blocks while the town has one ring of lots), so fifty-seven to
+  seventy-odd blocks out, with faces spreading up to sixty-eight blocks round the first one, back toward the houses too.
+  The town grows to its third ring (ninety-one blocks) and stands on the stairs. A face was refused once the town reached
+  it, but the faces already dug, their stairs and their open tops stayed in the streets. In a test world the mine opened
+  73 blocks out; on a real map (seed 424242) 82 out, with its faces at 82 to 99.
+- **A miner with no face staked a plot of its own** just past the houses of the day (the old per-miner look round,
+  still reached whenever the mine had no face to give: the ground out there not loaded, or none fit), and the town grew
+  over that too.
+- **A miner was moved off a plot only when a house stood on it** (TownMine.builtGround: buildings and the square),
+  never for a street, an empty lot, the farmland or the plan's ground, so plots from an older world, or a plot a player
+  gave a folk where it stood (an unzoned job claims the ground round its feet), were dug on in the town for good.
+- **Any hand sent for stone, earth, sand or gravel cut it where it stood** (GatherGoal looks sixteen blocks round the
+  folk and six down): a smelter or a crafter whose bench is on the square, taking on the town's want of stone, dug it
+  out from under the square.
+- The smelter's sand and clay: dry sand only past the town of the day; beds under water anywhere round the town.
+
+What a town does now (entity/TownDigs, marked `[mine7]`):
+
+- **The town's ground** is the ground it will grow over: its whole plan (the square and three rings of lots, ninety-one
+  blocks) with a six-block margin, its farmland with the margin, its buildings and its lines wherever they stand, and the
+  frontage of its roads to its neighbours (eight blocks). No village dig is made in it.
+- **The mine** is opened beyond it (a hundred and six blocks out at the least, looking out to sixty blocks further), and
+  no face is handed out that comes back into it. With no fit ground loaded the miners wait: no plot of their own.
+- **A miner on a plot in the town's ground** moves out to a face of the mine (seekTheSeam), or comes off the plot and
+  waits for one, keeping its trade; a mine run never starts from the town's ground (MineGoal), and the station work does
+  not queue one.
+- **A hand sent for stone, earth, sand, gravel or ore** never cuts it in the town's ground (GatherGoal, and the look that
+  says whether there is any to be had); timber and cane as ever. The player's own helpers are not touched.
+- **Sand and clay** are dug only beyond the town's ground, wet or dry.
+- **An older world**: a mine whose first face lies in the town's plan is moved out beyond it ("the town's mine was moved
+  out of the town's way, from ... to ..."; the old site noted in the ledger as mine.old), and its miners with it. The
+  town fills in its own old stairs in its ground, a staircase at a time every half minute (forty-eight blocks a look):
+  each step's column from the step up to the ground at the head, down to where rock roofs the stairs over, the top
+  turfed, the fence, sign and lantern round the head taken up; never while anybody stands in them or a miner still works
+  a plot round them ("the old mine stairs at x, z were filled in and turfed over"). Only its own: MineStairs now keeps
+  which village's folk cut each staircase (saved with the world); an older world's unmarked stairs count as the town's
+  only inside its plan. A player's dig, a natural cave or another town's stairs are never filled.
+- **The mine looks like a mine**: each staircase of the town's mine gets a timber portal over its head (two posts of
+  stripped spruce either side of the first step, a beam across, a lantern hung under it, the way down clear), once, on
+  open ground only; and a path two blocks wide is trodden from the town's edge out to the mine's first face (grass and
+  earth to path; never a field, water or anything somebody put down).
+- **Measured** (MineSiteGameTests ms01: a town of fourteen founded on the test world with four miners and a smelter,
+  its stores kept full, two days on; counted in the town's ground as it will grow): before, 7 openings dug (13 columns,
+  60 to 84 blocks out), 1 mine staircase head and 1 miner's plot in it, the mine 73 out; after, 0, 0 and 0, the mine 107
+  out and its miners at work 107 to 141 out.
+- Tests: MineSiteGameTests ms01 (the audit), ms02 (the mine beyond the whole plan, small town or grown; its faces clear;
+  no plot in town while the ring is not loaded), ms03 (no stone, earth or sand cut in the town's ground; timber and the
+  ground beyond, yes), ms04 (an older world: the mine and its miner moved out, the town's own stairs filled and turfed,
+  another town's stairs and an unrecorded hole left; the mark kept over a save and a load), ms05 (the portal and its
+  lantern, put up once; the path from the town to the mine).

@@ -339,12 +339,14 @@ public class CaveLodgeGameTests {
         UUID id = t.village();
         VillageFolkEntity miner = t.folk().get(1);
         miner.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_PICKAXE));
-        // The mine: its first face ninety blocks east of the heart; this miner on a plot of its own out west, off the
-        // mine's faces.
-        BlockPos site = new BlockPos(t.heart().getX() + 90, 0, t.heart().getZ());
+        // The mine: its first face a hundred and twenty blocks east of the heart (beyond the town's whole plan, [mine7]);
+        // this miner on a plot of its own out west, off the mine's faces and out of the town's ground.
+        BlockPos site = new BlockPos(t.heart().getX() + 120, 0, t.heart().getZ());
+        Kit.prepare(level, site.getX() + 17, site.getZ(), 24);
         TownMine.forgetForTests(id);
         Ledger.note(id, "mine.site", site.getX() + "," + site.getZ());
-        miner.assignPlot(WorkZone.around(Kit.surface(level, t.heart().getX() - 28, t.heart().getZ() + 40), 8, 16), "a mine of its own");
+        Kit.prepare(level, t.heart().getX() - 120, t.heart().getZ() + 40, 12);
+        miner.assignPlot(WorkZone.around(Kit.surface(level, t.heart().getX() - 120, t.heart().getZ() + 40), 8, 16), "a mine of its own");
         // The team's find: a big cave by the mine with a rich iron vein under its next face east.
         BlockPos veinAt = new BlockPos(site.getX() + 17, t.heart().getY() - 3, site.getZ() + 2);
         BlockPos cave = veinAt.offset(-4, 0, 3);

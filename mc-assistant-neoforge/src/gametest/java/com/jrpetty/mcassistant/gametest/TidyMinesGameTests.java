@@ -67,13 +67,16 @@ public class TidyMinesGameTests {
     }
 
     /**
-     * The one folk of a town whose heart is well off to one side, on no trade and left to no work of its own choosing
+     * The one folk of a town whose heart is well off to one side (beyond its town's ground: [mine7]), on no trade and left to no work of its own choosing
      * (a second folk is given a trade by its town at once, and a miner's plot is moved to its town's mine), a pick and
      * cobblestone in its pack, stood here. The test gives it its work at once: a hand with nothing queued takes the
      * cobblestone it carries back to the builders' stores.
      */
     private static VillageFolkEntity folk(ServerLevel level, int x, BlockPos at, ItemStack pick) {
-        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x - 40, Z + 30), 0.0F);
+        // [mine7] Its heart beyond the ground the test works (a village hand digs nothing in its town's ground, TownDigs).
+        Kit.hold(level, x - 160, Z + 30, 16);
+        Kit.prepare(level, x - 160, Z + 30, 16);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x - 160, Z + 30), 0.0F);
         if (f == null) return null;
         f.setAutonomous(false);
         f.clearQueue();
@@ -192,6 +195,7 @@ public class TidyMinesGameTests {
                 helper.assertTrue(Footholds.countForTests(level, floor, 12) == left[0], "its steps wait, booked, while it is away");
                 back[0] = t;
                 packed[0] = cobble(f);
+                f.clearQueue();                                                       // [mine7] back with nothing queued (its town's far off)
                 f.moveTo(floor.getX() + 1.5, floor.getY(), floor.getZ() + 2.5, 0.0F, 0.0F);   // beside the foot of its steps
                 Kit.log("tmn02 back by them at " + t);
                 return;

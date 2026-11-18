@@ -180,7 +180,10 @@ public class MineStairsGameTests {
             rock.add(r);
             level.setBlock(r, Blocks.STONE.defaultBlockState(), 2);
         }
-        VillageFolkEntity f = folk(level, g, g);
+        // [mine7] Its town's heart well off (a hand of the town cuts no stone in the town's ground, TownDigs).
+        Kit.hold(level, x - 160, z, 16);
+        Kit.prepare(level, x - 160, z, 16);
+        VillageFolkEntity f = folk(level, Kit.surface(level, x - 160, z), g);
         helper.assertTrue(f != null, "a folk");
         GatherGoal gather = new GatherGoal(f);
         BlockPos before = gather.nearestForTests(GatherGoal.Kind.STONE);
