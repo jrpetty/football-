@@ -179,7 +179,8 @@ public final class CityDress {
             if (planks > 0 && (plankItem == null || Market.stock(level, id, s -> s.is(plankItem)) < planks + KEEP)) return 0;
             if (logs > 0 && (logItem == null || Market.stock(level, id, s -> s.is(logItem)) < logs + KEEP)) return 0;
             for (BlockPos p : at) if (!TownBlocks.allows(level, v, p, TownBlocks.Why.RENOVATE)) return 0;
-            if (!TownJobs.atWork(level, v, "dressing", b.anchor(), "giving a house its own roof and timbers")) return -1;
+            // The gardens' hand (it is at the houses already): a crew of its own went without a hand in a town of ninety.
+            if (!TownJobs.atWork(level, v, "gardens", b.anchor(), "giving a house its own roof and timbers")) return -1;
             if (planks > 0 && !Crafts.take(level, v, s -> s.is(plankItem), planks)) return 0;
             if (logs > 0 && !Crafts.take(level, v, s -> s.is(logItem), logs)) {
                 if (planks > 0) Crafts.store(level, v, new ItemStack(plankItem, planks));
