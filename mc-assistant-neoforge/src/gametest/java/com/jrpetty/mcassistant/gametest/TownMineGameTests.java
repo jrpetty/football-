@@ -68,28 +68,20 @@ public class TownMineGameTests {
         BlockPos again = TownMine.site(level, v, heart.offset(300, 0, 300), p -> true);
         helper.assertTrue(again != null && again.getX() == site.getX() && again.getZ() == site.getZ(), "the site is kept: " + again);
 
-        // Faces side by side: the first miner on the first face, the second on the next one along.
+        // [mine8] Every miner's plot is the pithead: the mine is one works with one main shaft (MineWorks), not a face apiece.
         VillageFolkEntity a = miners.get(0), b = miners.get(1), c = miners.get(2);
         int depth = heart.getY() - 3;
         BlockPos fa = TownMine.faceFor(level, a, heart, p -> false);
-        helper.assertTrue(fa != null, "a face for the first miner");
+        helper.assertTrue(fa != null, "a plot for the first miner");
         a.assignPlot(WorkZone.around(fa, 8, depth), "Face A");
         BlockPos fb = TownMine.faceFor(level, b, heart, p -> false);
-        helper.assertTrue(fb != null, "a face for the second miner");
+        helper.assertTrue(fb != null, "a plot for the second miner");
         b.assignPlot(WorkZone.around(fb, 8, depth), "Face B");
-        int apart = Math.max(Math.abs(fa.getX() - fb.getX()), Math.abs(fa.getZ() - fb.getZ()));
-        Kit.log("tm01 faces: " + fa.toShortString() + " and " + fb.toShortString() + ", " + apart + " apart");
-        helper.assertTrue(fa.getX() == site.getX() && fa.getZ() == site.getZ(), "the first face is the site");
-        helper.assertTrue(!sameFace(v, fa, fb) && apart == TownMine.PITCH, "the second face is the next one along: " + apart);
+        Kit.log("tm01 plots: " + fa.toShortString() + " and " + fb.toShortString());
+        helper.assertTrue(fa.getX() == site.getX() && fa.getZ() == site.getZ(), "the first miner's plot is the pithead, at the site");
+        helper.assertTrue(fb.getX() == site.getX() && fb.getZ() == site.getZ(), "so is the second's: one works");
         helper.assertTrue(TownMine.inMine(v, fa) && TownMine.inMine(v, fb), "both in the mine");
-
-        // A face worked out is not handed out again; the miner takes a fresh one.
-        TownMine.spent(v, fa);
-        BlockPos fa2 = TownMine.faceFor(level, a, heart, p -> false);
-        helper.assertTrue(fa2 != null && !sameFace(v, fa2, fa) && !sameFace(v, fa2, fb),
-            "a worked-out face is not given again, nor a mate's: " + fa2);
-        helper.assertTrue(Villages.outsideTown(v, heart, fa2, 8), "the next face is clear of the town too");
-        a.assignPlot(WorkZone.around(fa2, 8, depth), "Face A2");
+        BlockPos fa2 = fa;
 
         // What a miner may cut: rock, earth and ore; never cobblestone or planks somebody laid.
         int y = heart.getY() - 2;
@@ -125,10 +117,10 @@ public class TownMineGameTests {
         BlockPos cAt = c.workZone().center(), aAt = a.workZone().center();
         Kit.log("tm01 moved on: the old pit's miner " + cMoved + " to " + cAt.toShortString() + ", the built-over face's " + aMoved
             + " to " + aAt.toShortString() + " | " + String.join(" | ", TownMine.report(v, heart)));
-        helper.assertTrue(cMoved && TownMine.inMine(v, cAt) && Villages.outsideTown(v, heart, cAt, 8),
-            "the miner under the square moves out to a face of the mine: " + cAt.toShortString());
-        helper.assertTrue(aMoved && !sameFace(v, aAt, fa2) && TownMine.inMine(v, aAt), "the miner whose face was built over takes another");
-        helper.assertTrue(!sameFace(v, aAt, cAt) && !sameFace(v, aAt, fb) && !sameFace(v, cAt, fb), "every miner on a face of its own");
+        helper.assertTrue(cMoved && TownMine.inMine(v, cAt) && Villages.outsideTown(v, heart, cAt, 8) && cAt.getX() == site.getX() && cAt.getZ() == site.getZ(),
+            "the miner under the square moves out to the mine's pithead: " + cAt.toShortString());
+        // [mine8] The mine is never moved: whatever stands by it, its miners work it from its one shaft.
+        helper.assertTrue(aAt.getX() == site.getX() && aAt.getZ() == site.getZ(), "the other miner works on from the pithead: " + aAt.toShortString());
         helper.succeed();
     }
 }
