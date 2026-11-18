@@ -246,10 +246,11 @@ public class CapitalGameTests {
         level.setDayTime((d0 + 7) * 24000L + 7000L);
         FolkCredit.loansForTests(level, v, d0 + 7);
         ok.that(FolkCredit.judgeForTests(level, id, b) == 0, "a week with its loan standing still: behind, and lent no more");
+        b.till = 0;                                                          // the loan spent, the takings gone: owing more than it is worth
         level.setDayTime((d0 + 14) * 24000L + 7000L);
         FolkCredit.loansForTests(level, v, d0 + 14);
         CompoundTag r = Enterprise.recordForTests(id, b);
-        ok.that(r != null && r.contains("petition"), "two weeks behind: its lender took it to the court (" + (r == null ? "-" : r.getString("petition")) + ")");
+        ok.that(r != null && r.contains("petition"), "two weeks behind and owing more than it is worth: its lender took it to the court (" + (r == null ? "-" : r.getString("petition")) + ")");
         b.till = 1000;
         b.account = 0;
         long chest = FolkCredit.clubCash(id);

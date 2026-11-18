@@ -13426,8 +13426,9 @@ between holders the coin census counts, and a player can deal at every one of th
   capital; a firm losing a fifth of its takings, behind with its payments, before the court or that has defaulted before
   gets nothing. Each decision (who asked, for what, what was lent or why not) is in the lender's book.
 - **Repaid daily; a default goes to court.** A loan is repaid out of the till a day at a time over its float. One that
-  has not come down in a week is behind; two weeks behind, the lender takes the firm to the court like any creditor. The
-  receiver pays the creditors in order; what the lender is not paid is written off (a default), and its rate goes up.
+  has not come down in a week is behind (and lent no more); two weeks behind and owing more than it is worth, the lender
+  takes the firm to the court like any creditor (a firm worth more than its loan is waited for). The receiver pays the
+  creditors in order; what the lender is not paid is written off (a default), and its rate goes up.
 - **Wages on credit.** A firm's undrawn credit counts toward what the labour market lets it offer: a month's credit
   spread over the month (LabourMarket.cap).
 

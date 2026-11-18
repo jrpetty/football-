@@ -34,8 +34,9 @@ import java.util.UUID;
  * a week and a half's takings, a trading one a week's, a struggling one a third of a week's, a new one half its founders'
  * capital; a firm losing a fifth of its takings, or one that has defaulted before, nothing. What it lends is lent at the
  * day's rate and repaid out of the till a day at a time (Businesses.repay). A firm whose loan has not come down in a week
- * is behind; two weeks behind, its lender takes it to the court like any creditor (Enterprise.petitionFor), and what the
- * receiver cannot pay is written off: a default, and the rate goes up for everybody.
+ * is behind (and lent no more); two weeks behind and owing more than it is worth, its lender takes it to the court like
+ * any creditor (Enterprise.petitionFor), and what the receiver cannot pay is written off: a default, and the rate goes up
+ * for everybody.
  *
  * <p><b>Wages on credit.</b> A firm's undrawn credit counts toward what it can afford to pay (LabourMarket.cap): a month's
  * worth of its credit spread over the month.
@@ -509,7 +510,8 @@ public final class FolkCredit {
             s.putLong("check", day);
             s.putLong("was", b.loan);
             if (!down) b.note(day, "behind with its payments to " + lenderName(id) + " (" + Businesses.pence(b.loan) + " owed)");
-            if (s.getInt("behind") >= BEHIND_WEEKS && Enterprise.isFirm(b)) {
+            // To the court only when its books do not cover what it owes: a firm worth more than its loan is waited for.
+            if (s.getInt("behind") >= BEHIND_WEEKS && Enterprise.isFirm(b) && Enterprise.equity(id, b) < 0) {
                 Enterprise.petitionFor(level, id, b, day, "it could not keep up its payments to " + lenderName(id));
             }
         }
