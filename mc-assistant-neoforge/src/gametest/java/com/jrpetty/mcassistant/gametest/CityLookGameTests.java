@@ -268,7 +268,7 @@ public class CityLookGameTests {
             }
         }
         int greens = 0;
-        for (int[] m : new int[][]{ { 9, 9 }, { -9, 9 }, { -9, -9 }, { 9, -9 } }) {
+        for (int[] m : new int[][]{ { 8, 8 }, { -8, 8 }, { -8, -8 }, { 8, -8 } }) {
             BlockPos p = Kit.surface(level, h.getX() + m[0], h.getZ() + m[1]);
             BlockPos q = p;
             for (int i = 0; i < 8 && level.getBlockState(q.below()).is(BlockTags.LOGS); i++) q = q.below();
@@ -490,7 +490,7 @@ public class CityLookGameTests {
                 int did = com.jrpetty.mcassistant.entity.CityGreen.roundsForTests(level, v, 80);
                 int[] court = Villages.courtRectForTests(id);
                 int greens = 0, wrong = 0, inCourt = 0;
-                for (int[] m : new int[][]{ { 9, 9 }, { -9, 9 }, { -9, -9 }, { 9, -9 } }) {
+                for (int[] m : new int[][]{ { 8, 8 }, { -8, 8 }, { -8, -8 }, { 8, -8 } }) {
                     boolean byCourt = court != null && cx + m[0] + 3 >= court[0] && cx + m[0] - 3 <= court[1] && cz + m[1] + 3 >= court[2] && cz + m[1] - 3 <= court[3];
                     BlockState mid = level.getBlockState(new BlockPos(cx + m[0], y + 1, cz + m[1]));
                     int turf = 0, flowers = 0;
@@ -509,7 +509,7 @@ public class CityLookGameTests {
                     "the paving lifted went back into the stores");
                 // One of them grown, with leaves hanging low over the square: trimmed, the crown kept.
                 int[] m = null;
-                for (int[] c : new int[][]{ { 9, 9 }, { -9, 9 }, { -9, -9 }, { 9, -9 } }) {
+                for (int[] c : new int[][]{ { 8, 8 }, { -8, 8 }, { -8, -8 }, { 8, -8 } }) {
                     if (level.getBlockState(new BlockPos(cx + c[0], y + 1, cz + c[1])).is(Blocks.OAK_SAPLING)) { m = c; break; }
                 }
                 BlockPos foot = new BlockPos(cx + m[0], y + 1, cz + m[1]);
@@ -520,7 +520,11 @@ public class CityLookGameTests {
                     level.setBlock(foot.offset(ox, 1, oz), leaf, 2 | 16);
                     level.setBlock(foot.offset(ox, 4, oz), leaf, 2 | 16);
                 }
+                // And a wide crown's arm reaching up against the square's wall, high up: taken off too.
+                BlockPos arm = foot.offset(Integer.signum(m[0]) * 4, 6, 0);
+                level.setBlock(arm, leaf, 2 | 16);
                 com.jrpetty.mcassistant.entity.CityGreen.roundsForTests(level, v, 8);
+                helper.assertTrue(!level.getBlockState(arm).is(Blocks.OAK_LEAVES), "the crown kept off the square's wall");
                 int low = 0, high = 0;
                 for (int ox = -2; ox <= 2; ox++) for (int oz = -2; oz <= 2; oz++) {
                     if (level.getBlockState(foot.offset(ox, 1, oz)).is(Blocks.OAK_LEAVES)) low++;

@@ -13923,12 +13923,13 @@ between them and the town or not. Five changes make it read as a place that grew
   and a street and a lot), so a young town is not a grid of paths over the empty meadow, and its streets reach out a
   block ahead of its houses.
 - **Greens on the square** (CityGreen). Once the town is settled and paving its square (the Stone Age), a hand at its
-  works lays a bed of turf three by three in each corner of the square (the paving lifted back into the stores, the
+  works lays a bed of turf three by three in each corner of the square, five in from the wall, (the paving lifted back into the stores, the
   turf out of the stores' earth), plants an oak, a birch or a cherry in the middle (a tree whose crown stands up out of
   folk's way: never a spruce or a dark oak) and a flower from the stores at each corner of the bed, one thing a visit.
   Never in the courtyard before the board or where anything stands; only what the stores can spare (the saplings the
   households' gardens and the avenues keep come first). A grown tree's leaves lower than three blocks over the square
-  are trimmed off, what they drop into the stores; the tree is never felled. The streets' paving leaves the beds alone.
+  are trimmed off, and any of its crown reaching over or against the square's wall (a wide oak's crown once kept the
+  wall's upper courses from going up), what they drop into the stores; the tree is never felled. The streets' paving leaves the beds alone.
   `/village townlook` says how many of the four are planted.
 - **Each plot closed in its own way** (CityPlots, in Grow.garden). A house's garden used to be a fence all round and a
   gate for every house, and two fences side by side between neighbours. Now each plot is settled once, by where it
