@@ -126,7 +126,7 @@ public final class CityPlan {
                 if (room(level, p.set(x, y + 1, z)) && room(level, p.set(x, y + 2, z))) return WET;
                 continue;
             }
-            if (!st.blocksMotion()) continue;
+            if (!st.blocksMotion() || opens(st)) continue;
             if (room(level, p.set(x, y + 1, z)) && room(level, p.set(x, y + 2, z))) return y;
         }
         return NONE;
@@ -134,7 +134,13 @@ public final class CityPlan {
 
     private static boolean room(ServerLevel level, BlockPos p) {
         BlockState st = level.getBlockState(p);
-        return !st.blocksMotion() && st.getFluidState().isEmpty();
+        return (!st.blocksMotion() || opens(st)) && st.getFluidState().isEmpty();
+    }
+
+    /** A gate or a wooden door: a folk opens it and walks through (a gate shut for the night is still a way). */
+    static boolean opens(BlockState st) {
+        return st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock
+            || (st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock && !st.is(net.minecraft.world.level.block.Blocks.IRON_DOOR));
     }
 
     /** The plan cell straight out from a lot's door (on its street), as an offset from the heart; null for a square spot. */

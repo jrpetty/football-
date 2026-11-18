@@ -347,14 +347,19 @@ public class CityLookGameTests {
                 if (room) return Integer.MIN_VALUE;
                 continue;
             }
-            if (st.blocksMotion() && room) return y;
+            if (st.blocksMotion() && !gate(st) && room) return y;
         }
         return Integer.MIN_VALUE;
     }
 
     private static boolean clear(ServerLevel level, int x, int y, int z) {
         BlockState st = level.getBlockState(new BlockPos(x, y, z));
-        return !st.blocksMotion() && st.getFluidState().isEmpty();
+        return (!st.blocksMotion() || gate(st)) && st.getFluidState().isEmpty();
+    }
+
+    private static boolean gate(BlockState st) {
+        return st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock
+            || (st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock && !st.is(Blocks.IRON_DOOR));
     }
 
     // ============================================================ ct02: no lot over the water

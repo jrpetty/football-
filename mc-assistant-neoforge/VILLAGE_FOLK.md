@@ -13812,3 +13812,51 @@ What a town does now (entity/TownDigs, marked `[mine7]`):
   gardens, lamps, decor and new buildings and letting the mine and the way, no land title on it), ms08 (a town grown to
   its whole plan round an older world's mine still mines there: faces handed out inside the plan, runs and cuts there,
   the mine not moved).
+
+## A town that reads as a place: streets that are walked, blocks turned, greens and plots (city-9)
+
+[city9] A town is laid out to its plan (the square, the ring street, the avenues, the grid of streets and lots: *The
+town*), and its plan was drawn on paper: a perfect grid, every block of homes facing the same way in each quarter, every
+house fenced in the same box, a bare stone square, and lots taken wherever the arithmetic put them, a lake or a cliff
+between them and the town or not. Five changes make it read as a place that grew, still in order:
+
+- **Lots only on streets the town walks** (CityPlan). The plan's streets and the square are walked from the heart the way
+  a folk walks them: a block up, three down, never into water (a bridge or a causeway the town lays carries its street
+  on), an arch over a gate or a lamp's post no bar. A building is offered a lot (Villages.siteFor, and a household's own
+  house in the housing market) only if the street before its door is reached that way, so no house goes up on the far
+  bank of a lake or the top of a cliff a street's length from the town. A town with nothing else left (an island, a
+  mountain top) is let onto the rest after four looks that found nothing. Walked afresh every two minutes at most, and
+  only while a building is being sited (a few thousand columns, never on a folk's tick).
+- **Blocks turned here and there** (TownPlan). Every lot of a block touches a street on two sides. About two blocks of
+  homes in five (never the first ring round the square) are turned to their cross street, their four houses still back
+  to back in two pairs, so the roofs and the fronts along a street are not all one way. A lot keeps its way round from
+  one look to the next (the scatter is fixed); a building that stands keeps the way it was built.
+- **Side streets laid as the town comes to them** (TownWork, CityPlan.served). The avenues and the ring street are worn
+  and paved from the first; a side street's cell only once a building stands or is going up within a block of it (a lot
+  and a street and a lot), so a young town is not a grid of paths over the empty meadow, and its streets reach out a
+  block ahead of its houses.
+- **Greens on the square** (CityGreen). Once the town is settled and paving its square (the Stone Age), a hand at its
+  works lays a bed of turf three by three in each corner of the square (the paving lifted back into the stores, the
+  turf out of the stores' earth), plants an oak, a birch or a cherry in the middle (a tree whose crown stands up out of
+  folk's way: never a spruce or a dark oak) and a flower from the stores at each corner of the bed, one thing a visit.
+  Never in the courtyard before the board or where anything stands; only what the stores can spare (the saplings the
+  households' gardens and the avenues keep come first). A grown tree's leaves lower than three blocks over the square
+  are trimmed off, what they drop into the stores; the tree is never felled. The streets' paving leaves the beds alone.
+- **Each plot closed in its own way** (CityPlots, in Grow.garden). A house's garden used to be a fence all round and a
+  gate for every house, and two fences side by side between neighbours. Now each plot is settled once, by where it
+  stands: a fence with a gate (about two in five), a low wall of the stores' cobblestone (stone bricks from the Iron
+  Age) with a gap for the path (one in four), or left open to the street with only the flowers before the house (the
+  rest). Where the neighbour's fence or wall already stands along a side, that side is left to it.
+
+Nothing that stands is moved or pulled down: the rules apply to new lots, new gardens and streets not yet laid; an older
+town's square gets its greens on the next rounds (only its open paving is lifted).
+
+**Measured** (CityLookGameTests ct01: a town of forty founded on a meadow cut by a channel of water three wide down the
+first street east of the square, and one on rolling hills, grown three days with a building put up through the plan
+every minute and a quarter, its own hands laying its streets, gardens and greens; the same test on the build before):
+see the numbers below.
+
+Tests: CityLookGameTests ct01 (the audit, not required), ct02 (a lot over the water is not on the streets; over a bridge
+it is), ct03 (the square's greens laid out of the stores, none in the courtyard and no spruce; the low leaves trimmed,
+the crown kept), ct04 (a fence and gate, a low wall and an open plot; two fenced neighbours share their side, no fence
+doubled); TownPlanTest (some blocks turned, none by the square, every door on a street).
