@@ -530,7 +530,8 @@ public final class Wheelwrights {
         if (note != null && !note.isEmpty()) {
             try {
                 String[] p = note.split("\\|");
-                return new int[]{ Integer.parseInt(p[0]), Integer.parseInt(p[1]) };
+                int[] kit = { Integer.parseInt(p[0]), Integer.parseInt(p[1]) };
+                if (kit[0] > 0 || kit[1] > 0) return kit;                     // used up (or none to be had): set aside afresh
             } catch (RuntimeException ignored) {
                 // an unreadable note: set aside afresh
             }
