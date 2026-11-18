@@ -14021,9 +14021,14 @@ What it found, and what changed:
   graded pit to y=19 (3,263 of the square's columns held off the level). At the foot of a pit in the square lay one
   block of raw copper from an ore vein; anything not earth, plant or water is somebody's building to the founding, and
   the ground round a building is held to its height, a block for every block out. Now something "built" standing six or
-  more below the middle of the land round it is down a hole, not on the land (an old mine's boards in a ravine, a ruin in
-  a pit, a vein's raw ore): the hole is filled over it, the fill resting on its top. A building on the land, however low
-  the land, is still left as it was, the ground round it graded to it.
+  more below the middle of the land round it is down a hole, not on the land. If all that is in the hole is the world's
+  own (raw ore, the stone where lava met water, a cave's crystals, moss and sculk, an old mine's rails and webs and the
+  timbers and lights that go with them), the hole is filled over it, the fill resting on its top. If anything in it is
+  what anybody could have made (a chest, a bed, a door, a torch or boards with no mine's rails, glass, any block the town
+  knows a player set down), the hole is left exactly as it is, every column of it, and nothing is held to it: the town is
+  levelled to its rim, a walled pit, never filled over and never dug down to (tf08: a camp of a chest, a bed and a door at
+  the foot of a pit fourteen deep stays open and untouched; raw copper at the foot of another is filled over). A building
+  on the land, however low the land, is still left as it was, the ground round it graded to it.
 * **Caves under a crust.** The town was solid five deep: under that, every cave, cavern and aquifer stayed as it was,
   some under a lid of four blocks of dirt (a thousand to four thousand cells of air or water within twelve of the top of
   every town audited). It is solid twelve deep now, earth for the first three and stone under it; a cave with anything
@@ -14094,5 +14099,6 @@ first five blocks.
 
 Tests: TerraformGameTests (x 4,000,000 to 4,100,000, z 90000) tf01 to tf06, a ground each (the meadow, the hillside,
 the forest, the waters, the desert, the snowy slope), founded and audited, every count nought and the meadow's hut
-untouched; tf00 (not required) all six at once, for the numbers; tf07 /village spawnat founds at once and then levels.
+untouched; tf00 (not required) all six at once, for the numbers; tf07 /village spawnat founds at once and then levels;
+tf08 a player's camp down a pit left open and untouched, the world's raw copper down another filled over.
 FoundingGameTests f04 (the tarn let out, its hill graded, nothing running); FoundingPlanTest as it was.
