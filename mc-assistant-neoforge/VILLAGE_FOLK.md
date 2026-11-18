@@ -13466,3 +13466,115 @@ remembered with its day, found by name, and may be taken off; ui06 a folk gone f
 away and not dead; ui07 the profile's colour, saying, chips and own life, another folk's chips its own, the talk context's
 colour, the star on both screens; ui08 the wire: a star adds and removes, the list on opening, a refresh at once dropped,
 no detail of a folk not followed. The smoke's ui stage photographs the profile, the favourites and a favourite's detail.
+
+## Capital: savings and loans, shares, land and the town's bonds (economy batch 3)
+
+Where a town's market is open it has capital markets of its own: the folk's savings lent on to its firms, the firms'
+shares bought and sold, a title and a price on every plot of land, and the town borrowing from its people by bonds
+instead of only running IOUs at its market. Everything is kept with the world (in the town's accounts), every coin moves
+between holders the coin census counts, and a player can deal at every one of them.
+
+### Savings and loans (FolkCredit)
+
+- **The savings club.** From Market Opening Day, before the town has a bank, a savings club keeps a chest at the market.
+  Each morning a folk with more in its purse than its week wants (its living, its rent, its payments: Bank.keep) puts its
+  nature's share of the rest in (a thrifty one three parts in four, most four in ten, a spendthrift nothing), and draws it
+  out again when its purse runs under half of what it keeps. The chest is coin; what each saver has is a claim on it.
+  Once the town's bank stands and opens the club is folded into it: every balance becomes an account at the bank, the
+  chest goes into the vault, the club's loans and bonds are the bank's.
+- **The rate.** The lender's rate follows its own reserves and its losses: two and a half in the hundred a week with all
+  it may lend in the vault, up to seven and a half with nothing left to lend, and three points more for every tenth of
+  what it lent in four weeks that was written off. Its savers are paid two fifths of that rate (half a point at least),
+  once a week, out of what its loans and its bonds earned and never more: no loans, no interest, and no coin made (the
+  bank's savers too, now, at the same rate instead of a flat point).
+- **Credit judged by the books.** A firm short of coin for its stock, its kit or its wages asks the lender, before the
+  town's trade credit (savings lent, not the treasury's coin). The lender reads its books: a thriving firm may owe a week
+  and a half's takings, a trading one a week's, a struggling one a third of a week's, a new one half its founders'
+  capital; a firm losing a fifth of its takings, behind with its payments, before the court or that has defaulted before
+  gets nothing. Each decision (who asked, for what, what was lent or why not) is in the lender's book.
+- **Repaid daily; a default goes to court.** A loan is repaid out of the till a day at a time over its float. One that
+  has not come down in a week is behind (and lent no more); two weeks behind and owing more than it is worth, the lender
+  takes the firm to the court like any creditor (a firm worth more than its loan is waited for). The receiver pays the
+  creditors in order; what the lender is not paid is written off (a default), and its rate goes up.
+- **Wages on credit.** A firm's undrawn credit counts toward what the labour market lets it offer: a month's credit
+  spread over the month (LabourMarket.cap).
+
+### The bourse (Bourse)
+
+- **Shares.** A firm's ten thousand parts are a hundred shares; its founders' stakes are its first shares. The holders
+  draw the week's profit by their shares (the dividend) and stand last in a bankruptcy: what the receiver has left after
+  the wages, the town, the market and the lender is shared by the shares, and then they are wiped out (the holders
+  remember it).
+- **Prices.** A share is worth the firm's books over its hundred shares and eight weeks of its last week's profit; a firm
+  is listed at that, never under what its founders put in a share. Each morning a holder short of coin, or holding a
+  firm that lost money, asks to sell a tenth under its worth (a founder keeps half its firm); a saver with coin over its
+  keep bids, at its worth, for the firm that earns best for its price. Bids and asks are matched at the price between
+  them, the coin purse to purse and the parts holder to holder, and the last price set.
+- **Raising capital.** A firm the lender will lend no more and short of coin, or a thriving one, issues new shares (ten
+  or twenty at a time, two fifths of the firm at most), offered a twentieth under their worth: what they bring goes into
+  its till, and its holders' parts are shared down to make room.
+- **Profit-sharing.** A firm that cannot match a better offer for a skilled hand may keep it with two shares out of its
+  founder's stake, beside the counter-offers (LabourMarket.counter).
+
+### Land (LandTitles)
+
+- **Titles.** Every house (the town's to let, a household's own, a player's), every firm's premises and every homestead
+  has a title in the register, written up each morning from who holds it.
+- **What land is worth.** Twelve weeks of what it earns (a house its rent, a premises its firm's rent, a homestead half
+  its profit or its rent; a homestead never under its title's worth), a tenth more for every tenth the town grew by in
+  the week (a fifth either way at most), each morning's reckoning moving it three tenths of the way. The land index is
+  what the plots of the week the market opened are worth now against then (a street of new cottages is not cheaper land).
+- **Rents follow land, without a spiral.** A week after Market Opening Day the town's house rents follow the square root
+  of the land index, a twentieth a week at most, within a quarter above and a sixth below. Rents are already reckoned on
+  the field hand's wage, so with the wage index and the land both up a tenth in a fortnight the council holds rents
+  where they are (a rent-wage spiral feared), and the register says so.
+- **Idle land.** A homestead whose hand has gone stands idle; after two mornings it is offered, and a folk at its trade
+  with no homestead of its own takes it on a lease from the town (a weekly payment, its own after fifty-two). A player
+  may buy the title to any plot the town holds for its value: from then the rent its firm pays waits for the player.
+
+### The town's bonds (TownBonds)
+
+- **Why.** A town short of coin bought its works' and its watch's needs of its market on IOUs, and the market, paying its
+  producers in coin, ran out of cash and paid them in store credit: the town's deficit was carried by its farmers
+  without their asking. A bond is a loan its lender chooses.
+- **The sale.** Each morning before the wages the treasurer offers bonds for what the town owes its market over a
+  quarter of what it can carry, and for what yesterday's wages wanted over what the treasury holds, as far as its room
+  goes: never more out than two weeks' revenue (twenty coins at least), nor so much that a week's coupons come to over a
+  fifth of a week's revenue. The savings club (or the bank) takes first, out of what its savers left with it and nobody
+  borrowed; then the firms with a till over their float; then the careful folk with coin over their keep. What it raises
+  pays the IOUs off (the market has the coin, and pays its producers their store credit) and finds the essential wages.
+- **The rate and the coupons.** One in the hundred a week, a point and a half more for every week's revenue the town owes
+  in all (IOUs and bonds), a point more while it is behind with a coupon. Coupons are paid every seventh day out of the
+  treasury (they are the town's spending, the hall's; to a purse in whole coins, a coupon under a coin running up on the
+  bond till it is one); a bond due is repaid when the treasury can spare it over two days' wages, else rolled over at the
+  day's rate.
+- **Its borrowing's end, earlier.** A town now starts nothing new on its works once it owes its market one and three
+  fifths of what it can carry (twice, before): the works in hand, finished as the stores allow, took a ten-day town past
+  twice what it could carry (296 coins against 142 its revenue could carry, a hundred and fifty a day of beds and
+  timber for houses already begun).
+- **Living within its means.** A town careful of its money (owing its market over half of what it can carry) now also
+  puts off its gardens and its houses' makeovers, buys no flowers for its verges, no water for the window boxes and no
+  lute for its band, and its builders lay its chimneys in rough stone rather than buy brick (a hundred coins of brick a
+  day had gone into the chimneys of a ten-day town owing twice what it could carry), beside the works it already put off.
+- **Savings and ventures.** What a folk has at the club counts toward a firm it means to found (and a partner's toward
+  its share), drawn out for it; a folk with an entrepreneur's nerve keeps its coin for a venture rather than lend it to
+  the town. A new firm's start-up beyond what its founders and partners put up is lent by the lender (half its founders'
+  capital) before the town's trade credit; households borrow for their houses at the bank (its mortgages) as before.
+
+### Where you see it
+
+- **The Capital page** (the city books, Economy): the savings club or bank (deposits, vault, what it may lend, its rate
+  and its savers', what it wrote off, each firm's loan and how far behind, its last decisions and why); the bourse (each
+  firm's last price against yesterday's and its worth, the day's trades, bids and asks standing, dividends, new shares;
+  the mouse over a firm gives its holders; the shares wiped in bankruptcies); the land (the titles, their worth and
+  earnings, the index, the rents, the idle and the plots for sale); the town's debt (its bonds, their rate and room, the
+  week's sales, coupons and repayments, the IOUs against what it can carry, who holds its bonds).
+- **The chronicle**: the club opening and its weeks, a firm lent to or written off, a bond sale and what it paid off,
+  trades and issues, a firm keeping a hand with shares, shares wiped, idle land offered and leased, rents following land.
+  **A folk's card** has a Capital line (what it has at the club, its shares, its bonds); folk remember buying shares,
+  lending the town a bond, being given a share, losing their shares in a bankruptcy.
+- **Commands** (`/village capital`): the four parts in lines and yours; `books`; `deposit <coins>`, `withdraw [coins]`;
+  `borrow <coins>`, `repay [coins]` (half of what you hold with the town, your savings, bonds and shares, as security);
+  `shares`, `shares buy <firm> <n>`, `shares sell <firm> <n> [price]`; `land`, `land buy <n>`, `land collect`; `bonds`,
+  `bonds buy <coins>`, `bonds collect`; operators `morning`. Coupons, rents and share sales wait for a player at the hall
+  (a holder the census counts) till collected; every coin a player pays in or is paid out is booked.

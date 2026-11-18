@@ -122,6 +122,7 @@ public final class MarketMaker {
         GLUT.clear();                                     // [econ-1c]
         IouBook.traceForTests(false);                     // [econ-1d]
         TownBudget.resetForTests();                       // [econ-1d]
+        CapitalBook.resetForTests();                      // [capital]
     }
 
     // ------------------------------------------------------------------ prices

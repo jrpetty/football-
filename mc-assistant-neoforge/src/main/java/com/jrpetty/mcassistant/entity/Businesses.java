@@ -471,7 +471,10 @@ public final class Businesses {
         // savings put in to pay itself (a coin round the circle, the wage tax off it each time) nor the town's credit.
         // (Where the market is open: a plain town keeps its old ways.)
         boolean ownHand = MarketMaker.live(v.id()) && b.owners.size() == 1 && f.getUUID().equals(b.owners.get(0).who());
-        if (b.till < needP && !ownHand) raise(level, v.id(), b, needP - b.till, day);
+        if (b.till < needP && !ownHand) {
+            FolkCredit.purpose = "its wages";                               // [capital] what the lender writes in its book
+            raise(level, v.id(), b, needP - b.till, day);
+        }
         int paid = (int) Math.min(due, b.till / 100);
         b.till -= paid * 100L;
         int taxed = Math.min(tax, paid);
@@ -541,6 +544,9 @@ public final class Businesses {
         }
         if (raised >= 500) b.note(day, b.ownersWords() + " put in " + pence(raised) + " of their savings");
         b.till += raised;
+        // [capital] Where the market is open, the lender before the town's trade credit: savings lent, not the treasury's
+        // coin (which a town short of it finds by writing its market IOUs).
+        if (raised < need && MarketMaker.live(village)) raised += bankLends(village, b, need - raised);
         if (raised < need) {
             long room = creditLimit(b, day) + Math.min(0, b.account);
             long take = Math.min(need - raised, Math.max(0, room));
@@ -567,6 +573,8 @@ public final class Businesses {
 
     /** The bank lends what it can spare (whole coins, out of its vault), at its rate: returns the pennies lent. */
     static long bankLends(UUID village, Business b, long need) {
+        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();   // [capital] the lender reads its books
+        if (server != null) return FolkCredit.lend(server.overworld(), village, b, need);
         if (need <= 0 || !Bank.open(village)) return 0;
         int coins = Bank.lendToFirm(village, (int) Math.min(Integer.MAX_VALUE, (need + 99) / 100));
         if (coins <= 0) return 0;
@@ -1139,8 +1147,10 @@ public final class Businesses {
     static void overheads(ServerLevel level, UUID village, Business b, long day) {
         Day d = b.today(day);
         long rent = rent(village, b);
-        payTown(level, village, b, rent, day);
-        TownBudget.in(village, "rents", rent);                              // [econ-1b] the town's budget
+        if (!LandTitles.toLandlord(level, village, b, rent, day)) {          // [capital] a player holding its title has its rent
+            payTown(level, village, b, rent, day);
+            TownBudget.in(village, "rents", rent);                          // [econ-1b] the town's budget
+        }
         d.rent += rent;
         b.allTime.rent += rent;
         long other = 0;
@@ -1210,13 +1220,13 @@ public final class Businesses {
             b.account += pay;
             toTreasury(village, pay);
         }
-        if (b.loan > 0 && b.till > floor + 100 && b.lender.equals("bank")) {
+        if (b.loan > 0 && b.till > floor + 100 && (b.lender.equals("bank") || b.lender.equals("club"))) {   // [capital] (the savings club)
             int coins = (int) Math.min(Math.min(b.loan, b.till - floor) / 100, Math.max(1, b.loan / 800));
             if (coins > 0) {
                 b.till -= coins * 100L;
-                b.loan -= coins * 100L;
-                if (Bank.open(village)) Bank.firmRepaid(village, coins);
+                if (b.lender.equals("club") || Bank.open(village)) FolkCredit.repaid(village, b, coins);   // [capital] the bank, or the savings club
                 else Ledger.addCoins(village, coins);           // the bank gone: what it was owed goes to the town that took on its books
+                b.loan -= coins * 100L;
                 if (b.loan <= 0) { b.loan = 0; b.lender = ""; b.note(day, "paid off its loan"); }
             }
         }
@@ -1289,6 +1299,7 @@ public final class Businesses {
         b.till -= given;
         d.drawings += given;
         b.allTime.drawings += given;
+        Bourse.dividend(village, b, given, day);                            // [capital] the shareholders' dividend
         if (given > 0) b.note(day, "the owners drew " + pence(given) + " of the week's " + pence(net) + " profit");
     }
 

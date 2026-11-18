@@ -4382,6 +4382,34 @@ def earning_stage(r, look, cx, cz):
     say("alive after earning: %s" % client_alive())
 
 
+def capital_stage(r, look, cx, cz):
+    """[capital] The town's capital (entity/CapitalBook, FolkCredit, Bourse, LandTitles, TownBonds; client/CapitalPage). As an
+    operator: the capital morning run now (/village capital morning: the savings club's deposits and loans, the bourse's
+    orders matched, the land register written up, the bonds' coupons), the player buying a coin's bond and putting a coin
+    by at the club (/village capital bonds buy 1, deposit 1), then the town's books open at the Capital page (the lender, its
+    rate and its decisions; each firm's last price, its worth and its holders; the titles and the land index; the bonds,
+    their rate and room, the IOUs). Pictures:
+      1. 74-capital-1-page: the Capital page.
+    Wired into main() right after the labour market stage."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    r.cmd("give %s mc_assistant:village_coin 5" % USER)
+    say("capital: " + r.cmd("execute as %s at @s run village capital morning" % USER)[:1500])
+    say("capital bond: " + r.cmd("execute as %s at @s run village capital bonds buy 1" % USER)[:400])
+    say("capital deposit: " + r.cmd("execute as %s at @s run village capital deposit 1" % USER)[:400])
+    say("capital: " + r.cmd("execute as %s at @s run village capital" % USER)[:2000])
+    say("capital books: " + r.cmd("execute as %s at @s run village capital books" % USER)[:200])
+    time.sleep(3)
+    park_mouse()
+    time.sleep(1)
+    shot("74-capital-1-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+
+
 def roles_a_stage(r, look, cx, cz):
     """[roles-a] The civic, care and faith posts (entity/Healers, Offices, Sexton, Lamplighter, RolesStage). Out past
     the town to the north-east, /village offices stage sets out from palettes and stand-ins: the office dress in a row
@@ -5702,7 +5730,7 @@ def main():
         flats_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("flats failed: %s" % e)
-    for name, stage in (("shops and homes", shops_homes_stage), ("dining", dining_stage), ("earning", earning_stage), ("business books", business_books_stage), ("the market", econ_market_stage), ("firms", econ_firms_stage), ("labour market", labour_stage), ("civic posts", roles_a_stage), ("crafts", roles_b_stage), ("outdoor trades", roles_d_stage), ("hospitality", roles_c_stage), ("roads and ranks", roles_e_stage)):
+    for name, stage in (("shops and homes", shops_homes_stage), ("dining", dining_stage), ("earning", earning_stage), ("business books", business_books_stage), ("the market", econ_market_stage), ("firms", econ_firms_stage), ("labour market", labour_stage), ("capital", capital_stage), ("civic posts", roles_a_stage), ("crafts", roles_b_stage), ("outdoor trades", roles_d_stage), ("hospitality", roles_c_stage), ("roads and ranks", roles_e_stage)):
         try:
             stage(r, look, cx, cz)
         except Exception as e:  # noqa: BLE001

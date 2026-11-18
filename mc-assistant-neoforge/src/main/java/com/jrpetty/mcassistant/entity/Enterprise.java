@@ -709,7 +709,7 @@ public final class Enterprise {
      *  at its own wage, four coins at the least and twelve at the most: a labourer's twelve coins were a fortnight's pay). */
     static int means(VillageFolkEntity f) {
         int keep = Math.max(4, Math.min(RESERVE, 2 * Wealth.wage(f)));
-        return Math.max(0, f.purse() + Bank.balance(f) - keep);
+        return Math.max(0, f.purse() + Bank.balance(f) + FolkCredit.clubBalance(f) - keep);   // [capital] its savings at the club too
     }
 
     /**
@@ -1022,6 +1022,10 @@ public final class Enterprise {
                 if (fromBank > 0) Bank.withdraw(id, Bank.state(id), founder, fromBank);
                 coins = (int) Math.min(founder.purse() - Math.min(founder.purse(), keep / 2), (want + 99) / 100);
             }
+            if (coins < (want + 99) / 100 && FolkCredit.clubBalance(founder) > 0) {      // [capital] its savings at the club
+                FolkCredit.drawOut(id, founder, (int) ((want + 99) / 100 - coins));
+                coins = (int) Math.min(founder.purse() - Math.min(founder.purse(), keep / 2), (want + 99) / 100);
+            }
             if (coins > 0 && founder.spend(coins)) raised = coins * 100L;
             if (raised < want) raised += drawFromHomestead(id, founder, want - raised, day);   // [econ-1d] the rest out of its homestead's till
             // [econ-1c] Short of the start-up: partners put in for a share (the founder keeps the most of it, at least half
@@ -1032,6 +1036,7 @@ public final class Enterprise {
                 for (VillageFolkEntity p : partnersFor(id, founder, skilledHand)) {
                     if (raised >= startup) break;
                     int c = (int) Math.min(partnerMoney(p), (startup - raised + 99) / 100);
+                    if (c > p.purse()) FolkCredit.drawOut(id, p, c - p.purse());   // [capital] its savings at the club
                     if (c <= 0 || !p.spend(c)) continue;
                     raised += c * 100L;
                     partners.add(new Stake(Holder.FOLK, p.getUUID(), p.displayNameCap(), 0));
@@ -1442,6 +1447,7 @@ public final class Enterprise {
         List<String> paid = new ArrayList<>(), unpaid = new ArrayList<>();
         payClaims(village, b, claims, paid);
         for (Tag t : claims) unpaid.add(claimWords((CompoundTag) t));
+        if (!toAuction) FolkCredit.writeOffClaims(village, b, claims, day);   // [capital] what the lender is never paid: a default
         Capital.refunded(village, b, Capital.value(village, b));          // [econ-1c] its kit goes with its hands (written off)
         if (toAuction) {
             CompoundTag rc = new CompoundTag();
@@ -1455,6 +1461,7 @@ public final class Enterprise {
             returnToOwners(village, b);                                   // what is left (if anything), to its owners
         }
         close(level, village, b, r, day, "bankrupt");
+        Bourse.wiped(village, b, day);                                     // [capital] its shareholders wiped out, after its creditors
         String court = heardBy == null ? "" : " (heard " + heardBy + ")";
         b.note(day, "bankrupt" + court + " (" + cause + "): stock " + Businesses.pence(fromStock) + (fromKit > 0 ? ", kit " + Businesses.pence(fromKit) : "") + ", stall " + (toAuction ? "to the auction on market day"
             : Businesses.pence(fromStall)) + (fromPurse > 0 ? ", " + Businesses.pence(fromPurse) + " of its owner's purse" : "") + "; paid "
@@ -1490,7 +1497,7 @@ public final class Enterprise {
         long market = Accounts.owed(village, Accounts.Account.firm(b));
         if (market > 0) out.add(claim("market", "", market));
         Accounts.forgive(village, Accounts.Account.firm(b));
-        if (b.loan > 0) out.add(claim("bank", "", b.loan));
+        if (b.loan > 0) out.add(claim("bank", b.lender, b.loan));        // [capital] who lent it (the bank, the savings club)
         b.loan = 0;
         b.lender = "";
         Businesses.dirty();
@@ -1511,7 +1518,7 @@ public final class Enterprise {
             case "wages" -> "wages";
             case "town" -> "the town";
             case "market" -> "the market";
-            default -> "the bank";
+            default -> "club".equals(c.getString("who")) ? "the savings club" : "the bank";   // [capital]
         };
         return to + " " + Businesses.pence(c.getLong("amt"));
     }
@@ -1554,10 +1561,9 @@ public final class Enterprise {
                     int coins = (int) (Math.min(due, b.till) / 100);
                     pay = coins * 100L;
                     if (coins > 0) {
-                        if (Bank.open(village)) Bank.firmRepaid(village, coins);
-                        else Businesses.toTreasury(village, pay);
+                        FolkCredit.claimPaid(village, c.getString("who"), coins);   // [capital] the bank, or the savings club
                         b.till -= pay;
-                        paid.add("the bank " + coins + "c");
+                        paid.add(("club".equals(c.getString("who")) ? "the savings club " : "the bank ") + coins + "c");
                     }
                 }
             }
@@ -1657,6 +1663,7 @@ public final class Enterprise {
         payClaims(village, b, claims, paid);
         List<String> off = new ArrayList<>();
         for (Tag t : claims) off.add(claimWords((CompoundTag) t));
+        FolkCredit.writeOffClaims(village, b, claims, day);                // [capital]
         returnToOwners(village, b);
         r.remove("receiver");
         if (winner != null) {
@@ -1685,6 +1692,7 @@ public final class Enterprise {
         for (Tag t : rc.getList("claims", Tag.TAG_COMPOUND)) off.add(claimWords((CompoundTag) t));
         r.remove("receiver");
         long day = Businesses.today(level);
+        FolkCredit.writeOffClaims(village, b, rc.getList("claims", Tag.TAG_COMPOUND), day);   // [capital]
         String words = "its stall found no buyer at two auctions and went back to the town" + (off.isEmpty() ? "" : "; written off " + String.join(", ", off));
         b.note(day, words);
         r.putString("creditors", r.getString("creditors") + "; " + words);
@@ -1713,8 +1721,7 @@ public final class Enterprise {
         }
         if (b.loan > 0) {
             int coins = (int) Math.min(b.loan, b.till) / 100;
-            if (coins > 0 && Bank.open(village)) Bank.firmRepaid(village, coins);
-            else if (coins > 0) Businesses.toTreasury(village, coins * 100L);
+            if (coins > 0) FolkCredit.claimPaid(village, b.lender, coins);   // [capital] the bank, or the savings club
             b.till -= coins * 100L;
             b.loan = 0;
         }

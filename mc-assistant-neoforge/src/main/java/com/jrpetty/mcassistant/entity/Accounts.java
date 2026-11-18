@@ -429,7 +429,10 @@ public final class Accounts {
                     if (got < p) debt(village, "the town's " + b.name.toLowerCase(Locale.ROOT), p - got, day, what);
                     return got;
                 }
-                if (b.till < p) Businesses.raise(level, village, b, p - b.till, day);
+                if (b.till < p) {
+                    FolkCredit.purpose = why == Purpose.KIT || why == Purpose.BUILD ? "its kit" : "its stock";   // [capital] the lender's book
+                    Businesses.raise(level, village, b, p - b.till, day);
+                }
                 long paid = Math.min(p, Math.max(0, b.till));
                 b.till -= paid;
                 if (paid < p) {

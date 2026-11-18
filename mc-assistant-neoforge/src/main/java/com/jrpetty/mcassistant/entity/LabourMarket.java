@@ -285,6 +285,7 @@ public final class LabourMarket {
             if (day - b.opened < 7) return M_NEW_FIRM * Math.max(1.0, atFloor(village, t));
             Business.Day w = b.last(day, 7);
             double margin = (w.revenue - w.cogs - w.other - w.rent - w.taxes - w.interest) / 7.0 / 100.0;
+            margin += FolkCredit.wageLine(level, village, b);                // [capital] its undrawn credit, a month's over the month
             int hands = Math.max(1, Enterprise.hands(village, b).size());
             double base = journeyman(village, t, 1.0);
             return clamp(margin / hands / Math.max(1.0, base), M_LEAST, M_MOST);
@@ -1183,7 +1184,13 @@ public final class LabourMarket {
         int now = Math.max(1, a.now);
         double want = c.m * (a.wage * 1.05 / now);
         double most = cap(level, id, c.employer, t, essentialNow(id, t));
-        if (want > most) return false;
+        if (want > most) {
+            // [capital] A firm that cannot match the offer may keep a skilled hand with a share in its profits.
+            if (!skilled || !Bourse.profitShare(level, id, c.employer, f, day)) return false;
+            note(tw, day, nameOf(id, c.employer) + " kept " + f.displayNameCap() + " with two shares in the firm against " + a.wage + " a day elsewhere");
+            felt(f, day, 3);
+            return true;
+        }
         int was = wageFor(id, t, c.m, f, f.tradeLevel(t), c.apprentice);
         c.m = want;
         c.apprentice = false;

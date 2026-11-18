@@ -502,6 +502,7 @@ public final class FolkTalk {
         if (!f.isBaby()) line(sb, "Job market", JobMarket.cardLine(f));       // applied elsewhere, or came from elsewhere (JobMarket)
         if (!f.isBaby()) line(sb, "Interviews", Interviews.cardLine(f));      // [interviews] shortlisted; chosen, or not and why
         if (!f.isBaby()) line(sb, "Work", LabourMarket.cardLine(f));          // [labour] its employer and terms, or out of work
+        if (!f.isBaby()) line(sb, "Capital", CapitalReport.cardLine(f));        // [capital] its savings, shares and bonds
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
         // Its horses: the rancher's gentling and the stable, a rider's horse and rides (Stables).
         String horses = f.isBaby() ? null : Stables.card(f);

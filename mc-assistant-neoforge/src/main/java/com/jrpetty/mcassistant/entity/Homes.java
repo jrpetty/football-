@@ -765,8 +765,10 @@ public final class Homes {
      * is too small to cut, and is let off one payday in five instead (tenants).
      */
     static int rent(UUID village, Home h) {
-        return Quarters.rent(village, h.anchor, CityTree.rent(village,
+        int r = Quarters.rent(village, h.anchor, CityTree.rent(village,
             HousingMarket.rent(village, baseRent(village, h))));                  // [econ-housing] scarce homes, dearer; empty, cheaper
+        double land = LandTitles.rentFactor(village);                             // [capital] rents follow the price of land
+        return land == 1.0 ? r : Math.max(1, (int) Math.round(r * land));
     }
 
     /** The rent before the town's Cheap Homes. */

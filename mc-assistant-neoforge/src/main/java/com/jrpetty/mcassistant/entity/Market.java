@@ -559,12 +559,14 @@ public final class Market {
         MarketMaker.morning(level, v, day);              // [econ-1a] the market's morning: Market Opening Day, store credit, its surplus, the privatisation
         if (CoinCensus.probing()) CoinCensus.probe("the morning, after MarketMaker.morning");   // [econ-1a] the drift hunt (tests)
         Businesses.morning(level, v, day);              // [business-books] every business's morning: its stock, rent, credit, drawings, orders
+        CapitalBook.beforeWages(level, v, day);          // [capital] the bonds the town needs sold: its IOUs funded, its essential wages found
         payWages(level, v);
         Bank.beforeRent(level, v, day);                  // the bank: a saver short of the rent draws it out first (Bank)
         Homes.payday(level, v, day);                     // the rent in, and what the households put by to buy their houses
         HousingMarket.payday(level, v, day);             // [econ-housing] the housing market weighed; a house of its own commissioned
         if (RestDay.today(id, day)) tithe(level, v, day);
         Bank.morning(level, v, day);                     // the bank: the day's savings in, and on its seventh day its round (Bank)
+        CapitalBook.morning(level, v, day);              // [capital] the savings club and the loans, the bourse, the land, the bonds' coupons
         upkeep(level, v, day);                           // [market] the town's upkeep, out of what it holds over a fortnight's wages
         Villages.checkRank(level, v, day);
         News.morning(level, v, day);
@@ -862,6 +864,7 @@ public final class Market {
             bill += w;
         }
         int purse = Ledger.coins(id) - saved(id, level.getGameTime());
+        TownBonds.payday(id, bill, Math.max(0, purse));        // [capital] the wage bill on the treasury, for the bonds it sells
         if (bill <= 0) return 0;
         if (purse <= 0) {
             // Nothing to pay with is a payday too: an empty treasury kept the last good morning's

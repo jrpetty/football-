@@ -1022,6 +1022,7 @@ public class EntrepreneurGameTests {
         MinecraftServer server = level.getServer();
         Kit.reset(level);
         MarketMaker.liveForTests(true);
+        Enterprise.autoForTests(true);                                     // [capital] the firms' scan on, whatever a short test left it at
         com.jrpetty.mcassistant.entity.IouBook.traceForTests(true);              // [econ-1d] each IOU's place in the code
         com.jrpetty.mcassistant.entity.CivicLand.liveForTests(true);             // [econ-1d] the council sits on the taxes, as in real play
         com.jrpetty.mcassistant.entity.SupplyTrace.traceForTests(true);           // [supply] where each ware comes from and goes, day by day
@@ -1126,6 +1127,7 @@ public class EntrepreneurGameTests {
                     }
                     Kit.log(tag + " day " + dayNo + " budget: " + TownBudget.line(id));
                     Kit.log(tag + " day " + dayNo + " LABOUR " + com.jrpetty.mcassistant.entity.LabourMarket.line(id));   // [labour]
+                    if (MarketMaker.live(id)) Kit.log(tag + " day " + dayNo + " CAPITAL " + String.join(" | ", com.jrpetty.mcassistant.entity.CapitalReport.lines(level, id)));   // [capital]
                     if (daily != null) daily.accept(id, dayNo);
                     long today = level.getDayTime() / 24000L;
                     Kit.log(tag + " day " + dayNo + " IOU book yesterday: " + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, today - 1));   // [econ-1d]

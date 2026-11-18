@@ -357,6 +357,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.BusinessBooks.command())   // [business-books] the businesses' books, orders, the coin audit
             .then(com.jrpetty.mcassistant.entity.FirmCommands.command())   // [econ-1b] the firms the folk opened, the town's wants, a player's charter
             .then(com.jrpetty.mcassistant.entity.LabourCommands.command())   // [labour] the labour market: openings, wages, the minimum wage
+            .then(com.jrpetty.mcassistant.entity.CapitalCommands.command())  // [capital] savings, loans, shares, land and the town's bonds
             .then(com.jrpetty.mcassistant.entity.MarketCommands.market())   // [econ-1a] the storehouse as the town's market
             .then(com.jrpetty.mcassistant.entity.MarketCommands.accounts()) // [econ-1a] whose account, the stragglers, the IOUs
             .then(com.jrpetty.mcassistant.entity.MarketCommands.money())    // [econ-1a] the town's coin, audited

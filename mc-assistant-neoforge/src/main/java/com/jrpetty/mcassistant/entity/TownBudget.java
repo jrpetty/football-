@@ -268,10 +268,11 @@ public final class TownBudget {
     }
 
     /** [econ-1e] Past this many times what it can carry, a town starts nothing new on its works till its revenue brings the IOUs down. */
-    static final double HALT = 2.0;
+    static final double HALT = 1.6;                                        // [capital] (was 2: what is in hand finished inside twice what it can carry)
 
     /**
-     * [econ-1e] At its borrowing's end: owing its market more than twice what it can carry. A town borrows to house
+     * [econ-1e] At its borrowing's end: owing its market more than [capital] one and three fifths of what it can carry (twice,
+     * before: the works already in hand, finished as the stores allow, took a ten-day town past twice what it could carry). A town borrows to house
      * its folk, within reason: past that its builders start nothing (its homes too) and its storeys and lecterns wait, till
      * its rents and taxes and its market's surplus bring the IOUs back down; what is half built is finished as the stores
      * allow. A ten-day town that built every house as fast as its hands could ran its IOUs to three times what it could carry.
