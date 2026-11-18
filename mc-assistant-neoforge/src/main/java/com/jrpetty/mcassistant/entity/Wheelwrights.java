@@ -85,6 +85,8 @@ public final class Wheelwrights {
 
     private static final String ORDER = "wheel.order";       // KIND|done|need|visits|opened|last|by|makings
     private static final String BOOK = "wheel.book";         // built|mended|planks|iron
+    /** [terra10] The makings set aside out of the stores for a mending under way: planks|iron. */
+    private static final String KIT = "wheel.mendkit";
 
     private static final Predicate<ItemStack> PLANKS = s -> s.is(ItemTags.PLANKS);
     private static final Predicate<ItemStack> IRON = s -> s.is(Items.IRON_INGOT);
@@ -477,13 +479,22 @@ public final class Wheelwrights {
             return;
         }
         boolean iron = w.kind().drawn && (sec / MEND_STEP) % IRON_EVERY == 0;
-        if (Market.stock(level, id, PLANKS) < MEND_PLANKS || iron && Market.stock(level, id, IRON) < 1) {
-            status(id, "the stores have no " + (Market.stock(level, id, PLANKS) < MEND_PLANKS ? "planks" : "iron") + " to mend the wagon with");
+        // [terra10] The makings for the whole mending are set aside at its first step, as an order's are: the town's other
+        // hands drew the stores' planks for their own work between one step and the next, and the wagon stood half mended.
+        int[] kit = setAside(level, v, w);
+        if (kit[0] + Market.stock(level, id, PLANKS) < MEND_PLANKS || iron && kit[1] + Market.stock(level, id, IRON) < 1) {
+            status(id, "the stores have no " + (kit[0] + Market.stock(level, id, PLANKS) < MEND_PLANKS ? "planks" : "iron") + " to mend the wagon with");
             PostStints.end(h, REST);
             return;
         }
-        if (!Crafts.take(level, v, PLANKS, MEND_PLANKS)) return;
-        if (iron && !Crafts.take(level, v, IRON, 1)) iron = false;
+        int fromKit = Math.min(kit[0], MEND_PLANKS);
+        if (fromKit < MEND_PLANKS && !Crafts.take(level, v, PLANKS, MEND_PLANKS - fromKit)) return;
+        kit[0] -= fromKit;
+        if (iron) {
+            if (kit[1] > 0) kit[1]--;
+            else if (!Crafts.take(level, v, IRON, 1)) iron = false;
+        }
+        kit(id, kit);
         int[] used = MENDING.computeIfAbsent(id, k -> new int[2]);
         used[0] += MEND_PLANKS;
         if (iron) {
@@ -495,6 +506,7 @@ public final class Wheelwrights {
         if (w.hp < w.kind().health) return;
         PostStints.end(h, REST);
         MENDING.remove(id);
+        giveBack(level, v);                                                   // [terra10] what was set aside and not used
         int[] b = book(id);
         b[1]++;
         b[2] += used[0];
@@ -505,6 +517,51 @@ public final class Wheelwrights {
             + (used[1] > 0 ? " and " + used[1] + " iron" : "") + " from the stores");
         FolkTalk.speak(h, "Good as new. She's fit for the road.");
         LOG.info("[MCA-WHEEL] {} mended its {} ({} planks, {} iron)", Villages.name(id), w.kind().label, used[0], used[1]);
+    }
+
+    /**
+     * [terra10] The makings set aside for the mending under way (planks, iron): taken out of the stores at its first step,
+     * as much of what the whole of it wants as the stores hold (two planks a step, iron every third step of a drawn
+     * wagon), and kept in the town's books (so a restart loses nothing) till they are used or given back.
+     */
+    private static int[] setAside(ServerLevel level, Villages.Village v, TradeWagon w) {
+        UUID id = v.id();
+        String note = Ledger.note(id, KIT);
+        if (note != null && !note.isEmpty()) {
+            try {
+                String[] p = note.split("\\|");
+                return new int[]{ Integer.parseInt(p[0]), Integer.parseInt(p[1]) };
+            } catch (RuntimeException ignored) {
+                // an unreadable note: set aside afresh
+            }
+        }
+        int steps = (int) Math.ceil((w.kind().health - w.hp) / MEND_HP);
+        int planks = Math.min(steps * MEND_PLANKS, Market.stock(level, id, PLANKS));
+        int iron = Math.min(w.kind().drawn ? steps / IRON_EVERY : 0, Market.stock(level, id, IRON));
+        int[] kit = { 0, 0 };
+        if (planks > 0 && Crafts.take(level, v, PLANKS, planks)) kit[0] = planks;
+        if (iron > 0 && Crafts.take(level, v, IRON, iron)) kit[1] = iron;
+        kit(id, kit);
+        return kit;
+    }
+
+    private static void kit(UUID id, int[] kit) {
+        Ledger.note(id, KIT, kit[0] + "|" + kit[1]);
+    }
+
+    /** [terra10] The makings set aside and not used, back into the stores (the mending done, or the wagon gone). */
+    private static void giveBack(ServerLevel level, Villages.Village v) {
+        String note = Ledger.note(v.id(), KIT);
+        Ledger.note(v.id(), KIT, "");
+        if (note == null || note.isEmpty()) return;
+        try {
+            String[] p = note.split("\\|");
+            int planks = Integer.parseInt(p[0]), iron = Integer.parseInt(p[1]);
+            if (planks > 0) Crafts.store(level, v, new ItemStack(Items.OAK_PLANKS, planks));
+            if (iron > 0) Crafts.store(level, v, new ItemStack(Items.IRON_INGOT, iron));
+        } catch (RuntimeException ignored) {
+            // nothing readable to give back
+        }
     }
 
     // ------------------------------------------------------------------ the wheelwright's hand (a player's paid shift)
