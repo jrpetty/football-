@@ -709,7 +709,7 @@ public final class Enterprise {
      *  at its own wage, four coins at the least and twelve at the most: a labourer's twelve coins were a fortnight's pay). */
     static int means(VillageFolkEntity f) {
         int keep = Math.max(4, Math.min(RESERVE, 2 * Wealth.wage(f)));
-        return Math.max(0, f.purse() + Bank.balance(f) - keep);
+        return Math.max(0, f.purse() + Bank.balance(f) + FolkCredit.clubBalance(f) - keep);   // [capital] its savings at the club too
     }
 
     /**
@@ -1020,6 +1020,10 @@ public final class Enterprise {
             if (coins < (want + 99) / 100 && Bank.open(id)) {
                 int fromBank = (int) Math.min(Bank.balance(founder), (want + 99) / 100 - coins);
                 if (fromBank > 0) Bank.withdraw(id, Bank.state(id), founder, fromBank);
+                coins = (int) Math.min(founder.purse() - Math.min(founder.purse(), keep / 2), (want + 99) / 100);
+            }
+            if (coins < (want + 99) / 100 && FolkCredit.clubBalance(founder) > 0) {      // [capital] its savings at the club
+                FolkCredit.drawOut(id, founder, (int) ((want + 99) / 100 - coins));
                 coins = (int) Math.min(founder.purse() - Math.min(founder.purse(), keep / 2), (want + 99) / 100);
             }
             if (coins > 0 && founder.spend(coins)) raised = coins * 100L;

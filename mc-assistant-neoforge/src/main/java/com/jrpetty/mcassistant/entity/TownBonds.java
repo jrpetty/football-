@@ -205,6 +205,7 @@ public final class TownBonds {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired()) continue;
             int thrift = Bank.thrift(f);
             if (thrift < 1 || Homes.rentsAndWantsToOwn(f)) continue;
+            if (Enterprise.boldness(f) >= 3) continue;                       // an entrepreneur at heart keeps its coin for a venture
             int over = f.purse() - CapitalBook.keep(id, f);
             if (over < 4) continue;
             int coins = (int) Math.min((want - s.raised + 99) / 100, Math.max(1, over * Bank.share(thrift) / 200));

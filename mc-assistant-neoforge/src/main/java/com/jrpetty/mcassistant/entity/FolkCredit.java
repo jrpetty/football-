@@ -184,6 +184,25 @@ public final class FolkCredit {
         return accounts(village).getInt(who.toString());
     }
 
+    /** What a folk has at the savings club, coins (nought once the bank keeps it: Bank.balance). */
+    public static int clubBalance(VillageFolkEntity f) {
+        UUID id = f.ownerId();
+        return id == null || bank(id) ? 0 : accounts(id).getInt(f.getUUID().toString());
+    }
+
+    /** So many coins of a folk's savings out of the club's chest into its purse, as far as both go (a founder's stake). */
+    static int drawOut(UUID village, VillageFolkEntity f, int n) {
+        CompoundTag a = accounts(village);
+        String k = f.getUUID().toString();
+        int got = (int) Math.min(Math.min(n, a.getInt(k)), club(village).getLong("cash") / 100);
+        if (got <= 0) return 0;
+        a.putInt(k, a.getInt(k) - got);
+        if (a.getInt(k) <= 0) a.remove(k);
+        chestOut(village, got * 100L);
+        f.earn(got);
+        return got;
+    }
+
     static void credit(UUID village, UUID who, String name, int coins) {
         CompoundTag a = accounts(village);
         a.putInt(who.toString(), a.getInt(who.toString()) + coins);
