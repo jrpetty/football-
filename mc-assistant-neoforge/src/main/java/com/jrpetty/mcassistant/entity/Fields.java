@@ -110,6 +110,8 @@ public final class Fields {
                         care(level, f);
                         compost(level, v, f);
                         lightTheField(level, v, f);
+                        FieldWater.wet(level, f, f.workZone(), 4);               // [build5] no farmland left dry
+                        FieldEdge.keep(level, v, f, f.workZone());               // [build5] fenced, a gate to the town
                     }
                 }
                 if (t % 1200 == 607) unstick(level, v, f);

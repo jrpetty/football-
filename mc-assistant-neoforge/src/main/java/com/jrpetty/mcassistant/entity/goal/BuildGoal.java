@@ -1822,7 +1822,16 @@ public class BuildGoal extends Goal {
                         if (Math.abs(dx) != r && Math.abs(dz) != r) continue; // perimeter only
                         boolean corner = Math.abs(dx) == r && Math.abs(dz) == r;
                         int along = Math.abs(dx) == r ? dz : dx;
-                        if (town ? Math.abs(along) <= gate && !corner : (dx == 0 && dz == -r)) continue;   // the gates
+                        if (town && Math.abs(along) <= gate && !corner) {
+                            // [build5] The gateway: an arch over the avenue from pillar to pillar, a lintel of the wall's
+                            // stone four up (room for a cart under it) with a coping of slabs, so a gap in the wall reads as
+                            // a gate and not as a breach.
+                            BlockPos col = cell(feet, right, facing, dx, dz);
+                            out.add(new Placement(col.above(4), Part.BLOCK, stone, Blueprints.Way.UP));
+                            out.add(new Placement(col.above(5), Part.BLOCK, Blueprints.Style.STONE_SLAB, Blueprints.Way.UP));
+                            continue;
+                        }
+                        if (!town && dx == 0 && dz == -r) continue;                                          // the gates
                         BlockPos col = cell(feet, right, facing, dx, dz);
                         boolean pillar = town && Math.abs(along) == gate + 1 && !corner;
                         int top = corner ? 4 : pillar ? 4 : 2;

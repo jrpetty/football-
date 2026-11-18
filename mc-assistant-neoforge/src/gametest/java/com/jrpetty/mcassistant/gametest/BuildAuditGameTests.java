@@ -521,7 +521,8 @@ public class BuildAuditGameTests {
                 if (p.part() == BuildGoal.Part.BLOCK && BuildGoal.isRoof(p.style()) && Restore.judge(st, p) == Restore.Kind.MISSING) roof++;
             }
             r.add("plant_in_cell", inCell, name + " first " + (cWhere == null ? "" : cWhere.toShortString() + " " + level.getBlockState(cWhere).getBlock()));
-            r.add("roof_missing", roof, name + (Ledger.grown(id, b.anchor()) ? " grown" : "")
+            boolean storey = com.jrpetty.mcassistant.entity.Grow.raisingNow(id, b.anchor());   // a storey going up: its roof comes last
+            r.add(storey ? "roof_open_storey" : "roof_missing", roof, name + (Ledger.grown(id, b.anchor()) ? " grown" : "")
                 + (com.jrpetty.mcassistant.entity.Grow.tall(id, b.anchor()) ? " tall" : "")
                 + (Restore.jobFor(id, b.anchor()) != null ? " on the repair list" : "") + (roof > 0 && cWhereRoof(level, plan) != null ? " first " + cWhereRoof(level, plan).toShortString()
                     + " gate " + TownBlocks.mayBuild(level, v, cWhereRoof(level, plan), b.anchor(), TownBlocks.Why.BUILD)
@@ -563,7 +564,9 @@ public class BuildAuditGameTests {
             if (!b.structure().equals("fortify")) continue;
             Set<Long> cols = new HashSet<>();
             for (BuildGoal.Placement p : BuildGoal.plan("fortify", b.anchor(), b.facing(), com.jrpetty.mcassistant.village.TownPlan.PLAZA)) {
-                if (p.part() != BuildGoal.Part.BLOCK || !cols.add(BlockPos.asLong(p.pos().getX(), 0, p.pos().getZ()))) continue;
+                // (Its foot course only: the gateways' arches stand four up over the avenues, nothing under them.)
+                if (p.part() != BuildGoal.Part.BLOCK || p.pos().getY() != b.anchor().getY()
+                    || !cols.add(BlockPos.asLong(p.pos().getX(), 0, p.pos().getZ()))) continue;
                 int x = p.pos().getX(), z = p.pos().getZ();
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 int g = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
@@ -623,6 +626,30 @@ public class BuildAuditGameTests {
                 }
             }
         }
+        // The fields' edges: a fence or gate on every column of the ring one out from each farmer's furrows, where the
+        // ground is the world's own (a road or a building is its own edge); and a gate on each field.
+        int open = 0, gates = 0, fields = 0;
+        for (com.jrpetty.mcassistant.entity.AssistantEntity a : Villages.folkOf(id)) {
+            if (a.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM || a.workZone() == null) continue;
+            com.jrpetty.mcassistant.entity.WorkZone z = a.workZone();
+            fields++;
+            int edge = z.radius() + 1, g = 0;
+            for (int dx = -edge; dx <= edge; dx++) for (int dz = -edge; dz <= edge; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != edge) continue;
+                int x = z.center().getX() + dx, zz = z.center().getZ() + dz;
+                if (!level.hasChunk(x >> 4, zz >> 4)) continue;
+                int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, zz);
+                BlockState st = level.getBlockState(new BlockPos(x, top - 1, zz));
+                if (st.is(Blocks.TORCH)) st = level.getBlockState(new BlockPos(x, top - 2, zz));
+                if (st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock) { g++; continue; }
+                if (st.is(BlockTags.FENCES)) continue;
+                if (Terraform.earth(st) && !st.is(Blocks.DIRT_PATH)) { open++; if (open <= 6) r.examples.computeIfAbsent("field_edge_open", k -> new ArrayList<>()).add(x + "," + (top - 1) + "," + zz + " " + st.getBlock()); }
+            }
+            if (g > 0) gates++;
+        }
+        r.counts.put("fields", fields);
+        r.counts.put("field_edge_open", open);
+        r.counts.put("fields_gated", gates);
         r.counts.put("farmland", farmland);
         r.counts.put("farmland_unwatered", dry);
         return r;
