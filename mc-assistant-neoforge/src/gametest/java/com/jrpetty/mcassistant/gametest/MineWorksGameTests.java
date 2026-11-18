@@ -121,9 +121,10 @@ public class MineWorksGameTests {
         level.getServer().tickRateManager().setTickRate(60.0F);
     }
 
+    /** Passed: in the test's own tick (a pass called from a server tick listener is never reported, and the run stalls). */
     static void done(GameTestHelper helper) {
         MineSiteGameTests.standDown(helper.getLevel());
-        helper.succeed();
+        helper.runAfterDelay(1, helper::succeed);
     }
 
     /**
