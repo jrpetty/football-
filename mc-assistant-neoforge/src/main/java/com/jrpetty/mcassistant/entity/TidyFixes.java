@@ -176,6 +176,8 @@ final class TidyFixes {
         BlockPos c = v.centre();
         int dx = p.getX() - c.getX(), dz = p.getZ() - c.getZ();
         if (TownPlan.isStreet(dx, dz) || TownPlan.isSquare(dx, dz)) return takeUp(level, v, p);
+        // [city9] Nor on the square's wall line: a post there stood where the wall was to go and left a gap in it (ba01).
+        if (Math.max(Math.abs(dx), Math.abs(dz)) == TownPlan.PLAZA) return takeUp(level, v, p);
         if (level.getBlockState(p.above()).isAir() && mayChange(level, v, p, TownBlocks.Why.LAMP)
                 && mayChange(level, v, p.above(), TownBlocks.Why.LAMP) && Crafts.fence(level, v)) {
             level.setBlockAndUpdate(p, Blocks.OAK_FENCE.defaultBlockState());
