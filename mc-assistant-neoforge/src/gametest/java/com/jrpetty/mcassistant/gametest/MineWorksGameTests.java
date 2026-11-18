@@ -322,6 +322,7 @@ public class MineWorksGameTests {
         MineDemand.stockForTests(r.v, plenty());
         kit(m, Items.IRON_PICKAXE);
         zone(r, m, 88);
+        MineWorks.pinForTests(r.v, Direction.NORTH);          // out across the mine's ground, into the water put in its way
         int y = level(r, MineWorks.COAL, Blocks.IRON_ORE, 90, m);
         m.teleportTo(r.sx - 6 + 0.5, y, r.sz - 6 + 0.5);
         fast(level);
@@ -376,7 +377,7 @@ public class MineWorksGameTests {
             Kit.log("[VT] mw05 after " + tick[0] + " ticks: drift " + (d == null ? "none" : "length " + path + ", turned " + d[4] + ", bent " + d[5] + ", branches " + d[6]
                 + ", ended " + (char) d[7]) + ", longest straight run " + longest + "; " + cells.size() + " cells of tunnel, " + open + " open, " + out
                 + " outside the mine's ground, " + inTown + " in the town's; broken " + counts[0] + ", ore left " + counts[2] + "; after a save and a load the same "
-                + same + " (" + (before == null ? 0 : before.length()) + " chars); the miner " + WorksGoal.stateForTests(m) + " — " + m.debugLine() + " | " + String.join(" | ", MineWorks.report(level, r.v)) + " || " + String.join(" | ", MineWorks.eventsForTests()));
+                + same + " (" + (before == null ? 0 : before.length()) + " chars); the miner " + WorksGoal.stateForTests(m) + " — " + m.debugLine() + " | " + String.join(" | ", MineWorks.report(level, r.v)) + " || " + String.join(" | ", MineWorks.eventsForTests()) + " || paths " + MineWorks.pathsForTests(level, r.v));
             helper.assertTrue(d != null && d[3] >= 20, "a drift driven twenty blocks and more");
             helper.assertTrue(longest >= 8, "straight, in long runs: " + longest);
             helper.assertTrue(d[4] >= 1, "it turned where it met the water");
