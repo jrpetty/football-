@@ -111,16 +111,20 @@ public final class TownPlanner {
             VillageFolkEntity f = (VillageFolkEntity) was[1];
             if (f == null || f.isAlive() && fit(f, id)) return f;
         }
-        VillageFolkEntity got = reckon(id);
+        VillageFolkEntity got = reckon(id, was == null ? null : (VillageFolkEntity) was[1]);
         HOLDER.put(id, new Object[]{ now, got });
         return got;
     }
 
     @Nullable
-    private static VillageFolkEntity reckon(UUID id) {
+    private static VillageFolkEntity reckon(UUID id, @Nullable VillageFolkEntity before) {
         if (!stands(id)) return null;
         VillageFolkEntity chosen = Interviews.holder(id, POST);
         if (chosen != null && fit(chosen, id)) return chosen;
+        // [terra10] The planner it had keeps the post while it is fit for it: reckoned afresh every few seconds, the best
+        // suited changed with a birthday or a day's work, and the post passed from one to another overnight, the plans
+        // the old planner had drawn set out by somebody else (re06).
+        if (before != null && before.isAlive() && fit(before, id)) return before;
         VillageFolkEntity best = null;
         int bestScore = Integer.MIN_VALUE;
         for (AssistantEntity a : Villages.folkOf(id)) {
