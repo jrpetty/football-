@@ -22,8 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>So the plan's streets and the square are walked from the heart the way a folk walks them (a block up, three down,
  * never through water: a bridge or a causeway the town lays carries the street on), and a lot is offered to a building
- * only if the street before its door is reached ({@link #reaches}). A town with nothing else left (an island) is let
- * onto the rest after a few looks (Villages.siteFor). Worked out again every two minutes at most, and only when a
+ * only if the street before its door is reached ({@link #reaches}). A town with nothing else left (an island) takes one
+ * of the rest after four looks that found nothing ({@link #hungry}), and is particular again after it. Worked out again every two minutes at most, and only when a
  * building is being sited: a few thousand columns, never on a folk's tick.
  */
 public final class CityPlan {
@@ -35,8 +35,8 @@ public final class CityPlan {
     private static final int SIDE = 2 * R + 1;
     /** Worked out again at most this often (ticks). */
     private static final long EVERY = 2400L;
-    /** A step a folk takes: a block up (a jump), three down. */
-    private static final int UP = 1, DOWN = 3;
+    /** A step a folk takes: a block up (a jump; two where the folk cut a step into a bank, StuckSpots), three down. */
+    private static final int UP = 2, DOWN = 3;
     /** No height known yet (a cell not walked), or ground not loaded (taken as walkable: nothing is known against it). */
     private static final int NONE = Integer.MIN_VALUE;
 
@@ -53,11 +53,27 @@ public final class CityPlan {
     public static void resetForTests() {
         NETS.clear();
         SERVED.clear();
+        HUNGRY.clear();
     }
 
     /** Forget a town's walk, so the next look walks it afresh (a test that changed the ground). */
     public static void forget(UUID village) {
         NETS.remove(village);
+    }
+
+    /** Looks in a row that found nothing but lots off the streets, by town: four, and the next look takes one of them. */
+    private static final Map<UUID, Integer> HUNGRY = new ConcurrentHashMap<>();
+    static final int PATIENCE = 4;
+
+    /** Has this town gone so many looks with nothing on its streets that it may take a lot off them (an island)? */
+    public static boolean hungry(UUID village) {
+        return HUNGRY.getOrDefault(village, 0) >= PATIENCE;
+    }
+
+    /** A look for a lot is over: found one (the count starts again), or found none with some passed over for their street. */
+    public static void looked(UUID village, boolean found, boolean passedOver) {
+        if (found) HUNGRY.remove(village);
+        else if (passedOver) HUNGRY.merge(village, 1, Integer::sum);
     }
 
     /** Is this offset one the walk goes over: the square, or a street of the plan? */

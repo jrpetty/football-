@@ -3033,6 +3033,7 @@ public final class Villages {
                 if (project.equals("townhall")) places.add(0, seat);
             }
             int[] court = courtRect(villageId);
+            boolean offWalk = false;                                    // [city9] a lot passed over for its street (CityPlan)
             for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : places) {
                 if (valid >= 6) break;
                 index++;
@@ -3064,7 +3065,7 @@ public final class Villages {
                 if (!lotLoaded(level, x, z, hx, hz)) { waiting = true; continue; }
                 // [city9] Only where the street before its door is walked from the heart (CityPlan): never a lot over the
                 // water or up a cliff from the town, until a few looks have found nothing else (an island town).
-                if (laps < 4 && !CityPlan.reaches(level, v, lot)) continue;
+                if (!CityPlan.hungry(villageId) && !CityPlan.reaches(level, v, lot)) { offWalk = true; continue; }
                 // The great buildings (the hall above all: no Iron Age without one) want the most
                 // ground of anything, and on a mountainside found none flat to six blocks across
                 // twenty: a town of fifty-eight sat in the Stone Age for want of one. Missed on
@@ -3085,6 +3086,7 @@ public final class Villages {
                     site = new Site(ground, back, 0);
                 }
             }
+            CityPlan.looked(villageId, site != null, offWalk && !waiting);     // [city9]
             if (site != null) {
                 for (long cell : best.cells()) taken.add(cell);
             } else if (!waiting && free > 0) {
