@@ -706,7 +706,8 @@ public final class VillageCommands {
             return 0;
         }
         String line = "GROUND " + d.heart().getX() + " " + d.heart().getZ() + " y=" + d.level() + " r=" + d.radius() + ": "
-            + com.jrpetty.mcassistant.entity.TerraformAudit.line(com.jrpetty.mcassistant.entity.TerraformAudit.scan(level, d));
+            + com.jrpetty.mcassistant.entity.TerraformAudit.line(com.jrpetty.mcassistant.entity.TerraformAudit.scan(level, d))
+            + " | first: " + com.jrpetty.mcassistant.entity.TerraformAudit.FIRST;
         ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         com.mojang.logging.LogUtils.getLogger().info("[MCA-FOUND] {}", line);
         return 1;
@@ -721,8 +722,18 @@ public final class VillageCommands {
         for (int cx = -3; cx <= 3; cx++) {
             for (int cz = -3; cz <= 3; cz++) level.getChunk((x >> 4) + cx, (z >> 4) + cz);
         }
-        return raiseMany(ctx, level, groundAt(level, x, z), 0.0F, count);
+        net.minecraft.core.BlockPos ground = groundAt(level, x, z);
+        boolean fresh = Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) == null;
+        int stood = raiseMany(ctx, level, ground, 0.0F, count);
+        // [terra10] A village founded at once for the console still has its ground made ready, as every other founding
+        // does: levelled round it as /village level levels a town already standing, its folk kept from harm meanwhile.
+        Villages.Village made = fresh && stood > 0 ? Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) : null;
+        if (made != null && SPAWNAT_LEVELS) com.jrpetty.mcassistant.entity.Founding.levelExisting(level, made, null);
+        return stood;
     }
+
+    /** [terra10] Whether /village spawnat levels the ground of a village it founds (tests that time a bare founding turn it off). */
+    public static boolean SPAWNAT_LEVELS = true;
 
     // ------------------------------------------------------------------ founding a village of a chosen size
 

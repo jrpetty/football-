@@ -140,7 +140,7 @@ public final class Terraform {
         int[] count = new int[TOPS.length];
         for (int i = 0; i < tops.length; i++) {
             if (g.kind[i] != FoundingPlan.LAND || FoundingPlan.reach(g.dx(i), g.dz(i)) > radius) continue;
-            if (tops[i] > 0 && tops[i] < ROCK) count[tops[i]]++;
+            if (tops[i] > 0 && tops[i] < ROCK && !bare(TOPS[tops[i]])) count[tops[i]]++;   // [terra10] never snow or gravel
         }
         int best = 0;
         for (int i = 1; i < ROCK; i++) if (count[i] > count[best]) best = i;
@@ -160,7 +160,23 @@ public final class Terraform {
         }
         if (surface == Blocks.CRIMSON_NYLIUM || surface == Blocks.WARPED_NYLIUM) return Blocks.NETHERRACK.defaultBlockState();
         if (surface == Blocks.GRAVEL) return (depth >= 2 ? Blocks.STONE : Blocks.GRAVEL).defaultBlockState();
-        return Blocks.DIRT.defaultBlockState();
+        return (depth >= 4 ? Blocks.STONE : Blocks.DIRT).defaultBlockState();     // [terra10] earth near the top, stone under it
+    }
+
+    /**
+     * [terra10] The top of a worked column of the edge: its own soil (sand, podzol, terracotta), but grass, or the
+     * town's soil, where it was bare rock, snow, gravel, earth, clay or mud, whether it was cut or built up: the bank
+     * comes down green to the town and not as a face of stone or dirt.
+     */
+    static Block edgeTop(Block own, Block townSurface) {
+        if (!bare(own)) return own;
+        return bare(townSurface) ? Blocks.GRASS_BLOCK : townSurface;
+    }
+
+    /** A top no town is dressed in: bare rock, snow, gravel, earth, clay, mud. */
+    static boolean bare(Block b) {
+        return b == Blocks.STONE || b == Blocks.SNOW_BLOCK || b == Blocks.GRAVEL || b == Blocks.DIRT || b == Blocks.CLAY
+            || b == Blocks.MUD;
     }
 
     /** A surface that a cut can be dressed in (rock is left as the stone it was). */
@@ -192,6 +208,7 @@ public final class Terraform {
                 g.fluid[i] = surface;
                 g.ground[i] = y;
                 g.kind[i] = earth(bed) || growth(bed) ? (lava ? FoundingPlan.LAVA : FoundingPlan.WATER) : FoundingPlan.BUILT;
+                if (g.kind[i] == FoundingPlan.BUILT) g.cover[i] = y;                 // [terra10]
                 tops[i] = topOf(bed);
                 return;
             }
@@ -204,6 +221,7 @@ public final class Terraform {
             }
             // Water in somebody's pool, a path, a floor, a wall: built. The earth under it is still
             // looked for, so the ground round it is held to that height.
+            if (!built) g.cover[i] = y;                                          // [terra10] the top of what is built
             built = true;
             y--;
         }
@@ -251,13 +269,7 @@ public final class Terraform {
         BlockState top = chunk.getBlockState(m.set(x, target, z));
         if (natural(top) && !top.is(Blocks.BEDROCK) && !top.is(surface)
                 && (top.isAir() || wet(top) || growth(top) || (square && soil(surface) && topOf(top) != 0))) return true;
-        for (int d = 1; d < SOLID_DEPTH; d++) {
-            if (target - d < level.getMinBuildHeight()) break;
-            BlockState b = chunk.getBlockState(m.set(x, target - d, z));
-            if (b.is(Blocks.BEDROCK) || !natural(b)) continue;
-            if (b.isAir() || wet(b) || growth(b)
-                    || b.getBlock() instanceof net.minecraft.world.level.block.FallingBlock && !under(surface, d).is(b.getBlock())) return true;
-        }
+        if (GroundWork.seal(level, chunk, x, z, target, surface, true) > 0) return true;   // [terra10] solid twelve deep
         BlockState on = chunk.getBlockState(m.set(x, target + 1, z));
         return !on.isAir() && natural(on) && (growth(on) || wet(on));
     }
@@ -277,6 +289,12 @@ public final class Terraform {
      */
     static int shape(ServerLevel level, LevelChunk chunk, int x, int z, int ground, int target, boolean levelled,
                      Block surface) {
+        return shape(level, chunk, x, z, ground, target, levelled, surface, null);
+    }
+
+    /** [terra10] The same, the logs and leaves it takes noted in {@code felling}, for their trees to be felled whole. */
+    static int shape(ServerLevel level, LevelChunk chunk, int x, int z, int ground, int target, boolean levelled,
+                     Block surface, @javax.annotation.Nullable GroundWork.Felling felling) {
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         int top = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, x & 15, z & 15);
         // Look first: one thing built in the way and the whole column is left be.
@@ -304,8 +322,11 @@ public final class Terraform {
         for (int y = top; y > target; y--) {
             BlockState s = chunk.getBlockState(m.set(x, y, z));
             if (s.isAir()) continue;
-            // A felled tree's logs tell their leaves, so what is left hanging off the edge falls.
-            level.setBlock(m, air, s.is(BlockTags.LOGS) ? Block.UPDATE_ALL : QUIET);
+            // A felled tree's logs tell their leaves, so what is left hanging off the edge falls;
+            // [terra10] or, where the founding fells its trees whole, noted for that (and nothing told, nothing dropped).
+            boolean tree = s.is(BlockTags.LOGS) || s.is(BlockTags.LEAVES) || s.is(Blocks.VINE);
+            if (felling != null && tree) felling.note(m.immutable());
+            level.setBlock(m, air, felling == null && s.is(BlockTags.LOGS) ? Block.UPDATE_ALL : QUIET);
             changed++;
         }
         for (int y = ground + 1; y <= target; y++) {
@@ -351,16 +372,9 @@ public final class Terraform {
                 level.setBlock(m, surface.defaultBlockState(), QUIET);
                 changed++;
             }
-            for (int d = 1; d < SOLID_DEPTH; d++) {
-                BlockState below = chunk.getBlockState(m.set(x, target - d, z));
-                if (below.is(Blocks.BEDROCK) || !natural(below)) continue;
-                boolean hollow = below.isAir() || wet(below) || growth(below)
-                    || below.getBlock() instanceof net.minecraft.world.level.block.FallingBlock && !under(surface, d).is(below.getBlock());
-                if (!hollow) continue;
-                level.setBlock(m, under(surface, d), QUIET);
-                changed++;
-            }
+            changed += GroundWork.seal(level, chunk, x, z, target, surface, false);   // [terra10] solid twelve deep
         }
+        if (target < ground) changed += GroundWork.faces(level, x, z, target, ground);   // [terra10] the cut's sides closed
         for (SiteWork.Carried c : chests) SiteWork.setDown(level, new BlockPos(x, target + 1, z), c);   // [build5] on the new ground
         // Grass that had snow lying on it, cleared: green again (its neighbours were not told).
         BlockState now = chunk.getBlockState(m.set(x, target, z));

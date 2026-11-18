@@ -151,11 +151,26 @@ public final class FoundingPlan {
         return t * t * (3 - 2 * t);
     }
 
+    /**
+     * [terra10] How far from level the ground may stand this far out, as a walkable bank: a block up for a block
+     * across after the first rounding (a step of two is a wall nobody climbs, folk or player). Only land standing
+     * further off the level than such a bank reaches across the whole band (forty-five blocks) is met steeper,
+     * blending to {@link #allowance} (a block and a half a block) as the height to be met grows to what that reaches,
+     * so a mountain still stands back on a slope rather than a cliff at the band's end.
+     */
+    public static double walkable(double u, double need) {
+        if (u <= 0) return 0;
+        double gentle = u <= FILLET ? u * u / (2 * FILLET) : FILLET / 2 + (u - FILLET);
+        double reach = FILLET / 2 + (BAND_MAX - FILLET), most = allowance(BAND_MAX);
+        double s = Math.max(0.0, Math.min(1.0, (need - reach) / (most - reach)));
+        return gentle + s * (allowance(u) - gentle);
+    }
+
     /** The height wanted for ground {@code was} high, {@code u} blocks past the levelled ground. */
     public static double target(double was, int level, double u) {
         if (u <= 0) return level;
         if (u >= BAND_MAX) return was;
-        double a = allowance(u);
+        double a = walkable(u, Math.abs(was - level));                     // [terra10] a walkable bank
         double kept = Math.max(level - a, Math.min(level + a, was));
         return level + (kept - level) * blend(u);
     }
@@ -209,6 +224,8 @@ public final class FoundingPlan {
     public static final class Ground {
         public final int outer, side;
         public final int[] ground, fluid;
+        /** [terra10] The top of what is built in a column read as built (MIN_VALUE in any other). */
+        public final int[] cover;
         public final byte[] kind;
         /** The height each column is to be, once planned. */
         public int[] target;
@@ -227,6 +244,9 @@ public final class FoundingPlan {
         public String heldFirst = "";
         /** Columns of water standing above the level inside the square, let out so it is cut flat. */
         public int drained;
+        /** [terra10] Columns built over at the foot of a hole (an old mine's boards in a ravine), filled over; columns of
+         *  shallow water, and of water wholly in the square, filled; columns of lava covered. */
+        public int buried, shallows, lava;
 
         public Ground(int outer) {
             this.outer = outer;
@@ -235,7 +255,9 @@ public final class FoundingPlan {
             this.ground = new int[n];
             this.fluid = new int[n];
             this.kind = new byte[n];
+            this.cover = new int[n];
             Arrays.fill(fluid, Integer.MIN_VALUE);
+            Arrays.fill(cover, Integer.MIN_VALUE);
         }
 
         public int index(int dx, int dz) {
@@ -300,6 +322,7 @@ public final class FoundingPlan {
      */
     public static void make(Ground g, int radius, int level, int camp, long seed) {
         int side = g.side, n = side * side;
+        buriedInHoles(g);                                                     // [terra10]
         // ---- the water: a pond inside is filled, anything bigger, deeper or running out of
         // the ground being levelled (a river, a lake, the sea) is left exactly as it is.
         int[] comp = new int[n];
@@ -332,10 +355,13 @@ public final class FoundingPlan {
                 }
             }
             boolean pond = inside && !edge && size <= POND_COLUMNS && deepest <= POND_DEPTH;
+            if (k == LAVA) pond = true;                                       // [terra10] lava is never left in a town's ground
+            if (k == LAVA) g.lava += size;
             for (int i : cells) g.kind[i] = pond ? FILL : KEEP;
             if (pond) g.filledPonds++;
             else g.keptWater += size;
         }
+        wetSquare(g, radius, level, seed);                                    // [terra10]
         // ---- anything built, and the ground round it, is left as it is.
         boolean[] built = new boolean[n];
         for (int i = 0; i < n; i++) built[i] = g.kind[i] == BUILT;
@@ -446,6 +472,88 @@ public final class FoundingPlan {
         for (int j = 0; j < m; j++) {
             g.order[j] = (int) (keys[j] & 0xFFFFFF);
             if (g.campIndex == m && (keys[j] >>> 24) / 1024.0 > camp) g.campIndex = j;
+        }
+    }
+
+    /** [terra10] How far below the land round it the top of something built must stand to be down a hole, not on the land. */
+    public static final int BURIED = 6;
+    /** [terra10] Water no deeper than this in the square is filled: a swamp's pools, a river's or a beach's shallows. */
+    public static final int SHALLOW = 2;
+    /** [terra10] Water wholly inside the square is filled if no deeper than this. */
+    public static final int SQUARE_POND_DEPTH = 12;
+
+    /**
+     * [terra10] Something built standing at the foot of a hole: an old mine's boards and rails at the bottom of a
+     * ravine, a ruin in a pit, cobble where lava met water in a cave mouth. It was taken for somebody's building on the
+     * land, the ground round it held to its height, a block for every block out, and the founding dug the town down
+     * into a funnel to it: half the square of a dark-forest town cut down eighty blocks to a few boards in a ravine.
+     * Where the top of what is built stands {@link #BURIED} or more below the land round it (the middle of the land's
+     * heights within five), it is down a hole, not on the land: the hole is filled over it, the fill resting on its top.
+     */
+    static void buriedInHoles(Ground g) {
+        int side = g.side;
+        int[] near = new int[121];
+        for (int i = 0; i < side * side; i++) {
+            if (g.kind[i] != BUILT || g.cover[i] == Integer.MIN_VALUE) continue;
+            int x = i % side, z = i / side, m = 0;
+            for (int dz = -5; dz <= 5; dz++) for (int dx = -5; dx <= 5; dx++) {
+                int xx = x + dx, zz = z + dz;
+                if (xx < 0 || zz < 0 || xx >= side || zz >= side) continue;
+                int j = zz * side + xx;
+                if (g.kind[j] == LAND) near[m++] = g.ground[j];
+            }
+            if (m < 8) continue;
+            Arrays.sort(near, 0, m);
+            if (g.cover[i] > near[m / 2] - BURIED) continue;
+            g.kind[i] = LAND;
+            g.ground[i] = g.cover[i];
+            g.buried++;
+        }
+    }
+
+    /**
+     * [terra10] The water in the square that is left as a hole in the town: a swamp's pools and a river's or a beach's
+     * shallows ({@link #SHALLOW} deep or less) are filled, and then any water left wholly inside the square (a pool the
+     * shallows were round, a lake in the middle of the town); the deep water running out of it (a river's channel, the
+     * sea) is kept, a bank on it.
+     */
+    static void wetSquare(Ground g, int radius, int level, long seed) {
+        int side = g.side, n = side * side;
+        boolean[] sq = new boolean[n];
+        for (int i = 0; i < n; i++) sq[i] = reach(g.dx(i), g.dz(i)) - radius + WOBBLE * noise(seed, g.dx(i), g.dz(i)) <= 0;
+        for (int i = 0; i < n; i++) {
+            if (g.kind[i] != KEEP || !sq[i] || g.fluid[i] > level || g.fluid[i] - g.ground[i] > SHALLOW) continue;
+            g.kind[i] = FILL;
+            g.shallows++;
+            g.keptWater--;
+        }
+        int[] comp = new int[n];
+        Arrays.fill(comp, -1);
+        ArrayDeque<Integer> queue = new ArrayDeque<>();
+        for (int start = 0; start < n; start++) {
+            if (g.kind[start] != KEEP || comp[start] >= 0) continue;
+            comp[start] = start;
+            queue.add(start);
+            java.util.List<Integer> cells = new java.util.ArrayList<>();
+            boolean inside = true;
+            int deepest = 0;
+            while (!queue.isEmpty()) {
+                int i = queue.poll();
+                cells.add(i);
+                if (!sq[i] || g.fluid[i] > level) inside = false;
+                deepest = Math.max(deepest, g.fluid[i] - g.ground[i]);
+                int x = i % side, z = i / side;
+                int[] nb = { x > 0 ? i - 1 : -1, x < side - 1 ? i + 1 : -1, z > 0 ? i - side : -1, z < side - 1 ? i + side : -1 };
+                for (int j : nb) {
+                    if (j < 0 || comp[j] >= 0 || g.kind[j] != KEEP) continue;
+                    comp[j] = start;
+                    queue.add(j);
+                }
+            }
+            if (!inside || deepest > SQUARE_POND_DEPTH) continue;
+            for (int i : cells) g.kind[i] = FILL;
+            g.shallows += cells.size();
+            g.keptWater -= cells.size();
         }
     }
 

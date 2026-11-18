@@ -26,7 +26,8 @@ import java.util.Map;
  * Columns the plan left as they were on purpose (water it kept, ground round anything built, a village of
  * villagers' own) are not counted against it. Holes: air, water or lava within {@link #DEEP} of the top of a
  * worked column; a crust is a column with any. A pit is a column two or more lower than all four of its
- * neighbours. A sheer edge is a step of more than two between neighbouring columns where either was worked.
+ * neighbours. A sheer edge is a step of more than two between neighbouring columns where either was worked, and
+ * steeper than the land had it there.
  * Floating leaves are a wild tree's leaves more than six from any log (they would rot away and drop their
  * saplings); a floating log is a run of a tree's logs standing on nothing; a stump a log or two with no
  * crown. Odd tops: the square's top anything but the town's soil, and a worked edge column topped in bare
@@ -65,8 +66,17 @@ public final class TerraformAudit {
         return best;
     }
 
+    /** Where the first of each fault was found by the last scan (for the log). */
+    public static final Map<String, String> FIRST = new LinkedHashMap<>();
+
+    private static void at(Map<String, Integer> c, String key, int x, int y, int z, BlockState s) {
+        c.merge(key, 1, Integer::sum);
+        FIRST.putIfAbsent(key, x + "," + y + "," + z + (s == null ? "" : " " + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath()));
+    }
+
     /** The faults counted, by name, in a fixed order. */
     public static Map<String, Integer> scan(ServerLevel level, Done d) {
+        FIRST.clear();
         Map<String, Integer> c = new LinkedHashMap<>();
         for (String k : new String[]{ "square", "offLevel", "holes", "crust", "pits", "oddTop", "oddTopDirt", "oddTopRock",
                 "oddTopOre", "oddTopGravel", "growthOnSquare", "floatLeaves", "floatLogs", "stumps", "floatVines", "sheer",
@@ -105,7 +115,7 @@ public final class TerraformAudit {
             if (!over.isAir() && !Terraform.natural(over)) continue;   // the town's own work on it since (a field, a path)
             if (sq[i]) {
                 c.merge("square", 1, Integer::sum);
-                if (y != d.level) c.merge("offLevel", 1, Integer::sum);
+                if (y != d.level) at(c, "offLevel", x, y, z, null);
             }
             BlockState t = level.getBlockState(m.set(x, y, z));
             String odd = null;
@@ -115,14 +125,14 @@ public final class TerraformAudit {
                 odd = kindOf(t);
             }
             if (odd != null) {
-                c.merge(sq[i] ? "oddTop" : "rawEdge", 1, Integer::sum);
+                at(c, sq[i] ? "oddTop" : "rawEdge", x, y, z, t);
                 if (sq[i]) c.merge("oddTop" + odd, 1, Integer::sum);
             }
             if (sq[i]) {
                 for (int up = 1; up <= 12; up++) {
                     BlockState a = level.getBlockState(m.set(x, y + up, z));
                     if (a.isAir()) continue;
-                    if (Terraform.growth(a) || Terraform.wet(a)) c.merge("growthOnSquare", 1, Integer::sum);
+                    if (Terraform.growth(a) || Terraform.wet(a)) at(c, "growthOnSquare", x, y + up, z, a);
                 }
             }
             boolean hollow = false;
@@ -130,7 +140,7 @@ public final class TerraformAudit {
                 BlockState b = level.getBlockState(m.set(x, y - dd, z));
                 if (!Terraform.natural(b)) break;                       // something buried: not the ground's
                 if (b.isAir() || !b.getFluidState().isEmpty() || Terraform.growth(b)) {
-                    c.merge("holes", 1, Integer::sum);
+                    at(c, "holes", x, y - dd, z, b);
                     hollow = true;
                 }
                 if (dd <= 4 && (b.is(Blocks.COBBLESTONE) || b.is(Blocks.COBBLED_DEEPSLATE))) c.merge("junk", 1, Integer::sum);
@@ -152,10 +162,11 @@ public final class TerraformAudit {
                 if (n[0] < 0 || n[1] < 0) continue;                    // each pair once
                 if (!worked[i] && !worked[j]) continue;
                 int step = Math.abs(top[j] - top[i]);
-                if (step > 2) c.merge("sheer", 1, Integer::sum);
+                if (step <= Math.abs(g.ground[j] - g.ground[i])) continue;   // no worse than the land had it
+                if (step > 2) at(c, "sheer", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
                 else if (step == 2) c.merge("steps2", 1, Integer::sum);
             }
-            if (worked[i] && lowerThanAll != Integer.MIN_VALUE && lowerThanAll >= 2) c.merge("pits", 1, Integer::sum);
+            if (worked[i] && lowerThanAll != Integer.MIN_VALUE && lowerThanAll >= 2) at(c, "pits", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
         }
         // ---- trees: leaves cut off from their logs, logs on nothing, stumps; vines hanging on nothing
         int x0 = hx - g.outer - 8, z0 = hz - g.outer - 8, w = 2 * g.outer + 17;
@@ -172,12 +183,12 @@ public final class TerraformAudit {
                 if (y <= minY) continue;
                 BlockState b = ch.getBlockState(m.set(x, y, z));
                 if (!b.getFluidState().isEmpty()) {
-                    if (b.getFluidState().is(FluidTags.LAVA)) c.merge("lava", 1, Integer::sum);
-                    else if (!b.getFluidState().isSource()) c.merge("flowing", 1, Integer::sum);
+                    if (b.getFluidState().is(FluidTags.LAVA)) at(c, "lava", x, y, z, b);
+                    else if (!b.getFluidState().isSource()) at(c, "flowing", x, y, z, b);
                 }
                 if (b.getBlock() instanceof FallingBlock && y > minY + 1) {
                     BlockState u = ch.getBlockState(m.set(x, y - 1, z));
-                    if (u.isAir() || !u.getFluidState().isEmpty()) c.merge("falling", 1, Integer::sum);
+                    if (u.isAir() || !u.getFluidState().isEmpty()) at(c, "falling", x, y, z, b);
                 }
             }
         }
@@ -205,7 +216,7 @@ public final class TerraformAudit {
 
     /** Leaves, logs and vines in the box, looked over as the game's own leaf decay would. */
     private static void trees(ServerLevel level, Map<String, Integer> c, int x0, int z0, int y0, int w, int h) {
-        // 0 nothing, 1 log (a tree's), 2 leaves (wild), 3 leaves (set), 4 vine, 5 other solid
+        // 0 nothing, 1 log (a tree's), 2 leaves (wild), 3 leaves (set), 4 vine, 5 other solid, 6 something built
         byte[] k = new byte[w * w * h];
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         for (int cx = x0 >> 4; cx <= (x0 + w - 1) >> 4; cx++) {
@@ -223,7 +234,7 @@ public final class TerraformAudit {
                             else if (s.is(BlockTags.LEAVES)) v = s.hasProperty(LeavesBlock.PERSISTENT) && s.getValue(LeavesBlock.PERSISTENT) ? (byte) 3 : 2;
                             else if (s.is(Blocks.VINE)) v = 4;
                             else if (s.canBeReplaced() || !s.getFluidState().isEmpty()) continue;
-                            else v = 5;
+                            else v = Terraform.natural(s) ? (byte) 5 : 6;
                             k[((y - y0) * w + (z - z0)) * w + (x - x0)] = v;
                         }
                     }
@@ -248,7 +259,7 @@ public final class TerraformAudit {
                 q.add(j);
             }
         }
-        for (int i = 0; i < k.length; i++) if (k[i] == 2 && dist[i] > 6) c.merge("floatLeaves", 1, Integer::sum);
+        for (int i = 0; i < k.length; i++) if (k[i] == 2 && dist[i] > 6) at(c, "floatLeaves", x0 + i % w, y0 + i / (w * w), z0 + (i / w) % w, null);
         // Logs: each run of them (touching, corners too), on something or not, and with a crown or not.
         boolean[] seen = new boolean[k.length];
         for (int i0 = 0; i0 < k.length; i0++) {
@@ -264,19 +275,21 @@ public final class TerraformAudit {
                 if (x == 0 || z == 0 || x == w - 1 || z == w - 1 || y == 0) edge = true;
                 if (y > 0) {
                     byte b = k[i - w * w];
-                    if (b == 5) grounded = true;
+                    if (b == 5 || b == 6) grounded = true;
                 }
                 for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++) for (int dx = -1; dx <= 1; dx++) {
                     int xx = x + dx, yy = y + dy, zz = z + dz;
                     if (xx < 0 || zz < 0 || yy < 0 || xx >= w || zz >= w || yy >= h) continue;
                     int j = (yy * w + zz) * w + xx;
                     if (k[j] == 2 || k[j] == 3) crown = true;
+                    if (k[j] == 6) edge = true;                         // something built beside it: a post, not a stump
                     if (k[j] == 1 && !seen[j]) { seen[j] = true; q.add(j); }
                 }
             }
             if (edge) continue;
-            if (!grounded) c.merge("floatLogs", size, Integer::sum);
-            else if (!crown && size <= 3) c.merge("stumps", 1, Integer::sum);
+            int px = x0 + i0 % w, py = y0 + i0 / (w * w), pz = z0 + (i0 / w) % w;
+            if (!grounded) { c.merge("floatLogs", size - 1, Integer::sum); at(c, "floatLogs", px, py, pz, null); }
+            else if (!crown && size <= 3) at(c, "stumps", px, py, pz, null);
         }
         // Vines: hanging on nothing (no solid block beside or over them, and no vine over them).
         for (int i = 0; i < k.length; i++) {
@@ -287,9 +300,9 @@ public final class TerraformAudit {
                 if (s == 5) continue;                                   // under it holds nothing up
                 if (s == 0 && x == w - 1 || s == 1 && x == 0 || s == 2 && z == w - 1 || s == 3 && z == 0 || s == 4 && y == h - 1) { held = true; continue; }
                 int j = i + step[s];
-                if (j >= 0 && j < k.length && (k[j] == 5 || k[j] == 1 || k[j] == 2 || k[j] == 3 || (s == 4 && k[j] == 4))) held = true;
+                if (j >= 0 && j < k.length && (k[j] == 5 || k[j] == 6 || k[j] == 1 || k[j] == 2 || k[j] == 3 || (s == 4 && k[j] == 4))) held = true;
             }
-            if (!held) c.merge("floatVines", 1, Integer::sum);
+            if (!held) at(c, "floatVines", x0 + x, y0 + y, z0 + z, null);
         }
     }
 
