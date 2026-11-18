@@ -128,9 +128,9 @@ is done, the first of them says so, and the village's history remembers it.
 A spawner placed within reach of a village adds one settler, as it always has. Every other way a
 village begins levels its ground the same way: a village the world founds as you come upon it,
 `/village spawn` out of reach of a village, and the Village Charter all put the board up and
-confirm the founding at once, and the folk come when the heart is level. Only `/village spawnat`
-(the console and the soak tests) still stands a party up at once with no levelling, and a colony
-sent out by its mother town is founded where it stops. The board clears whatever grew where it
+confirm the founding at once, and the folk come when the heart is level. `/village spawnat`
+(the console and the soak tests) still stands a party up at once, and then levels the ground round
+it as `/village level` does (terra-10); a colony sent out by its mother town is founded where it stops. The board clears whatever grew where it
 stands, tree trunks too: in a jungle every place on the square's edge has one, and the board once
 could not go up there at all. A town that was founded before any of this, standing among its
 trees, has its ground levelled with `/village level`.
@@ -4535,6 +4535,9 @@ ripen, days pass, folk work and houses go up at that pace.
   the board waiting there, or on one put up for it. `found board [x z]` puts the board up
   alone, as placing a spawner does; `found screen [count]` opens the founding screen of the
   waiting board nearest you; `found status` says how every founding is getting on.
+* `/village groundcheck` — (operators) the faults in the ground of the founding finished nearest
+  you since the server started, counted (holes, crusts, pits, floating leaves and logs, sheer
+  steps, bare edge tops, running water, lava, loose items, and where the first of each is).
 * `/village tp <name>` — (operators) go straight to a folk by name, the nearest of that name
   first, in any world: set down on the ground beside it, facing it, never inside a block or over
   a drop. From the console, name who goes: `/execute as <player> run village tp <name>`. The
@@ -13992,3 +13995,110 @@ the crown kept), ct04 (a fence and gate, a low wall and an open plot; two fenced
 doubled), ct05 (no water into a channel over nothing; lined, then watered; water running off taken up), ct06 (houses
 of one drawing dressed each their own, once), ct07 (not required: a trace of the streets laid by hand); TownPlanTest (some blocks turned, none by the square, every door on a
 street).
+
+## The founding's ground made good: filled, sealed, graded and cleared (terra-10)
+
+<!-- [terra10] entity/GroundWork, entity/TerraformAudit, Terraform (shape, survey, under, edgeTop), village/FoundingPlan
+     (buriedInHoles, wetSquare, walkable, steepness, the square's hold on the beach, water let out of the band), Founding
+     (felling, the quay, the sweep), /village groundcheck, /village spawnat; TerraformGameTests tf00-tf07 -->
+
+Setting the village block down levels the town's ground. A player standing on it after should find a solid, level,
+green square with no holes in it, the land round it met in banks a body can walk up, every tree that was in the way
+gone whole, and nothing lying about. **The audit** (entity/TerraformAudit; `/village groundcheck` on a live server, run
+where a founding finished since the server started; TerraformGameTests) looks over every column the founding worked
+and counts what a player would call a fault: air, water or lava within twelve of the top (holes; a crust is a column
+with any), pits, the square's top not the town's soil, anything growing on it, a wild tree's leaves more than six from a
+log (they rot and drop their saplings over the new ground), logs standing on nothing, stumps, vines on nothing, steps of
+more than two between neighbours that the land had not had (sheer), a worked edge column topped in bare earth, rock or
+gravel, water left running and lava where the work laid it open, sand or gravel over a hollow, cobble in the top, loose
+items, and the square's columns the plan itself held off the level. Thirteen foundings of eight on a real world (seed
+424242: dark forest, plains, a river, a beach, snowy slopes, a forest, a swamp, desert, badlands, windswept hills, stony
+peaks, taiga, and beside a village of villagers) were audited on the build before and on this one.
+
+What it found, and what changed:
+
+* **A funnel dug to a block of raw copper.** A dark-forest town's founding cut half its square down eighty blocks, a
+  graded pit to y=19 (3,263 of the square's columns held off the level). At the foot of a pit in the square lay one
+  block of raw copper from an ore vein; anything not earth, plant or water is somebody's building to the founding, and
+  the ground round a building is held to its height, a block for every block out. Now something "built" standing six or
+  more below the middle of the land round it is down a hole, not on the land. If all that is in the hole is the world's
+  own (raw ore, the stone where lava met water, a cave's crystals, moss and sculk, an old mine's rails and webs and the
+  timbers and lights that go with them), the hole is filled over it, the fill resting on its top. If anything in it is
+  what anybody could have made (a chest, a bed, a door, a torch or boards with no mine's rails, glass, any block the town
+  knows a player set down), the hole is left exactly as it is, every column of it, and nothing is held to it: the town is
+  levelled to its rim, a walled pit, never filled over and never dug down to (tf08: a camp of a chest, a bed and a door at
+  the foot of a pit fourteen deep stays open and untouched; raw copper at the foot of another is filled over). A building
+  on the land, however low the land, is still left as it was, the ground round it graded to it.
+* **Caves under a crust.** The town was solid five deep: under that, every cave, cavern and aquifer stayed as it was,
+  some under a lid of four blocks of dirt (a thousand to four thousand cells of air or water within twelve of the top of
+  every town audited). It is solid twelve deep now, earth for the first three and stone under it; a cave with anything
+  built beside it (a rail, a torch, a ladder) is somebody's tunnel and is left from there down. Fill goes all the way to
+  the ground it stands on, earth near the top and stone deeper (it was dirt all the way down).
+* **The faces of a cut.** Where the ground was cut down, the side of the ground beside it came to the light: a cave in
+  the bank stood open, and water or lava in it ran out across the town (lava in the hillside test, by a forest town).
+  Every hollow, and every cell of water or lava, in the side of a cut is closed in the neighbour's own earth and stone.
+* **Trees.** A tree the levelling cut into was cut a column at a time: half a crown hanging off the edge of the work,
+  trunks on nothing, and the leaves left rotting for minutes and dropping saplings and sticks (hundreds of floating
+  leaves by every wooded town, 1,181 over the swamp's). A tree touched at all is felled whole now, its logs (corners too,
+  never a log set into anything built or a player's), the trees whose leaves were taken, every wild leaf no log holds
+  any more (as the game's own decay reckons it, at once), and the vines and cocoa left hanging, however far down they
+  hang. A tree buried by the fill is felled the same. Nothing is dropped; anything left lying on the worked ground when
+  it is done (and nothing a player threw) goes into the town's stores.
+* **Banks.** The edge was cut and built a block and a half a block where the land asked: every other step two high, a
+  wall nobody climbs. It is a block a block now, walkable, and only the ways out from the heart where the land stands
+  further off the level than such a bank reaches across the band (forty-five) are met steeper, blending smoothly from
+  one way to the next (reckoned for each degree round the heart, so neighbouring columns are met alike). The tops of the
+  bank are grass, or the town's soil, wherever they were bare rock, snow, gravel, earth, clay or mud, cut or built up (the
+  fill's top was left bare rock or dirt). The town's soil itself is never snow, gravel, clay or mud: the snowy slopes'
+  town was a square of snow blocks, and is grass.
+* **Water.** A swamp town stood among its pools (624 of the square's columns dry); shallows of two or less in the square
+  are filled now, and then any water left wholly inside it (2,727 dry). Lava is covered wherever it lies in the ground
+  worked. A river or the sea through or by the town is still kept, deep water running out of the square; the square ends
+  at it in a stone quay (sandstone on sand), not a raw face of dirt, and the beach beside it outside the square starts
+  from the square's own height, a block a block down to the water (the square stood three and four over its own beach:
+  forty steps on the beach and by the river). Water above the level out past the square, too near for a walkable bank to
+  hold it (a stream on the hillside just past the edge), is let out there and the slope cut through it, and what is
+  kept is walled; a tarn in f04 nine high three blocks past the edge is let out now.
+* **/village spawnat** founded a village at once with no levelling at all (every other way a town begins levels it):
+  it still founds at once, for the console and scripts, and then levels the ground round it as `/village level` does a
+  town already standing, its folk kept from harm meanwhile.
+
+**Measured** (before, on the build before with the same audit; after, this build; holes are cells, crust columns):
+
+| ground | holes | crust | floating leaves | floating logs | sheer | bare edge tops | falling | items | other |
+|---|---|---|---|---|---|---|---|---|---|
+| dark forest | 332 → 0 | 297 → 0 | 336 → 5 | 59 → 0 | 0 → 0 | 127 → 0 | 0 → 0 | 11 → 11 | funnel: 3,263 columns held off → 0 |
+| plains | 1,314 → 0 | 506 → 0 | 83 → 0 | 0 → 0 | 0 → 0 | 72 → 0 | 13 → 0 | 6 → 5 | pits 0 → 1 |
+| river | 560 → 0 | 261 → 0 | 204 → 0 | 1 → 0 | 20 → 0 | 16 → 0 | 0 → 0 | 4 → 1 | vines 30 → 20 |
+| beach | 1,479 → 1 | 429 → 1 | 188 → 0 | 0 → 0 | 3 → 0 | 33 → 0 | 7 → 0 | 0 → 0 | |
+| snowy slopes | 1,394 → 0 | 535 → 0 | 202 → 0 | 0 → 0 | 65 → 0 | 110 → 0 | 10 → 0 | 14 → 10 | snow square → grass; running water 0 → 8 |
+| forest | 944 → 0 | 265 → 0 | 181 → 0 | 1 → 0 | 66 → 0 | 53 → 0 | 0 → 0 | 0 → 0 | |
+| by a village | 2,829 → 0 | 771 → 0 | 64 → 0 | 0 → 0 | 44 → 0 | 95 → 0 | 14 → 0 | 0 → 0 | |
+| swamp | 0 → 0 | 0 → 0 | 1,181 → 0 | 0 → 0 | 0 → 0 | 1 → 0 | 0 → 0 | 11 → 0 | dry square 624 → 2,727; vines 23 → 10 |
+| desert | 3,026 → 0 | 664 → 0 | 257 → 1 | 17 → 0 | 0 → 2 | 98 → 11 | 3 → 0 | 1 → 0 | vines 30 → 17 |
+| badlands | 1,202 → 0 | 360 → 0 | 0 → 0 | 0 → 0 | 53 → 0 | 537 → 0 | 42 → 0 | 2 → 0 | |
+| windswept hills | 423 → 0 | 186 → 0 | 460 → 0 | 0 → 0 | 318 → 0 | 201 → 0 | 0 → 0 | 16 → 11 | 352 held round a ruined portal, both |
+| stony peaks | 3,791 → 0 | 1,254 → 0 | 262 → 0 | 6 → 0 | 0 → 0 | 245 → 0 | 4 → 0 | 10 → 0 | vines 40 → 42 |
+| taiga | 4,317 → 0 | 1,553 → 0 | 375 → 0 | 1 → 0 | 0 → 0 | 127 → 0 | 12 → 0 | 4 → 0 | |
+
+On the built grounds of TerraformGameTests (a strewn meadow with a player's hut; a hillside with a cave of water and lava in it; a
+thick forest with vines; a river, a ravine with an old mine's boards at its foot, a cavern under a crust and sand over a
+hollow; desert dunes over a cave; a snowy slope with powder snow) every count is nought, the hut untouched; before:
+holes 194, 3,388 and 180 (hillside, waters, desert), floating leaves 26 and 1,500 (meadow, forest), lava 20 (hillside),
+sheer 94 and 32 (waters, snowy), bare edge tops 66 (waters). A founding of eight takes about as long as it did (twenty to
+thirty-five seconds on the real world, the levelling spread over the ticks as before; the trees settled a chunk's worth
+at a time within the tick's budget).
+
+**Left as they are, with the reason.** What is left in the after column: a handful of items and leaves by the wooded
+towns are the folk's own work begun (the woodcutter fells, the camp is pitched) in the seconds before the audit ran;
+the vines counted at the far edge of the river, swamp, desert and peaks towns are the same before and after, the land's
+own; running water by the snowy town comes down the mountain from outside the ground worked. A ruined portal (or any
+other thing the world built on the land) is left standing, the ground round it graded to it, as a player's building
+would be: the founding cannot tell one from the other. A cave with a rail, torch or ladder in it is not filled past the
+first five blocks.
+
+Tests: TerraformGameTests (x 4,000,000 to 4,100,000, z 90000) tf01 to tf06, a ground each (the meadow, the hillside,
+the forest, the waters, the desert, the snowy slope), founded and audited, every count nought and the meadow's hut
+untouched; tf00 (not required) all six at once, for the numbers; tf07 /village spawnat founds at once and then levels;
+tf08 a player's camp down a pit left open and untouched, the world's raw copper down another filled over.
+FoundingGameTests f04 (the tarn let out, its hill graded, nothing running); FoundingPlanTest as it was.

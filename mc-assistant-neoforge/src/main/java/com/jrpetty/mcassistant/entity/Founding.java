@@ -114,6 +114,8 @@ public final class Founding extends SavedData {
         int goodCursor, goodPass, goodMended, goodMendedAll;
         long held = -100000L;
         Block surface = Blocks.GRASS_BLOCK;
+        /** [terra10] The trees the levelling cut into, waiting to be felled whole (not kept: a restart lets the game's decay have them). */
+        final GroundWork.Felling felling = new GroundWork.Felling();
 
         boolean founded() {
             return village != null;
@@ -697,13 +699,33 @@ public final class Founding extends SavedData {
             LOG.info("[MCA-FOUND] the ground at {} is levelled to y={} in {}", s.heart.toShortString(), s.level, s.soil);
         }
         s.surface = Terraform.byName(s.soil, Blocks.GRASS_BLOCK);
+        builtSeen(level, s, g);                                            // [terra10] what was taken for built, for the log
         long t0 = System.nanoTime();
         FoundingPlan.make(g, s.radius, s.level, FoundingPlan.campRadius(s.count), s.seed);
         LOG.info("[MCA-FOUND] planned {} columns in {} ms: {} ponds filled, {} columns of water kept ({} above the level"
                 + " let out of the square), {} left round buildings; {} columns to the camp, from column {}",
             g.order.length, (System.nanoTime() - t0) / 1_000_000L, g.filledPonds, g.keptWater, g.drained, g.protectedColumns,
             g.campIndex, s.cursor);
+        LOG.info("[MCA-FOUND] [terra10] {} columns built over down holes, {} of holes left for what is in them, {} of shallow or"
+            + " enclosed water filled, {} of lava covered", g.buried, g.keptHoles, g.shallows, g.lava);
         s.phase = SHAPE;
+    }
+
+    /** [terra10] The columns read as somebody's building, how many, and the first few of them by what is there. */
+    private static void builtSeen(ServerLevel level, Site s, FoundingPlan.Ground g) {
+        int n = 0;
+        java.util.Map<String, Integer> what = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < g.kind.length; i++) {
+            if (g.kind[i] != FoundingPlan.BUILT) continue;
+            n++;
+            if (what.size() >= 8) continue;
+            int x = s.heart.getX() + g.dx(i), z = s.heart.getZ() + g.dz(i);
+            LevelChunk chunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
+            if (chunk == null) continue;
+            String w = Terraform.inTheWay(chunk, x, z, g.ground[i], g.ground[i]);
+            what.merge(w.replaceAll(" \\(y=.*", "") + " (first at " + x + "," + w.replaceAll(".*y=", "y=").replace(")", "") + "," + z + ")", 1, Integer::sum);
+        }
+        if (n > 0) LOG.info("[MCA-FOUND] {} columns read as built: {}", n, what.keySet());
     }
 
     /** The columns the waiting board stands in (taken down, and levelled, when the village is founded). */
@@ -741,8 +763,9 @@ public final class Founding extends SavedData {
                     // The square in the town's soil; the edge in whatever each column was (rock left rock).
                     boolean own = !levelled && k == FoundingPlan.LAND && s.tops != null && s.tops[i] > 0;
                     Block top = own ? Terraform.top(s.tops[i]) : s.surface;
-                    if (own) top = SiteWork.edgeTop(top, s.surface, g.target[i] < g.ground[i]);   // [build5] a cut edge turfed
-                    int c = Terraform.shape(level, chunk, x, z, g.ground[i], g.target[i], levelled, top);
+                    if (own) top = Terraform.edgeTop(top, s.surface);   // [build5] a cut edge turfed; [terra10] and a built-up one
+                    int c = Terraform.shape(level, chunk, x, z, g.ground[i], g.target[i], levelled, top, s.felling);
+                    if (c >= 0) c += quayBeside(level, g, i, x, z, top);                // [terra10] a stone quay over kept water
                     if (c < 0 && levelled && s.blocked++ == 0) {
                         s.blockedFirst = Terraform.inTheWay(chunk, x, z, g.ground[i], g.target[i]) + " at " + x + "," + z;
                     }
@@ -751,7 +774,21 @@ public final class Founding extends SavedData {
             }
             s.cursor++;
         }
-        if (s.cursor >= g.order.length && s.founded() && s.spawned >= s.count && makeGood(level, s, deadline)) finish(level, f, s);
+        if (!s.felling.settle(level, deadline)) return;                    // [terra10] the trees cut into, felled whole
+        if (s.cursor >= g.order.length && s.founded() && s.spawned >= s.count && makeGood(level, s, deadline)
+                && s.felling.settle(level, deadline)) finish(level, f, s);
+    }
+
+    /** [terra10] A column over kept water beside it by two or more faced in stone (GroundWork.quay). */
+    private static int quayBeside(ServerLevel level, FoundingPlan.Ground g, int i, int x, int z, Block top) {
+        int side = g.side, xi = i % side, zi = i / side, water = Integer.MAX_VALUE;
+        for (int[] n : new int[][]{ {1, 0}, {-1, 0}, {0, 1}, {0, -1} }) {
+            int xx = xi + n[0], zz = zi + n[1];
+            if (xx < 0 || zz < 0 || xx >= side || zz >= side) continue;
+            int j = zz * side + xx;
+            if (g.kind[j] == FoundingPlan.KEEP && g.fluid[j] != Integer.MIN_VALUE) water = Math.min(water, g.fluid[j]);
+        }
+        return water == Integer.MAX_VALUE ? 0 : GroundWork.quay(level, x, z, g.target[i], water, top);
     }
 
     /** The most times the square is looked over again for anything the levelling left wrong. */
@@ -789,9 +826,9 @@ public final class Founding extends SavedData {
                 // (A shaft to nowhere is not filled from the bottom of the world.)
                 if (y == Integer.MIN_VALUE || Math.abs(y - want) > 48) continue;
                 // The edge in whatever each column was, as the levelling dressed it; the square in the town's soil.
-                Block top = !square && s.tops != null && s.tops[i] > 0 ? Terraform.top(s.tops[i]) : s.surface;
+                Block top = !square && s.tops != null && s.tops[i] > 0 ? Terraform.edgeTop(Terraform.top(s.tops[i]), s.surface) : s.surface;
                 if (!Terraform.wantsWork(level, chunk, x, z, y, want, top, square)) continue;
-                if (Terraform.shape(level, chunk, x, z, y, want, square, top) > 0) s.goodMended++;
+                if (Terraform.shape(level, chunk, x, z, y, want, square, top, s.felling) > 0) s.goodMended++;
             }
             s.goodMendedAll += s.goodMended;
             LOG.info("[MCA-FOUND] looked the square over again ({} of {}): {} columns mended", s.goodPass + 1, GOOD_PASSES, s.goodMended);
@@ -822,7 +859,7 @@ public final class Founding extends SavedData {
                 if (g.kind[i] != FoundingPlan.BOARD) continue;
                 int x = s.heart.getX() + g.dx(i), z = s.heart.getZ() + g.dz(i);
                 LevelChunk chunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
-                if (chunk != null) Terraform.shape(level, chunk, x, z, g.ground[i], g.target[i], true, s.surface);
+                if (chunk != null) Terraform.shape(level, chunk, x, z, g.ground[i], g.target[i], true, s.surface, s.felling);
                 g.kind[i] = FoundingPlan.OUTSIDE;                  // done: the cursor passes it by
             }
         }
@@ -920,6 +957,13 @@ public final class Founding extends SavedData {
     /** All done: the ground let go, the village told, and the founding forgotten. */
     private static void finish(ServerLevel level, Founding f, Site s) {
         release(level, s);
+        if (s.village != null && s.level != UNSET) {                        // [terra10] nothing left lying about
+            int swept = GroundWork.sweep(level, s.village, s.heart, s.outer, s.level);
+            if (swept > 0) LOG.info("[MCA-FOUND] {} things left lying on the ground swept into the stores", swept);
+        }
+        if (s.ground != null && s.level != UNSET) {                       // [terra10] for the ground's audit
+            TerraformAudit.remember(new TerraformAudit.Done(s.heart, s.level, s.radius, s.outer, s.seed, s.surface, s.ground));
+        }
         f.sites.remove(s);
         f.setDirty();
         UUID id = s.village;

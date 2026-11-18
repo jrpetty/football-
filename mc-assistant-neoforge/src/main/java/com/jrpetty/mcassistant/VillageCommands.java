@@ -194,6 +194,7 @@ public final class VillageCommands {
             // The ground of a town already standing levelled round it, as a founding at a board levels it (a town
             // the world founded, or one from before its ground was levelled). An operator, or the world's owner.
             .then(Commands.literal("level").executes(VillageCommands::levelGround))
+            .then(Commands.literal("groundcheck").requires(src -> src.hasPermission(2)).executes(VillageCommands::groundCheck))   // [terra10]
             // Which version of the mod is loaded: its number and the newest change in it.
             .then(Commands.literal("version").executes(ctx -> {
                 String v = "MC Assistant " + com.jrpetty.mcassistant.McAssistantMod.version() + " — "
@@ -695,6 +696,23 @@ public final class VillageCommands {
         return new net.minecraft.core.BlockPos(x, y, z);
     }
 
+    /** [terra10] /village groundcheck: the faults in the ground of the founding finished nearest here (entity/TerraformAudit). */
+    private static int groundCheck(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        com.jrpetty.mcassistant.entity.TerraformAudit.Done d = com.jrpetty.mcassistant.entity.TerraformAudit.near(here, 400);
+        if (d == null) {
+            ctx.getSource().sendFailure(Component.literal("No founding has finished near here since the server started."));
+            return 0;
+        }
+        String line = "GROUND " + d.heart().getX() + " " + d.heart().getZ() + " y=" + d.level() + " r=" + d.radius() + ": "
+            + com.jrpetty.mcassistant.entity.TerraformAudit.line(com.jrpetty.mcassistant.entity.TerraformAudit.scan(level, d))
+            + " | first: " + com.jrpetty.mcassistant.entity.TerraformAudit.FIRST;
+        ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        com.mojang.logging.LogUtils.getLogger().info("[MCA-FOUND] {}", line);
+        return 1;
+    }
+
     private static int spawnAt(CommandContext<CommandSourceStack> ctx, int count) {
         net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
         int x = IntegerArgumentType.getInteger(ctx, "x");
@@ -704,8 +722,18 @@ public final class VillageCommands {
         for (int cx = -3; cx <= 3; cx++) {
             for (int cz = -3; cz <= 3; cz++) level.getChunk((x >> 4) + cx, (z >> 4) + cz);
         }
-        return raiseMany(ctx, level, groundAt(level, x, z), 0.0F, count);
+        net.minecraft.core.BlockPos ground = groundAt(level, x, z);
+        boolean fresh = Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) == null;
+        int stood = raiseMany(ctx, level, ground, 0.0F, count);
+        // [terra10] A village founded at once for the console still has its ground made ready, as every other founding
+        // does: levelled round it as /village level levels a town already standing, its folk kept from harm meanwhile.
+        Villages.Village made = fresh && stood > 0 ? Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) : null;
+        if (made != null && SPAWNAT_LEVELS) com.jrpetty.mcassistant.entity.Founding.levelExisting(level, made, null);
+        return stood;
     }
+
+    /** [terra10] Whether /village spawnat levels the ground of a village it founds (tests that time a bare founding turn it off). */
+    public static boolean SPAWNAT_LEVELS = true;
 
     // ------------------------------------------------------------------ founding a village of a chosen size
 
