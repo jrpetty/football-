@@ -526,7 +526,9 @@ public final class Favourites extends SavedData {
         event(t, day, kind, text);
         if (!MILESTONES.contains(kind) || notices == null) return;
         for (Map.Entry<UUID, List<UUID>> e : b.lists.entrySet()) {
-            if (e.getValue().contains(t.folk)) notices.accept(new Notice(e.getKey(), t.folk, t.name(), kind, text));
+            if (!e.getValue().contains(t.folk)) continue;
+            Notice n = new Notice(e.getKey(), t.folk, t.name(), kind, text);
+            Guard.run("favourites notice", () -> notices.accept(n));      // a toast that cannot go never stops the record
         }
     }
 

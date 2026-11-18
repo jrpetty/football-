@@ -128,7 +128,7 @@ public final class FavouritesNetwork {
         net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         ServerPlayer p = server.getPlayerList().getPlayer(n.player());
-        if (p == null) return;
+        if (p == null || !p.connection.hasChannel(FavouritesPayload.TYPE)) return;   // off line, or a client without the mod
         CompoundTag t = new CompoundTag();
         t.putString("kind", "toast");
         t.putUUID("uuid", n.folk());
