@@ -1022,6 +1022,44 @@ def talk_ui_stage(r):
     say("alive after the talk screen: %s" % client_alive())
 
 
+def ui_stage(r):
+    """[ui] The folk's own screens and the favourites: the profile of the folk the player stands before (its tall
+    portrait in its own colour, its saying, its chips and star) on its About and Life tabs, then that folk starred
+    (/village favourite add), the favourites list (its card) and its detail (the progress charts and its timeline);
+    the same at GUI scale 3; then shut, the folk taken off the list again so later stages see nothing new."""
+    def view(name, cmd, wait=3):
+        say("%s: %s" % (name, r.cmd("execute as %s at @s run %s" % (USER, cmd))[:200]))
+        time.sleep(wait)
+        park_mouse()
+        shot(name)
+
+    out = r.cmd("execute as %s at @s run village individual profile about" % USER)
+    m = re.search(r"PROFILE (.+) at \w+", out)
+    say("ui profile: " + out[:200])
+    time.sleep(3)
+    park_mouse()
+    shot("ui-1-profile-about")
+    view("ui-2-profile-life", "village individual profile life")
+    r.cmd("execute as %s run village individual profile close" % USER)
+    name = m.group(1) if m else ""
+    if name:
+        say("ui favourite: " + r.cmd("execute as %s at @s run village favourite add %s" % (USER, name))[:200])
+        view("ui-3-favourites", "village favourite show")
+        view("ui-4-favourite-detail", "village favourite show %s" % name)
+        r.cmd("execute as %s run village favourite close" % USER)
+        r.cmd("execute as %s run village favourite close" % USER)
+        say("ui scale 3: " + r.cmd("execute as %s at @s run village talkview chat 3" % USER)[:120])
+        time.sleep(3)
+        view("ui-5-profile-scale3", "village individual profile about")
+        r.cmd("execute as %s run village individual profile close" % USER)
+        view("ui-6-favourites-scale3", "village favourite show")
+        r.cmd("execute as %s run village favourite close" % USER)
+        say("ui back: " + r.cmd("execute as %s at @s run village talkview chat 2 1280x720" % USER)[:120])
+        time.sleep(3)
+        say("ui unfavourite: " + r.cmd("execute as %s at @s run village favourite remove %s" % (USER, name))[:200])
+    say("alive after the folk's screens: %s" % client_alive())
+
+
 def wages_stage(r, look, cx, cz):
     """What every job is worth (entity/JobWorth): the day's pay scale drawn up now; the wages page on the screen
     (the pay level, the lowest wage against the cost of living, the bill against what comes in, every job's worth
@@ -5321,6 +5359,10 @@ def main():
     except Exception as e:  # noqa: BLE001
         say("talk ui stage failed: %s" % e)
     say("alive after talking: %s" % client_alive())
+    try:
+        ui_stage(r)                                   # [ui] the profile, the favourites and a favourite's detail
+    except Exception as e:  # noqa: BLE001
+        say("ui stage failed: %s" % e)
     try:
         anim_stage(r, look, cx, cz)                   # [anim] early, so a long run never cuts it off
     except Exception as e:  # noqa: BLE001

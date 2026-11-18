@@ -570,7 +570,11 @@ public final class Favourites extends SavedData {
             c.putBoolean("about", f != null);
             c.putInt("entity", f != null && f.level() == player.level() ? f.getId() : -1);
             List<CompoundTag> hist = t.history();
+            // Since yesterday and since a week ago; followed for less than that, since the first snapshot.
+            CompoundTag first = hist.isEmpty() ? null : hist.get(0);
             CompoundTag yesterday = at(hist, c.getLong("day") - 1), week = at(hist, c.getLong("day") - 7);
+            if (yesterday == null) yesterday = first;
+            if (week == null) week = first;
             for (String k : new String[]{ "level", "coin", "mood", "wage", "worth" }) {
                 c.putInt("d1_" + k, yesterday == null ? 0 : c.getInt(k) - yesterday.getInt(k));
                 c.putInt("d7_" + k, week == null ? 0 : c.getInt(k) - week.getInt(k));
@@ -605,7 +609,10 @@ public final class Favourites extends SavedData {
         out.putBoolean("about", f != null);
         out.putInt("entity", f != null && f.level() == player.level() ? f.getId() : -1);
         out.putLong("first", t.firstDay);
+        // Its history with how it is now at the end (today's point brought up to date, or added after the last morning).
         List<CompoundTag> hist = t.history();
+        if (hist.isEmpty() || hist.get(hist.size() - 1).getLong("day") < t.last.getLong("day")) hist.add(t.last);
+        else if (hist.get(hist.size() - 1).getLong("day") == t.last.getLong("day")) hist.set(hist.size() - 1, t.last);
         long[] days = new long[hist.size()];
         for (int i = 0; i < hist.size(); i++) days[i] = hist.get(i).getLong("day");
         out.putLongArray("days", days);

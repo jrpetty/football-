@@ -525,7 +525,7 @@ public class FavouritesScreen extends Screen {
 
     private Row fact(String key, String value, int ink) {
         if (value == null || value.isBlank()) return new Row() { { h = -2; } String draw(GuiGraphics g, int x, int ry, int w, int mx, int my) { return null; } };
-        int keyW = Math.min(76, laidW / 3);
+        int keyW = Math.min(92, laidW / 3);
         List<FormattedCharSequence> lines = TextCache.splitPlain(font, value, Math.max(40, laidW - keyW));
         return new Row() {
             { h = lines.size() * UiStyle.LINE; }
@@ -579,7 +579,8 @@ public class FavouritesScreen extends Screen {
     private Row event(long day, String kind, String text, int pw) {
         String dayS = "Day " + day;
         int dayW = Math.max(46, font.width("Day 0000") + 4);
-        List<FormattedCharSequence> lines = TextCache.splitPlain(font, text, Math.max(40, pw - dayW - 24));
+        String said = kind.equals("memory") ? "\u201C" + text + "\u201D" : text;      // what it remembers, in its own words
+        List<FormattedCharSequence> lines = TextCache.splitPlain(font, said, Math.max(40, pw - dayW - 24));
         ItemStack icon = FavouritesClient.icon(kind);
         return new Row() {
             { h = Math.max(18, lines.size() * UiStyle.LINE + 6); }
@@ -621,7 +622,7 @@ public class FavouritesScreen extends Screen {
             this.colour = colour;
             this.nowS = per == 100 ? "level " + now / 100 : now + unit;
             int week = values.length > 7 ? now - values[values.length - 8] : values.length > 0 ? now - values[0] : 0;
-            this.weekS = values.length < 2 ? "its first day on your list" : (per == 100 ? week / 100 == 0 && week != 0 ? (week > 0 ? "+" : "-") + Math.abs(week) + "% of a level" : UiStyle.signed(week / 100) + " levels" : UiStyle.signed(week) + unit)
+            this.weekS = values.length < 2 ? "its first day on your list" : (per == 100 ? week / 100 == 0 && week != 0 ? (week > 0 ? "+" : "-") + Math.abs(week) + "% of a level" : UiStyle.signed(week / 100) + (Math.abs(week / 100) == 1 ? " level" : " levels") : UiStyle.signed(week) + unit)
                 + (values.length > 7 ? " this week" : " so far");
             this.weekInk = week > 0 ? UiStyle.SUCCESS : week < 0 ? UiStyle.DANGER : UiStyle.TEXT_FAINT;
             int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;

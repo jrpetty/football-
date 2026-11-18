@@ -13399,3 +13399,70 @@ taken when a chandler wants it; sc2_04 string spun when it is wanted; sc2_05 a c
 wanted, never below a pair; sc2_06 the smith leaves the iron picks to a toolshop; sc2_07 a household that tires of roots
 buys a loaf; sc2_08 a bakery's loaves taken off the shelf are its sale, the market's own loaves the market's. The long tests log each ware's comings and goings every morning (whose output, by trade; to whom, for what),
 the crop plan, the wants and the trades left to firms.
+
+## Each folk its own on its screens, and the folk you follow (UI batch 4)
+
+The folk's screens show who each one is before a word is read, and a player may keep a short list of folk to follow and
+watch them get on. Nothing here changes anything for a player who never stars anybody.
+
+- **Its own colour.** Every folk has a colour that is already its own: the main colour of its clothes once it has a style,
+  else the colour it loves (from what it loves and its hobby, as its home's carpet and its fireworks already are). Its
+  profile and its talk screen carry it: a band along the top of the panel, its likeness on a wash of it, a stripe down its
+  words in the conversation, its name in it over each turn it speaks. Two folk side by side differ at a glance.
+- **Its saying.** A line it lives by, from what it cares for most (its Values) turned by its first trait: a Provider says
+  "A full larder is a quiet house." or "Feed them first; talk after.", a Merchant "Count twice, spend once.", a Free Spirit
+  "Life's too short for long faces." It sits under its name on its profile and on its card on the favourites.
+- **Its chips.** Its traits, the kind of folk it is, its hobby, its season, a reader, left-handed, an elder: small tinted
+  chips at the head of its About tab; its habits as chips in its colour under its own life.
+- **Its profile.** With room (a window of 400 by 196 GUI pixels or more, which is GUI scale 2 at 854 by 480 and scale 3 at
+  1280 by 720), the folk stands tall in a column of its own down the left, live and turning to the mouse, its level and how
+  far to the next, its worth and its wage under it. The header has its name with the star beside it, its trade, level, age
+  and town, its saying, what it is thinking, its mood and its four needs. About now opens with its chips, then who it is,
+  what it is working towards, and **its own life**: its dream, fears, habits, favourite place, keepsake, reading and
+  favourites, each with an item for its mark (a rocket, a cobweb, a clock, a map, a nugget, a book, a dye of its colour).
+  The tabs, keys (1 to 5, Tab, the wheel) and the footer (Talk, Pack, Close) are where they were, with Favourites beside.
+- **Its talk screen.** The same colour band and likeness, the star by its name, and the conversation easier to follow:
+  who speaks is named over the first bubble of each turn ("You" on the right, its first name on the left in its colour).
+- **Tooltips that fit.** A tooltip is wrapped once to the room beside the mouse. The books' tooltips had been wrapped at
+  240 pixels and then wrapped again by the loader at the screen's edge, which broke their lines in two on a small window.
+
+**Favourites.** A star by a folk's name on its profile or its talk screen (or `/village favourite add <name>`) puts it on
+the player's favourites; the star again (or `remove`) takes it off. `/village favourite list` lists them in chat;
+`show [name]` opens the screen. Kept with the world, by the player's id, at most 24 a player; each folk by its id, so it is
+followed across towns, while it is away or its ground is unloaded, and after it dies (entity/Favourites, the
+`mc_assistant_favourites` saved data).
+
+- **What is kept of each.** Its last-known snapshot (name, trade and level, how far to the next, wage, purse and worth,
+  mood and health and any illness, town and home, partner, children and friends, its firm, what it was doing, where), taken
+  when it is looked at: about once a minute while it is loaded, and whenever the screen asks. One snapshot each morning goes
+  into its history: the last sixty days day by day, older ones thinned to one a week (forty of those). Its timeline: what
+  changed between two looks (a new trade, laid off, a rise, a pay rise or cut, married, widowed, a child, a new house or
+  town, a firm founded, joined or bought into, ill, well again) and the weighty things it remembers (its memories of weight
+  seven or more: the town's chronicle as it lived it), the latest eighty. Its death, with the day: it stays on the list,
+  remembered, until the player takes it off.
+- **The favourites screen.** Its own key (unbound until the player binds it under Controls), the star button in the city
+  books' header, and Favourites on a profile. A card for each: its likeness on its colour, name, trade and level with a bar
+  to the next, its mood, its worth, the week's arrows (levels, coins, mood), and what it is doing now, or that it is away
+  (and when it was last seen), or that it is remembered. Sorted by your own order (arrows on a card's edge move it), level,
+  mood, wealth, the week's change or name. A card's tooltip has its changes since yesterday and this week and its latest
+  event. Click a card for its **detail**: the header in its colour (likeness, saying, doing, mood, health, worth, wage) and
+  three tabs: **Progress** (line charts of its level, worth, wage and mood each morning it was about, each with the week's
+  change and its range), **Life** (its timeline, newest first, each with its mark) and **Details** (its chips and own life,
+  work and money, home and family, where it was last seen). The footer: back to all, its full profile when it is in sight,
+  pin it to the tracker, unfollow (asked twice).
+- **Optional extras** (config/mc_assistant-ui-client.toml): a small toast when a folk you follow reaches a milestone
+  (`toasts`, on: a new trade, a rise, laid off, married, widowed, a child, a new house, a firm, ill, died); a small tracker
+  card at the right of the screen for one pinned favourite (`tracker`, off; Pin on its detail turns it on), which asks for
+  the list once every thirty seconds while it shows.
+- **The wire.** The screen asks for the list or one folk's detail when it opens and every five seconds while it stays open,
+  never otherwise; a refresh asked for within half a second of the last is dropped (net/FavouritesNetwork). A star is one
+  small message. A milestone goes to whoever follows the folk and is on line.
+
+Tests (UiGameTests, x 3,400,000 to 3,414,000 on z 90000): ui01 follow, follow again, the list full at 24, moved, taken off
+(its record gone with it); ui02 the list in its order, the history and the events after a save and a load; ui03 the next
+morning's snapshot in the history, a rise on the timeline and on the card's since-yesterday, the detail's series as long
+as the history; ui04 four hundred mornings kept to sixty daily and forty weekly, a week apart; ui05 a folk that dies is
+remembered with its day, found by name, and may be taken off; ui06 a folk gone from the world is still listed as last seen,
+away and not dead; ui07 the profile's colour, saying, chips and own life, another folk's chips its own, the talk context's
+colour, the star on both screens; ui08 the wire: a star adds and removes, the list on opening, a refresh at once dropped,
+no detail of a folk not followed. The smoke's ui stage photographs the profile, the favourites and a favourite's detail.
