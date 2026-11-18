@@ -102,6 +102,7 @@ public class WorksGoal extends Goal {
         oreTaken = 0;
         broke = 0;
         saidSealed = false;
+        fluidAhead = null;
         resumeAt = 0;
         teleports = 0;
         if (!(a.level() instanceof ServerLevel)) { finish(""); return; }
@@ -375,6 +376,7 @@ public class WorksGoal extends Goal {
         t.cut = ci + 1;
         MineWorks.dress(level, a, t, ci);
         ci++;
+        if (fluidAhead != null) { String why = fluidAhead; fluidAhead = null; report(why); return; }
         if (ci >= t.cells.size()) { report(""); return; }
         prepare(level);
     }
@@ -423,6 +425,10 @@ public class WorksGoal extends Goal {
             boolean lava = fl.is(FluidTags.LAVA);
             if (seal(side, lava)) {
                 SEALED++;
+                // Stopped in the drift's own way ahead: it is not tunnelled through; the drift turns round it after this cell.
+                if (task != null && (task.kind == MineWorks.Kind.FACE || task.kind == MineWorks.Kind.BRANCH) && aheadInTask(side)) {
+                    fluidAhead = lava ? "lava" : "water";
+                }
                 if (!saidSealed) { saidSealed = true; a.sayRoutine(lava ? "Lava behind the rock — stopped it with cobble." : "Water coming in — walled it off."); }
             } else if (lava) openLava = true;
         }
@@ -440,6 +446,24 @@ public class WorksGoal extends Goal {
             if (com.jrpetty.mcassistant.entity.OreSight.isOre(ns) && !inTask(n)) traceVein(level, n);
         }
     }
+
+    /** Water or lava stopped here: in a cell of this task still to come, or the one straight on past its last? */
+    private boolean aheadInTask(BlockPos p) {
+        MineWorks.Task t = task;
+        if (t == null) return false;
+        List<BlockPos> ahead = new ArrayList<>(t.cells.subList(Math.min(ci + 1, t.cells.size()), t.cells.size()));
+        if (!t.cells.isEmpty()) {
+            BlockPos last = t.cells.get(t.cells.size() - 1), before = t.cells.size() > 1 ? t.cells.get(t.cells.size() - 2) : t.stand.get(0);
+            ahead.add(last.offset(last.getX() - before.getX(), 0, last.getZ() - before.getZ()));
+        }
+        for (BlockPos c : ahead) {
+            if (c.getX() == p.getX() && c.getZ() == p.getZ() && p.getY() >= c.getY() && p.getY() < c.getY() + t.height) return true;
+        }
+        return false;
+    }
+
+    /** What was stopped in the way ahead of the cell being cut ("water", "lava"), or null. */
+    @Nullable private String fluidAhead;
 
     private boolean inTask(BlockPos p) {
         if (task == null) return false;
@@ -562,6 +586,7 @@ public class WorksGoal extends Goal {
     private void report(String why) {
         MineWorks.Task t = task;
         task = null;
+        fluidAhead = null;
         blocks.clear();
         digging = null;
         if (t == null) return;

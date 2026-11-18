@@ -108,6 +108,9 @@ public class MineWorksGameTests {
     /** The miner kept at it: daylight, and a shift in the works whenever it has nothing in hand. */
     static void keepAtIt(Rig r, VillageFolkEntity m) {
         if (r.level.getDayTime() % 24000L > 10000L) r.level.setDayTime(1000);
+        // Its spoil banked for it: the test's rock stands in the air, with no walk home to the stores from it.
+        int spoil = m.countMatching(s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE) || s.is(Items.DIRT) || s.is(Items.GRAVEL));
+        if (spoil > 96) m.removeMatching(s -> s.is(Items.COBBLED_DEEPSLATE) || s.is(Items.DIRT) || s.is(Items.GRAVEL) || s.is(Items.COBBLESTONE), spoil - 64);
         if (m.peekJob() == null) m.enqueue(Job.mine(m.workZone() != null ? m.workZone().depth() : 16, MineWorks.ARG));
     }
 
