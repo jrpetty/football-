@@ -334,6 +334,12 @@ public final class MineWorks {
             out.add(new Lvl(id, NAMES[id], n, y));
             prev = n;
         }
+        // Ground too low for any level over the deepest a mine goes (a flat world's few blocks of rock): one level as deep as
+        // the rock goes, a few blocks over the bottom of the world.
+        if (out.isEmpty()) {
+            int n = Math.max(1, (w.top - Math.max(w.top - 12, level.getMinBuildHeight() + 4)) / 3);
+            out.add(new Lvl(COAL, NAMES[COAL], n, w.top - 3 * n));
+        }
         return out;
     }
 
@@ -1303,6 +1309,8 @@ public final class MineWorks {
 
     private static void put(ServerLevel level, Villages.Village v, BlockPos p, BlockState st) {
         if (!level.getBlockState(p).canBeReplaced() && !level.getBlockState(p).isAir()) return;
+        // Never on anybody standing there.
+        if (!level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(p)).isEmpty()) return;
         if (!TownBlocks.mayPlace(level, v, p, TownBlocks.Why.MINE)) return;
         level.setBlock(p, st, 3);
     }

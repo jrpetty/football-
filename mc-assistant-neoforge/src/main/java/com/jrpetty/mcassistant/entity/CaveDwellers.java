@@ -4140,6 +4140,9 @@ public final class CaveDwellers {
         ListTag hauls = new ListTag();
         for (String h : hauls(id)) hauls.add(StringTag.valueOf(h));
         out.put("hauls", hauls);
+        ListTag mine = new ListTag();                                    // [mine8] the town's works and the ores it is short of
+        for (String line : MineWorks.report(level, id)) mine.add(StringTag.valueOf(line));
+        out.put("mine", mine);
         out.putString("lodge", lodgeLine(level, v));                   // [caves] the lodge, an ask, a player going along
         return out;
     }

@@ -49,6 +49,22 @@ public final class CavesPage {
                 cy += 9;
             }
             small(g, font, "The town is in " + m.getString("age") + ".", x + 4, cy + 2, Ui.FAINT);
+            // [mine8] The town's mine: its shaft, its levels and drifts, and each ore against what the town wants.
+            ListTag works = m.getList("mine", Tag.TAG_STRING);
+            if (!works.isEmpty()) {
+                cy += 14;
+                Ui.section(g, font, "The mine", x, cy, w);
+                cy += 12;
+                int skip = Math.max(0, scroll);
+                for (int i = 0; i < works.size(); i++) {
+                    for (String line : wrap(font, works.getString(i), w - 8)) {
+                        if (skip-- > 0) continue;
+                        if (cy > y + h - 9) return null;
+                        small(g, font, line, x + 4, cy, works.getString(i).startsWith("  ") ? Ui.FAINT : Ui.MUTED);
+                        cy += 9;
+                    }
+                }
+            }
             return null;
         }
         int side = Math.max(90, Math.min(h - 4, w * 2 / 5));
@@ -110,6 +126,11 @@ public final class CavesPage {
         if (!hauls.isEmpty()) {
             rows.add(new Row("The hauls brought home", 0, 0, true));
             for (int i = 0; i < hauls.size(); i++) for (String line : wrap(font, hauls.getString(i), lw - 4)) rows.add(new Row(line, Ui.MUTED, 0, false));
+        }
+        ListTag works = m.getList("mine", Tag.TAG_STRING);                // [mine8] the town's mine and its ores
+        if (!works.isEmpty()) {
+            rows.add(new Row("The mine", 0, 0, true));
+            for (int i = 0; i < works.size(); i++) for (String line : wrap(font, works.getString(i), lw - 4)) rows.add(new Row(line, Ui.MUTED, 0, false));
         }
         // Scrolled as one, headings and all.
         int start = Math.max(0, Math.min(scroll, Math.max(0, rows.size() - 6)));
