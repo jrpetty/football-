@@ -1315,10 +1315,13 @@ public final class MineWorks {
         boolean changed = false;
         int felled = clearing(level, w, 96);
         if (felled > 0) com.mojang.logging.LogUtils.getLogger().info("[MCA-WORKS] {}: {} blocks of the trees over the pithead cleared", Villages.name(v.id()), felled);
-        if (!w.head && w.sunk >= 4) {
-            headframe(level, v, w);
-            w.head = true;
-            changed = true;
+        if (w.sunk >= 4) {
+            headframe(level, v, w);                          // what is missing of it put up (a post on rising ground, a beam)
+            if (!w.head) {
+                w.head = true;
+                changed = true;
+                Villages.tell(w.village, level.getDayTime() / 24000L, "a headframe went up over the mine's main shaft");
+            }
         }
         if (w.sunk >= 2) rail(level, v, w);
         int want = Math.min(60, w.dug / 96);
@@ -1346,8 +1349,7 @@ public final class MineWorks {
                     boolean leaf = s.is(BlockTags.LEAVES) || s.is(Blocks.RED_MUSHROOM_BLOCK) || s.is(Blocks.BROWN_MUSHROOM_BLOCK) || s.is(Blocks.MUSHROOM_STEM);
                     boolean trunk = s.is(BlockTags.LOGS) && com.jrpetty.mcassistant.entity.goal.BuildGoal.isTreeLog(level, p);
                     if (!leaf && !trunk) continue;
-                    boolean frame = Math.abs(dx) <= 1 && Math.abs(dz) <= 1
-                        && (Math.abs(dx) == 1 && Math.abs(dz) == 1 && y >= w.top && y <= w.top + 3 || y == w.top + 4);
+                    boolean frame = Math.abs(dx) <= 1 && Math.abs(dz) <= 1 && y >= w.top - 1;
                     if (trunk && frame && w.head) continue;                                        // the headframe's own timbers
                     level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
                     n++;
@@ -1357,26 +1359,35 @@ public final class MineWorks {
         return n;
     }
 
-    /** Over the pillar: four posts, a frame of beams on them, a beam across with the lantern hung from it. */
+    /**
+     * Over the pillar: four posts standing on the ground at the pillar's corners, a frame of beams on them level over the
+     * highest, a beam across with the lantern hung from it, and a rail along the pillar's edge over the open stair.
+     */
     static void headframe(ServerLevel level, Villages.Village v, Works w) {
         String wood = wood(level, w);
         Block post = log(wood, true), beam = log(wood, false);
-        int y = w.top;
+        int high = w.top;
+        for (int dx = -1; dx <= 1; dx += 2) {
+            for (int dz = -1; dz <= 1; dz += 2) high = Math.max(high, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, w.sx + dx, w.sz + dz));
+        }
+        int cap = Math.min(high + 4, w.top + 7);
         for (int dx = -1; dx <= 1; dx += 2) {
             for (int dz = -1; dz <= 1; dz += 2) {
-                for (int h = 0; h < 4; h++) put(level, v, new BlockPos(w.sx + dx, y + h, w.sz + dz), post.defaultBlockState());
+                int base = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, w.sx + dx, w.sz + dz);
+                if (level.getBlockState(new BlockPos(w.sx + dx, base - 1, w.sz + dz)).is(BlockTags.LOGS)) base--;     // its own post already
+                for (int y = Math.min(base, cap - 1); y < cap; y++) put(level, v, new BlockPos(w.sx + dx, y, w.sz + dz), post.defaultBlockState());
             }
         }
         for (int a = -1; a <= 1; a++) {
-            put(level, v, new BlockPos(w.sx + a, y + 4, w.sz - 1), beam.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X));
-            put(level, v, new BlockPos(w.sx + a, y + 4, w.sz + 1), beam.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X));
-            put(level, v, new BlockPos(w.sx + a, y + 4, w.sz), beam.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X));
+            put(level, v, new BlockPos(w.sx + a, cap, w.sz - 1), beam.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X));
+            put(level, v, new BlockPos(w.sx + a, cap, w.sz + 1), beam.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X));
+            put(level, v, new BlockPos(w.sx + a, cap, w.sz), beam.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X));
         }
-        put(level, v, new BlockPos(w.sx, y + 3, w.sz), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+        put(level, v, new BlockPos(w.sx, cap - 1, w.sz), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
         Block fence = BuiltInRegistries.BLOCK.get(ResourceLocation.withDefaultNamespace(wood + "_fence"));
         if (fence == Blocks.AIR) fence = Blocks.SPRUCE_FENCE;
-        put(level, v, new BlockPos(w.sx, y, w.sz - 1), Block.updateFromNeighbourShapes(fence.defaultBlockState(), level, new BlockPos(w.sx, y, w.sz - 1)));
-        Villages.tell(w.village, level.getDayTime() / 24000L, "a headframe went up over the mine's main shaft");
+        BlockPos rail = new BlockPos(w.sx, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, w.sx, w.sz - 1), w.sz - 1);
+        if (rail.getY() <= cap - 2) put(level, v, rail, Block.updateFromNeighbourShapes(fence.defaultBlockState(), level, rail));
     }
 
     /** A fence round each column of the shaft open to the sky, the way in (the first landing) left open. */
