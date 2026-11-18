@@ -13435,11 +13435,32 @@ What the audit found, and what changed:
   from its top, never under anything built, through a tree or a player's block, and only where the town's gate lets the
   ground be cut.
 * **The square's wall.** The wall round the square (the town's first wall, four gates on the avenues) is laid column by
-  column on the ground, round anything built on its line. The square's paving reached that line before the wall did,
-  and every paved column was taken for somebody's floor and passed over: the audit counted sixty-odd gaps in each town's
-  square wall, the wall standing in pieces. The town's own paving and its worn paths (cobble, stone bricks, smooth stone,
-  gravel, a path; never a player's) are ground a wall stands on now, for the square's wall and the war palisade alike.
+  column on the ground, round anything built on its line. Each column was stood on whatever topped it. Where the
+  square's paving (or the wall's own first course, in cobble) was the top, the column was taken for somebody's floor and
+  passed over: the audit counted sixty-odd gaps in each town's square wall. Where the wall's own stone bricks were the
+  top, every time its builders came back to finish it they stood the column on the courses already laid: a grown town in
+  the mountains had its square ringed by broken towers forty high. Now a column's ground is looked for under the wall's
+  own courses, the town's paving and its worn paths (never a player's block), so a return to the wall finds what is laid
+  and fills only what is missing; and paving and paths are ground a wall stands on, for the war palisade as well.
 * **A hire's price** (older than the labour market). "Hire you?" cost four coins a day whatever the folk earned, so a
   master smith on fifteen a day left its anvil for four. It costs the folk's own day's wage and a quarter over now, four
   at the least.
+
+**Measured** (four days, three towns of twenty-four; before is the tree as it was, after is this batch). Before: no
+floating floors, hollow footings, earth or litter in rooms, blocked doors or banked walls in any town; the hillside lots
+(ba02) showed six cells of dirt for a footing's face; the square's walls had 126 gaps between the three towns (the
+meadow's had one, being raised before the square was paved); ba03 (a wall raised twice over half-paved ground) left 20 of
+its 39 columns unbuilt and then stacked 19 of them past their height. After: every one of those counts nought in all three towns and
+on the hillside lots, the square's walls whole and none too tall, ba03 nought gaps and nought too tall at both raisings.
+
+**Left as they are, with the reason.** Roof cells open on one great building a town (the hall or the workshop, a hundred
+or so cells) at the end of four days, in the tree before and after alike: the gate allows those cells (the audit asks
+it), so it is the builders' own order of work or a storey going up, for another batch to follow. Farmland four or more
+from water (a fifth to a third of it, on hills more) and the torches and flowers of the strewn meadow standing on the
+plan's streets where no street is paved yet: the fields' own watering and the road works' rounds see to those as they
+reach them. A square's wall stacked or gapped in an old save stays as it is until its builders next come to it.
+
+Tests (BuildAuditGameTests, x 3,500,000 to 3,600,000, z 90000): ba01 the audit (not required: it runs for some
+minutes; every count above must be nought); ba02 the hillside lots; ba03 the wall raised twice. VillageGameTests t37
+hires at the folk's own price.
 
