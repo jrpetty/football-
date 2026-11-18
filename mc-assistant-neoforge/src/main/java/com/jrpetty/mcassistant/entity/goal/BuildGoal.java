@@ -640,8 +640,12 @@ public class BuildGoal extends Goal {
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (Placement p : plan) taken.add(p.pos());
         // [integrity] The fill under the floor is earth where earth will do (it is never seen), its stone footing above it.
+        boolean turnedFill = facing.getAxis() == Direction.Axis.X;
+        int fwx = turnedFill ? g[1] : g[0], fwz = turnedFill ? g[0] : g[1];
         for (BlockPos c : fillCells(assistant.level(), base, facing, g[0], g[1])) {
-            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, Blueprints.Style.SOIL, Blueprints.Way.UP));
+            // [build5] Except its outer face, which is seen from downhill: a stone footing there, not a cliff of dirt.
+            boolean face = Math.abs(c.getX() - base.getX()) == fwx || Math.abs(c.getZ() - base.getZ()) == fwz;
+            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, face ? Blueprints.Style.FOUNDATION : Blueprints.Style.SOIL, Blueprints.Way.UP));
         }
         Direction right = facing.getClockWise();
         int top = lotTop(structure);
@@ -654,7 +658,7 @@ public class BuildGoal extends Goal {
                     BlockPos c = cell(base, right, facing, dx, dz).above(dy);
                     if (taken.contains(c)) continue;
                     BlockState there = assistant.level().getBlockState(c);
-                    if (isWildPlant(there) || there.is(Blocks.SNOW)) plan.add(new Placement(c, Part.CLEAR));
+                    if (com.jrpetty.mcassistant.entity.SiteWork.litter(assistant.level(), c, there)) plan.add(new Placement(c, Part.CLEAR));   // [build5] saplings, torches, mushrooms too
                     // [build-world] And the ground itself where it rises above the floor inside the walls (a bank, a
                     // hummock, a drift of snow): dug out, or the room was built round it, earth on its floor.
                     else if (groundInside(there)) plan.add(new Placement(c, Part.CLEAR, Blueprints.Style.SOIL, Blueprints.Way.UP));
@@ -931,6 +935,7 @@ public class BuildGoal extends Goal {
             // so it is only asked whether there is still a trunk or a leaf there.)
             if (p.part() == Part.CLEAR) {
                 if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st) || isWildPlant(st)) { target = p; break; }   // [econ-store] a plant
+                if (p.style() == Blueprints.Style.GENERIC && com.jrpetty.mcassistant.entity.SiteWork.litter(assistant.level(), p.pos(), st)) { target = p; break; }   // [build5]
                 if (st.is(Blocks.SNOW) && p.style() == Blueprints.Style.GENERIC) { target = p; break; }   // [build-world] a drift on its floor
                 // [districts] Earth above a park's lawn, still to be dug away (entity/ParkGround).
                 if (com.jrpetty.mcassistant.entity.ParkGround.dig(p, st)) { target = p; break; }

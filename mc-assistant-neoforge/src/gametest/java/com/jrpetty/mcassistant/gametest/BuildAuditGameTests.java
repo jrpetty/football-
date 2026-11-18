@@ -20,7 +20,6 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoublePlantBlock;
-import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -269,10 +268,9 @@ public class BuildAuditGameTests {
     }
 
     /** Something growing or lying on the ground that has no business in a building's cell or room. */
-    static boolean plantish(BlockState st) {
-        return BuildGoal.isWildPlant(st) || st.is(Blocks.SNOW) || st.is(BlockTags.SAPLINGS) || st.is(Blocks.TORCH)
-            || st.is(Blocks.WALL_TORCH) || st.is(Blocks.BROWN_MUSHROOM) || st.is(Blocks.RED_MUSHROOM) || st.is(Blocks.SUGAR_CANE)
-            || st.is(Blocks.VINE) || st.is(Blocks.SWEET_BERRY_BUSH)
+    static boolean plantish(ServerLevel level, BlockPos pos, BlockState st) {
+        // (A torch on a wall or on the boards is the room's own light, the furnishers'; one stuck in the earth is not.)
+        return com.jrpetty.mcassistant.entity.SiteWork.litter(level, pos, st)
             || (st.is(BlockTags.LEAVES) && !(st.hasProperty(LeavesBlock.PERSISTENT) && st.getValue(LeavesBlock.PERSISTENT)));
     }
 
@@ -356,7 +354,7 @@ public class BuildAuditGameTests {
                         if (mine.contains(c.asLong()) || !level.isLoaded(c)) continue;
                         BlockState st = level.getBlockState(c);
                         if (Terraform.earth(st) && !st.is(Blocks.BEDROCK)) { earth++; if (eWhere == null) eWhere = c; }
-                        else if (plantish(st)) { plants++; if (pWhere == null) pWhere = c; }
+                        else if (plantish(level, c, st)) { plants++; if (pWhere == null) pWhere = c; }
                     }
                 }
             }
@@ -369,11 +367,13 @@ public class BuildAuditGameTests {
             for (BuildGoal.Placement p : plan) {
                 if (p.part() == BuildGoal.Part.CLEAR || !level.isLoaded(p.pos())) continue;
                 BlockState st = level.getBlockState(p.pos());
-                if (plantish(st) && Restore.judge(st, p) != null) { inCell++; if (cWhere == null) cWhere = p.pos(); }
+                if (plantish(level, p.pos(), st) && Restore.judge(st, p) != null) { inCell++; if (cWhere == null) cWhere = p.pos(); }
                 if (p.part() == BuildGoal.Part.BLOCK && BuildGoal.isRoof(p.style()) && Restore.judge(st, p) == Restore.Kind.MISSING) roof++;
             }
             r.add("plant_in_cell", inCell, name + " first " + (cWhere == null ? "" : cWhere.toShortString() + " " + level.getBlockState(cWhere).getBlock()));
-            r.add("roof_missing", roof, name);
+            r.add("roof_missing", roof, name + (Ledger.grown(id, b.anchor()) ? " grown" : "")
+                + (com.jrpetty.mcassistant.entity.Grow.tall(id, b.anchor()) ? " tall" : "")
+                + (Restore.jobFor(id, b.anchor()) != null ? " on the repair list" : "") + (roof > 0 && cWhereRoof(level, plan) != null ? " first " + cWhereRoof(level, plan).toShortString() : ""));
             // The ground round the walls: banked up over the floor, two or more.
             int banked = 0;
             BlockPos bWhere = null;
@@ -411,6 +411,10 @@ public class BuildAuditGameTests {
         r.counts.put("on_roads", (int) ta.measure("blocks_on_roads"));
         r.counts.put("half_built", ta.count(TownAudit.HALF_BUILT));
         r.counts.put("doorway_foreign", ta.count(TownAudit.FOREIGN));
+        int shown = 0;
+        for (String line : ta.lines(400)) {
+            if (shown < 8 && line.toLowerCase(java.util.Locale.ROOT).contains("road")) { r.examples.computeIfAbsent("on_roads", k -> new ArrayList<>()).add(line); shown++; }
+        }
         // The wall: a cross-section with none of its three cells built from the walkway down to the ground is a gap.
         if (CastleWall.stands(id)) {
             for (int[] e : CastleWall.ringForTests(id)) {
@@ -436,14 +440,31 @@ public class BuildAuditGameTests {
                     BlockState st = level.getBlockState(new BlockPos(x, y, z));
                     if (st.is(Blocks.FARMLAND)) {
                         farmland++;
-                        if (st.getValue(FarmBlock.MOISTURE) == 0) dry++;
+                        if (!watered(level, new BlockPos(x, y, z))) dry++;
                     }
                 }
             }
         }
         r.counts.put("farmland", farmland);
-        r.counts.put("farmland_dry", dry);
+        r.counts.put("farmland_unwatered", dry);
         return r;
+    }
+
+    /** Water within four of a farmland cell, at its level or one up, as the game hydrates it. */
+    static boolean watered(ServerLevel level, BlockPos p) {
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-4, 0, -4), p.offset(4, 1, 4))) {
+            if (level.getFluidState(q).is(net.minecraft.tags.FluidTags.WATER)) return true;
+        }
+        return false;
+    }
+
+    /** The first roof cell of a drawing left open. */
+    static BlockPos cWhereRoof(ServerLevel level, List<BuildGoal.Placement> plan) {
+        for (BuildGoal.Placement p : plan) {
+            if (p.part() == BuildGoal.Part.BLOCK && BuildGoal.isRoof(p.style()) && level.isLoaded(p.pos())
+                && Restore.judge(level.getBlockState(p.pos()), p) == Restore.Kind.MISSING) return p.pos();
+        }
+        return null;
     }
 
     /** The natural ground at a column: the first open cell over earth, through plants and snow, looking down from {@code from}. */
