@@ -156,21 +156,79 @@ public final class FoundingPlan {
      * across after the first rounding (a step of two is a wall nobody climbs, folk or player). Only land standing
      * further off the level than such a bank reaches across the whole band (forty-five blocks) is met steeper,
      * blending to {@link #allowance} (a block and a half a block) as the height to be met grows to what that reaches,
-     * so a mountain still stands back on a slope rather than a cliff at the band's end.
+     * so a mountain still stands back on a slope rather than a cliff at the band's end. How steep is reckoned for the
+     * way out from the heart ({@link #steepness}), the same for neighbouring columns, or the bank stepped where one
+     * column was met steeper than the next.
      */
-    public static double walkable(double u, double need) {
+    public static double walkable(double u, double steep) {
         if (u <= 0) return 0;
         double gentle = u <= FILLET ? u * u / (2 * FILLET) : FILLET / 2 + (u - FILLET);
-        double reach = FILLET / 2 + (BAND_MAX - FILLET), most = allowance(BAND_MAX);
-        double s = Math.max(0.0, Math.min(1.0, (need - reach) / (most - reach)));
-        return gentle + s * (allowance(u) - gentle);
+        return gentle + Math.max(0.0, Math.min(1.0, steep)) * (allowance(u) - gentle);
     }
 
-    /** The height wanted for ground {@code was} high, {@code u} blocks past the levelled ground. */
+    /** [terra10] How steep a bank must be (0 walkable, 1 a block and a half a block) to meet ground {@code need} off the level at the band's end. */
+    public static double steepFor(double need) {
+        double reach = FILLET / 2 + (BAND_MAX - FILLET), most = allowance(BAND_MAX);
+        return Math.max(0.0, Math.min(1.0, (need - reach) / (most - reach)));
+    }
+
+    /** [terra10] The steepness the band is met with, by the way out from the heart (degrees, a bin each), smoothed round. */
+    static final int BINS = 360, SPREAD = 15;
+
+    /**
+     * [terra10] For each way out from the heart, the most the land in the band that way stands off the level, the
+     * greatest within fifteen degrees, averaged over fifteen degrees more: so it changes smoothly from one way to
+     * the next. As the steepness ({@link #steepFor}) of each way.
+     */
+    static double[] steepness(Ground g, int radius, int level, long seed) {
+        double[] raw = new double[BINS];
+        for (int i = 0; i < g.side * g.side; i++) {
+            byte k = g.kind[i];
+            if (k != LAND && k != FILL) continue;
+            int dx = g.dx(i), dz = g.dz(i);
+            double u = reach(dx, dz) - radius + WOBBLE * noise(seed, dx, dz);
+            if (u <= 0 || u >= BAND_MAX || reach(dx, dz) > g.outer) continue;
+            double was = k == FILL ? g.fluid[i] : g.ground[i];
+            int b = bin(dx, dz);
+            raw[b] = Math.max(raw[b], Math.abs(was - level));
+        }
+        double[] env = new double[BINS], out = new double[BINS];
+        for (int b = 0; b < BINS; b++) {
+            double m = 0;
+            for (int d = -SPREAD; d <= SPREAD; d++) m = Math.max(m, raw[Math.floorMod(b + d, BINS)]);
+            env[b] = m;
+        }
+        for (int b = 0; b < BINS; b++) {
+            double sum = 0;
+            for (int d = -SPREAD; d <= SPREAD; d++) sum += env[Math.floorMod(b + d, BINS)];
+            out[b] = steepFor(sum / (2 * SPREAD + 1));
+        }
+        return out;
+    }
+
+    static int bin(int dx, int dz) {
+        return Math.floorMod((int) Math.floor(Math.toDegrees(Math.atan2(dz, dx))), BINS);
+    }
+
+    /** [terra10] The steepness at this column, between the bins either side of its way out. */
+    static double steepAt(double[] steep, int dx, int dz) {
+        if (steep == null) return 0;
+        double deg = Math.toDegrees(Math.atan2(dz, dx));
+        int b0 = (int) Math.floor(deg);
+        double t = deg - b0;
+        return steep[Math.floorMod(b0, BINS)] * (1 - t) + steep[Math.floorMod(b0 + 1, BINS)] * t;
+    }
+
+    /** The height wanted for ground {@code was} high, {@code u} blocks past the levelled ground, as steep as the land there wants. */
     public static double target(double was, int level, double u) {
+        return target(was, level, u, steepFor(Math.abs(was - level)));
+    }
+
+    /** [terra10] The same, met with the bank's steepness given. */
+    public static double target(double was, int level, double u, double steep) {
         if (u <= 0) return level;
         if (u >= BAND_MAX) return was;
-        double a = walkable(u, Math.abs(was - level));                     // [terra10] a walkable bank
+        double a = walkable(u, steep);                                      // [terra10] a walkable bank
         double kept = Math.max(level - a, Math.min(level + a, was));
         return level + (kept - level) * blend(u);
     }
@@ -395,7 +453,7 @@ public final class FoundingPlan {
             int dx = g.dx(i), dz = g.dz(i);
             double u = reach(dx, dz) - radius + WOBBLE * noise(seed, dx, dz);
             int need = g.fluid[i] - level;
-            if (u > 0 && need <= walkable(u, need) - 1) continue;
+            if (u > 0 && need <= walkable(u, steepFor(need)) - 1) continue;
             g.kind[i] = LAND;
             let[i] = true;
             g.drained++;
@@ -441,6 +499,7 @@ public final class FoundingPlan {
         spreadHigh(high, side);
         spreadHigh(shore, side);
         // ---- and the height of every column to be worked.
+        double[] steep = steepness(g, radius, level, seed);               // [terra10]
         g.target = new int[n];
         for (int i = 0; i < n; i++) {
             byte k = g.kind[i];
@@ -455,7 +514,7 @@ public final class FoundingPlan {
             double was = k == FILL || let[i] ? g.fluid[i] : g.ground[i];      // [terra10] water let out: as land at its top
             double u = r - radius + WOBBLE * noise(seed, dx, dz);
             boolean square = u <= 0;
-            double want = target(was, level, u);
+            double want = target(was, level, u, steepAt(steep, dx, dz));      // [terra10] as steep as that way wants
             // What holds it only ever holds it back: a cut no deeper than it allows and a fill no
             // higher, and never a change where the plan made none. In the square, only something
             // built and the bank right beside water hold it; out past it, the slopes to them too,

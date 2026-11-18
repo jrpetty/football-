@@ -79,7 +79,8 @@ public final class GroundWork {
      * beside it, past the first few blocks, is left). Returns the blocks set, or with {@code look} only whether any
      * want setting (1) or not (0).
      */
-    static int seal(ServerLevel level, LevelChunk chunk, int x, int z, int target, Block surface, boolean look) {
+    static int seal(ServerLevel level, LevelChunk chunk, int x, int z, int target, Block surface, boolean look,
+                    @javax.annotation.Nullable Felling felling) {
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos(), n = new BlockPos.MutableBlockPos();
         int changed = 0;
         for (int d = 1; d <= SEAL_DEPTH; d++) {
@@ -90,6 +91,7 @@ public final class GroundWork {
             if (!hollow(b, surface, d)) continue;
             if (d >= Terraform.SOLID_DEPTH && builtBeside(chunk, level, n, x, y, z)) break;
             if (look) return 1;
+            if (felling != null && (b.is(BlockTags.LOGS) || b.is(BlockTags.LEAVES) || b.is(Blocks.VINE))) felling.note(m.immutable());
             level.setBlock(m, Terraform.under(surface, d), QUIET);
             changed++;
         }
@@ -294,6 +296,13 @@ public final class GroundWork {
             if ((s.is(Blocks.VINE) || s.is(Blocks.COCOA) || s.is(Blocks.BEE_NEST)) && !standing(level, m, s)) {
                 level.setBlock(m, air, QUIET);
                 changed++;
+                // and the vine hanging under it, however far down it hangs
+                BlockPos.MutableBlockPos v = m.mutable().move(Direction.DOWN);
+                for (int i = 0; i < 64 && level.getBlockState(v).is(Blocks.VINE) && !level.getBlockState(v).canSurvive(level, v); i++) {
+                    level.setBlock(v, air, QUIET);
+                    changed++;
+                    v.move(Direction.DOWN);
+                }
             }
         }
         return changed;

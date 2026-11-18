@@ -269,7 +269,7 @@ public final class Terraform {
         BlockState top = chunk.getBlockState(m.set(x, target, z));
         if (natural(top) && !top.is(Blocks.BEDROCK) && !top.is(surface)
                 && (top.isAir() || wet(top) || growth(top) || (square && soil(surface) && topOf(top) != 0))) return true;
-        if (GroundWork.seal(level, chunk, x, z, target, surface, true) > 0) return true;   // [terra10] solid twelve deep
+        if (GroundWork.seal(level, chunk, x, z, target, surface, true, null) > 0) return true;   // [terra10] solid twelve deep
         BlockState on = chunk.getBlockState(m.set(x, target + 1, z));
         return !on.isAir() && natural(on) && (growth(on) || wet(on));
     }
@@ -331,6 +331,10 @@ public final class Terraform {
         }
         for (int y = ground + 1; y <= target; y++) {
             BlockState want = y == target ? surface.defaultBlockState() : under(surface, target - y);
+            if (felling != null) {                                               // [terra10] a tree buried by the fill: felled whole
+                BlockState was = chunk.getBlockState(m.set(x, y, z));
+                if (was.is(BlockTags.LOGS) || was.is(BlockTags.LEAVES) || was.is(Blocks.VINE)) felling.note(m.immutable());
+            }
             level.setBlock(m.set(x, y, z), want, QUIET);
             changed++;
         }
@@ -372,7 +376,7 @@ public final class Terraform {
                 level.setBlock(m, surface.defaultBlockState(), QUIET);
                 changed++;
             }
-            changed += GroundWork.seal(level, chunk, x, z, target, surface, false);   // [terra10] solid twelve deep
+            changed += GroundWork.seal(level, chunk, x, z, target, surface, false, felling);   // [terra10] solid twelve deep
         }
         if (target < ground) changed += GroundWork.faces(level, x, z, target, ground);   // [terra10] the cut's sides closed
         for (SiteWork.Carried c : chests) SiteWork.setDown(level, new BlockPos(x, target + 1, z), c);   // [build5] on the new ground
