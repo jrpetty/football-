@@ -13433,3 +13433,21 @@ the crop plan, the wants and the trades left to firms.
   frozen: the same numbers five days running, no new building and no new folk for twenty-five days (HUNDRED_STALL_DAYS),
   or not one folk loaded two days running with its heart held; the legs after a frozen one do nothing. HUNDRED_HOLD=0 runs
   it with nothing held (the town keeps itself); a biome may be named; SOAK_RCON_PORT for a local server.
+- **The raid's leftovers.** The long game's raids summon their monsters to stay, and nothing despawns on a server nobody
+  is on: the ones a young town's watch never reached piled up raid on raid (eleven to thirteen about the meadow town of
+  eight every morning, its folk indoors from creepers a fifth to a third of each day). They are cleared on the third
+  morning after each raid now, and counted ("the raid's leftovers cleared on day 3: 7").
+- **Measured** (a local dedicated server, soak.py hundred, the town of eight):
+  - Plains, seed 7331, held: day 1 8 folk, no buildings; day 9 8 folk, 3 buildings, 1994 meals put by; day 15 12 folk, 6;
+    day 21 19 folk, the Stone Age, 10; day 32 31 folk, 20 buildings, 1861 meals. The heart at -64, 152 (y 80), "on a river".
+  - Meadow by the mountains, seed 424242 (the spot where an earlier town starved), held, raids cleared: day 6 8 folk, 4
+    buildings; day 12 11 folk, the Stone Age, 7; day 18 25 folk, 12; day 30 38 folk, 16 buildings, 4090 meals. The same
+    town before the raids were cleared stood at 8 folk and 4 buildings on day 31, and before the bench was fetched at 5
+    buildings from day 9.
+  - Plains, seed 7331, nothing held, nobody near: awake its first three days (8 folk, a building, 615 meals), then asleep
+    two days and a day of its own in turn; 4 buildings and 2195 meals by day 16, its treasury from 42 coins to 426 (still
+    8 folk: a house comes first). Asleep, its status reads its chests as empty (they are not loaded); its kept stores
+    answer the market and come into the chests when it wakes.
+  - Tests: LongGameTests lg01 (too young to sleep; sleeps with rates; its own day after two days asleep, and asleep again
+    after it; awake with its heart force-loaded; the status says which) and lg02 (a town of eight with nobody near, two
+    days on: awake, its folk loaded, its stores moving).
