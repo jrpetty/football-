@@ -169,6 +169,7 @@ public final class TownDigs {
             hollows(level, v, Math.max(16, FILL_A_LOOK * 2 - laid));
             portals(level, v);
             path(level, v, PATH_A_LOOK);
+            MineWorks.tick(level, v);                                    // [mine8] the headframe, the railings, the spoil heap
         } catch (RuntimeException e) {
             com.mojang.logging.LogUtils.getLogger().warn("[MCA-DIGS] {}: {}", Villages.name(id), e.toString());
         }

@@ -4332,6 +4332,19 @@ public class VillageFolkEntity extends AssistantEntity {
                 return true;
             }
         }
+        // [mine8] A miner on a face of the town's mine (an older world's, or one the cave team's lead took it to and held no
+        // longer) works the mine's levels from its main shaft: its plot is the pithead.
+        if (villageCentre != null && level() instanceof net.minecraft.server.level.ServerLevel worksLevel && TownMine.inMine(village, zone.center())
+                && !TownMine.onALead(village, zone.center(), worksLevel.getDayTime() / 24000L)) {
+            BlockPos site = TownMine.siteOf(village);
+            BlockPos head = site == null ? null : MineWorks.pithead(worksLevel, village, site);
+            if (head != null && (Math.abs(zone.center().getX() - head.getX()) > 1 || Math.abs(zone.center().getZ() - head.getZ()) > 1)) {
+                assignPlot(WorkZone.around(head, radiusFor(StationTask.MINE), zone.depth()), patchNameFor(StationTask.MINE));
+                setAutonomous(true);
+                brain("to the pithead of the town's mine: the works");
+                return true;
+            }
+        }
         int floor = deepestMine();
         // A mine marked down into the lava (below the deepest a mine now goes, from an older world)
         // comes up to the deepest it may go.

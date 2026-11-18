@@ -551,7 +551,8 @@ public final class VillageCommands {
             ctx.getSource().sendFailure(Component.literal("No village near enough to have a mine."));
             return 0;
         }
-        java.util.List<String> lines = com.jrpetty.mcassistant.entity.TownMine.report(v.id(), v.centre());
+        java.util.List<String> lines = new java.util.ArrayList<>(com.jrpetty.mcassistant.entity.TownMine.report(v.id(), v.centre()));
+        lines.addAll(com.jrpetty.mcassistant.entity.MineWorks.report(ctx.getSource().getLevel(), v.id()));   // [mine8] the shaft, the levels, the drifts, the ores
         ctx.getSource().sendSuccess(() -> Component.literal("The mine of " + Villages.name(v.id()) + " | " + String.join(" | ", lines)), false);
         return lines.size();
     }
@@ -1584,6 +1585,8 @@ public final class VillageCommands {
         sb.append(". Built: ").append(Villages.builtList(v.id()));
         String mineGround = com.jrpetty.mcassistant.entity.MineGround.line(v.id());              // [mine7]
         if (mineGround != null) sb.append(". Mine: ").append(mineGround);
+        String works = com.jrpetty.mcassistant.entity.MineWorks.line(level, v.id());                // [mine8]
+        if (works != null) sb.append("; ").append(works);
         sb.append(". Rank: ").append(Villages.rank(v.id()).label).append(" (next, ").append(Villages.nextRankNote(v.id())).append(")");
         sb.append(". Land: ").append(com.jrpetty.mcassistant.entity.Homeland.line(v.id()));
         sb.append(". Room for ").append(Villages.housing(v.id()));

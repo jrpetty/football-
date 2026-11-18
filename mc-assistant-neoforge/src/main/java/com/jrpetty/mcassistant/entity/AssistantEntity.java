@@ -3958,6 +3958,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.goalSelector.addGoal(2, new BuildGoal(this));
         this.goalSelector.addGoal(2, new SmeltGoal(this));
         this.goalSelector.addGoal(2, new MineGoal(this));
+        this.goalSelector.addGoal(2, new com.jrpetty.mcassistant.entity.goal.WorksGoal(this));   // [mine8] a shift in the town's works
         this.goalSelector.addGoal(2, new ShearGoal(this));
         this.goalSelector.addGoal(2, new GiveGoal(this));
         this.goalSelector.addGoal(2, new TravelGoal(this));
@@ -7347,6 +7348,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     if (this instanceof VillageFolkEntity vf) vf.seekTheSeamForTests();
                     brain("no mine in the town's ground: waiting for a face of the town's mine");
                     return false;
+                }
+                // [mine8] A miner of a town with a mine works its levels from the pithead (MineWorks).
+                if (isSettler() && workZone != null && this instanceof VillageFolkEntity works && MineWorks.handles(works)) {
+                    return MineWorks.station(works);
                 }
                 if (isSettler() && workZone != null) {
                     // A village's miner digs from the MIDDLE of its plot, facing the

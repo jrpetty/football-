@@ -90,6 +90,7 @@ public final class MineSafety {
     static boolean dug(ServerLevel level, UUID village, BlockPos p) {
         BlockPos c = TownMine.faceCentre(village, p);
         if (c == null) return false;
+        if (MineWorks.dug(level, village, p)) return true;   // [mine8] down in the works
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
                 if (MineStairs.head(level, MineStairs.plotKey(c.offset(i * TownMine.PITCH, 0, j * TownMine.PITCH))) != null) return true;

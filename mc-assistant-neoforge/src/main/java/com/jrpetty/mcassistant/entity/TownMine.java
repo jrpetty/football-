@@ -170,6 +170,9 @@ public final class TownMine {
         if (village == null) return null;
         BlockPos site = site(level, village, heart, stony);
         if (site == null) return null;
+        // [mine8] Every miner works the mine's levels from its main shaft: its plot is the pithead.
+        BlockPos head = MineWorks.pithead(level, village, site);
+        if (head != null) return head;
         Set<Long> spent = spent(village);
         Set<Long> taken = new HashSet<>();
         for (AssistantEntity a : Villages.folkOf(village)) {

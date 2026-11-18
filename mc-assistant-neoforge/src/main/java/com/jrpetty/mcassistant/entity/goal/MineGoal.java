@@ -160,7 +160,8 @@ public class MineGoal extends Goal {
     @Override
     public boolean canUse() {
         Job j = assistant.peekJob();
-        return j != null && j.type() == Job.Type.MINE && assistant.getTarget() == null;
+        return j != null && j.type() == Job.Type.MINE && assistant.getTarget() == null
+            && !WorksGoal.ours(assistant, j);   // [mine8] a shift in the town's works, or a way up out of them
     }
 
     @Override
