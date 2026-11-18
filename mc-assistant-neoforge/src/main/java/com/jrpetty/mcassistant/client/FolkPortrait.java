@@ -6,6 +6,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 
 import javax.annotation.Nullable;
 import java.util.Locale;
@@ -20,6 +21,13 @@ import java.util.UUID;
 public final class FolkPortrait {
 
     private FolkPortrait() {}
+
+    /** True while a likeness is being drawn (FolkRenderer leaves out what belongs to the world: marks, bubble, icon). */
+    private static boolean drawing;
+
+    public static boolean drawing() {
+        return drawing;
+    }
 
     /** The folk with this entity id (and this UUID, when given) in the client's world, alive; or null. */
     @Nullable
@@ -40,31 +48,44 @@ public final class FolkPortrait {
         UiStyle.well(g, x, y, w, h, wash);
         g.fill(x + 1, y + 1, x + w - 1, y + 1 + h / 3, 0x18FFFFFF);       // a lighter sky over the shoulders
         if (e != null) {
-            // Its name and health over its head belong to the world, not the portrait: hidden while it is drawn here.
+            // Its name and health over its head, its marks and bubble belong to the world, not the portrait: hidden here.
+            // Asleep in its bed it would lie across the frame at a sleeper's size: stood up for its likeness (the pose,
+            // and with it the size, put back after, and its place too, should standing up have nudged it).
             Minecraft mc = Minecraft.getInstance();
             boolean named = e.isCustomNameVisible();
             Entity aimed = mc.getEntityRenderDispatcher().crosshairPickEntity;
+            Pose pose = e.getPose();
+            boolean lying = pose != Pose.STANDING && pose != Pose.CROUCHING;
+            double px = e.getX(), py = e.getY(), pz = e.getZ(), ox = e.xo, oy = e.yo, oz = e.zo;
+            float height = e.getDimensions(Pose.STANDING).height();
             e.setCustomNameVisible(false);
-            // Asleep in its bed it would lie across the frame: stood up for its likeness, laid back down after.
-            net.minecraft.world.entity.Pose pose = e.getPose();
-            if (pose == net.minecraft.world.entity.Pose.SLEEPING) e.setPose(net.minecraft.world.entity.Pose.STANDING);
             if (aimed == e) mc.getEntityRenderDispatcher().crosshairPickEntity = null;
-            g.enableScissor(x + 1, y + 1, x + w - 1, y + h - 1);
-            if (bust) {
-                // Head and shoulders, looking out of the frame a little to the side (not at the mouse: a card is
-                // small, and a folk looking down at the pointer shows only the top of its hat).
-                int scale = Math.round(h * 1.05F);
-                int centre = y + 2 + Math.round(scale * e.getBbHeight() / 2F);
-                InventoryScreen.renderEntityInInventoryFollowsMouse(g, x, y + 1, x + w, 2 * centre - y - 1, scale, 0.0625F,
-                    x + w * 1.1F, centre - 10F, e);
-            } else {
-                int scale = Math.max(8, Math.round((h - 8) / Math.max(1.0F, e.getBbHeight()) * 0.92F));
-                InventoryScreen.renderEntityInInventoryFollowsMouse(g, x, y + 4, x + w, y + h - 2, scale, 0.0625F, mx, my, e);
+            if (lying) e.setPose(Pose.STANDING);
+            drawing = true;
+            try {
+                g.enableScissor(x + 1, y + 1, x + w - 1, y + h - 1);
+                if (bust) {
+                    // Head and shoulders, looking out of the frame a little to the side (not at the mouse: a card is
+                    // small, and a folk looking down at the pointer shows only the top of its hat).
+                    int scale = Math.round(h * 1.05F);
+                    int centre = y + 2 + Math.round(scale * height / 2F);
+                    InventoryScreen.renderEntityInInventoryFollowsMouse(g, x, y + 1, x + w, 2 * centre - y - 1, scale, 0.0625F,
+                        x + w * 1.1F, centre - 10F, e);
+                } else {
+                    int scale = Math.max(8, Math.round((h - 8) / Math.max(1.0F, height) * 0.92F));
+                    InventoryScreen.renderEntityInInventoryFollowsMouse(g, x, y + 4, x + w, y + h - 2, scale, 0.0625F, mx, my, e);
+                }
+                g.disableScissor();
+            } finally {
+                drawing = false;
+                if (lying) {
+                    e.setPose(pose);
+                    e.setPos(px, py, pz);
+                    e.xo = ox; e.yo = oy; e.zo = oz;
+                }
+                e.setCustomNameVisible(named);
+                if (aimed == e) mc.getEntityRenderDispatcher().crosshairPickEntity = aimed;
             }
-            g.disableScissor();
-            e.setCustomNameVisible(named);
-            if (pose == net.minecraft.world.entity.Pose.SLEEPING) e.setPose(pose);
-            if (aimed == e) mc.getEntityRenderDispatcher().crosshairPickEntity = aimed;
         } else {
             g.fill(x + 1, y + h - 5, x + w - 1, y + h - 1, jobColour);
             String letter = name == null || name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT);

@@ -379,6 +379,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         FolkBatch.folk();
         super.render(folk, entityYaw, partialTick, pose, FolkBatch.around(buffer), packedLight);   // [anim] its passes batched
         if (sat) pose.popPose();
+        if (FolkPortrait.drawing()) return;                              // [ui] a likeness on a screen: no marks, bubble or icon
         QuestClient.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick);   // [quests] "!" or "?" over its head
 
         double far = this.entityRenderDispatcher.distanceToSqr(folk);
