@@ -1307,9 +1307,14 @@ public final class MineWorks {
     /** Every half minute (TownDigs.tick): the headframe over the shaft, the railings round its open top, the spoil heap. */
     public static void tick(ServerLevel level, Villages.Village v) {
         Works w = works(level, v.id());
-        if (w == null || !Land.areaLoaded(level, new BlockPos(w.sx, w.top, w.sz), 12)) return;
+        if (w == null) return;
+        if (!Land.areaLoaded(level, new BlockPos(w.sx, w.top, w.sz), 12)) {
+            com.mojang.logging.LogUtils.getLogger().debug("[MCA-WORKS] {}: the pithead not loaded", Villages.name(v.id()));
+            return;
+        }
         boolean changed = false;
-        clearing(level, w, 96);
+        int felled = clearing(level, w, 96);
+        if (felled > 0) com.mojang.logging.LogUtils.getLogger().info("[MCA-WORKS] {}: {} blocks of the trees over the pithead cleared", Villages.name(v.id()), felled);
         if (!w.head && w.sunk >= 4) {
             headframe(level, v, w);
             w.head = true;
@@ -1330,7 +1335,7 @@ public final class MineWorks {
      * middle, from the top of the shaft up), no more than so many blocks a look: a pithead in a wood had its headframe
      * lost in the leaves and a tree growing out of the pillar.
      */
-    static void clearing(ServerLevel level, Works w, int most) {
+    static int clearing(ServerLevel level, Works w, int most) {
         int n = 0;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int y = w.top + 24; y >= w.top - 1 && n < most; y--) {
@@ -1338,7 +1343,7 @@ public final class MineWorks {
                 for (int dz = -7; dz <= 7 && n < most; dz++) {
                     p.set(w.sx + dx, y, w.sz + dz);
                     BlockState s = level.getBlockState(p);
-                    boolean leaf = s.is(BlockTags.LEAVES);
+                    boolean leaf = s.is(BlockTags.LEAVES) || s.is(Blocks.RED_MUSHROOM_BLOCK) || s.is(Blocks.BROWN_MUSHROOM_BLOCK) || s.is(Blocks.MUSHROOM_STEM);
                     boolean trunk = s.is(BlockTags.LOGS) && com.jrpetty.mcassistant.entity.goal.BuildGoal.isTreeLog(level, p);
                     if (!leaf && !trunk) continue;
                     boolean frame = Math.abs(dx) <= 1 && Math.abs(dz) <= 1
@@ -1349,6 +1354,7 @@ public final class MineWorks {
                 }
             }
         }
+        return n;
     }
 
     /** Over the pillar: four posts, a frame of beams on them, a beam across with the lantern hung from it. */
