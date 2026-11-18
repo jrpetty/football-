@@ -183,6 +183,60 @@ public class BuildAuditGameTests {
         if (expect.clean()) helper.succeed(); else helper.fail(expect.summary());
     }
 
+    /**
+     * A town's wall raised by its builder over ground half paved in cobble, and raised again (as its builders come back to
+     * a wall they did not finish): every column of it walled three high and no higher than it is drawn, the second time
+     * as the first. (Its columns were stood on whatever topped them: the paved ones passed over as somebody's floor, and
+     * at each return the rest went up on the courses already laid, into towers.)
+     */
+    @GameTest(template = "empty", timeoutTicks = 2000, batch = "ba03_wall_raised_again")
+    public static void ba03_wall_raised_again(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int cx = 3592000, cz = Z;
+        Kit.hold(level, cx, cz, 40);
+        Kit.prepare(level, cx, cz, 40);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        com.jrpetty.mcassistant.entity.VillageFolkEntity hand = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(hand != null, "a village");
+        BlockPos anchor = Kit.surface(level, cx, cz + 150);
+        Kit.hold(level, anchor.getX(), anchor.getZ(), 16);
+        Kit.prepare(level, anchor.getX(), anchor.getZ(), 16);
+        // Cobble paving over the west half of the ground the ring runs over.
+        for (int dx = -8; dx <= 0; dx++) for (int dz = -8; dz <= 8; dz++) {
+            level.setBlock(anchor.offset(dx, -1, dz), Blocks.COBBLESTONE.defaultBlockState(), 2 | 16);
+        }
+        List<BuildGoal.Placement> plan = BuildGoal.plan("fortify", anchor, Direction.NORTH, 0);
+        Map<Long, Integer> colH = new HashMap<>();                  // each column's blocks as drawn
+        for (BuildGoal.Placement p : plan) if (p.part() == BuildGoal.Part.BLOCK) colH.merge(BlockPos.asLong(p.pos().getX(), 0, p.pos().getZ()), 1, Integer::sum);
+        Set<Long> cols = colH.keySet();
+        int drawn = java.util.Collections.max(colH.values());
+        String[] said = new String[2];
+        int[][] heights = new int[2][];
+        for (int run = 0; run < 2; run++) {
+            said[run] = BuildGoal.buildNowForTests(hand, "fortify", anchor, Direction.NORTH, BuildWorldGameTests::stock);
+            int gaps = 0, tall = 0;
+            for (long k : cols) {
+                int x = BlockPos.getX(k), z = BlockPos.getZ(k);
+                int stack = 0;
+                for (int y = anchor.getY() - 1; y < anchor.getY() + 20; y++) {
+                    BlockState st = level.getBlockState(new BlockPos(x, y, z));
+                    if (holds(st) && !Terraform.earth(st)) stack++;
+                }
+                if (stack < 3) gaps++;
+                if (stack > colH.get(k) + 1) tall++;                   // (+1: the cobble it stands on)
+            }
+            heights[run] = new int[]{ gaps, tall };
+        }
+        Kit.log("[VT] ba03 " + cols.size() + " columns drawn " + drawn + " high; first: " + said[0] + " gaps/too tall "
+            + java.util.Arrays.toString(heights[0]) + "; again: " + said[1] + " " + java.util.Arrays.toString(heights[1]));
+        Kit.Expect expect = new Kit.Expect();
+        expect.that(heights[0][0] == 0 && heights[1][0] == 0, "every column walled (gaps " + heights[0][0] + ", then " + heights[1][0] + ")");
+        expect.that(heights[0][1] == 0 && heights[1][1] == 0, "no column higher than drawn (" + heights[0][1] + ", then " + heights[1][1] + ")");
+        if (expect.clean()) helper.succeed(); else helper.fail(expect.summary());
+    }
+
     /** The floor level a town gives a lot here (Villages.groundFor): the middle of nine heights, or the highest on a slope. */
     static BlockPos siteOn(ServerLevel level, String structure, int x, int z, Direction facing) {
         int[] half = BuildGoal.footprint(structure);
