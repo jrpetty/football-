@@ -741,6 +741,7 @@ public final class Founding extends SavedData {
                     // The square in the town's soil; the edge in whatever each column was (rock left rock).
                     boolean own = !levelled && k == FoundingPlan.LAND && s.tops != null && s.tops[i] > 0;
                     Block top = own ? Terraform.top(s.tops[i]) : s.surface;
+                    if (own) top = SiteWork.edgeTop(top, s.surface, g.target[i] < g.ground[i]);   // [build5] a cut edge turfed
                     int c = Terraform.shape(level, chunk, x, z, g.ground[i], g.target[i], levelled, top);
                     if (c < 0 && levelled && s.blocked++ == 0) {
                         s.blockedFirst = Terraform.inTheWay(chunk, x, z, g.ground[i], g.target[i]) + " at " + x + "," + z;

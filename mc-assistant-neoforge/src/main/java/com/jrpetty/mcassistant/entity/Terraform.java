@@ -195,7 +195,7 @@ public final class Terraform {
                 tops[i] = topOf(bed);
                 return;
             }
-            if (growth(s)) { y--; continue; }
+            if (growth(s) || SiteWork.townChest(chunk, m, s)) { y--; continue; }   // [build5] a work chest goes down with the ground
             if (earth(s)) {
                 g.ground[i] = y;
                 g.kind[i] = built ? FoundingPlan.BUILT : FoundingPlan.LAND;
@@ -280,11 +280,14 @@ public final class Terraform {
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         int top = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, x & 15, z & 15);
         // Look first: one thing built in the way and the whole column is left be.
+        java.util.List<SiteWork.Carried> chests = new java.util.ArrayList<>();      // [build5] the town's work chests, carried
         for (int y = top; y > target; y--) {
-            if (!natural(chunk.getBlockState(m.set(x, y, z)))) return -1;
+            BlockState s0 = chunk.getBlockState(m.set(x, y, z));
+            if (!natural(s0) && !SiteWork.townChest(chunk, m, s0)) return -1;
         }
         for (int y = ground + 1; y <= target; y++) {
-            if (!natural(chunk.getBlockState(m.set(x, y, z)))) return -1;
+            BlockState s0 = chunk.getBlockState(m.set(x, y, z));
+            if (!natural(s0) && !SiteWork.townChest(chunk, m, s0)) return -1;
         }
         if (!levelled && target == ground && top <= ground) return 0;
         // [integrity] Nothing cut or banked under a building, its doorway or the way in to it.
@@ -294,6 +297,10 @@ public final class Terraform {
                 || !TownBlocks.mayPlace(level, town, probe.above(), TownBlocks.Why.TERRAFORM))) return -1;
         int changed = 0;
         BlockState air = Blocks.AIR.defaultBlockState();
+        for (int y = ground + 1; y <= top; y++) {                                   // [build5] lift the chests out first
+            BlockState s0 = chunk.getBlockState(m.set(x, y, z));
+            if (SiteWork.townChest(chunk, m, s0)) chests.add(SiteWork.lift(level, m.immutable()));
+        }
         for (int y = top; y > target; y--) {
             BlockState s = chunk.getBlockState(m.set(x, y, z));
             if (s.isAir()) continue;
@@ -354,6 +361,7 @@ public final class Terraform {
                 changed++;
             }
         }
+        for (SiteWork.Carried c : chests) SiteWork.setDown(level, new BlockPos(x, target + 1, z), c);   // [build5] on the new ground
         // Grass that had snow lying on it, cleared: green again (its neighbours were not told).
         BlockState now = chunk.getBlockState(m.set(x, target, z));
         if (changed > 0 && now.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.SNOWY)

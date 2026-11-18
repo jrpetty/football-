@@ -93,7 +93,7 @@ public final class Floors {
             if (p.part() != BuildGoal.Part.BLOCK || p.style() == Blueprints.Style.SOIL) continue;
             for (int up = 1; up <= 2; up++) {
                 BlockPos q = p.pos().above(up);
-                if (planned.contains(q) || !BuildGoal.isWildPlant(level.getBlockState(q))) break;
+                if (planned.contains(q) || !SiteWork.litter(level.getBlockState(q))) break;   // [build5] saplings, mushrooms, cane too
                 out.add(new Fix(q.immutable(), false, p.style(), drawing));
             }
         }
@@ -131,7 +131,7 @@ public final class Floors {
                 || own != null && !TownBlocks.mayBuild(level, v, f.pos(), own.anchor(), TownBlocks.Why.REPAIR)) return false;
         BlockState there = level.getBlockState(f.pos());
         if (!f.lay()) {
-            if (!BuildGoal.isWildPlant(there)) return true;
+            if (!SiteWork.litter(there)) return true;                                       // [build5]
             for (ItemStack drop : Block.getDrops(there, level, f.pos(), null)) TidyFixes.store(level, v, f.pos(), drop);
             level.setBlock(f.pos(), Blocks.AIR.defaultBlockState(), 3);
             return true;

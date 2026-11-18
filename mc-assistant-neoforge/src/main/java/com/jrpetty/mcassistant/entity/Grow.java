@@ -572,8 +572,14 @@ public final class Grow {
         }
         final int layer = lowest;
         TRIED.merge(b.anchor().asLong() + ":" + layer, 1, Integer::sum);
+        // [build5] As much of it as the builders can lay at a visit, layer on layer from the bottom: the old roof is off,
+        // and a dozen blocks a visit left a hall open to the sky for days (the building audit found the great building
+        // of each town roofless at the end of four days, a hundred cells and more), with the rain in its rooms.
+        int most = Math.max(budget * 4, 48);
         Set<BlockPos> now = new HashSet<>();
-        for (BlockPos p : missing) if (p.getY() == layer && now.size() < Math.max(budget, 12)) now.add(p);
+        List<BlockPos> order = new ArrayList<>(missing);
+        order.sort(java.util.Comparator.comparingInt(BlockPos::getY));
+        for (BlockPos p : order) if (now.size() < most) now.add(p);
         return BuildGoal.stampOnly(level, to, b.anchor(), b.facing(), 13, paint, p -> now.contains(p.pos()));
     }
 

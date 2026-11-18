@@ -26,8 +26,23 @@ public final class Hire {
 
     private Hire() {}
 
-    /** A day of a folk's time. */
+    /** A day of a folk's time, at the least. */
     public static final int PRICE = 4;
+
+    /**
+     * [build5] What a day of this folk's time costs: the four coins it always asked, or, for a hand the labour market pays
+     * more, its own day's wage and a quarter over for the road and the fighting. (Four coins took a master smith off a
+     * day's work worth fifteen: nobody leaves a good wage for less than it.)
+     */
+    public static int priceOf(VillageFolkEntity f) {
+        int wage = 0;
+        try {
+            wage = JobWorth.payOf(f).worthPart();
+        } catch (RuntimeException e) {
+            wage = 0;
+        }
+        return Math.max(PRICE, (int) Math.ceil(wage * 1.25));
+    }
     static final long DAY = 24000L;
 
     /** "Come adventuring with me?" — the answer, and the bargain if it is yes. */
@@ -46,13 +61,14 @@ public final class Hire {
         if (Raids.underAlarm(village)) return FolkAction.shrug(f, "Not with the bell ringing! Ask me when it's quiet.");
         if (!f.isHired() && f.persona().mood() < 25) return FolkAction.shrug(f, "I'm not up to it. Ask me another day.");
         int coins = Market.coinsHeld(p);
-        if (coins < PRICE) {
-            return "I'll go with you for " + PRICE + " coins a day — I'll fight, I'll carry, and I'll want a story out of it. You've "
+        int price = priceOf(f);                                        // [build5] its own wage, and a quarter over
+        if (coins < price) {
+            return "I'll go with you for " + price + " coins a day — I'll fight, I'll carry, and I'll want a story out of it. You've "
                 + coins + ".";
         }
-        Market.payOut(p, PRICE);
-        f.earn(PRICE);
-        CoinCensus.playerIn(CoinCensus.purseTown(f), PRICE);          // [health]
+        Market.payOut(p, price);
+        f.earn(price);
+        CoinCensus.playerIn(CoinCensus.purseTown(f), price);          // [health]
         boolean more = f.isHired();
         long until = (more ? Math.max(f.hiredUntil, level.getGameTime()) : level.getGameTime()) + DAY;
         if (more) {
@@ -69,7 +85,7 @@ public final class Hire {
         if (p instanceof net.minecraft.server.level.ServerPlayer sp) PlayerEmotes.shake(sp, f);   // [anim] shaken on
         Social.Life life = f.life();
         if (life.has(Social.Trait.CURIOUS)) return "An adventure? I've been waiting all my life for somebody to ask! Lead the way.";
-        if (life.has(Social.Trait.GRUMPY)) return "Fine. Four coins a day, and I'm not carrying anything heavy. Well — not much.";
+        if (life.has(Social.Trait.GRUMPY)) return "Fine. " + price + " coins a day, and I'm not carrying anything heavy. Well — not much.";
         if (life.has(Social.Trait.SHY)) return "All right… I'll come. I'll stay close.";
         return FolkTalk.pick(f.getRandom(), "You've hired yourself a companion! Where are we going?",
             "Done! I'll fight, I'll carry, and you'll have a story to tell. Lead on.");

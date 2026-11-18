@@ -2311,6 +2311,7 @@ public class VillageGameTests {
         p.moveTo(b.getX() + 1.0, b.getY(), b.getZ());
         int coins3 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
         b.persona().setMood(60, List.of());
+        int price = com.jrpetty.mcassistant.entity.Hire.priceOf(b);         // [build5] its own wage and a quarter, four at least
         String hired = com.jrpetty.mcassistant.entity.Hire.ask(b, p);
         boolean going = b.isHired() && p.getUUID().equals(b.hiredBy());
         b.insertItem(new ItemStack(Items.BONE, 3));
@@ -2328,7 +2329,7 @@ public class VillageGameTests {
         String story = lines.stream().filter(x -> x.contains("adventuring")).findFirst().orElse("");
         Kit.log("t37 hired: " + hired + " / " + home + " / " + story + " (bones handed over " + bones + ", coins "
             + coins3 + " -> " + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + ")");
-        helper.assertTrue(going && com.jrpetty.mcassistant.entity.Market.coinsHeld(p) == coins3 - com.jrpetty.mcassistant.entity.Hire.PRICE,
+        helper.assertTrue(going && com.jrpetty.mcassistant.entity.Market.coinsHeld(p) == coins3 - price,
             "hired for a day's coin, it goes along");
         helper.assertTrue(!b.isHired() && bones == 3 && story.contains("2 monsters"), "home again: what it carried handed over, and a story told");
         // A house to order.

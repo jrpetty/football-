@@ -640,8 +640,12 @@ public class BuildGoal extends Goal {
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (Placement p : plan) taken.add(p.pos());
         // [integrity] The fill under the floor is earth where earth will do (it is never seen), its stone footing above it.
+        boolean turnedFill = facing.getAxis() == Direction.Axis.X;
+        int fwx = turnedFill ? g[1] : g[0], fwz = turnedFill ? g[0] : g[1];
         for (BlockPos c : fillCells(assistant.level(), base, facing, g[0], g[1])) {
-            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, Blueprints.Style.SOIL, Blueprints.Way.UP));
+            // [build5] Except its outer face, which is seen from downhill: a stone footing there, not a cliff of dirt.
+            boolean face = Math.abs(c.getX() - base.getX()) == fwx || Math.abs(c.getZ() - base.getZ()) == fwz;
+            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, face ? Blueprints.Style.FOUNDATION : Blueprints.Style.SOIL, Blueprints.Way.UP));
         }
         Direction right = facing.getClockWise();
         int top = lotTop(structure);
@@ -654,11 +658,18 @@ public class BuildGoal extends Goal {
                     BlockPos c = cell(base, right, facing, dx, dz).above(dy);
                     if (taken.contains(c)) continue;
                     BlockState there = assistant.level().getBlockState(c);
-                    if (isWildPlant(there) || there.is(Blocks.SNOW)) plan.add(new Placement(c, Part.CLEAR));
+                    if (com.jrpetty.mcassistant.entity.SiteWork.litter(assistant.level(), c, there)) plan.add(new Placement(c, Part.CLEAR));   // [build5] saplings, torches, mushrooms too
                     // [build-world] And the ground itself where it rises above the floor inside the walls (a bank, a
                     // hummock, a drift of snow): dug out, or the room was built round it, earth on its floor.
                     else if (groundInside(there)) plan.add(new Placement(c, Part.CLEAR, Blueprints.Style.SOIL, Blueprints.Way.UP));
                 }
+            }
+        }
+        // [build5] And the hillside cut back from its walls, a step out for a step up (SiteWork.cutBack): the bank stood
+        // against the uphill wall of every building set into a slope. Not a park's (its own ground work, below).
+        if (!com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(structure)) {
+            for (BlockPos c : com.jrpetty.mcassistant.entity.SiteWork.cutBack(assistant.level(), base, facing, g[0], g[1])) {
+                if (taken.add(c)) plan.add(new Placement(c, Part.CLEAR, Blueprints.Style.SOIL, Blueprints.Way.UP));
             }
         }
         // [districts] A park's lot is cut and filled to one level, its edges eased, before a stone of it is laid
@@ -684,12 +695,13 @@ public class BuildGoal extends Goal {
             int x = p.pos().getX();
             int z = p.pos().getZ();
             long key = BlockPos.asLong(x, 0, z);
+            // [build5] Its ground under its own courses already laid, never on top of them (SiteWork.wallGround).
             int g = ground.computeIfAbsent(key,
-                k -> assistant.level().hasChunk(x >> 4, z >> 4) ? groundTop(assistant.level(), x, z) : base.getY());
+                k -> assistant.level().hasChunk(x >> 4, z >> 4) ? com.jrpetty.mcassistant.entity.SiteWork.wallGround(assistant.level(), x, z) : base.getY());
             // The ring is laid out before anybody looks at what stands on it. Thirteen
             // blocks out from the heart it crosses houses, fields and ponds: a wall through
             // a house fills its rooms, across a field it buries the crop. It goes round them.
-            if (!fits.computeIfAbsent(key, k -> wallFits(assistant.level(), x, z, g))) {
+            if (!fits.computeIfAbsent(key, k -> com.jrpetty.mcassistant.entity.SiteWork.wallFits(assistant.level(), x, z, g))) {   // [build5]
                 // Except water: a pond or a river on the line gets a footing of stone up from
                 // its bed, and the wall stands on it. The long game's wall had two whole sides
                 // missing where the ring ran into a lake, and no gate or post on either.
@@ -757,8 +769,12 @@ public class BuildGoal extends Goal {
         if (!level.hasChunk(x >> 4, z >> 4)) return false;
         BlockState ground = level.getBlockState(new BlockPos(x, g - 1, z));
         if (!ground.getFluidState().isEmpty()) return false;                     // a pond, a river
-        if (ground.is(Blocks.FARMLAND) || ground.is(Blocks.DIRT_PATH)) return false;
-        if (ground.is(net.minecraft.tags.BlockTags.PLANKS) || ground.is(Blocks.COBBLESTONE)
+        // [build5] The town's own paving and its worn paths are no floor of anybody's: the wall stands on them. (The
+        // square's paving reached its wall's line before the wall did, and every paved column was "somebody's floor",
+        // passed over: the square's wall stood with sixty gaps in it, the palisade likewise.)
+        boolean paved = com.jrpetty.mcassistant.entity.SiteWork.townPaving(level, new BlockPos(x, g - 1, z), ground);
+        if (ground.is(Blocks.FARMLAND) || ground.is(Blocks.DIRT_PATH) && !paved) return false;
+        if (ground.is(net.minecraft.tags.BlockTags.PLANKS) || ground.is(Blocks.COBBLESTONE) && !paved
             || ground.is(net.minecraft.tags.BlockTags.SLABS) || ground.is(net.minecraft.tags.BlockTags.STAIRS)
             || ground.hasBlockEntity()) {
             return false;                                                         // somebody's floor
@@ -931,6 +947,7 @@ public class BuildGoal extends Goal {
             // so it is only asked whether there is still a trunk or a leaf there.)
             if (p.part() == Part.CLEAR) {
                 if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st) || isWildPlant(st)) { target = p; break; }   // [econ-store] a plant
+                if (p.style() == Blueprints.Style.GENERIC && com.jrpetty.mcassistant.entity.SiteWork.litter(assistant.level(), p.pos(), st)) { target = p; break; }   // [build5]
                 if (st.is(Blocks.SNOW) && p.style() == Blueprints.Style.GENERIC) { target = p; break; }   // [build-world] a drift on its floor
                 // [districts] Earth above a park's lawn, still to be dug away (entity/ParkGround).
                 if (com.jrpetty.mcassistant.entity.ParkGround.dig(p, st)) { target = p; break; }
@@ -1805,7 +1822,16 @@ public class BuildGoal extends Goal {
                         if (Math.abs(dx) != r && Math.abs(dz) != r) continue; // perimeter only
                         boolean corner = Math.abs(dx) == r && Math.abs(dz) == r;
                         int along = Math.abs(dx) == r ? dz : dx;
-                        if (town ? Math.abs(along) <= gate && !corner : (dx == 0 && dz == -r)) continue;   // the gates
+                        if (town && Math.abs(along) <= gate && !corner) {
+                            // [build5] The gateway: an arch over the avenue from pillar to pillar, a lintel of the wall's
+                            // stone four up (room for a cart under it) with a coping of slabs, so a gap in the wall reads as
+                            // a gate and not as a breach.
+                            BlockPos col = cell(feet, right, facing, dx, dz);
+                            out.add(new Placement(col.above(4), Part.BLOCK, stone, Blueprints.Way.UP));
+                            out.add(new Placement(col.above(5), Part.BLOCK, Blueprints.Style.STONE_SLAB, Blueprints.Way.UP));
+                            continue;
+                        }
+                        if (!town && dx == 0 && dz == -r) continue;                                          // the gates
                         BlockPos col = cell(feet, right, facing, dx, dz);
                         boolean pillar = town && Math.abs(along) == gate + 1 && !corner;
                         int top = corner ? 4 : pillar ? 4 : 2;

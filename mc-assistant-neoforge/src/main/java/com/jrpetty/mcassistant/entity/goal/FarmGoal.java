@@ -415,12 +415,14 @@ public class FarmGoal extends Goal {
     /** Carve a 1-deep basin at farmland level and set a contained water source
      *  so the surrounding tilled plot stays hydrated; convert the bucket to empty. */
     private void doPlaceWater(BlockPos pos) {
-        if (assistant.removeMatching(s -> s.is(Items.WATER_BUCKET), 1) != 1) return;
+        boolean full = assistant.removeMatching(s -> s.is(Items.WATER_BUCKET), 1) == 1;
+        boolean town = !full && com.jrpetty.mcassistant.entity.FieldWater.fromTheTown(assistant);   // [build5] the well's water
+        if (!full && !town) return;
         assistant.level().destroyBlock(pos, false);
         assistant.level().setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
         assistant.level().playSound(null, pos, net.minecraft.sounds.SoundEvents.BUCKET_EMPTY,
             net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
-        ItemStack leftover = assistant.insertItem(new ItemStack(Items.BUCKET));
+        ItemStack leftover = full ? assistant.insertItem(new ItemStack(Items.BUCKET)) : ItemStack.EMPTY;   // [build5] (no bucket from nothing)
         if (!leftover.isEmpty()) {
             assistant.level().addFreshEntity(new ItemEntity(assistant.level(),
                 pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, leftover));
@@ -500,7 +502,8 @@ public class FarmGoal extends Goal {
     }
 
     private boolean hasWaterBucket() {
-        return assistant.countMatching(s -> s.is(Items.WATER_BUCKET)) > 0;
+        return assistant.countMatching(s -> s.is(Items.WATER_BUCKET)) > 0
+            || com.jrpetty.mcassistant.entity.FieldWater.fromTheTown(assistant);   // [build5] a town's farmer: the well's water
     }
 
     /** Farmland is hydrated by water within 4 blocks horizontally and no more
