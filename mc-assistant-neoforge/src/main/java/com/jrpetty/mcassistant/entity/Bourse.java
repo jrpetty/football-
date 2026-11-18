@@ -87,7 +87,9 @@ public final class Bourse {
     public static long last(ServerLevel level, UUID village, Business b) {
         CompoundTag f = firmBook(village, b.id);
         if (!f.contains("last")) {
-            f.putLong("last", fair(level, village, b));
+            // Listed at what a share is worth, and never under what its founders put in a share.
+            CompoundTag r = Enterprise.rec(village, b.id);
+            f.putLong("last", Math.max(fair(level, village, b), r == null ? 1 : r.getLong("capital") / 100));
             f.putLong("listed", Businesses.today(level));
             CapitalBook.dirty();
         }
@@ -165,6 +167,14 @@ public final class Bourse {
             b.owners.set(big, new Stake(s.holder(), s.who(), s.name(), s.parts() + keep - sum));
         }
         b.owners.removeIf(s -> s.parts() <= 0);
+        for (int i = 0; i < b.owners.size(); i++) {
+            Stake s = b.owners.get(i);
+            if (s.holder() == toH && java.util.Objects.equals(s.who(), to)) {
+                b.owners.set(i, new Stake(s.holder(), s.who(), toName, s.parts() + newParts));
+                Businesses.dirty();
+                return;
+            }
+        }
         b.owners.add(new Stake(toH, to, toName, newParts));
         Businesses.dirty();
     }
@@ -202,7 +212,7 @@ public final class Bourse {
         // The holders: a holder short of coin sells what covers it; one holding a firm that lost money last week sells half
         // (never a founder below half its firm).
         for (Business b : firms) {
-            long fair = fair(level, id, b), last = last(level, id, b);
+            long fair = fair(level, id, b);
             long net = b.last(day - 1, 7).net();
             CompoundTag r = Enterprise.rec(id, b.id);
             UUID founder = r != null && r.hasUUID("founder") ? r.getUUID("founder") : null;
@@ -214,7 +224,7 @@ public final class Bourse {
                 int floor = s.who().equals(founder) ? 51 : 0;
                 int canSell = held - floor;
                 if (canSell <= 0) continue;
-                long price = Math.max(1, Math.min(fair, last) * 9 / 10);
+                long price = Math.max(1, fair * 9 / 10);                  // a little under what it reckons a share worth
                 int keep = CapitalBook.keep(id, f);
                 int n = 0;
                 if (f.purse() < keep / 2) n = (int) Math.min(canSell, Math.max(1, ((keep - f.purse()) * 100L + price - 1) / price));
@@ -229,13 +239,13 @@ public final class Bourse {
         double bestYield = 0;
         for (Business b : firms) {
             long net = b.last(day - 1, 7).net();
-            long price = Math.max(1, last(level, id, b));
+            long price = Math.max(1, Math.max(last(level, id, b), fair(level, id, b)));
             double y = net / 100.0 / price;
             if (net > 0 && y > bestYield) { bestYield = y; best = b; }
         }
         if (best != null) {
-            long fair = fair(level, id, best), last = last(level, id, best);
-            long bid = Math.max(1, Math.min(fair, last * 105 / 100));
+            long fair = fair(level, id, best);
+            long bid = Math.max(1, fair);                                       // no more than it reckons a share worth
             for (AssistantEntity a : Villages.folkOf(id)) {
                 if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired()) continue;
                 if (Bank.thrift(f) < 0 || Homes.rentsAndWantsToOwn(f)) continue;

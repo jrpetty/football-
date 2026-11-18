@@ -157,7 +157,7 @@ public class CapitalGameTests {
         ok.that(FolkCredit.clubCash(id) == dep - 3000, "out of its chest: " + Businesses.pence(FolkCredit.clubCash(id)));
         ok.that(coinNow(id) == c0, "the town's coin the same after the loan");
         b.loan += 600;                                                       // a few weeks' interest run up on it
-        b.till += 4000;
+        b.till += Businesses.fromTreasuryForTests(id, 4000);                 // (its takings: coin moved, not made)
         FolkCredit.repaidForTests(id, b, 36);
         long earned = FolkCredit.earnedForTests(id);
         ok.that(b.loan == 0 && earned > 0, "the loan repaid, the club earned " + Businesses.pence(earned));
@@ -194,7 +194,7 @@ public class CapitalGameTests {
         int full = FolkCredit.rateBp(id);
         Business good = firm(level, id, folk.get(0), "toolsmith", 2000, 500, "thriving");
         Business poor = firm(level, id, folk.get(1), "clothier", 1000, -50, "struggling");
-        Business bad = firm(level, id, folk.get(2), "bakery", 1000, -300, "trading");
+        Business bad = firm(level, id, folk.get(2), "baker", 1000, -300, "trading");
         ok.that(good != null && poor != null && bad != null, "three firms opened");
         if (good == null || poor == null || bad == null) { helper.fail(ok.summary()); return; }
         long rg = FolkCredit.judgeForTests(level, id, good), rp = FolkCredit.judgeForTests(level, id, poor), rb = FolkCredit.judgeForTests(level, id, bad);
@@ -352,7 +352,7 @@ public class CapitalGameTests {
         long d = day(level);
         LandTitles.morningForTests(level, v, d);
         CompoundTag t = LandTitles.titleForTests(id, "firm:" + farm.id);
-        ok.that(t != null && t.getLong("value") == t.getLong("earns") * 12, "a title to the homestead, worth twelve weeks of what it earns: "
+        ok.that(t != null && t.getLong("value") > 0 && t.getLong("value") == Math.max(800, t.getLong("earns") * 12), "a title to the homestead, worth twelve weeks of what it earns (its title's worth at least): "
             + (t == null ? "-" : Businesses.pence(t.getLong("value")) + " on " + Businesses.pence(t.getLong("earns"))));
         // Its hand gone: idle two mornings, then leased to a farmer with no homestead of its own.
         folk.get(1).discard();

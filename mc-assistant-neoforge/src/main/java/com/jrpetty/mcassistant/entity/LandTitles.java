@@ -85,7 +85,7 @@ public final class LandTitles {
             int rent = Math.max(0, h.rent > 0 ? h.rent : Homes.rent(id, h));
             t.putLong("earns", rent * 700L);
             t.putBoolean("idle", h.members.isEmpty());
-            value(t, rent * 700L, growth);
+            value(t, rent * 700L, growth, 0);
         }
         // The firms' premises and the homesteads.
         for (Business b : Businesses.all(id)) {
@@ -116,7 +116,7 @@ public final class LandTitles {
             boolean idle = !b.open || home && Privatisation.handOf(id, b) == null;
             t.putInt("idleDays", idle ? t.getInt("idleDays") + 1 : 0);
             t.putBoolean("idle", idle);
-            value(t, earns, growth);
+            value(t, earns, growth, home ? Privatisation.TITLE_PENCE : 0);
             if (home && b.open && t.getInt("idleDays") >= IDLE_DAYS && landlord.isEmpty()) offerIdle(level, v, b, t, day);
         }
         for (String k : new ArrayList<>(all.getAllKeys())) if (!seen.contains(k)) all.remove(k);
@@ -134,8 +134,8 @@ public final class LandTitles {
     }
 
     /** A title's value moved three tenths of the way to twelve weeks' earnings, by the town's growth. */
-    static void value(CompoundTag t, long weekEarns, double growth) {
-        long target = Math.round(weekEarns * YEARS_WEEKS * growth);
+    static void value(CompoundTag t, long weekEarns, double growth, long least) {
+        long target = Math.max(least, Math.round(weekEarns * YEARS_WEEKS * growth));
         long was = t.getLong("value");
         t.putLong("value", was <= 0 ? target : was + (target - was) * STEP / 100);
     }
