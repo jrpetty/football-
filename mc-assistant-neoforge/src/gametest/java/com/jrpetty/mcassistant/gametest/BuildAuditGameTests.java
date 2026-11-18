@@ -493,6 +493,28 @@ public class BuildAuditGameTests {
             }
         }
         r.counts.put("buildings", buildings);
+        // The square's wall (the fortify): every column of its ring (but its gates) walled, or a building standing in for it.
+        for (Ledger.Building b : Ledger.buildings(id)) {
+            if (!b.structure().equals("fortify")) continue;
+            Set<Long> cols = new HashSet<>();
+            for (BuildGoal.Placement p : BuildGoal.plan("fortify", b.anchor(), b.facing(), com.jrpetty.mcassistant.village.TownPlan.PLAZA)) {
+                if (p.part() != BuildGoal.Part.BLOCK || !cols.add(BlockPos.asLong(p.pos().getX(), 0, p.pos().getZ()))) continue;
+                int x = p.pos().getX(), z = p.pos().getZ();
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                int g = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                // Walled: three built blocks stacked from the top down (paving is one; a wall is three or more).
+                int stack = 0;
+                String what = level.getBlockState(new BlockPos(x, g - 1, z)).getBlock().toString();
+                int top = g - 1;
+                while (top > g - 3 && !holds(level.getBlockState(new BlockPos(x, top, z)))) top--;   // a lantern on it
+                for (int y = top; y >= top - 2; y--) {
+                    BlockState st = level.getBlockState(new BlockPos(x, y, z));
+                    if (holds(st) && !Terraform.earth(st)) stack++; else break;
+                }
+                boolean walled = stack >= 3;
+                if (!walled) r.add("square_wall_gap", 1, x + "," + (g - 1) + "," + z + " " + what);
+            }
+        }
         // The audit everyone uses: what stands on the roads, half built, foreign things in doorways.
         TownAudit.Report ta = TownAudit.check(level, v);
         r.counts.put("on_roads", (int) ta.measure("blocks_on_roads"));
