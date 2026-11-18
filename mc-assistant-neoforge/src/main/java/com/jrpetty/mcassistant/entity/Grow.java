@@ -301,7 +301,9 @@ public final class Grow {
         int[][] beds = { { -3, -4 }, { -2, -4 }, { 2, -4 }, { 3, -4 }, { -4, -4 }, { 4, -4 } };
         for (int[] p : beds) {
             if (unpaid) break;
-            BlockPos at = b.anchor().relative(right, p[0]).relative(back, p[1]).atY(y);
+            // [city9] An open plot's flowers along its front by the street, where a fence would stand (the row before the
+            // house is its own ground, and the gate keeps flowers off it).
+            BlockPos at = b.anchor().relative(right, p[0]).relative(back, edge == CityPlots.Edge.OPEN ? -5 : p[1]).atY(y);
             if (!plot(level, village, b, at)) continue;
             boolean azalea = Math.abs(p[0]) == 4;
             BlockState plant;

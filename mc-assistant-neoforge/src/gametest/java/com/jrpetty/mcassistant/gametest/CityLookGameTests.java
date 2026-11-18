@@ -541,8 +541,9 @@ public class CityLookGameTests {
         int[] fa = edges(level, fenceA), fb = edges(level, fenceB), wa = edges(level, walled), op = edges(level, open);
         Kit.log("[VT] ct04 fenced " + java.util.Arrays.toString(fa) + " " + java.util.Arrays.toString(fb) + ", walled " + java.util.Arrays.toString(wa)
             + ", open " + java.util.Arrays.toString(op) + " (fences, gates, walls, flowers)");
-        helper.assertTrue(fa[0] >= 30 && fa[1] == 1, "a fence all round the first plot, a gate in front");
-        helper.assertTrue(fb[0] >= 20 && fb[0] <= fa[0] - 8 && fb[1] == 1, "the next fenced plot shares the side between them (" + fb[0] + " posts)");
+        // (The way in before the door is kept open: the gate's cell is the door's approach, never fenced.)
+        helper.assertTrue(fa[0] >= 30 && !level.getBlockState(fenceA.offset(0, 0, 5)).is(BlockTags.FENCES), "a fence all round the first plot, open in front");
+        helper.assertTrue(fb[0] >= 20 && fb[0] <= fa[0] - 8, "the next fenced plot shares the side between them (" + fb[0] + " posts)");
         // Between the two: one line of fence, not two.
         int east = fenceA.getX() + 5;                                   // the first plot's side; the next plot's is a block on
         int doubled = 0;
@@ -551,7 +552,8 @@ public class CityLookGameTests {
                     && level.getBlockState(new BlockPos(east + 1, fenceA.getY(), fenceA.getZ() + dz)).is(BlockTags.FENCES)) doubled++;
         }
         helper.assertTrue(doubled == 0, "no fence doubled along the shared side (" + doubled + ")");
-        helper.assertTrue(wa[2] >= 30 && wa[0] == 0 && wa[1] == 0, "a low wall of the stores' stone round the walled plot, no gate");
+        helper.assertTrue(wa[2] >= 30 && wa[0] == 0 && wa[1] == 0 && !level.getBlockState(walled.offset(0, 0, 5)).is(BlockTags.WALLS),
+            "a low wall of the stores' stone round the walled plot, a gap for the path");
         helper.assertTrue(op[0] == 0 && op[2] == 0 && op[3] >= 2, "the open plot has no edge, only its flowers");
         helper.succeed();
     }
