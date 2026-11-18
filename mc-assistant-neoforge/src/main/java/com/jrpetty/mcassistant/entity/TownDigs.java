@@ -38,7 +38,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * good when it is opened, beyond the plan; an older world's mine set aside as it stands): a hand sent for
  * earth or stone looks for it outside the town; a miner whose plot lies in it moves to a face of the mine,
  * or waits for one. The town fills and turfs the stray stairs it left in its ground off the mine's ground, a
- * staircase at a time (only its own: the stairs its miners cut, kept in MineStairs). Out at the mine each staircase gets a timber portal with a lantern, and a
+ * staircase at a time (only its own: the stairs its miners cut, marked in MineStairs, or an older world's with a miner's plot or a
+ * face of its mine at their key; never a player's digging or a helper's stairs). Out at the mine each staircase gets a timber portal with a lantern, and a
  * path is trodden from the town's edge to it.
  */
 public final class TownDigs {
@@ -162,6 +163,7 @@ public final class TownDigs {
         if (now - LAST.getOrDefault(id, -100000L) < EVERY && now >= LAST.getOrDefault(id, -100000L)) return;
         LAST.put(id, now);
         try {
+            markOurStairs(level, v);                                     // the stairs its miners' plots are cut from: its own
             MineGround.ensure(level, v);                                 // an older world's mine: its ground set aside as it stands
             int laid = seal(level, v, FILL_A_LOOK);
             hollows(level, v, Math.max(16, FILL_A_LOOK * 2 - laid));
@@ -176,7 +178,32 @@ public final class TownDigs {
     static boolean ours(ServerLevel level, UUID village, BlockPos heart, long key, BlockPos head) {
         UUID by = MineStairs.owner(level, key);
         if (by != null) return by.equals(village);
-        return inPlan(village, heart, head, 0);
+        return cutByOurMiner(village, key);
+    }
+
+    /**
+     * An unmarked staircase (an older world's) is the town's only on positive evidence that a miner of the town cut it:
+     * its key is the middle of a plot one of the town's folk holds now, or of a face of the town's mine. Otherwise
+     * (a player's own digging, a player's helper's stairs, a way out, kept footholds) it is never the town's to fill.
+     */
+    static boolean cutByOurMiner(UUID village, long key) {
+        if (MineStairs.kindOf(key) != MineStairs.Kind.MAIN) return false;
+        int x = BlockPos.getX(key), z = BlockPos.getZ(key);
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            WorkZone w = a.workZone();
+            if (w != null && w.center().getX() == x && w.center().getZ() == z) return true;
+        }
+        BlockPos face = TownMine.faceCentre(village, new BlockPos(x, 0, z));
+        return face != null && face.getX() == x && face.getZ() == z;
+    }
+
+    /** Each plot the town's folk hold now: the stairs cut from its middle marked as the town's (the evidence is kept,
+     *  so the stairs stay the town's after the plot has moved on). */
+    static void markOurStairs(ServerLevel level, Villages.Village v) {
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            WorkZone w = a.workZone();
+            if (w != null) MineStairs.ownIfUnmarked(level, MineStairs.plotKey(w.center()), v.id());
+        }
     }
 
     /**

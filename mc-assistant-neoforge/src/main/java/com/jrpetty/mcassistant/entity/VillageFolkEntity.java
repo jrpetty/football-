@@ -4318,6 +4318,7 @@ public class VillageFolkEntity extends AssistantEntity {
         boolean inTown = TownDigs.plotInTown(this);
         if (villageCentre != null && level() instanceof net.minecraft.server.level.ServerLevel mineLevel
                 && (inTown || TownMine.underTheTown(TownMine.builtGround(village, villageCentre, level().getGameTime()), zone.center(), zone.radius() + 2))) {
+            MineStairs.ownIfUnmarked(mineLevel, MineStairs.plotKey(zone.center()), village);   // [mine7] the stairs it cut there: the town's
             BlockPos face = TownMine.faceFor(mineLevel, this, villageCentre, this::diggable);
             if (face != null) {
                 assignPlot(WorkZone.around(face, radiusFor(StationTask.MINE), zone.depth()), patchNameFor(StationTask.MINE));

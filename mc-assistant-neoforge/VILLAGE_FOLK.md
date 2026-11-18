@@ -13786,7 +13786,9 @@ What a town does now (entity/TownDigs, marked `[mine7]`):
   top turfed, the fence, sign and lantern round the head taken up; never while a player or a folk is anywhere sixteen
   blocks round the stairs, a beast in them, or a miner still works a plot round them ("the old mine stairs at x, z were
   filled in and turfed over"). Only its own: MineStairs now keeps which village's folk cut each staircase (saved with
-  the world); an older world's unmarked stairs count as the town's only inside its plan. A player's dig, a natural cave,
+  the world); an older world's unmarked stairs count as the town's only on positive evidence that a miner of the town cut them
+  (their key is the middle of a plot one of its folk holds, or of a face of its mine; marked the town's as soon as that is
+  seen, so the mark outlives the plot): a player's digging or a player's helper's stairs never. A natural cave,
   another town's stairs and the mine's own stairs are never filled. Then the pits round each sealed staircase (the
   galleries and terraces a miner cut from the same plot, open to the sky, nine blocks round the head) are filled up to
   the ground at the head and turfed (no deeper than six from the top: below that bridged over), only over the ground the

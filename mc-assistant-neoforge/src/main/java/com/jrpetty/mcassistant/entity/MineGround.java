@@ -86,7 +86,7 @@ public final class MineGround {
             for (long k : MineStairs.keys(level)) {
                 BlockPos head = MineStairs.head(level, k);
                 UUID by = MineStairs.owner(level, k);
-                if (head == null || by != null && !by.equals(village)) continue;
+                if (head == null || (by == null ? !TownDigs.cutByOurMiner(village, k) : !by.equals(village))) continue;
                 int[] c = TownMine.faceIndex(site, head);
                 if (c != null) faces.add(key(c[0], c[1]));
             }

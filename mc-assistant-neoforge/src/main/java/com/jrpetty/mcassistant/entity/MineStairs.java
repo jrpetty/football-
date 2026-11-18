@@ -231,6 +231,14 @@ public final class MineStairs extends SavedData {
         m.setDirty();
     }
 
+    /** [mine7] Marked as cut by this village's folk, if there are stairs at this key and nobody's mark on them yet. */
+    public static void ownIfUnmarked(ServerLevel level, long key, @Nullable UUID village) {
+        MineStairs m = of(level);
+        if (village == null || !m.stairs.containsKey(key) || m.owners.containsKey(key)) return;
+        m.owners.put(key, village);
+        m.setDirty();
+    }
+
     /** [mine7] The village whose folk cut this staircase, or null (not known: an older world's, or a player's helper). */
     @Nullable
     public static UUID owner(ServerLevel level, long key) {
