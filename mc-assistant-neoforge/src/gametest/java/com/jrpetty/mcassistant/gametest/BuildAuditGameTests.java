@@ -200,12 +200,11 @@ public class BuildAuditGameTests {
         BlockPos heart = Kit.surface(level, cx, cz);
         com.jrpetty.mcassistant.entity.VillageFolkEntity hand = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(hand != null, "a village");
-        BlockPos anchor = Kit.surface(level, cx, cz + 150);
-        Kit.hold(level, anchor.getX(), anchor.getZ(), 16);
-        Kit.prepare(level, anchor.getX(), anchor.getZ(), 16);
+        // (A town's wall rings its builder's home, the heart: BuildGoal.)
+        BlockPos anchor = hand.getHome() != null ? hand.getHome() : heart;
         // Cobble paving over the west half of the ground the ring runs over.
         for (int dx = -8; dx <= 0; dx++) for (int dz = -8; dz <= 8; dz++) {
-            level.setBlock(anchor.offset(dx, -1, dz), Blocks.COBBLESTONE.defaultBlockState(), 2 | 16);
+            level.setBlock(Kit.surface(level, anchor.getX() + dx, anchor.getZ() + dz).below(), Blocks.COBBLESTONE.defaultBlockState(), 2 | 16);
         }
         List<BuildGoal.Placement> plan = BuildGoal.plan("fortify", anchor, Direction.NORTH, 0);
         Map<Long, Integer> colH = new HashMap<>();                  // each column's blocks as drawn
@@ -220,7 +219,7 @@ public class BuildAuditGameTests {
             for (long k : cols) {
                 int x = BlockPos.getX(k), z = BlockPos.getZ(k);
                 int stack = 0;
-                for (int y = anchor.getY() - 1; y < anchor.getY() + 20; y++) {
+                for (int y = anchor.getY() - 4; y < anchor.getY() + 20; y++) {
                     BlockState st = level.getBlockState(new BlockPos(x, y, z));
                     if (holds(st) && !Terraform.earth(st)) stack++;
                 }
