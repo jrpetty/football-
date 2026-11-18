@@ -419,4 +419,41 @@ public class MineWorksGameTests {
             return true;
         });
     }
+
+    /** On low ground (a flat world's hill, as in a village test) the works still plan a level and sink their shaft. */
+    @GameTest(template = "empty", timeoutTicks = 5000, batch = "mw07_low_ground")
+    public static void mw07_low_ground(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<VillageFolkEntity> miners = MineSiteGameTests.town(level, 3826000, 190, 1, StationTask.MINE);
+        VillageFolkEntity m = miners.get(0);
+        UUID v = m.ownerId();
+        BlockPos heart = m.villageCentre();
+        MineWorks.forgetForTests(v);
+        int sx = heart.getX() + 124, sz = heart.getZ();
+        Kit.hill(level, sx, sz, 14, 12, 77L);
+        Ledger.note(v, "mine.site", sx + "," + sz);
+        MineGround.reserve(level, v, heart, new BlockPos(sx, 0, sz), false);
+        MineDemand.stockForTests(v, plenty());
+        WorksGoal.resetCountsForTests();
+        Rig r = new Rig(level, miners, v, heart, sx, sz);
+        kit(m, Items.IRON_PICKAXE);
+        BlockPos head = Kit.surface(level, sx, sz);
+        m.assignPlot(WorkZone.around(head, 8, 16), "Mine");
+        m.teleportTo(sx - 4.5, Kit.surface(level, sx - 5, sz - 2).getY(), sz - 1.5);
+        level.setDayTime(1000);
+        List<String> plan = MineWorks.planForTests(level, v);
+        final int[] tick = { 0 };
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            keepAtIt(r, m);
+            int[] c = WorksGoal.countsForTests();
+            if (c[0] < 40 && tick[0] < 4500) return false;
+            Kit.log("[VT] mw07 a hill at Y" + head.getY() + ": levels " + MineWorks.planForTests(level, v) + " (at first " + plan + "); broken " + c[0] + " in " + tick[0]
+                + " ticks | " + String.join(" | ", MineWorks.report(level, v)) + " || " + String.join(" | ", MineWorks.eventsForTests()));
+            helper.assertTrue(!plan.isEmpty(), "a level planned on low ground");
+            helper.assertTrue(c[0] >= 40, "the shaft sunk into the hill: " + c[0] + " blocks");
+            done(helper);
+            return true;
+        });
+    }
 }

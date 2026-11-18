@@ -3318,7 +3318,7 @@ public class VillageGameTests {
                 // stores hold cobblestone, so what is in the chests says nothing about it.
                 int dug = 0;
                 for (AssistantEntity a : crew) dug += a.deedCount(AssistantEntity.Deed.BLOCKS_MINED);
-                Kit.log("  stone in chests + built: " + stoneBanked + "; blocks dug by the crew: " + dug);
+                Kit.log("  stone in chests + built: " + stoneBanked + "; blocks dug by the crew: " + dug + " | the works: " + String.join(" | ", com.jrpetty.mcassistant.entity.MineWorks.eventsForTests()));   // [mine8]
                 Kit.log("  " + minersReport(crew));
                 dugFirst[0] = dug;
                 ex.that(dug >= 20, "the miners have dug (" + dug + " blocks)");
