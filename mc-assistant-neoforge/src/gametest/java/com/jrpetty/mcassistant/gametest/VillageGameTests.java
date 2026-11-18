@@ -2815,9 +2815,12 @@ public class VillageGameTests {
     /** t41 after the pen: sand for glass, a guard's potion, and a cake. */
     private static void rest41(GameTestHelper helper, ServerLevel level, java.util.UUID village, Villages.Village v, BlockPos heart,
                                java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock, VillageFolkEntity rancher) {
-        // A pond with a sandy bed, six blocks out.
+        // A pond with a sandy bed, out past the town's ground ([mine7] the town never digs inside it: its whole plan and a margin).
+        int pondOut = com.jrpetty.mcassistant.entity.TownDigs.PLAN_REACH + com.jrpetty.mcassistant.entity.TownDigs.MARGIN + 3;
+        Kit.hold(level, heart.getX(), heart.getZ(), pondOut + 16);
+        Kit.prepare(level, heart.getX() + pondOut, heart.getZ(), 8);
         for (int dz = -1; dz <= 1; dz++) {
-            BlockPos top = Kit.surface(level, heart.getX() + 6, heart.getZ() + dz);
+            BlockPos top = Kit.surface(level, heart.getX() + pondOut, heart.getZ() + dz);
             level.setBlock(top.below(2), Blocks.SAND.defaultBlockState(), 3);
             level.setBlock(top.below(), Blocks.WATER.defaultBlockState(), 3);
         }
@@ -3233,6 +3236,9 @@ public class VillageGameTests {
         final int cx = 3500, cz = 3500;
         Kit.hold(level, cx, cz, 140);
         Kit.generousTerrain(level, cx, cz);
+        // [mine7] A hill of stone out past the town's ground (its whole plan and a margin, where no village dig is made), for the
+        // town's mine: the generous ring's hills are inside it now, and under the flat world's turf there is no rock to mine.
+        Kit.hill(level, cx + com.jrpetty.mcassistant.entity.TownDigs.PLAN_REACH + com.jrpetty.mcassistant.entity.TownDigs.MARGIN + 27, cz, 14, 12, 77);
         final BlockPos heart = Kit.surface(level, cx, cz);
         for (int i = 0; i < 12; i++) {
             VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);

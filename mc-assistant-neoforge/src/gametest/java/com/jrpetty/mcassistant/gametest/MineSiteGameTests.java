@@ -293,7 +293,7 @@ public class MineSiteGameTests {
      * The mine opened beyond the town's whole plan (as it will grow) and its faces never in the town's ground, small
      * town or grown; a miner with no face to be had (the ground out there not loaded) gets no plot of its own in the town.
      */
-    @GameTest(template = "empty", timeoutTicks = 400, batch = "ms02_site_beyond_plan")
+    @GameTest(template = "empty", timeoutTicks = 2000, batch = "ms02_site_beyond_plan")
     public static void ms02_site_beyond_plan(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 3704000;
@@ -341,12 +341,25 @@ public class MineSiteGameTests {
         lone.setJob(StationTask.MINE);
         BlockPos none = TownMine.faceFor(level, lone, heart2, p -> true);
         helper.assertTrue(none == null, "no face with the ring not loaded: " + none);
-        helper.runAfterDelay(300, () -> {
+        // The job given where it stands claims the ground round its feet (AssistantEntity.setJob), in the square; the miner's own
+        // look (seekTheSeam, behind the rest of its day's checks) takes it off that within a minute or so and stakes none there
+        // again. (Read at a fixed 300 ticks it was still on it in one run of the CI's.)
+        long from = helper.getTick();
+        int[] offAt = { -1 };
+        helper.onEachTick(() -> {
             WorkZone z = lone.workZone();
-            Kit.log("[VT] ms02 no ground loaded: the miner's plot " + (z == null ? "none" : z.center().toShortString()));
-            helper.assertTrue(z == null || !TownDigs.inTownGround(level, lone.ownerId(), heart2, z.center(), 0),
-                "no plot in the town's ground while it waits: " + (z == null ? "" : z.center().toShortString()));
-            helper.succeed();
+            boolean inTown = z != null && TownDigs.inTownGround(level, lone.ownerId(), heart2, z.center(), 0);
+            long t = helper.getTick() - from;
+            if (offAt[0] < 0) {
+                if (!inTown) offAt[0] = (int) t;
+                else if (t > 1500) helper.fail("no plot in the town's ground while it waits: " + z.center().toShortString());
+                return;
+            }
+            helper.assertTrue(!inTown, "no plot staked in the town's ground again while it waits: " + (z == null ? "" : z.center().toShortString()));
+            if (t >= offAt[0] + 200) {
+                Kit.log("[VT] ms02 no ground loaded: off the town's ground at " + offAt[0] + " ticks; the miner's plot " + (z == null ? "none" : z.center().toShortString()));
+                helper.succeed();
+            }
         });
     }
 

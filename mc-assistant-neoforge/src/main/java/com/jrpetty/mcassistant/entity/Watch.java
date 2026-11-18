@@ -105,6 +105,29 @@ public final class Watch {
         return null;
     }
 
+    /** [health320] The floor in a gateway: as floorAt, but the wall's own arch over the avenue (BuildGoal's fortify: a
+     *  lintel of masonry four up and its coping slab five up) is no roof; without this the gate was hung on top of the
+     *  arch, six blocks up in the air, its doors over nothing. */
+    @Nullable
+    static BlockPos gateFloorAt(ServerLevel level, int x, int z, int aroundY) {
+        for (int y = aroundY - 10; y <= aroundY + 10; y++) {
+            BlockPos p = new BlockPos(x, y, z);
+            BlockState under = level.getBlockState(p.below());
+            if (!under.isSolid() || under.getBlock() instanceof DoorBlock) continue;
+            if (!roomy(level.getBlockState(p)) || !roomy(level.getBlockState(p.above()))) continue;
+            BlockPos over = p;
+            BlockState lintel = level.getBlockState(p.above(4));
+            if (masonry(lintel) && roomy(level.getBlockState(p.above(2))) && roomy(level.getBlockState(p.above(3)))) {
+                over = p.above(3);
+                BlockState coping = level.getBlockState(p.above(5));
+                if (coping.getBlock() instanceof net.minecraft.world.level.block.SlabBlock || masonry(coping)) over = p.above(4);
+            }
+            if (!open(level, over, aroundY + 14)) continue;
+            return p;
+        }
+        return null;
+    }
+
     /** Nothing over this spot but what a gate or a post puts there (a door, a ladder) and a tree's
      *  leaves: it is out on the ground, not under it. */
     private static boolean open(ServerLevel level, BlockPos p, int upTo) {
@@ -287,7 +310,7 @@ public final class Watch {
             if (why == null) {
                 for (int along = -2; along <= 2 && why == null; along++) {
                     BlockPos c = cell(a, side, along);
-                    BlockPos f = floorAt(level, c.getX(), c.getZ(), a.getY());
+                    BlockPos f = gateFloorAt(level, c.getX(), c.getZ(), a.getY());
                     if (f == null) why = "no floor at " + along;
                     else for (int h = 0; h <= 2 && why == null; h++) {
                         BlockState st = level.getBlockState(f.above(h));
@@ -349,7 +372,7 @@ public final class Watch {
         List<BlockPos> floors = new ArrayList<>();
         for (int along = -2; along <= 2; along++) {
             BlockPos c = cell(a, side, along);
-            BlockPos f = floorAt(level, c.getX(), c.getZ(), a.getY());
+            BlockPos f = gateFloorAt(level, c.getX(), c.getZ(), a.getY());
             if (f == null) return null;
             floors.add(f);
         }
