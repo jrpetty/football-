@@ -325,6 +325,8 @@ public final class TownJobs {
                 || ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) continue;
             if (RESTING.containsKey(f.getUUID())) continue;              // had its turn: somebody else's now
             if (PostStints.busy(f)) continue;                            // [roles-e] at its post's work: the wagon, the town's plans
+            // [city9] The streets' hands, past the eighth, are never a post's holder (its stints would wait on the streets).
+            if (streetsWork(works) && (f == Wheelwrights.holder(v.id()) || f == TownPlanner.holder(v.id()))) continue;
             if (over != null && !spare(f, over)) continue;               // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();
             // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a

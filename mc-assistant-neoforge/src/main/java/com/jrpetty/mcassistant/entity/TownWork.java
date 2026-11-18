@@ -66,6 +66,7 @@ public final class TownWork {
     public static void paving(ServerLevel level, Villages.Village v) {
         long now = level.getGameTime();
         if (now - PAVED.getOrDefault(v.id(), -100000L) < PAVE_EVERY && now >= PAVED.getOrDefault(v.id(), 0L)) return;
+        if (Villages.headcount(v.id()) < TownJobs.SETTLED) return;          // a young town: its trades first, its streets on the full round
         streets(level, v, now);
     }
 
