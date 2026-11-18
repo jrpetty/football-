@@ -45,6 +45,9 @@ public final class FolkPortrait {
             boolean named = e.isCustomNameVisible();
             Entity aimed = mc.getEntityRenderDispatcher().crosshairPickEntity;
             e.setCustomNameVisible(false);
+            // Asleep in its bed it would lie across the frame: stood up for its likeness, laid back down after.
+            net.minecraft.world.entity.Pose pose = e.getPose();
+            if (pose == net.minecraft.world.entity.Pose.SLEEPING) e.setPose(net.minecraft.world.entity.Pose.STANDING);
             if (aimed == e) mc.getEntityRenderDispatcher().crosshairPickEntity = null;
             g.enableScissor(x + 1, y + 1, x + w - 1, y + h - 1);
             if (bust) {
@@ -60,6 +63,7 @@ public final class FolkPortrait {
             }
             g.disableScissor();
             e.setCustomNameVisible(named);
+            if (pose == net.minecraft.world.entity.Pose.SLEEPING) e.setPose(pose);
             if (aimed == e) mc.getEntityRenderDispatcher().crosshairPickEntity = aimed;
         } else {
             g.fill(x + 1, y + h - 5, x + w - 1, y + h - 1, jobColour);
