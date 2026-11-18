@@ -665,6 +665,13 @@ public class BuildGoal extends Goal {
                 }
             }
         }
+        // [build5] And the hillside cut back from its walls, a step out for a step up (SiteWork.cutBack): the bank stood
+        // against the uphill wall of every building set into a slope. Not a park's (its own ground work, below).
+        if (!com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(structure)) {
+            for (BlockPos c : com.jrpetty.mcassistant.entity.SiteWork.cutBack(assistant.level(), base, facing, g[0], g[1])) {
+                if (taken.add(c)) plan.add(new Placement(c, Part.CLEAR, Blueprints.Style.SOIL, Blueprints.Way.UP));
+            }
+        }
         // [districts] A park's lot is cut and filled to one level, its edges eased, before a stone of it is laid
         // (entity/ParkGround): a lawn on a hillside is no lawn, and its fountain's water ran out under it.
         if (com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(structure)) {
