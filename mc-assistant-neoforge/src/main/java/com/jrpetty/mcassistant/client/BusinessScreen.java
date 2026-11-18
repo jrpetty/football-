@@ -95,7 +95,7 @@ public class BusinessScreen extends Screen {
         if (list()) {
             UiStyle.title(g, font, UiStyle.clip(font, "Businesses of " + data.getString("town"), inner - 50), x, top + 6);
             button(g, "Close", left + w - PAD - 40, top + 6, 40, mx, my, this::onClose);   // [ui] a way out besides Esc
-            small(g, "Click a business for its books. Every coin is counted: " + data.getString("census"), x, top + 18, UiStyle.TEXT_MUTED, inner);
+            small(g, "Click a business for its books. Every coin is counted: " + data.getString("census"), x, top + 20, UiStyle.TEXT_MUTED, inner - 48);
             drawList(g, x, top + HEAD, inner, mx, my);
         } else {
             String title = data.getString("name") + (data.getBoolean("open") ? "" : " (closed)");

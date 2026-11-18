@@ -2113,7 +2113,7 @@ public class CityScreen extends Screen {
             { "Mortgaged", mortgages.size() + (bank.getBoolean("open") ? "" : " (no bank)") } };
         // [ui] As many columns as the widest figure lets fit (five on a wide page), so none runs into the next.
         int widest = 0;
-        for (String[] f : figures) widest = Math.max(widest, (int) (font.width(f[0] + ": " + f[1]) * 0.75) + 8);
+        for (String[] f : figures) widest = Math.max(widest, (int) (font.width(f[0] + ": " + f[1]) * 0.75) + 4);
         int perRow = Math.max(2, Math.min(5, cw / Math.max(1, widest)));
         int colW = cw / perRow;
         for (int i = 0; i < figures.length; i++) {
