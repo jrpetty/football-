@@ -522,7 +522,8 @@ class FrozenWatch:
     STALL_DAYS = int(os.environ.get("HUNDRED_STALL_DAYS", "25"))
     LOADED_DAYS = 2
 
-    def __init__(self, first):
+    def __init__(self, first, held=True):
+        self.held = held
         self.same, self.unloaded, self.last_sig = 0, 0, None
         self.best_built, self.best_folk, self.best_day = -1, -1, first
 
@@ -539,7 +540,7 @@ class FrozenWatch:
             self.best_built = max(self.best_built, m.get("buildings", 0))
             self.best_folk = max(self.best_folk, folk)
             self.best_day = day
-        self.unloaded = self.unloaded + 1 if m.get("loaded") == 0 and folk > 0 else 0
+        self.unloaded = self.unloaded + 1 if self.held and m.get("loaded") == 0 and folk > 0 else 0
         if self.same >= self.SAME_DAYS:
             return "the same numbers %d days running (%s)" % (self.same + 1, sig)
         if self.unloaded >= self.LOADED_DAYS:
@@ -548,6 +549,11 @@ class FrozenWatch:
             return "no new building and no new folk for %d days (best %d buildings, %d folk, on day %d)" % (
                 day - self.best_day, self.best_built, self.best_folk, self.best_day)
         return None
+
+
+# [long6] HUNDRED_HOLD=0: the heart is not force-loaded, and the town has to keep itself going with nobody near (its
+# own chunk keeping while it is young, then asleep with a day of its own in full every few days).
+HOLD = os.environ.get("HUNDRED_HOLD", "1") != "0"
 
 
 def heart_of(r, x, z):
@@ -602,7 +608,10 @@ def hundred(r, first, last, minutes, biome="plains"):
         if (hx, hz) != (x, z):
             say("the heart is at %d, %d, %d blocks from the spot" % (hx, hz, int(((hx - x) ** 2 + (hz - z) ** 2) ** 0.5)))
         x, z = hx, hz
-        say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x - 48, z - 48, x + 48, z + 48))))
+        if HOLD:
+            say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x - 48, z - 48, x + 48, z + 48))))
+        else:
+            say("nobody near and nothing held: the town keeps itself (HUNDRED_HOLD=0)")
         with open(spotfile, "w") as fh:
             fh.write("%d %d" % (x, z))
     else:
@@ -612,10 +621,11 @@ def hundred(r, first, last, minutes, biome="plains"):
         with open(spotfile) as fh:
             x, z = (int(v) for v in fh.read().split())
         say("the hundred days, on from day %d: the village at %d, %d (game time %s)" % (first, x, z, r.cmd("time query gametime").strip()))
-        say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x - 48, z - 48, x + 48, z + 48))))
+        if HOLD:
+            say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x - 48, z - 48, x + 48, z + 48))))
     began = time.time()
     last_age, done = None, first - 1
-    watch = FrozenWatch(first)
+    watch = FrozenWatch(first, HOLD)
     for day in range(first, last + 1):
         last_age = epic_day(r, x, z, day, began, last_age, "hundred-metrics.jsonl")
         done = day
@@ -818,7 +828,7 @@ def main():
             first = int(sys.argv[2]) if len(sys.argv) > 2 else 1
             last = int(sys.argv[3]) if len(sys.argv) > 3 else 100
             minutes = int(sys.argv[4]) if len(sys.argv) > 4 else 300
-            hundred(r, first, last, minutes)
+            hundred(r, first, last, minutes, sys.argv[5] if len(sys.argv) > 5 else "plains")   # [long6] a biome
         elif scenario == "epic":
             days = int(sys.argv[2]) if len(sys.argv) > 2 else 60
             minutes = int(sys.argv[3]) if len(sys.argv) > 3 else 300

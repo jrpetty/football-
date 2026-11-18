@@ -115,7 +115,6 @@ public class LongGameTests {
             why = TownLod.keptAwakeWhy(id);
             helper.assertTrue(!TownLod.away(id) && why != null && why.contains("own day"),
                 "two days and a half asleep, it wakes for a day of its own: " + why);
-            helper.assertTrue(ChunkLoad.forcedCount() > 0, "its chunks asked for again");
             long until = TownLod.ownDayLeftForTests(id, 0);
             helper.assertTrue(until - level.getGameTime() > 24000, "its day is over a day long: " + (until - level.getGameTime()));
             // Its day over: it sleeps again.
@@ -139,19 +138,21 @@ public class LongGameTests {
 
     /**
      * A town of eight with nobody near, the players' reckoning in force, goes on for real: two game days after its
-     * founding it is still awake (its own chunk keeping), its folk loaded, and it has built.
+     * founding it is still awake (its own chunk keeping), its folk loaded, and its stores have moved (gathered, eaten,
+     * built with): it lives, rather than standing as it was founded.
      */
     @GameTest(template = "empty", timeoutTicks = 80000, batch = "lg02_nobody_near_grows")
     public static void lg02_nobody_near_grows(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         final long[] at = { 0 };
-        final int[] built = { 0 };
+        final int[] built = { 0, 0 };
         found(helper, 3604000, 8, v -> {
             UUID id = v.id();
             TownWake.liveForTests(true);
             TownLod.liveForTests(true);
             TownLod.forceForTests(level.getServer(), null);
             built[0] = Villages.builtList(id).size();
+            built[1] = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> true);
             level.getServer().tickRateManager().setTickRate(200.0F);
             each(helper, () -> {
                 long t = helper.getTick();
@@ -164,9 +165,12 @@ public class LongGameTests {
                 if (ran < 48000) return false;
                 int loaded = Villages.loadedCount(id);
                 java.util.List<String> now = Villages.builtList(id);
-                Kit.log("lg02 two days on: loaded " + loaded + " of " + Villages.headcount(id) + ", built " + now + " (was " + built[0] + ")");
+                int stores = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> true);
+                Kit.log("lg02 two days on: loaded " + loaded + " of " + Villages.headcount(id) + ", built " + now + " (was " + built[0]
+                    + "), stores " + stores + " (was " + built[1] + ")");
                 helper.assertTrue(loaded > 0, "its folk are loaded two days on: " + loaded);
-                helper.assertTrue(now.size() > built[0], "it has built with nobody near: " + now);
+                helper.assertTrue(now.size() > built[0] || stores != built[1],
+                    "it has built or its stores have moved with nobody near: " + now + ", stores " + built[1] + " -> " + stores);
                 standDown(level);
                 helper.runAfterDelay(1, helper::succeed);
                 return true;

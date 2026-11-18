@@ -605,9 +605,18 @@ public final class VillageSpawner {
                     BlockPos g = groundAt(level, x, z);
                     if (g == null) continue;
                     int s = siteScore(level, g) - r * 10;          // the nearer the better, all else equal
+                    // [long6] Up a hill or down a hollow costs too: a party set down on the plains camped on a knoll 36
+                    // blocks off and some thirty above the plain round it, read its land as mountains, and staked its
+                    // fields in the valley below.
+                    s -= 40 * Math.max(0, Math.abs(g.getY() - at.getY()) - 4);
                     if (s > best) { best = s; chosen = g; }
                 }
             }
+        }
+        if (chosen != at) {                                       // [long6] the move, and why, in the log
+            com.mojang.logging.LogUtils.getLogger().info(
+                "[MCA-FOUND] the party camps at {}, {}, {} (set down at {}, {}, {}): better ground ({} against {} there)",
+                chosen.getX(), chosen.getY(), chosen.getZ(), at.getX(), at.getY(), at.getZ(), best, here);
         }
         return chosen;
     }
