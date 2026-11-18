@@ -13857,8 +13857,12 @@ town's square gets its greens on the next rounds (only its open paving is lifted
 
 **Measured** (CityLookGameTests ct01: a town of forty founded on a meadow cut by a channel of water three wide down the
 first street east of the square, and one on rolling hills, grown three days with a building put up through the plan
-every minute and a quarter, its own hands laying its streets, gardens and greens; the same test on the build before):
-see the numbers below.
+every minute and a quarter, its own hands laying its streets, gardens and greens; the same test on the build before).
+Before: by the water 7 of 39 buildings stood on lots across the channel from the town (the smeltery, the workshop, the
+smithy, the inn and three houses), no block of homes turned, no green on the square. After: 0 of 36 across the water
+(the town grew on its own side), 8 of 20 homes turned to their cross street (8 of 24 on the hills), 2 of the square's
+greens planted in the three days, more plots closed in (fence, wall: 3 and 1 by the water, 5 and 2 on the hills, against
+3 and 0, 2 and 0). Unchanged: no works in the heart, no buildings off the streets on the hills.
 
 Tests: CityLookGameTests ct01 (the audit, not required), ct02 (a lot over the water is not on the streets; over a bridge
 it is), ct03 (the square's greens laid out of the stores, none in the courtyard and no spruce; the low leaves trimmed,
