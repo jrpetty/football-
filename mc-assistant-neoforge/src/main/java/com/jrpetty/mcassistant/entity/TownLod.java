@@ -524,10 +524,28 @@ public final class TownLod {
             if (!kind.isEmpty() && what.test(kind)) n += have(t, key);
         }
         for (Map.Entry<String, Integer> e : t.aside.entrySet()) {
-            ItemStack kind = kind(e.getKey());
+            ItemStack kind = asideKind(e.getKey());
             if (!kind.isEmpty() && what.test(kind)) n += e.getValue();
         }
         return n;
+    }
+
+    private static final Map<String, ItemStack> ASIDE_KINDS = new ConcurrentHashMap<>();
+
+    /** [health320] One of the goods set aside (worn, named, enchanted: storesAside), as the asking sees it: with components of
+     *  its own. Asked through a plain stand-in, "plain goods only" counted them too: a sleeping town of the long test read
+     *  37 more tools and the like than it had awake the moment it slept, and "lost" them when it woke (they never left its
+     *  chests). */
+    static ItemStack asideKind(String key) {
+        return ASIDE_KINDS.computeIfAbsent(key, k -> {
+            ItemStack plain = kind(k);
+            if (plain.isEmpty()) return ItemStack.EMPTY;
+            ItemStack c = plain.copy();
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            tag.putBoolean("mca_set_aside", true);
+            c.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+            return c;
+        });
     }
 
     /** Goods put into a sleeping town's stores (a shipment come in, a gift): kept for its waking. Nothing is left over. */
@@ -543,7 +561,14 @@ public final class TownLod {
     public static boolean take(UUID village, Predicate<ItemStack> what, int n) {
         Town t = TOWNS.get(village);
         if (t == null || n <= 0) return n <= 0;
-        if (stock(village, what) < n) return false;
+        // [health320] Only what is kept as it stood and came and went (the goods set aside stay in the chests as they are):
+        // counted with them, a take "succeeded" with less than it asked for.
+        int have = 0;
+        for (String key : keys(t)) {
+            ItemStack kind = kind(key);
+            if (!kind.isEmpty() && what.test(kind)) have += have(t, key);
+        }
+        if (have < n) return false;
         int left = n;
         for (String key : keys(t)) {
             if (left <= 0) break;

@@ -1195,16 +1195,12 @@ public class WeaveGameTests {
         long day = QuestRun.day(level);
         for (Item k : six) Lodge.broughtUp(id, new ItemStack(k), "Ada", "the big cave east", day);
         Lodge.broughtUp(id, new ItemStack(Items.AMETHYST_SHARD), "Bram", "the crystal cave", day);
-        // The team at home hangs what it can (the lodge's own work, its own tests'); the rest of the six put up as it would.
+        // The six put up on the wall as the team would (its hanging is the lodge's own tests'); then the team at home looks the
+        // wall over and finds no room for the seventh. (The team hangs the rarest the stores can spare one of, which here is
+        // the amethyst, the only kind they hold two of: hung first, it took the raw gold's place and the test lost its point.)
         VillageFolkEntity d = folk.get(0);
         d.moveTo(hall.getX() + 0.5, hall.getY(), hall.getZ() + 0.5, 0.0F, 0.0F);
-        for (int i = 0; i < 8; i++) Lodge.tick(level, v, day);
         List<Item> up = new ArrayList<>();
-        for (int[] c : TROPHY_WALL) {
-            ItemFrame f = trophyFrame(level, b, c);
-            if (f != null && !f.getItem().isEmpty()) up.add(f.getItem().getItem());
-        }
-        int byTheTeam = up.size();
         for (int[] c : TROPHY_WALL) {
             ItemFrame f = trophyFrame(level, b, c);
             if (f != null && !f.getItem().isEmpty()) continue;
@@ -1219,6 +1215,12 @@ public class WeaveGameTests {
             f.setItem(new ItemStack(next), false);
             up.add(next);
         }
+        for (int i = 0; i < 8; i++) Lodge.tick(level, v, day);
+        int byTheTeam = 0;
+        for (int[] c : TROPHY_WALL) {
+            ItemFrame f = trophyFrame(level, b, c);
+            if (f != null && !f.getItem().isEmpty() && !up.contains(f.getItem().getItem())) byTheTeam++;
+        }
         ItemStack shard = new ItemStack(Items.AMETHYST_SHARD);
         boolean lot = Weave.lotForTests(level, id, shard), diamond = Weave.lotForTests(level, id, new ItemStack(Items.DIAMOND));
         String from = Weave.provenanceForTests(level, id, shard);
@@ -1228,6 +1230,7 @@ public class WeaveGameTests {
             + diamond + "; the town's lots " + lots + "; the wall as the weave reads it " + Weave.trophyWallForTests(level, id) + "; noted " + Lodge.trophies(id).keySet()
             + "; the lodge at " + b.anchor().toShortString() + " facing " + b.facing());
         helper.assertTrue(up.size() == 6, "the trophy wall full: " + up);
+        helper.assertTrue(byTheTeam == 0, "and the team finds no room on it: " + byTheTeam);
         helper.assertTrue(lot && !diamond, "the find the full wall has no room for goes to auction; the wall's own do not, by the weave");
         helper.assertTrue(from != null && from.contains("Bram") && from.contains("the crystal cave") && from.contains("no room"), "and the auction says whose find it was: " + from);
         helper.assertTrue(lots.stream().anyMatch(l -> l.contains("amethyst")), "under the hammer: " + lots);

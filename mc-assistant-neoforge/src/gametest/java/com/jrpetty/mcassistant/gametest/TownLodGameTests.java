@@ -315,6 +315,18 @@ public class TownLodGameTests {
         return m;
     }
 
+    /** The craft goods item by item, through the stores' own count (asleep: what the town keeps). */
+    private static Map<String, Integer> craftItems(ServerLevel level, UUID id) {
+        Map<String, Integer> m = new java.util.TreeMap<>();
+        for (net.minecraft.world.item.Item it : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+            ItemStack one = new ItemStack(it);
+            if (one.isEmpty() || !"craft".equals(kindOf(one))) continue;
+            int n = Market.stock(level, id, s -> s.is(it) && s.isComponentsPatchEmpty());
+            if (n != 0) m.put(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).getPath(), n);
+        }
+        return m;
+    }
+
     private static final java.util.List<String> KINDS = kinds();
 
     private static java.util.List<String> kinds() {
@@ -411,13 +423,16 @@ public class TownLodGameTests {
                         if (ran < span) return false;
                         pic[1] = picture(level, id);
                         Kit.log("lod02 rates learned: " + TownLod.ratesFor(id));
+                        Kit.log("lod02 craft awake before sleep: " + craftItems(level, id));
                         TownLod.forceForTests(level.getServer(), TownLod.Lod.AWAY);
                         asleep.add(picture(level, id));
+                        Kit.log("lod02 craft kept at sleep: " + craftItems(level, id) + "; " + asleep.get(asleep.size() - 1));
                         phase[0] = 2;
                         at[0] = t;
                     }
                     case 2 -> {                                 // asleep, by its step
                         if (ran < span) return false;
+                        Kit.log("lod02 craft kept at waking: " + craftItems(level, id));
                         TownLod.forceForTests(level.getServer(), TownLod.Lod.FULL);
                         phase[0] = 3;
                         at[0] = t;
@@ -428,6 +443,7 @@ public class TownLodGameTests {
                             return false;
                         }
                         pic[2] = picture(level, id);
+                        Kit.log("lod02 craft in the chests awake: " + craftItems(level, id));
                         level.getServer().tickRateManager().setTickRate(20.0F);
                         compare(helper, pic, trend(watched), noise(watched), trend(asleep), asleep.get(asleep.size() - 1));
                         TownLod.forceForTests(level.getServer(), null);

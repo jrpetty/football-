@@ -545,7 +545,10 @@ public class RoadsRanksGameTests {
 
     // ============================================================ re06: the town planner
 
-    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "re06_planner")
+    // [health320] The morning assembly comes first (the hour set is in it), and it reads the town's news line by line, up to
+    // three hundred ticks a long line: with the labour market's pay notices and the scholars' studies it ran to two thousand
+    // ticks in the CI's, and the planner had not reached the hall's table by 2400.
+    @GameTest(template = EMPTY, timeoutTicks = 4800, batch = "re06_planner")
     public static void re06_planner(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 2110000;
@@ -585,7 +588,8 @@ public class RoadsRanksGameTests {
             String doing = planner[0].offWorkWhy();
             if (doing.contains("post")) atTable[0] = true;
             if (!Long.toString(morning[0]).equals(Ledger.note(id, "planner.day"))) {
-                if (helper.getTick() % 200 == 0) Kit.log("re06 @" + helper.getTick() + " " + planner[0].displayNameCap() + ": '" + doing + "'");
+                if (helper.getTick() % 200 == 0) Kit.log("re06 @" + helper.getTick() + " " + planner[0].displayNameCap() + ": '" + doing + "'"
+                    + " (the town at " + com.jrpetty.mcassistant.entity.Assemblies.stateForTests(id, level.getGameTime()) + ")");
                 return;
             }
             Kit.log("re06 set out (at its post's work seen: " + atTable[0] + "): " + history(id));
