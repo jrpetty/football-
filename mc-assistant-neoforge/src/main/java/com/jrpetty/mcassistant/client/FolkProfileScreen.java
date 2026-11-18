@@ -68,6 +68,8 @@ public class FolkProfileScreen extends Screen {
     /** The folk in its portrait: how big (a grown folk some sixty pixels tall), and how far below the frame its box
      *  reaches, so the frame holds its head and shoulders. */
     private static final int PORTRAIT_SCALE = 34, PORTRAIT_DROP = 40;
+    /** [ui] The left column's width, with the folk standing tall in it. */
+    private static final int COL_W = 92;
     /** The label column of a fact row, and the need meters' label column. */
     private static final int KEY_W = 86, NEED_LABEL_W = 52;
 
@@ -143,6 +145,14 @@ public class FolkProfileScreen extends Screen {
     private int[] needs = new int[4];
     private int mood, jobColour;
     private String moodTip = "";
+    /** [ui] Its identity (FolkIdentity, the profile's "self"): its colour, its saying, its chips; and the left column's
+     *  readings (level, experience, worth, wage). */
+    private int rgb;
+    private String saying = "";
+    private final List<String> chipTexts = new ArrayList<>();
+    private final List<Integer> chipTints = new ArrayList<>();
+    private String colLevel = "", colWorth = "", colWage = "";
+    private float colXp;
 
     private FolkProfileScreen(UUID folk, CompoundTag data, @Nullable Screen parent) {
         super(Component.literal(data.getCompound("head").getString("name")));
@@ -178,7 +188,28 @@ public class FolkProfileScreen extends Screen {
         needs = n.length == 4 ? n : new int[4];
         jobColour = Ui.job(hd.getInt("ordinal"));
         thoughtLines = List.of();
+        // [ui] Who it is, at a glance.
+        CompoundTag self = data.getCompound("self");
+        rgb = self.getInt("colour");
+        saying = self.getString("saying").isEmpty() ? "" : "\u201C" + self.getString("saying") + "\u201D";
+        chipTexts.clear();
+        chipTints.clear();
+        ListTag chips = self.getList("chips", Tag.TAG_COMPOUND);
+        for (int i = 0; i < chips.size(); i++) {
+            chipTexts.add(chips.getCompound(i).getString("t"));
+            chipTints.add(FavouritesScreen.chipTint(chips.getCompound(i).getString("k")));
+        }
+        CompoundTag wk = data.getCompound("work"), th = data.getCompound("things");
+        int here = wk.getInt("xp_here"), next = wk.getInt("xp_next");
+        colLevel = hd.getBoolean("child") ? "A child" : "Level " + wk.getInt("level");
+        colXp = next > here ? Math.max(0F, Math.min(1F, (wk.getInt("xp") - here) / (float) (next - here))) : 1F;
+        colWorth = th.contains("worth") ? UiStyle.coins(th.getInt("worth")) : UiStyle.coins(th.getInt("purse"));
+        colWage = wk.getInt("wage") > 0 ? wk.getInt("wage") + "c a day" : "no wage";
+        if (data.contains("fav")) starOn = data.getBoolean("fav");
     }
+
+    /** [ui] On the player's favourites, as the profile last said. */
+    private boolean starOn;
 
     @Override
     protected void init() {
@@ -207,9 +238,12 @@ public class FolkProfileScreen extends Screen {
 
     // ------------------------------------------------------------------ geometry
 
-    private int pageX() { return left + UiStyle.S2; }
+    /** [ui] The left column with the tall portrait, when the window has room for it (0 when not). */
+    private int col() { return w >= 400 && h >= 196 ? COL_W : 0; }
+    private int innerX() { return left + UiStyle.S2 + (col() > 0 ? col() + UiStyle.S2 : 0); }
+    private int pageX() { return innerX(); }
     private int pageY() { return top + HEADER_H + TABS_H + UiStyle.S1; }
-    private int pageW() { return w - 2 * UiStyle.S2 - 4; }                   // room for the scroll bar
+    private int pageW() { return left + w - UiStyle.S2 - 4 - innerX(); }      // room for the scroll bar
     private int pageH() { return top + h - FOOT_H - pageY() - UiStyle.S1; }
 
     @Nullable
@@ -247,52 +281,80 @@ public class FolkProfileScreen extends Screen {
         g.fill(0, 0, width, height, UiStyle.BACKDROP);
     }
 
-    /** The header band: the folk, its name and the rest, its mood and needs. Returns a tooltip, or null. */
+    /** The header band: the folk, its name and the rest, its mood and needs. Returns a tooltip, or null. [ui] With room,
+     *  the folk stands tall in a column of its own down the left, in its own colour, its level, worth and wage under it;
+     *  a band of its colour along the top; its saying under its name; the star that follows it beside its name. */
     @Nullable
     private String header(GuiGraphics g, int mx, int my) {
         UiStyle.headerBand(g, left, top, w, HEADER_H);
-        int px = left + UiStyle.S2, py = top + 5, ph = HEADER_H - 10;
-        UiStyle.well(g, px, py, PORTRAIT_W, ph, 0xFF8FA3B5);
+        g.fill(left + 1, top + 1, left + w - 1, top + 4, UiStyle.accentFill(rgb));
         LivingEntity e = entity();
-        if (e != null) {
-            g.enableScissor(px + 1, py + 1, px + PORTRAIT_W - 1, py + ph - 1);
-            // Head and shoulders: drawn large, the box reaching below the frame so the face sits in it.
-            InventoryScreen.renderEntityInInventoryFollowsMouse(g, px, py, px + PORTRAIT_W, py + ph + PORTRAIT_DROP, PORTRAIT_SCALE, 0.0625F, mx, my, e);
-            g.disableScissor();
+        String tip = null;
+        int col = col();
+        if (col > 0) {
+            int cx = left + UiStyle.S2, cy = top + 7, ch = top + h - FOOT_H - 3 - cy;
+            int portraitH = Math.min(140, ch - 38);
+            FolkPortrait.draw(g, font, e, headName, rgb, jobColour, cx, cy, col, portraitH, false, mx, my);
+            if (inside(mx, my, cx, cy, col, portraitH)) tip = e == null ? "Not in sight just now: walk nearer to see it." : null;
+            int ry = cy + portraitH + 4;
+            UiStyle.card(g, cx, ry, col, ch - portraitH - 4, UiStyle.accentFill(rgb));
+            g.drawString(font, UiStyle.clip(font, colLevel, col - 10), cx + 6, ry + 4, UiStyle.TEXT, false);
+            UiStyle.bar(g, cx + 6, ry + 14, col - 12, 4, colXp, UiStyle.ACCENT_FILL);
+            if (inside(mx, my, cx, ry, col, 20)) tip = colLevel + ": " + Math.round(colXp * 100) + "% of the way to the next level.";
+            if (ch - portraitH - 4 >= 44) {
+                g.drawString(font, "Worth", cx + 6, ry + 21, UiStyle.TEXT_FAINT, false);
+                g.drawString(font, colWorth, cx + col - 6 - font.width(colWorth), ry + 21, UiStyle.TEXT, false);
+                String wage = UiStyle.clip(font, colWage, col - 12);
+                g.drawString(font, wage, cx + col - 6 - font.width(wage), ry + 31, UiStyle.TEXT_MUTED, false);
+            }
         } else {
-            g.fill(px + 1, py + ph - 10, px + PORTRAIT_W - 1, py + ph - 1, jobColour);
-            g.pose().pushPose();
-            g.pose().translate(px + PORTRAIT_W / 2F, py + 10F, 0);
-            g.pose().scale(2F, 2F, 1F);
-            g.drawString(font, portraitLetter, -font.width(portraitLetter) / 2, 0, UiStyle.TEXT_ON_DARK, true);
-            g.pose().popPose();
+            int px = left + UiStyle.S2, py = top + 7, ph = HEADER_H - 12;
+            FolkPortrait.draw(g, font, e, headName, rgb, jobColour, px, py, PORTRAIT_W, ph, true, mx, my);
         }
-        g.renderOutline(px, py, PORTRAIT_W, ph, UiStyle.EDGE);
         boolean narrow = w < 360;
         int needsW = narrow ? 0 : 118;
-        int tx = px + PORTRAIT_W + UiStyle.S2, tw = left + w - UiStyle.S2 - needsW - (needsW > 0 ? UiStyle.S2 : 0) - tx;
-        UiStyle.title(g, font, UiStyle.clip(font, headName, tw - 8), tx, top + 6);
-        UiStyle.text(g, font, headSub, tx, top + 18, tw, UiStyle.TEXT_MUTED);
-        if (thoughtLines.isEmpty() && !headThought.isEmpty()) thoughtLines = TextCache.splitPlain(font, headThought, tw);
-        for (int i = 0; i < Math.min(2, thoughtLines.size()); i++) {
-            g.drawString(font, thoughtLines.get(i), tx, top + 31 + i * UiStyle.LINE, UiStyle.INFO, false);
+        int tx = col > 0 ? innerX() : left + UiStyle.S2 + PORTRAIT_W + UiStyle.S2;
+        int tw = left + w - UiStyle.S2 - needsW - (needsW > 0 ? UiStyle.S2 : 0) - tx;
+        String name = UiStyle.clip(font, headName, tw - 16);
+        UiStyle.title(g, font, name, tx, top + 8);
+        // The star: on its list or not.
+        int sx = tx + UiStyle.titleWidth(font, name) + 5;
+        boolean starHover = inside(mx, my, sx - 2, top + 6, 13, 12);
+        UiStyle.star(g, font, sx, top + 8, star(), starHover);
+        if (starHover) tip = star() ? "One of your favourites. Click to stop following it." : "Follow it: add it to your favourites, to see how it gets on.";
+        UiStyle.text(g, font, headSub, tx, top + 20, tw, UiStyle.TEXT_MUTED);
+        // Its saying, then what it is thinking.
+        int ly = top + 32;
+        if (!saying.isEmpty()) {
+            if (UiStyle.text(g, font, saying, tx, ly, tw, UiStyle.ACCENT) && inside(mx, my, tx, ly, tw, 10)) tip = saying;
+            if (inside(mx, my, tx, ly, tw, 10) && tip == null) tip = "What it lives by.";
+            ly += UiStyle.LINE + 1;
         }
-        String tip = null;
-        if (inside(mx, my, tx, top + 30, tw, 22) && thoughtLines.size() > 2) tip = headThought;
+        if (thoughtLines.isEmpty() && !headThought.isEmpty()) thoughtLines = TextCache.splitPlain(font, headThought, tw);
+        int room = Math.max(0, (top + HEADER_H - 2 - ly) / UiStyle.LINE);
+        for (int i = 0; i < Math.min(room, thoughtLines.size()); i++) {
+            g.drawString(font, thoughtLines.get(i), tx, ly + i * UiStyle.LINE, UiStyle.INFO, false);
+        }
+        if (inside(mx, my, tx, ly, tw, HEADER_H - (ly - top)) && thoughtLines.size() > room && tip == null) tip = headThought;
         if (needsW > 0) {
             int nx = left + w - UiStyle.S2 - needsW;
-            int pillW = UiStyle.badge(g, font, headMood, nx, top + 5, UiStyle.levelFill(mood, 60, 40));
-            if (inside(mx, my, nx, top + 5, pillW, 11)) tip = moodTip;
+            int pillW = UiStyle.badge(g, font, headMood, nx, top + 7, UiStyle.levelFill(mood, 60, 40));
+            if (inside(mx, my, nx, top + 7, pillW, 11)) tip = moodTip;
             for (int i = 0; i < 4; i++) {
-                int ny = top + 19 + i * UiStyle.LINE;
+                int ny = top + 21 + i * UiStyle.LINE;
                 UiStyle.meter(g, font, NEED_NAMES[i], needs[i], nx, ny, needsW, NEED_LABEL_W);
                 if (inside(mx, my, nx, ny, needsW, UiStyle.LINE)) tip = NEED_TIPS[i] + " " + needs[i] + " of 100.";
             }
         } else {
-            int pillW = UiStyle.badge(g, font, headMood, tx + tw - font.width(headMood) - 6, top + 6, UiStyle.levelFill(mood, 60, 40));
-            if (inside(mx, my, tx + tw - pillW, top + 6, pillW, 11)) tip = moodTip;
+            int pillW = UiStyle.badge(g, font, headMood, tx + tw - font.width(headMood) - 6, top + 20, UiStyle.levelFill(mood, 60, 40));
+            if (inside(mx, my, tx + tw - pillW, top + 20, pillW, 11)) tip = moodTip;
         }
         return tip;
+    }
+
+    /** [ui] Whether it is on the player's favourites: the server's last word on a star, else the profile's. */
+    private boolean star() {
+        return FavouritesClient.starred(folk, starOn);
     }
 
     private static final String[] NEED_NAMES = { "Food", "Rest", "Company", "Comfort" };
@@ -304,8 +366,8 @@ public class FolkProfileScreen extends Screen {
 
     @Nullable
     private String tabs(GuiGraphics g, int mx, int my) {
-        int y = top + HEADER_H + 2, x = left + UiStyle.S2;
-        int each = Math.min(78, (w - 2 * UiStyle.S2) / TAB_NAMES.length);
+        int y = top + HEADER_H + 2, x = innerX();
+        int each = Math.min(78, (left + w - UiStyle.S2 - innerX()) / TAB_NAMES.length);
         for (int i = 0; i < TAB_NAMES.length; i++) {
             boolean over = inside(mx, my, x, y, each - 2, TABS_H - 2);
             UiStyle.topTab(g, x, y, each - 2, TABS_H - 2, UiStyle.State.of(true, i == tab, over));
@@ -355,7 +417,14 @@ public class FolkProfileScreen extends Screen {
         x -= bw + UiStyle.S1;
         UiStyle.button(g, font, "Talk", x, y, bw, bh, UiStyle.State.of(near, false, inside(mx, my, x, y, bw, bh)));
         if (inside(mx, my, x, y, bw, bh)) tip = near ? "Talk to it." : "Walk up to it to talk.";
-        UiStyle.text(g, font, "Esc back · 1-5 tabs · wheel scrolls", left + UiStyle.S2, y + 5, x - left - 2 * UiStyle.S2, UiStyle.TEXT_FAINT);
+        // [ui] Your favourites, its star lit when it is one of them.
+        int fw = 78;
+        x -= fw + UiStyle.S1;
+        UiStyle.button(g, font, (star() ? "\u2605 " : "") + "Favourites", x, y, fw, bh, UiStyle.State.of(true, false, inside(mx, my, x, y, fw, bh)));
+        if (inside(mx, my, x, y, fw, bh)) tip = "The folk you follow, and how each is getting on.";
+        String said = FavouritesClient.starSaid();
+        UiStyle.text(g, font, said.isEmpty() ? "Esc back · 1-5 tabs · wheel scrolls" : said, left + UiStyle.S2, y + 5, x - left - 2 * UiStyle.S2,
+            said.isEmpty() ? UiStyle.TEXT_FAINT : UiStyle.ACCENT);
         return tip;
     }
 
@@ -364,8 +433,8 @@ public class FolkProfileScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (button != 0) return super.mouseClicked(mx, my, button);
-        int y = top + HEADER_H + 2, x = left + UiStyle.S2;
-        int each = Math.min(78, (w - 2 * UiStyle.S2) / TAB_NAMES.length);
+        int y = top + HEADER_H + 2, x = innerX();
+        int each = Math.min(78, (left + w - UiStyle.S2 - innerX()) / TAB_NAMES.length);
         for (int i = 0; i < TAB_NAMES.length; i++, x += each) {
             if (inside(mx, my, x, y, each - 2, TABS_H - 2)) { pick(i); return true; }
         }
@@ -375,6 +444,13 @@ public class FolkProfileScreen extends Screen {
         if (inside(mx, my, fx, fy, bw, 18)) { if (nearEnough()) { UiStyle.click(); talk(TalkTopic.PACK); } return true; }
         fx -= bw + UiStyle.S1;
         if (inside(mx, my, fx, fy, bw, 18)) { if (nearEnough()) { UiStyle.click(); talk(TalkTopic.OPEN); } return true; }
+        fx -= 78 + UiStyle.S1;                                                // [ui] the favourites
+        if (inside(mx, my, fx, fy, 78, 18)) { UiStyle.click(); FavouritesClient.open(null, this); return true; }
+        // [ui] The star beside its name.
+        int tx = col() > 0 ? innerX() : left + UiStyle.S2 + PORTRAIT_W + UiStyle.S2;
+        int tw = left + w - UiStyle.S2 - (w < 360 ? 0 : 118 + UiStyle.S2) - tx;
+        int sx = tx + UiStyle.titleWidth(font, UiStyle.clip(font, headName, tw - 16)) + 5;
+        if (inside(mx, my, sx - 2, top + 6, 13, 12)) { FavouritesClient.toggle(folk); return true; }
         int px = pageX(), py = pageY();
         if (inside(mx, my, px, py, pageW(), pageH())) {
             int off = scroll.offset();
@@ -442,7 +518,11 @@ public class FolkProfileScreen extends Screen {
         ListTag card = data.getCompound("card").getList(TAB_IDS[tab], Tag.TAG_COMPOUND);
         if (!card.isEmpty()) {
             p.heading(tab == 2 ? "At its work" : tab == 4 ? "Money and things" : "More");
-            for (int i = 0; i < card.size(); i++) p.fact(card.getCompound(i).getString("k"), card.getCompound(i).getString("v"));
+            for (int i = 0; i < card.size(); i++) {
+                String k = card.getCompound(i).getString("k");
+                if (tab == 0 && OWN.contains(k) && !data.getCompound("self").isEmpty()) continue;   // [ui] shown above
+                p.fact(k, card.getCompound(i).getString("v"));
+            }
         }
         blocks.addAll(p.blocks);
         pageH = p.y;
@@ -450,6 +530,8 @@ public class FolkProfileScreen extends Screen {
 
     private void about(Page p) {
         CompoundTag a = data.getCompound("about");
+        // [ui] Its traits and ways as chips, first: two folk side by side read differently at a glance.
+        if (!chipTexts.isEmpty()) p.add(new Chips(font, chipTexts, chipTints, p.w));
         p.heading("Who it is");
         p.fact("Kind", capital(a.getString("kind")));
         p.fact("Nature", a.getString("traits"));
@@ -466,10 +548,57 @@ public class FolkProfileScreen extends Screen {
             CompoundTag gl = goals.getCompound(i);
             p.add(new Goal(font, capital(gl.getString("what")), gl.getInt("done"), gl.getString("words"), p.w));
         }
+        // [ui] Its own life: its dream, fears, habits, favourite place, keepsake, reading and favourites, each with its mark.
+        ListTag own = data.getCompound("self").getList("own", Tag.TAG_COMPOUND);
+        if (!own.isEmpty()) {
+            p.heading("Its own life");
+            for (int i = 0; i < own.size(); i++) {
+                String k = own.getCompound(i).getString("k");
+                p.add(new IconFact(font, ownIcon(k), k, capital(own.getCompound(i).getString("v")), p.w));
+            }
+            ListTag habits = data.getCompound("self").getList("habits", Tag.TAG_STRING);
+            if (!habits.isEmpty()) {
+                List<String> hs = new ArrayList<>();
+                List<Integer> tints = new ArrayList<>();
+                for (int i = 0; i < habits.size(); i++) { hs.add(habits.getString(i)); tints.add(UiStyle.accentFill(rgb)); }
+                p.add(new Chips(font, hs, tints, p.w));
+            }
+        }
         if (!a.getString("story").isEmpty()) {
             p.heading("Its story");
             p.text(a.getString("story"), UiStyle.TEXT);
         }
+    }
+
+    /** [ui] The card lines its own life already shows (not repeated under "More"). */
+    private static final java.util.Set<String> OWN = java.util.Set.of("Dream", "Fears", "Habits", "Favourite place", "Keepsake",
+        "Learning", "Favourites");
+
+    /** [ui] The mark beside a line of its own life. */
+    private ItemStack ownIcon(String key) {
+        return new ItemStack(switch (key) {
+            case "Dream" -> net.minecraft.world.item.Items.FIREWORK_ROCKET;
+            case "Fears" -> net.minecraft.world.item.Items.COBWEB;
+            case "Habits" -> net.minecraft.world.item.Items.CLOCK;
+            case "Favourite place" -> net.minecraft.world.item.Items.FILLED_MAP;
+            case "Keepsake" -> net.minecraft.world.item.Items.GOLD_NUGGET;
+            case "Learning" -> net.minecraft.world.item.Items.BOOK;
+            case "Favourites" -> net.minecraft.world.item.DyeItem.byColor(dye());
+            default -> net.minecraft.world.item.Items.PAPER;
+        });
+    }
+
+    /** [ui] Its colour as the dye nearest to it. */
+    private net.minecraft.world.item.DyeColor dye() {
+        net.minecraft.world.item.DyeColor best = net.minecraft.world.item.DyeColor.WHITE;
+        long bestD = Long.MAX_VALUE;
+        for (net.minecraft.world.item.DyeColor c : net.minecraft.world.item.DyeColor.values()) {
+            int v = c.getTextureDiffuseColor() & 0xFFFFFF;
+            long dr = ((v >> 16) & 255) - ((rgb >> 16) & 255), dg = ((v >> 8) & 255) - ((rgb >> 8) & 255), db = (v & 255) - (rgb & 255);
+            long d = dr * dr + dg * dg + db * db;
+            if (d < bestD) { bestD = d; best = c; }
+        }
+        return best;
     }
 
     private void life(Page p) {
@@ -761,6 +890,59 @@ public class FolkProfileScreen extends Screen {
         @Nullable
         String tip(Font font, int x, int y, int w, int mx, int my) {
             return mx < x + keyW && font.width(key) > keyW - UiStyle.S1 ? key : null;
+        }
+    }
+
+    /** [ui] Chips flowing onto as many rows as they need. */
+    private static final class Chips extends Block {
+        final List<String> texts;
+        final List<Integer> tints;
+
+        Chips(Font font, List<String> texts, List<Integer> tints, int w) {
+            this.texts = List.copyOf(texts);
+            this.tints = List.copyOf(tints);
+            int rows = 1, at = 0;
+            for (String t : texts) {
+                int cw = font.width(t) + 8;
+                if (at > 0 && at + cw > w) { rows++; at = 0; }
+                at += cw + UiStyle.S1;
+            }
+            h = rows * 14 - 2;
+        }
+
+        void draw(GuiGraphics g, Font font, int x, int y, int w, int mx, int my) {
+            int at = 0, line = 0;
+            for (int i = 0; i < texts.size(); i++) {
+                int cw = font.width(texts.get(i)) + 8;
+                if (at > 0 && at + cw > w) { line++; at = 0; }
+                at += UiStyle.chip(g, font, texts.get(i), x + at, y + line * 14, tints.get(i)) + UiStyle.S1;
+            }
+        }
+    }
+
+    /** [ui] A fact with an item for its mark: the icon, the label under it in small, the words wrapped beside. */
+    private static final class IconFact extends Block {
+        final ItemStack icon;
+        final String key;
+        final List<FormattedCharSequence> lines;
+
+        IconFact(Font font, ItemStack icon, String key, String value, int w) {
+            this.icon = icon;
+            this.key = key;
+            this.lines = TextCache.splitPlain(font, value, Math.max(40, w - 22 - KEY_W + 18));
+            h = Math.max(18, lines.size() * UiStyle.LINE + 2);
+        }
+
+        void draw(GuiGraphics g, Font font, int x, int y, int w, int mx, int my) {
+            g.renderItem(icon, x, y + (h - 16) / 2 - 1);
+            g.drawString(font, UiStyle.clip(font, key, KEY_W - 22), x + 20, y + (lines.size() > 1 ? 1 : 4), UiStyle.TEXT_FAINT, false);
+            int vy = y + (lines.size() > 1 ? 1 : 4);
+            for (int i = 0; i < lines.size(); i++) g.drawString(font, lines.get(i), x + KEY_W - 2, vy + i * UiStyle.LINE, UiStyle.TEXT, false);
+        }
+
+        @Nullable
+        String tip(Font font, int x, int y, int w, int mx, int my) {
+            return mx < x + KEY_W - 2 && font.width(key) > KEY_W - 22 ? key : null;
         }
     }
 

@@ -163,7 +163,9 @@ public class TalkScreen extends Screen {
 
     // ------------------------------------------------------------------ the transcript, laid out on a change
 
-    private record Bubble(boolean you, List<FormattedCharSequence> lines, int w, int h, int y) {}
+    private record Bubble(boolean you, List<FormattedCharSequence> lines, int w, int h, int y, boolean named) {}
+    /** [ui] The speaker's name over the first bubble of each turn, and its height. */
+    private static final int NAME_H = 10;
 
     private final List<Bubble> bubbles = new ArrayList<>();
     private int bubblesVersion = -1, bubblesWidth = -1, bubblesHeight;
@@ -332,7 +334,7 @@ public class TalkScreen extends Screen {
         int box = headerH - 2 * S1 - (compact ? 0 : 2);
         int tx = px + S1 + 2 + box + S2;
         int textW = Math.max(10, linkX - S2 - tx);
-        nameShown = UiStyle.clip(font, last.name(), textW);
+        nameShown = UiStyle.clip(font, last.name(), textW - 14);   // [ui] room for the star
         nameW = titleWidth(font, nameShown);
         aboutShown = UiStyle.clip(font, last.about(), textW);
         String doing = last.doing().isEmpty() ? "" : I18n.get("talk.mc_assistant.ui.now", last.doing());
@@ -525,8 +527,10 @@ public class TalkScreen extends Screen {
             int w = 0;
             for (FormattedCharSequence s : lines) w = Math.max(w, font.width(s));
             if (prev != null) y += prev == l.you() ? BUBBLE_GAP : BUBBLE_TURN_GAP;
+            boolean named = prev == null || prev != l.you();                 // [ui] a new turn: who speaks, over it
+            if (named) y += NAME_H;
             int h = lines.size() * LINE + 2 * BUBBLE_PAD - 1;
-            bubbles.add(new Bubble(l.you(), lines, w + 2 * BUBBLE_PAD, h, y));
+            bubbles.add(new Bubble(l.you(), lines, w + 2 * BUBBLE_PAD, h, y, named));
             y += h;
             prev = l.you();
         }
@@ -665,6 +669,11 @@ public class TalkScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         if (links.click(mx, my, button)) return true;                    // [teleport] its name, or its button
         if (button != 0) return super.mouseClicked(mx, my, button);
+        // [ui] The star beside its name.
+        if (minecraft != null && minecraft.level != null && minecraft.level.getEntity(last.entityId()) instanceof LivingEntity seen) {
+            int box = headerH - 2 * S1 - (compact ? 0 : 2), sx = px + S1 + 2 + box + S2 + nameW + 5, ny = py + (compact ? 5 : 7);
+            if (in(mx, my, sx - 2, ny - 2, 13, 12)) { FavouritesClient.toggle(seen.getUUID()); return true; }
+        }
         // The header's links.
         for (int i = 0; i < TalkMenu.LINKS.size(); i++) {
             int lx = linkX + i * (linkSize + 2), ly = linkY();
@@ -853,6 +862,32 @@ public class TalkScreen extends Screen {
         if (hoverTip != null && !hoverTip.isEmpty()) UiStyle.tooltip(g, font, hoverTip, mouseX, mouseY, 220);
     }
 
+    /** [ui] Its colour (FolkIdentity, from the reply's context), as RGB; 0 from an older server. */
+    private int colourRgb() {
+        try { return Integer.parseInt(ctx.value("colour"), 16); } catch (NumberFormatException e) { return 0; }
+    }
+
+    /** [ui] Its colour as a fill that reads, or the panel's soft edge when there is none. */
+    private int accent() {
+        int c = colourRgb();
+        return c == 0 ? EDGE_SOFT : UiStyle.accentFill(c);
+    }
+
+    /** [ui] Its colour dark enough for its name over its words. */
+    private int accentInk() {
+        int c = colourRgb();
+        if (c == 0) return TEXT_MUTED;
+        int f = UiStyle.accentFill(c);
+        return 0xFF000000 | ((f >> 16 & 0xFF) * 3 / 5) << 16 | ((f >> 8 & 0xFF) * 3 / 5) << 8 | (f & 0xFF) * 3 / 5;
+    }
+
+    /** [ui] Its first name, for over its words. */
+    private String speaker() {
+        String n = last.name();
+        int sp = n.indexOf(' ');
+        return sp > 0 ? n.substring(0, sp) : n;
+    }
+
     private int linkY() {
         return compact ? py + (headerH - linkSize) / 2 + 1 : py + S1 + 1;
     }
@@ -862,17 +897,11 @@ public class TalkScreen extends Screen {
         String tip = null;
         int box = headerH - 2 * S1 - (compact ? 0 : 2);
         int bx = px + S1 + 2, by = py + S1;
-        well(g, bx, by, box, box, PORTRAIT);
-        if (minecraft != null && minecraft.level != null
-                && minecraft.level.getEntity(last.entityId()) instanceof LivingEntity folk) {
-            // A bust: drawn big enough that the head and shoulders fill the frame, the rest cut off below it.
-            int scale = Math.round(box * PORTRAIT_SCALE);
-            int centre = by + 3 + Math.round(scale * folk.getBbHeight() / 2F);
-            g.enableScissor(bx + 1, by + 1, bx + box - 1, by + box - 1);
-            InventoryScreen.renderEntityInInventoryFollowsMouse(g, bx, by + 1, bx + box, 2 * centre - by - 1,
-                scale, 0.0625F, mouseX, mouseY, folk);
-            g.disableScissor();
-        }
+        // [ui] Its colour along the top of the panel, and its likeness on a wash of it.
+        g.fill(px + 1, py + 1, px + pw - 1, py + 3, accent());
+        LivingEntity folkSeen = minecraft != null && minecraft.level != null
+            && minecraft.level.getEntity(last.entityId()) instanceof LivingEntity l && l.isAlive() ? l : null;
+        FolkPortrait.draw(g, font, folkSeen, last.name(), colourRgb(), PORTRAIT, bx, by, box, box, true, mouseX, mouseY);
         int tx = bx + box + S2;
         // The links, right.
         for (int i = 0; i < linkIcons.length; i++) {
@@ -889,6 +918,14 @@ public class TalkScreen extends Screen {
         int ny = py + (compact ? 5 : 7);
         title(g, font, nameShown, tx, ny);
         links.addCard(g, last.entityId(), last.name(), tx, ny, nameW, 9, TEXT);   // [teleport]
+        // [ui] The star: one of your favourites, or not.
+        if (folkSeen != null) {
+            int sx = tx + nameW + 5;
+            boolean starHover = in(mouseX, mouseY, sx - 2, ny - 2, 13, 12);
+            UiStyle.star(g, font, sx, ny, FavouritesClient.starred(folkSeen.getUUID(), ctx.has("fav")), starHover);
+            if (starHover) tip = FavouritesClient.starred(folkSeen.getUUID(), ctx.has("fav"))
+                ? "One of your favourites. Click to stop following it." : "Follow it: add it to your favourites, to see how it gets on.";
+        }
         if (compact) {
             statusRow(g, tx, py + 17);
         } else {
@@ -1066,6 +1103,12 @@ public class TalkScreen extends Screen {
             boolean latest = i >= lastIndex - 1;
             int bx = b.you() ? x + convW - S1 - 2 - b.w() : x + S1 + 2;
             bubble(g, bx, by, b.w(), b.h(), b.you());
+            if (!b.you()) g.fill(bx + 1, by + 2, bx + 3, by + b.h() - 2, accent());   // [ui] its colour down its words
+            if (b.named()) {                                                 // [ui] who is speaking
+                String who = b.you() ? "You" : speaker();
+                int nx = b.you() ? x + convW - S1 - 2 - font.width(who) : x + S1 + 3;
+                g.drawString(font, who, nx, by - NAME_H + 1, b.you() ? ACCENT : accentInk(), false);
+            }
             int ink = latest || b.you() ? TEXT : TEXT_MUTED;
             int ly = by + BUBBLE_PAD;
             for (FormattedCharSequence l : b.lines()) {

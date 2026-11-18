@@ -430,7 +430,7 @@ public class CityScreen extends Screen {
             g.disableScissor();
         }
         if (links.draw(g, font)) hover = null;                          // [teleport] a name's buttons, over everything
-        if (hover != null) g.renderComponentTooltip(font, hover, hoverX, hoverY);
+        if (hover != null) UiStyle.componentTooltip(g, font, hover, hoverX, hoverY);   // [ui] wrapped once, to its room
     }
 
     /** [folk-ui] The header band: the town's banner and name, its age and day; its people, mood and treasury; the range; Close. */
@@ -448,6 +448,7 @@ public class CityScreen extends Screen {
         UiStyle.button(g, font, "Close", rx, top + 6, cw, 18, UiStyle.State.of(true, false, in(mx, my, rx, top + 6, cw, 18)));
         closeX = rx;
         rx = AdminClient.boardButton(g, font, rx, top + 6, mx, my);      // [admin] the admin panel, for operators
+        rx = FavouritesClient.boardButton(g, font, rx, top + 6, mx, my);  // [ui] the folk you follow
         rx -= UiStyle.S2;
         for (int i = RANGE_NAMES.length - 1; i >= 0; i--) {
             int bw = font.width(RANGE_NAMES[i]) + 8;
@@ -553,7 +554,7 @@ public class CityScreen extends Screen {
     private void tip(String text, int mx, int my) {
         List<Component> lines = new ArrayList<>();
         for (String part : text.split("\n")) {
-            for (FormattedCharSequence l : TextCache.splitPlain(font, part, 240)) lines.add(Component.literal(toPlain(l)));
+            for (FormattedCharSequence l : TextCache.splitPlain(font, part, UiStyle.tooltipWrap(width, mx, 240))) lines.add(Component.literal(toPlain(l)));   // [ui] to its room
         }
         hover = lines;
         hoverX = mx;
@@ -3912,6 +3913,7 @@ public class CityScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         if (links.click(mx, my, button)) return true;                    // [teleport] a folk's name, or its buttons
         if (AdminClient.boardClick(mx, my)) return true;                  // [admin]
+        if (FavouritesClient.boardClick(mx, my, this)) return true;       // [ui]
         for (Zone z : new ArrayList<>(zones)) {
             if (mx >= z.x0() && mx < z.x1() && my >= z.y0() && my < z.y1()) { z.act().run(); return true; }
         }

@@ -173,6 +173,35 @@ public final class FavouritesClient {
         });
     }
 
+    // ------------------------------------------------------------------ the city books' button
+
+    /** The books' button's box, where it was last drawn (x, y, w, h; w 0: not drawn). */
+    private static final int[] BOARD = new int[4];
+
+    /** The books' header button (a star) left of {@code right}; returns the new right edge. Its tooltip is drawn here. */
+    public static int boardButton(GuiGraphics g, Font font, int right, int y, int mx, int my) {
+        int w = 18, x = right - UiStyle.S1 - w;
+        boolean over = mx >= x && mx < x + w && my >= y && my < y + 18;
+        UiStyle.tile(g, x, y, w, 18, over ? UiStyle.State.HOVER : UiStyle.State.NORMAL);
+        g.drawString(font, "\u2605", x + (w - font.width("\u2605")) / 2, y + 5, UiStyle.STAR, true);
+        BOARD[0] = x; BOARD[1] = y; BOARD[2] = w; BOARD[3] = 18;
+        if (over) {
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 400);
+            UiStyle.tooltip(g, font, "Your favourite folk: the ones you follow, and how each is getting on.", mx, my, 200);
+            g.pose().popPose();
+        }
+        return x;
+    }
+
+    /** A click on the books' button: the favourites, Esc back to the books. */
+    public static boolean boardClick(double mx, double my, net.minecraft.client.gui.screens.Screen books) {
+        if (BOARD[2] == 0 || mx < BOARD[0] || mx >= BOARD[0] + BOARD[2] || my < BOARD[1] || my >= BOARD[1] + BOARD[3]) return false;
+        UiStyle.click();
+        open(null, books);
+        return true;
+    }
+
     // ------------------------------------------------------------------ the toast
 
     /** A milestone of a folk you follow: its event's icon, its name with a star, the line, for five seconds. */

@@ -40,16 +40,27 @@ public final class FolkPortrait {
         UiStyle.well(g, x, y, w, h, wash);
         g.fill(x + 1, y + 1, x + w - 1, y + 1 + h / 3, 0x18FFFFFF);       // a lighter sky over the shoulders
         if (e != null) {
+            // Its name and health over its head belong to the world, not the portrait: hidden while it is drawn here.
+            Minecraft mc = Minecraft.getInstance();
+            boolean named = e.isCustomNameVisible();
+            Entity aimed = mc.getEntityRenderDispatcher().crosshairPickEntity;
+            e.setCustomNameVisible(false);
+            if (aimed == e) mc.getEntityRenderDispatcher().crosshairPickEntity = null;
             g.enableScissor(x + 1, y + 1, x + w - 1, y + h - 1);
             if (bust) {
-                int scale = Math.round(h * 0.62F);
-                int centre = y + 3 + Math.round(scale * e.getBbHeight() / 2F);
-                InventoryScreen.renderEntityInInventoryFollowsMouse(g, x, y + 1, x + w, 2 * centre - y - 1, scale, 0.0625F, mx, my, e);
+                // Head and shoulders, looking out of the frame a little to the side (not at the mouse: a card is
+                // small, and a folk looking down at the pointer shows only the top of its hat).
+                int scale = Math.round(h * 1.05F);
+                int centre = y + 2 + Math.round(scale * e.getBbHeight() / 2F);
+                InventoryScreen.renderEntityInInventoryFollowsMouse(g, x, y + 1, x + w, 2 * centre - y - 1, scale, 0.0625F,
+                    x + w * 1.1F, centre - 10F, e);
             } else {
                 int scale = Math.max(8, Math.round((h - 8) / Math.max(1.0F, e.getBbHeight()) * 0.92F));
                 InventoryScreen.renderEntityInInventoryFollowsMouse(g, x, y + 4, x + w, y + h - 2, scale, 0.0625F, mx, my, e);
             }
             g.disableScissor();
+            e.setCustomNameVisible(named);
+            if (aimed == e) mc.getEntityRenderDispatcher().crosshairPickEntity = aimed;
         } else {
             g.fill(x + 1, y + h - 5, x + w - 1, y + h - 1, jobColour);
             String letter = name == null || name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT);

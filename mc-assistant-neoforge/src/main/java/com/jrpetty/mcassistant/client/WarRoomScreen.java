@@ -416,7 +416,7 @@ public class WarRoomScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
         super.render(g, mx, my, pt);
-        if (tip != null) g.renderComponentTooltip(font, tip, mx, my);
+        if (tip != null) UiStyle.componentTooltip(g, font, tip, mx, my);   // [ui] wrapped once, to its room
     }
 
     private void drawTiles(GuiGraphics g) {

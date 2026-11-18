@@ -371,7 +371,7 @@ public class StallScreen extends Screen {
                 tip.add(Component.literal(price <= 0 ? "Kept back: not for sale." : "Yours: " + price + "c" + (ware.getBoolean("set") ? "" : " (the going price)")));
             }
             if (ware.getInt("sold7") > 0) tip.add(Component.literal("Sold " + ware.getInt("sold7") + " this week for " + ware.getInt("coin7") + "c."));
-            g.renderComponentTooltip(font, tip, mouseX, mouseY);
+            UiStyle.componentTooltip(g, font, tip, mouseX, mouseY);   // [ui] wrapped once, to its room
             break;
         }
     }

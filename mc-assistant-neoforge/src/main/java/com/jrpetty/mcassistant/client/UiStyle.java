@@ -236,7 +236,8 @@ public final class UiStyle {
     /** A vanilla tooltip, the text wrapped to {@code maxWidth} (cached: TextCache). */
     public static void tooltip(GuiGraphics g, Font font, String text, int mouseX, int mouseY, int maxWidth) {
         if (text == null || text.isBlank()) return;
-        List<FormattedCharSequence> lines = TextCache.splitPlain(font, text, Math.max(60, maxWidth));
+        int wrap = Math.min(Math.max(60, maxWidth), tooltipWrap(g.guiWidth(), mouseX, Math.max(60, maxWidth)));   // [ui] fits its side
+        List<FormattedCharSequence> lines = TextCache.splitPlain(font, text, wrap);
         g.renderTooltip(font, lines, mouseX, mouseY);
     }
 
@@ -498,5 +499,23 @@ public final class UiStyle {
     public static String coins(int c) {
         if (Math.abs(c) >= 10000) return String.format(java.util.Locale.ROOT, "%.1fkc", c / 1000F);
         return c + "c";
+    }
+
+    /**
+     * A tooltip of lines made elsewhere (a page's list of components), wrapped once to the room beside the mouse so it
+     * never has to be wrapped again at the screen's edge (the loader re-wraps a line too wide for the side it lands on,
+     * which left lines pre-wrapped at 240 broken in two on a small window).
+     */
+    public static void componentTooltip(GuiGraphics g, Font font, List<? extends net.minecraft.network.chat.FormattedText> lines, int mx, int my) {
+        if (lines == null || lines.isEmpty()) return;
+        int wrap = tooltipWrap(g.guiWidth(), mx, 260);
+        List<FormattedCharSequence> out = new java.util.ArrayList<>();
+        for (net.minecraft.network.chat.FormattedText l : lines) out.addAll(font.split(l, wrap));
+        g.renderTooltip(font, out, mx, my);
+    }
+
+    /** How wide a tooltip's lines may be with the mouse at {@code mx}: the room on its wider side, at most {@code most}. */
+    public static int tooltipWrap(int screenWidth, int mx, int most) {
+        return Math.max(100, Math.min(most, Math.max(screenWidth - mx - 24, mx - 24)));
     }
 }

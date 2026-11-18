@@ -621,12 +621,12 @@ public class FavouritesScreen extends Screen {
             this.colour = colour;
             this.nowS = per == 100 ? "level " + now / 100 : now + unit;
             int week = values.length > 7 ? now - values[values.length - 8] : values.length > 0 ? now - values[0] : 0;
-            this.weekS = (per == 100 ? week / 100 == 0 && week != 0 ? (week > 0 ? "+" : "-") + Math.abs(week) + "% of a level" : UiStyle.signed(week / 100) + " levels" : UiStyle.signed(week) + unit)
+            this.weekS = values.length < 2 ? "its first day on your list" : (per == 100 ? week / 100 == 0 && week != 0 ? (week > 0 ? "+" : "-") + Math.abs(week) + "% of a level" : UiStyle.signed(week / 100) + " levels" : UiStyle.signed(week) + unit)
                 + (values.length > 7 ? " this week" : " so far");
             this.weekInk = week > 0 ? UiStyle.SUCCESS : week < 0 ? UiStyle.DANGER : UiStyle.TEXT_FAINT;
             int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
             for (int v : values) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
-            this.range = values.length == 0 ? "" : per == 100 ? "levels " + lo / 100 + "–" + hi / 100 : lo + unit + " – " + hi + unit;
+            this.range = values.length < 2 ? "" : per == 100 ? "levels " + lo / 100 + "–" + hi / 100 : lo + unit + " – " + hi + unit;
         }
 
         @Nullable
