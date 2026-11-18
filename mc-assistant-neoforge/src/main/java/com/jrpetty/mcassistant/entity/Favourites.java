@@ -391,8 +391,9 @@ public final class Favourites extends SavedData {
         t.last = now;
         if (morning) {
             CompoundTag s = now.copy();
-            if (!t.daily.isEmpty() && t.daily.get(t.daily.size() - 1).getLong("day") == day) t.daily.set(t.daily.size() - 1, s);
-            else t.daily.add(s);
+            long lastDay = t.daily.isEmpty() ? Long.MIN_VALUE : t.daily.get(t.daily.size() - 1).getLong("day");
+            if (lastDay == day) t.daily.set(t.daily.size() - 1, s);
+            else if (lastDay < day) t.daily.add(s);                         // a clock put back adds nothing out of turn
             compact(t);
         }
         b.setDirty();

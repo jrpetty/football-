@@ -322,7 +322,7 @@ public class FolkProfileScreen extends Screen {
         boolean starHover = inside(mx, my, sx - 2, top + 6, 13, 12);
         UiStyle.star(g, font, sx, top + 8, star(), starHover);
         if (starHover) tip = star() ? "One of your favourites. Click to stop following it." : "Follow it: add it to your favourites, to see how it gets on.";
-        UiStyle.text(g, font, headSub, tx, top + 20, tw, UiStyle.TEXT_MUTED);
+        if (UiStyle.text(g, font, headSub, tx, top + 20, tw, UiStyle.TEXT_MUTED) && inside(mx, my, tx, top + 19, tw, 10)) tip = headSub;
         // Its saying, then what it is thinking.
         int ly = top + 32;
         if (!saying.isEmpty()) {
