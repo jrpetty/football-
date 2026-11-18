@@ -13479,9 +13479,14 @@ between holders the coin census counts, and a player can deal at every one of th
   in all (IOUs and bonds), a point more while it is behind with a coupon. Coupons are paid every seventh day out of the
   treasury (they are the town's spending, the hall's); a bond due is repaid when the treasury can spare it over two days'
   wages, else rolled over at the day's rate.
-- **Living within its means.** A town short of money (owing its market more than it can carry) now also puts off its
-  gardens and its houses' makeovers, buys no flowers for its verges, no water for the window boxes and no lute for its
-  band, beside the works it already put off.
+- **Living within its means.** A town careful of its money (owing its market over half of what it can carry) now also
+  puts off its gardens and its houses' makeovers, buys no flowers for its verges, no water for the window boxes and no
+  lute for its band, and its builders lay its chimneys in rough stone rather than buy brick (a hundred coins of brick a
+  day had gone into the chimneys of a ten-day town owing twice what it could carry), beside the works it already put off.
+- **Savings and ventures.** What a folk has at the club counts toward a firm it means to found (and a partner's toward
+  its share), drawn out for it; a folk with an entrepreneur's nerve keeps its coin for a venture rather than lend it to
+  the town. A new firm's start-up beyond what its founders and partners put up is lent by the lender (half its founders'
+  capital) before the town's trade credit; households borrow for their houses at the bank (its mortgages) as before.
 
 ### Where you see it
 
