@@ -140,7 +140,7 @@ public final class TownWork {
             // [nether] In the Nether Age, glowstone from the runners' dust where the stores have it (NetherHome.lampLight).
             if (!Masonry.canLight(level, v) && !NetherHome.canLamp(level, v)) return 0;
             if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, top.above(), top.above(2), top.above(3))) return 0;   // [integrity]
-            if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a lamp post")) return -1;
+            if (!TownJobs.atWork(level, v, "paving", top.above(), "putting up a lamp post")) return -1;   // [city9] the hand laying the street
             net.minecraft.world.level.block.Block light = NetherHome.lampLight(level, v);
             if (light == null) light = Masonry.light(level, v);
             if (light == null) return 0;
@@ -167,7 +167,7 @@ public final class TownWork {
                 && !level.getBlockState(top.above(2)).isSolid()) {
             if (Market.stock(level, v.id(), s -> s.is(Items.TORCH) || s.is(Items.COAL) || s.is(Items.CHARCOAL)) == 0) return 0;
             if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, top.above(), top.above(2))) return 0;              // [integrity]
-            if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a street light")) return -1;
+            if (!TownJobs.atWork(level, v, "paving", top.above(), "putting up a street light")) return -1;   // [city9]
             if (!take(level, v, s -> s.is(Items.TORCH), 1)) {
                 if (!take(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 1)) return 0;
                 if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 1)
