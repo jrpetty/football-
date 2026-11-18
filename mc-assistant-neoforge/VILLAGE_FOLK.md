@@ -13821,11 +13821,12 @@ house fenced in the same box, a bare stone square, and lots taken wherever the a
 between them and the town or not. Five changes make it read as a place that grew, still in order:
 
 - **Lots only on streets the town walks** (CityPlan). The plan's streets and the square are walked from the heart the way
-  a folk walks them: a block up, three down, never into water (a bridge or a causeway the town lays carries its street
-  on), an arch over a gate or a lamp's post no bar. A building is offered a lot (Villages.siteFor, and a household's own
+  a folk walks them: a block up (two where a step can be cut into the bank), three down, never into water (a bridge or a
+  causeway the town lays carries its street on), through a gate or a wooden door, an arch over a gate or a lamp's post
+  no bar. A building is offered a lot (Villages.siteFor, and a household's own
   house in the housing market) only if the street before its door is reached that way, so no house goes up on the far
   bank of a lake or the top of a cliff a street's length from the town. A town with nothing else left (an island, a
-  mountain top) is let onto the rest after four looks that found nothing. Walked afresh every two minutes at most, and
+  mountain top) takes one of the rest after four looks in a row that found nothing, and is particular again after it. Walked afresh every two minutes at most, and
   only while a building is being sited (a few thousand columns, never on a folk's tick).
 - **Blocks turned here and there** (TownPlan). Every lot of a block touches a street on two sides. About two blocks of
   homes in five (never the first ring round the square) are turned to their cross street, their four houses still back
@@ -13845,8 +13846,10 @@ between them and the town or not. Five changes make it read as a place that grew
 - **Each plot closed in its own way** (CityPlots, in Grow.garden). A house's garden used to be a fence all round and a
   gate for every house, and two fences side by side between neighbours. Now each plot is settled once, by where it
   stands: a fence with a gate (about two in five), a low wall of the stores' cobblestone (stone bricks from the Iron
-  Age) with a gap for the path (one in four), or left open to the street with only the flowers before the house (the
-  rest). Where the neighbour's fence or wall already stands along a side, that side is left to it.
+  Age) with a gap for the path (one in four), or left open to the street with a row of flowers along its front (the
+  rest). Where the neighbour's fence or wall already stands along a side, that side is left to it. The first house still
+  without its garden has it seen to on every round of the houses (in the Iron Age the round used to stop at the first
+  house still to be raised a storey, and the gardens past it waited for days).
 
 Nothing that stands is moved or pulled down: the rules apply to new lots, new gardens and streets not yet laid; an older
 town's square gets its greens on the next rounds (only its open paving is lifted).
