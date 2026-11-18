@@ -262,7 +262,7 @@ public final class TownBonds {
                 owed += b.getLong("face") * b.getInt("bp") / 10000;
             }
             // A folk's purse and the bank's vault take whole coins: the odd pennies wait on the bond (a claim, not coin).
-            long payable = wholeCoins(b.getString("kind")) ? owed / 100 * 100 : owed;
+            long payable = wholeCoins(b.getString("kind")) ? Math.min(owed, Businesses.treasuryPence(id)) / 100 * 100 : owed;
             if (payable > 0) {
                 long got = Businesses.fromTreasury(id, payable);
                 if (got > 0) {
@@ -288,9 +288,9 @@ public final class TownBonds {
                     if (back > 0) Businesses.toTreasury(id, back);
                     got -= back;
                 }
-                pay(level, id, b, got, day, "repaid");
-                if (got >= face) b.putLong("owed", 0);                    // the odd pennies of its last coupon forgiven with it
                 b.putLong("face", face - got);
+                if (got >= face) b.putLong("owed", 0);                    // the odd pennies of its last coupon forgiven with it
+                pay(level, id, b, got, day, "repaid");
                 repaid += got;
                 spare -= got;
             } else {
