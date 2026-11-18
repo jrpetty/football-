@@ -13872,10 +13872,11 @@ between them and the town or not. Five changes make it read as a place that grew
   farmer's water hole likewise. On the town's rounds, one building a visit, water in a building's water cells that would
   not stay is taken up, so an older town's stream dries up ("the water running off the allotments was stopped").
 - **Each house its own** (CityDress). The houses go up to one drawing from one stock of wood. Once one stands (in the
-  Iron Age, once it has its second storey) the town's hands dress it once, by where it stands: its roof kept, or laid
-  again in the town's second or third roofing wood (its look's list), and its posts and beams kept, stripped to the bare
-  wood, or in a dark timber; two neighbours are seldom alike. Paid in planks (a stair a plank and a half, a slab half)
-  and logs of the wood, only while the stores keep a builder's load besides; what comes off goes back. Never a
+  Iron Age, once it has its second storey) the town's hands dress it once, by where it stands: its roof kept, laid
+  again in another of the town's roofing woods (its look's list) that the stores have to spare, or in stone, the slate
+  look (cobblestone, stone bricks from the Iron Age); and its posts and beams kept, stripped to the bare wood, or in a
+  dark timber; two neighbours are seldom alike. Paid in planks or stone (a stair a block and a half, a slab half) and
+  logs of the wood, only while the stores keep a builder's load besides; what comes off goes back. Never a
   player's house, a household's own, the founders' first, or one going up a storey; noted in the town's books once
   done.
 

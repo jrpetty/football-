@@ -32,8 +32,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * house. Once a house stands (and, in the Iron Age, once it has its second storey), the town's hands dress it once, by
  * where it stands, so that two neighbours are seldom the same:
  * <ul>
- * <li><b>its roof</b> kept as built (about one in three), or laid again in the town's second or third roofing wood
- *     (its look's list: Palettes);</li>
+ * <li><b>its roof</b> kept as built (about one in three), laid again in another of the town's roofing woods (its
+ *     look's list: Palettes) that the stores have to spare, or in stone, the slate look: cobblestone, and stone bricks
+ *     from the Iron Age;</li>
  * <li><b>its frame</b> (the posts and beams) kept, stripped to the bare wood, or in a dark timber against the walls.</li>
  * </ul>
  * Paid for out of the stores in planks and logs of the wood (a stair is a plank and a half, a slab half), only while
@@ -63,7 +64,7 @@ public final class CityDress {
         return h;
     }
 
-    /** Which roof this house has: 0 as built, 1 the town's second roofing wood, 2 its third. */
+    /** Which roof this house has: 0 as built, 1 another of the town's roofing woods, 2 stone. */
     public static int roofChoice(BlockPos anchor) {
         return (int) Math.floorMod(mix(anchor, 0x51ED), 3L);
     }
@@ -117,7 +118,16 @@ public final class CityDress {
         String drawing = drawing(id, b);
         boolean iron = Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal();
         if (iron && drawing.equals("house") && !free) return 0;                 // its second storey first: the roof comes off for it
-        String roofWood = roofWood(id, roofChoice(b.anchor()));
+        int roofChoice = roofChoice(b.anchor());
+        // The roof's make: 1, a wood of the town's roofing list other than the house's own that the stores can spare;
+        // 2, stone (cobblestone, stone bricks from the Iron Age), the slate look of the better streets.
+        String roofWood = null;
+        if (roofChoice == 1) {
+            roofWood = altWood(level, v, b, free);
+            if (roofWood == null && !free) return 0;                          // none to spare yet: later
+        } else if (roofChoice == 2) {
+            roofWood = iron ? "stone_brick" : "cobblestone";
+        }
         int frame = frameChoice(b.anchor());
         List<BuildGoal.Placement> roof = new ArrayList<>(), posts = new ArrayList<>();
         for (BuildGoal.Placement p : BuildGoal.plan(drawing, b.anchor(), b.facing(), 13)) {
@@ -162,7 +172,8 @@ public final class CityDress {
             return 0;
         }
         int planks = (stairs * 3 + 1) / 2 + (slabs + 1) / 2;
-        Item plankItem = roofWood == null ? null : item(roofWood + "_planks");
+        Item plankItem = roofWood == null ? null : roofWood.equals("stone_brick") ? Items.STONE_BRICKS
+            : roofWood.equals("cobblestone") ? Items.COBBLESTONE : item(roofWood + "_planks");
         Item logItem = logWood == null ? null : item(logWood + "_log");
         if (!free) {
             if (planks > 0 && (plankItem == null || Market.stock(level, id, s -> s.is(plankItem)) < planks + KEEP)) return 0;
@@ -188,10 +199,29 @@ public final class CityDress {
         return 1;
     }
 
+    /** The first wood of the town's roofing list that is not this house's roof and that the stores can spare enough
+     *  planks of (any, for the tests' free dressing); null if none. */
+    @Nullable
+    static String altWood(ServerLevel level, Villages.Village v, Ledger.Building b, boolean free) {
+        String own = null;
+        for (BuildGoal.Placement p : BuildGoal.plan(drawing(v.id(), b), b.anchor(), b.facing(), 13)) {
+            if (p.style() != Blueprints.Style.ROOF_STAIR) continue;
+            String path = BuiltInRegistries.BLOCK.getKey(level.getBlockState(p.pos()).getBlock()).getPath();
+            if (path.endsWith("_stairs")) { own = path.substring(0, path.length() - 7); break; }
+        }
+        for (int k = 0; k < 6; k++) {
+            String w = roofWood(v.id(), k);
+            if (w == null || w.equals(own)) continue;
+            if (free) return w;
+            Item planks = item(w + "_planks");
+            if (planks != null && Market.stock(level, v.id(), s -> s.is(planks)) >= 40 + KEEP) return w;
+        }
+        return null;
+    }
+
     /** The town's roofing wood for a choice: null to keep what the house was built in. */
     @Nullable
     static String roofWood(UUID id, int choice) {
-        if (choice == 0) return null;
         List<String> woods = new ArrayList<>();
         for (Item it : Palettes.ranked(id, Blueprints.Style.ROOF_STAIR)) {
             String path = BuiltInRegistries.ITEM.getKey(it).getPath();
