@@ -30,7 +30,9 @@ public final class FieldEdge {
     /** Posts set at one visit, at most. */
     static final int POSTS = 12;
     /** Boards the stores keep for everything else before any is cut into fence posts. */
-    static final int PLANKS_KEPT = 96;
+    static final int PLANKS_KEPT = 160;
+    /** Fences the stores keep for railings and pens before any goes round a field. */
+    static final int FENCES_KEPT = 16;
 
     /** Fence a farmer's field a little more. Returns the blocks set or taken up. */
     public static int keep(ServerLevel level, Villages.Village v, VillageFolkEntity f, WorkZone z) {
@@ -74,7 +76,9 @@ public final class FieldEdge {
         if (!Terraform.earth(here)) return 0;                                           // somebody's floor, a street's paving
         if (!TownBlocks.mayPlace(level, v, at, TownBlocks.Why.FIELD)) return 0;
         ItemStack[] got = new ItemStack[1];
-        boolean have = Crafts.take(level, v, s -> {
+        // The stores' own fences too only past what a building's railings and pens want.
+        boolean spare = Market.stock(level, v.id(), s -> gate ? s.is(ItemTags.FENCE_GATES) : s.is(ItemTags.WOODEN_FENCES)) > (gate ? 2 : FENCES_KEPT);
+        boolean have = spare && Crafts.take(level, v, s -> {
             boolean ok = (gate ? s.is(ItemTags.FENCE_GATES) : s.is(ItemTags.WOODEN_FENCES)) && s.getItem() instanceof BlockItem;
             if (ok && got[0] == null) got[0] = s.copyWithCount(1);
             return ok;
@@ -96,7 +100,10 @@ public final class FieldEdge {
      * of four planks and two sticks; two for a gate), of the boards' own wood. Null if there are none.
      */
     static Block fromPlanks(ServerLevel level, Villages.Village v, boolean gate) {
-        // Only out of boards to spare: the wheelwright's mending, the builders and the makers come first.
+        // Only out of boards to spare: the builders, the wheelwright's mending and the makers come first (a block of flats
+        // waited on its last loads while the farmers cut the town's boards into fence posts). Never while a building is
+        // going up.
+        if (!Villages.sitesOf(v.id()).isEmpty()) return null;
         if (Market.stock(level, v.id(), s -> s.is(ItemTags.PLANKS)) < PLANKS_KEPT) return null;
         Block[] wood = new Block[1];
         boolean have = Crafts.take(level, v, s -> {
