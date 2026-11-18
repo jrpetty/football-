@@ -182,6 +182,11 @@ public final class TownJobs {
      */
     static final String BENCH = "pastimes";
 
+    /** [city9] The streets' works: the paving, and the doors' ways and lamps (a works key, or a crew's "village/works"). */
+    static boolean streetsWork(String works) {
+        return works != null && (works.equals("streets") || works.equals("paving") || works.endsWith("/streets") || works.endsWith("/paving"));
+    }
+
     /** Works that wait for all the others. */
     static boolean least(String works) {
         return works.equals(LEAST) || works.equals(BENCH);
@@ -285,7 +290,10 @@ public final class TownJobs {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (a.isBaby()) continue;
             adults++;
-            if (a instanceof VillageFolkEntity f && ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) busy++;
+            if (a instanceof VillageFolkEntity f && ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) {
+                if (!streetsWork(works) && streetsWork(ON.get(f.getUUID()))) continue;   // [city9] the streets' hands are on top of the eighth
+                busy++;
+            }
         }
         if (adults < SETTLED && !essential(works)) return null;      // a young village: its trades first
         // Never more than one hand in eight — unless hands are standing idle in trades with more
@@ -299,9 +307,9 @@ public final class TownJobs {
         // unmade and no child born for want of one.
         boolean extra = (essential(works) || works.equals(TIDY)) && busy < cap + 1;   // [tidy] the crew is never starved of its one hand
         // [city9] Nor the streets: a town of ninety had its hands all at its signs, beds and gardens, and four days on not a
-        // yard of street laid. The paving's hand and the doors' ways' may each be past the eighth, with the tidy crew's.
-        // The beds, the stores and the tidy crew keep their place past the eighth beside them.
-        if ((works.equals("streets") || works.equals("paving") || essential(works) || works.equals(TIDY)) && busy < cap + 3) extra = true;
+        // yard of street laid. The paving's hand and the doors' ways' are on top of the eighth (and not counted against the
+        // other works'), so the roads, the beds and the rest keep theirs.
+        if (streetsWork(works) && busy < cap + 2) extra = true;
         if (busy >= cap && !extra) {
             if (busy >= Math.max(1, adults / 4)) return null;
             over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);
