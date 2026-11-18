@@ -80,6 +80,16 @@ public final class TownBonds {
     /** The coupons it is behind with, pennies. */
     public static long arrears(UUID village) {
         long n = 0;
+        for (Tag e : bonds(village)) {
+            long owed = ((CompoundTag) e).getLong("owed");
+            if (owed >= 100) n += owed;                                    // (a purse's coupon under a coin waits till it is a coin)
+        }
+        return n;
+    }
+
+    /** Tests: the coupons run up on the bonds and not yet paid, pennies (a purse's under a coin among them). */
+    public static long owedForTests(UUID village) {
+        long n = 0;
         for (Tag e : bonds(village)) n += ((CompoundTag) e).getLong("owed");
         return n;
     }

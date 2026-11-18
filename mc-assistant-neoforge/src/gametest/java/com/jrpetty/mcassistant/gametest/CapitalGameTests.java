@@ -453,8 +453,10 @@ public class CapitalGameTests {
         int p1 = 0;
         for (VillageFolkEntity f : folk) p1 += f.purse();
         long coupons = TownBonds.reportForTests(id).getCompound("thisWeek").getLong("coupons") + TownBonds.reportForTests(id).getCompound("lastWeek").getLong("coupons");
-        Kit.log("[VT] cap06 coupons " + coupons + "; purses " + p0 + " -> " + p1);
-        ok.that(coupons > 0 && p1 >= p0, "the week's coupons paid to the holders out of the treasury: " + Businesses.pence(coupons));
+        long owedC = TownBonds.owedForTests(id);
+        Kit.log("[VT] cap06 coupons " + coupons + ", run up " + owedC + "; purses " + p0 + " -> " + p1);
+        ok.that((coupons > 0 || owedC > 0) && p1 >= p0 && (p1 - p0) * 100L == coupons,
+            "the week's coupons paid out of the treasury in whole coins (a purse's under a coin run up on the bond): paid " + Businesses.pence(coupons) + ", run up " + Businesses.pence(owedC));
         Ledger.takeCoins(id, Ledger.coins(id));
         long before = TownBonds.outstanding(id);
         level.setDayTime((d0 + 14) * 24000L + 7000L);

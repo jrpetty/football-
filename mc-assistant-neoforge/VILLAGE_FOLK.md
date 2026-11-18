@@ -13478,8 +13478,13 @@ between holders the coin census counts, and a player can deal at every one of th
   pays the IOUs off (the market has the coin, and pays its producers their store credit) and finds the essential wages.
 - **The rate and the coupons.** One in the hundred a week, a point and a half more for every week's revenue the town owes
   in all (IOUs and bonds), a point more while it is behind with a coupon. Coupons are paid every seventh day out of the
-  treasury (they are the town's spending, the hall's); a bond due is repaid when the treasury can spare it over two days'
-  wages, else rolled over at the day's rate.
+  treasury (they are the town's spending, the hall's; to a purse in whole coins, a coupon under a coin running up on the
+  bond till it is one); a bond due is repaid when the treasury can spare it over two days' wages, else rolled over at the
+  day's rate.
+- **Its borrowing's end, earlier.** A town now starts nothing new on its works once it owes its market one and three
+  fifths of what it can carry (twice, before): the works in hand, finished as the stores allow, took a ten-day town past
+  twice what it could carry (296 coins against 142 its revenue could carry, a hundred and fifty a day of beds and
+  timber for houses already begun).
 - **Living within its means.** A town careful of its money (owing its market over half of what it can carry) now also
   puts off its gardens and its houses' makeovers, buys no flowers for its verges, no water for the window boxes and no
   lute for its band, and its builders lay its chimneys in rough stone rather than buy brick (a hundred coins of brick a
