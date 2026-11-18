@@ -133,7 +133,8 @@ public final class MineSafety {
         BlockPos feet = f.blockPosition();
         if (!below(level, f.ownerId(), feet)) return false;
         Job j = f.peekJob();
-        boolean climbing = f.running(com.jrpetty.mcassistant.entity.goal.MineGoal.class);
+        boolean climbing = f.running(com.jrpetty.mcassistant.entity.goal.MineGoal.class)
+            || f.running(com.jrpetty.mcassistant.entity.goal.WorksGoal.class);   // [mine8] on a shift in the works
         if (j != null && j.type() == Job.Type.MINE) {
             // Its way up (or its run) first in the queue but not under way: the goal that called for the rescue (a
             // deposit, a walk to its bed) has its legs, and lets go now. Its watchdog used to set it going again.

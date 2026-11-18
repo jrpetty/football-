@@ -208,7 +208,7 @@ public final class MineDemand {
         for (VillageFolkEntity f : miners) {
             int tier = f.pickTierCarried();
             MineWorks.Lvl best = null;
-            double bestScore = 0.08;            // less than this is no want worth a miner: where the age sends it
+            double bestScore = 0.15;            // less than this is no want worth a miner: where the age sends it
             Ore bestOre = null;
             for (MineWorks.Lvl l : plan) {
                 if (!mayWork(plan, l, tier)) continue;
@@ -227,7 +227,7 @@ public final class MineDemand {
             if (bestOre != null) {
                 why.put(f.getUUID(), bestOre);
                 sent.merge(bestOre, 1, Integer::sum);
-                for (Ore o : Ore.values()) left.put(o, left.get(o) * (1.0 - 0.6 * rich(o, best.y(), mountain, badlands)));
+                for (Ore o : Ore.values()) left.put(o, left.get(o) * (1.0 - 0.85 * rich(o, best.y(), mountain, badlands)));
             }
         }
         FOR.put(v, why);

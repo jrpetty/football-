@@ -961,6 +961,7 @@ public final class MineWorks {
             }
             case BRANCH -> {
                 Drift d = drift(w, t.drift);
+                if (d != null && t.cut > 0 && d.by != null && !d.by.equals(f.getUUID())) JOINS++;   // working the other side of a mate's drift
                 if (d != null) {
                     int[] b = d.branch(t.anchor, t.side);
                     if (b == null) { b = new int[]{ t.anchor, t.side, 0, 0 }; d.branches.add(b); }
@@ -1445,6 +1446,9 @@ public final class MineWorks {
     }
 
     // ------------------------------------------------------------------ tests
+
+    /** Tests: branches cut by a miner in another's drift. */
+    public static volatile int JOINS;
 
     public static void forgetForTests(UUID village) {
         CACHE.remove(village);
