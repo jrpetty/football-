@@ -56,6 +56,23 @@ public final class TownWork {
         CityDress.tick(level, v);                   // [city9] each house its own roof and timbers, out of the town's woods
         Store.tick(level, v);                       // [econ-store] the shop's staff, its stock book and its deliveries
         WorkTools.rounds(level, v);                 // [workitems] the milestones, the window boxes, the thatch, the shop's book
+        streets(level, v, now);
+    }
+
+    /** [city9] The streets' own round, every three seconds (its hand walks on as it lays): the town's other works keep
+     *  their quarter of a minute. A town's streets at one round in fifteen seconds took a day to pave its square. */
+    private static final Map<UUID, Long> PAVED = new ConcurrentHashMap<>();
+    private static final long PAVE_EVERY = 60L;
+
+    public static void paving(ServerLevel level, Villages.Village v) {
+        long now = level.getGameTime();
+        if (now - PAVED.getOrDefault(v.id(), -100000L) < PAVE_EVERY && now >= PAVED.getOrDefault(v.id(), 0L)) return;
+        streets(level, v, now);
+    }
+
+    private static void streets(ServerLevel level, Villages.Village v, long now) {
+        UUID id = v.id();
+        PAVED.put(id, now);
         int reach = Villages.townReach(id);
         List<int[]> cells = cellsWithin(reach);
         if (cells.isEmpty()) return;
@@ -63,8 +80,8 @@ public final class TownWork {
         int cursor = CURSOR.getOrDefault(id, 0);
         int done = 0;
         // A town sitting on a mountain of cobblestone paves its streets faster.
-        int budget = age.ordinal() >= Villages.Age.STONE.ordinal()
-            && Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)) > 512 ? 64 : 24;
+        int budget = 24;
+        CityStreets.beginRound();                   // [city9] the stores counted once a round
         for (int looked = 0; looked < 400 && done < budget; looked++) {
             int[] c = cells.get(Math.floorMod(cursor, cells.size()));
             int r = work(level, v, c[0], c[1], age);

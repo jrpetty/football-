@@ -650,6 +650,7 @@ public class CityLookGameTests {
             level.setBlock(c, Blocks.AIR.defaultBlockState(), 2 | 16);
             for (int d = 1; d <= 3; d++) level.setBlock(c.below(d), Blocks.AIR.defaultBlockState(), 2 | 16);
         }
+        for (BlockPos p : Villages.storeChests(level, id)) if (level.getBlockEntity(p) instanceof Container c) { c.clearContent(); c.setChanged(); }
         BlockPos chest = Kit.surface(level, cx + 3, cz - 3);
         level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
         ZoneChests.mark(level, chest);

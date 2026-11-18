@@ -19,8 +19,8 @@ import java.util.List;
  * <p><b>The order.</b> The streets' work (TownWork) went over its cells nearest the heart first, every cell of a ring at
  * the same distance one after another, so its one hand was sent from one side of the town to the other and back for
  * each block and laid one or two a visit: a town of ninety had not a yard of street after four days. Now the cells go
- * in walking order, so the hand lays a run of them where it stands before it moves on: the square round and round, each
- * avenue from the gate outward, the ring street round, then the side streets one after another along their length,
+ * in walking order, so the hand lays a run of them where it stands before it moves on: each avenue from the gate
+ * outward, the ring street round, the square round and round, then the side streets one after another along their length,
  * the nearest first (and each only once the town has come to it: CityPlan.served).
  *
  * <p><b>The grades.</b> Bare earth is worn to a path; from the Stone Age the avenues and the ring street are gravelled;
@@ -76,7 +76,7 @@ public final class CityStreets {
         for (int g = want; g > have; g--) {
             if (PAID[g] == null) { lay = g; break; }
             Item it = PAID[g];
-            if (Market.stock(level, v.id(), s -> s.is(it)) > KEEP) { lay = g; break; }
+            if (STOCK.computeIfAbsent(it, k -> Market.stock(level, v.id(), s -> s.is(k))) > KEEP) { lay = g; break; }
         }
         if (lay < 0) return 0;
         // Its own hand ("paving"): the doors' ways and lamps keep theirs ("streets"), and the one no longer waits on the other.
@@ -87,7 +87,8 @@ public final class CityStreets {
         LAID.merge(v.id(), 1, Integer::sum);
         if (PAID[lay] != null) {
             Item it = PAID[lay];
-            if (!TownWork.take(level, v, s -> s.is(it), 1)) return 0;
+            if (!TownWork.take(level, v, s -> s.is(it), 1)) { STOCK.put(it, 0); return 0; }
+            STOCK.merge(it, -1, Integer::sum);
         }
         if (!above.isAir()) level.removeBlock(top.above(), false);       // the grass and flowers in the way
         Item up = have >= 2 ? PAID[have] : null;
@@ -143,7 +144,14 @@ public final class CityStreets {
         return "laid " + LAID.getOrDefault(village, 0) + ", passed over " + passedOver(village) + ", last waited at " + (w == null ? "-" : w.toShortString());
     }
 
-    /** The cells (offsets from the heart) in walking order: the square, the avenues outward, the ring, the side streets. */
+    /** The stores' paving counted once a round (the round's own takings off it), not once a cell. */
+    private static final java.util.Map<Item, Integer> STOCK = new java.util.HashMap<>();
+
+    static void beginRound() {
+        STOCK.clear();
+    }
+
+    /** The cells (offsets from the heart) in walking order: the avenues outward, the ring, the square, the side streets. */
     static void order(List<int[]> cells) {
         cells.sort(Comparator.comparingLong(CityStreets::key));
     }
@@ -153,13 +161,13 @@ public final class CityStreets {
         int u = Math.max(ax, az);
         double angle = Math.atan2(z, x) + Math.PI;                         // 0 .. 2 pi round the heart
         int turn = (int) (angle / (2 * Math.PI) * 4000);
-        if (TownPlan.isSquare(x, z)) return key(0, u, turn, 0);
+        if (TownPlan.isSquare(x, z)) return key(2, u, turn, 0);
         if (ax <= TownPlan.AVENUE || az <= TownPlan.AVENUE) {
             int which = ax <= TownPlan.AVENUE ? (z < 0 ? 0 : 2) : (x > 0 ? 1 : 3);
             int out = ax <= TownPlan.AVENUE ? az : ax, across = ax <= TownPlan.AVENUE ? x : z;
-            return key(1, which, out, across + 8);
+            return key(0, which, out, across + 8);
         }
-        if (u < TownPlan.RING + TownPlan.STREET) return key(2, 0, turn, u);
+        if (u < TownPlan.RING + TownPlan.STREET) return key(1, 0, turn, u);
         boolean onX = ax >= TownPlan.RING && (ax - TownPlan.RING) % TownPlan.PERIOD < TownPlan.STREET;
         int line = onX ? (ax - TownPlan.RING) / TownPlan.PERIOD : (az - TownPlan.RING) / TownPlan.PERIOD;
         int side = onX ? (x > 0 ? 0 : 1) : (z > 0 ? 2 : 3);

@@ -652,6 +652,11 @@ public class VillageFolkEntity extends AssistantEntity {
         // The town's streets, worn and paved and lit a little at a time (TownWork).
         if (ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel townLevel) {
             Villages.Village home = Villages.get(ownerId());
+            if (home != null && !TownLod.away(home.id())) {
+                try (Accounts.Scope paving = Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.WORK)) {
+                    TownWork.paving(townLevel, home);   // [city9] the streets' own round, every three seconds
+                }
+            }
             if (home != null && TownScheduler.due(townLevel, home.id(), TownScheduler.Job.STREETS)) {
                 long started = TownScheduler.start();
                 try (Accounts.Scope townsAccount = Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.WORK)) {   // [econ-1a] the town's own
