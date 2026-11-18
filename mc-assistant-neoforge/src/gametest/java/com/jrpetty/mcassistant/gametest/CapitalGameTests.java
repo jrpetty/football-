@@ -435,7 +435,9 @@ public class CapitalGameTests {
         ok.that(Accounts.debts(id) == ious0 - out, "the IOUs paid off with it: " + Businesses.pence(Accounts.debts(id)));
         ok.that(MarketMaker.cash(id) == cash0 + out, "the market has the coin");
         ok.that(coinNow(id) == c0, "the town's coin the same: purses to the market");
-        ok.that(FolkTalk.card(folk.get(0)).contains("bonds") || FolkTalk.card(folk.get(1)).contains("bonds"), "a holder's card has its bonds");
+        boolean carded = false;
+        for (VillageFolkEntity f : folk) carded |= TownBonds.heldBy(id, f.getUUID()) > 0 && FolkTalk.card(f).contains("bonds");
+        ok.that(carded, "a holder's card has its bonds");
         // The wages: short of yesterday's bill, bonds sold for them (room permitting).
         TownBonds.paydayForTests(id, 10, 0);
         Accounts.debitForTests(level, id, Accounts.Account.dept(Accounts.Dept.WORKS), 0, Accounts.Purpose.BUILD);
