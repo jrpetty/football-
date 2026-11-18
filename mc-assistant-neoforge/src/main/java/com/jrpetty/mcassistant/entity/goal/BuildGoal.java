@@ -768,8 +768,12 @@ public class BuildGoal extends Goal {
         if (!level.hasChunk(x >> 4, z >> 4)) return false;
         BlockState ground = level.getBlockState(new BlockPos(x, g - 1, z));
         if (!ground.getFluidState().isEmpty()) return false;                     // a pond, a river
-        if (ground.is(Blocks.FARMLAND) || ground.is(Blocks.DIRT_PATH)) return false;
-        if (ground.is(net.minecraft.tags.BlockTags.PLANKS) || ground.is(Blocks.COBBLESTONE)
+        // [build5] The town's own paving and its worn paths are no floor of anybody's: the wall stands on them. (The
+        // square's paving reached its wall's line before the wall did, and every paved column was "somebody's floor",
+        // passed over: the square's wall stood with sixty gaps in it, the palisade likewise.)
+        boolean paved = com.jrpetty.mcassistant.entity.SiteWork.townPaving(level, new BlockPos(x, g - 1, z), ground);
+        if (ground.is(Blocks.FARMLAND) || ground.is(Blocks.DIRT_PATH) && !paved) return false;
+        if (ground.is(net.minecraft.tags.BlockTags.PLANKS) || ground.is(Blocks.COBBLESTONE) && !paved
             || ground.is(net.minecraft.tags.BlockTags.SLABS) || ground.is(net.minecraft.tags.BlockTags.STAIRS)
             || ground.hasBlockEntity()) {
             return false;                                                         // somebody's floor

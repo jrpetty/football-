@@ -82,6 +82,17 @@ public final class SiteWork {
         return out;
     }
 
+    /**
+     * The town's own paving or a worn path underfoot (cobble, stone bricks, a path's earth): ground a wall may stand on,
+     * as it stands on turf. Never a block a player set down.
+     */
+    public static boolean townPaving(Level level, BlockPos pos, BlockState st) {
+        boolean paving = st.is(Blocks.COBBLESTONE) || st.is(Blocks.MOSSY_COBBLESTONE) || st.is(Blocks.STONE_BRICKS)
+            || st.is(Blocks.MOSSY_STONE_BRICKS) || st.is(Blocks.CRACKED_STONE_BRICKS) || st.is(Blocks.DIRT_PATH)
+            || st.is(Blocks.SMOOTH_STONE) || st.is(Blocks.POLISHED_ANDESITE) || st.is(Blocks.GRAVEL);
+        return paving && !(level instanceof ServerLevel sl && PlayerBlocks.placed(sl, pos));
+    }
+
     /** As {@link #litter(BlockState)}, or a torch stuck in the ground; and nobody's: never a block a player set down. */
     public static boolean litter(Level level, BlockPos pos, BlockState st) {
         if (!litter(st) && !groundTorch(level, pos, st)) return false;

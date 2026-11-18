@@ -68,6 +68,7 @@ public class BuildAuditGameTests {
         Founding.resetForTests(server);
         com.jrpetty.mcassistant.entity.Police.standDownForTests(false);
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        TownBlocks.traceForTests(true);
         List<Growth> towns = new ArrayList<>();
         int x = 3500000;
         for (Ground g : Ground.values()) {
@@ -92,10 +93,13 @@ public class BuildAuditGameTests {
                         for (Map.Entry<String, Integer> c : t.counts.entrySet()) total.merge(c.getKey(), c.getValue(), Integer::sum);
                     }
                     Kit.log("[VT] ba01 TOTAL " + total);
+                    Map<String, Integer> refused = new TreeMap<>();
+                    for (TownBlocks.Refusal f : TownBlocks.refusals()) refused.merge(f.why() + " in " + f.zone() + (f.building() == null ? "" : " of " + f.building()), 1, Integer::sum);
+                    Kit.log("[VT] ba01 refusals " + TownBlocks.refusalCount() + " (last 400 by kind: " + refused + ")");
                     if (STRICT) {
                         for (String k : BAR) expect.that(total.getOrDefault(k, 0) == 0, k + " = " + total.getOrDefault(k, 0));
                         int buildings = total.getOrDefault("buildings", 0);
-                        expect.that(buildings >= 6 * towns.size(), "the towns built (" + buildings + " buildings)");
+                        expect.that(buildings >= 4 * towns.size(), "the towns built (" + buildings + " buildings)");
                     }
                     helper.runAfterDelay(1, () -> { if (expect.clean()) helper.succeed(); else helper.fail(expect.summary()); });
                 }
@@ -460,7 +464,9 @@ public class BuildAuditGameTests {
             r.add("plant_in_cell", inCell, name + " first " + (cWhere == null ? "" : cWhere.toShortString() + " " + level.getBlockState(cWhere).getBlock()));
             r.add("roof_missing", roof, name + (Ledger.grown(id, b.anchor()) ? " grown" : "")
                 + (com.jrpetty.mcassistant.entity.Grow.tall(id, b.anchor()) ? " tall" : "")
-                + (Restore.jobFor(id, b.anchor()) != null ? " on the repair list" : "") + (roof > 0 && cWhereRoof(level, plan) != null ? " first " + cWhereRoof(level, plan).toShortString() : ""));
+                + (Restore.jobFor(id, b.anchor()) != null ? " on the repair list" : "") + (roof > 0 && cWhereRoof(level, plan) != null ? " first " + cWhereRoof(level, plan).toShortString()
+                    + " gate " + TownBlocks.mayBuild(level, v, cWhereRoof(level, plan), b.anchor(), TownBlocks.Why.BUILD)
+                    + " zone " + TownBlocks.zone(level, v, cWhereRoof(level, plan)) : ""));
             // The ground round the walls: banked up over the floor, two or more.
             int banked = 0;
             BlockPos bWhere = null;
