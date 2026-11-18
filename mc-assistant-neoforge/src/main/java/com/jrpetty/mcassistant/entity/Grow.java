@@ -208,6 +208,16 @@ public final class Grow {
         if (age.ordinal() < Villages.Age.STONE.ordinal()) return 0;
         if (TownBudget.frugal(id)) return 0;                               // [capital] careful of its money: its gardens and makeovers wait
         int done = 0;
+        // [city9] The first house still without its garden has it seen to each round, before any storey goes up: in the
+        // Iron Age the round stopped at the first house still to be raised, and the gardens past it waited for days.
+        for (Ledger.Building b : Ledger.buildings(id)) {
+            if (!b.structure().equals("house") || !Land.areaLoaded(level, b.anchor(), 7)) continue;
+            if (HousingMarket.isPrivate(id, b.anchor()) || Beliefs.untouchable(id, b)) continue;
+            Set<Long> gardened = GARDENED.get(id);
+            if (gardened != null && gardened.contains(b.anchor().asLong())) continue;
+            done += garden(level, v, b, false);
+            break;
+        }
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (!b.structure().equals("house") || !Land.areaLoaded(level, b.anchor(), 7)) continue;
             if (HousingMarket.isPrivate(id, b.anchor())) continue;     // [econ-housing] a folk's own: not the council's to rebuild or raise
