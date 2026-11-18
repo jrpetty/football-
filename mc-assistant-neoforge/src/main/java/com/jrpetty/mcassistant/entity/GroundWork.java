@@ -82,7 +82,7 @@ public final class GroundWork {
     static int seal(ServerLevel level, LevelChunk chunk, int x, int z, int target, Block surface, boolean look) {
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos(), n = new BlockPos.MutableBlockPos();
         int changed = 0;
-        for (int d = 1; d < SEAL_DEPTH; d++) {
+        for (int d = 1; d <= SEAL_DEPTH; d++) {
             int y = target - d;
             if (y <= level.getMinBuildHeight()) break;
             BlockState b = chunk.getBlockState(m.set(x, y, z));

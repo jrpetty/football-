@@ -152,24 +152,29 @@ public final class TerraformAudit {
         for (int i = 0; i < side * side; i++) {
             if (top[i] == Integer.MIN_VALUE || !counted[i]) continue;
             int x = i % side, z = i / side;
-            int lowerThanAll = Integer.MAX_VALUE;
+            int lowerThanAll = Integer.MAX_VALUE, wasLower = Integer.MAX_VALUE;
             for (int[] n : new int[][]{ {1, 0}, {0, 1}, {-1, 0}, {0, -1} }) {
                 int xx = x + n[0], zz = z + n[1];
                 if (xx < 0 || zz < 0 || xx >= side || zz >= side) { lowerThanAll = Integer.MIN_VALUE; continue; }
                 int j = zz * side + xx;
                 if (top[j] == Integer.MIN_VALUE || !counted[j]) { lowerThanAll = Integer.MIN_VALUE; continue; }
                 lowerThanAll = Math.min(lowerThanAll, top[j] - top[i]);
+                wasLower = Math.min(wasLower, g.ground[j] - g.ground[i]);
                 if (n[0] < 0 || n[1] < 0) continue;                    // each pair once
                 if (!worked[i] && !worked[j]) continue;
                 int step = Math.abs(top[j] - top[i]);
                 if (step <= Math.abs(g.ground[j] - g.ground[i])) continue;   // no worse than the land had it
-                if (step > 2) at(c, "sheer", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
+                if (step > 2) {
+                    at(c, "sheer", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
+                    FIRST.putIfAbsent("sheerWhy", "kind " + g.kind[i] + "/" + g.kind[j] + " ground " + g.ground[i] + "/" + g.ground[j]
+                        + " target " + g.target[i] + "/" + g.target[j] + " now " + top[i] + "/" + top[j]);
+                }
                 else if (step == 2) c.merge("steps2", 1, Integer::sum);
             }
-            if (worked[i] && lowerThanAll != Integer.MIN_VALUE && lowerThanAll >= 2) at(c, "pits", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
+            if (worked[i] && lowerThanAll != Integer.MIN_VALUE && lowerThanAll >= 2 && lowerThanAll > wasLower) at(c, "pits", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
         }
         // ---- trees: leaves cut off from their logs, logs on nothing, stumps; vines hanging on nothing
-        int x0 = hx - g.outer - 8, z0 = hz - g.outer - 8, w = 2 * g.outer + 17;
+        int x0 = hx - g.outer - 15, z0 = hz - g.outer - 15, w = 2 * g.outer + 31;   // (counted 8 round, held 7 more)
         int y0 = Math.max(minY, lowest - 4), hgt = Math.min(level.getMaxBuildHeight() - 1, highest + 2) - y0 + 1;
         if (hgt > 0 && (long) w * w * hgt < 40_000_000L) trees(level, c, x0, z0, y0, w, hgt);
         // ---- water left running, lava, sand over a hollow: anywhere in the worked ground, at and above its top less a few
@@ -179,10 +184,26 @@ public final class TerraformAudit {
             LevelChunk ch = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
             if (ch == null) continue;
             int hi = ch.getHeight(Heightmap.Types.WORLD_SURFACE, x & 15, z & 15);
-            for (int y = top[i] - DEEP; y <= hi + 1; y++) {
+            // An untouched column beside the work counts only where the cut laid it open: above the worked column's
+            // new top and within its old ground (natural springs and floating gravel elsewhere are the land's own).
+            int lo = top[i] - DEEP, hi2 = hi + 1;
+            if (!worked[i]) {
+                lo = Integer.MAX_VALUE;
+                hi2 = Integer.MIN_VALUE;
+                int xi = i % side, zi = i / side;
+                for (int[] n : new int[][]{ {1, 0}, {-1, 0}, {0, 1}, {0, -1} }) {
+                    int xx = xi + n[0], zz = zi + n[1];
+                    if (xx < 0 || zz < 0 || xx >= side || zz >= side) continue;
+                    int j = zz * side + xx;
+                    if (!worked[j] || top[j] == Integer.MIN_VALUE || g.ground[j] <= top[j]) continue;
+                    lo = Math.min(lo, top[j] + 1);
+                    hi2 = Math.max(hi2, g.ground[j]);
+                }
+            }
+            for (int y = lo; y <= hi2; y++) {
                 if (y <= minY) continue;
                 BlockState b = ch.getBlockState(m.set(x, y, z));
-                if (!b.getFluidState().isEmpty()) {
+                if (!b.getFluidState().isEmpty() && open(level, x, y, z)) {
                     if (b.getFluidState().is(FluidTags.LAVA)) at(c, "lava", x, y, z, b);
                     else if (!b.getFluidState().isSource()) at(c, "flowing", x, y, z, b);
                 }
@@ -192,9 +213,19 @@ public final class TerraformAudit {
                 }
             }
         }
-        AABB box = new AABB(x0, y0, z0, x0 + w, y0 + hgt + 8, z0 + w);
+        AABB box = new AABB(x0 + 7, y0, z0 + 7, x0 + w - 7, y0 + hgt + 8, z0 + w - 7);
         c.put("items", level.getEntitiesOfClass(ItemEntity.class, box, e -> e.isAlive()).size());
         return c;
+    }
+
+    /** Is this cell open to the sky, or beside a cell that is (so what is in it shows, and runs)? */
+    private static boolean open(ServerLevel level, int x, int y, int z) {
+        for (int[] n : new int[][]{ {0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1} }) {
+            int xx = x + n[0], zz = z + n[1];
+            int sky = level.getHeight(Heightmap.Types.WORLD_SURFACE, xx, zz);
+            if (n[0] == 0 && n[1] == 0 ? y >= sky - 1 : y >= sky) return true;
+        }
+        return false;
     }
 
     private static boolean near(boolean[] worked, int side, int i) {
@@ -259,7 +290,7 @@ public final class TerraformAudit {
                 q.add(j);
             }
         }
-        for (int i = 0; i < k.length; i++) if (k[i] == 2 && dist[i] > 6) at(c, "floatLeaves", x0 + i % w, y0 + i / (w * w), z0 + (i / w) % w, null);
+        for (int i = 0; i < k.length; i++) if (k[i] == 2 && dist[i] > 6 && i % w >= 7 && i % w < w - 7 && (i / w) % w >= 7 && (i / w) % w < w - 7) at(c, "floatLeaves", x0 + i % w, y0 + i / (w * w), z0 + (i / w) % w, null);
         // Logs: each run of them (touching, corners too), on something or not, and with a crown or not.
         boolean[] seen = new boolean[k.length];
         for (int i0 = 0; i0 < k.length; i0++) {
@@ -302,7 +333,7 @@ public final class TerraformAudit {
                 int j = i + step[s];
                 if (j >= 0 && j < k.length && (k[j] == 5 || k[j] == 6 || k[j] == 1 || k[j] == 2 || k[j] == 3 || (s == 4 && k[j] == 4))) held = true;
             }
-            if (!held) at(c, "floatVines", x0 + x, y0 + y, z0 + z, null);
+            if (!held && x >= 7 && z >= 7 && x < w - 7 && z < w - 7) at(c, "floatVines", x0 + x, y0 + y, z0 + z, null);
         }
     }
 
