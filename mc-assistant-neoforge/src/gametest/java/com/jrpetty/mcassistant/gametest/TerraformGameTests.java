@@ -269,23 +269,18 @@ public class TerraformGameTests {
     // ============================================================ the audit
 
     /**
-     * tf01: the six grounds founded at once, and each looked over when its levelling is done. Every count of a fault
-     * nought; the hut somebody built on the meadow still standing; the ravine's old boards no reason to dig the
-     * ground round them down to them.
+     * Found a town of eight on each of these grounds at once and, when every levelling is done, look each over: every
+     * count of a fault nought (unless -Dtf.strict=false); a hut somebody built still standing; a village there.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 24000, batch = "tf01_audit", required = false)
-    public static void tf01_audit(GameTestHelper helper) {
+    static void audit(GameTestHelper helper, String label, List<String> kinds) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         Founding.resetForTests(level.getServer());
         level.setDayTime(1000);
         int radius = FoundingPlan.coreRadius(FOLK), outer = radius + FoundingPlan.BAND_MAX, half = outer + 14;
-        List<String> kinds = new ArrayList<>();
-        for (String k : ALL) if (("," + GROUNDS + ",").contains("," + k + ",")) kinds.add(k);
         Map<String, BlockPos> hearts = new LinkedHashMap<>();
         Map<String, BlockPos> huts = new HashMap<>();
-        for (int n = 0; n < kinds.size(); n++) {
-            String k = kinds.get(n);
+        for (String k : kinds) {
             int cx = X0 + 4000 * java.util.Arrays.asList(ALL).indexOf(k), cz = Z;
             Kit.hold(level, cx, cz, half + 16);
             Kit.prepare(level, cx, cz, half + 16);
@@ -293,9 +288,9 @@ public class TerraformGameTests {
             BlockPos hut = lay(level, k, cx, cz, half);
             if (hut != null) huts.put(k, hut);
             BlockPos heart = Kit.surface(level, cx, cz);
-            Kit.log("[VT] tf01 " + k + " laid in " + (System.nanoTime() - t0) / 1_000_000 + " ms; the heart at " + heart.toShortString());
+            Kit.log("[VT] " + label + " " + k + " laid in " + (System.nanoTime() - t0) / 1_000_000 + " ms; the heart at " + heart.toShortString());
             Founding.Outcome o = Founding.foundNow(level, heart, FOLK, 0F, null);
-            Kit.log("[VT] tf01 " + k + " founding: " + o.message());
+            Kit.log("[VT] " + label + " " + k + " founding: " + o.message());
             hearts.put(k, heart);
         }
         final long[] start = { -1 };
@@ -303,7 +298,7 @@ public class TerraformGameTests {
             long t = helper.getTick();
             for (BlockPos h : hearts.values()) {
                 if (Founding.near(level, h, 8)) {
-                    if (t % 400 == 0) Kit.log("[VT] tf01 @" + t + " " + Founding.status(level.getServer()));
+                    if (t % 400 == 0) Kit.log("[VT] " + label + " @" + t + " " + Founding.status(level.getServer()));
                     return;
                 }
             }
@@ -316,7 +311,8 @@ public class TerraformGameTests {
                 expect.that(d != null, e.getKey() + ": the founding finished");
                 if (d == null) continue;
                 Map<String, Integer> c = TerraformAudit.scan(level, d);
-                Kit.log("[VT] tf01 AUDIT " + e.getKey() + " y=" + d.level() + " " + TerraformAudit.line(c));
+                Kit.log("[VT] " + label + " AUDIT " + e.getKey() + " y=" + d.level() + " " + TerraformAudit.line(c)
+                    + (TerraformAudit.FIRST.isEmpty() ? "" : " | first: " + TerraformAudit.FIRST));
                 c.forEach((key, v) -> total.merge(key, v, Integer::sum));
                 if (STRICT) {
                     for (String key : MUST_BE_NOUGHT) {
@@ -330,7 +326,88 @@ public class TerraformGameTests {
                 }
                 expect.that(Villages.nearest(level, e.getValue(), 64) != null, e.getKey() + ": a village stands there");
             }
-            Kit.log("[VT] tf01 AUDIT total " + TerraformAudit.line(total));
+            if (hearts.size() > 1) Kit.log("[VT] " + label + " AUDIT total " + TerraformAudit.line(total));
+            if (expect.clean()) helper.succeed();
+            else helper.fail(expect.summary());
+        });
+    }
+
+    /** tf01: the meadow, strewn with gravel, ore and andesite at the top, pits, a pond, trees on the edge, a player's hut. */
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "tf01_meadow")
+    public static void tf01_meadow(GameTestHelper helper) {
+        audit(helper, "tf01", List.of("meadow"));
+    }
+
+    /** tf02: a steep hillside across the edge, a cave through it at the cut's height with water and lava, a cave mouth in the square. */
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "tf02_hillside")
+    public static void tf02_hillside(GameTestHelper helper) {
+        audit(helper, "tf02", List.of("hillside"));
+    }
+
+    /** tf03: a thick forest, dark oaks among the oaks, vines on them, the edge cutting through their crowns. */
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "tf03_forest")
+    public static void tf03_forest(GameTestHelper helper) {
+        audit(helper, "tf03", List.of("forest"));
+    }
+
+    /** tf04: a river through, a ravine with an old mine's boards at its foot, a cavern under a thin crust, sand over a hollow. */
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "tf04_waters")
+    public static void tf04_waters(GameTestHelper helper) {
+        audit(helper, "tf04", List.of("waters"));
+    }
+
+    /** tf05: desert dunes, a cave right under the sand, cacti and a dead bush. */
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "tf05_desert")
+    public static void tf05_desert(GameTestHelper helper) {
+        audit(helper, "tf05", List.of("desert"));
+    }
+
+    /** tf06: a long snowy slope, snow blocks up it, powder snow, spruces. */
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "tf06_snowy")
+    public static void tf06_snowy(GameTestHelper helper) {
+        audit(helper, "tf06", List.of("snowy"));
+    }
+
+    /** tf00: every ground at once (-Dtf.grounds to choose), for the audit's numbers; not required, the six above are. */
+    @GameTest(template = EMPTY, timeoutTicks = 24000, batch = "tf00_audit", required = false)
+    public static void tf00_audit(GameTestHelper helper) {
+        List<String> kinds = new ArrayList<>();
+        for (String k : ALL) if (("," + GROUNDS + ",").contains("," + k + ",")) kinds.add(k);
+        audit(helper, "tf00", kinds);
+    }
+
+    /**
+     * tf07: /village spawnat founds a village at once for the console (folk there the same tick, as it always was) and
+     * levels its ground after, as /village level does: the meadow's pits filled and its trees gone when it is done.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "tf07_spawnat")
+    public static void tf07_spawnat(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Founding.resetForTests(level.getServer());
+        level.setDayTime(1000);
+        int cx = X0 + 4000 * ALL.length + 4000, cz = Z;
+        int radius = FoundingPlan.coreRadius(FOLK), half = radius + FoundingPlan.BAND_MAX + 14;
+        Kit.hold(level, cx, cz, half + 16);
+        Kit.prepare(level, cx, cz, half + 16);
+        lay(level, "meadow", cx, cz, half);
+        List<String> said = Kit.command(level, "village spawnat " + cx + " " + cz + " " + FOLK);
+        Villages.Village v = Villages.nearest(level, new BlockPos(cx, 0, cz), 64);
+        Kit.log("[VT] tf07 spawnat: " + said + "; village " + (v == null ? "none" : Villages.name(v.id()) + " of " + Villages.headcount(v.id())));
+        helper.assertTrue(v != null && Villages.headcount(v.id()) == FOLK, "spawnat founds the village at once, its folk there");
+        helper.assertTrue(Founding.near(level, v.centre(), 16), "and its ground is being levelled");
+        helper.onEachTick(() -> {
+            if (Founding.near(level, v.centre(), 16)) return;
+            TerraformAudit.Done d = TerraformAudit.near(v.centre(), 40);
+            if (d == null) { helper.fail("the levelling left nothing to audit"); return; }
+            Map<String, Integer> c = TerraformAudit.scan(level, d);
+            Kit.log("[VT] tf07 AUDIT y=" + d.level() + " " + TerraformAudit.line(c));
+            Kit.Expect expect = new Kit.Expect();
+            expect.that(c.get("square") > 2000, "the square levelled round the village: " + c.get("square") + " columns");
+            for (String key : new String[]{ "offLevel", "holes", "pits", "oddTop", "growthOnSquare", "floatLeaves", "floatLogs" }) {
+                expect.that(c.get(key) == 0, key + "=" + c.get(key));
+            }
+            expect.that(Villages.headcount(v.id()) == FOLK, "nobody new came, nobody lost: " + Villages.headcount(v.id()));
             if (expect.clean()) helper.succeed();
             else helper.fail(expect.summary());
         });

@@ -377,6 +377,15 @@ public final class Terraform {
                 changed++;
             }
             changed += GroundWork.seal(level, chunk, x, z, target, surface, false, felling);   // [terra10] solid twelve deep
+            // [terra10] Sand or gravel's stone set for a top over a hollow (above): the hollow filled now, its own top on it.
+            BlockState set = chunk.getBlockState(m.set(x, target, z));
+            if (surface.defaultBlockState().getBlock() instanceof net.minecraft.world.level.block.FallingBlock
+                    && set.is(under(surface, 4).getBlock()) && !set.is(surface)) {
+                BlockState below = chunk.getBlockState(m.set(x, target - 1, z));
+                if (!below.isAir() && below.getFluidState().isEmpty() && !(below.getBlock() instanceof net.minecraft.world.level.block.FallingBlock && !under(surface, 1).is(below.getBlock()))) {
+                    level.setBlock(m.set(x, target, z), surface.defaultBlockState(), QUIET);
+                }
+            }
         }
         if (target < ground) changed += GroundWork.faces(level, x, z, target, ground);   // [terra10] the cut's sides closed
         for (SiteWork.Carried c : chests) SiteWork.setDown(level, new BlockPos(x, target + 1, z), c);   // [build5] on the new ground
