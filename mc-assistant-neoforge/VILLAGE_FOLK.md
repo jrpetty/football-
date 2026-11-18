@@ -13812,3 +13812,72 @@ What a town does now (entity/TownDigs, marked `[mine7]`):
   gardens, lamps, decor and new buildings and letting the mine and the way, no land title on it), ms08 (a town grown to
   its whole plan round an older world's mine still mines there: faces handed out inside the plan, runs and cuts there,
   the mine not moved).
+
+## The mine as a mine: one shaft, levels, drifts and branches, dug for what the town is short of (mine-8)
+
+Players wanted the town's mine to look and work like a mine: a way down a folk or a player can walk, long straight
+tunnels that turn now and then, every miner with its own way to go or in company, and an order to the whole. Before,
+each miner cut its own staircase from the middle of a face of the mine (TownMine) and a gallery off its foot a different
+way each run: a field of open trenches at the surface and underground a warren going nowhere in particular. And how deep a
+miner dug was the age's question alone, so a town past the Iron Age that ran out of coal never sent anybody back up for
+it, and nobody went for the copper, the redstone or the lapis its trades asked for.
+
+What a town does now (entity/MineWorks, entity/MineDemand, entity/goal/WorksGoal, marked `[mine8]`):
+
+- **The pithead.** Every miner's plot is the mine's site (TownMine.faceFor gives it to them all; a miner on an older
+  world's face moves to it, VillageFolkEntity.seekTheSeam). The station sends a miner there and down for a shift (a mine
+  job "works", run by WorksGoal; MineGoal leaves those alone). Over the shaft stands a headframe of the town's wood (four
+  posts, a frame of beams, a lantern hung in the middle), the open top of the shaft is fenced round with the way in left
+  open, and a spoil heap of cobble and gravel grows beside it on the side away from the town as the works are dug (a block
+  for every ninety-six cut, sixty at most). The path from the town (mine-7) comes to it.
+- **The main shaft.** A broad stair two blocks wide winding down round a pillar of rock three across (seven blocks square
+  in all): each side drops three steps and turns on a flat corner landing, twelve blocks down a turn, three blocks of
+  headroom all the way, walkable up and down by a folk or a player. Each step is laid as a stair of the rock it is cut in
+  (stone, or cobbled deepslate below), a torch on each landing, a timber set across the middle of each side. Only its
+  first side is open to the sky, a cutting two and three deep; below that it is a covered stair. One miner sinks it at a
+  time, a side at a go.
+- **The levels.** Off a corner landing at the depths where the ores lie, as near as the ground allows and twelve blocks
+  apart at the least: the coal level (as near ninety-six as it can be, under the top), the copper level (forty-eight), the
+  iron level (sixteen), the gold level (minus sixteen, for the gold and the lapis) and the deep level (as deep as a
+  village mine goes, minus fifty: the diamonds and the redstone). From Y 64 that is four levels (52, 16, -17, -50); from
+  a hill at 100, all five. On ground too low for any (a flat world) one level as deep as the rock goes. When the shaft
+  reaches a level a landing is cut beside the corner, five blocks square and three high, with a chest, a crafting table,
+  a bench and a lantern hung in the middle; the town's news says so.
+- **The drifts.** From the middle of each wall of a landing a drift is driven out, two high and one wide, by the miner
+  who starts it: straight, a timber set every eight blocks, a torch every six on alternate walls. Every fourth block a
+  branch is cut off each side, five to seven long (branch mining), so the level becomes a grid of corridors. A drift turns
+  now and then: after a long straight run (sixteen to twenty-seven blocks, each drift its own) a short dog-leg of three to
+  six and back on its way; round water, lava or a cave in its way a dog-leg too; at the edge of the mine's ground it bends
+  away for good (twice at most); with nowhere to go, or broken through into another tunnel, it is closed. No drift comes
+  within five blocks of the shaft; all of it stays two blocks inside the mine's reserved faces, clear of the town's ground
+  and of another town's mine.
+- **The miners' choices.** On its level a miner drives its own drift (its branches first once two wait behind the face),
+  or, sociable (always) or on one day in three (not the shy), joins a friend's drift and cuts its branches, working the
+  other side of it; starts a new drift from a wall of the landing nobody has started from (each its own way first); or
+  takes on branches, or a drift whose miner is not at its face. Every piece of work is claimed: never two on one face or
+  one branch.
+- **The work.** Each block broken as a player breaks it (the pick's pace, the pit props' pace), every ore that shows in a
+  wall followed out to the end of its vein (thirty-two blocks) from the tunnel cut so far, water and lava stopped with
+  cobblestone as they show, a hole in the floor filled. A shift ends with a full pack, a worn-out pick, the evening, ten
+  pieces of work, or hurt; the miner walks back up by the tunnels and the shaft and banks its haul as before. A folk sent
+  up out of the mine (a mine job "out") down in the works walks up the same way, not cutting its own stairs.
+- **Kept with the world** (ledger note mine.works): the shaft's depth, the landings cut, every drift (who started it, its
+  way, each block of its path, its turns and bends, each branch and how far it is cut, why it ended), the ore taken by
+  level this week and in all.
+- **Dug for what the town is short of** (MineDemand). Each ore's stock in the stores (ore, raw, ingot, and blocks as
+  nine) against what the town wants: coal for the smelting, the smiths and the torches (twice as much from the Iron Age);
+  iron as the age asks; copper from the Stone Age; gold, lapis and redstone from the Iron Age; diamonds from the Diamond
+  Age; emeralds when a trade wants them; and whatever the firms are short of (InputWants). Where each ore lies is this
+  game's own lay of the ores (coal in a broad band about ninety-six, copper about forty-eight, iron about sixteen and high
+  in the mountains, lapis about nought, gold about minus sixteen and up the badlands, redstone thick under minus
+  thirty-two, diamonds thicker the deeper, emeralds in the mountains only). Once a minute the town shares its miners out:
+  each in turn to the level where most of what it is still short of lies, of the ores its pick takes (a wooden pick the
+  top level only; the deep level an iron pick); each one sent takes most of the want off the ores of its level, so the next
+  goes for the next shortage, a mix. With nothing short, each goes where the age sends it (the depth of its plot). The
+  coal and middle levels are worked as long as the town uses what is in them. The town's news says when it turns miners to
+  an ore ("the town turned a miner to the coal: the stores ran short (0 of the 64 it wants)"), once in three days an ore.
+- **Seen.** `/village mine` adds the works: the shaft and its depth, each level (its drifts, branches and blocks of
+  tunnel, the ore taken this week and in all, who is on it doing what), each drift (whose, its way, its length, its turns
+  and branches, why it ended), and each ore's stock against what the town wants, the level it lies richest in and who
+  works there (and who was sent for it). The status line adds "the works: the shaft to Y.., N of M levels open, K
+  drifts". The city books' Caves page shows the same under "The mine".
