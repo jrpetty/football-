@@ -338,8 +338,8 @@ public class CityLookGameTests {
     static String pavingNote(ServerLevel level, UUID id) {
         try {
             VillageFolkEntity hand = com.jrpetty.mcassistant.entity.TownJobs.handAt(level, id, "paving");
-            return "; the paving's hand " + (hand == null ? "none" : hand.blockPosition().toShortString())
-                + ", cells passed over " + com.jrpetty.mcassistant.entity.CityStreets.passedOver(id);
+            return "; the paving's hand " + (hand == null ? "none" : hand.blockPosition().toShortString()
+                + " (" + com.jrpetty.mcassistant.entity.TownJobs.doing(hand) + ")") + "; " + com.jrpetty.mcassistant.entity.CityStreets.state(id);
         } catch (LinkageError older) {
             return "";
         }
@@ -724,6 +724,31 @@ public class CityLookGameTests {
         helper.assertTrue(roofs.size() >= 2 && frames.size() >= 2, "the houses' roofs and frames not all one: " + roofs + " " + frames);
         // Restore holds them to their drawing: none of the dressed blocks counts as wrong.
         helper.succeed();
+    }
+
+    // ============================================================ ct07: the streets laid by hand (a trace)
+
+    @GameTest(template = "empty", timeoutTicks = 12000, required = false, batch = "ct07_paving_trace")
+    public static void ct07_paving_trace(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        VillageFolkEntity first = founder(helper, 3990000, Z + 3000);
+        UUID id = first.ownerId();
+        Villages.Village v = Villages.get(id);
+        int cx = v.centre().getX(), cz = v.centre().getZ();
+        for (int i = 0; i < 15; i++) VillageFolkSpawnerBlock.raise(level, Kit.surface(level, cx + 5 + (i % 5) * 2, cz + 5 + (i / 5) * 2), 0.0F);
+        Villages.ageForTests(id, Villages.Age.IRON);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        level.setDayTime(24000L * 5 + 500);
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t == 20) stock(level, Villages.get(id));
+            if (t % 600 != 0) return;
+            VillageFolkEntity hand = com.jrpetty.mcassistant.entity.TownJobs.handAt(level, id, "paving");
+            Kit.log("[VT] ct07 t" + t + " day-time " + level.getDayTime() % 24000 + ": " + paved(level, Villages.get(id)) + "; hand "
+                + (hand == null ? "none" : hand.blockPosition().toShortString() + " " + com.jrpetty.mcassistant.entity.TownJobs.doing(hand))
+                + "; " + com.jrpetty.mcassistant.entity.CityStreets.state(id));
+        });
+        helper.runAtTickTime(11000, helper::succeed);
     }
 
     // ------------------------------------------------------------------ the ground

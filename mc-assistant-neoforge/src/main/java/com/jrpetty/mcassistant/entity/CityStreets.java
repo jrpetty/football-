@@ -80,7 +80,11 @@ public final class CityStreets {
         }
         if (lay < 0) return 0;
         // Its own hand ("paving"): the doors' ways and lamps keep theirs ("streets"), and the one no longer waits on the other.
-        if (!TownJobs.atWork(level, v, "paving", top, lay == 1 ? "laying the streets" : "paving the streets")) return -1;
+        if (!TownJobs.atWork(level, v, "paving", top, lay == 1 ? "laying the streets" : "paving the streets")) {
+            WAITED.put(v.id(), top.immutable());
+            return -1;
+        }
+        LAID.merge(v.id(), 1, Integer::sum);
         if (PAID[lay] != null) {
             Item it = PAID[lay];
             if (!TownWork.take(level, v, s -> s.is(it), 1)) return 0;
@@ -126,6 +130,17 @@ public final class CityStreets {
     public static void resetForTests() {
         WAITING.clear();
         PASSED.clear();
+        WAITED.clear();
+        LAID.clear();
+    }
+
+    private static final java.util.Map<java.util.UUID, BlockPos> WAITED = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<java.util.UUID, Integer> LAID = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Tests and the books: the cell the paving last waited on for a hand, and how many cells it has laid. */
+    public static String state(java.util.UUID village) {
+        BlockPos w = WAITED.get(village);
+        return "laid " + LAID.getOrDefault(village, 0) + ", passed over " + passedOver(village) + ", last waited at " + (w == null ? "-" : w.toShortString());
     }
 
     /** The cells (offsets from the heart) in walking order: the square, the avenues outward, the ring, the side streets. */
