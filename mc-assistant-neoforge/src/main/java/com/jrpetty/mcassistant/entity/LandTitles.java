@@ -354,6 +354,10 @@ public final class LandTitles {
         return all.contains(key) ? all.getCompound(key) : null;
     }
 
+    public static void baseForTests(UUID village, long base) {
+        book(village).putLong("base", base);
+    }
+
     public static void rentsForTests(UUID village, long day) {
         rents(village, day);
     }

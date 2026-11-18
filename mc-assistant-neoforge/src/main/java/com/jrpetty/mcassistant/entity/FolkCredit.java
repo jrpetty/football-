@@ -746,6 +746,18 @@ public final class FolkCredit {
         morning(level, v, day);
     }
 
+    /** Tests: so many coins of a firm's loan paid back out of its till, as Businesses.repay does. */
+    public static void repaidForTests(UUID village, Business b, int coins) {
+        b.till -= coins * 100L;
+        repaid(village, b, coins);
+        b.loan -= coins * 100L;
+        if (b.loan <= 0) { b.loan = 0; b.lender = ""; }
+    }
+
+    public static long earnedForTests(UUID village) {
+        return club(village).getLong("earned");
+    }
+
     public static void weekForTests(ServerLevel level, Villages.Village v, long day) {
         week(level, v, day);
     }

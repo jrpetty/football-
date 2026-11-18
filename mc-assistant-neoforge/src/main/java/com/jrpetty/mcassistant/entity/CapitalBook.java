@@ -121,6 +121,36 @@ public final class CapitalBook {
         Villages.tell(village, day, text);
     }
 
+    /**
+     * Tests: the world saved and loaded, as far as the capital goes: the accounts' books (where the club, the bonds, the
+     * bourse and the land are kept) written out as a save file's bytes and read back, and every business of the town (its
+     * owners' shares, its loan, its lender and rate) saved and loaded in its place.
+     */
+    public static void roundTripForTests(UUID village, net.minecraft.core.HolderLookup.Provider p) {
+        try {
+            Accounts.Books live = Accounts.books();
+            CompoundTag saved = live.save(new CompoundTag(), p);
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            net.minecraft.nbt.NbtIo.writeCompressed(saved, out);
+            CompoundTag read = net.minecraft.nbt.NbtIo.readCompressed(new java.io.ByteArrayInputStream(out.toByteArray()),
+                net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+            live.root = Accounts.Books.load(read, p).root;
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
+        Businesses.Town t = Businesses.town(village);
+        for (String k : new ArrayList<>(t.biz.keySet())) t.biz.put(k, Business.load(t.biz.get(k).save()));
+    }
+
+    public static void morningForTests(ServerLevel level, Villages.Village v, long day) {
+        root(v.id()).remove("morning");
+        morning(level, v, day);
+    }
+
+    public static List<CompoundTag> daysForTests(UUID village) {
+        return days(village);
+    }
+
     public static void resetForTests() {
         TownBonds.resetForTests();
         FolkCredit.resetForTests();

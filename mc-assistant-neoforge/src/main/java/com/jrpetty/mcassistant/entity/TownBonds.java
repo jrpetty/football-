@@ -501,6 +501,15 @@ public final class TownBonds {
         return i < l.size() ? l.getCompound(i) : null;
     }
 
+    public static CompoundTag reportForTests(UUID village) {
+        return report(village);
+    }
+
+    @Nullable
+    public static CompoundTag firstForTests(UUID village) {
+        return forTests(village, 0);
+    }
+
     public static int countForTests(UUID village) {
         return bonds(village).size();
     }
