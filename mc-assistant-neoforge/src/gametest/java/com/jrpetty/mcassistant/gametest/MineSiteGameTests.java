@@ -400,6 +400,8 @@ public class MineSiteGameTests {
         miners.get(1).assignPlot(WorkZone.around(heart.offset(60, 0, 0), 8, heart.getY() - 3), "The first face");
         BlockPos h1 = oldPlot, h2 = heart.offset(-35, 0, -20), h3 = heart.offset(20, 0, -40), h4 = heart.offset(62, 0, 2);
         List<BlockPos> ours = cutStairs(level, h1, 4, MineStairs.plotKey(h1));
+        // A gallery off the same plot, open to the sky: a trench two deep, five long (the pits a heart plot's miner left).
+        for (int k = 0; k < 5; k++) for (int dy = 1; dy <= 2; dy++) level.setBlock(h1.offset(-2 - k, -dy, 4), Blocks.AIR.defaultBlockState(), 2);
         cutStairs(level, h2, 4, MineStairs.plotKey(h2));
         MineStairs.own(level, MineStairs.plotKey(h2), UUID.randomUUID());          // another town's
         cutStairs(level, h4, 4, MineStairs.plotKey(h4));                            // the mine's own, on its first face
@@ -433,6 +435,11 @@ public class MineSiteGameTests {
         // The town fills in its own stray stairs; not the mine's own, another town's, nor a hole nobody recorded.
         int laid = 0;
         for (int i = 0; i < 4; i++) laid += TownDigs.seal(level, vil, TownDigs.FILL_A_LOOK_FOR_TESTS);
+        int pits = 0;
+        for (int i = 0; i < 4; i++) pits += TownDigs.hollows(level, vil, 200);
+        boolean trench = true;
+        for (int k = 0; k < 5; k++) trench &= level.getBlockState(h1.offset(-2 - k, -1, 4)).is(Blocks.GRASS_BLOCK)
+            && !level.getBlockState(h1.offset(-2 - k, -2, 4)).isAir();
         BlockPos top = ours.get(1).atY(h1.getY() - 1);
         boolean filled = true;
         for (BlockPos st : ours) for (int y = st.getY(); y < h1.getY(); y++) filled &= !level.getBlockState(st.atY(y)).isAir();
@@ -443,8 +450,9 @@ public class MineSiteGameTests {
         boolean forgotten = MineStairs.steps(level, MineStairs.plotKey(h1)).isEmpty();
         Kit.log("[VT] ms04 sealed: " + laid + " blocks laid, filled " + filled + ", turfed " + turf + ", record let go " + forgotten
             + "; the mine's own stairs left " + minesOpen + ", another town's left " + otherOpen + ", the unrecorded hole left " + holeOpen
-            + "; sealed " + TownDigs.sealed(v));
+            + "; sealed " + TownDigs.sealed(v) + "; the trench off its plot filled " + trench + " (" + pits + " blocks)");
         helper.assertTrue(filled && turf && forgotten && laid > 0, "the town's own stray stairs filled and turfed");
+        helper.assertTrue(trench, "the pit its gallery left filled and turfed");
         helper.assertTrue(minesOpen && otherOpen && holeOpen, "nothing filled that was the mine's or not the town's own dig");
         helper.succeed();
     }

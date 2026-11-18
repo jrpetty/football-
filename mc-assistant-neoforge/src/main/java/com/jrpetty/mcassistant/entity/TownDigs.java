@@ -163,7 +163,8 @@ public final class TownDigs {
         LAST.put(id, now);
         try {
             MineGround.ensure(level, v);                                 // an older world's mine: its ground set aside as it stands
-            seal(level, v, FILL_A_LOOK);
+            int laid = seal(level, v, FILL_A_LOOK);
+            hollows(level, v, Math.max(16, FILL_A_LOOK * 2 - laid));
             portals(level, v);
             path(level, v, PATH_A_LOOK);
         } catch (RuntimeException e) {
@@ -199,11 +200,80 @@ public final class TownDigs {
             laid += got[0];
             if (got[1] == 0) break;                                        // not finished: the rest next look
             MineStairs.forget(level, key);
+            hollowAt(id, head);                                           // the pits its galleries left round it, next
             Ledger.note(id, "digs.sealed", String.valueOf(sealed(id) + 1));
             Villages.tell(id, level.getDayTime() / 24000L, "the old mine stairs at " + head.getX() + ", " + head.getZ()
                 + " were filled in and turfed over: they were in the town's ground");
             com.mojang.logging.LogUtils.getLogger().info("[MCA-DIGS] {}: sealed the old mine stairs at {}", Villages.name(id), head.toShortString());
         }
+        return laid;
+    }
+
+    /** How far round a sealed staircase the pits its galleries and terraces left open are filled (a plot's half and one). */
+    static final int HOLLOW_REACH = 9;
+    /** The deepest a pit is filled from the top; under that it is bridged over (what is below is left a cave). */
+    static final int HOLLOW_DEEP = 6;
+
+    /** A sealed staircase's head, to fill the pits round it next (kept with the world). */
+    static void hollowAt(UUID village, BlockPos head) {
+        String s = Ledger.note(village, "digs.hollows");
+        String add = head.getX() + "," + head.getY() + "," + head.getZ();
+        Ledger.note(village, "digs.hollows", s == null || s.isEmpty() ? add : s + ";" + add);
+    }
+
+    /**
+     * The pits left round the town's sealed stairs (its galleries and terraces, open to the sky, cut from the same plot):
+     * each column within HOLLOW_REACH of the head lower than the ground at the head, filled up to it (no deeper than
+     * HOLLOW_DEEP from the top: below that it is bridged over), the top turfed; only over the ground the world made, never
+     * water, a building or anything somebody put down, never with anybody there. A head is let go once nothing round it is
+     * left to fill. Blocks laid.
+     */
+    public static int hollows(ServerLevel level, Villages.Village v, int most) {
+        UUID id = v.id();
+        String s = Ledger.note(id, "digs.hollows");
+        if (s == null || s.isEmpty()) return 0;
+        List<String> left = new ArrayList<>(List.of(s.split(";")));
+        int laid = 0;
+        while (!left.isEmpty() && laid < most) {
+            BlockPos head;
+            try {
+                String[] p = left.get(0).split(",");
+                head = new BlockPos(Integer.parseInt(p[0].trim()), Integer.parseInt(p[1].trim()), Integer.parseInt(p[2].trim()));
+            } catch (RuntimeException e) {
+                left.remove(0);
+                continue;
+            }
+            if (!Land.areaLoaded(level, head, HOLLOW_REACH + 1)) break;
+            AABB box = new AABB(head.getX() - HOLLOW_REACH - 2, head.getY() - 24, head.getZ() - HOLLOW_REACH - 2,
+                head.getX() + HOLLOW_REACH + 3, head.getY() + 4, head.getZ() + HOLLOW_REACH + 3);
+            if (!level.getEntitiesOfClass(LivingEntity.class, box, e -> e.isAlive()).isEmpty()) break;   // somebody there: later
+            int ground = head.getY() - 1;
+            boolean more = false;
+            for (int dx = -HOLLOW_REACH; dx <= HOLLOW_REACH && laid < most; dx++) {
+                for (int dz = -HOLLOW_REACH; dz <= HOLLOW_REACH && laid < most; dz++) {
+                    int x = head.getX() + dx, z = head.getZ() + dz;
+                    if (MineGround.reserved(id, x, z)) continue;
+                    int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+                    if (top >= ground) continue;
+                    BlockState under = level.getBlockState(new BlockPos(x, top, z));
+                    if (!MineStairs.ground(under) && !under.is(Blocks.GRASS_BLOCK) && !under.is(Blocks.DIRT_PATH)) continue;
+                    if (!level.getFluidState(new BlockPos(x, top + 1, z)).isEmpty()) continue;
+                    for (int y = Math.max(top + 1, ground - HOLLOW_DEEP + 1); y <= ground && laid < most; y++) {
+                        BlockPos c = new BlockPos(x, y, z);
+                        BlockState st = level.getBlockState(c);
+                        if (!fillable(st) || !st.getFluidState().isEmpty()) continue;
+                        if (!TownBlocks.mayPlace(level, v, c, TownBlocks.Why.TERRAFORM)) break;
+                        level.setBlock(c, (y == ground ? Blocks.GRASS_BLOCK : y >= ground - 3 ? Blocks.DIRT : Blocks.COBBLESTONE).defaultBlockState(), 3);
+                        laid++;
+                    }
+                    if (laid >= most) more = true;
+                }
+            }
+            if (more) break;
+            left.remove(0);
+            Villages.tell(id, level.getDayTime() / 24000L, "the pits round the old mine stairs at " + head.getX() + ", " + head.getZ() + " were filled and turfed");
+        }
+        Ledger.note(id, "digs.hollows", String.join(";", left));
         return laid;
     }
 
@@ -335,13 +405,14 @@ public final class TownDigs {
             if (!level.getBlockState(post.below()).isSolid()) return false;
             for (int h = 0; h <= 3; h++) {
                 BlockState st = level.getBlockState(post.above(h));
-                if (!(st.isAir() || st.canBeReplaced() || st.is(BlockTags.WOODEN_FENCES))) return false;
+                if (!(st.isAir() || st.canBeReplaced() || st.is(BlockTags.WOODEN_FENCES) || st.is(BlockTags.LEAVES)
+                    || h <= 2 && MineStairs.ground(st))) return false;               // a post may stand in the cutting's side
                 if (v != null && !TownBlocks.mayPlace(level, v, post.above(h), TownBlocks.Why.MINE)) return false;
             }
         }
         for (int h = 0; h <= 3; h++) {
             BlockState st = level.getBlockState(head.above(h));
-            if (!(st.isAir() || st.canBeReplaced())) return false;
+            if (!(st.isAir() || st.canBeReplaced() || h >= 2 && st.is(BlockTags.LEAVES))) return false;
         }
         BlockState post = Blocks.STRIPPED_SPRUCE_LOG.defaultBlockState();
         BlockState beam = post.setValue(RotatedPillarBlock.AXIS, side.getAxis());

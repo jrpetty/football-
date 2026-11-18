@@ -13756,22 +13756,38 @@ What a town does now (entity/TownDigs, marked `[mine7]`):
 - **The town's ground** is the ground it will grow over: its whole plan (the square and three rings of lots, ninety-one
   blocks) with a six-block margin, its farmland with the margin, its buildings and its lines wherever they stand, and the
   frontage of its roads to its neighbours (eight blocks). No village dig is made in it.
-- **The mine** is opened beyond it (a hundred and six blocks out at the least, looking out to sixty blocks further), and
-  no face is handed out that comes back into it. With no fit ground loaded the miners wait: no plot of their own.
+- **The mine** is opened beyond it (a hundred and six blocks out at the least, looking out to sixty blocks further).
+  With no fit ground loaded the miners wait: no plot of their own.
+- **The mine's ground, set aside for good** (entity/MineGround). When the mine is opened, the whole of the ground it may
+  spread over is set aside with it: every face out to its last ring (TownMine.MOST_RING) that lies clear of the town's
+  ground, the portal over each staircase, and the way out to it from the edge of the plan, each with a three-block
+  margin; kept with the world (ledger notes mine.faces and mine.ground). Every planner keeps off it: the plan's lots
+  (Villages.lotKeptOff, so the council's buildings, the households' own houses and the blocks of flats, the firms'
+  premises), the buildings sited off the plan (a manor, a diver's shed, a harbour office), the farmers' fields, a
+  colony's ground, the land register (no title on it, so nothing on it is ever sold), and the gate every block goes
+  through (TownBlocks): on it only the mine's work, the way to it, ground work and nature; no new building, field, wall,
+  garden, lamp, seat or sign. The town plans round it as it grows; a road may run to the mine, nothing is built on it.
+  The mine is never moved because the town has come up to it, and works its own faces however the town grows round it
+  (the old rule that a face the town had grown into was left alone for good is gone). It is drawn on the town's quarters
+  map (the city books' Buildings page) in a dark earth brown, with its key and a tip, and the status says "Mine: the
+  mine's ground set aside: N faces round x, z and the way to it"; the town's news has the day it was set aside.
 - **A miner on a plot in the town's ground** moves out to a face of the mine (seekTheSeam), or comes off the plot and
   waits for one, keeping its trade; a mine run never starts from the town's ground (MineGoal), and the station work does
   not queue one.
 - **A hand sent for stone, earth, sand, gravel or ore** never cuts it in the town's ground (GatherGoal, and the look that
   says whether there is any to be had); timber and cane as ever. The player's own helpers are not touched.
 - **Sand and clay** are dug only beyond the town's ground, wet or dry.
-- **An older world**: a mine whose first face lies in the town's plan is moved out beyond it ("the town's mine was moved
-  out of the town's way, from ... to ..."; the old site noted in the ledger as mine.old), and its miners with it. The
-  town fills in its own old stairs in its ground, a staircase at a time every half minute (forty-eight blocks a look):
-  each step's column from the step up to the ground at the head, down to where rock roofs the stairs over, the top
-  turfed, the fence, sign and lantern round the head taken up; never while anybody stands in them or a miner still works
-  a plot round them ("the old mine stairs at x, z were filled in and turfed over"). Only its own: MineStairs now keeps
-  which village's folk cut each staircase (saved with the world); an older world's unmarked stairs count as the town's
-  only inside its plan. A player's dig, a natural cave or another town's stairs are never filled.
+- **An older world**: on the first look after a load, a mine opened before its ground was kept is set aside as it
+  stands, wherever it lies: its first face, the faces worked or worked out, the faces a miner works and the faces its
+  stairs go down from, and the faces round it still clear of the town. Whatever the town had already built on that
+  ground stays as it is (mended as it stands; no miner cuts under it); nothing new goes on it. Off the mine's ground,
+  the town fills in its own stray stairs in its ground, a staircase at a time every half minute (forty-eight blocks a
+  look): each step's column from the step up to the ground at the head, down to where rock roofs the stairs over, the
+  top turfed, the fence, sign and lantern round the head taken up; never while a player or a folk is anywhere sixteen
+  blocks round the stairs, a beast in them, or a miner still works a plot round them ("the old mine stairs at x, z were
+  filled in and turfed over"). Only its own: MineStairs now keeps which village's folk cut each staircase (saved with
+  the world); an older world's unmarked stairs count as the town's only inside its plan. A player's dig, a natural cave,
+  another town's stairs and the mine's own stairs are never filled. A miner on a stray plot goes to a face of the mine.
 - **The mine looks like a mine**: each staircase of the town's mine gets a timber portal over its head (two posts of
   stripped spruce either side of the first step, a beam across, a lantern hung under it, the way down clear), once, on
   open ground only; and a path two blocks wide is trodden from the town's edge out to the mine's first face (grass and
@@ -13782,6 +13798,11 @@ What a town does now (entity/TownDigs, marked `[mine7]`):
   out and its miners at work 107 to 141 out.
 - Tests: MineSiteGameTests ms01 (the audit), ms02 (the mine beyond the whole plan, small town or grown; its faces clear;
   no plot in town while the ring is not loaded), ms03 (no stone, earth or sand cut in the town's ground; timber and the
-  ground beyond, yes), ms04 (an older world: the mine and its miner moved out, the town's own stairs filled and turfed,
-  another town's stairs and an unrecorded hole left; the mark kept over a save and a load), ms05 (the portal and its
-  lantern, put up once; the path from the town to the mine).
+  ground beyond, yes), ms04 (an older world: the mine kept where it is and its ground set aside as it stands, the stray
+  miner to a face, the town's own stray stairs filled and turfed, the mine's own, another town's stairs and an
+  unrecorded hole left; the mark kept over a save and a load), ms05 (the portal and its lantern, put up once; the path
+  from the town to the mine), ms06 (the mine's ground set aside when it opens, none of the plan, the same after a save
+  and a load, in the status), ms07 (the lots over it kept off, no building sited on it, the gate refusing fields, walls,
+  gardens, lamps, decor and new buildings and letting the mine and the way, no land title on it), ms08 (a town grown to
+  its whole plan round an older world's mine still mines there: faces handed out inside the plan, runs and cuts there,
+  the mine not moved).

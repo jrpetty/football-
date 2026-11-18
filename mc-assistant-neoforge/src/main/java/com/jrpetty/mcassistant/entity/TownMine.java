@@ -265,6 +265,7 @@ public final class TownMine {
         UUID village = miner.ownerId();
         BlockPos site = village == null ? null : kept(village);
         if (site == null) return null;
+        if (!MineGround.has(village)) MineGround.reserve(level, village, heart, site, true);   // [mine7] an older world's mine
         WorkZone own = miner.workZone();
         long day = level.getDayTime() / 24000L;
         if (own != null && onALead(village, own.center(), day)) return null;
