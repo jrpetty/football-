@@ -205,6 +205,7 @@ public class CityLookGameTests {
         int maxHome = 0;
         List<String> offList = new ArrayList<>();
         java.util.Set<Long> footprint = new java.util.HashSet<>();
+        java.util.Set<Long> byHome = new java.util.HashSet<>();
         for (Ledger.Building b : Ledger.buildings(id)) {
             int dx = b.anchor().getX() - h.getX(), dz = b.anchor().getZ() - h.getZ();
             int[] g = BuildGoal.footprint(b.structure());
@@ -224,6 +225,8 @@ public class CityLookGameTests {
                 else if (e[2] >= 8) walled++;
                 else openPlots++;
                 maxHome = Math.max(maxHome, Math.max(Math.abs(dx), Math.abs(dz)));
+                for (int ox = -TownPlan.LOT; ox <= TownPlan.LOT; ox++) for (int oz = -TownPlan.LOT; oz <= TownPlan.LOT; oz++)
+                    byHome.add(BlockPos.asLong(dx + ox, 0, dz + oz));
             }
             TownPlan.Lot lot = null;
             for (TownPlan.Lot l : TownPlan.lots()) if (l.x() == dx && l.z() == dz) { lot = l; break; }
@@ -253,7 +256,7 @@ public class CityLookGameTests {
                 int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
                 BlockState top = level.getBlockState(new BlockPos(x, y - 1, z));
                 if (top.is(Blocks.FARMLAND)) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) < maxHome - TownPlan.LOT) farmInHomes++;
+                    if (byHome.contains(BlockPos.asLong(dx, 0, dz))) farmInHomes++;      // within a lot of a house
                     continue;
                 }
                 if ((top.is(Blocks.DIRT) || top.is(Blocks.COARSE_DIRT) || top.is(Blocks.ROOTED_DIRT))
@@ -487,7 +490,6 @@ public class CityLookGameTests {
         UUID id = first.ownerId();
         Villages.Village v = Villages.get(id);
         int cx = v.centre().getX(), cz = v.centre().getZ();               // the heart, where the founders camped
-        int y = Kit.surface(level, cx, cz).getY();
         // Houses on the plan's lots, side by side as they stand: two fenced neighbours, one walled and one open.
         int[] pairs = { 22, 47, 72, -33, -58, -83 };                     // the nearer of two lots side by side (22 and 33, ...)
         int[] bands = { -22, -33, -47, -58, -72, -83, 22, 33, 47, 58, 72, 83 };
@@ -495,7 +497,7 @@ public class CityLookGameTests {
         BlockPos fenceA = null, fenceB = null, walled = null, open = null;
         for (int bz : bands) {
             for (int px : pairs) {
-                BlockPos a = new BlockPos(cx + px, y, cz + bz), b = a.offset(TownPlan.LOT, 0, 0);
+                BlockPos a = Kit.surface(level, cx + px, cz + bz), b = Kit.surface(level, cx + px + TownPlan.LOT, cz + bz);
                 row.add(a);
                 row.add(b);
                 if (fenceA == null && edgeAt(a) == com.jrpetty.mcassistant.entity.CityPlots.Edge.FENCE
@@ -526,7 +528,13 @@ public class CityLookGameTests {
                 Ledger.built(id, "house", p, Direction.NORTH);
                 houses.put(p, new Ledger.Building("house", p, Direction.NORTH));
             }
-            for (Ledger.Building b : houses.values()) com.jrpetty.mcassistant.entity.Grow.garden(level, v, b, false);
+            for (Ledger.Building b : houses.values()) {
+                BlockPos probe = b.anchor().offset(-5, 0, 0);
+                Kit.log("[VT] ct04 garden at " + b.anchor().toShortString() + " (" + edgeAt(b.anchor()) + "): "
+                    + com.jrpetty.mcassistant.entity.Grow.garden(level, v, b, false) + " blocks; probe " + level.getBlockState(probe)
+                    + " on " + level.getBlockState(probe.below()) + ", zone " + com.jrpetty.mcassistant.entity.TownBlocks.zone(level, v, probe)
+                    + ", stock " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.OAK_FENCE)));
+            }
         } finally {
             com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
         }
@@ -539,8 +547,8 @@ public class CityLookGameTests {
         int east = fenceA.getX() + 5;                                   // the first plot's side; the next plot's is a block on
         int doubled = 0;
         for (int dz = -4; dz <= 4; dz++) {
-            if (level.getBlockState(new BlockPos(east, y, fenceA.getZ() + dz)).is(BlockTags.FENCES)
-                    && level.getBlockState(new BlockPos(east + 1, y, fenceA.getZ() + dz)).is(BlockTags.FENCES)) doubled++;
+            if (level.getBlockState(new BlockPos(east, fenceA.getY(), fenceA.getZ() + dz)).is(BlockTags.FENCES)
+                    && level.getBlockState(new BlockPos(east + 1, fenceA.getY(), fenceA.getZ() + dz)).is(BlockTags.FENCES)) doubled++;
         }
         helper.assertTrue(doubled == 0, "no fence doubled along the shared side (" + doubled + ")");
         helper.assertTrue(wa[2] >= 30 && wa[0] == 0 && wa[1] == 0, "a low wall of the stores' stone round the walled plot, no gate");
