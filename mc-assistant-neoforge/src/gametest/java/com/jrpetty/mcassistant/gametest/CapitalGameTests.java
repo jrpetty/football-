@@ -77,7 +77,7 @@ public class CapitalGameTests {
             f.spend(f.purse());
             f.earn(purse);
             Values.setForTests(f, Values.Value.TRADITION, 100);
-            Values.setForTests(f, Values.Value.WEALTH, 100);            // careful with its coin: saves, buys bonds and shares
+            Values.setForTests(f, Values.Value.WEALTH, 70);             // careful with its coin (no entrepreneur): saves, buys bonds and shares
             Values.setForTests(f, Values.Value.PROGRESS, 0);
             folk.add(f);
         }
@@ -317,6 +317,7 @@ public class CapitalGameTests {
         if (r != null) r.putString("status", "thriving");
         long till0 = b.till;
         for (VillageFolkEntity f : folk) if (f != founder && f != hand) { f.spend(f.purse()); f.earn(80); }
+        hand.spend(hand.purse());                                            // (the hand buys none of the issue: its shares come below)
         Bourse.morningForTests(level, v, day(level));
         CompoundTag fb = Bourse.firmForTests(id, b.id);
         int parts = 0;
