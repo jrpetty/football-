@@ -45,6 +45,9 @@ import java.util.UUID;
  * <li><b>ct02</b>: a lot over the water is not on the town's streets until a bridge carries its street over.</li>
  * <li><b>ct04</b>: each plot closed in its own way (a fence and a gate, a low wall, or open), and two fenced neighbours
  *     sharing the side between them, not standing two fences side by side.</li>
+ * <li><b>ct05</b>: no water into an allotments' channel over nothing; lined from the stores' stone, then watered; water
+ *     running off a building's basin taken up on the rounds.</li>
+ * <li><b>ct06</b>: houses of one drawing dressed each their own (roof wood, frame), once.</li>
  * <li><b>ct03</b>: the square's four corners laid to turf with a tree and flowers out of the stores, never in the
  *     courtyard; a grown tree's low leaves over the square trimmed, its crown kept.</li>
  * </ul>
@@ -614,6 +617,102 @@ public class CityLookGameTests {
             else if (st.is(BlockTags.SMALL_FLOWERS)) n[3]++;
         }
         return n;
+    }
+
+    // ============================================================ ct05: water that stays put
+
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "ct05_water_stays")
+    public static void ct05_water_stays(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        VillageFolkEntity first = founder(helper, 3920000, Z);
+        UUID id = first.ownerId();
+        Villages.Village v = Villages.get(id);
+        int cx = v.centre().getX(), cz = v.centre().getZ();
+        // The allotments on a lot whose ground under the channel has gone (a slope's edge): nothing under the three cells.
+        BlockPos at = Kit.surface(level, cx + 33, cz + 47);
+        BuildGoal.stamp(level, "allotments", at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        Ledger.built(id, "allotments", at, Direction.NORTH);
+        Ledger.Building b = new Ledger.Building("allotments", at, Direction.NORTH);
+        List<BlockPos> channel = new ArrayList<>();
+        for (int k = 1; k <= 3; k++) channel.add(at.relative(Direction.NORTH, k).below());
+        for (BlockPos c : channel) {
+            level.setBlock(c, Blocks.AIR.defaultBlockState(), 2 | 16);
+            for (int d = 1; d <= 3; d++) level.setBlock(c.below(d), Blocks.AIR.defaultBlockState(), 2 | 16);
+        }
+        BlockPos chest = Kit.surface(level, cx + 3, cz - 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        ZoneChests.mark(level, chest);
+        Container box = (Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.WATER_BUCKET));
+        box.setItem(1, new ItemStack(Items.WATER_BUCKET));
+        box.setItem(2, new ItemStack(Items.WATER_BUCKET));
+        Villages.forgetStores(id);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+        try {
+            for (int i = 0; i < 12; i++) com.jrpetty.mcassistant.entity.TownLook.tick(level, v);
+            int wet = 0;
+            for (BlockPos c : channel) if (level.getFluidState(c).is(net.minecraft.tags.FluidTags.WATER)) wet++;
+            int running = flowing(level, at, 12);
+            Kit.log("[VT] ct05 no stone: channel wet " + wet + ", flowing " + running);
+            helper.assertTrue(wet == 0 && running == 0, "no water into a channel over nothing (" + wet + " wet, " + running + " running)");
+            // With stone in the stores the channel is lined, then filled, and holds.
+            box.setItem(4, new ItemStack(Items.COBBLESTONE, 64));
+            box.setItem(5, new ItemStack(Items.COBBLESTONE, 64));
+            Villages.forgetStores(id);
+            for (int i = 0; i < 12; i++) com.jrpetty.mcassistant.entity.TownLook.tick(level, v);
+            wet = 0;
+            for (BlockPos c : channel) if (level.getFluidState(c).is(net.minecraft.tags.FluidTags.WATER)) wet++;
+            boolean bed = level.getBlockState(channel.get(0).below()).is(Blocks.COBBLESTONE);
+            Kit.log("[VT] ct05 lined: channel wet " + wet + ", bed " + bed);
+            helper.assertTrue(bed && wet >= 1, "the channel lined with the stores' stone and watered (" + wet + ")");
+            // An older town's: water in a basin cell that runs off is taken up on the rounds.
+            BlockPos leak = channel.get(2);
+            level.setBlock(leak.below(), Blocks.AIR.defaultBlockState(), 2 | 16);
+            level.setBlock(leak, Blocks.WATER.defaultBlockState(), 3);
+            int dried = 0;
+            for (int i = 0; i < Ledger.buildings(id).size() + 2; i++) dried += com.jrpetty.mcassistant.entity.CityWater.sweep(level, v);
+            helper.assertTrue(dried >= 1 && !level.getFluidState(leak).isSource(), "the water running off taken up (" + dried + ")");
+        } finally {
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        }
+        helper.succeed();
+    }
+
+    // ============================================================ ct06: houses dressed each their own
+
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "ct06_houses_dressed")
+    public static void ct06_houses_dressed(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        VillageFolkEntity first = founder(helper, 3900000 + 20000, Z + 3000);
+        UUID id = first.ownerId();
+        Villages.Village v = Villages.get(id);
+        Villages.ageForTests(id, Villages.Age.STONE);
+        int cx = v.centre().getX(), cz = v.centre().getZ();
+        List<Ledger.Building> row = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            BlockPos a = Kit.surface(level, cx - 47 + 11 * (i % 4) + (i % 4 >= 2 ? 3 : 0), cz + (i < 4 ? -47 : 47));
+            BuildGoal.stamp(level, "house", a, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            Ledger.built(id, "house", a, Direction.NORTH);
+            row.add(new Ledger.Building("house", a, Direction.NORTH));
+        }
+        java.util.Set<String> roofs = new java.util.TreeSet<>(), frames = new java.util.TreeSet<>();
+        int dressed = 0;
+        for (Ledger.Building b : row) {
+            dressed += com.jrpetty.mcassistant.entity.CityDress.dress(level, v, b, true);
+            String roof = "", frame = "";
+            for (BuildGoal.Placement p : BuildGoal.plan("house", b.anchor(), b.facing(), 13)) {
+                BlockState st = level.getBlockState(p.pos());
+                if (p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_STAIR && roof.isEmpty()) roof = st.getBlock().toString();
+                if (p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.POST && frame.isEmpty()) frame = st.getBlock().toString();
+            }
+            roofs.add(roof);
+            frames.add(frame);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.CityDress.dress(level, v, b, true) == 0, "a house is dressed once");
+        }
+        Kit.log("[VT] ct06 " + dressed + " of 8 dressed; roofs " + roofs + "; frames " + frames);
+        helper.assertTrue(roofs.size() >= 2 && frames.size() >= 2, "the houses' roofs and frames not all one: " + roofs + " " + frames);
+        // Restore holds them to their drawing: none of the dressed blocks counts as wrong.
+        helper.succeed();
     }
 
     // ------------------------------------------------------------------ the ground
