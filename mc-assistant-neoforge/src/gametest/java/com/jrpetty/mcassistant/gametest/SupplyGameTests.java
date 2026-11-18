@@ -320,18 +320,20 @@ public class SupplyGameTests {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         level.setDayTime(2000);
-        Kit.hold(level, 93000, 12000, 40);
+        int pondOut = com.jrpetty.mcassistant.entity.TownDigs.PLAN_REACH + com.jrpetty.mcassistant.entity.TownDigs.MARGIN + 3;   // [mine7] past the town's ground
+        Kit.hold(level, 93000, 12000, pondOut + 16);
         Kit.prepare(level, 93000, 12000, 40);
+        Kit.prepare(level, 93000 + pondOut, 12000, 8);
         BlockPos heart = Kit.surface(level, 93000, 12000);
         VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(f != null, "a village");
         UUID village = f.ownerId();
         Villages.Village v = Villages.get(village);
         f.setJob(StationTask.SMELT);
-        // A pond with a clay bed, eight blocks out.
+        // A pond with a clay bed, out past the town's ground (the town never digs inside it).
         for (int dz = -2; dz <= 2; dz++) {
             for (int dx = 0; dx <= 2; dx++) {
-                BlockPos top = Kit.surface(level, heart.getX() + 8 + dx, heart.getZ() + dz);
+                BlockPos top = Kit.surface(level, heart.getX() + pondOut + dx, heart.getZ() + dz);
                 level.setBlock(top.below(2), Blocks.CLAY.defaultBlockState(), 3);
                 level.setBlock(top.below(), Blocks.WATER.defaultBlockState(), 3);
             }
