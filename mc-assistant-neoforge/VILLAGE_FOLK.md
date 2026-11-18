@@ -13826,9 +13826,11 @@ What a town does now (entity/MineWorks, entity/MineDemand, entity/goal/WorksGoal
 
 - **The pithead.** Every miner's plot is the mine's site (TownMine.faceFor gives it to them all; a miner on an older
   world's face moves to it, VillageFolkEntity.seekTheSeam). The station sends a miner there and down for a shift (a mine
-  job "works", run by WorksGoal; MineGoal leaves those alone). Over the shaft stands a headframe of the town's wood (four
-  posts, a frame of beams, a lantern hung in the middle), the open top of the shaft is fenced round with the way in left
-  open, and a spoil heap of cobble and gravel grows beside it on the side away from the town as the works are dug (a block
+  job "works", run by WorksGoal; MineGoal leaves those alone). The trees and giant mushrooms standing over the pithead
+  are cleared (seven blocks round). Over the shaft stands a headframe of the town's wood (four posts on the ground at the
+  pillar's corners, a frame of beams level over the highest, a lantern hung in the middle), the open top of the shaft is
+  fenced round the outside and along the pillar's edge (never on a step of the way down), the way in left open, and a
+  spoil heap of cobble and gravel grows beside it on the side away from the town as the works are dug (a block
   for every ninety-six cut, sixty at most). The path from the town (mine-7) comes to it.
 - **The main shaft.** A broad stair two blocks wide winding down round a pillar of rock three across (seven blocks square
   in all): each side drops three steps and turns on a flat corner landing, twelve blocks down a turn, three blocks of
@@ -13854,13 +13856,24 @@ What a town does now (entity/MineWorks, entity/MineDemand, entity/goal/WorksGoal
 - **The miners' choices.** On its level a miner drives its own drift (its branches first once two wait behind the face),
   or, sociable (always) or on one day in three (not the shy), joins a friend's drift and cuts its branches, working the
   other side of it; starts a new drift from a wall of the landing nobody has started from (each its own way first); or
-  takes on branches, or a drift whose miner is not at its face. Every piece of work is claimed: never two on one face or
-  one branch.
+  takes on branches, or a drift whose miner is not at its face. Once a landing's four walls all have their drifts, a
+  cross-cut is driven on from the end of a full branch every sixteenth block along a drift, so a level is laid out in
+  panels (parallel drifts sixteen apart, their branches meeting between them) and the works have work for the whole
+  game. Every piece of work is claimed: never two on one face or one branch; a claim held by a miner called away to other
+  work is free for the next.
 - **The work.** Each block broken as a player breaks it (the pick's pace, the pit props' pace), every ore that shows in a
   wall followed out to the end of its vein (thirty-two blocks) from the tunnel cut so far, water and lava stopped with
-  cobblestone as they show, a hole in the floor filled. A shift ends with a full pack, a worn-out pick, the evening, ten
+  cobblestone as they show, a hole in the floor filled (in a drift; the shaft and the landings go on where the ground
+  falls away under a step). In the works' own ground anything the rock holds is cut through (tuff, an old mineshaft's
+  timbers, its own seals), never what holds something (a chest, a spawner). A block in reach is cut from where the miner
+  stands; an ore out of reach is left for another day, not walked at. A shift ends with a full pack, a worn-out pick, the evening, ten
   pieces of work, or hurt; the miner walks back up by the tunnels and the shaft and banks its haul as before. A folk sent
   up out of the mine (a mine job "out") down in the works walks up the same way, not cutting its own stairs.
+- **The mine's ground kept for the works.** No hand cuts stone or earth on a mine's ground once its works are laid out
+  (TownDigs.mayCut: a hand after stone at the surface broke into the stair and fell down the works), and a miner of the
+  works is not sent to cut stone, coal or iron round the pithead for the age's wants (its shifts bring them up). A folk
+  walking up out of the works is not interrupted by the lost-below look (MineStairs.lookForAWayUp) or the rescues
+  (MineSafety.climbInstead), and a walk that is stuck is not forgotten when a shift is broken off and taken up again.
 - **Kept with the world** (ledger note mine.works): the shaft's depth, the landings cut, every drift (who started it, its
   way, each block of its path, its turns and bends, each branch and how far it is cut, why it ended), the ore taken by
   level this week and in all.
@@ -13880,4 +13893,5 @@ What a town does now (entity/MineWorks, entity/MineDemand, entity/goal/WorksGoal
   tunnel, the ore taken this week and in all, who is on it doing what), each drift (whose, its way, its length, its turns
   and branches, why it ended), and each ore's stock against what the town wants, the level it lies richest in and who
   works there (and who was sent for it). The status line adds "the works: the shaft to Y.., N of M levels open, K
-  drifts". The city books' Caves page shows the same under "The mine".
+  drifts". The city books' Caves page shows the same under "The mine". The last few things done in the works close
+  the report ("Lately: Cotter: cutting a branch on the coal level: 6 of 6 cells").
