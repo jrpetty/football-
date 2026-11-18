@@ -471,6 +471,12 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
         metrics["roles"] = tally(r, x, z)
     except Exception as e:  # noqa: BLE001
         say("tally failed: %s" % e)
+    # [long6] How many of the folk are loaded (a town asleep or let go has none), and whether it sleeps.
+    loaded = re.search(r"folk \((\d+) loaded", status)
+    if loaded:
+        metrics["loaded"] = int(loaded.group(1))
+    metrics["asleep"] = "asleep, nobody near" in status
+    LAST_METRICS[0] = metrics
     say("METRICS " + json.dumps(metrics, separators=(",", ":")))
     try:
         with open(metrics_file, "a") as out:
@@ -502,6 +508,52 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
         for line in villages:
             say("  " + line)
     return last_age
+
+
+LAST_METRICS = [None]
+
+
+class FrozenWatch:
+    """[long6] The four-hundred-day run on 0.315.0 read the same numbers every day from day one to four hundred (the
+    town asleep with no rates of its own, nothing loaded) and passed. A frozen town now fails the run, loudly:
+    the same day's numbers for SAME_DAYS days running, no new building and no new folk for STALL_DAYS days, or not one
+    folk loaded on LOADED_DAYS days running while its heart is force-loaded."""
+    SAME_DAYS = 5
+    STALL_DAYS = int(os.environ.get("HUNDRED_STALL_DAYS", "25"))
+    LOADED_DAYS = 2
+
+    def __init__(self, first):
+        self.same, self.unloaded, self.last_sig = 0, 0, None
+        self.best_built, self.best_folk, self.best_day = -1, -1, first
+
+    def day(self, day, m):
+        """The day's metrics in: None if all is well, else why the town is frozen."""
+        if not m:
+            return None
+        folk = int(m["folk"]) if str(m.get("folk", "")).isdigit() else 0
+        sig = (m.get("buildings"), m.get("folk"), m.get("age"), m.get("food"), m.get("logs"), m.get("stone"),
+               m.get("coins"), m.get("output"))
+        self.same = self.same + 1 if sig == self.last_sig else 0
+        self.last_sig = sig
+        if m.get("buildings", 0) > self.best_built or folk > self.best_folk:
+            self.best_built = max(self.best_built, m.get("buildings", 0))
+            self.best_folk = max(self.best_folk, folk)
+            self.best_day = day
+        self.unloaded = self.unloaded + 1 if m.get("loaded") == 0 and folk > 0 else 0
+        if self.same >= self.SAME_DAYS:
+            return "the same numbers %d days running (%s)" % (self.same + 1, sig)
+        if self.unloaded >= self.LOADED_DAYS:
+            return "0 of %d folk loaded %d days running, its heart force-loaded" % (folk, self.unloaded)
+        if day - self.best_day >= self.STALL_DAYS:
+            return "no new building and no new folk for %d days (best %d buildings, %d folk, on day %d)" % (
+                day - self.best_day, self.best_built, self.best_folk, self.best_day)
+        return None
+
+
+def heart_of(r, x, z):
+    """[long6] Where the town's heart really is (a founding party may camp off the spot it was set down on)."""
+    m = re.search(r"Village at (-?\d+), (-?\d+)", r.cmd("execute positioned %d 64 %d run village status" % (x, z)))
+    return (int(m.group(1)), int(m.group(2))) if m else (x, z)
 
 
 def epic(r, days, minutes, biome="plains"):
@@ -543,6 +595,14 @@ def hundred(r, first, last, minutes, biome="plains"):
         x, z = spot
         say("the hundred days: a village of 8 at %d, %d (%s)" % (x, z, biome))
         say("spawn: " + r.cmd("village spawnat %d %d 8" % (x, z)))
+        # [long6] Its heart held, as the other scenarios hold theirs: nobody plays on this server, and a town with
+        # nobody near sleeps (TownLod), but one whose heart is force-loaded runs in full (TownWake). The raids and the
+        # readings from the heart itself, which may be off the spot it was set down on.
+        hx, hz = heart_of(r, x, z)
+        if (hx, hz) != (x, z):
+            say("the heart is at %d, %d, %d blocks from the spot" % (hx, hz, int(((hx - x) ** 2 + (hz - z) ** 2) ** 0.5)))
+        x, z = hx, hz
+        say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x - 48, z - 48, x + 48, z + 48))))
         with open(spotfile, "w") as fh:
             fh.write("%d %d" % (x, z))
     else:
@@ -552,13 +612,28 @@ def hundred(r, first, last, minutes, biome="plains"):
         with open(spotfile) as fh:
             x, z = (int(v) for v in fh.read().split())
         say("the hundred days, on from day %d: the village at %d, %d (game time %s)" % (first, x, z, r.cmd("time query gametime").strip()))
+        say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x - 48, z - 48, x + 48, z + 48))))
     began = time.time()
     last_age, done = None, first - 1
+    watch = FrozenWatch(first)
     for day in range(first, last + 1):
         last_age = epic_day(r, x, z, day, began, last_age, "hundred-metrics.jsonl")
         done = day
         with open(reached, "w") as fh:
             fh.write(str(done))
+        frozen = watch.day(day, LAST_METRICS[0])
+        if frozen:
+            # [long6] Loudly: the leg fails, and the legs after it find the run over (hundred-frozen.txt).
+            say("FAIL FROZEN on day %d: %s" % (day, frozen))
+            with open("hundred-frozen.txt", "w") as fh:
+                fh.write("day %d: %s" % (day, frozen))
+            say("village list: " + r.cmd("village list").replace("\n", " | "))
+            if not os.environ.get("SOAK_KEEP"):
+                try:
+                    r.cmd("stop")
+                except Exception:  # noqa: BLE001
+                    pass
+            raise SystemExit(4)
         if time.time() - began > minutes * 60:
             say("LEG the time this leg had is spent at day %d" % day)
             break

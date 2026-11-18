@@ -46,6 +46,11 @@ jobs:
             mkdir -p mc-assistant-neoforge/run
             tar -xzf carried/hundred.tar.gz -C mc-assistant-neoforge/run
             reached=$(cat mc-assistant-neoforge/run/hundred-reached.txt 2>/dev/null || echo 0)
+            # A leg before found the town frozen and failed: the run is over (the legs after it do nothing).
+            if [ -f mc-assistant-neoforge/run/hundred-frozen.txt ]; then
+              echo "the run froze: $(cat mc-assistant-neoforge/run/hundred-frozen.txt)"
+              reached=${{ inputs.days }}
+            fi
           fi
           echo "reached=$reached" >> "$GITHUB_OUTPUT"
           echo "first=$((reached + 1))" >> "$GITHUB_OUTPUT"
@@ -124,7 +129,8 @@ jobs:
           ( while sleep 600; do publish real-hundred.txt; publish hundred-metrics.jsonl; done ) &
           LOOP=$!
           python3 tools/realworld/soak.py hundred "$FIRST" "${{ inputs.days }}" "$MINUTES" | tee -a real-hundred.txt
-          echo "soak exit: ${PIPESTATUS[0]}"
+          SOAK_EXIT=${PIPESTATUS[0]}
+          echo "soak exit: $SOAK_EXIT"
           kill $LOOP 2>/dev/null
           # The server saves the world as it stops (the soak's last command): wait for it.
           for i in $(seq 1 60); do pgrep -f "net.minecraft" > /dev/null || break; sleep 2; done
@@ -136,7 +142,11 @@ jobs:
           cp real-hundred.txt hundred-metrics.jsonl run/
           cp hundred-spot.txt hundred-reached.txt run/ 2>/dev/null
           gzip -c run/logs/latest.log > server-hundred-${{ inputs.leg }}.log.gz 2>/dev/null || true
+          cp hundred-frozen.txt run/ 2>/dev/null || true
           set -e
+          # The town froze (soak.py's FrozenWatch: the same numbers day after day, no growth for weeks, or nobody
+          # loaded with its heart force-loaded): the leg fails, loudly.
+          if [ "$SOAK_EXIT" = "4" ]; then echo "::error::the hundred days' town froze: $(cat hundred-frozen.txt 2>/dev/null)"; exit 1; fi
 
       - name: Stop the server
         if: always()
@@ -148,7 +158,7 @@ jobs:
         run: |
           mkdir -p ../carry
           if [ -d run/world ]; then
-            tar -czf ../carry/hundred.tar.gz -C run world real-hundred.txt hundred-metrics.jsonl hundred-spot.txt hundred-reached.txt 2>/dev/null || true
+            tar -czf ../carry/hundred.tar.gz -C run world real-hundred.txt hundred-metrics.jsonl hundred-spot.txt hundred-reached.txt $(cd run && ls hundred-frozen.txt 2>/dev/null) 2>/dev/null || true
           elif [ -f ../carried/hundred.tar.gz ]; then
             cp ../carried/hundred.tar.gz ../carry/hundred.tar.gz
           fi
