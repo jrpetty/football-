@@ -83,6 +83,8 @@ public final class FolkProfile {
         out.getCompound("day").put("memories", memories(f));
         out.put("things", things(f));
         out.put("card", card(f));
+        out.put("self", FolkIdentity.tag(f));                          // [ui] its colour, saying, chips, own life
+        out.putBoolean("fav", viewer != null && Favourites.has(viewer.getUUID(), f.getUUID()));   // [ui] on the viewer's list
         return out;
     }
 

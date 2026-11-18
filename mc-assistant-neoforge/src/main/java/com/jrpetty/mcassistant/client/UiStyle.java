@@ -417,4 +417,86 @@ public final class UiStyle {
         g.drawString(font, shown, x, y, sorted ? ACCENT : TEXT_FAINT, false);
         if (hover) g.fill(x, y + GLYPH, x + font.width(shown), y + GLYPH + 1, sorted ? ACCENT : TEXT_FAINT);
     }
+
+    // ------------------------------------------------------------------ [ui] identity, chips, charts
+
+    /** A soft star gold, for a favourite's star and its marks. */
+    public static final int STAR = 0xFFE0A81E, STAR_INK = 0xFF7A5200;
+
+    /** A folk's own colour (RGB) made safe to read text over: darkened until light ink reads on it. */
+    public static int accentFill(int rgb) {
+        int r = (rgb >> 16) & 0xFF, gr = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
+        float lum = (0.299F * r + 0.587F * gr + 0.114F * b) / 255F;
+        float k = lum > 0.55F ? 0.55F / lum : 1F;                          // pale colours (white, yellow) taken down
+        return 0xFF000000 | Math.round(r * k) << 16 | Math.round(gr * k) << 8 | Math.round(b * k);
+    }
+
+    /** A folk's own colour as a pale wash for a band behind dark text. */
+    public static int accentWash(int rgb) {
+        return Ui.lighten(0xFF000000 | rgb, 0.72F);
+    }
+
+    /** A rounded chip: a tinted bed with a darker edge and its word. Returns its width. */
+    public static int chip(GuiGraphics g, Font font, String text, int x, int y, int tint) {
+        int w = font.width(text) + 8;
+        int bed = Ui.lighten(tint, 0.70F), edge = Ui.lighten(tint, 0.25F);
+        g.fill(x + 1, y, x + w - 1, y + 12, edge);
+        g.fill(x, y + 1, x + w, y + 11, edge);
+        g.fill(x + 1, y + 1, x + w - 1, y + 11, bed);
+        g.drawString(font, text, x + 4, y + 2, TEXT, false);
+        return w;
+    }
+
+    /** A star: filled gold when on, an outline when off; the hover ring when the mouse is over it. */
+    public static void star(GuiGraphics g, Font font, int x, int y, boolean on, boolean hover) {
+        String s = on ? "\u2605" : "\u2606";
+        if (hover) g.fill(x - 2, y - 2, x + font.width(s) + 2, y + GLYPH + 1, 0x30000000);
+        g.drawString(font, s, x, y, on ? STAR : hover ? STAR_INK : TEXT_FAINT, on);
+    }
+
+    /**
+     * A line chart in a well: faint grid lines at a quarter and three quarters, the line from oldest to newest, a dot
+     * on the newest (the caller writes the range beside it). Draws an empty note for fewer than two values.
+     */
+    public static void lineChart(GuiGraphics g, Font font, int x, int y, int w, int h, int[] values, int colour) {
+        well(g, x, y, w, h, 0xFFB8B8B8);
+        if (values.length < 2) {
+            String s = clip(font, values.length == 1 ? "one day so far" : "no days yet", w - 6);
+            g.drawString(font, s, x + (w - font.width(s)) / 2, y + (h - GLYPH) / 2, TEXT_FAINT, false);
+            return;
+        }
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int v : values) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+        if (hi == lo) { hi++; lo--; }
+        int ix = x + 2, iy = y + 2, iw = w - 4, ih = h - 4;
+        g.fill(ix, iy + ih / 4, ix + iw, iy + ih / 4 + 1, 0x18000000);
+        g.fill(ix, iy + ih * 3 / 4, ix + iw, iy + ih * 3 / 4 + 1, 0x18000000);
+        int prevX = -1, prevY = -1;
+        for (int i = 0; i < values.length; i++) {
+            int px = ix + (int) ((long) i * (iw - 1) / (values.length - 1));
+            int py = iy + ih - 1 - (int) ((long) (values[i] - lo) * (ih - 1) / (hi - lo));
+            if (prevX >= 0) {
+                for (int cx = prevX; cx <= px; cx++) {                    // a line between the two points, column by column
+                    int cy = prevX == px ? py : prevY + (py - prevY) * (cx - prevX) / Math.max(1, px - prevX);
+                    int ny = cx == px ? py : prevY + (py - prevY) * (cx + 1 - prevX) / Math.max(1, px - prevX);
+                    g.fill(cx, Math.min(cy, ny), cx + 1, Math.max(cy, ny) + 1, colour);
+                }
+            }
+            prevX = px;
+            prevY = py;
+        }
+        g.fill(prevX - 1, prevY - 1, prevX + 2, prevY + 2, EDGE);
+        g.fill(prevX, prevY, prevX + 1, prevY + 1, colour);
+    }
+
+    /** A number with a sign ("+3", "-2", "0"), for a change. */
+    public static String signed(int n) {
+        return n > 0 ? "+" + n : Integer.toString(n);
+    }
+
+    /** Coins as the books write them: "840c", "12.4kc" past ten thousand. */
+    public static String coins(int c) {
+        if (Math.abs(c) >= 10000) return String.format(java.util.Locale.ROOT, "%.1fkc", c / 1000F);
+        return c + "c";
+    }
 }

@@ -370,6 +370,8 @@ public final class FolkTalk {
         if (!f.isBaby()) sb.append(RoadPosts.contextFlags(f));                // [roles-e] wheelwright, carter, planner
         sb.append(AfterWar.contextFlags(f, p));                               // [war-after] a prisoner, a town holding prisoners, an outlaw
         if (!f.isBaby()) sb.append(TradeWorld.contextFlags(f));               // [trade-world] leaving, harbourmaster, harbour
+        sb.append(" colour=").append(Integer.toHexString(FolkIdentity.rgb(f)));   // [ui] its colour, for the talk screen's band
+        if (Favourites.has(p.getUUID(), f.getUUID())) sb.append(" fav");     // [ui] on the player's favourites
         return sb.toString();
     }
 

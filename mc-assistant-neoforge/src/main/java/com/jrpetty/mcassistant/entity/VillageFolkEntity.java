@@ -1688,6 +1688,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!level().isClientSide) NetherRuns.fell(this, cause);         // [nether] lost on a Nether run: the team and the town know where
         if (!level().isClientSide) Fashion.died(this);                   // [fashion] what it wore falls where it fell, with its pack
         if (!level().isClientSide) Individual.died(this);                // [individual] its keepsake to its eldest child; mourned
+        if (!level().isClientSide) Favourites.died(this);                // [ui] remembered on the lists of those who follow it
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
         if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
         if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {

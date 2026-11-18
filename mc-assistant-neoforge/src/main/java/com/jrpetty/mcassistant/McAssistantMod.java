@@ -370,6 +370,7 @@ public final class McAssistantMod {
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, AssistantConfig.SPEC);
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.jrpetty.mcassistant.admin.AdminConfig.SPEC);   // [admin] the admin toolkit's switches
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, AnimConfig.SPEC);   // [anim] how much of the folk's life is drawn
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, UiConfig.SPEC, "mc_assistant-ui-client.toml");   // [ui] favourites' toasts and tracker
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);
         BLOCKS.register(modBus);
@@ -414,6 +415,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(BattleCommands.class);            // [war] /village war battle, /village war join
         NeoForge.EVENT_BUS.register(DefenceCommands.class);           // [defence] /village wall, /village muster
         NeoForge.EVENT_BUS.register(IndividualCommands.class);        // [individual] /village individual
+        NeoForge.EVENT_BUS.register(FavouriteCommands.class);         // [ui] /village favourite
         NeoForge.EVENT_BUS.register(AnimCommands.class);              // [anim] /village anim
         NeoForge.EVENT_BUS.register(SessionReset.class);
         NeoForge.EVENT_BUS.register(ChunkLoad.class);
