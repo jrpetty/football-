@@ -30,7 +30,7 @@ import struct
 import sys
 import time
 
-HOST, PORT, PASSWORD = "127.0.0.1", 25575, "soak"
+HOST, PORT, PASSWORD = "127.0.0.1", int(os.environ.get("SOAK_RCON_PORT", "25575")), "soak"   # [long6] a local server on another port
 
 
 def say(msg):

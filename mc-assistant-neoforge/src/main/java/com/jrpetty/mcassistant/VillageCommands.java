@@ -1559,7 +1559,8 @@ public final class VillageCommands {
         sb.append("Village at ").append(v.centre().getX()).append(", ").append(v.centre().getZ())
           .append(" (").append(Villages.name(v.id()))
           .append(Villages.elderName(v.id()).isEmpty() ? "" : ", elder " + Villages.elderName(v.id())).append(") — ").append(Villages.headcount(v.id())).append(" folk (")
-          .append(Villages.loadedCount(v.id())).append(" loaded), ")
+          .append(Villages.loadedCount(v.id())).append(" loaded")
+          .append(com.jrpetty.mcassistant.entity.TownWake.statusClause(v.id())).append("), ")      // [long6]
           .append(Villages.ageOf(v.id()).label).append('.');
         java.util.Map<AssistantEntity.StationTask, Integer> trades =
             new java.util.EnumMap<>(AssistantEntity.StationTask.class);

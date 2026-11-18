@@ -78,6 +78,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue TOWN_LOD_FULL_RANGE;
     public static final ModConfigSpec.IntValue TOWN_LOD_AWAY_SECONDS;
     public static final ModConfigSpec.IntValue TOWN_LOD_STEP_SECONDS;
+    public static final ModConfigSpec.IntValue TOWN_LOD_WAKE_DAYS;                       // [long6]
     public static final ModConfigSpec.IntValue PATH_BUDGET_MS;
     public static final ModConfigSpec.IntValue TOWN_TICK_BUDGET_MS;
 
@@ -360,6 +361,11 @@ public final class AssistantConfig {
         TOWN_LOD_STEP_SECONDS = b.comment(
                 "How often a sleeping town's step runs, in seconds.")
             .defineInRange("townLodStepSeconds", 5, 1, 60);
+        TOWN_LOD_WAKE_DAYS = b.comment(                                                   // [long6]
+                "A sleeping town with nobody near still has a day of its own in full every this many days asleep",
+                "(two towns at a time, in turn), so it farms and builds for real and its rates stay its own. A town",
+                "younger than three days of watching never sleeps: it has no rates of its own yet. 0: never.")
+            .defineInRange("townLodWakeDays", 2, 0, 60);
         PATH_BUDGET_MS = b.comment(
                 "How many milliseconds of each tick the folk may spend finding their way, all told. Past it a",
                 "folk's search waits a tick (never one near a player, never two ticks running). 0: no limit.")
@@ -436,6 +442,7 @@ public final class AssistantConfig {
     public static int townLodFullRange() { return read(TOWN_LOD_FULL_RANGE, 128); }
     public static int townLodAwaySeconds() { return read(TOWN_LOD_AWAY_SECONDS, 60); }
     public static int townLodStepSeconds() { return read(TOWN_LOD_STEP_SECONDS, 5); }
+    public static int townLodWakeDays() { return read(TOWN_LOD_WAKE_DAYS, 2); }                // [long6]
     public static int pathBudgetMs() { return read(PATH_BUDGET_MS, 10); }
     public static int townTickBudgetMs() { return read(TOWN_TICK_BUDGET_MS, 5); }
 

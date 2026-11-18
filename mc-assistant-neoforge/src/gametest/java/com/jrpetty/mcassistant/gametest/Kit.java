@@ -87,6 +87,7 @@ final class Kit {
         com.jrpetty.mcassistant.entity.CropPlan.resetForTests();          // [supply]
         com.jrpetty.mcassistant.entity.InputWants.resetForTests();        // [supply]
         com.jrpetty.mcassistant.entity.FirmTrades.offForTests(false);     // [supply]
+        com.jrpetty.mcassistant.entity.TownWake.liveForTests(false);      // [long6] towns kept awake with nobody near: LongGameTests only
     }
 
     /**
