@@ -695,12 +695,13 @@ public class BuildGoal extends Goal {
             int x = p.pos().getX();
             int z = p.pos().getZ();
             long key = BlockPos.asLong(x, 0, z);
+            // [build5] Its ground under its own courses already laid, never on top of them (SiteWork.wallGround).
             int g = ground.computeIfAbsent(key,
-                k -> assistant.level().hasChunk(x >> 4, z >> 4) ? groundTop(assistant.level(), x, z) : base.getY());
+                k -> assistant.level().hasChunk(x >> 4, z >> 4) ? com.jrpetty.mcassistant.entity.SiteWork.wallGround(assistant.level(), x, z) : base.getY());
             // The ring is laid out before anybody looks at what stands on it. Thirteen
             // blocks out from the heart it crosses houses, fields and ponds: a wall through
             // a house fills its rooms, across a field it buries the crop. It goes round them.
-            if (!fits.computeIfAbsent(key, k -> wallFits(assistant.level(), x, z, g))) {
+            if (!fits.computeIfAbsent(key, k -> com.jrpetty.mcassistant.entity.SiteWork.wallFits(assistant.level(), x, z, g))) {   // [build5]
                 // Except water: a pond or a river on the line gets a footing of stone up from
                 // its bed, and the wall stands on it. The long game's wall had two whole sides
                 // missing where the ring ran into a lake, and no gate or post on either.

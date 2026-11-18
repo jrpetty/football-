@@ -2407,7 +2407,7 @@ To use a posting:
 A new posting goes up most mornings. One nobody takes, or nobody finishes, comes down
 after four days. Ask any folk "Quest board" to hear what is on it.
 
-**Hire a folk.** "Hire you?" costs four coins a day, and the folk must know you. It
+**Hire a folk.** "Hire you?" costs the folk's own day's wage and a quarter (four coins at the least), and the folk must know you. It
 leaves its work and goes with you, day and night, wherever you go. It catches up if left
 behind, fights whatever attacks you or whatever you attack, and picks up what falls. Ask
 again to pay for another day.
@@ -13399,3 +13399,47 @@ taken when a chandler wants it; sc2_04 string spun when it is wanted; sc2_05 a c
 wanted, never below a pair; sc2_06 the smith leaves the iron picks to a toolshop; sc2_07 a household that tires of roots
 buys a loaf; sc2_08 a bakery's loaves taken off the shelf are its sale, the market's own loaves the market's. The long tests log each ware's comings and goings every morning (whose output, by trade; to whom, for what),
 the crop plan, the wants and the trades left to firms.
+
+## The old systems, looked over: building sites, the square's wall, a hire's price (build batch 5)
+
+<!-- [build5] entity/SiteWork, goal/BuildGoal (addTerrainWork, wallFits), entity/Floors, entity/Hire; BuildAuditGameTests -->
+
+A building audit first, then the mistakes it found put right. **The audit** (BuildAuditGameTests ba01) founds three towns of
+twenty-four at once, on a meadow strewn with grass, ferns, flowers, snow, saplings, dead bushes, mushrooms, tall grass and
+torches stuck in the turf (a pond with sugar cane on its bank, wild trees about); on rolling hills; and on steep broken
+ground with a river through it. It grows them for four days in the Iron Age and then walks every building they finished:
+a floor with air or water under it (floating), a gap in the ground under a footing (hollow), earth for the face of a
+footing, earth or litter left in a room, litter standing in a cell the drawing wanted, ground banked two or more up
+against a wall, a door onto a bank or a drop, roof cells left open; the square's wall column by column; what stands on
+the roads; how much of the farmland is within four of water. Counts by kind, the first few of each with where they are.
+**ba02** has a town's builder put up two houses on a hillside out past its town (one door uphill, one down), the lots
+strewn with the same litter and a player's torch by one: the same counts must all be nought, and the torch still there.
+
+What the audit found, and what changed:
+
+* **Footings.** Floors floating, hollow footings, earth in the rooms, doors blocked or over a drop: none, before or after
+  (the founding levels the heart, the builders fill under a floor on a slope and dig the bank out of the rooms, and the
+  doorways' rounds make every way in). But the fill under a floor on a slope was earth to its outer face, so a house on a
+  hillside stood on a cliff of dirt. The outer face of the fill is the stone footing now; earth only inside, where it is
+  never seen.
+* **Litter on a lot.** The builders took grass, ferns, flowers and snow out of a building's rooms and nothing else: a
+  sapling on the lot stayed on the floor of the room and grew into a tree there, a mushroom stayed in its corner, sugar
+  cane by a pond stood two high in a kitchen, a torch stuck in the meadow lit a bedroom from the floor. Now saplings,
+  mushrooms, sugar cane, vines, sweet berry bushes, glow lichen, moss carpet, cobwebs and torches stuck in the earth are
+  taken up too (into the builder's pack), before the floor goes down; the floors' round (Floors) takes the same off an
+  older building's floor. Never a block a player set down, never a lantern, and never a torch on a wall or on the boards
+  (the room's own light).
+* **The hillside cut back.** A building set into a slope keeps its floor at the lot's high side; the ground round it is
+  now taken down to the floor in the first ring out from its footing, a block higher in the next, one up for one out,
+  until it meets the hillside (four rings out at most, ten high at most): the world's own earth and rock only, a column
+  from its top, never under anything built, through a tree or a player's block, and only where the town's gate lets the
+  ground be cut.
+* **The square's wall.** The wall round the square (the town's first wall, four gates on the avenues) is laid column by
+  column on the ground, round anything built on its line. The square's paving reached that line before the wall did,
+  and every paved column was taken for somebody's floor and passed over: the audit counted sixty-odd gaps in each town's
+  square wall, the wall standing in pieces. The town's own paving and its worn paths (cobble, stone bricks, smooth stone,
+  gravel, a path; never a player's) are ground a wall stands on now, for the square's wall and the war palisade alike.
+* **A hire's price** (older than the labour market). "Hire you?" cost four coins a day whatever the folk earned, so a
+  master smith on fifteen a day left its anvil for four. It costs the folk's own day's wage and a quarter over now, four
+  at the least.
+

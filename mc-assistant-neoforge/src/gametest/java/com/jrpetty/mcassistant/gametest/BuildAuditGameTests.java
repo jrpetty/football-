@@ -201,7 +201,7 @@ public class BuildAuditGameTests {
 
     /** The counts that must come to nothing. */
     static final String[] BAR = { "floating", "hollow_footing", "earth_inside", "plants_inside", "plant_in_cell",
-        "door_blocked", "door_over_drop", "banked_wall", "dirt_face", "wall_gap" };
+        "door_blocked", "door_over_drop", "banked_wall", "dirt_face", "wall_gap", "square_wall_gap", "square_wall_tower" };
 
     // ------------------------------------------------------------------ the ground
 
@@ -519,6 +519,10 @@ public class BuildAuditGameTests {
                 }
                 boolean walled = stack >= 3;
                 if (!walled) r.add("square_wall_gap", 1, x + "," + (g - 1) + "," + z + " " + what);
+                // A tower where a wall should be: the wall stacked up on its own courses, more than seven over the earth.
+                int earth = g - 1;
+                while (earth > g - 60 && !Terraform.earth(level.getBlockState(new BlockPos(x, earth, z)))) earth--;
+                if (g - 1 - earth > 7) r.add("square_wall_tower", 1, x + "," + z + " " + (g - 1 - earth) + " high");
             }
         }
         // The audit everyone uses: what stands on the roads, half built, foreign things in doorways.

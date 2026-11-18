@@ -93,6 +93,60 @@ public final class SiteWork {
         return paving && !(level instanceof ServerLevel sl && PlayerBlocks.placed(sl, pos));
     }
 
+    // ------------------------------------------------------------------ the square's wall on its ground
+
+    /** The square's wall's own stuff (its masonry, cobble, coping slabs, lanterns and torches): a column of it is the wall
+     *  already, not ground to build another on. */
+    public static boolean wallStuff(BlockState st) {
+        return st.is(BlockTags.STONE_BRICKS) || st.is(Blocks.COBBLESTONE) || st.is(Blocks.MOSSY_COBBLESTONE)
+            || st.is(Blocks.STONE_BRICK_SLAB) || st.is(Blocks.COBBLESTONE_SLAB) || st.is(Blocks.MOSSY_STONE_BRICK_SLAB)
+            || st.is(Blocks.SMOOTH_STONE_SLAB) || st.is(Blocks.STONE_SLAB) || st.is(Blocks.DEEPSLATE_BRICKS)
+            || st.is(Blocks.DEEPSLATE_TILES) || st.is(Blocks.POLISHED_DEEPSLATE) || st.is(Blocks.COBBLED_DEEPSLATE)
+            || st.is(Blocks.LANTERN) || st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH) || st.is(Blocks.BRICKS);
+    }
+
+    /**
+     * The ground a column of the square's wall stands on: the first cell over the world's own earth and rock, down through
+     * the wall's own courses, the town's paving and what grows (at most a dozen down). The wall used to be stood on the
+     * top of whatever was there, and a wall it had begun before was the top: each time its builders came back to finish
+     * it, its columns went up on top of the courses already laid, and the square's wall grew into towers forty high.
+     * Water is the top of a column (its wall stands on a footing up from the bed: BuildGoal.wetBed); anything else built
+     * stops the look where it is, so the gate and the fit see it.
+     */
+    public static int wallGround(Level level, int x, int z) {
+        int top = com.jrpetty.mcassistant.entity.goal.BuildGoal.groundTop(level, x, z);
+        int y = top;
+        for (int i = 0; i < 12; i++) {
+            BlockState below = level.getBlockState(new BlockPos(x, y - 1, z));
+            if (!below.getFluidState().isEmpty()) return y;
+            if (Terraform.earth(below) && !townPaving(level, new BlockPos(x, y - 1, z), below)) return y;
+            if (below.isAir() || below.canBeReplaced() || below.is(BlockTags.LEAVES) || wallStuff(below)
+                    || townPaving(level, new BlockPos(x, y - 1, z), below)) { y--; continue; }
+            return top;                                              // somebody's building: as it stands
+        }
+        return top;
+    }
+
+    /** May the square's wall stand on this column, on its ground {@code g}: open ground, the town's paving, or its own
+     *  courses already laid there; never a field, a floor, water or somebody's building. */
+    public static boolean wallFits(Level level, int x, int z, int g) {
+        if (!level.hasChunk(x >> 4, z >> 4)) return false;
+        BlockPos at = new BlockPos(x, g - 1, z);
+        BlockState ground = level.getBlockState(at);
+        if (!ground.getFluidState().isEmpty() || ground.is(Blocks.FARMLAND)) return false;
+        if (!Terraform.earth(ground) && !townPaving(level, at, ground) && !wallStuff(ground)) return false;
+        for (int dy = 0; dy <= 4; dy++) {
+            BlockPos c = new BlockPos(x, g + dy, z);
+            BlockState st = level.getBlockState(c);
+            if (st.isAir() || wallStuff(st) && !(level instanceof ServerLevel sl && PlayerBlocks.placed(sl, c))) continue;
+            if (st.is(BlockTags.LEAVES) && !(st.hasProperty(net.minecraft.world.level.block.LeavesBlock.PERSISTENT)
+                    && st.getValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT))) continue;
+            if (st.canBeReplaced() && st.getFluidState().isEmpty() || litter(st)) continue;
+            return false;
+        }
+        return true;
+    }
+
     /** As {@link #litter(BlockState)}, or a torch stuck in the ground; and nobody's: never a block a player set down. */
     public static boolean litter(Level level, BlockPos pos, BlockState st) {
         if (!litter(st) && !groundTorch(level, pos, st)) return false;
