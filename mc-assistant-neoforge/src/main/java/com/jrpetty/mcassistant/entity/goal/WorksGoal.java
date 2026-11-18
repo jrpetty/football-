@@ -202,6 +202,7 @@ public class WorksGoal extends Goal {
     }
 
     private void finish(String message) {
+        MineWorks.event(a, "shift over: " + message + " (" + tasks + " pieces, " + broke + " blocks, " + teleports + " hops)");
         if (!message.isEmpty()) a.sayRoutine(message);
         if (!outJob) a.noteJobOutcome(oreTaken > 0 || broke > 8);
         a.pollJob();

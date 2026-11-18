@@ -961,8 +961,21 @@ public final class MineWorks {
 
     // ------------------------------------------------------------------ the work reported
 
+    /** The last few things done in the works, any town's (the tests and the debug line read them). */
+    private static final java.util.concurrent.ConcurrentLinkedDeque<String> EVENTS = new java.util.concurrent.ConcurrentLinkedDeque<>();
+
+    public static void event(AssistantEntity a, String what) {
+        EVENTS.addLast(a.level().getGameTime() + " " + a.getName().getString() + ": " + what);
+        while (EVENTS.size() > 40) EVENTS.pollFirst();
+    }
+
+    public static List<String> eventsForTests() {
+        return new ArrayList<>(EVENTS);
+    }
+
     /** The task worked: the record brought up to date, the claim let go. */
     public static void done(ServerLevel level, VillageFolkEntity f, Task t) {
+        event(f, t.words() + ": " + t.cut + " of " + t.cells.size() + " cells" + (t.why.isEmpty() ? "" : ", stopped: " + t.why));
         Works w = works(level, f.ownerId());
         LAST.put(f.getUUID(), t);
         if (w == null) return;
