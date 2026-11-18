@@ -102,6 +102,7 @@ public class WorksGoal extends Goal {
         oreTaken = 0;
         broke = 0;
         saidSealed = false;
+        resumeAt = 0;
         if (!(a.level() instanceof ServerLevel)) { finish(""); return; }
         if (outJob) { beginOut("Out of the works."); return; }
         a.equipBestTool(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
@@ -134,12 +135,16 @@ public class WorksGoal extends Goal {
     public void tick() {
         if (!(a.level() instanceof ServerLevel level) || job == null) return;
         shiftTicks++;
+        if (shiftTicks % 20 == 0) STATE.put(a.getUUID(), phase + " " + (task == null ? "-" : task.kind + " cell " + ci + "/" + task.cells.size())
+            + " blocks " + blocks.size() + " vein " + vein.size() + " walking " + (walking == null ? "-" : walking.toShortString())
+            + " digging " + (digging == null ? "-" : digging.toShortString()) + " route " + ri + "/" + route.size());
         switch (phase) {
             case NEXT -> next(level);
             case WALK -> {
                 if (follow()) {
                     phase = Phase.CUT;
-                    ci = 0;
+                    ci = resumeAt;
+                    resumeAt = 0;
                     blocks.clear();
                     if (!prepare(level)) return;
                 }
@@ -245,27 +250,29 @@ public class WorksGoal extends Goal {
     private boolean walk(BlockPos dest) {
         if (at(dest)) return true;
         double d = a.distanceToSqr(Vec3.atBottomCenterOf(dest));
+        boolean far = d > 256;
         if (!dest.equals(walking)) {
             walking = dest;
             best = d;
             stuck = 0;
-            a.getNavigation().moveTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, 1.0D);
+            go(dest, far);
         } else if (a.getNavigation().isDone()) {
-            a.getNavigation().moveTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, 1.0D);
+            go(dest, far);
         }
         if (d < best - 0.2) { best = d; stuck = 0; } else stuck++;
+        // A long way off (on the surface, sent off somewhere): its long walk, given its time; then the shift is over.
+        if (far) {
+            if (stuck > 600) {
+                stuck = 0;
+                walking = null;
+                if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
+                task = null;
+                finish("Can't find my way to the pithead.");
+            }
+            return false;
+        }
         if (stuck > 80) {
             stuck = 0;
-            if (d > 144) {                                   // a long way off on open ground: no way there it can find
-                walking = null;
-                if (phase == Phase.WALK || phase == Phase.OUT) { route = List.of(); ri = 0; }
-                if (phase == Phase.WALK) {
-                    if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
-                    task = null;
-                    finish("Can't find my way to the pithead.");
-                }
-                return phase != Phase.CUT;
-            }
             if (open(dest)) {
                 a.getNavigation().stop();
                 a.teleportTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5);
@@ -275,6 +282,11 @@ public class WorksGoal extends Goal {
             return true;
         }
         return false;
+    }
+
+    private void go(BlockPos dest, boolean far) {
+        if (far) a.walkTo(dest, 1.1D);
+        else a.getNavigation().moveTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, 1.0D);
     }
 
     private boolean open(BlockPos p) {
@@ -313,6 +325,18 @@ public class WorksGoal extends Goal {
         // Not where it stands to work: there first.
         BlockPos stand = t.stand.get(Math.min(ci, t.stand.size() - 1));
         if (!vein.isEmpty()) { followVein(level, t); return; }
+        // Sent off somewhere (a rescue, a fright): back by the way down first.
+        if (a.distanceToSqr(Vec3.atBottomCenterOf(stand)) > 256 && a.level() instanceof ServerLevel sl0) {
+            route = MineWorks.route(sl0, a, t);
+            route = new ArrayList<>(route);
+            route.add(stand);
+            ri = 0;
+            walking = null;
+            vein.clear();
+            resumeAt = ci;
+            phase = Phase.WALK;
+            return;
+        }
         // Where it stands to work, unless what is next to break is in its reach from where it is.
         BlockPos nextBlock = blocks.peek();
         boolean inReach = nextBlock != null && a.getEyePosition().distanceTo(Vec3.atCenterOf(nextBlock)) <= REACH;
@@ -467,7 +491,7 @@ public class WorksGoal extends Goal {
         for (int i = 0; i < ci && i < t.cells.size(); i++) spots.add(t.cells.get(i));
         for (BlockPos p : spots) {
             double d = Vec3.atBottomCenterOf(p).add(0, 1.6, 0).distanceTo(Vec3.atCenterOf(v));
-            if (d <= REACH && d < bestD && open(p)) { bestD = d; spot = p; }
+            if (d <= REACH - 0.6 && d < bestD && open(p)) { bestD = d; spot = p; }
         }
         if (spot == null || !bare(level, v)) {
             vein.poll();
@@ -475,8 +499,19 @@ public class WorksGoal extends Goal {
             if (!bare(level, v) && hasBareNeighbourInVein(v)) vein.add(v); else LEFT++;
             return;
         }
-        walk(spot);
+        // At the spot already and still out of reach (or a walk that went nowhere): left for another day.
+        if (at(spot) || ++veinWalks > 200) {
+            vein.poll();
+            veinWalks = 0;
+            LEFT++;
+            return;
+        }
+        if (walk(spot)) veinWalks = 0;
     }
+
+    private int veinWalks;
+    /** The cell it goes back to after a walk back by the way down. */
+    private int resumeAt;
 
     private boolean hasBareNeighbourInVein(BlockPos v) {
         for (BlockPos o : vein) if (o.distManhattan(v) <= 2) return true;
@@ -539,6 +574,12 @@ public class WorksGoal extends Goal {
     // ------------------------------------------------------------------ for the tests
 
     public static volatile int TELEPORTS, BROKEN, SEALED, LEFT;
+    private static final java.util.Map<java.util.UUID, String> STATE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Tests: what this miner's shift is at. */
+    public static String stateForTests(AssistantEntity a) {
+        return STATE.getOrDefault(a.getUUID(), "-");
+    }
 
     /** Tests: the counts kept since the last reset. */
     public static int[] countsForTests() {

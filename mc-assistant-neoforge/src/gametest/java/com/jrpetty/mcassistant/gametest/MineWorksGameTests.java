@@ -447,6 +447,7 @@ public class MineWorksGameTests {
             tick[0]++;
             keepAtIt(r, m);
             int[] c = WorksGoal.countsForTests();
+            if (tick[0] % 500 == 0) Kit.log("[VT] mw07 @" + tick[0] + " broken " + c[0] + ", at " + m.blockPosition().toShortString() + ": " + WorksGoal.stateForTests(m));
             if (c[0] < 40 && tick[0] < 4500) return false;
             Kit.log("[VT] mw07 a hill at Y" + head.getY() + ": levels " + MineWorks.planForTests(level, v) + " (at first " + plan + "); broken " + c[0] + " in " + tick[0]
                 + " ticks | " + String.join(" | ", MineWorks.report(level, v)) + " || " + String.join(" | ", MineWorks.eventsForTests()));
