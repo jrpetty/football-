@@ -192,7 +192,10 @@ public final class MineWorks {
         w = new Works(village);
         w.sx = site.getX();
         w.sz = site.getZ();
-        w.top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, w.sx - 2, w.sz - 2);
+        // The first landing at the lowest of the ground under it: a landing is never left hanging over a slope.
+        w.top = Integer.MAX_VALUE;
+        for (int dx = 2; dx <= 3; dx++) for (int dz = 2; dz <= 3; dz++)
+            w.top = Math.min(w.top, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, w.sx - dx, w.sz - dz));
         save(w);
         Villages.tell(village, level.getDayTime() / 24000L, "the town's miners began the main shaft of the mine, at " + w.sx + ", " + w.sz);
         return w;

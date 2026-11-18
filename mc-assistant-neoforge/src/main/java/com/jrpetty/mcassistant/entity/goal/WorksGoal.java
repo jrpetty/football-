@@ -335,7 +335,9 @@ public class WorksGoal extends Goal {
         BlockState fs = level.getBlockState(floor);
         if (!fs.isFaceSturdy(level, floor, Direction.UP) && !(fs.getBlock() instanceof net.minecraft.world.level.block.StairBlock)) {
             if (!fs.getFluidState().isEmpty() || fs.canBeReplaced()) {
-                if (!seal(floor, fs.getFluidState().is(FluidTags.LAVA))) { report("hole"); return; }
+                // A drift stops at a hole it cannot bridge; the shaft and the landing go on (the ground falling away on a
+                // hillside under a step), the step's floor laid when the miner has the stone for it.
+                if (!seal(floor, fs.getFluidState().is(FluidTags.LAVA)) && t.kind != MineWorks.Kind.SHAFT && t.kind != MineWorks.Kind.ROOM) { report("hole"); return; }
             }
         }
         t.cut = ci + 1;
