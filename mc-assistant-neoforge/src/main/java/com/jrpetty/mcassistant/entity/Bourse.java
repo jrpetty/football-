@@ -26,11 +26,12 @@ import com.jrpetty.mcassistant.entity.Business.Stake;
  *
  * <p><b>Prices.</b> Each firm has a last price, a share's worth as the bourse last traded it. Folk value a share by what
  * the firm owns and earns: its worth (till, stock, kit, less what it owes) over its hundred shares, and eight weeks of its
- * last week's profit (a firm that lost money is worth its books). Each morning the folk post their orders: a holder short
- * of coin, or holding a firm that lost money last week, asks to sell at a little under what it reckons a share worth; a
- * saver with coin over its week's keep bids for the firm that earns best for its price, at no more than it reckons it
- * worth and a twentieth over the last price. The bids and asks are matched (the best bid against the cheapest ask, at
- * the price between them), coin moves from purse to purse, the parts from holder to holder, and the last price is set.
+ * last week's profit (a firm that lost money is worth its books). A firm is listed at that, and never under what its
+ * founders put in a share. Each morning the folk post their orders: a holder short of coin, or holding a firm that lost
+ * money last week, asks to sell at a tenth under what it reckons a share worth; a saver with coin over its week's keep
+ * bids, at what it reckons a share worth, for the firm that earns best for its price. The bids and asks are matched (the
+ * best bid against the cheapest ask, at the price between them), coin moves from purse to purse, the parts from holder
+ * to holder, and the last price is set.
  * What is not matched stands for the day for players to take.
  *
  * <p><b>Raising capital.</b> A firm the lender will lend no more, short of coin, or a thriving one, may issue new shares

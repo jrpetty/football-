@@ -374,12 +374,13 @@ public final class FolkCredit {
             decided(village, day, b.name, ask, 0, j.room <= 0 ? j.why : "the " + (bank(village) ? "bank's vault" : "club's chest") + " has nothing to lend", why);
             return 0;
         }
+        int rate = rateBp(village);                                          // the day's rate, before this loan leaves the vault
         if (bank(village)) coins = Bank.lendToFirm(village, coins);
         else coins = (int) (chestOut(village, coins * 100L) / 100);
         if (coins <= 0) return 0;
         long p = coins * 100L;
         if (b.loan <= 0) {
-            b.rateBp = rateBp(village);
+            b.rateBp = rate;
             CompoundTag s = Accounts.sub(Accounts.sub(club(village), "sched"), b.id);
             s.putLong("since", day);
             s.putLong("check", day);
