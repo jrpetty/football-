@@ -114,7 +114,7 @@ public final class InventionsPage {
         // ---- the tools: the view, the filter, the find, the zoom
         // The scholars beside the tree only when the tree still has room for its cards at their usual size.
         int side = Math.min(w * 3 / 10, w - width(1) - 6 - UiStyle.S2 - 2);
-        boolean wide = side >= 120;
+        boolean wide = side >= 100;
         if (!wide) side = 0;
         int treeW = wide ? w - side - UiStyle.S2 : w;
         int bx = x;
@@ -300,7 +300,7 @@ public final class InventionsPage {
         }
         if (hovered != null) {
             List<Component> tip = tip(byId.getOrDefault(hovered.id(), new CompoundTag()));
-            tip.add(1, Component.literal(stateWords(m, byId, hovered)));
+            if (!state(byId, hovered).equals("locked")) tip.add(1, Component.literal(stateWords(m, byId, hovered)));   // locked: its own line says why
             return tip;
         }
         if (hoverBranch >= 0) {

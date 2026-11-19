@@ -251,7 +251,7 @@ public class StallScreen extends Screen {
         int pc = state.equals("open") ? UiStyle.SUCCESS_FILL : state.equals("due") ? UiStyle.WARNING_FILL : UiStyle.DANGER_FILL;
         if (!pill.isEmpty()) UiStyle.badge(g, font, pill, left + w - PAD - font.width(pill) - 6, top + 6, pc);
         // The till and the week, on a card.
-        UiStyle.card(g, x - 2, top + HEAD + 2, inner + 2, 34, 0);
+        UiStyle.card(g, x - 2, top + HEAD + 2, inner + 2, 33, 0);
         int till = data.getInt("till");
         g.drawString(font, "Till: " + UiStyle.coins(till) + (till > 0 ? "" : " (empty)"), x + 2, top + HEAD + 6, till > 0 ? UiStyle.SUCCESS : UiStyle.TEXT_MUTED, false);
         int md = data.getInt("marketIn");
@@ -264,7 +264,7 @@ public class StallScreen extends Screen {
         small(g, Ui.clip(font, when, (int) ((inner - 104) / 0.75)), x + 2, top + HEAD + 26, mode.equals("held") ? UiStyle.WARNING : UiStyle.TEXT_MUTED);
         // The wares.
         boolean own = mode.equals("own");
-        UiStyle.heading(g, font, own ? "Your stock, and your price for a lot" : "In the stall", x, top + TABLE_Y - 20, inner - (pages() > 1 ? 60 : 0));
+        UiStyle.heading(g, font, own ? "Your stock, and your price for a lot" : "In the stall", x, top + TABLE_Y - 19, inner - (pages() > 1 ? 60 : 0));
         if (data.getBoolean("worn")) small(g, "(worn things don't sell)", x + C_SOLD, top + TABLE_Y - 19, UiStyle.WARNING);
         int hy = top + TABLE_Y - 9;
         small(g, "In it", x + C_COUNT, hy, Ui.FAINT);
