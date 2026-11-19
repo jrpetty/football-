@@ -74,7 +74,7 @@ public final class FieldEdge {
         if (!(cell.isAir() || torch != null || cell.canBeReplaced() && cell.getFluidState().isEmpty())) return 0;
         if (!here.isSolid() || here.getBlock() instanceof FarmBlock || here.is(Blocks.DIRT_PATH) || !here.getFluidState().isEmpty()) return 0;
         if (!Terraform.earth(here)) return 0;                                           // somebody's floor, a street's paving
-        if (!TownBlocks.mayPlace(level, v, at, TownBlocks.Why.FIELD)) return 0;
+        if (!TownBlocks.allows(level, v, at, TownBlocks.Why.FIELD)) return 0;   // [growth22] asked round the whole edge every round: no refusal booked
         ItemStack[] got = new ItemStack[1];
         // The stores' own fences too only past what a building's railings and pens want.
         boolean spare = Market.stock(level, v.id(), s -> gate ? s.is(ItemTags.FENCE_GATES) : s.is(ItemTags.WOODEN_FENCES)) > (gate ? 2 : FENCES_KEPT);

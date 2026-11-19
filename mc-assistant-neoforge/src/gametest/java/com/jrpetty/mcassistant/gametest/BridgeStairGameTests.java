@@ -205,7 +205,7 @@ public class BridgeStairGameTests {
                     if (level.getBlockState(new BlockPos(d.getX() + dx, yy, d.getZ() + k)).is(net.minecraft.tags.BlockTags.DIRT)) earth++;
                 }
                 BlockPos out = d.south(), far = new BlockPos(d.getX(), y, d.getZ() + 7);
-                BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, out, far, d.getX() - 3, d.getX() + 3, y - 3, y + 6, d.getZ() + 1, d.getZ() + 8);
+                BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, out, far, d.getX() - 7, d.getX() + 7, y - 3, y + 6, d.getZ() + 1, d.getZ() + 8);   // [growth22] wide enough for a flight turned along the wall
                 Kit.log("[VT] bs05 door at " + d.toShortString() + " (" + (d.getY() - y) + " up): " + c);
                 all.add(c);
             }

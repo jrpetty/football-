@@ -349,6 +349,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level().isClientSide) return;
         FolkAction.tick(this);                                 // [anim] what its body is doing, for the client
         if (showcase) return;
+        if (HELD_FOR_TESTS.contains(getUUID())) return;        // [growth22] tests: held to the job in hand, nothing else
         if (laterLine != null && tickCount >= laterAt) {
             FolkTalk.speak(this, laterLine);
             laterLine = null;
@@ -2044,6 +2045,13 @@ public class VillageFolkEntity extends AssistantEntity {
         meals.ate(level().getGameTime(), meal.getHoverName().getString());
         FolkAction.ate(this, meal);                                 // [anim] a bite to the mouth, and crumbs
         Cuisine.ate(this, meal);                                    // [culture2] its town's own dish, or a neighbour's
+    }
+
+    /** [growth22] Tests: folk held to the job in hand (its goals run; its day, its town's calls and its own notions do not). */
+    private static final java.util.Set<UUID> HELD_FOR_TESTS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public static void holdForTests(UUID folk, boolean held) {
+        if (held) HELD_FOR_TESTS.add(folk); else HELD_FOR_TESTS.remove(folk);
     }
 
     public void makeShowcase(StationTask trade) {
@@ -6599,7 +6607,9 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // Nowhere on its own level by the edge towards the town (a bank under a cliff): by the middle of the plot.
         if (spot == null) spot = chestSpot(level, c.getX() + 1, c.getZ() + 1, c.getY());
-        if (spot == null) return null;
+        // [growth22] Nowhere at all (a miner whose plot is the works' shaft, on the mine's own ground): asked again in five
+        // minutes, not every half minute.
+        if (spot == null) { productionTick = tickCount + 5400; return null; }
         if (countCarried(s -> s.is(net.minecraft.world.item.Items.CHEST)) == 0) {
             drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.CHEST), 1, buildStoresRadius());
         }
@@ -6642,7 +6652,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     if (!below.isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP) || !below.getFluidState().isEmpty()) continue;
                     if (!level.getBlockState(p).canBeReplaced() || !level.getBlockState(p).getFluidState().isEmpty()) continue;
                     if (below.is(Blocks.FARMLAND)) continue;
-                    if (!TownBlocks.mayPlace(level, p, TownBlocks.Why.FIELD)) continue;   // [integrity] the next spot over, never a road or a way in
+                    if (!TownBlocks.allows(level, p, TownBlocks.Why.FIELD)) continue;   // [integrity] the next spot over, never a road or a way in ([growth22] asked, not tried: no refusal booked)
                     boolean onAPlot = false;
                     if (village != null) {
                         for (AssistantEntity a : Villages.folkOf(village)) {
@@ -7246,7 +7256,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (peekJob() != null || !getNavigation().isDone()) return;
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         long now = level().getGameTime();
-        if (!Villages.projectDue(village, now)) { buildNote("build: not due yet"); return; }
+        if (!Villages.projectDue(village, now) && !Villages.resuming(village, getUUID(), now)) { buildNote("build: not due yet"); return; }   // [growth22] back at its own: no gap
         // The first building no other crew is raising (a thriving town has two or three going up at once:
         // Villages.crewsAllowed), or the one this hand's crew is already on.
         String project = Villages.projectFor(village, getUUID());

@@ -221,6 +221,7 @@ public class WorksGoal extends Goal {
     private void finish(String message) {
         if (!outJob && tasks > 0) SHIFTS++;                      // [fixes14]
         ENDS.merge(message.isEmpty() ? "-" : message, 1, Integer::sum);
+        if (!outJob && tasks > 0) { SHIFT_BLOCKS += broke; SHIFT_TICKS_ALL += shiftTicks; }   // [growth22] the books' averages
         MineWorks.event(a, "shift over: " + message + " (" + tasks + " pieces, " + broke + " blocks, " + teleports + " hops)");
         if (!message.isEmpty()) a.sayRoutine(message);
         if (!outJob) a.noteJobOutcome(oreTaken > 0 || broke > 8);
@@ -484,6 +485,17 @@ public class WorksGoal extends Goal {
                 if (!saidSealed) { saidSealed = true; a.sayRoutine(lava ? "Lava behind the rock — stopped it with cobble." : "Water coming in — walled it off."); }
             } else if (lava) openLava = true;
         }
+        // [growth22] And the open air it broke through to (a hill's flank): stopped up again with a block from the pack.
+        if (task != null && task.kind != MineWorks.Kind.SHAFT) {
+            for (Direction d : Direction.values()) {
+                if (d == Direction.DOWN) continue;
+                BlockPos side = pos.relative(d);
+                BlockState ss = level.getBlockState(side);
+                if (!(ss.isAir() || ss.canBeReplaced() && ss.getFluidState().isEmpty()) || inTask(side)) continue;
+                if (side.getY() < level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, side.getX(), side.getZ())) continue;
+                if (seal(side, false)) { SEALED++; DAYLIGHT_SEALED++; }
+            }
+        }
         sweep(pos);
         if (openLava) { beginOut("Lava, and nothing to stop it with — out of here."); return; }
         BlockPos above = pos.above();
@@ -536,6 +548,7 @@ public class WorksGoal extends Goal {
             BlockPos p = q.poll();
             BlockState s = level.getBlockState(p);
             if (!MineWorks.mayCut(level, v, p, s)) continue;
+            if (MineWorks.daylight(level, p, 1)) continue;          // [growth22] ore in the hill's skin stays: taking it opens the drift to the slope
             vein.add(p);
             n++;
             for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++) {
@@ -650,7 +663,7 @@ public class WorksGoal extends Goal {
 
     // ------------------------------------------------------------------ for the tests
 
-    public static volatile int TELEPORTS, BROKEN, SEALED, LEFT;
+    public static volatile int TELEPORTS, BROKEN, SEALED, LEFT, DAYLIGHT_SEALED;   // [growth22] DAYLIGHT_SEALED
     private static final java.util.Map<java.util.UUID, String> STATE = new java.util.concurrent.ConcurrentHashMap<>();
 
     /** Tests: what this miner's shift is at. */
@@ -665,6 +678,19 @@ public class WorksGoal extends Goal {
 
     /** [fixes14] Shifts worked, and the last few hops with what stood in the way (the tests read them). */
     public static volatile int SHIFTS;
+    /** [growth22] Blocks broken and ticks spent over all the shifts counted in SHIFTS. */
+    public static volatile long SHIFT_BLOCKS, SHIFT_TICKS_ALL;
+
+    /** [growth22] The shifts in words, for the mine's report: how many, blocks and minutes a shift, why they ended. */
+    public static String shiftsLine() {
+        if (SHIFTS <= 0) return null;
+        java.util.List<java.util.Map.Entry<String, Integer>> e = new java.util.ArrayList<>(ENDS.entrySet());
+        e.sort((x, y) -> y.getValue() - x.getValue());
+        StringBuilder sb = new StringBuilder("Shifts: " + SHIFTS + ", " + (SHIFT_BLOCKS / SHIFTS) + " blocks and " + (SHIFT_TICKS_ALL / SHIFTS / 1200)
+            + " minutes a shift; ended:");
+        for (int i = 0; i < Math.min(5, e.size()); i++) sb.append(i == 0 ? " " : ", ").append(e.get(i).getKey()).append(" ").append(e.get(i).getValue());
+        return sb.toString();
+    }
     private static final java.util.concurrent.ConcurrentLinkedDeque<String> HOPS = new java.util.concurrent.ConcurrentLinkedDeque<>();
 
     public static final java.util.Map<String, Integer> ENDS = new java.util.concurrent.ConcurrentHashMap<>();
@@ -687,6 +713,8 @@ public class WorksGoal extends Goal {
 
     public static void resetCountsForTests() {
         SHIFTS = 0;
+        SHIFT_BLOCKS = 0;
+        SHIFT_TICKS_ALL = 0;
         HOPS.clear();
         ENDS.clear();
         TELEPORTS = 0;

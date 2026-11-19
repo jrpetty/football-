@@ -526,39 +526,89 @@ LAST_METRICS = [None]
 class FrozenWatch:
     """[long6] The four-hundred-day run on 0.315.0 read the same numbers every day from day one to four hundred (the
     town asleep with no rates of its own, nothing loaded) and passed. A frozen town now fails the run, loudly:
-    the same day's numbers for SAME_DAYS days running, no new building and no new folk for STALL_DAYS days, or not one
-    folk loaded on LOADED_DAYS days running while its heart is force-loaded."""
+    the same day's numbers for SAME_DAYS days running, nothing new for STALL_DAYS days, or not one folk loaded on
+    LOADED_DAYS days running while its heart is force-loaded.
+
+    [growth22] "Nothing new" is counted region-wide, not by the town's own head and buildings alone: the run on 0.319.0
+    failed on day 183 with 'no new building and no new folk for 25 days' while the town sent its folk off to colonies
+    (its own 107 down to 86, the world's folk 298 up to 420, two new towns, renown 99 up to 126). Progress is any of a
+    new best in the town's buildings, its folk, the world's folk, the towns in the world, its colonies, its renown, its
+    homes made up (a storey raised, a house refitted), its upgrades (the status line's count, when it has one), or a
+    new age. A town where none of these moves (the 0.315.0 case: nothing changes at all) still fails."""
     SAME_DAYS = 5
     STALL_DAYS = int(os.environ.get("HUNDRED_STALL_DAYS", "25"))
     LOADED_DAYS = 2
+    # The numbers whose new best is progress (a missing or non-number reading is skipped).
+    GROWTH = ("buildings", "folk", "world", "villages", "colonies", "renown", "beds_made", "upgrades")
 
     def __init__(self, first, held=True):
         self.held = held
         self.same, self.unloaded, self.last_sig = 0, 0, None
-        self.best_built, self.best_folk, self.best_day = -1, -1, first
+        self.best = {}
+        self.best_day, self.last_age, self.why = first, None, "the start"
+
+    @staticmethod
+    def num(m, k):
+        v = m.get(k)
+        if isinstance(v, bool):
+            return None
+        if isinstance(v, (int, float)):
+            return v
+        return int(v) if str(v).isdigit() else None
 
     def day(self, day, m):
         """The day's metrics in: None if all is well, else why the town is frozen."""
         if not m:
             return None
-        folk = int(m["folk"]) if str(m.get("folk", "")).isdigit() else 0
+        folk = self.num(m, "folk") or 0
         sig = (m.get("buildings"), m.get("folk"), m.get("age"), m.get("food"), m.get("logs"), m.get("stone"),
                m.get("coins"), m.get("output"))
         self.same = self.same + 1 if sig == self.last_sig else 0
         self.last_sig = sig
-        if m.get("buildings", 0) > self.best_built or folk > self.best_folk:
-            self.best_built = max(self.best_built, m.get("buildings", 0))
-            self.best_folk = max(self.best_folk, folk)
-            self.best_day = day
+        moved = []
+        for k in self.GROWTH:
+            v = self.num(m, k)
+            if v is None:
+                continue
+            if k not in self.best:
+                self.best[k] = v
+            elif v > self.best[k]:
+                moved.append("%s %s" % (k, v))
+                self.best[k] = v
+        age = m.get("age")
+        if age and age != "?" and age != self.last_age:
+            if self.last_age is not None:
+                moved.append(str(age))
+            self.last_age = age
+        if moved:
+            self.best_day, self.why = day, ", ".join(moved)
         self.unloaded = self.unloaded + 1 if self.held and m.get("loaded") == 0 and folk > 0 else 0
         if self.same >= self.SAME_DAYS:
             return "the same numbers %d days running (%s)" % (self.same + 1, sig)
         if self.unloaded >= self.LOADED_DAYS:
             return "0 of %d folk loaded %d days running, its heart force-loaded" % (folk, self.unloaded)
         if day - self.best_day >= self.STALL_DAYS:
-            return "no new building and no new folk for %d days (best %d buildings, %d folk, on day %d)" % (
-                day - self.best_day, self.best_built, self.best_folk, self.best_day)
+            return ("nothing new for %d days: no new building, folk, town, colony, renown, home or age anywhere in its "
+                    "region (best %s buildings, %s folk, %s in the world, renown %s; last moved on day %d: %s)" % (
+                        day - self.best_day, self.best.get("buildings"), self.best.get("folk"), self.best.get("world"),
+                        self.best.get("renown"), self.best_day, self.why))
         return None
+
+
+def frozen_replay(path, first=1):
+    """[growth22] A run's hundred-metrics.jsonl played through the FrozenWatch: the first day it calls the town frozen,
+    or None. (python3 soak.py frozen-replay hundred-metrics.jsonl)"""
+    watch = FrozenWatch(first, True)
+    with open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            m = json.loads(line)
+            why = watch.day(int(m["day"]), m)
+            if why:
+                return int(m["day"]), why
+    return None
 
 
 # [long6] HUNDRED_HOLD=0: the heart is not force-loaded, and the town has to keep itself going with nobody near (its
@@ -811,6 +861,11 @@ def restart2(r):
 
 def main():
     scenario = sys.argv[1] if len(sys.argv) > 1 else "plains"
+    if scenario == "frozen-replay":
+        # [growth22] No server: a metrics file through the FrozenWatch.
+        got = frozen_replay(sys.argv[2])
+        print("FROZEN on day %d: %s" % got if got else "not frozen")
+        sys.exit(4 if got else 0)
     r = Rcon()
     say("connected; scenario %s" % scenario)
     try:

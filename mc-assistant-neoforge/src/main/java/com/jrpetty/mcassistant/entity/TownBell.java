@@ -235,6 +235,7 @@ public final class TownBell {
         if (f.trip() != null || f.expedition() != null || Nether.away(f) || Drover.busy(f)) return false;
         if (f.getTarget() != null || Patrols.escorting(f) || Assemblies.attending(f) || TownJobs.busy(f)) return false;
         if (f.talkPartner() != null || f.companionPlayer() != null || f.guidePlayer() != null) return false;
+        if (Villages.raising(f)) return false;               // [growth22] a hand raising one of the town's buildings stays at it
         return p == Peal.DAWN || !f.isSleeping();             // the dawn's ringer is woken for it
     }
 

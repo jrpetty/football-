@@ -420,6 +420,27 @@ public final class MineWorks {
         return inGround(level, w, x, z);
     }
 
+    /** [growth22] Rock a drift keeps between itself and the open air outside, every way and overhead. */
+    public static final int SKIN = 2;
+
+    /**
+     * [growth22] Would a tunnel cell here, this tall, come within {@link #SKIN} blocks of the open air: a column within two
+     * blocks (corners too) whose ground (the first thing a body stands on, leaves and grass not counted) is no higher than
+     * two over its roof. On a mountain's flank a drift driven level out of the hill met its side and broke out into the
+     * daylight, and its miners walked out of it onto the slope; now it stops two blocks short and turns, or ends there.
+     */
+    public static boolean daylight(ServerLevel level, BlockPos cell, int height) {
+        int roof = cell.getY() + height + SKIN - 1;
+        for (int dx = -SKIN; dx <= SKIN; dx++) {
+            for (int dz = -SKIN; dz <= SKIN; dz++) {
+                int x = cell.getX() + dx, z = cell.getZ() + dz;
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                if (level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) <= roof) return true;
+            }
+        }
+        return false;
+    }
+
     /** May a miner of the works break this block (a vein it follows, a cell of its task): the world's own, in the mine's ground. */
     public static boolean mayCut(ServerLevel level, @Nullable UUID village, BlockPos pos, BlockState s) {
         Works w = village == null ? null : works(level, village);
@@ -725,7 +746,7 @@ public final class MineWorks {
                 Task t = new Task(Kind.BRANCH, l.id(), d.id, a, side, 2, key);
                 for (int j = done + 1; j <= len; j++) {
                     BlockPos c = root.relative(out, j);
-                    if (!fits(level, w, c.getX(), c.getZ())) break;
+                    if (!fits(level, w, c.getX(), c.getZ()) || daylight(level, c, 2)) break;   // [growth22] never out to the open air
                     t.cells.add(c);
                     t.stand.add(root.relative(out, j - 1));
                 }
@@ -805,7 +826,7 @@ public final class MineWorks {
         boolean wayIsHead = way == Direction.from2DDataValue(d.heading);
         for (int k = 0; k < FACE_CELLS; k++) {
             BlockPos c = at.relative(way);
-            if (!fits(level, w, c.getX(), c.getZ())) break;
+            if (!fits(level, w, c.getX(), c.getZ()) || daylight(level, c, 2)) break;   // [growth22] never out to the open air
             t.cells.add(c);
             t.stand.add(at);
             at = c;
@@ -826,6 +847,7 @@ public final class MineWorks {
         for (int i = 1; i <= n; i++) {
             BlockPos c = from.relative(d, i);
             if (!fits(level, w, c.getX(), c.getZ())) return false;
+            if (daylight(level, c, 2)) return false;                     // [growth22] the hillside ahead: an edge, as the ground's is
         }
         return true;
     }
@@ -1077,7 +1099,7 @@ public final class MineWorks {
                         if (t.why.startsWith("tunnel")) d.closed = 'j';
                         else {
                             d.blocked = true;
-                            d.why = switch (t.why) { case "water" -> 'w'; case "lava" -> 'l'; case "cave" -> 'c'; case "rock" -> 'r'; case "made" -> 'm'; default -> 'e'; };
+                            d.why = switch (t.why) { case "water" -> 'w'; case "lava" -> 'l'; case "cave" -> 'c'; case "rock" -> 'r'; case "made" -> 'm'; case "daylight" -> 'd'; default -> 'e'; };   // [growth22] 'd'
                         }
                     }
                 }
@@ -1130,6 +1152,8 @@ public final class MineWorks {
             if (s.getDestroySpeed(level, p) < 0) return "rock";
             if (s.hasBlockEntity()) return "made";
         }
+        // [growth22] Two blocks short of the open air (a hill's flank, a ravine): stopped, and the drift turns or ends.
+        if (tunnel && daylight(level, cell, t.height)) return "daylight";
         if (tunnel && open >= t.height) {
             // Open already: one of the works' own tunnels (it has met it), or a cave.
             return ourTunnel(level, t, cell) ? "tunnel" : "cave";
@@ -1587,6 +1611,9 @@ public final class MineWorks {
         }
         out.addAll(MineDemand.lines(level, w, plan));
         for (String e : lately(village, 4)) out.add("Lately: " + e.substring(e.indexOf(' ') + 1));
+        out.addAll(OreFlow.lines(village, level.getDayTime() / 24000L));   // [growth22] the metal in and out, by whom
+        String shifts = com.jrpetty.mcassistant.entity.goal.WorksGoal.shiftsLine();   // [growth22] the shifts' books
+        if (shifts != null) out.add(shifts);
         return out;
     }
 
@@ -1598,6 +1625,7 @@ public final class MineWorks {
             case 'j' -> "through into another tunnel";
             case 'r' -> "stopped at bedrock";
             case 'm' -> "stopped at something built";
+            case 'd' -> "stopped two blocks short of the hillside";   // [growth22]
             default -> "at the edge of the mine's ground";
         };
     }

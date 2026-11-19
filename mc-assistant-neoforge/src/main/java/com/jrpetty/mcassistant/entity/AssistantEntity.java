@@ -3917,7 +3917,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             BlockPos p = feet.relative(dir);
             if (level().getBlockState(p).canBeReplaced()
                 && level().getBlockState(p.below()).isSolid()
-                && TownBlocks.mayPlace(level(), p, TownBlocks.Why.LAMP)) {                     // [integrity]
+                && TownBlocks.allows(level(), p, TownBlocks.Why.LAMP)) {                     // [integrity] ([growth22] asked, not tried)
                 final net.minecraft.world.item.Item want = lamp.getItem();
                 if (removeMatching(s -> s.is(want), 1) == 1) {
                     level().setBlockAndUpdate(p, lit.defaultBlockState());
@@ -5601,7 +5601,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (level().getMaxLocalRawBrightness(pos) >= 6) return;
         if (!level().getBlockState(pos).canBeReplaced()) return;
         if (!level().getBlockState(pos.below()).isFaceSturdy(level(), pos.below(), net.minecraft.core.Direction.UP)) return;
-        if (!TownBlocks.mayPlace(level(), pos, TownBlocks.Why.LAMP)) return;       // [integrity] not in a road, a doorway, a room
+        if (!TownBlocks.allows(level(), pos, TownBlocks.Why.LAMP)) return;       // [integrity] not in a road, a doorway, a room ([growth22] asked every dark tick: no refusal booked)
         if (removeMatching(s -> s.is(Items.TORCH), 1) == 1) {
             level().setBlockAndUpdate(pos, Blocks.TORCH.defaultBlockState());
         }
@@ -7875,6 +7875,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     fromStore.add(st.copyWithCount(taken));
                 }
                 ItemStack one = st.copyWithCount(1);                  // [supply] (booked once it is off the shelf: Bonded)
+                if (isSettler() && OreFlow.metal(st) != null) OreFlow.out(ownerId(), level().getDayTime() / 24000L, st, taken, "a " + stationTask().name().toLowerCase() + "'s hand");   // [growth22]
                 st.shrink(taken);
                 if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
                 if (isSettler() && level() instanceof net.minecraft.server.level.ServerLevel market) {
@@ -8870,6 +8871,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public void clearQueue() {
+        // [growth22] Tests measuring builds: who took a builder off its building.
+        if (com.jrpetty.mcassistant.entity.goal.BuildGoal.measuring() && !jobs.isEmpty() && jobs.peek().type() == Job.Type.BUILD) {
+            com.jrpetty.mcassistant.entity.goal.BuildGoal.takenOffBy(getUUID(), StackWalker.getInstance().walk(f -> f.skip(1).limit(4)
+                .map(x -> x.getClassName().substring(x.getClassName().lastIndexOf('.') + 1) + "." + x.getMethodName())
+                .collect(java.util.stream.Collectors.joining(" < "))));
+        }
         this.jobs.clear();
         this.taskGen++;
         // Drop any road detour with it: a stale leg would otherwise re-issue

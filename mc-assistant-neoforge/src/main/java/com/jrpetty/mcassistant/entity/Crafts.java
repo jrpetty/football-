@@ -389,6 +389,15 @@ public final class Crafts {
         return false;
     }
 
+    /**
+     * [growth22] Has the town iron to spare for what can wait (a fire station's cauldron and buckets, the foundry's steel,
+     * a restored cauldron)? Not while it is putting iron by for its age: each of those took the stores down to its own floor
+     * every day, and a grown town sat in the Iron Age with seven bars in its stores.
+     */
+    public static boolean ironToSpare(ServerLevel level, Villages.Village v) {
+        return !savingIron(level, v);
+    }
+
     /** Bars the smith never beats into lanterns and pots: the next pick, the next blade. */
     static final int IRON_KEPT = 16;
     /** Lanterns the smith keeps in the stores, for the lamp posts and the buildings' lantern hooks. */

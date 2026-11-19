@@ -102,6 +102,8 @@ public final class StepKit {
         BlockPos door = d.pos();
         Direction out = d.out();
         Block stair = houseStair(level, door, out);
+        Direction turn = TurnedFlights.side(level, d);                   // [growth22] a flight turned along the wall
+        if (turn != null) return TurnedFlights.dress(level, v, d, turn, stair);
         int prev = door.getY(), made = 0;
         List<Integer> feet = new ArrayList<>();
         List<Direction> ups = new ArrayList<>();
@@ -140,7 +142,7 @@ public final class StepKit {
     }
 
     /** Earth, nothing, or an earlier flight's own stone (or its old cheek posts): what may be made good in the flight's stone. */
-    private static boolean fill(BlockState st) {
+    static boolean fill(BlockState st) {
         if (st.hasBlockEntity()) return false;
         return st.isAir() || st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.DIRT) || st.is(Blocks.DIRT_PATH)
             || st.is(Blocks.GRAVEL) || st.is(Blocks.SAND) || st.is(Blocks.COBBLESTONE) || st.is(Blocks.COBBLESTONE_WALL)
@@ -148,7 +150,7 @@ public final class StepKit {
     }
 
     /** One block of the flight's stone (or its stair) out of the stores into this place, what was there going back. */
-    private static boolean put(ServerLevel level, Villages.Village v, BlockPos at, BlockState want) {
+    static boolean put(ServerLevel level, Villages.Village v, BlockPos at, BlockState want) {
         BlockState was = level.getBlockState(at);
         if (was == want) return true;
         Item exact = want.getBlock().asItem();

@@ -229,6 +229,36 @@ public class BuildGoal extends Goal {
     }
 
     /** [fixes14] Tests: what every builder is handed for the cell it comes to, its pace and its reach its own (null: off). */
+    /** [growth22] Tests: where each builder's ticks went, {all, walking to a cell out of reach, stood in its own cell, at its
+     *  pace, a part's turn, set down beside a cell, a cell given up for now, taken off it before it was done}. */
+    private static volatile boolean statsForTests;
+    private static final Map<java.util.UUID, long[]> STATS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void statsForTests(boolean on) {
+        statsForTests = on;
+        STATS.clear();
+        TAKEN_BY.clear();
+    }
+
+    public static boolean measuring() {
+        return statsForTests;
+    }
+
+    /** Who cleared each builder's jobs while it had a building in hand (tests measuring builds). */
+    private static final Map<java.util.UUID, String> TAKEN_BY = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void takenOffBy(java.util.UUID builder, String who) {
+        TAKEN_BY.merge(builder, who, (a, b) -> a.length() > 300 ? a : a + " ;; " + b);
+    }
+
+    public static String takenOffByForTests(java.util.UUID builder) {
+        return TAKEN_BY.getOrDefault(builder, "");
+    }
+
+    public static long[] statsForTests(java.util.UUID builder) {
+        return STATS.getOrDefault(builder, new long[8]).clone();
+    }
+
     public static void stockAtPaceForTests(@Nullable java.util.function.BiConsumer<AssistantEntity, Placement> stock) {
         stockForTests = stock;
     }
@@ -919,6 +949,13 @@ public class BuildGoal extends Goal {
 
     @Override
     public void stop() {
+        if (job != null) {
+            // [growth22] Taken off it before it was done (a monster, another job put before it, its trade changed): booked.
+            if (statsForTests) STATS.computeIfAbsent(assistant.getUUID(), k -> new long[8])[7]++;
+            if (assistant.isSettler() && placed > 0) LOG.info("[MCA-BUILD] tick {}: the {} (builder at {}, {} placed): taken off it ({})",
+                assistant.level().getGameTime(), building, assistant.blockPosition().toShortString(), placed,
+                assistant.getTarget() != null ? "a fight" : assistant.peekJob() == null ? "its jobs cleared" : "another job: " + assistant.peekJob().type());
+        }
         this.job = null;
         assistant.getNavigation().stop();
     }
@@ -941,6 +978,8 @@ public class BuildGoal extends Goal {
     @Override
     public void tick() {
         if (job == null) return;
+        long[] gstat = statsForTests ? STATS.computeIfAbsent(assistant.getUUID(), k -> new long[8]) : null;   // [growth22]
+        if (gstat != null) gstat[0]++;
 
         // Advance to the next cell that still needs its part.
         Placement target = null;
@@ -977,6 +1016,7 @@ public class BuildGoal extends Goal {
                     int oz = side == 1 ? 3 : side == 3 ? -3 : 0;
                     assistant.getNavigation().moveTo(at.getX() + 0.5 + ox, at.getY() + 1, at.getZ() + 0.5 + oz, 1.1D);
                 }
+                if (gstat != null) gstat[2]++;                                        // [growth22] stood in its own cell
                 if (++standTicks > 100) {
                     // A village's builder that can't walk out of the cell (on a dais between a
                     // frame's posts) is set down beside it, and the cell is laid after all: one
@@ -1044,6 +1084,7 @@ public class BuildGoal extends Goal {
         }
 
         if (!inReach) {
+            if (gstat != null) gstat[1]++;                                            // [growth22] walking to a cell out of reach
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 1.1D);
             }
@@ -1061,10 +1102,12 @@ public class BuildGoal extends Goal {
                 // is set down beside it, as a hand that cannot reach its plot is. Only when that
                 // too is impossible is the cell given up.
                 if (assistant.isSettler() && assistant.putBeside(pos)) {
+                    if (gstat != null) gstat[5]++;                                    // [growth22] set down beside it
                     stuckTicks = 0;
                     nearest = Double.MAX_VALUE;
                     return;
                 }
+                if (gstat != null) gstat[6]++;                                        // [growth22] given up for now
                 if (!lastLook) missed.add(target);
                 cursor++; // can't get there — skip that cell
                 stuckTicks = 0;
@@ -1093,8 +1136,10 @@ public class BuildGoal extends Goal {
         int pace = assistant.buildPaceHundredths();
         if (handsForTests) workTicks = pace;                                    // [build-world] tests: no pace kept
         if (workTicks < pace) {
+            if (gstat != null) gstat[3]++;                                            // [growth22] at its pace
             return;
         }
+        if (gstat != null) gstat[4]++;                                                // [growth22] a part's turn
         workTicks = Math.min(99, workTicks - pace);
 
         BlockState state;
