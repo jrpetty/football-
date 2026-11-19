@@ -210,6 +210,7 @@ public final class ItemUses {
         if (it instanceof DiggerItem || it instanceof ShearsItem || it instanceof FishingRodItem || it instanceof FlintAndSteelItem
             || it instanceof BrushItem || s.is(ItemTags.PICKAXES) || s.is(ItemTags.AXES) || s.is(ItemTags.HOES) || s.is(ItemTags.SHOVELS)
             || s.is(Tags.Items.MINING_TOOL_TOOLS) || s.is(Tags.Items.TOOLS_SHEAR) || s.is(Tags.Items.TOOLS_FISHING_ROD)) k.add(Kind.TOOL);
+        for (StationTask t : WORK_ITEM_TRADES) if (WorkTools.keeps(t, s) > 0) k.add(Kind.TOOL);   // this mod's: a prop, a rope, a sack, a saw, a crate
         if (s.is(Items.SADDLE) || it instanceof AnimalArmorItem || s.is(Items.LEAD) || s.is(Items.NAME_TAG)) k.add(Kind.TACK);
         if (s.is(Items.WRITTEN_BOOK) || s.is(Items.WRITABLE_BOOK) || s.is(Items.ENCHANTED_BOOK) || s.is(Items.BOOK)) k.add(Kind.BOOK);
         if (s.has(DataComponents.JUKEBOX_PLAYABLE) || s.is(Tags.Items.MUSIC_DISCS) || s.is(Items.GOAT_HORN)) k.add(Kind.MUSIC);
@@ -232,6 +233,9 @@ public final class ItemUses {
         }
         return k;
     }
+
+    /** The trades that keep this mod's work items (WorkTools.keeps). */
+    private static final StationTask[] WORK_ITEM_TRADES = { StationTask.MINE, StationTask.CAVE, StationTask.WOOD, StationTask.HAUL };
 
     /** A block's uses: a light, a piece of furniture, a comfort, building stuff. */
     private static void blockKinds(ItemStack s, Block b, EnumSet<Kind> k) {
@@ -437,6 +441,16 @@ public final class ItemUses {
         // The tool of its trade (and the watch's and the hunter's blade).
         Toolrack.Tool tool = Toolrack.of(job);
         if (tool != null) toolNeed(f, tool, tier, job == StationTask.GUARD || job == StationTask.HUNT ? Kind.WEAPON : Kind.TOOL, out);
+        // This mod's work items its trade keeps (a miner's props, rope and sack; a woodcutter's saw; a courier's crates).
+        for (ItemStack kit : workKit()) {
+            int keep = WorkTools.keeps(job, kit);
+            if (keep <= 0) continue;
+            Item ki = kit.getItem();
+            int has = f.countCarried(x -> x.is(ki));
+            if (has * 2 > keep) continue;
+            out.add(new Need(Kind.TOOL, x -> x.is(ki) && WorkTools.keeps(job, x) > 0, kit.copy(), keep - has, 0.4,
+                "its work wants " + name(kit) + (has > 0 ? " and it has only " + has : " and it has none"), Payer.OWN, null, null, "kit." + name(kit)));
+        }
         // The watch's armour, the hunter's, the cave team's and the nether runners'.
         if (job == StationTask.GUARD || job == StationTask.HUNT || job == StationTask.CAVE || job == StationTask.NETHER) armourNeeds(f, out);
         // Arrows for a bow it carries.
@@ -513,6 +527,23 @@ public final class ItemUses {
         if (job == StationTask.STORE || job == StationTask.HAUL) townNeeds(level, village, out);
         out.sort(Comparator.comparingDouble((Need n) -> -n.urgency()));
         return out;
+    }
+
+    /** This mod's work items, one of each, for the needs (WorkItems). */
+    private static volatile List<ItemStack> workKit;
+
+    private static List<ItemStack> workKit() {
+        if (workKit == null) {
+            List<ItemStack> l = new ArrayList<>();
+            try {
+                l.add(new ItemStack(com.jrpetty.mcassistant.item.WorkItems.PIT_PROP_ITEM.get()));
+                l.add(new ItemStack(com.jrpetty.mcassistant.item.WorkItems.ROPE_COIL.get()));
+            } catch (RuntimeException e) {
+                // not registered (a unit test): no work items to want
+            }
+            workKit = l;
+        }
+        return workKit;
     }
 
     private static ItemStack potion() {
@@ -675,13 +706,34 @@ public final class ItemUses {
             String key = Stockroom.key(one);
             Business.Line l = b.allTime.lines.get(key);
             String nm = name(one);
-            if ((l == null || l.used <= 0) && !shortOf.contains(nm) && !shortOf.contains(nm.replace(" ingot", ""))) continue;
+            if ((l == null || l.used <= 0) && !shortOf.contains(nm) && !shortOf.contains(nm.replace(" ingot", "")) && !firmUses(level, village, b, it)) continue;
             int stock = Market.stock(level, village, s -> s.is(it));
             int n = Math.min(16, e.getValue() - stock);
             if (n <= 0) continue;
             out.add(new Need(Kind.INPUT, s -> s.is(it) && !s.isEnchanted(), one, n, 0.6, b.name + " is short of " + nm + " for its bench",
                 Payer.FIRM, b.id, null, "input." + key));
         }
+    }
+
+    private static final Map<String, Boolean> USES = new ConcurrentHashMap<>();
+
+    /** Does a firm of this kind make any of its wares of this (a toolsmith's picks of iron)? By the game's recipes. */
+    static boolean firmUses(ServerLevel level, UUID village, Business b, Item it) {
+        BusinessTypes.BusinessType t = Enterprise.kindOf(village, b);
+        if (t == null) return false;
+        return USES.computeIfAbsent(t.key() + "|" + BuiltInRegistries.ITEM.getKey(it), k -> {
+            ItemStack probe = new ItemStack(it);
+            for (String ware : t.wares()) {
+                ItemStack out = Stockroom.sampleOf(ware);
+                if (out.isEmpty()) continue;
+                for (net.minecraft.world.item.crafting.RecipeHolder<?> r : level.getRecipeManager().getRecipes()) {
+                    ItemStack res = r.value().getResultItem(level.registryAccess());
+                    if (res.isEmpty() || !res.is(out.getItem())) continue;
+                    for (net.minecraft.world.item.crafting.Ingredient ing : r.value().getIngredients()) if (ing.test(probe)) return true;
+                }
+            }
+            return false;
+        });
     }
 
     /** The builders' working stock, short in the stores. */
@@ -716,17 +768,16 @@ public final class ItemUses {
         int lot = PlayerStalls.lot(one);
         int going = Budget.goodFor(one) != null ? PlayerStalls.going(level, village, one) : 0;
         if (going > 0) return going / (double) lot;
-        double p = Prices.of(one);
+        double p = Math.max(1.0, Prices.of(one));
         if (MarketMaker.live(village)) p *= MarketMaker.priceLevel(village);
-        return Math.max(0.05, p);
+        return p;
     }
 
     /** [uses16] PlayerStalls.going for a thing the village's counter has no price for: its worth by the list, a lot of it,
      *  so a useful thing of another mod can be bought too. Nought for what nobody here has a use for. */
     static int fallbackLot(ServerLevel level, UUID village, ItemStack one) {
         if (kinds(one).isEmpty()) return 0;
-        double p = Prices.of(one.copyWithCount(1));
-        if (p <= 0) return 0;
+        double p = Math.max(1.0, Prices.of(one.copyWithCount(1)));         // no price on the list: worth a coin to whoever has a use for it
         if (MarketMaker.live(village)) p *= MarketMaker.priceLevel(village);
         return Math.max(1, (int) Math.round(p * PlayerStalls.lot(one)));
     }
@@ -1277,6 +1328,26 @@ public final class ItemUses {
 
     private static String cap(String s) {
         return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /** Tests: its tastes set (a reader, a lover of gems...), its persona taken as rolled. */
+    public static void tasteForTests(VillageFolkEntity f, Persona.Hobby hobby, Persona.Gift loves) {
+        Persona p = f.persona();
+        p.hobby = hobby;
+        p.loves = loves;
+        if (p.quirk.isEmpty()) p.quirk = "a quiet one";
+        forget(f);
+    }
+
+    /** Tests: the ticks of its cold still to run. */
+    public static int coldForTests(VillageFolkEntity f) {
+        return f.health().cold;
+    }
+
+    /** Tests: the best of its trade's tool it has. */
+    public static ItemStack ownToolForTests(VillageFolkEntity f) {
+        Toolrack.Tool t = Toolrack.of(f.stationTask());
+        return t == null ? ItemStack.EMPTY : ownTool(f, t);
     }
 
     /** Its last uses, newest first (tests, the card). */
