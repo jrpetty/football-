@@ -41,6 +41,32 @@ public final class RegionStage {
         return Railways.linkOpen(a.id(), b.id());
     }
 
+    /** [tests] Would these two lay a railway between them now (the iron and the mine's line not asked for)? */
+    public static boolean wantsRailForTests(ServerLevel level, Villages.Village a, Villages.Village b) {
+        Railways.planAnywayForTests(true);
+        try {
+            Villages.Village first = a.id().toString().compareTo(b.id().toString()) <= 0 ? a : b, second = first == a ? b : a;
+            return Railways.wantsLink(level, first, second);
+        } finally {
+            Railways.planAnywayForTests(false);
+        }
+    }
+
+    /** [tests] The way a caravan from one town to the other walks (Caravans.way). */
+    public static List<BlockPos> wayForTests(Villages.Village from, Villages.Village to) {
+        return Caravans.way(from, to);
+    }
+
+    /** [tests] A town's visit's catching up on what its road gang laid while it slept (Routes.catchUp). */
+    public static void catchUpForTests(ServerLevel level, Villages.Village v) {
+        Routes.catchUp(level, v, RoadWorks.workingOn(v));
+    }
+
+    /** [tests] The road gang set on the road to that town (as RoadWorks.tick sets it). */
+    public static void workOnForTests(UUID me, UUID other) {
+        Ledger.note(me, RoadWorks.WORKING, other.toString());
+    }
+
     static List<String> stage(ServerLevel level, BlockPos at) {
         List<String> out = new ArrayList<>();
         int x0 = at.getX() + 24, z0 = at.getZ(), x1 = x0 + 200, z1 = z0 + 36;

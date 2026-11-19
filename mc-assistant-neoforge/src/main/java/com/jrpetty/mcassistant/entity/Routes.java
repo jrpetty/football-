@@ -361,7 +361,7 @@ public final class Routes {
                     int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1;
                     BlockState t = level.getBlockState(new BlockPos(x, top, z));
                     if (t.is(BlockTags.LEAVES) || t.is(BlockTags.LOGS)) flags |= 2;
-                    if (ownGround(x, z) == 0 && built(x, y, z)) flags |= 4;
+                    if (ownGround(x, z) == 0 && builtNear(x, y, z)) flags |= 4;
                 }
                 return new int[]{ y, flags };
             }
@@ -379,6 +379,17 @@ public final class Routes {
                 if (biome.is(BiomeTags.IS_FOREST) || biome.is(BiomeTags.IS_TAIGA) || biome.is(BiomeTags.IS_JUNGLE)) flags |= 2;
             }
             return new int[]{ surface, flags };
+        }
+
+        /** Somebody's building here or two blocks off (the road is three wide and keeps its distance). */
+        boolean builtNear(int x, int y, int z) {
+            if (built(x, y, z)) return true;
+            for (int[] d : new int[][]{ { 2, 0 }, { -2, 0 }, { 0, 2 }, { 0, -2 } }) {
+                if (!level.hasChunk((x + d[0]) >> 4, (z + d[1]) >> 4)) continue;
+                Roads.Ground g = Roads.ground(level, x + d[0], z + d[1]);
+                if (g != null && !g.water() && built(x + d[0], g.y(), z + d[1])) return true;
+            }
+            return false;
         }
 
         /** Somebody's building on the ground here: what the world did not put there, and is no road or bridge. */
@@ -494,13 +505,7 @@ public final class Routes {
                 pts.add(xy(path.get(i), false, i == path.size() - 1));
             }
             // The water it crosses, for the books.
-            List<int[]> steps = trace(pts);
-            int prevWet = 0;
-            for (int[] p : steps) {
-                boolean wet = (at(p[0], p[1])[1] & 1) != 0;
-                if (wet) water++;
-                prevWet = wet ? prevWet + 1 : 0;
-            }
+            for (int[] p : trace(pts)) if ((at(p[0], p[1])[1] & 1) != 0) water++;
             return pts;
         }
 
