@@ -1587,6 +1587,7 @@ public final class PlayerStalls {
             stallTag(level, village, st, boothOf(village, st), t);
             out.add(t);
         }
+        out.addAll(PlayerShops.report(level, village));                 // [player15] the players' own shops, beside their stalls
         int free = 0;
         for (Booth b : booths(village)) if (tenantOf(village, b) == null) free++;
         if (free > 0) {

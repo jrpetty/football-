@@ -405,7 +405,7 @@ public class BusinessScreen extends Screen {
 
     private void command(String c) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) mc.player.connection.sendCommand(c);
+        if (mc.player != null) com.jrpetty.mcassistant.net.LifeNetwork.command(c);   // [player15] not as chat: a server may ban commands
         UiStyle.click();
     }
 

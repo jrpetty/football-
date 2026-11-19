@@ -370,6 +370,7 @@ public final class Shifts {
         long day = level.getDayTime() / 24000L;
         int left = budget(s.village, s.role) - Earnings.spentToday(s.village, payer(s.role), day);
         coins = Math.max(0, Math.min(coins, left));
+        if (PlayerJobs.onTheBooks(p, s.role, stars)) coins = 0;            // [player15] a job's task: its wage on payday is the pay
         int paid = coins <= 0 ? 0 : Earnings.fromTreasury(p, s.village, coins, Earnings.Source.SHIFT, Villages.name(s.village),
             "for " + what + " (" + EarnMath.starWord(stars) + ")");
         Earnings.spend(s.village, payer(s.role), day, paid);

@@ -591,5 +591,8 @@
   "talk.mc_assistant.give_up": "Give yourself up",
   "talk.mc_assistant.give_up.tip": "An outlaw here? Serve your time in the cells and the matter is settled",
   "talk.mc_assistant.pardon": "Ask for a pardon",
-  "talk.mc_assistant.pardon.tip": "The leader may pardon an outlaw: freely, a friend of the town; else for a gift of coin"
+  "talk.mc_assistant.pardon.tip": "The leader may pardon an outlaw: freely, a friend of the town; else for a gift of coin",
+  "block.mc_assistant.shop_counter": "Shop Counter",
+  "block.mc_assistant.shop_sign": "Shop Sign",
+  "key.mc_assistant.life": "Your life in town"
 }

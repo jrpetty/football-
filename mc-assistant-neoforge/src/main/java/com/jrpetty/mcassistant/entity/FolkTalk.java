@@ -656,7 +656,7 @@ public final class FolkTalk {
         return TownSpeech.flavour(f, said, answering);       // [culture2] one of its town's sayings, now and then
     }
 
-    private static String firstSentence(String s) {
+    static String firstSentence(String s) {
         int cut = -1;
         for (int i = 0; i < s.length() - 1; i++) {
             char c = s.charAt(i);
