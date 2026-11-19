@@ -479,7 +479,13 @@ public final class Grow {
     /** Is a second storey going up on this building now (begun, or its old roof off)? */
     public static boolean raisingNow(UUID village, BlockPos anchor) {
         Set<Long> started = STARTED.get(village);
-        return (started != null && started.contains(anchor.asLong())) || Ledger.raising(village, anchor);
+        return (started != null && started.contains(anchor.asLong())) || Ledger.raising(village, anchor) || paidFor(village, anchor);
+    }
+
+    /** [fixes14] A storey paid for and not yet up (what it was paid in is kept with the world, so a restart goes on with it). */
+    private static boolean paidFor(UUID village, BlockPos anchor) {
+        String look = Ledger.note(village, LOOK + anchor.asLong());
+        return look != null && !look.isEmpty();
     }
 
     /** Has this building (not a house: Ledger.grown) had its second storey put on (Ages)? */
@@ -500,6 +506,7 @@ public final class Grow {
         List<BuildGoal.Placement> was = BuildGoal.plan(from, b.anchor(), b.facing(), 13);
         List<BuildGoal.Placement> will = BuildGoal.plan(to, b.anchor(), b.facing(), 13);
         if (will.isEmpty()) return 0;
+        if (!started.contains(b.anchor().asLong()) && paidFor(id, b.anchor())) started.add(b.anchor().asLong());   // [fixes14]
         if (!started.contains(b.anchor().asLong()) && !Ledger.raising(id, b.anchor())) {
             // The makings for all of it, out of the stores, before the roof comes off: and the storey goes
             // up in what the stores could pay for (Masonry.buildIn), not in what the palette would like.
@@ -518,11 +525,16 @@ public final class Grow {
         // The old roof off, from the top down (once: after that, what stands there is the new storey).
         List<BuildGoal.Placement> off = new ArrayList<>();
         boolean stripped = Ledger.raising(id, b.anchor());
+        java.util.function.Function<BuildGoal.Placement, BlockState> paint = free ? Showcase.painter(pal) : lookOf(level, id, b, pal);
         for (BuildGoal.Placement p : stripped ? List.<BuildGoal.Placement>of() : was) {
             if (p.pos().getY() < b.anchor().getY() + 3 || p.part() == BuildGoal.Part.CLEAR) continue;
             BuildGoal.Placement q = next.get(p.pos());
             if (q != null && q.part() == p.part() && q.style() == p.style()) continue;
-            if (level.getBlockState(p.pos()).isAir()) continue;
+            BlockState there = level.getBlockState(p.pos());
+            if (there.isAir()) continue;
+            // [fixes14] Already the new storey's (laid where the old roof had a gap): it stays.
+            BlockState want = q == null || q.part() == BuildGoal.Part.CLEAR ? null : paint.apply(q);
+            if (want != null && there.is(want.getBlock())) continue;
             off.add(p);
         }
         // Whatever stands where the new ladder goes up (the old chest): its contents to the household that
@@ -554,16 +566,47 @@ public final class Grow {
             if (!free) back.merge(there.getBlock().asItem(), 1, Integer::sum);
             level.setBlock(q.pos(), Blocks.AIR.defaultBlockState(), 2 | 16);
         }
+        // [fixes14] The house kept weather-tight: before the old roof comes off, the new storey's walls and its roof go up
+        // wherever they are clear of it, a layer at a time from the bottom, so the new roof stands over the old one. (The
+        // old roof came off first, and the rooms stood open to the rain for a day and more while the storey went up.)
+        int most = Math.max(budget * 4, 48);
+        if (!stripped && !off.isEmpty()) {
+            Set<BlockPos> clear = new HashSet<>();
+            for (BuildGoal.Placement p : will) {
+                if (p.part() == BuildGoal.Part.CLEAR || p.pos().getY() < b.anchor().getY() + 3) continue;
+                if (!free && p.part() == BuildGoal.Part.BED) continue;
+                if (paint.apply(p) == null) continue;
+                BlockState now = level.getBlockState(p.pos());
+                if (!now.isAir() && !(now.canBeReplaced() && now.getFluidState().isEmpty())) continue;
+                clear.add(p.pos());
+            }
+            String key = b.anchor().asLong() + ":over";
+            if (!clear.isEmpty() && TRIED.getOrDefault(key, 0) < 40) {
+                TRIED.merge(key, 1, Integer::sum);
+                for (Map.Entry<net.minecraft.world.item.Item, Integer> e : back.entrySet()) Crafts.giveBack(level, v, e.getKey(), e.getValue());
+                List<BlockPos> order = new ArrayList<>(clear);
+                order.sort(java.util.Comparator.comparingInt(BlockPos::getY));
+                Set<BlockPos> now = new HashSet<>(order.subList(0, Math.min(most, order.size())));
+                return BuildGoal.stampOnly(level, to, b.anchor(), b.facing(), 13, paint, p -> now.contains(p.pos()));
+            }
+        }
         if (off.isEmpty() && !stripped) Ledger.raising(id, b.anchor(), true);
         if (!off.isEmpty()) {
             off.sort((x, y) -> y.pos().getY() - x.pos().getY());
             int n = 0;
+            // [fixes14] Each block of the old roof swapped for the new storey's block there at once (or taken out where
+            // the new storey has none), under the new roof: never a gap to the sky. As many as a visit lays.
+            Set<BlockPos> swap = new HashSet<>();
             for (BuildGoal.Placement p : off) {
-                if (n >= budget) break;
+                if (n >= most) break;
                 if (!free) back.merge(level.getBlockState(p.pos()).getBlock().asItem(), 1, Integer::sum);
-                level.setBlock(p.pos(), Blocks.AIR.defaultBlockState(), 2 | 16);
+                BuildGoal.Placement q = next.get(p.pos());
+                boolean laid = q != null && q.part() != BuildGoal.Part.CLEAR && !(!free && q.part() == BuildGoal.Part.BED) && paint.apply(q) != null;
+                if (laid) swap.add(p.pos());
+                else level.setBlock(p.pos(), Blocks.AIR.defaultBlockState(), 2 | 16);
                 n++;
             }
+            if (!swap.isEmpty()) BuildGoal.stampOnly(level, to, b.anchor(), b.facing(), 13, paint, p -> swap.contains(p.pos()));
             for (Map.Entry<net.minecraft.world.item.Item, Integer> e : back.entrySet()) Crafts.giveBack(level, v, e.getKey(), e.getValue());
             return n;
         }
@@ -572,7 +615,6 @@ public final class Grow {
         // whatever would not go in (something in the way) must not hold up the roof.
         int lowest = Integer.MAX_VALUE;
         Set<BlockPos> missing = new HashSet<>();
-        java.util.function.Function<BuildGoal.Placement, BlockState> paint = free ? Showcase.painter(pal) : lookOf(level, id, b, pal);
         for (BuildGoal.Placement p : will) {
             if (p.part() == BuildGoal.Part.CLEAR) continue;
             if (!free && p.part() == BuildGoal.Part.BED) continue;               // furnished out of the stores later
@@ -600,7 +642,6 @@ public final class Grow {
         // [build5] As much of it as the builders can lay at a visit, layer on layer from the bottom: the old roof is off,
         // and a dozen blocks a visit left a hall open to the sky for days (the building audit found the great building
         // of each town roofless at the end of four days, a hundred cells and more), with the rain in its rooms.
-        int most = Math.max(budget * 4, 48);
         Set<BlockPos> now = new HashSet<>();
         List<BlockPos> order = new ArrayList<>(missing);
         order.sort(java.util.Comparator.comparingInt(BlockPos::getY));

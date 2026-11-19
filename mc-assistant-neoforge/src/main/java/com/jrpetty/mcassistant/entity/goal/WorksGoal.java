@@ -211,6 +211,8 @@ public class WorksGoal extends Goal {
     }
 
     private void finish(String message) {
+        if (!outJob && tasks > 0) SHIFTS++;                      // [fixes14]
+        ENDS.merge(message.isEmpty() ? "-" : message, 1, Integer::sum);
         MineWorks.event(a, "shift over: " + message + " (" + tasks + " pieces, " + broke + " blocks, " + teleports + " hops)");
         if (!message.isEmpty()) a.sayRoutine(message);
         if (!outJob) a.noteJobOutcome(oreTaken > 0 || broke > 8);
@@ -226,7 +228,8 @@ public class WorksGoal extends Goal {
 
     /**
      * One tick along the route: to the furthest waypoint ahead it can make for in a straight line along a tunnel. Stuck
-     * (no headway for four seconds) it is put on the waypoint, the way being cut and open. True when it is at the end.
+     * (no headway for eight seconds, a hop and the pathfinder tried) it is put on the waypoint, the way being cut and
+     * open. True when it is at the end.
      */
     private boolean follow() {
         if (ri >= route.size()) return true;
@@ -257,15 +260,29 @@ public class WorksGoal extends Goal {
         if (at(dest)) return true;
         double d = a.distanceToSqr(Vec3.atBottomCenterOf(dest));
         boolean far = d > 256;
+        // [fixes14] Along the tunnel in sight of the spot: stepped straight there. The pathfinder counts a spot a block
+        // off as reached, and left the miner standing at the edge of the cell before, short of where the works wanted
+        // it, until it was put there: ten hops a shift, on every step of the stair and every few blocks of a drift.
+        boolean straight = !far && (stuck < 60 || !dest.equals(walking)) && straight(dest);
         if (!dest.equals(walking)) {
             walking = dest;
             best = d;
             stuck = 0;
-            go(dest, far);
-        } else if (a.getNavigation().isDone()) {
+            if (!straight) go(dest, far);
+        } else if (!straight && a.getNavigation().isDone()) {
             go(dest, far);
         }
+        if (straight) {
+            if (!a.getNavigation().isDone()) a.getNavigation().stop();
+            a.getMoveControl().setWantedPosition(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, 1.0D);
+            a.getLookControl().setLookAt(dest.getX() + 0.5, dest.getY() + 1.5, dest.getZ() + 0.5);
+        }
         if (d < best - 0.2) { best = d; stuck = 0; } else stuck++;
+        // [fixes14] No headway for three seconds: a hop up (a lip of rock, a stair's edge), and the pathfinder's way.
+        if (!far && stuck == 60) {
+            if (a.onGround()) a.getJumpControl().jump();
+            go(dest, false);
+        }
         // A long way off (on the surface, sent off somewhere): its long walk, given its time; then the shift is over.
         if (far) {
             if (stuck > 600) {
@@ -277,10 +294,11 @@ public class WorksGoal extends Goal {
             }
             return false;
         }
-        if (stuck > 80) {
+        if (stuck > 160) {                                       // [fixes14] the last resort, after eight seconds
             stuck = 0;
             if (open(dest)) {
                 a.getNavigation().stop();
+                hopNote(dest);                                   // [fixes14] why it was stuck, for the tests
                 a.teleportTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5);
                 teleports++;
                 TELEPORTS++;
@@ -290,8 +308,31 @@ public class WorksGoal extends Goal {
         return false;
     }
 
+    /**
+     * [fixes14] Is this spot a short straight walk from where it stands, every block of the way open two high (at its
+     * own level or the spot's: a step of the stair)?
+     */
+    private boolean straight(BlockPos dest) {
+        Vec3 from = a.position(), to = Vec3.atBottomCenterOf(dest);
+        double dx = to.x - from.x, dz = to.z - from.z, len = Math.sqrt(dx * dx + dz * dz);
+        if (len > 8.0 || Math.abs(to.y - from.y) > 1.6) return false;
+        int lo = Math.min(a.blockPosition().getY(), dest.getY()), hi = Math.max(a.blockPosition().getY(), dest.getY());
+        int steps = (int) Math.ceil(len / 0.4);
+        for (int i = 1; i <= steps; i++) {
+            double f = i / (double) steps;
+            int x = net.minecraft.util.Mth.floor(from.x + dx * f), z = net.minecraft.util.Mth.floor(from.z + dz * f);
+            boolean ok = false;
+            for (int y = lo; y <= hi && !ok; y++) ok = open(new BlockPos(x, y, z));
+            if (!ok) return false;
+        }
+        return true;
+    }
+
     private void go(BlockPos dest, boolean far) {
-        if (far) a.walkTo(dest, 1.1D);
+        if (far) { a.walkTo(dest, 1.1D); return; }
+        // [fixes14] To the spot itself (the pathfinder's own reach of a block stopped it a cell short).
+        net.minecraft.world.level.pathfinder.Path path = a.getNavigation().createPath(dest, 0);
+        if (path != null) a.getNavigation().moveTo(path, 1.0D);
         else a.getNavigation().moveTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, 1.0D);
     }
 
@@ -332,7 +373,10 @@ public class WorksGoal extends Goal {
         BlockPos stand = t.stand.get(Math.min(ci, t.stand.size() - 1));
         if (!vein.isEmpty()) { followVein(level, t); return; }
         // Sent off somewhere (a rescue, a fright): back by the way down first.
-        if (a.distanceToSqr(Vec3.atBottomCenterOf(stand)) > 256 && a.level() instanceof ServerLevel sl0) {
+        // [fixes14] (Or out of sight of it down the stair or round a turn: the pathfinder lost its way in the shaft's
+        // turns, and the miner was put there.)
+        double far = a.distanceToSqr(Vec3.atBottomCenterOf(stand));
+        if ((far > 256 || far > 12 && !straight(stand)) && a.level() instanceof ServerLevel sl0) {
             route = MineWorks.route(sl0, a, t);
             route = new ArrayList<>(route);
             route.add(stand);
@@ -611,7 +655,32 @@ public class WorksGoal extends Goal {
         return new int[]{ BROKEN, SEALED, LEFT, TELEPORTS };
     }
 
+    /** [fixes14] Shifts worked, and the last few hops with what stood in the way (the tests read them). */
+    public static volatile int SHIFTS;
+    private static final java.util.concurrent.ConcurrentLinkedDeque<String> HOPS = new java.util.concurrent.ConcurrentLinkedDeque<>();
+
+    public static final java.util.Map<String, Integer> ENDS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static List<String> hopsForTests() {
+        return new ArrayList<>(HOPS);
+    }
+
+    private void hopNote(BlockPos dest) {
+        net.minecraft.world.level.pathfinder.Path path = a.getNavigation().getPath();
+        BlockPos at = a.blockPosition();
+        int folk = a.level().getEntitiesOfClass(AssistantEntity.class, a.getBoundingBox().inflate(1.2), o -> o != a).size();
+        HOPS.addLast(phase + (task == null ? "" : " " + task.kind) + " at " + a.position().x + "," + a.position().y + "," + a.position().z
+            + " to " + dest.toShortString() + " (" + (dest.getX() - at.getX()) + "," + (dest.getY() - at.getY()) + "," + (dest.getZ() - at.getZ()) + ")"
+            + " path " + (path == null ? "none" : (path.isDone() ? "done " : "") + path.getNodeCount() + " nodes to " + path.getTarget().toShortString() + (path.canReach() ? "" : " cannot reach"))
+            + " folk by " + folk + " under " + a.level().getBlockState(at.below()).getBlock().getName().getString()
+            + " feet " + a.level().getBlockState(at).getBlock().getName().getString() + " route " + ri + "/" + route.size());
+        while (HOPS.size() > 60) HOPS.pollFirst();
+    }
+
     public static void resetCountsForTests() {
+        SHIFTS = 0;
+        HOPS.clear();
+        ENDS.clear();
         TELEPORTS = 0;
         BROKEN = 0;
         SEALED = 0;
