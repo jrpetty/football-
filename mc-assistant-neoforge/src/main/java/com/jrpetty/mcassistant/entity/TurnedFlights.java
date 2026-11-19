@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * to the ground. Where the straight way would want {@link #LEAST} steps or more down, and there is room along the wall to
  * one side (open ground, nothing built, no other door, no bank in the way), the way in is made that way instead (DoorWays:
  * the landing and each step built up out of a hollow, cleared under a bank) and dressed that way (StepKit: each step a
- * stair facing up the flight, the landing left flat, filled under in the flight's stone, a cheek on its open side).
+ * stair facing up the flight, the landing left flat, filled under in the flight's stone, a rail on its open side).
  */
 public final class TurnedFlights {
 
@@ -190,9 +190,9 @@ public final class TurnedFlights {
     }
 
     /**
-     * [StepKit.door] The turned flight dressed: the landing left flat; each step a block above the next a stair facing up
-     * the flight (back toward the landing); under every step down to the ground the flight's stone; a cheek on the open
-     * side of a step standing two and more over the ground beside it. Returns the stairs made (or there already).
+     * [StepKit.door] The turned flight dressed: the landing left flat, a rail at its open edges; each step a block above the
+     * next a stair facing up the flight (back toward the landing); under every step down to the ground the flight's stone;
+     * a rail on the open side of every step. Returns the stairs made (or there already).
      */
     static int dress(ServerLevel level, Villages.Village v, DoorWays.Door d, Direction side, Block stair) {
         List<Step> f = flight(level, d, side);
@@ -203,18 +203,11 @@ public final class TurnedFlights {
         BlockState stone = Block.byItem(StepKit.cutFrom(stair)).defaultBlockState();
         // A rail at the landing's open edges where the ground falls away two and more (the way down is the flight).
         Step landing = f.get(0);
-        for (Direction open : new Direction[]{ d.out(), side.getOpposite() }) {
-            BlockPos at = landing.col().relative(open).atY(landing.feet());
-            BlockState there = level.getBlockState(at);
-            if (!(there.isAir() || there.canBeReplaced() && there.getFluidState().isEmpty())) continue;
-            if (DoorWays.solid(level, at.below()) || DoorWays.solid(level, at.below(2))) continue;   // a step down at most: no rail
-            if (!Crafts.take(level, v, st -> st.is(net.minecraft.world.item.Items.COBBLESTONE_WALL) || st.is(net.minecraft.world.item.Items.COBBLESTONE), 1)) continue;
-            level.setBlock(at, Blocks.COBBLESTONE_WALL.defaultBlockState(), Block.UPDATE_ALL);
-        }
-        for (int i = 1; i < f.size() - 1; i++) {
+        for (Direction open : new Direction[]{ d.out(), side.getOpposite() }) rail(level, v, landing.col().relative(open).atY(landing.feet()), 2, stair);
+        for (int i = 0; i < f.size() - 1; i++) {
             Step s = f.get(i), next = f.get(i + 1);
             int floor = s.feet() - 1;
-            // Under the step: the flight's stone to the ground.
+            // Under the step (and the landing): the flight's stone to the ground.
             for (int y = floor - 1, n = 0; y > ground - 4 && n < 8; y--, n++) {
                 BlockPos at = s.col().atY(y);
                 BlockState st = level.getBlockState(at);
@@ -222,6 +215,7 @@ public final class TurnedFlights {
                 if (!StepKit.fill(st)) { if (y <= ground) break; continue; }
                 if (!StepKit.put(level, v, at, stone)) return made;
             }
+            if (i == 0) continue;                                              // the landing: its doorstep stays as laid
             boolean stepDown = next.feet() == s.feet() - 1;
             if (stepDown) {
                 if (StepKit.set(level, v, s.col().atY(floor), up, stair, false)) made++;
@@ -229,19 +223,33 @@ public final class TurnedFlights {
                 BlockState top = level.getBlockState(s.col().atY(floor));
                 if (!(top.getBlock() instanceof StairBlock) && StepKit.fill(top) && !StepKit.put(level, v, s.col().atY(floor), stone)) return made;
             }
-            // The cheek on its open side (the wall is the other): where the ground beside it is two or more below.
-            if (s.feet() - (ground + 1) < 2) continue;
-            BlockPos cheek = s.col().relative(d.out());
-            if (!StepKit.fill(level.getBlockState(cheek.atY(floor))) || !Footways.passable(level, cheek.atY(floor + 1))) continue;
-            for (int y = floor - 1, n = 0; n < 8; y--, n++) {
-                BlockState st = level.getBlockState(cheek.atY(y));
-                if (y <= ground && !(st.isAir() || st.canBeReplaced())) break;
-                if (!StepKit.fill(st)) break;
-                if (!StepKit.put(level, v, cheek.atY(y), stone)) return made;
-            }
-            if (!StepKit.put(level, v, cheek.atY(floor), stepDown ? BridgeKit.stair(stair, up, false) : stone)) return made;
+            // A rail on its open side (the wall is the other): the flight is walked down, not stepped off.
+            rail(level, v, s.col().relative(d.out()).atY(s.feet()), 1, stair);
         }
         return made;
+    }
+
+    /** A rail (a wall of the flight's own stone, out of the stores) in this place beside the way, if the ground under it is
+     *  so far down or more. */
+    private static void rail(ServerLevel level, Villages.Village v, BlockPos at, int drop, Block stair) {
+        BlockState there = level.getBlockState(at);
+        if (!(there.isAir() || there.canBeReplaced() && there.getFluidState().isEmpty())) return;
+        for (int k = 1; k <= drop; k++) if (DoorWays.solid(level, at.below(k))) return;       // less of a drop than that: no rail
+        Block wall = wallFor(stair);
+        net.minecraft.world.item.Item made = wall.asItem(), from = StepKit.cutFrom(stair);
+        if (!Crafts.take(level, v, st -> st.is(made) || st.is(from), 1)) return;
+        level.setBlock(at, wall.defaultBlockState(), Block.UPDATE_ALL);
+    }
+
+    /** The wall that goes with a flight's stair (its rail). */
+    static Block wallFor(Block stair) {
+        if (stair == Blocks.STONE_BRICK_STAIRS) return Blocks.STONE_BRICK_WALL;
+        if (stair == Blocks.MOSSY_STONE_BRICK_STAIRS) return Blocks.MOSSY_STONE_BRICK_WALL;
+        if (stair == Blocks.MOSSY_COBBLESTONE_STAIRS) return Blocks.MOSSY_COBBLESTONE_WALL;
+        if (stair == Blocks.BRICK_STAIRS) return Blocks.BRICK_WALL;
+        if (stair == Blocks.COBBLED_DEEPSLATE_STAIRS) return Blocks.COBBLED_DEEPSLATE_WALL;
+        if (stair == Blocks.POLISHED_ANDESITE_STAIRS) return Blocks.ANDESITE_WALL;
+        return Blocks.COBBLESTONE_WALL;
     }
 
     /** Tests: the steps of the flight at this door (landing first, the ground last), or null when it goes straight out. */
