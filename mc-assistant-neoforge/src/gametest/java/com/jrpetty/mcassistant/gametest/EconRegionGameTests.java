@@ -402,4 +402,46 @@ public class EconRegionGameTests {
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
+
+    // ============================================================ er06 thirty days of a real town
+
+    /**
+     * Thirty days of a town of sixteen founded and left to itself under the market (the long growth harness of
+     * EntrepreneurGameTests: its stores topped up with building stuff each morning, the council sitting on its taxes), the
+     * cycle and the treasury's reserve at work from its first morning. Logged each morning: the treasury, the times, the
+     * index, the council's rate. The treasury not at nought on any of the last ten mornings; the census at nought drift
+     * (the harness's own check). Optional: an hour and more of the machine.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2900000, required = false, batch = "er06_thirty_days")
+    public static void er06_thirty_days(GameTestHelper helper) {
+        er06(helper, 4130000, "er06", true);
+    }
+
+    /** As er06, the treasury's reserve not kept (the old way), for the comparison. Optional. */
+    @GameTest(template = EMPTY, timeoutTicks = 2900000, required = false, batch = "er07_thirty_days_old")
+    public static void er07_thirty_days_old(GameTestHelper helper) {
+        er06(helper, 4140000, "er07", false);
+    }
+
+    static void er06(GameTestHelper helper, int cx, String tag, boolean reserve) {
+        final int[] zeroLate = { 0 }, low = { Integer.MAX_VALUE };
+        final StringBuilder trace = new StringBuilder();
+        EntrepreneurGameTests.tenDays(helper, cx, tag, false, 30, (id, dayNo) -> {
+            EconCycle.liveForTests(true);
+            EconRegion.liveForTests(true);
+            EconCycle.fiscalForTests(reserve);
+            int t = Ledger.coins(id);
+            if (dayNo >= 21 && t <= 0) zeroLate[0]++;
+            if (dayNo >= 10) low[0] = Math.min(low[0], t);
+            CycleModel.Phase ph = EconCycle.phase(id);
+            trace.append(String.format(Locale.ROOT, "d%d T%d %s cpi %.1f; ", dayNo, t, ph == null ? "-" : ph.words, EconIndex.cpi(id) / 100.0));
+            Kit.log("[VT] " + tag + " day " + dayNo + " ECON treasury " + t + " | " + String.join(" | ", EconReport.words(helper.getLevel(), id, false))
+                + " | council " + java.util.Arrays.toString(EconCycle.councilForTests(id)));
+        }, (id, ok) -> {
+            Kit.log("[VT] " + tag + " trace: " + trace);
+            Kit.log("[VT] " + tag + " the treasury at nought on " + zeroLate[0] + " of the last ten mornings; its lowest from day 10: " + low[0]);
+            EconCycle.fiscalForTests(true);
+            if (reserve) ok.that(zeroLate[0] == 0, "the treasury not at nought on any of the last ten mornings: " + zeroLate[0]);
+        });
+    }
 }
