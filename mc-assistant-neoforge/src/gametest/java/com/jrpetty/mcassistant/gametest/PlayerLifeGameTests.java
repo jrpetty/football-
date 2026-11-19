@@ -361,6 +361,7 @@ public class PlayerLifeGameTests {
             Container stockroom = chest(level, back, new ItemStack(Items.BREAD, 32));
             PlayerShops.Shop same = PlayerShops.of(village, p.getUUID());
             same.back.add(back);
+            PlayerShops.resurvey(level, same);
             VillageFolkEntity k = folk.get(2);
             k.setJob(AssistantEntity.StationTask.NONE);
             List<ShopKeepers.Candidate> cs = ShopKeepers.candidates(level, village, 8);
@@ -439,7 +440,7 @@ public class PlayerLifeGameTests {
             friend(village, p, folk);
             Ledger.addCoins(village, 50);
             long day = level.getDayTime() / 24000L;
-            int id = PlayerJobs.openingForTests(village, "town:farm", "The town's fields", "farming", 6, day);
+            int id = PlayerJobs.openingForTests(village, "town:farm", "The town's fields", "FARM", 6, day);
             String said = PlayerJobs.applyForTests(level, p, village, id);
             Kit.log("[VT] pl07 applied: " + said);
             helper.assertTrue(PlayerJobs.employed(p), "taken on: " + said);
@@ -465,10 +466,11 @@ public class PlayerLifeGameTests {
     public static void pl08_start_business(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 4535000;
-        List<VillageFolkEntity> folk = town(helper, level, x, 4);
+        List<VillageFolkEntity> folk = town(helper, level, x, 10);
         level.setDayTime(1000);
         helper.runAtTickTime(10, () -> {
             UUID village = folk.get(0).ownerId();
+            Villages.ageForTests(village, Villages.Age.STONE);
             BlockPos heart = Kit.surface(level, x, Z);
             ServerPlayer p = player(helper, heart, 4);
             String refused = StartBusiness.startForTests(p, "baker", "town");

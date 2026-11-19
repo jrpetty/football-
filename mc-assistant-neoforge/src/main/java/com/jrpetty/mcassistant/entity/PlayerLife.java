@@ -270,6 +270,43 @@ public final class PlayerLife {
         return n == 1 ? "1 coin" : n + " coins";
     }
 
+    /**
+     * Operators only, for the camera and the smoke test: {@code /village playershops} lists the town's players' shops;
+     * {@code visit} sends the nearest few folk to the nearest open one now (they walk in, look, queue and pay, or not).
+     */
+    @SubscribeEvent
+    public static void onCommands(net.neoforged.neoforge.event.RegisterCommandsEvent e) {
+        e.getDispatcher().register(net.minecraft.commands.Commands.literal("village").then(net.minecraft.commands.Commands.literal("playershops")
+            .requires(s -> s.hasPermission(2))
+            .executes(c -> {
+                Villages.Village v = Villages.nearest(c.getSource().getLevel(), net.minecraft.core.BlockPos.containing(c.getSource().getPosition()), 400);
+                StringBuilder sb = new StringBuilder();
+                if (v != null) for (PlayerShops.Shop s : PlayerShops.all(v.id())) sb.append(s.name).append(" at ").append(s.anchor.toShortString()).append(": ")
+                    .append(PlayerShops.stateWords(c.getSource().getLevel(), s)).append(", till ").append(s.till).append("; ");
+                c.getSource().sendSuccess(() -> Component.literal(sb.length() == 0 ? "No players' shops here." : sb.toString()), false);
+                return 1;
+            })
+            .then(net.minecraft.commands.Commands.literal("visit").executes(c -> {
+                ServerLevel level = c.getSource().getLevel();
+                net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(c.getSource().getPosition());
+                Villages.Village v = Villages.nearest(level, at, 400);
+                if (v == null) return 0;
+                PlayerShops.Shop best = null;
+                for (PlayerShops.Shop s : PlayerShops.all(v.id())) if (best == null || s.anchor.distSqr(at) < best.anchor.distSqr(at)) best = s;
+                if (best == null) return 0;
+                int sent = 0;
+                java.util.List<VillageFolkEntity> near = level.getEntitiesOfClass(VillageFolkEntity.class, new net.minecraft.world.phys.AABB(best.anchor).inflate(48));
+                near.sort(java.util.Comparator.comparingDouble(f -> f.distanceToSqr(at.getX(), at.getY(), at.getZ())));
+                for (VillageFolkEntity f : near) {
+                    if (sent >= 3 || f.isBaby() || ShopCustomers.underWay(f) || f.purse() < 1) continue;
+                    if (ShopCustomers.go(level, f, best, false)) sent++;
+                }
+                int n = sent;
+                c.getSource().sendSuccess(() -> Component.literal("VISIT " + n + " folk set off for the shop"), false);
+                return n;
+            }))));
+    }
+
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent e) {
         CTX.remove(e.getEntity().getUUID());

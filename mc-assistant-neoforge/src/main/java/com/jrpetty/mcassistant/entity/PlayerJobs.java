@@ -108,7 +108,7 @@ public final class PlayerJobs {
         if (tw != null) for (LabourBook.Vacancy v : tw.vacancies) if (v.id == id && v.open() && v.openings > 0) vac = v;
         if (vac == null) return "!That opening has been filled or withdrawn.";
         ShiftRole role = roleFor(vac.task());
-        if (role == null) return "!That's work a player can't take on here yet (" + vac.trade + "): try a shift instead.";
+        if (role == null) return "!That's work a player can't take on here yet (" + JobMarket.noun(vac.trade) + "): try a shift instead.";
         Standing.View view = Standing.of(village, p.getUUID(), level.getGameTime());
         long day = level.getDayTime() / 24000L;
         if (Laws.banished(village, p.getUUID(), day) || !view.title().atLeast(Standing.Title.VISITOR)) {
@@ -277,7 +277,7 @@ public final class PlayerJobs {
             if (os.isEmpty()) page.text(LabourMarket.live(v.id()) ? "No openings posted just now: the board fills in the morning." : "The town has no labour market yet (its market isn't open): its shifts are below.", 4);
             for (Opening o : os) {
                 boolean can = o.role() != null && !employed(p);
-                page.row(new ItemStack(o.role() == null ? Items.BARRIER : Items.PAPER), capitalize(o.trade()) + " at " + o.employerName(),
+                page.row(new ItemStack(o.role() == null ? Items.BARRIER : Items.PAPER), capitalize(JobMarket.noun(o.trade())) + " at " + o.employerName(),
                         PlayerLife.coins(o.wage()) + " a day, " + o.hours() + "; " + o.applied() + " applied" + (o.role() == null ? "; not work a player can do here yet" : ""), "")
                     .button("Apply", "apply", LifePage.args("id", o.id()), can, employed(p) ? "You have a job" : "Not work a player can do here yet");
             }

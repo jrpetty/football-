@@ -28,7 +28,8 @@ public final class InWorld implements PlayerLife.Page {
     }
 
     /** Operators' and the world's own tools: not a player's. */
-    public static final List<String> OPERATOR = List.of("admin", "spawnat", "level", "tidy", "speed", "version", "money");
+    public static final List<String> OPERATOR = List.of("admin", "spawnat", "level", "tidy", "speed", "version", "money",
+        "anim", "outdoor");   // the animators' own tool (AnimCommands: playing, marking and staging the folk's moves)
 
     public static final List<Route> ROUTES = List.of(
         // ---------------------------------------------------------------- work and money

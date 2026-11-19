@@ -324,8 +324,13 @@ public final class BuildDesk {
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(t.getUUID("owner"));
         Status s = status(t);
         if (owner != null && pct / 25 > was / 25 && pct < 100) PlayerShops.notify(owner, s.words());
-        if (t.getInt("laid") >= plan.size()) finish(level, v, t, plan, facing, owner);
         Ledger.note(v.id(), NOTE + t.getString("id"), t.toString());
+        if (t.getInt("laid") >= plan.size()) {
+            t.putBoolean("done", true);
+            Ledger.note(v.id(), NOTE + t.getString("id"), t.toString());
+            finish(level, v, t, plan, facing, owner);
+            Ledger.note(v.id(), NOTE + t.getString("id"), t.toString());
+        }
     }
 
     /** It stands: a shop or premises gets its counter and a chest, and is the player's shop; the chronicle has it. */

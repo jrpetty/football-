@@ -14157,3 +14157,100 @@ it, no line runs through a card, and the usual size fits 369 pixels across.
 
 No new server data: the only server changes are the two operator commands for the auction's pictures and the shop
 tooltip's words.
+
+## Living in town: your own shop, a job, a business, and no commands needed (player15)
+
+A player can live in a town as its folk do: keep a shop, hold a job, run a business, have the town build for them,
+belong. Everything is done in the world, by blocks, talk options and screens; nothing needs a command typed (a server
+may ban them), and the screens that used to send commands as chat no longer do.
+
+### Your life in town (LifeTown)
+The **U** key, the village board's **You** button, or any folk's *"Show me my life in town"* (Ask tab): who you are
+to the town (your standing, citizenship, best friend), your purse and the week's earnings, your job and shift, your shop
+and its takings, your businesses, the buildings going up for you (a bar each), your home (buy the house you stand in,
+collect rent), belonging (the council, taxes, feasts), and *What you could do next*, each a button to where it is
+done. **Everything you can do** lists every way in (below).
+
+### A shop of your own (PlayerShops, ShopNeeds, ShopPage)
+* **Marking it.** Build a room however you like in a town and set a **Shop Counter** in it (three wooden slabs over a
+  chest between two planks, a gold nugget under the chest; or bought at the town's shop), or hang a **Shop Sign** on its
+  wall. One shop a town. Its screen opens at its **Setup**: a name, what kind (general store, grocer's, bakery,
+  butcher's, tool shop, clothier's, home goods, apothecary, tavern), its hours, and whether to be told of sales.
+  Registering costs a licence of a week's business rates (three coins at least), into the treasury; then the rates come
+  out of its till every week.
+* **What it needs** (the checklist, on its screen and in its setup, a tick or a cross each with where to get it): a
+  counter (customers pay there), walls and a roof (the room is filled out from the counter: a gap or an open doorway
+  shows), a door, the door reached from a street or the square, a chest, barrel, shelf or pot for stock that is not
+  back stock, ground a building may stand on (not a street, not the mine), and the kind's own kit (a bakery an oven, a
+  butcher a smoker or oven, a tool shop an anvil or furnace, a clothier a loom, an apothecary a brewing stand, a tavern
+  two seats). Until it has everything it stays shut; its sign over the counter says *Closed: needs a counter*, a line
+  over the hotbar and a toast remind you while you build near it, and the moment it is complete you are told *Your
+  shop is ready to open!* The same list checks a firm's premises (by its kind) and the town's own buildings for you.
+* **Stock and prices.** Every chest, barrel, shelf and pot inside is stock; mark some **back stock** on the Stock tab
+  (the stockroom: customers don't see it, a keeper restocks from it). Each ware's price for a lot, with − and + (shift
+  for ten), *Going price* and *Keep back*, beside the going price, how folk will take it, and who would buy it and why.
+* **Customers** (ShopCustomers) come in its hours when they want something it has (the tool of their trade, food when
+  the town is hungry, a treat on market day, a comfort for their home, something nice when well off): they walk to its
+  door, in, look over a shelf, queue at the counter, pay (into the till; the keeper says *That's three, thank you
+  kindly*), say a word and go; too dear, they say so and leave, and it goes on the books. How many come follows its
+  name: four a day at worst, two dozen at best. The buying decision is one method (ShopCustomers.wants).
+* **Books and name.** Every sale (who, what, how many, for how much), takings by day for a week and all told, what sold
+  out, what was too dear and the going price, the week's mood (pleased, put off, found nothing), and its name in town:
+  up with fair prices and sales, down with dear prices and bare shelves, up a little each customer a keeper greets. On
+  its Books tab, the Shops page of the city books (beside the players' stalls), and the sign over it.
+* **A keeper** (ShopKeepers): the Keeper tab lists folk who can be spared (between trades, a shop hand, a trade with
+  hands over) and their wage; taken on, it stands behind the counter in its hours (the shop's, mornings or afternoons),
+  greets customers and fills the shelves from the back stock; paid its day's wage out of the till each morning, it
+  goes after two days owed.
+* **Rules.** No other player may open its stock or break its counter; folk never take without paying; every coin is
+  counted (purse to till inside the town; the licence and rates in; the till out to you, as *paid out to players*); the
+  shop's tills are a holder in the coin census. Kept in the ledger, so it outlasts a restart. **Close the shop** pays you
+  its till and lets the keeper go; the goods in its chests were yours all along. Sell, Let and Repurpose buttons lead to
+  the property market (another round's).
+
+### A job off the board (PlayerJobs)
+The **jobs board** (Your life in town, any folk's *"Any jobs for me on the board?"*): the town's openings (LabourMarket)
+with the employer, the work, the wage a day, the hours and how many applied, and the day shifts. **Apply**: the employer
+interviews you as it would a folk (your standing, your skill at the work, a citizen or not) against the best who applied;
+taken on, the opening is filled and the job is a standing shift at its trade (farm hand, woodcutter, shearer, the watch,
+smelter, hauler, cook, counter hand, healer's assistant). A job's tasks are not paid one by one: the wage is paid each
+morning for every day worked (three tasks or more), out of the firm's till or the treasury; a good week (three and a
+half stars) brings a rise of a tenth; three days missed and you are let go; **Quit** at any time.
+
+### Starting a business (StartBusiness) and running it (MyBusinesses)
+From the bank's counter (*Start a business*: it lends what you are short), the village board's button, any folk's *"I'd
+like to start a business"* (the hall's clerk and elder too), Your life in town, or your own shop (*Make it a registered
+business*): three steps, the best chosen for you so Next, Next, Confirm works.
+1. **A kind**: every kind the town can have, the best for you first (what the town is short of this week, your skill at
+   the work, what you sell already), each with its reason and the week's takings to expect.
+2. **Premises**: your shop (its checklist for the kind), the town's (a stall on the square or a room), or **have the
+   town build it**: a gallery of the town's drawings, each with a picture made from its own blocks in the chosen style
+   (oak, birch, spruce under brick, stone and slate; drag to turn it), its size, what is inside, the quote (materials,
+   labour, land, fees) and how long; then its plot on a small map and outlined on the ground itself (green where it may
+   go, red where not), nudged a block or turned.
+3. **Confirm**: the charter fee (and the building), what you carry, and if short *Borrow N and open it*.
+Then a welcome with the next steps. **Your businesses** does everything the firm and business commands did: hands (the
+best the town can spare, post an opening, take the best applicant), stock (order its makings), prices (its markup beside
+the going price), money (invest, drawings), shares on the bourse and winding it up.
+
+### Buildings the town builds for you (BuildDesk, BuildPlots)
+Quoted, paid for and built by the town's hands from the footing up, out of the stores where it has the blocks (the rest
+bought in at the price quoted), with a toast at each quarter (*your shop is 40% built: waiting for 12 dark oak slabs*),
+a bar on Your life in town and a chronicle line when it stands. A shop or premises comes complete: its counter and a
+chest set in, and it is your shop. The town's build orders (another round's) answer the same calls when they land.
+
+### Everything you can do (InWorld) and no commands
+Every one of the mod's player commands has its way in the world: a block, a screen's button, a talk option, a key; the
+page lists them by tab (Work, Money, Capital, Shops & business, Town & civic, Home & belonging, The town's books) with a
+button each. Land titles and shares are bought on its Capital tab; savings, loans and bonds at the bank's counter; a gift
+to the treasury on its Money tab. The few with no screen of their own (a theatre ticket, entering the fair, busking, the
+morning news) are done from it on the server. The business books, the civic screen, the knights' page and the
+businesses list send their buttons through the same way (net/LifeNetwork "cmd"): run on the server at a player's
+standing (never an operator's), only the mod's own commands, never as chat, so a server that bans commands does not stop
+them. Operators' tools (admin, the animators' anim, the stage) are not a player's.
+
+### Tests
+PlayerLifeGameTests pl01-pl11 (x 4,500,000 to 4,600,000, z 90,000): the checklist and opening, a sale (coin and goods,
+the census to the penny), too dear and the hours, a customer walking in to the counter, the keeper, a restart and
+closing, a job off the board to payday, starting a business, a building the town builds coming complete, commands banned
+(and every player command routed), citizenship.

@@ -326,7 +326,7 @@ public final class PlayerShops {
     }
 
     /** Read the building again now (a block of it changed, a button pressed). */
-    static void resurvey(ServerLevel level, Shop s) {
+    public static void resurvey(ServerLevel level, Shop s) {
         s.survey = null;
         survey(level, s);
     }

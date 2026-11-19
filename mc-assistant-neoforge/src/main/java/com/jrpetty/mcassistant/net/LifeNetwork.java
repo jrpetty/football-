@@ -86,6 +86,8 @@ public final class LifeNetwork {
 
     /** A page to this player. */
     public static void send(ServerPlayer p, CompoundTag page) {
+        // A connection without the mod's channel (a test's stand-in player, a client without the mod) is sent nothing.
+        if (p.connection == null || !p.connection.hasChannel(PagePayload.TYPE)) return;
         PacketDistributor.sendToPlayer(p, new PagePayload(page));
     }
 

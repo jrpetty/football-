@@ -180,7 +180,8 @@ public final class ShopNeeds {
                 continue;
             }
             s.room.add(p);
-            if (s.roofed && level.canSeeSky(p)) {
+            // Under the open sky: nothing at all above it (read off the height map, not the light, which lags a new roof).
+            if (s.roofed && level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, p.getX(), p.getZ()) <= p.getY()) {
                 s.roofed = false;
                 if (s.leak.isEmpty()) s.leak = "open to the sky at " + p.getX() + ", " + p.getY() + ", " + p.getZ() + ": it wants a roof";
             }

@@ -22,7 +22,8 @@ import java.util.Locale;
  * cost with its labour); its stock at cost; what it bought from whom at what price; and why its prices moved. Or, sent
  * with "list", the town's businesses a line each, a click to any one's books.
  *
- * <p>Its buttons are commands (/village business ...), so they work typed too.
+ * <p>Its buttons run the business commands (/village business ...) on the server, not as chat ([player15]: net/LifeNetwork),
+ * so they work on a server that bans commands, and the commands still work typed.
  */
 public class BusinessScreen extends Screen {
 
