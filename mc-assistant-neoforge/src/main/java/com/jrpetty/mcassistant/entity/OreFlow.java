@@ -83,7 +83,17 @@ public final class OreFlow {
             .map(StackWalker.StackFrame::getClassName)
             .filter(c -> c.startsWith("com.jrpetty.mcassistant") && !c.endsWith(".OreFlow") && !c.endsWith(".TownWork")
                 && !c.endsWith(".Crafts") && !c.endsWith(".Market") && !c.endsWith(".ZoneChests"))
-            .findFirst().map(c -> c.substring(c.lastIndexOf('.') + 1)).orElse("?"));
+            .findFirst().map(c -> c.substring(c.lastIndexOf('.') + 1)).map(OreFlow::word).orElse("?"));
+    }
+
+    /** A taker's class in the town's words (the smelter's raw iron comes back as bars: it is no use of it). */
+    private static String word(String cls) {
+        return switch (cls) {
+            case "Links" -> "the furnaces (back as bars)";
+            case "Picks", "Toolrack" -> "the miners' and hands' tools";
+            case "WatchKit", "Workshop" -> "the watch's kit";
+            default -> cls;
+        };
     }
 
     /** Yesterday's and today's flow of each metal, in words (the mine's report). */
