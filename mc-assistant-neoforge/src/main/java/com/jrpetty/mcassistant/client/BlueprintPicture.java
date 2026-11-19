@@ -75,7 +75,7 @@ public final class BlueprintPicture {
             yaw += 0.15f;
             YAW.put(key, yaw);
         }
-        float scale = Math.min(w, h) / (s.span() * 1.55f);
+        float scale = Math.min(w, h) / (s.span() * 1.2f);
         PoseStack ps = g.pose();
         ps.pushPose();
         ps.translate(x + w / 2f, y + h / 2f + 4, 200);

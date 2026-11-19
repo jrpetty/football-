@@ -164,7 +164,7 @@ public final class ShopKeepers {
         BlockPos counter = sv.counter();
         if (counter == null) return false;
         BlockPos place = behind(level, sv, counter);
-        if (f.position().distanceToSqr(place.getX() + 0.5, place.getY(), place.getZ() + 0.5) > 1.5 * 1.5) {
+        if (!ShopCustomers.closeTo(f, place, 0.9)) {
             if (f.getNavigation().isDone() || f.tickCount % 60 == 0) f.walkTo(place, 0.8);
             f.hobbyNow = "on the way to keep " + s.name;
             return true;

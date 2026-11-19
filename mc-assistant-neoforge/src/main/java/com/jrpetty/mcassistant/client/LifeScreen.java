@@ -113,7 +113,7 @@ public class LifeScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
+        super.render(g, mx, my, pt);                                       // the backdrop (the widgets again on top, below)
         zones.clear();
         acts.clear();
         tips.clear();
@@ -162,8 +162,13 @@ public class LifeScreen extends Screen {
             UiStyle.text(g, font, msg, left + PAD, top + h - FOOT + 7, w - PAD * 2, colour);
             if (font.width(msg) > w - PAD * 2 && in(mx, my, left + PAD, top + h - FOOT + 4, w - PAD * 2, 14)) tips.add(msg);
         }
-        super.render(g, mx, my, pt);
-        if (!tips.isEmpty()) UiStyle.tooltip(g, font, tips.get(tips.size() - 1), mx, my, 220);
+        for (var r : renderables) r.render(g, mx, my, pt);
+        if (!tips.isEmpty()) {
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 500);
+            UiStyle.tooltip(g, font, tips.get(tips.size() - 1), mx, my, 220);
+            g.pose().popPose();
+        }
     }
 
     /** One block at y; returns the y under it. */

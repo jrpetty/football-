@@ -91,6 +91,10 @@ public final class StartBusiness implements PlayerLife.Page {
             page.text("Businesses are chartered by a town: go to one.", 3);
             return page;
         }
+        if (!c.tab.isEmpty()) {                                              // a tab clicked: that step
+            c.args.putInt("step", ShopPage.parse(c.tab, 1));
+            c.tab = "";
+        }
         int step = Math.max(1, c.args.getInt("step"));
         if (c.args.getString("kind").isEmpty()) {
             List<Pick> ps = picks(level, v, p);
@@ -112,6 +116,8 @@ public final class StartBusiness implements PlayerLife.Page {
     private void kinds(ServerLevel level, ServerPlayer p, Villages.Village v, PlayerLife.Ctx c, LifePage page) {
         page.heading("What kind of business? The best for you first");
         String chosen = c.args.getString("kind");
+        BusinessTypes.BusinessType ct = BusinessTypes.of(chosen);
+        page.buttons().button("Next: premises" + (ct == null ? "" : " for your " + ct.noun()), "step", LifePage.args("s", 2)).primary();
         for (Pick k : picks(level, v, p)) {
             boolean on = k.type().key().equals(chosen);
             page.row(icon(k.type()), (on ? "✔ " : "") + k.type().title() + (k.week() > 0 ? "" : ""), k.why(),

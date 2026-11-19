@@ -296,7 +296,7 @@ public final class ShopNeeds {
         BlockPos probe = at != null ? at : s.room.isEmpty() ? null : s.room.iterator().next();
         if (v != null && probe != null) {
             if (Footways.street(v, probe.getX(), probe.getZ())) { ground = false; bad = "it stands on a street"; }
-            else if (TownMine.inMine(v.id(), probe)) { ground = false; bad = "it is over the town's mine"; }
+            else if (MineGround.reserved(v.id(), probe.getX(), probe.getZ())) { ground = false; bad = "it is on the mine's ground"; }
         }
         out.add(new Need("ground", ground, "On ground a building may go", bad, "Not on a street and not over the mine: build it elsewhere."));
         out.add(new Need("counter", at != null, "A shop counter, where customers pay", at == null ? "customers need somewhere to pay" : "",

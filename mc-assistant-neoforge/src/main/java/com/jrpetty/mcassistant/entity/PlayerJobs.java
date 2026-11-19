@@ -109,6 +109,10 @@ public final class PlayerJobs {
         if (vac == null) return "!That opening has been filled or withdrawn.";
         ShiftRole role = roleFor(vac.task());
         if (role == null) return "!That's work a player can't take on here yet (" + JobMarket.noun(vac.trade) + "): try a shift instead.";
+        Villages.Village town = Villages.get(village);
+        if (town != null && !workable(level, town, p, role)) {
+            return "!" + Villages.name(village) + " has no " + role.title.toLowerCase(Locale.ROOT) + " work a player can do yet: it needs " + role.needs + ".";
+        }
         Standing.View view = Standing.of(village, p.getUUID(), level.getGameTime());
         long day = level.getDayTime() / 24000L;
         if (Laws.banished(village, p.getUUID(), day) || !view.title().atLeast(Standing.Title.VISITOR)) {
@@ -152,6 +156,16 @@ public final class PlayerJobs {
         Villages.tell(village, day, p.getGameProfile().getName() + " was taken on as " + role.title.toLowerCase(Locale.ROOT) + " at " + employerName(vac));
         return "Interviewed and taken on: " + why + ". You're " + role.title.toLowerCase(Locale.ROOT) + " at " + employerName(vac) + " for "
             + PlayerLife.coins(j.getInt("wage")) + " a day, paid each morning for each day you work. Your shift starts at its hours.";
+    }
+
+    /** Can this work be done here as a shift (the town has its place: grown trees for the woods, a pen for shearing...)? */
+    /** Tests: any work counts as workable here (a test town has no ripe fields). */
+    public static volatile boolean ANY_WORK_FOR_TESTS = false;
+
+    static boolean workable(ServerLevel level, Villages.Village v, Player p, ShiftRole role) {
+        if (ANY_WORK_FOR_TESTS) return true;
+        for (Shifts.Offer o : Shifts.offers(level, v, p)) if (o.role() == role) return true;
+        return false;
     }
 
     static String employerName(LabourBook.Vacancy v) {
@@ -276,10 +290,12 @@ public final class PlayerJobs {
             List<Opening> os = openings(v.id());
             if (os.isEmpty()) page.text(LabourMarket.live(v.id()) ? "No openings posted just now: the board fills in the morning." : "The town has no labour market yet (its market isn't open): its shifts are below.", 4);
             for (Opening o : os) {
-                boolean can = o.role() != null && !employed(p);
+                boolean work = o.role() != null && workable(level, v, p, o.role());
+                boolean can = work && !employed(p);
                 page.row(new ItemStack(o.role() == null ? Items.BARRIER : Items.PAPER), capitalize(JobMarket.noun(o.trade())) + " at " + o.employerName(),
                         PlayerLife.coins(o.wage()) + " a day, " + o.hours() + "; " + o.applied() + " applied" + (o.role() == null ? "; not work a player can do here yet" : ""), "")
-                    .button("Apply", "apply", LifePage.args("id", o.id()), can, employed(p) ? "You have a job" : "Not work a player can do here yet");
+                    .button("Apply", "apply", LifePage.args("id", o.id()), can, employed(p) ? "You have a job"
+                        : o.role() == null ? "Not work a player can do here yet" : "No such work here yet: it needs " + o.role().needs);
             }
             page.heading("Day shifts (paid by the task)");
             for (Shifts.Offer o : Shifts.offers(level, v, p)) {

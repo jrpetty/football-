@@ -89,9 +89,13 @@ public final class PlayerLife {
     public static void open(ServerPlayer p, String page, @Nullable CompoundTag args) {
         Ctx c = ctx(p);
         if (!PAGES.containsKey(page)) page = "life";
+        boolean resume = (args == null || args.isEmpty()) && c.page.equals(page) && !c.args.isEmpty();   // back where you were
         c.page = page;
-        c.tab = args != null && args.contains("tab") ? args.getString("tab") : "";
-        c.args = args == null ? new CompoundTag() : args.copy();
+        if (!resume) {
+            c.tab = args != null && args.contains("tab") ? args.getString("tab") : "";
+            c.args = args == null ? new CompoundTag() : args.copy();
+        }
+        if (page.equals("start") && c.args.getInt("step") >= 4) c.args = new CompoundTag();   // a business started: a fresh start
         c.msg = "";
         send(p, c);
     }
@@ -286,6 +290,18 @@ public final class PlayerLife {
                 c.getSource().sendSuccess(() -> Component.literal(sb.length() == 0 ? "No players' shops here." : sb.toString()), false);
                 return 1;
             })
+            .then(net.minecraft.commands.Commands.literal("befriend").then(net.minecraft.commands.Commands.argument("who",
+                    net.minecraft.commands.arguments.EntityArgument.player()).executes(c -> {
+                ServerPlayer who = net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "who");
+                Villages.Village v = here(who);
+                if (v == null) return 0;
+                for (AssistantEntity a : Villages.folkOf(v.id())) {
+                    if (a instanceof VillageFolkEntity f) f.persona().feelFor(who.getUUID(), who.getGameProfile().getName(), 60);
+                }
+                Standing.stir(v.id(), who.getUUID());
+                c.getSource().sendSuccess(() -> Component.literal("BEFRIENDED " + Standing.of(v.id(), who.getUUID(), who.level().getGameTime()).title().words), false);
+                return 1;
+            })))
             .then(net.minecraft.commands.Commands.literal("visit").executes(c -> {
                 ServerLevel level = c.getSource().getLevel();
                 net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(c.getSource().getPosition());

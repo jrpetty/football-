@@ -148,7 +148,7 @@ public class PlayerLifeGameTests {
         room(level, heart);
         counter(level, heart);
         chest(level, chestAt(heart), new ItemStack(Items.STONE_HOE), new ItemStack(Items.STONE_HOE), new ItemStack(Items.STONE_HOE));
-        PlayerShops.Shop s = PlayerShops.registerForTests(level, counterAt(heart), p, "tools");
+        PlayerShops.Shop s = PlayerShops.registerForTests(level, counterAt(heart), p, "general");
         helper.assertTrue(s != null, "the shop is registered");
         return s;
     }
@@ -206,7 +206,7 @@ public class PlayerLifeGameTests {
             CompoundTag args = new CompoundTag();
             CompoundTag form = new CompoundTag();
             form.putString("name", "Hoes & Co");
-            form.putString("kind", "tools");
+            form.putString("kind", "tools");                                   // a tool shop: it wants its forge too
             form.putString("opens", "6");
             form.putString("closes", "24");
             args.put("f", form);
@@ -214,13 +214,16 @@ public class PlayerLifeGameTests {
             String said = PlayerLife.messageForTests(p);
             Kit.log("[VT] pl01 setup: " + said + "; treasury " + treasury + " -> " + Ledger.coins(village) + "; census " + census + " -> " + CoinCensus.count(village));
             helper.assertTrue(s.name.equals("Hoes & Co") && s.setUp && s.licensed, "named, set up and licensed");
+            helper.assertTrue(said.contains("needs an anvil or a furnace") && PlayerShops.state(level, s) == PlayerShops.State.INCOMPLETE,
+                "a tool shop without its forge stays shut, and says why: " + said);
+            level.setBlockAndUpdate(heart.offset(10, 0, -2), Blocks.FURNACE.defaultBlockState());
+            PlayerShops.resurvey(level, s);
             helper.assertTrue(Ledger.coins(village) == treasury + 3 || Ledger.coins(village) > treasury, "its licence to the treasury");
             helper.assertTrue(PlayerShops.state(level, s) == PlayerShops.State.OPEN, "it opens: " + PlayerShops.stateWords(level, s));
             // Back stock only: nothing on the shelves.
             s.back.add(chestAt(heart));
             List<ShopNeeds.Need> n2 = ShopNeeds.check(level, Villages.get(village), ShopNeeds.survey(level, s.anchor), s.kindOf(), s.back);
             helper.assertTrue(ShopNeeds.missing(n2).equals("needs a chest for stock"), "every chest back stock: " + ShopNeeds.missing(n2));
-            // A tool shop needs its forge.
             helper.assertTrue(s.kindOf().kit.equals("forge"), "a tool shop's kit");
             helper.succeed();
         });
@@ -441,7 +444,16 @@ public class PlayerLifeGameTests {
             Ledger.addCoins(village, 50);
             long day = level.getDayTime() / 24000L;
             int id = PlayerJobs.openingForTests(village, "town:farm", "The town's fields", "FARM", 6, day);
-            String said = PlayerJobs.applyForTests(level, p, village, id);
+            String no = PlayerJobs.applyForTests(level, p, village, id);
+            Kit.log("[VT] pl07 with no ripe fields: " + no);
+            helper.assertTrue(no.startsWith("!") && no.contains("needs"), "work the town has no place for is refused, with why: " + no);
+            PlayerJobs.ANY_WORK_FOR_TESTS = true;
+            String said;
+            try {
+                said = PlayerJobs.applyForTests(level, p, village, id);
+            } finally {
+                PlayerJobs.ANY_WORK_FOR_TESTS = false;
+            }
             Kit.log("[VT] pl07 applied: " + said);
             helper.assertTrue(PlayerJobs.employed(p), "taken on: " + said);
             for (int i = 0; i < 3; i++) PlayerJobs.onTheBooks(p, ShiftRole.FARM, 4);

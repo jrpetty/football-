@@ -283,8 +283,10 @@ public final class ShopCustomers {
         f.hobbyNow = null;
     }
 
-    private static boolean closeTo(VillageFolkEntity f, BlockPos p, double r) {
-        return f.position().distanceToSqr(p.getX() + 0.5, p.getY(), p.getZ() + 0.5) <= r * r;
+    /** On that spot: near enough across, and on its floor (not up on the counter beside it). */
+    static boolean closeTo(VillageFolkEntity f, BlockPos p, double r) {
+        double dx = f.getX() - (p.getX() + 0.5), dz = f.getZ() - (p.getZ() + 0.5);
+        return dx * dx + dz * dz <= r * r && Math.abs(f.getY() - p.getY()) < 0.6;
     }
 
     private static void walk(VillageFolkEntity f, Visit t, BlockPos to, double speed) {
