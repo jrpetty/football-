@@ -369,6 +369,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level() instanceof net.minecraft.server.level.ServerLevel diving && Divers.hold(this, diving)) return;
         // [batchG] A visitor from afar (the bard, a tourist, the merchant), one of ours away for the day at a friend's
         // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
+        // [join21] A visitor from another town on its way round a player's shop (ShopCustomers): that visit first.
+        if (ShopCustomers.underWay(this) && Visitors.is(this) && level() instanceof net.minecraft.server.level.ServerLevel shopping
+                && ShopCustomers.hold(this, shopping)) return;
         if (Visitors.drive(this)) return;
         if (WorkTools.hold(this)) return;                      // [workitems] on a rope, or carrying a window box home to hang
         if (Newcomers.drive(this)) return;                     // [civic] a newcomer on the road, or camped at a town's edge

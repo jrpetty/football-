@@ -165,6 +165,11 @@ public final class Tourists {
             return false;
         }
         if (step == 1) {                                          // a souvenir at the shop
+            if (ShopCustomers.errand(f, level)) {                 // [join21] or a player's own shop, if it has something it can use
+                v.sight++;
+                Visitors.save(f, v);
+                return false;
+            }
             shopAt(level, town, f, v, "shop");
             return false;
         }

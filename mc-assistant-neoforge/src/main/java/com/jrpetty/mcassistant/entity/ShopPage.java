@@ -164,6 +164,15 @@ public final class ShopPage implements PlayerLife.Page {
                 .button("Going", "price", LifePage.args("k", k, "going", true), set != null, "It sells at the going price already")
                 .button("Keep back", "price", LifePage.args("k", k, "zero", true), set == null || set != 0, "Kept back already");
         }
+        // [join21] What customers looked at and had no use for (ItemUses), and why: stock what the town can use.
+        net.minecraft.nbt.ListTag refused = ItemUses.refusedTag(s.village, ShopCustomers.refusals(s.owner));
+        if (!refused.isEmpty()) {
+            page.heading("Looked at, but no use to them");
+            for (int i = 0; i < Math.min(5, refused.size()); i++) {
+                net.minecraft.nbt.CompoundTag r = refused.getCompound(i);
+                page.text(ShopCustomers.capital(r.getString("what")) + ": " + r.getString("who") + " — \"" + r.getString("why") + "\"", 4);
+            }
+        }
         ShopNeeds.Survey sv = PlayerShops.survey(level, s);
         page.heading("Its chests");
         if (sv.stock.isEmpty()) page.text("No chest, barrel or shelf inside its walls yet.", 3);
