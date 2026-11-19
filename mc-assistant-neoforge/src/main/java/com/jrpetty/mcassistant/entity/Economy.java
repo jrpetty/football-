@@ -276,6 +276,7 @@ public final class Economy {
         if (!(a instanceof VillageFolkEntity f) || n <= 0 || s.isEmpty()) return;
         UUID village = f.ownerId();
         StationTask trade = f.stationTask();
+        if (village != null && OreFlow.metal(s) != null) OreFlow.in(village, f.level().getDayTime() / 24000L, s, n, trade.name().toLowerCase());   // [growth22]
         if (village == null || trade == StationTask.NONE || trade == StationTask.HAUL || trade == StationTask.STORE) return;
         Kind k = kindOf(s);
         if (k == null || !makes(trade, k, s)) return;

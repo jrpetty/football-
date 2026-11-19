@@ -327,6 +327,7 @@ public final class TownWork {
                     if (st.isEmpty() || !what.test(st)) continue;
                     int k = Math.min(left, st.getCount());
                     Economy.storesOut(v.id(), st, k);                           // a maker's work, item by item
+                    if (OreFlow.metal(st) != null) OreFlow.out(v.id(), level.getDayTime() / 24000L, st, k, OreFlow.taker());   // [growth22]
                     ItemStack one = st.copyWithCount(1);                        // [supply] (booked once it is off the shelf: Bonded)
                     if (f.blockEntity() instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity) {
                         Storekeeping.bookOut(level, v.id(), null, st, k, null);   // the town's works, in its books

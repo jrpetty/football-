@@ -7256,7 +7256,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (peekJob() != null || !getNavigation().isDone()) return;
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         long now = level().getGameTime();
-        if (!Villages.projectDue(village, now)) { buildNote("build: not due yet"); return; }
+        if (!Villages.projectDue(village, now) && !Villages.resuming(village, getUUID(), now)) { buildNote("build: not due yet"); return; }   // [growth22] back at its own: no gap
         // The first building no other crew is raising (a thriving town has two or three going up at once:
         // Villages.crewsAllowed), or the one this hand's crew is already on.
         String project = Villages.projectFor(village, getUUID());

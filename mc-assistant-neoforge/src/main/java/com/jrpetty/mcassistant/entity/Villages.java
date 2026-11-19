@@ -2498,6 +2498,20 @@ public final class Villages {
         return null;
     }
 
+    /**
+     * [growth22] Is this hand back at a building its crew has begun (its lot kept, the lead still its own)? Coming back to it
+     * is no new project, and waits for no gap between projects: a lead taken off its building (its rations, a fight, a new
+     * trade) stood "not due yet" for the town's whole gap every time, and a hill house, with the earth under its floor and its
+     * footing to lay as well, went up over days.
+     */
+    public static boolean resuming(UUID villageId, UUID me, long now) {
+        Map<UUID, Crew> m = CREWS.get(villageId);
+        Crew c = m == null ? null : m.get(me);
+        if (c == null || c.project == null || now - c.since >= LEAD_TERM) return false;
+        Map<String, Site> pending = SITES.get(villageId);
+        return pending != null && pending.containsKey(c.project) && open(villageId, c.project);
+    }
+
     /** This hand's crew is on this building now. */
     public static void leadOn(UUID villageId, UUID me, String project) {
         Map<UUID, Crew> m = CREWS.get(villageId);

@@ -230,7 +230,7 @@ public class BuildGoal extends Goal {
 
     /** [fixes14] Tests: what every builder is handed for the cell it comes to, its pace and its reach its own (null: off). */
     /** [growth22] Tests: where each builder's ticks went, {all, walking to a cell out of reach, stood in its own cell, at its
-     *  pace, a part's turn, set down beside a cell, a cell given up for now, -}. */
+     *  pace, a part's turn, set down beside a cell, a cell given up for now, taken off it before it was done}. */
     private static volatile boolean statsForTests;
     private static final Map<java.util.UUID, long[]> STATS = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -933,6 +933,13 @@ public class BuildGoal extends Goal {
 
     @Override
     public void stop() {
+        if (job != null) {
+            // [growth22] Taken off it before it was done (a monster, another job put before it, its trade changed): booked.
+            if (statsForTests) STATS.computeIfAbsent(assistant.getUUID(), k -> new long[8])[7]++;
+            if (assistant.isSettler() && placed > 0) LOG.info("[MCA-BUILD] tick {}: the {} (builder at {}, {} placed): taken off it ({})",
+                assistant.level().getGameTime(), building, assistant.blockPosition().toShortString(), placed,
+                assistant.getTarget() != null ? "a fight" : assistant.peekJob() == null ? "its jobs cleared" : "another job: " + assistant.peekJob().type());
+        }
         this.job = null;
         assistant.getNavigation().stop();
     }

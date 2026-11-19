@@ -1611,6 +1611,7 @@ public final class MineWorks {
         }
         out.addAll(MineDemand.lines(level, w, plan));
         for (String e : lately(village, 4)) out.add("Lately: " + e.substring(e.indexOf(' ') + 1));
+        out.addAll(OreFlow.lines(village, level.getDayTime() / 24000L));   // [growth22] the metal in and out, by whom
         return out;
     }
 

@@ -115,7 +115,6 @@ public final class TurnedFlights {
                 continue;
             }
             if (want - g > DoorWays.MOST_FILL + 1) return no("deep at " + k);           // a hollow too deep to build up
-            if (DoorWays.roofed(level, col, want)) return no("roofed at " + k);
             for (int h = 0; h <= 2; h++) {
                 BlockPos c = col.atY(want + h);
                 if (v != null && !wayZone(TownBlocks.zone(level, v, c))) return no(TownBlocks.zone(level, v, c) + " at " + k + "/" + h);
@@ -135,10 +134,10 @@ public final class TurnedFlights {
         return null;
     }
 
-    /** Ground a door's flight may run over: open ground, or the way in at a door (its approach, its steps); never a building,
-     *  its eaves or fittings, a road or the square. */
+    /** Ground a door's flight may run over: anything but a street or the square (a building's own lot round its walls is the
+     *  door's to come down; what stands there, built, is no ground to dig and stops the flight by itself). */
     private static boolean wayZone(TownBlocks.Zone z) {
-        return z == TownBlocks.Zone.OPEN || z == TownBlocks.Zone.APPROACH || z == TownBlocks.Zone.DOORWAY || z == TownBlocks.Zone.STAIRS;
+        return z != TownBlocks.Zone.ROAD && z != TownBlocks.Zone.SQUARE && z != TownBlocks.Zone.FITTING;
     }
 
     /** The steps the flight this way wants (its ground at the end not counted), or -1 when there is no room for it. */
@@ -155,13 +154,12 @@ public final class TurnedFlights {
         for (int i = 0; i < f.size() - 1; i++) {                               // the ground at the end is the world's
             Step s = f.get(i);
             BlockPos feet = s.col().atY(s.feet());
-            boolean roofed = DoorWays.roofed(level, s.col(), s.feet());
+            // (Under the eaves along the wall is no porch: the flight is the door's own way, and only the world's ground is dug.)
             for (BlockPos cell : new BlockPos[]{ feet.above(), feet }) {
-                DoorWays.Fix x = DoorWays.clear(level, cell, roofed && i > 0);
+                DoorWays.Fix x = DoorWays.clear(level, cell, false);
                 if (x != null) return x;
             }
             if (!DoorWays.solid(level, feet.below())) {
-                if (roofed && i > 0) return DoorWays.BLOCKED;
                 int bottom = feet.getY() - 1;
                 while (bottom > feet.getY() - 1 - DoorWays.MOST_FILL && !DoorWays.solid(level, feet.atY(bottom - 1))) bottom--;
                 if (!DoorWays.solid(level, feet.atY(bottom - 1))) return DoorWays.BLOCKED;

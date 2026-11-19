@@ -206,14 +206,20 @@ public class GrowthGameTests {
      * [growth22] Hill houses: three builders held to their jobs (nothing else in their day: a test hook) each put up a house
      * by their own goal at their own pace, each cell's makings handed them: one on the flat, one on a hillside with its door
      * uphill, one with its door down. Where each builder's ticks went is logged (walking to a cell out of reach, standing in
-     * its own cell, at its pace, set down beside a cell, a cell given up); the hill houses go up about as fast as the flat one.
+     * its own cell, at its pace, set down beside a cell, a cell given up, taken off it); a hill house takes no longer a part
+     * than the flat one (it has more parts: the earth under its floor on the low side, its footing, the bank cut back).
      */
     @GameTest(template = "empty", timeoutTicks = 40000, batch = "gw04_hill_house")
     public static void gw04_hill_house(GameTestHelper helper) {
+        hillHouses(helper, 5130000, true);
+    }
+
+    static void hillHouses(GameTestHelper helper, int cx, boolean held) {
         ServerLevel level = helper.getLevel();
+        String tag = held ? "gw04" : "gw05";
         Kit.reset(level);
         level.setDayTime(1000);
-        int cx = 5130000, cz = 90000;
+        int cz = 90000;
         Kit.hold(level, cx, cz, 96);
         Kit.prepare(level, cx, cz, 96);
         BlockPos heart = Kit.surface(level, cx, cz);
@@ -237,26 +243,36 @@ public class GrowthGameTests {
         Villages.Village v = Villages.get(builders.get(0).ownerId());
         Kit.stockForGrowth(level, v);
         BlockPos[] at = {
-            BuildAuditGameTests.siteOn(level, "house", cx + 20, cz + 70, Direction.NORTH),
+            BuildAuditGameTests.siteOn(level, "house", cx + 30, cz - 60, Direction.NORTH),
             BuildAuditGameTests.siteOn(level, "house", hx + 18, hz, Direction.NORTH),
             BuildAuditGameTests.siteOn(level, "house", hx - 18, hz, Direction.SOUTH) };
         Direction[] facing = { Direction.NORTH, Direction.NORTH, Direction.SOUTH };
         String[] name = { "flat", "hill, door uphill", "hill, door downhill" };
+        int[] parts = new int[3];
+        for (int i = 0; i < 3; i++) parts[i] = FixesGameTests.missingOf(level, at[i], facing[i]);
         long[] took = { -1, -1, -1 };
         int[] jobs = new int[3];
+        boolean[] begun = new boolean[3];
         com.jrpetty.mcassistant.entity.goal.BuildGoal.statsForTests(true);
         for (int i = 0; i < 3; i++) {
             VillageFolkEntity b = builders.get(i);
             b.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.STORE);
             b.setAutonomous(false);
-            VillageFolkEntity.holdForTests(b.getUUID(), true);
+            if (held) VillageFolkEntity.holdForTests(b.getUUID(), true);
             BuildWorldGameTests.stock(b, null);
             b.teleportTo(at[i].getX() + 0.5, Kit.surface(level, at[i].getX(), at[i].getZ() + 9).getY(), at[i].getZ() + 9.5);
             b.clearQueue();
+            b.enqueue(com.jrpetty.mcassistant.entity.Job.buildAt("house", at[i], facing[i], 0));
+            jobs[i]++;
         }
-        com.jrpetty.mcassistant.entity.goal.BuildGoal.stockAtPaceForTests(BuildWorldGameTests::stock);
+        // Each cell's makings to hand, and its rations kept in its pack (an empty pack sent it off to eat mid-build).
+        com.jrpetty.mcassistant.entity.goal.BuildGoal.stockAtPaceForTests((f, p) -> {
+            BuildWorldGameTests.stock(f, p);
+            f.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 8));
+        });
         level.getServer().tickRateManager().setTickRate(10000.0F);
         final int[] tick = { 0 };
+        final int limit = held ? 36000 : 56000;
         MineSiteGameTests.each(helper, () -> {
             tick[0]++;
             if (level.getDayTime() % 24000L > 11000L) level.setDayTime(1000);
@@ -265,36 +281,77 @@ public class GrowthGameTests {
                 if (took[i] >= 0) continue;
                 all = false;
                 VillageFolkEntity b = builders.get(i);
-                // Held to it: a build job in hand whenever its last one ended (it picks up where it left off).
-                if (b.peekJob() == null && tick[0] % 20 == 0) {
+                boolean building = b.peekJob() != null && b.peekJob().type() == com.jrpetty.mcassistant.entity.Job.Type.BUILD;
+                if (building) begun[i] = true;
+                if (tick[0] % 20 != 0) continue;
+                int miss = FixesGameTests.missingOf(level, at[i], facing[i]);
+                if (miss <= 3 || held && begun[i] && !building) { took[i] = tick[0]; continue; }
+                // Not held: taken off it, it is set to it again (as the town's lead comes back to its building).
+                if (!held && !building) {
                     b.enqueue(com.jrpetty.mcassistant.entity.Job.buildAt("house", at[i], facing[i], 0));
                     jobs[i]++;
                 }
-                if (tick[0] % 100 != 0) continue;
-                int miss = FixesGameTests.missingOf(level, at[i], facing[i]);
-                if (miss <= 3) took[i] = tick[0];
             }
-            if (!all && tick[0] < 36000) return false;
+            if (!all && tick[0] < limit) return false;
             List<String> out = new java.util.ArrayList<>();
             int[] missing = new int[3];
+            double[] perPart = new double[3];
             for (int i = 0; i < 3; i++) {
                 missing[i] = FixesGameTests.missingOf(level, at[i], facing[i]);
                 long[] st = com.jrpetty.mcassistant.entity.goal.BuildGoal.statsForTests(builders.get(i).getUUID());
-                out.add(name[i] + " at " + at[i].toShortString() + ": " + (took[i] < 0 ? "not done" : took[i] + " ticks") + ", " + missing[i]
-                    + " missing, " + jobs[i] + " jobs; ticks: all " + st[0] + ", walking " + st[1] + ", stood in its cell " + st[2] + ", pace " + st[3]
-                    + ", parts' turns " + st[4] + ", set beside " + st[5] + ", given up " + st[6]);
+                perPart[i] = took[i] / (double) Math.max(1, st[4]);             // a placement's ticks: the drawing's, the fill's, the bank's
+                out.add(name[i] + " at " + at[i].toShortString() + ": " + (took[i] < 0 ? "not done" : took[i] + " ticks") + ", " + parts[i] + " parts, "
+                    + missing[i] + " missing, " + String.format("%.1f", perPart[i]) + " ticks a placement, " + jobs[i] + " jobs; goal ticks: all " + st[0]
+                    + ", walking " + st[1] + ", stood in its cell " + st[2] + ", pace " + st[3] + ", parts' turns " + st[4] + ", set beside " + st[5]
+                    + ", given up " + st[6] + ", taken off it " + st[7] + " | " + builders.get(i).debugLine());
             }
-            Kit.log("[VT] gw04 " + String.join("; ", out));
+            Kit.log("[VT] " + tag + " " + String.join(" ;; ", out));
             com.jrpetty.mcassistant.entity.goal.BuildGoal.stockAtPaceForTests(null);
             com.jrpetty.mcassistant.entity.goal.BuildGoal.statsForTests(false);
             for (VillageFolkEntity b : builders) VillageFolkEntity.holdForTests(b.getUUID(), false);
             MineSiteGameTests.standDown(level);
             Kit.Expect expect = new Kit.Expect();
-            for (int i = 0; i < 3; i++) expect.that(took[i] > 0 && missing[i] <= 3, name[i] + " built: " + took[i] + " ticks, " + missing[i] + " missing");
-            expect.that(took[1] <= Math.max(took[0] * 3 / 2, took[0] + 1200) && took[2] <= Math.max(took[0] * 3 / 2, took[0] + 1200),
-                "the hill houses about as quick as the flat one: " + took[0] + ", " + took[1] + ", " + took[2]);
+            for (int i = 0; i < 3; i++) expect.that(took[i] > 0 && missing[i] <= Math.max(3, parts[i] / 10), name[i] + " built: " + took[i] + " ticks, " + missing[i] + " missing");
+            expect.that(perPart[1] <= perPart[0] * 1.25 && perPart[2] <= perPart[0] * 1.25,
+                "a hill house no slower a placement than the flat one: " + String.format("%.1f, %.1f, %.1f", perPart[0], perPart[1], perPart[2]));
             helper.runAfterDelay(1, () -> { if (expect.clean()) helper.succeed(); else helper.fail(expect.summary()); });
             return true;
+        });
+    }
+
+    /**
+     * [growth22] A lead back at the building its crew has begun (its lot kept) waits for no gap between projects: the town's
+     * gap is for starting the next building, not for coming back to this one. Another hand, or a lead whose lot is given up,
+     * still waits.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "gw05_resume_build")
+    public static void gw05_resume_build(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 5150000, z = 90000;
+        Kit.reset(level);
+        Kit.hold(level, x, z, 96);
+        Kit.prepare(level, x, z, 96);
+        int y = Kit.surface(level, x, z).getY();
+        helper.runAtTickTime(5, () -> {
+            Villages.Village v = BridgeStage.town(level, x, z, y, 4);
+            helper.assertTrue(v != null, "the town");
+            List<com.jrpetty.mcassistant.entity.AssistantEntity> folk = new java.util.ArrayList<>(Villages.folkOf(v.id()));
+            java.util.UUID lead = folk.get(0).getUUID(), other = folk.get(1).getUUID();
+            long now = level.getGameTime();
+            boolean took = Villages.isLead(v.id(), lead, now);
+            Villages.leadOn(v.id(), lead, "house");
+            Villages.Site site = Villages.siteFor(level, v.id(), "house");
+            Villages.noteAttempt(v.id(), now);                                  // the building begun: the gap runs from now
+            boolean due = Villages.projectDue(v.id(), now + 20);
+            boolean back = Villages.resuming(v.id(), lead, now + 20), otherBack = Villages.resuming(v.id(), other, now + 20);
+            boolean late = Villages.resuming(v.id(), lead, now + 7000);         // its term lapsed: the post is anybody's again
+            Kit.log("[VT] gw05 lead " + took + ", site " + site + ", due " + due + ", lead back " + back + ", another " + otherBack + ", lapsed " + late
+                + " | " + Villages.projectsWanted(v.id()));
+            helper.assertTrue(took && site != null, "a lead and a lot for the house");
+            helper.assertTrue(!due, "the town's gap runs (no new project now)");
+            helper.assertTrue(back, "the lead goes back to its house at once");
+            helper.assertTrue(!otherBack && !late, "another hand (" + otherBack + ") or a lapsed lead (" + late + ") waits");
+            helper.succeed();
         });
     }
 }

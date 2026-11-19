@@ -7875,6 +7875,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     fromStore.add(st.copyWithCount(taken));
                 }
                 ItemStack one = st.copyWithCount(1);                  // [supply] (booked once it is off the shelf: Bonded)
+                if (isSettler() && OreFlow.metal(st) != null) OreFlow.out(ownerId(), level().getDayTime() / 24000L, st, taken, "a " + stationTask().name().toLowerCase() + "'s hand");   // [growth22]
                 st.shrink(taken);
                 if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
                 if (isSettler() && level() instanceof net.minecraft.server.level.ServerLevel market) {
