@@ -1,5 +1,7 @@
 package com.jrpetty.mcassistant.client;
 
+import com.jrpetty.mcassistant.village.InventionTree;
+import com.jrpetty.mcassistant.village.InventionTree.Invention;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.nbt.CompoundTag;
@@ -9,157 +11,493 @@ import net.minecraft.network.chat.Component;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * [tech-tree] The Inventions page of the town's books (CityScreen, in the Civic section beside Research), as the server's
- * Inventions.report has it. Across the top, the work in hand: what the scholars are at, a bar of their learning, the
- * days left, who chose it and why, and whether its working model is built or waits on the stores. Below on the left the
- * tree, a column a branch (Agriculture, Engineering, Military, Learning), each invention a box at its depth: green known,
- * gold the one in hand (a bar across it), white open, grey locked; the mouse over one gives the whole of it (its age, its
- * cost and days, what it needs, the model's makings, what it unlocks and does, why it is locked, who was first to it in
- * the world). On the right the day's learning and its parts, the scholars with their heads for it and their evenings at
- * the desk, the eurekas and failures, the notes, the patrons and the suggestion waiting.
+ * Inventions.report has it.
+ *
+ * <p>[screens13] Laid out as a tree that reads at any size. Across the top, the work in hand: what the scholars are at,
+ * how far, the days left (the mouse over it: who chose it, why, and the working model). Under it a bar of tools: the
+ * tree or the scholars (side by side when the page is wide), a filter by state (all, open, known, locked), what is
+ * typed to find one, and the zoom. The tree itself is a map to pan: a column for each step down the road of needs (the
+ * ages each column spans over it), a lane for each branch, each invention a card in its state's colour (green known,
+ * gold in hand with its bar, white open, grey locked), a line from each thing needed to what needs it (green from what
+ * is known), the road to the card under the mouse drawn dark. Drag to pan, the wheel to scroll (Shift for across),
+ * Ctrl and the wheel or the buttons to zoom; the mouse over a card gives the whole of it.
  */
 public final class InventionsPage {
 
     private InventionsPage() {}
 
-    private static final int KNOWN = 0xFF5E9B4E, NOW = 0xFFD9A63A, OPEN = 0xFFEDEDED, LOCKED = 0xFF9A9A9A, BAR = 0xFF3F7F2F;
     private static final String[] BRANCHES = { "Agriculture", "Engineering", "Military", "Learning" };
+    private static final String[] FILTERS = { "All", "Open", "Known", "Locked" };
+    private static final String[] ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII" };
+    /** Card sizes and gaps at the three zooms: compact, normal, large. */
+    private static final int[] CARD_W = { 60, 88, 112 }, CARD_H = { 13, 22, 26 }, GAP_X = { 14, 18, 22 }, GAP_Y = { 3, 4, 5 };
+    private static final int LANE_HEAD = 11, COL_HEAD = 11, PAD = 4;
+    private static final int KNOWN_LINE = 0xFF4E9A3A, OPEN_LINE = 0xFF6F6F6F, LOCKED_LINE = 0xFF9A9A9A;
+
+    // What the reader has chosen, kept while the books stay open (and between openings: it is only a view).
+    private static int zoom = -1;                 // -1: fit the room
+    private static int filter;                    // 0 all, 1 open, 2 known, 3 locked
+    private static boolean scholarsView;          // on a narrow page, the scholars instead of the tree
+    private static int panX, panY;
+    private static String lastFind = "";
+
+    // Where the last frame put things, for the mouse.
+    private static int vx, vy, vw, vh, contentW, contentH, zoomShown;
+    private static boolean dragging;
+    private static double dragFromX, dragFromY;
+    private static int panFromX, panFromY;
+    private record Zone(int x0, int y0, int x1, int y1, Runnable act) {}
+    private static final List<Zone> ZONES = new ArrayList<>();
+
+    /** A card's place in the tree, in the tree's own pixels. */
+    private record Place(Invention inv, int x, int y) {}
 
     /** The page. Returns the tooltip for what the mouse is over, or null. */
     @Nullable
     public static List<Component> draw(GuiGraphics g, Font font, CompoundTag m, int x, int y, int w, int h, int scroll, int mx, int my) {
+        return draw(g, font, m, x, y, w, h, mx, my, "");
+    }
+
+    /** The page, with what the reader has typed to find (CityScreen's finds). */
+    @Nullable
+    public static List<Component> draw(GuiGraphics g, Font font, CompoundTag m, int x, int y, int w, int h, int mx, int my, String find) {
+        ZONES.clear();
+        vw = 0;
         ListTag tree = m.getList("tree", Tag.TAG_COMPOUND);
         if (tree.isEmpty()) {
-            Ui.section(g, font, "Inventions", x, y, w);
-            small(g, font, "No inventions in these books yet.", x + 4, y + 14, Ui.MUTED);
+            UiStyle.heading(g, font, "Inventions", x, y, w);
+            UiStyle.empty(g, font, "No inventions in these books yet", "A town of six keeps a scholar; the leader picks the work.", x, y + 12, w, Math.min(60, h - 12));
             return null;
         }
+        Map<String, CompoundTag> byId = new HashMap<>();
+        for (int i = 0; i < tree.size(); i++) byId.put(tree.getCompound(i).getString("id"), tree.getCompound(i));
         List<Component> tip = null;
-        // ---- the work in hand
-        Ui.section(g, font, "Inventions: " + m.getInt("known") + " of " + m.getInt("all") + " known", x, y, w);
-        int cy = y + 13;
+
+        // ---- the work in hand, one line and its bar
+        String known = m.getInt("known") + " of " + m.getInt("all") + " known";
+        int kw = font.width(known);
+        g.drawString(font, known, x + w - kw, y, UiStyle.TEXT_MUTED, false);
+        int room = w - kw - UiStyle.S2;
         if (m.contains("now")) {
             int prog = m.getInt("prog"), cost = Math.max(1, m.getInt("cost"));
             int left = m.getInt("daysLeft");
-            String head = "Researching " + m.getString("now") + ": " + (prog * 100 / cost) + "%" + (left > 0 ? ", about " + left + (left == 1 ? " day" : " days") + " to go" : ", done at the next morning");
-            small(g, font, Ui.clip(font, head, (int) ((w - 8) / 0.75F)), x + 4, cy, Ui.INK);
-            cy += 9;
-            Ui.bar(g, x + 4, cy, w - 8, 5, Math.min(1F, prog / (float) cost), BAR);
-            cy += 8;
-            String by = m.getString("by").isEmpty() ? "" : "Chosen by " + m.getString("by") + ": " + m.getString("why") + ". ";
-            String model = m.getBoolean("paid") ? "Its working model is built." : m.getString("short").isEmpty()
-                ? "The model is built a quarter of the way in, out of the stores." : "The model waits on the stores for " + m.getString("short") + ".";
-            for (String line : wrap(font, by + model, w - 8)) {
-                small(g, font, line, x + 4, cy, Ui.MUTED);
-                cy += 8;
+            String head = "Researching " + m.getString("now") + " · " + (prog * 100 / cost) + "%"
+                + (left > 0 ? " · about " + left + (left == 1 ? " day" : " days") : " · done by morning");
+            UiStyle.text(g, font, head, x, y, room, UiStyle.TEXT);
+            UiStyle.bar(g, x, y + 10, w, 3, Math.min(1F, prog / (float) cost), UiStyle.HIGHLIGHT_SPINE);
+            if (mx >= x && mx < x + w && my >= y && my < y + 14) {
+                String by = m.getString("by").isEmpty() ? "" : "Chosen by " + m.getString("by") + ": " + m.getString("why") + ".";
+                String model = m.getBoolean("paid") ? "Its working model is built." : m.getString("short").isEmpty()
+                    ? "The model is built a quarter of the way in, out of the stores." : "The model waits on the stores for " + m.getString("short") + ".";
+                tip = new ArrayList<>();
+                tip.add(Component.literal(head));
+                if (!by.isEmpty()) tip.add(Component.literal(by));
+                tip.add(Component.literal(model));
             }
         } else {
-            small(g, font, "Nothing in hand: the leader chooses the scholars' next at the morning's books.", x + 4, cy, Ui.MUTED);
-            cy += 9;
+            UiStyle.text(g, font, "Nothing in hand: the leader picks the scholars' next at the morning's books.", x, y, room, UiStyle.TEXT_MUTED);
         }
-        cy += 3;
-        // ---- the tree, a column a branch
-        int side = Math.max(110, w * 3 / 10);
-        int tw = w - side - 6, colW = Math.max(40, tw / BRANCHES.length);
-        int maxDepth = 1;
-        for (int i = 0; i < tree.size(); i++) maxDepth = Math.max(maxDepth, tree.getCompound(i).getInt("depth"));
-        int boxH = 17, gap = 3;
-        int[] perRow = new int[BRANCHES.length * (maxDepth + 1)];
-        for (int b = 0; b < BRANCHES.length; b++) small(g, font, BRANCHES[b], x + b * colW + 3, cy, Ui.INK);
-        int ty = cy + 9;
-        // Boxes placed by branch and depth, several to a depth stacked.
-        List<int[]> boxes = new ArrayList<>();
-        int bottom = ty;
-        for (int i = 0; i < tree.size(); i++) {
-            CompoundTag n = tree.getCompound(i);
-            int b = Math.max(0, Math.min(BRANCHES.length - 1, n.getInt("b")));
-            int d = n.getInt("depth");
-            boxes.add(new int[]{ i, b, d });
+        int ty = y + 17;
+
+        // ---- the tools: the view, the filter, the find, the zoom
+        boolean wide = w >= 440;
+        int side = wide ? Math.max(130, w * 3 / 10) : 0;
+        int treeW = wide ? w - side - UiStyle.S2 : w;
+        int bx = x;
+        if (!wide) {
+            bx += viewTab(g, font, "Tree", bx, ty, !scholarsView, mx, my, () -> scholarsView = false) + 2;
+            bx += viewTab(g, font, "Scholars", bx, ty, scholarsView, mx, my, () -> scholarsView = true) + UiStyle.S2;
         }
-        // Rows: for each depth, as many as the busiest branch has at that depth.
-        int[] rowsAt = new int[maxDepth + 1];
-        for (int[] bx : boxes) rowsAt[bx[2]] = Math.max(rowsAt[bx[2]], ++perRow[bx[1] * (maxDepth + 1) + bx[2]]);
-        int[] depthY = new int[maxDepth + 2];
-        depthY[1] = ty;
-        for (int d = 1; d <= maxDepth; d++) depthY[d + 1] = depthY[d] + rowsAt[d] * (boxH + gap) + 2;
-        int[] placed = new int[BRANCHES.length * (maxDepth + 1)];
-        for (int[] bx : boxes) {
-            CompoundTag n = tree.getCompound(bx[0]);
-            int b = bx[1], d = bx[2];
-            int slot = placed[b * (maxDepth + 1) + d]++;
-            int bxX = x + b * colW + 2, bxY = depthY[d] + slot * (boxH + gap) - scroll * 4;
-            if (bxY + boxH > y + h || bxY < ty - 2) continue;
-            String state = n.getString("state");
-            int fill = switch (state) { case "known" -> KNOWN; case "researching" -> NOW; case "open" -> OPEN; default -> LOCKED; };
-            g.fill(bxX, bxY, bxX + colW - 4, bxY + boxH, fill);
-            g.renderOutline(bxX, bxY, colW - 4, boxH, Ui.EDGE);
-            if (state.equals("researching") && m.getInt("cost") > 0) {
-                float f = Math.min(1F, m.getInt("prog") / (float) m.getInt("cost"));
-                g.fill(bxX + 1, bxY + boxH - 3, bxX + 1 + (int) ((colW - 6) * f), bxY + boxH - 1, BAR);
+        if (wide || !scholarsView) {
+            for (int i = 0; i < FILTERS.length; i++) {
+                final int f = i;
+                bx += toggle(g, font, FILTERS[i], bx, ty, filter == i, mx, my, () -> filter = f) + 2;
             }
-            String title = n.getString("title").replace("The ", "");
-            small(g, font, Ui.clip(font, title, (int) ((colW - 8) / 0.75F)), bxX + 2, bxY + 2, state.equals("locked") ? Ui.FAINT : Ui.INK);
-            String sub = state.equals("known") ? "known" : state.equals("researching") ? "researching" : state.equals("open") ? n.getInt("cost") + " learning"
-                : n.getString("age").replace("the ", "");
-            small(g, font, Ui.clip(font, sub, (int) ((colW - 8) / 0.75F)), bxX + 2, bxY + 9, Ui.MUTED);
-            bottom = Math.max(bottom, bxY + boxH);
-            if (mx >= bxX && mx < bxX + colW - 4 && my >= bxY && my < bxY + boxH) tip = tip(n);
+            // The zoom, at the right.
+            int zx = x + treeW - 11;
+            smallButton(g, font, "+", zx, ty, zoomShown < 2, mx, my, () -> zoom = Math.min(2, zoomShown + 1));
+            smallButton(g, font, "−", zx - 13, ty, zoomShown > 0, mx, my, () -> zoom = Math.max(0, zoomShown - 1));
+            int fitW = font.width("Fit") + 6;
+            smallButtonW(g, font, "Fit", zx - 15 - fitW, ty, fitW, zoom >= 0, mx, my, () -> zoom = -1);
+            // What is typed, between.
+            String findLine = find.isEmpty() ? "type to find" : "Find: " + find + "_";
+            int fx = bx + UiStyle.S1, fRoom = zx - 15 - fitW - UiStyle.S1 - fx;
+            if (fRoom > 30) UiStyle.text(g, font, findLine, fx, ty + 2, fRoom, find.isEmpty() ? UiStyle.TEXT_FAINT : UiStyle.TEXT);
         }
-        // ---- the side: the learning, the scholars, the rest
-        int sx = x + w - side, sy = cy;
-        Ui.section(g, font, "Learning: " + m.getString("rate") + " a day", sx, sy, side);
+        int top = ty + 15;
+        int bodyH = y + h - top;
+        if (wide) {
+            tip = orTree(tip, drawTree(g, font, m, byId, x, top, treeW, bodyH, mx, my, find));
+            drawScholars(g, font, m, x + w - side, ty, side, y + h - ty);
+        } else if (scholarsView) {
+            drawScholars(g, font, m, x, top, w, bodyH);
+        } else {
+            tip = orTree(tip, drawTree(g, font, m, byId, x, top, w, bodyH, mx, my, find));
+        }
+        return tip;
+    }
+
+    private static List<Component> orTree(@Nullable List<Component> a, @Nullable List<Component> b) {
+        return b != null ? b : a;
+    }
+
+    // ------------------------------------------------------------------ the tree
+
+    @Nullable
+    private static List<Component> drawTree(GuiGraphics g, Font font, CompoundTag m, Map<String, CompoundTag> byId,
+                                            int x, int y, int w, int h, int mx, int my, String find) {
+        if (h < 40) return null;
+        int maxDepth = 1;
+        for (Invention inv : Invention.values()) maxDepth = Math.max(maxDepth, inv.depth());
+        // The zoom: as asked, or the largest that fits across, or the smallest.
+        int z = zoom;
+        if (z < 0) {
+            z = 0;
+            for (int t = 2; t >= 0; t--) if (width(t, maxDepth) <= w - 2) { z = t; break; }
+        }
+        zoomShown = z;
+        int cw = CARD_W[z], ch = CARD_H[z], gx = GAP_X[z], gy = GAP_Y[z];
+        // Place every card: its column by its depth, its lane by its branch, stacked within a lane at the same depth.
+        Map<Invention, Place> at = new EnumMap<>(Invention.class);
+        int[] laneTop = new int[BRANCHES.length + 1];
+        int ly = 0;
+        for (int b = 0; b < BRANCHES.length; b++) {
+            laneTop[b] = ly;
+            int[] stack = new int[maxDepth + 1];
+            int most = 1;
+            for (Invention inv : Invention.values()) {
+                if (inv.branch.ordinal() != b) continue;
+                int d = inv.depth();
+                int slot = stack[d]++;
+                most = Math.max(most, stack[d]);
+                at.put(inv, new Place(inv, PAD + (d - 1) * (cw + gx), ly + LANE_HEAD + slot * (ch + gy)));
+            }
+            ly += LANE_HEAD + most * (ch + gy) + gy;
+        }
+        laneTop[BRANCHES.length] = ly;
+        contentW = width(z, maxDepth);
+        contentH = ly + PAD;
+        // The viewport: a well, the column heads stuck along its top.
+        vx = x; vy = y; vw = w; vh = h;
+        int innerW = w - 2 - 4, innerH = h - 2 - COL_HEAD - 4;          // room for the scroll bars
+        panX = Math.max(0, Math.min(Math.max(0, contentW - innerW), panX));
+        panY = Math.max(0, Math.min(Math.max(0, contentH - innerH), panY));
+        // What is typed: the first card that answers it brought into view, once, as it changes.
+        String q = find.trim().toLowerCase(Locale.ROOT);
+        if (!q.equals(lastFind)) {
+            lastFind = q;
+            if (!q.isEmpty()) for (Invention inv : Invention.values()) {
+                if (!inv.title.toLowerCase(Locale.ROOT).contains(q)) continue;
+                Place p = at.get(inv);
+                if (p.x() < panX || p.x() + cw > panX + innerW) panX = Math.max(0, Math.min(Math.max(0, contentW - innerW), p.x() - PAD));
+                if (p.y() < panY || p.y() + ch > panY + innerH) panY = Math.max(0, Math.min(Math.max(0, contentH - innerH), p.y() - LANE_HEAD));
+                break;
+            }
+        }
+        UiStyle.well(g, x, y, w, h, UiStyle.PAGE);
+        int ox = x + 1 - panX, oy = y + 1 + COL_HEAD - panY;
+        int clipX0 = x + 1, clipY0 = y + 1 + COL_HEAD, clipX1 = x + 1 + innerW, clipY1 = y + 1 + COL_HEAD + innerH;
+        boolean overTree = mx >= clipX0 && mx < clipX1 && my >= clipY0 && my < clipY1;
+        // Which card the mouse is over, and the road to it (all it needs, and what needs it next).
+        Invention hovered = null;
+        if (overTree && !dragging) {
+            for (Place p : at.values()) {
+                int px = ox + p.x(), py = oy + p.y();
+                if (mx >= px && mx < px + cw && my >= py && my < py + ch) { hovered = p.inv(); break; }
+            }
+        }
+        Set<Invention> road = EnumSet.noneOf(Invention.class);
+        if (hovered != null) {
+            ancestors(hovered, road);
+            for (Invention inv : Invention.values()) if (inv.needs().contains(hovered)) road.add(inv);
+        }
+        g.enableScissor(clipX0, clipY0, clipX1, clipY1);
+        // The lanes: a faint band for every other one, the branch's name stuck to the left edge.
+        for (int b = 0; b < BRANCHES.length; b++) {
+            int top = oy + laneTop[b], bottom = oy + laneTop[b + 1];
+            if (b % 2 == 1) g.fill(clipX0, top, clipX1, bottom, 0x14000000);
+            g.fill(clipX0, bottom - 1, clipX1, bottom, 0x22000000);
+            String name = BRANCHES[b].toUpperCase(Locale.ROOT);
+            int lx = Math.max(ox + PAD, clipX0 + 3);
+            small(g, font, name, lx, top + 3, UiStyle.TEXT_FAINT);
+            InventionTree.Branch br = InventionTree.Branch.values()[b];
+            if (z > 0) small(g, font, "· " + br.about, lx + (int) (font.width(name) * 0.75F) + 3, top + 3, UiStyle.TEXT_DISABLED);
+        }
+        // The lines: from each thing needed to what needs it, round the corner in the gap before its column.
+        for (int pass = 0; pass < 2; pass++) {                       // the road to the hovered card last, over the rest
+            for (Invention inv : Invention.values()) {
+                Place to = at.get(inv);
+                for (Invention need : inv.needs()) {
+                    boolean onRoad = hovered != null && road.contains(inv) && (road.contains(need) || need == hovered) || inv == hovered && road.contains(need);
+                    if ((pass == 1) != onRoad) continue;
+                    Place from = at.get(need);
+                    String fs = state(byId, need), ts = state(byId, inv);
+                    int colour = onRoad ? UiStyle.ACCENT : fs.equals("known") ? KNOWN_LINE : ts.equals("locked") ? LOCKED_LINE : OPEN_LINE;
+                    if (!matches(byId, inv, q) || !matches(byId, need, q)) colour = UiStyle.alpha(colour, 0.35F);
+                    int sx = ox + from.x() + cw, sy = oy + from.y() + ch / 2;
+                    int tx = ox + to.x(), tyy = oy + to.y() + ch / 2;
+                    int cx = tx - gx / 2;
+                    int t = onRoad ? 2 : 1;
+                    g.fill(sx, sy, cx + t, sy + t, colour);
+                    g.fill(cx, Math.min(sy, tyy), cx + t, Math.max(sy, tyy) + t, colour);
+                    g.fill(cx, tyy, tx - 2, tyy + t, colour);
+                    g.fill(tx - 3, tyy - 1, tx - 1, tyy + t + 1, colour);         // the arrow's head
+                }
+            }
+        }
+        // The cards.
+        for (Place p : at.values()) {
+            int px = ox + p.x(), py = oy + p.y();
+            if (px > clipX1 || px + cw < clipX0 || py > clipY1 || py + ch < clipY0) continue;
+            card(g, font, m, byId, p.inv(), px, py, cw, ch, z, p.inv() == hovered, matches(byId, p.inv(), q));
+        }
+        g.disableScissor();
+        // The column heads: the step down the road of needs, and the ages it spans.
+        g.fill(x + 1, y + 1, x + w - 1, y + 1 + COL_HEAD, UiStyle.PANEL_HEADER);
+        g.fill(x + 1, y + COL_HEAD, x + w - 1, y + 1 + COL_HEAD, UiStyle.EDGE_SOFT);
+        g.enableScissor(x + 1, y + 1, x + w - 1, y + 1 + COL_HEAD);
+        for (int d = 1; d <= maxDepth; d++) {
+            int lo = 9, hi = -1;
+            for (Invention inv : Invention.values()) if (inv.depth() == d) { lo = Math.min(lo, inv.age); hi = Math.max(hi, inv.age); }
+            String ages = hi < 0 ? "" : ageWord(lo) + (hi > lo ? "–" + ageWord(hi) : "");
+            String label = ROMAN[Math.min(ROMAN.length - 1, d - 1)] + (z > 0 && !ages.isEmpty() ? "  " + ages : "");
+            int cx = ox + PAD + (d - 1) * (cw + gx);
+            small(g, font, UiStyle.clip(font, label, (int) ((cw + gx - 4) / 0.75F)), cx + 1, y + 3, UiStyle.TEXT_MUTED);
+        }
+        g.disableScissor();
+        // The scroll bars: down the right, along the bottom.
+        UiStyle.scrollBar(g, x + w - 5, clipY0, innerH, panY, Math.max(0, contentH - innerH), innerH);
+        int maxX = Math.max(0, contentW - innerW);
+        if (maxX > 0) {
+            int track = innerW, thumb = Math.max(8, track * innerW / Math.max(1, contentW));
+            int tx = clipX0 + (track - thumb) * panX / maxX;
+            g.fill(clipX0, y + h - 5, clipX0 + track, y + h - 2, 0x30000000);
+            g.fill(tx, y + h - 5, tx + thumb, y + h - 2, UiStyle.EDGE);
+        }
+        // The key, small, in the corner the scroll bars leave, when it all fits; else in the tooltip of the "?".
+        if (hovered != null) {
+            List<Component> tip = tip(byId.getOrDefault(hovered.id(), new CompoundTag()));
+            tip.add(1, Component.literal(stateWords(m, byId, hovered)));
+            return tip;
+        }
+        return null;
+    }
+
+    /** One card: its state's fill and spine, its title, and under it (when there is room) what it costs or that it is known. */
+    private static void card(GuiGraphics g, Font font, CompoundTag m, Map<String, CompoundTag> byId, Invention inv,
+                             int x, int y, int w, int h, int z, boolean hover, boolean lit) {
+        String s = state(byId, inv);
+        int fill, spine, ink, subInk;
+        String sub;
+        switch (s) {
+            case "known" -> { fill = UiStyle.TILE_SELECTED; spine = UiStyle.SUCCESS_FILL; ink = UiStyle.TEXT; subInk = UiStyle.SUCCESS; sub = "✓ known"; }
+            case "researching" -> {
+                fill = UiStyle.HIGHLIGHT; spine = UiStyle.HIGHLIGHT_SPINE; ink = UiStyle.TEXT; subInk = UiStyle.WARNING;
+                int cost = Math.max(1, m.getInt("cost"));
+                sub = "in hand · " + (m.getInt("prog") * 100 / cost) + "%";
+            }
+            case "open" -> { fill = 0xFFF2F2F2; spine = UiStyle.INFO_FILL; ink = UiStyle.TEXT; subInk = UiStyle.TEXT_MUTED; sub = inv.cost + " learning · " + inv.days + "d"; }
+            default -> { fill = UiStyle.TILE_DISABLED; spine = 0; ink = UiStyle.TEXT_DISABLED; subInk = UiStyle.TEXT_FAINT; sub = "○ " + capital(inv.ageWords().replace("the ", "")); }
+        }
+        g.fill(x, y, x + w, y + h, hover ? UiStyle.EDGE : s.equals("open") ? UiStyle.EDGE_SOFT : 0xFF9E9E9E);
+        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, hover ? Ui.lighten(fill, 0.35F) : fill);
+        if (spine != 0) g.fill(x + 1, y + 1, x + 3, y + h - 1, spine);
+        if (s.equals("researching") && m.getInt("cost") > 0) {
+            float f = Math.min(1F, m.getInt("prog") / (float) m.getInt("cost"));
+            g.fill(x + 3, y + h - 3, x + 3 + (int) ((w - 4) * f), y + h - 1, UiStyle.HIGHLIGHT_SPINE);
+        }
+        String title = inv.title.startsWith("The ") ? inv.title.substring(4) : inv.title;
+        int tx = x + 5;
+        if (z == 0) {
+            small(g, font, UiStyle.clip(font, title, (int) ((w - 7) / 0.75F)), tx, y + (h - 6) / 2, ink);
+        } else {
+            g.drawString(font, UiStyle.clip(font, title, w - 7), tx, y + 3, ink, false);
+            small(g, font, UiStyle.clip(font, sub, (int) ((w - 7) / 0.75F)), tx, y + h - 9, subInk);
+        }
+        if (!lit) g.fill(x, y, x + w, y + h, 0xA0D0D0D0);                // not what is filtered for or found: faded back
+    }
+
+    private static void ancestors(Invention inv, Set<Invention> into) {
+        for (Invention n : inv.needs()) if (into.add(n)) ancestors(n, into);
+    }
+
+    private static String state(Map<String, CompoundTag> byId, Invention inv) {
+        CompoundTag n = byId.get(inv.id());
+        return n == null ? "locked" : n.getString("state");
+    }
+
+    /** Does a card answer the filter and what is typed? */
+    private static boolean matches(Map<String, CompoundTag> byId, Invention inv, String q) {
+        String s = state(byId, inv);
+        boolean f = switch (filter) {
+            case 1 -> s.equals("open") || s.equals("researching");
+            case 2 -> s.equals("known");
+            case 3 -> s.equals("locked");
+            default -> true;
+        };
+        return f && (q.isEmpty() || inv.title.toLowerCase(Locale.ROOT).contains(q));
+    }
+
+    private static String stateWords(CompoundTag m, Map<String, CompoundTag> byId, Invention inv) {
+        return switch (state(byId, inv)) {
+            case "known" -> "Known to the town.";
+            case "researching" -> "In hand: " + (m.getInt("prog") * 100 / Math.max(1, m.getInt("cost"))) + "% of the way.";
+            case "open" -> "Open: the scholars could take it up next.";
+            default -> "Locked.";
+        };
+    }
+
+    private static int width(int z, int maxDepth) {
+        return PAD * 2 + maxDepth * CARD_W[z] + (maxDepth - 1) * GAP_X[z];
+    }
+
+    private static String ageWord(int age) {
+        String a = InventionTree.AGES[Math.max(0, Math.min(InventionTree.AGES.length - 1, age))];
+        return capital(a.replace("the ", "").replace(" Age", ""));
+    }
+
+    // ------------------------------------------------------------------ the scholars
+
+    private static void drawScholars(GuiGraphics g, Font font, CompoundTag m, int sx, int sy, int side, int sh) {
+        int bottom = sy + sh;
+        UiStyle.heading(g, font, "Learning: " + m.getString("rate") + " a day", sx, sy, side);
         sy += 12;
-        for (String line : wrap(font, m.getString("rateWhy"), side - 6)) {
-            if (sy > y + h - 8) break;
-            small(g, font, line, sx + 2, sy, Ui.MUTED);
+        for (String line : wrap(font, m.getString("rateWhy"), side - 4)) {
+            if (sy > bottom - 8) return;
+            small(g, font, line, sx + 2, sy, UiStyle.TEXT_MUTED);
             sy += 8;
         }
-        sy += 3;
+        sy += 4;
         ListTag scholars = m.getList("scholars", Tag.TAG_COMPOUND);
-        Ui.section(g, font, "Scholars (" + scholars.size() + ")" + (m.getBoolean("academy") ? ", at the academy" : ""), sx, sy, side);
+        if (sy > bottom - 12) return;
+        UiStyle.heading(g, font, "Scholars (" + scholars.size() + ")" + (m.getBoolean("academy") ? ", at the academy" : ""), sx, sy, side);
         sy += 12;
         if (scholars.isEmpty()) {
-            small(g, font, "None yet: a town of six keeps one.", sx + 2, sy, Ui.FAINT);
-            sy += 8;
-        }
-        for (int i = 0; i < scholars.size() && sy < y + h - 16; i++) {
-            CompoundTag s = scholars.getCompound(i);
-            small(g, font, Ui.clip(font, s.getString("name") + " (" + s.getInt("aptitude") + ")", (int) ((side - 6) / 0.75F)), sx + 2, sy, Ui.INK);
-            sy += 8;
-            small(g, font, Ui.clip(font, s.getString("why") + "; " + s.getInt("beats") + " beats at the desk yesterday", (int) ((side - 8) / 0.75F)),
-                sx + 6, sy, Ui.FAINT);
+            small(g, font, "None yet: a town of six keeps one.", sx + 2, sy, UiStyle.TEXT_FAINT);
             sy += 9;
         }
-        sy += 3;
+        for (int i = 0; i < scholars.size() && sy < bottom - 16; i++) {
+            CompoundTag s = scholars.getCompound(i);
+            String name = s.getString("name");
+            g.drawString(font, UiStyle.clip(font, name, side - 30), sx + 2, sy, UiStyle.TEXT, false);
+            String apt = s.getInt("aptitude") + "";
+            g.drawString(font, apt, sx + side - font.width(apt) - 2, sy, UiStyle.levelInk(s.getInt("aptitude"), 60, 35), false);
+            sy += 10;
+            small(g, font, UiStyle.clip(font, s.getString("why") + "; " + s.getInt("beats") + " beats at the desk yesterday", (int) ((side - 8) / 0.75F)),
+                sx + 6, sy, UiStyle.TEXT_FAINT);
+            sy += 10;
+        }
+        sy += 4;
         List<String> rest = new ArrayList<>();
         rest.add("Eurekas " + m.getInt("eurekas") + ", failed experiments " + m.getInt("fails") + ", pages of notes " + m.getInt("notes") + ".");
         if (!m.getString("suggest").isEmpty()) rest.add("Suggested: " + m.getString("suggest") + ".");
         if (!m.getString("patrons").isEmpty()) rest.add("Patrons: " + m.getString("patrons") + ".");
         rest.add("Suggest, sponsor or give books: /village inventions, or the academy's lectern.");
         for (String r : rest) {
-            for (String line : wrap(font, r, side - 6)) {
-                if (sy > y + h - 8) break;
-                small(g, font, line, sx + 2, sy, Ui.MUTED);
+            for (String line : wrap(font, r, side - 4)) {
+                if (sy > bottom - 8) return;
+                small(g, font, line, sx + 2, sy, UiStyle.TEXT_MUTED);
                 sy += 8;
             }
+            sy += 2;
         }
-        // The key, under the tree.
-        if (bottom + 10 < y + h) {
-            int kx = x + 2, ky = bottom + 4;
-            int[] cols = { KNOWN, NOW, OPEN, LOCKED };
-            String[] words = { "known", "in hand", "open", "locked" };
-            for (int i = 0; i < cols.length; i++) {
-                g.fill(kx, ky, kx + 6, ky + 6, cols[i]);
-                g.renderOutline(kx, ky, 6, 6, Ui.EDGE);
-                small(g, font, words[i], kx + 8, ky, Ui.MUTED);
-                kx += 12 + (int) (font.width(words[i]) * 0.75F) + 6;
+    }
+
+    // ------------------------------------------------------------------ the tools
+
+    private static int viewTab(GuiGraphics g, Font font, String label, int x, int y, boolean on, int mx, int my, Runnable act) {
+        int w = font.width(label) + 10;
+        boolean over = mx >= x && mx < x + w && my >= y && my < y + 12;
+        UiStyle.topTab(g, x, y, w, 12, UiStyle.State.of(true, on, over));
+        g.drawString(font, label, x + 5, y + 2, on ? UiStyle.TEXT : UiStyle.TEXT_MUTED, false);
+        ZONES.add(new Zone(x, y, x + w, y + 12, act));
+        return w;
+    }
+
+    private static int toggle(GuiGraphics g, Font font, String label, int x, int y, boolean on, int mx, int my, Runnable act) {
+        int w = (int) (font.width(label) * 0.75F) + 8;
+        boolean over = mx >= x && mx < x + w && my >= y && my < y + 11;
+        UiStyle.tile(g, x, y, w, 11, UiStyle.State.of(true, on, over));
+        small(g, font, label, x + (on ? 5 : 4), y + 3, on ? UiStyle.ACCENT : UiStyle.TEXT_MUTED);
+        ZONES.add(new Zone(x, y, x + w, y + 11, act));
+        return w;
+    }
+
+    private static void smallButton(GuiGraphics g, Font font, String label, int x, int y, boolean enabled, int mx, int my, Runnable act) {
+        smallButtonW(g, font, label, x, y, 11, enabled, mx, my, act);
+    }
+
+    private static void smallButtonW(GuiGraphics g, Font font, String label, int x, int y, int w, boolean enabled, int mx, int my, Runnable act) {
+        boolean over = mx >= x && mx < x + w && my >= y && my < y + 11;
+        UiStyle.tile(g, x, y, w, 11, UiStyle.State.of(enabled, false, over && enabled));
+        g.drawString(font, label, x + (w - font.width(label)) / 2 + 1, y + 2, enabled ? UiStyle.TEXT : UiStyle.TEXT_DISABLED, false);
+        if (enabled) ZONES.add(new Zone(x, y, x + w, y + 11, act));
+    }
+
+    // ------------------------------------------------------------------ the mouse (CityScreen hands it on while this page shows)
+
+    /** A click: a tool, or the start of a drag on the tree. True when it was this page's. */
+    public static boolean mouseClicked(double mx, double my, int button) {
+        for (Zone z : new ArrayList<>(ZONES)) {
+            if (mx >= z.x0() && mx < z.x1() && my >= z.y0() && my < z.y1()) {
+                UiStyle.click();
+                z.act().run();
+                return true;
             }
         }
-        return tip;
+        if (button == 0 && overTree(mx, my)) {
+            dragging = true;
+            dragFromX = mx;
+            dragFromY = my;
+            panFromX = panX;
+            panFromY = panY;
+            return true;
+        }
+        return false;
     }
+
+    public static boolean mouseDragged(double mx, double my) {
+        if (!dragging) return false;
+        panX = panFromX - (int) Math.round(mx - dragFromX);
+        panY = panFromY - (int) Math.round(my - dragFromY);
+        return true;
+    }
+
+    public static boolean mouseReleased() {
+        boolean was = dragging;
+        dragging = false;
+        return was;
+    }
+
+    /** The wheel over the tree: down and up, across with Shift, the zoom with Ctrl. */
+    public static boolean mouseScrolled(double mx, double my, double dy, boolean shift, boolean ctrl) {
+        if (!overTree(mx, my) || dy == 0) return false;
+        int step = (int) Math.signum(dy);
+        if (ctrl) {
+            zoom = Math.max(0, Math.min(2, zoomShown + step));
+        } else if (shift) {
+            panX -= step * 24;
+        } else {
+            panY -= step * 18;
+        }
+        return true;
+    }
+
+    private static boolean overTree(double mx, double my) {
+        return vw > 0 && mx >= vx && mx < vx + vw && my >= vy && my < vy + vh;
+    }
+
+    // ------------------------------------------------------------------ text
 
     /** The whole of one invention, for the mouse. */
     static List<Component> tip(CompoundTag n) {

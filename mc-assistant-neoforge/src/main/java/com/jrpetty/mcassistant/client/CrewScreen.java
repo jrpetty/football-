@@ -93,6 +93,13 @@ public class CrewScreen extends Screen {
                 "The block book: what every block does, why you'd build it, "
                 + "when it matters, and the recipe that makes it")))
             .build());
+        // [screens13] The crew's map from above (MapScreen): it had no way in since its button gave way to Plots.
+        this.addRenderableWidget(Button.builder(Component.literal("Map"),
+                b -> { if (this.minecraft != null) this.minecraft.setScreen(new MapScreen()); })
+            .bounds(left + W - PAD - 140, top + 24, 44, 14)
+            .tooltip(Tooltip.create(Component.literal(
+                "Every patch and every assistant on it, seen from above; drag out a new patch")))
+            .build());
 
         // Rows are drawn by hand and clicked through mouseClicked — a stack of
         // vanilla buttons looked like a toolbar, not a list.

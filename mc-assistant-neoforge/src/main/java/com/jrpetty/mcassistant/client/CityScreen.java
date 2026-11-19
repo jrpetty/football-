@@ -325,7 +325,8 @@ public class CityScreen extends Screen {
                 case "News" -> news(g, x, y, cw, ch);
                 case "Research" -> research(g, x, y, cw, ch, mouseX, mouseY);
                 case "Inventions" -> {                                                 // [tech-tree] the scholars' tree (InventionsPage)
-                    List<Component> tip = InventionsPage.draw(g, font, data.getCompound("inventions"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    List<Component> tip = InventionsPage.draw(g, font, data.getCompound("inventions"), x, y, cw, ch, mouseX, mouseY,
+                        finds.getOrDefault("Inventions", ""));     // [screens13] a tree to pan and zoom, and what is typed found
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "School" -> school(g, x, y, cw, ch, mouseX, mouseY);
@@ -2461,7 +2462,7 @@ public class CityScreen extends Screen {
     private boolean stockDown = true;
     /** [folk-ui] What is typed on a page that finds things (Folk, Stock, News), by page: kept while the books are open. */
     private final java.util.Map<String, String> finds = new java.util.HashMap<>();
-    private static final java.util.Set<String> SEARCHABLE = java.util.Set.of("Folk", "Stock", "News");
+    private static final java.util.Set<String> SEARCHABLE = java.util.Set.of("Folk", "Stock", "News", "Inventions");   // [screens13] Inventions
 
     /** What is typed on this page, "" for nothing yet; null when the page finds nothing. */
     @javax.annotation.Nullable
@@ -3965,6 +3966,7 @@ public class CityScreen extends Screen {
         if (links.click(mx, my, button)) return true;                    // [teleport] a folk's name, or its buttons
         if (AdminClient.boardClick(mx, my)) return true;                  // [admin]
         if (FavouritesClient.boardClick(mx, my, this)) return true;       // [ui]
+        if (page().equals("Inventions") && InventionsPage.mouseClicked(mx, my, button)) return true;   // [screens13] its tools, a drag
         for (Zone z : new ArrayList<>(zones)) {
             if (mx >= z.x0() && mx < z.x1() && my >= z.y0() && my < z.y1()) { z.act().run(); return true; }
         }
@@ -4030,7 +4032,20 @@ public class CityScreen extends Screen {
     }
 
     @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (page().equals("Inventions") && InventionsPage.mouseDragged(mx, my)) return true;          // [screens13] the tree panned
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        if (InventionsPage.mouseReleased()) return true;                                               // [screens13]
+        return super.mouseReleased(mx, my, button);
+    }
+
+    @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
+        if (page().equals("Inventions") && InventionsPage.mouseScrolled(mx, my, dy, hasShiftDown(), hasControlDown())) return true;   // [screens13]
         scroll = Math.max(0, scroll - (int) Math.signum(dy) * 3);
         return true;
     }
