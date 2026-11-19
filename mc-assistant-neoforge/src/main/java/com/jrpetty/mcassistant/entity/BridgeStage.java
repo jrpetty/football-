@@ -202,22 +202,22 @@ public final class BridgeStage {
         return out;
     }
 
-    /** The whole stage beside (x, z): the timber bridge, the stone bridge, the colony's bridge, the hill road and the doors. */
+    /** The whole stage beside (x, z), each scene 220 on from the last (nearer, their towns would be one town): the timber bridge, the stone bridge, the colony's bridge, the hill road and the doors. */
     static List<String> stage(ServerLevel level, BlockPos at) {
         List<String> out = new ArrayList<>();
         int x = at.getX() + 40, z = at.getZ();
         int y = Math.max(level.getSeaLevel() + 2, at.getY());
-        for (int cx = (x - 64) >> 4; cx <= (x + 260) >> 4; cx++) for (int cz = (z - 80) >> 4; cz <= (z + 620) >> 4; cz++) level.setChunkForced(cx, cz, true);
+        for (int cx = (x - 64) >> 4; cx <= (x + 260) >> 4; cx++) for (int cz = (z - 80) >> 4; cz <= (z + 980) >> 4; cz++) level.setChunkForced(cx, cz, true);
         Scene wood = road(level, x, z, y, 24, 1, Villages.Age.STONE);
         view(out, "timber", wood);
-        Scene stone = road(level, x, z + 140, y, 24, 3, Villages.Age.IRON);
+        Scene stone = road(level, x, z + 220, y, 24, 3, Villages.Age.IRON);
         view(out, "stone", stone);
-        Scene col = colony(level, x, z + 280, y);
+        Scene col = colony(level, x, z + 440, y);
         view(out, "colony", col);
-        Scene hill = hill(level, x, z + 400, y);
-        if (hill != null) out.add("VIEW hill " + (x + 110) + " " + (y + 14) + " " + (z + 400 + 22) + " " + (x + 110) + " " + (y + 5) + " " + (z + 400));
-        List<BlockPos> doors = doors(level, x, z + 520, y);
-        if (!doors.isEmpty()) out.add("VIEW doors " + (x + 12) + " " + (y + 6) + " " + (z + 520 + 26) + " " + (x + 12) + " " + (y + 1) + " " + (z + 530));
+        Scene hill = hill(level, x, z + 660, y);
+        if (hill != null) out.add("VIEW hill " + (x + 110) + " " + (y + 14) + " " + (z + 660 + 22) + " " + (x + 110) + " " + (y + 5) + " " + (z + 660));
+        List<BlockPos> doors = doors(level, x, z + 880, y);
+        if (!doors.isEmpty()) out.add("VIEW doors " + (x + 12) + " " + (y + 6) + " " + (z + 880 + 26) + " " + (x + 12) + " " + (y + 1) + " " + (z + 890));
         return out;
     }
 
