@@ -297,6 +297,10 @@ public final class ShopNeeds {
         if (v != null && probe != null) {
             if (Footways.street(v, probe.getX(), probe.getZ())) { ground = false; bad = "it stands on a street"; }
             else if (MineGround.reserved(v.id(), probe.getX(), probe.getZ())) { ground = false; bad = "it is on the mine's ground"; }
+            else {
+                com.jrpetty.mcassistant.village.Ledger.Building b = TownBlocks.buildingAt(level, v, probe);   // the town's own building
+                if (b != null) { ground = false; bad = "it is inside the town's " + Villages.spoken(b.structure()); }
+            }
         }
         out.add(new Need("ground", ground, "On ground a building may go", bad, "Not on a street and not over the mine: build it elsewhere."));
         out.add(new Need("counter", at != null, "A shop counter, where customers pay", at == null ? "customers need somewhere to pay" : "",

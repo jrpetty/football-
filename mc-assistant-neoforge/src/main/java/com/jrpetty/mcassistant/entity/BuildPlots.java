@@ -76,6 +76,7 @@ public final class BuildPlots {
                 if (!level.isLoaded(col)) return "the ground there isn't loaded";
                 if (Footways.street(v, x, z)) return "it would stand on a street";
                 if (MineGround.reserved(v.id(), x, z)) return "it would stand on the mine's ground";
+                if (TownBlocks.buildingAt(level, v, col) != null) return "a building of the town's stands there";
                 int h = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
                 lo = Math.min(lo, h);
                 hi = Math.max(hi, h);
