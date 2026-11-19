@@ -193,7 +193,7 @@ public class FixesGameTests {
         net.minecraft.world.item.ItemStack worn2 = new net.minecraft.world.item.ItemStack(Items.STONE_PICKAXE);
         worn2.setDamageValue(worn2.getMaxDamage() * 2 / 3);
         com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, worn2);
-        for (int i = 0; i < 5; i++) com.jrpetty.mcassistant.entity.Picks.issuedForTests(id, level.getGameTime());
+        for (int i = 0; i < 7; i++) com.jrpetty.mcassistant.entity.Picks.issuedForTests(id, level.getGameTime());
         int wantedAfterWear = com.jrpetty.mcassistant.entity.Toolrack.wanted(id, pick);
         com.jrpetty.mcassistant.entity.Picks.resetSmithForTests();
         String made3 = com.jrpetty.mcassistant.entity.Picks.smith(smith, level);
@@ -209,7 +209,7 @@ public class FixesGameTests {
             + made1 + " (" + stone + " stone picks in the stores); with iron: " + made2 + " (" + iron + " iron picks); the miner's worn pick changed "
             + changed + " (its best now " + best + "% left, worn picks in the stores " + wornBefore + " -> " + wornAfter + "); then: " + made3 + ", mended " + mended);
         Kit.Expect expect = new Kit.Expect();
-        expect.that(wantedAtFirst >= 3, "a spare for every two miners: " + wantedAtFirst);
+        expect.that(wantedAtFirst >= 2, "a spare for every four miners at the least: " + wantedAtFirst);
         expect.that(wantedAfterWear > wantedAtFirst, "more kept as they wear them out: " + wantedAfterWear);
         expect.that(stone >= 2, "stone picks made by the smith: " + stone);
         expect.that(iron >= 1, "iron picks once there is iron, in the Stone Age: " + iron);

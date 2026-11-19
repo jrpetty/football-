@@ -22,8 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * walked up out of the works "for another" and stood at the heart till somebody at the stores made one, and the mine was
  * a day and more sinking its first turn of the shaft. Now:
  * <ul>
- * <li><b>Kept to the need.</b> The rack keeps a spare pick for every two miners, and more where they wear them out
- *     faster: half as many again as were handed out over the last day, twelve at most.</li>
+ * <li><b>Kept to the need.</b> The rack keeps a spare pick for every four miners at the least, and as many as half a
+ *     day wears out where they wear them out faster (the last day's handing out), twelve at most.</li>
  * <li><b>Iron once there is iron.</b> Picks are made of iron as soon as the stores hold the bars for them past what the
  *     smith keeps back (and, while the town puts iron by for its age, past a good deal more): twice the wear of stone.</li>
  * <li><b>Mended.</b> A worn pick handed in is not thrown away: two of one metal are mended into one at the rack, as a
@@ -94,11 +94,12 @@ public final class Picks {
         }
     }
 
-    /** The spares the rack keeps: one for every two miners, and half as many again as the last day wore out. */
+    /** The spares the rack keeps: one for every four miners at the least, and as many as half a day wears out (the last
+     *  day's handing out), twelve at most. */
     static int wanted(UUID village, int miners) {
         long now = NOW;
-        int byWear = (lastDay(village, now) * 3 + 1) / 2;
-        return Math.min(MOST, Math.max(Math.max(1, (miners + 1) / 2), byWear));
+        int byWear = (lastDay(village, now) + 1) / 2;
+        return Math.min(MOST, Math.max(Math.max(1, (miners + 3) / 4), byWear));
     }
 
     /** The game's time when the picks were last looked at (the wear rate's clock, where no level is to hand). */

@@ -14119,7 +14119,7 @@ kept a spare for every four miners whatever they wore out, a pick was changed on
 a miner whose pick broke at the bottom of the works walked up "for another" and, the rack bare, stood idle: in the
 photographed mountain town of thirty (Wood Age, six miners, day nine) three of its six miners stood in the works with no
 pick in their packs, the last work they did five thousand ticks and more before. Now the rack keeps a spare pick for
-every two miners and half as many again as were handed out over the last day (twelve at most); picks are made of iron as
+every four miners at the least and as many as half a day wears out (the last day's handing out; twelve at most); picks are made of iron as
 soon as the stores hold the bars past what the smith keeps back (the Stone Age too, past a good deal more while the town
 puts iron by for its age); two worn picks handed in are mended into one before a new one is made; a miner setting out
 for a shift with its pick a third worn or less changes it for a fresh one off the rack and hands the worn one in (one
