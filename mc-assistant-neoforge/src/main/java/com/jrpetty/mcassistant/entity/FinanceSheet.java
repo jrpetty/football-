@@ -301,6 +301,7 @@ public final class FinanceSheet {
         Map<Long, Homes.Home> homes = Homes.homes(id);
         for (Homes.Home h : homes.values()) {
             if (h.tenure != Homes.Tenure.PLAYER || !who.equals(h.landlord)) continue;
+            if (FinanceJoin.registered(id, who, h.anchor)) continue;         // [join21] on the property register: valued there (FinanceJoin)
             int price = h.price > 0 ? h.price : Homes.price(id, h);
             String addr = Homes.address(id, v, h);
             int rent = h.members.isEmpty() ? 0 : h.rent;
@@ -334,6 +335,7 @@ public final class FinanceSheet {
             t.putString("k", "page:" + id + ":Lands");
             s.properties.add(t);
         }
+        FinanceJoin.property(level, s, id, town, day);                       // [join21] buildings on the register, and going up (orders-17)
         int rentDue = Homes.parse(Ledger.note(id, "rentdue/" + who));
         if (rentDue > 0) s.assets.add(new Row(OWED_TO_YOU, "Rent waiting from your tenants", rentDue * 100L, town, "page:" + id + ":Homes",
             "Your tenants' rent, waiting for you at " + town + "'s bank counter."));
@@ -381,6 +383,7 @@ public final class FinanceSheet {
             t.putString("k", "stall:" + id);
             s.businesses.add(t);
         }
+        FinanceJoin.shop(level, s, id, town, day);                           // [join21] the player's own shop (player-15)
         // ---- what it owes the town
         int taxes = TaxBook.owedBy(id, who);
         if (taxes > 0) {
@@ -406,7 +409,7 @@ public final class FinanceSheet {
         }
     }
 
-    private static void bill(Sheet s, String what, String town, long pence, long day, boolean overdue, String tip) {
+    static void bill(Sheet s, String what, String town, long pence, long day, boolean overdue, String tip) {   // [join21] FinanceJoin too
         CompoundTag t = new CompoundTag();
         t.putString("what", what);
         t.putString("town", town);
@@ -558,6 +561,7 @@ public final class FinanceSheet {
             else if (landlord) roles.add(net.minecraft.nbt.StringTag.valueOf("Landlord"));
             if (owner) roles.add(net.minecraft.nbt.StringTag.valueOf("Business owner"));
             if (trader) roles.add(net.minecraft.nbt.StringTag.valueOf("Stallholder"));
+            if (PlayerShops.of(id, who) != null) roles.add(net.minecraft.nbt.StringTag.valueOf("Shopkeeper"));   // [join21]
             c.put("roles", roles);
             // Its share of the land and of the firms.
             CompoundTag titles = LandTitles.titles(id);
@@ -742,6 +746,8 @@ public final class FinanceSheet {
                 Business b = Businesses.of(id, f[2]);
                 if (b != null && b.ownedBy(p.getUUID())) BusinessBooks.show(p, id, b);
             }
+            case "shop" -> PlayerLife.open(p, "shop", null);                 // [join21] its shop's screen
+            case "property" -> PropertyOffice.openOn(p, "property", null, "");   // [join21] the property office
             case "stall" -> {
                 PlayerStalls.Booth b = PlayerStalls.boothOf(id, p.getUUID());
                 if (b != null) PlayerStalls.open(p, level, v, b);

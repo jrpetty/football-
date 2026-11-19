@@ -717,4 +717,73 @@ public class PlayerLifeGameTests {
             helper.succeed();
         });
     }
+
+    // ============================================================ the shop in Your finances, and the property office
+
+    /**
+     * [join21] A shop sale shows in its owner's finances: booked as shop takings as the coin goes into the till (net of the
+     * market's toll), the shop on the Businesses tab with the week's takings, the till among the assets; the till emptied
+     * into the pack is a move (no second income). The shop is on the property register, valued there, and its Sell button
+     * opens the property office on the My property tab with the shop's building first.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pl12_shop_in_finances")
+    public static void pl12_shop_in_finances(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 4555000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 2);
+        com.jrpetty.mcassistant.entity.BuildOrders.resetForTests();
+        com.jrpetty.mcassistant.entity.PropertyMarket.resetForTests();
+        level.setDayTime(1000);
+        helper.runAtTickTime(10, () -> {
+            UUID village = folk.get(0).ownerId();
+            BlockPos heart = Kit.surface(level, x, Z);
+            ServerPlayer p = player(helper, heart.offset(7, 0, 0), 30);
+            PlayerShops.Shop s = shop(helper, level, heart, p);
+            VillageFolkEntity f = folk.get(1);
+            f.setJob(AssistantEntity.StationTask.FARM);
+            f.removeMatching(it -> it.is(net.minecraft.tags.ItemTags.HOES), 64);
+            f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            long day = level.getDayTime() / 24000L;
+            UUID who = p.getUUID();
+            var takingsCat = com.jrpetty.mcassistant.entity.PlayerFinance.Cat.SHOP;
+            long before = com.jrpetty.mcassistant.entity.PlayerFinance.span(who, day, 1).getOrDefault(takingsCat, 0L);
+            String bought = ShopCustomers.buyForTests(level, f, s);
+            helper.assertTrue(bought != null, "a farmer without a hoe buys one");
+            int paid = s.sales.get(0).price();
+            long takings = com.jrpetty.mcassistant.entity.PlayerFinance.span(who, day, 1).getOrDefault(takingsCat, 0L) - before;
+            Kit.log("[VT] pl12 sold for " + paid + ", till " + s.till + "; booked as shop takings " + takings);
+            helper.assertTrue(takings == s.till * 100L && takings > 0, "the sale in the owner's books as shop takings, net of the toll: " + takings + " vs till " + s.till);
+            CompoundTag page = com.jrpetty.mcassistant.entity.FinanceSheet.page(level, who, p, true);
+            CompoundTag row = null;
+            for (Tag t : page.getList("businesses", Tag.TAG_COMPOUND)) if (((CompoundTag) t).getString("name").equals(s.name)) row = (CompoundTag) t;
+            Kit.log("[VT] pl12 Businesses tab: " + row);
+            helper.assertTrue(row != null && row.getLong("takings") == paid * 100L && row.getLong("till") == s.till * 100L,
+                "the shop on the Businesses tab with its takings and till: " + row);
+            var sheet = com.jrpetty.mcassistant.entity.FinanceSheet.work(level, who, p);
+            helper.assertTrue(sheet.assets.stream().anyMatch(r -> r.label().startsWith("Your shop's till") && r.value() == s.till * 100L), "its till among the assets");
+            var props = com.jrpetty.mcassistant.entity.PropertyMarket.ownedBy(village, who);
+            helper.assertTrue(!props.isEmpty(), "the shop's building on the property register");
+            helper.assertTrue(sheet.assets.stream().anyMatch(r -> r.group().equals(com.jrpetty.mcassistant.entity.FinanceSheet.PROPERTY) && r.label().equals(props.get(0).name())
+                && r.value() > 0), "its building on the Property tab at the register's value");
+            // The till into the pack: a move, not income again.
+            int till = s.till;
+            PlayerLife.open(p, "shop", null);
+            PlayerLife.act(p, "shop", "till", new CompoundTag());
+            var span = com.jrpetty.mcassistant.entity.PlayerFinance.span(who, day, 1);
+            helper.assertTrue(span.getOrDefault(com.jrpetty.mcassistant.entity.PlayerFinance.Cat.TILL, 0L) == till * 100L
+                && span.getOrDefault(takingsCat, 0L) - before == takings, "the till emptied as a move: " + span);
+            long[] io = com.jrpetty.mcassistant.entity.PlayerFinance.inOut(span);
+            helper.assertTrue(io[0] == takings, "the day's income the takings once: " + io[0]);
+            // Its Sell button: the property office, the shop's building first.
+            CompoundTag what = new CompoundTag();
+            what.putString("what", "sell");
+            PlayerLife.act(p, "shop", "property", what);
+            CompoundTag office = com.jrpetty.mcassistant.entity.PropertyOffice.page(level, p);
+            ListTag rows = office.getList("rows", Tag.TAG_COMPOUND);
+            String first = rows.isEmpty() ? "" : rows.getCompound(0).getList("lines", Tag.TAG_STRING).getString(0);
+            Kit.log("[VT] pl12 the office: tab " + office.getString("tab") + ", first " + first + "; " + office.getString("msg"));
+            helper.assertTrue(office.getString("tab").equals("property") && first.startsWith(props.get(0).name()), "the property office on its building: " + first);
+            helper.succeed();
+        });
+    }
 }
