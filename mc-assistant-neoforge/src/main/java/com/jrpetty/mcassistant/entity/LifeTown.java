@@ -89,6 +89,11 @@ public final class LifeTown implements PlayerLife.Page {
             .button("Feasts and festivals", "say", LifePage.args("t", "When are the next fireworks?"));
         // what next
         page.heading("What you could do next");
+        VillageFolkEntity envoy = Envoys.waitingAt(level, v);
+        if (envoy != null && envoy.trip() != null && envoy.trip().errand != null && PlayerLeader.leads(id, p.getUUID())) {
+            page.row(new ItemStack(Items.WHITE_BANNER), "An envoy waits: " + envoy.displayNameCap() + " has come " + envoy.trip().errand.purpose, "Your answer as the town's leader", "")
+                .button("Yes", "envoy", LifePage.args("yes", true)).button("No", "envoy", LifePage.args("yes", false));
+        }
         if (!citizen) page.row(new ItemStack(Items.BLUE_BANNER), "Become a citizen", "A home in the town, a vote, a say: ask any folk \"May I live here?\"", "").button("Ask now", "citizen", null);
         if (job.isEmpty()) page.row(new ItemStack(Items.PAPER), "Find work", "Apply for an opening, or take a shift today", "").button("Jobs board", "jobs", null);
         if (s == null) page.row(new ItemStack(Items.BARREL), "Open a shop", "Any building of yours with a counter, a door and a chest", "").button("How", "shop", null);
@@ -112,6 +117,7 @@ public final class LifeTown implements PlayerLife.Page {
             case "council" -> { return sayToNearest(p, "Who's on the council?"); }
             case "say" -> { return sayToNearest(p, args.getString("t")); }
             case "buyhouse" -> { return Homes.playerBuys(level, p); }
+            case "envoy" -> { return PlayerLife.command(p, "village leader envoy " + (args.getBoolean("yes") ? "yes" : "no")); }
             case "rent" -> { return Homes.playerCollects(level, p); }
             default -> { return null; }
         }

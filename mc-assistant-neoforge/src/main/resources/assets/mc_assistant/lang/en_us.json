@@ -594,5 +594,15 @@
   "talk.mc_assistant.pardon.tip": "The leader may pardon an outlaw: freely, a friend of the town; else for a gift of coin",
   "block.mc_assistant.shop_counter": "Shop Counter",
   "block.mc_assistant.shop_sign": "Shop Sign",
-  "key.mc_assistant.life": "Your life in town"
+  "key.mc_assistant.life": "Your life in town",
+  "talk.mc_assistant.start_business": "Start a business",
+  "talk.mc_assistant.start_business.tip": "A charter of your own: pick a kind, premises, confirm. The bank lends what you're short",
+  "talk.mc_assistant.my_businesses": "My businesses",
+  "talk.mc_assistant.my_businesses.tip": "Run your firms: hands, stock, prices, money, shares",
+  "talk.mc_assistant.my_shop": "My shop",
+  "talk.mc_assistant.my_shop.tip": "Your own shop's screen: stock, prices, books, keeper",
+  "talk.mc_assistant.jobs_board": "The jobs board",
+  "talk.mc_assistant.jobs_board.tip": "Apply for an opening, be interviewed, be hired; or take a day's shift",
+  "talk.mc_assistant.my_life": "My life in town",
+  "talk.mc_assistant.my_life.tip": "Your work, shop, home, standing and what to do next (the U key)"
 }

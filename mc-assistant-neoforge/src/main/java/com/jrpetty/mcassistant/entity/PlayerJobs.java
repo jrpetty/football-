@@ -317,6 +317,23 @@ public final class PlayerJobs {
         return s == null || s.isEmpty() ? "" : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
+    /** Tests: an opening posted on the board now. Returns its number. */
+    public static int openingForTests(UUID village, String employer, String employerName, String trade, int wage, long day) {
+        LabourBook.Town tw = LabourBook.town(village);
+        LabourBook.Vacancy v = new LabourBook.Vacancy();
+        int id = 1;
+        for (LabourBook.Vacancy x : tw.vacancies) id = Math.max(id, x.id + 1);
+        v.id = id;
+        v.employer = employer;
+        v.employerName = employerName;
+        v.trade = trade;
+        v.wage = wage;
+        v.posted = day;
+        tw.vacancies.add(v);
+        LabourBook.changed();
+        return id;
+    }
+
     /** Tests. */
     public static String applyForTests(ServerLevel level, ServerPlayer p, UUID village, int id) {
         return apply(level, p, village, id);

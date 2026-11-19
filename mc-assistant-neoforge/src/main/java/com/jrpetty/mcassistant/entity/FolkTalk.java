@@ -68,6 +68,11 @@ public final class FolkTalk {
         Persona me = f.persona();
         long day = f.level().getDayTime() / 24000L;
         Persona.Opinion op = me.opinionOf(p.getUUID(), p.getName().getString());
+        // [player15] "Show me my life in town", "I'd like to start a business", the jobs board, my shop: the page opens.
+        if (topic == TalkTopic.SAY && p instanceof net.minecraft.server.level.ServerPlayer sp) {
+            String life = PlayerLife.heard(f, sp, text);
+            if (life != null) return life;
+        }
         // [caves] Said to one of the cave team: an ask of it, going along, its map, a share (CaveGuests.meant).
         if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.CAVE && CaveGuests.meant(text)) topic = TalkTopic.CAVES;
         // [cartographer] Said to the cartographer, about a map: its maps (Cartographers.talk); a map of the town from it is its copy.

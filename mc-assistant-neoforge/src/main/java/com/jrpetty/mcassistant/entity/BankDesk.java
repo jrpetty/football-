@@ -56,6 +56,19 @@ final class BankDesk implements ServicePoints.Desk {
             d.row("mortgage", "Ask", "A mortgage on this house", "A fifth down; the rest paid weekly from your account.",
                 new ItemStack(Items.TRIPWIRE_HOOK), "");
         }
+        // [player15] A business of your own (the bank lends what the charter is short of), and the town's capital market.
+        d.section("A business of your own");
+        d.row("startbiz", "Start", "Start a business", "The charter is " + Enterprise.CHARTER_FEE + " coins; the bank lends you what you're short.",
+            new ItemStack(Items.WRITABLE_BOOK), "");
+        d.section("Savings, loans and bonds").line(FolkCredit.playerLine(p, id));
+        DeskRows.amount(d.row("club_in", "Save", "Into your savings", "Interest every week.", new ItemStack(Items.GOLD_NUGGET), held <= 0 ? "You've no coin on you." : ""),
+            1, Math.max(1, held), Math.max(1, Math.min(10, held)), 1);
+        DeskRows.amount(d.row("club_out", "Draw", "Out of your savings", "", new ItemStack(Items.GOLD_INGOT), ""), 1, 1000, 10, 1);
+        DeskRows.amount(d.row("borrow", "Borrow", "A loan", "Repaid weekly, with interest.", new ItemStack(Items.PAPER), ""), 1, 500, 10, 1);
+        DeskRows.amount(d.row("club_repay", "Repay", "Pay a loan down", "", new ItemStack(Items.PAPER), held <= 0 ? "You've no coin on you." : ""), 1, Math.max(1, held), Math.max(1, Math.min(10, held)), 1);
+        DeskRows.amount(d.row("bonds", "Buy", "The town's bonds", TownBonds.line(id), new ItemStack(Items.MAP), held <= 0 ? "You've no coin on you." : ""), 1, Math.max(1, held), Math.max(1, Math.min(10, held)), 1);
+        d.row("bonds_collect", "Collect", "Your bonds' interest and rents", TownBonds.playerLine(p, id), new ItemStack(Items.EMERALD), "");
+        d.row("capital", "Open", "Land titles and shares", "Buy the title to a plot, or shares in a firm", new ItemStack(Items.FILLED_MAP), "");
         d.section("The bank").line(Bank.line(id));
         if (visit.point() != null) {
             d.row("use", "Read", "The bank's ledger", "Open on its desk for anybody to read (crouch and click it to go straight to it).",
@@ -69,6 +82,27 @@ final class BankDesk implements ServicePoints.Desk {
         ServerPlayer p = visit.player();
         UUID id = visit.village().id();
         if (action.equals("use")) return ServicePoints.useItYourself(visit);
+        // [player15] the business and capital rows
+        if (p != null && action.equals("startbiz")) {
+            PlayerLife.open(p, "start", LifePage.args("loan", true));
+            return ServicePoints.Result.said("Here's how to start one.");
+        }
+        if (p != null && action.equals("capital")) {
+            PlayerLife.open(p, "all", LifePage.args("tab", "capital"));
+            return ServicePoints.Result.said("The capital market.");
+        }
+        if (p != null && (action.startsWith("club_") || action.equals("borrow") || action.startsWith("bonds"))) {
+            int m = Math.max(0, args.getInt("amount"));
+            String said = switch (action) {
+                case "club_in" -> FolkCredit.playerDeposits(visit.level(), p, id, m);
+                case "club_out" -> FolkCredit.playerWithdraws(visit.level(), p, id, m);
+                case "club_repay" -> FolkCredit.playerRepays(visit.level(), p, id, m);
+                case "borrow" -> FolkCredit.playerBorrows(visit.level(), p, id, m);
+                case "bonds" -> TownBonds.playerBuys(visit.level(), p, id, m);
+                default -> TownBonds.playerCollects(p, id);
+            };
+            return ServicePoints.Result.done(said);
+        }
         if (p == null || !Bank.open(id)) return ServicePoints.Result.no("The bank isn't open for business yet.");
         int n = Math.max(0, args.getInt("amount"));
         String said = switch (action) {

@@ -229,6 +229,24 @@ public final class PlayerLife {
         return said.isEmpty() ? "Done." : String.join(" ", said);
     }
 
+    // ------------------------------------------------------------------ said to a folk
+
+    /** The talk menu's phrases for the player's pages: the page opens, and the folk says a word. Null for anything else. */
+    @Nullable
+    public static String heard(VillageFolkEntity f, ServerPlayer p, String text) {
+        String t = text == null ? "" : text.toLowerCase(java.util.Locale.ROOT).trim();
+        String page = t.contains("my life in town") ? "life" : t.contains("start a business") ? "start" : t.contains("my businesses") ? "firm"
+            : t.contains("jobs board") || t.contains("jobs for me") ? "jobs" : t.equals("my shop") || t.contains("my shop doing") ? "shop" : null;
+        if (page == null) return null;
+        open(p, page, null);
+        return switch (page) {
+            case "start" -> "A business of your own? Good for you. The charter's " + Enterprise.CHARTER_FEE + " coins; here's how it goes.";
+            case "jobs" -> "Here's what's on the board.";
+            case "shop" -> "Your shop? Let's see how it's doing.";
+            default -> "Here, have a look.";
+        };
+    }
+
     // ------------------------------------------------------------------ small helpers for the pages
 
     /** A marker for the player on this place (the arrow and sparks of the Earnings page), sent with the next page. */
