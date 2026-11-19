@@ -600,6 +600,27 @@ public final class FinanceSheet {
         PacketDistributor.sendToPlayer(p, new FinancePayload(kind, t));
     }
 
+    // ------------------------------------------------------------------ the operators' tool
+
+    /** /village finances [player]: an operator opens its own finances, or a player's (for scripts and the admin; the
+     *  players themselves open theirs from the game: a key, the inventory, the journal, the books, the bank). */
+    public static com.mojang.brigadier.builder.LiteralArgumentBuilder<net.minecraft.commands.CommandSourceStack> command() {
+        return net.minecraft.commands.Commands.literal("finances").requires(src -> src.hasPermission(2))
+            .executes(ctx -> {
+                open(ctx.getSource().getPlayerOrException());
+                return 1;
+            })
+            .then(net.minecraft.commands.Commands.argument("player", com.mojang.brigadier.arguments.StringArgumentType.word())
+                .executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayerOrException();
+                    CompoundTag args = new CompoundTag();
+                    args.putBoolean("open", true);
+                    args.putString("who", com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "player"));
+                    act(p, "page", args);
+                    return 1;
+                }));
+    }
+
     // ------------------------------------------------------------------ the entry point
 
     /** [purse20] Open a player's finances on its screen (other pages and buttons call this: the life-in-town page, an

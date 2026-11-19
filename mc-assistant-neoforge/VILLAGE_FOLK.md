@@ -14365,3 +14365,73 @@ towns' thirty real mornings each with their households and works spending, the o
 er05 the cycle, the figures, the trade book and the sheets kept with the world; er06 and er07 (optional) thirty days of
 a real town founded and left to itself, with the reserve and without. CycleModelTest: the cycle's arithmetic (it comes
 round, deterministic, the rate dearer in the boom, a hard shock recovered from).
+
+## Your finances: what a player has, earns, spends and owes (purse-20)
+
+A player's money is spread across the towns it deals with: coin in its pack, savings at a bank, a savings club or a
+treasury, shares on a bourse, bonds at a hall, houses and land titles, businesses and a market stall, rent and coupons
+waiting to be collected, a mortgage, loans, taxes and fines. **Your finances** gathers all of it on one screen.
+
+### The books (PlayerFinance)
+
+Every coin a town books coming out of a player's pack or going into it (the coin census's player bookings,
+`CoinCensus.playerIn` and `playerOut`) is written down in the player's own books too, with what kind of money it was and
+what for: one booking point, so nothing the census counts is missed and nothing is counted twice. About a hundred and
+forty places book this way: the bank and the savings club, the bourse and the bonds, the stall's till and rent, shift pay
+and the earnings board, the market and the shops, the tavern and the inn, fines, bail and outlaws' accounts, taxes,
+quests and bounties, rent from tenants, the treasury's own bank and works, bulk orders and supply contracts, auctions
+(the winner's price and the seller's takings, player to player too) and the rest. A few movements never pass through the
+pack and are booked where they happen: the bank's interest put on the player's account, a mortgage's week taken from it
+(and from the rent waiting), and what waits at the hall (bond coupons, a land title's rent, the price of shares sold,
+bonds repaid) — kept by kind as it builds, so that when the player collects it each part is booked as what it was.
+
+The kinds: **income** (wages, shift pay, tips, sales, stall takings, contracts and haulage, rent received, dividends and
+drawings, interest, bond coupons, rewards and bounties, prizes, refunds); **spending** (rent paid, taxes, fees and
+services, wages to its hands, goods bought, food, drink and leisure, loan repayments and interest, fines and bail, gifts
+and donations, losses and forfeits); and what only **moved between its own holdings**, which is neither (into savings and
+out, a loan taken, property and investments bought and sold, deposits put down and returned). Profit or loss is income
+less spending.
+
+Kept with the world (`mc_assistant_player_finance`), to the penny: the kinds day by day for sixty days, the ledger's last
+two hundred entries (the day and hour, what, the town, the coin), and the player's net worth, cash, assets and
+liabilities each day for sixty days (written each morning for the players about, and whenever the screen opens).
+
+### The balance sheet (FinanceSheet)
+
+Assets: coin carried and in the ender chest; bank accounts, the savings club, savings at a treasury; shares at their last
+price on the bourse (with what they cost, for the gain or loss), bonds at face, coin in a town's works; houses at their
+price and land titles at their value; businesses the player owns half or more of at book value (its till, what the town
+owes it, its stock at cost and its kit, less its loan and what it owes: `Enterprise.equity`) by its share, and the
+stall's goods at the going price; and what is owed to it (rent waiting from tenants, money at the hall, drawings
+waiting in a business's books, the stall's till, a bulk order's deposit). Liabilities: the mortgage, loans against its
+holdings, a treasury loan, taxes and fines owed, an outlaw's account, a stall's rent run out. Net worth is the one less
+the other. Bills: overdue first, then by the day due: mortgage payments (the bank's week), tax day for a citizen, the
+stall's next week of rent, a bulk order to collect, interest building on a loan.
+
+### Where you see it
+
+- **The coin beside the inventory** (E; the creative inventory too): a small tile just outside the panel's top right,
+  following it when the recipe book opens. It can be hidden (Notices tab, or `mc_assistant-ui-client.toml`).
+- **A key**, "Your finances" in Controls (unbound at first; K is suggested on the screen).
+- **The village journal** (J): the Finances tab. **The city books**: the coin in the header. **A bank's counter**: the
+  ledger book in its header. Other pages open it with `FinanceClient.openFrom(screen)` (server side:
+  `FinanceSheet.open(player)`).
+- The screen's tabs: Overview (net worth with its trend over the week, cash, income and spending this week, profit or
+  loss, net worth over sixty days, the bills due soon, the week's money by kind), Balance sheet (groups that fold, each
+  line a click from its page: the town's capital, homes, land or money page, a business's books, the stall), Income and
+  spending (each kind, this week against last), Charts (net worth, cash, income and spending over sixty days, the day
+  under the mouse), Businesses (takings, costs, profit with its trend, hands, stock, worth, its books), Property (value,
+  rent in, mortgage), Investments (shares with gain or loss, bonds with what waits at the hall), Bills, Ledger (by kind,
+  town and category) and Notices.
+- **Notices** (each can be turned off): at the start of each week, "This week: +84c income, -31c spending, net worth
+  1,204c ▲"; and once a day, the bills due within two days or overdue.
+- A player sees only its own finances. An operator can look up anybody's from the screen's header, or with
+  `/village finances <player>`.
+
+Tests: PlayerFinanceGameTests (x 5,000,000 to 5,100,000, z 90000): pf01 to pf03 every path the player-coin tests drive
+(the talk, the law, the counters: shift and treasury pay, the stall's till, rent, the bank, fines) with each player's
+pack moving by exactly what its ledger booked, every entry with a kind, fines and stall takings and rent in theirs; pf04
+the capital markets (savings in and out, a loan and its repayment, bonds bought and a coupon a week later, shares bought
+and sold and their price collected at the hall) each in its category, and the balance sheet adding up (net worth is
+assets less liabilities, its lines the holdings); pf05 the ledger capped at two hundred, sixty days kept, all of it the
+same after a save and a load, and another player refused.
