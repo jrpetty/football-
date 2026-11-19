@@ -26,11 +26,12 @@ import java.util.Set;
  * <p>[screens13] Laid out as a tree that reads at any size. Across the top, the work in hand: what the scholars are at,
  * how far, the days left (the mouse over it: who chose it, why, and the working model). Under it a bar of tools: the
  * tree or the scholars (side by side when the page is wide), a filter by state (all, open, known, locked), what is
- * typed to find one, and the zoom. The tree itself is a map to pan: a column for each step down the road of needs (the
- * ages each column spans over it), a lane for each branch, each invention a card in its state's colour (green known,
- * gold in hand with its bar, white open, grey locked), a line from each thing needed to what needs it (green from what
- * is known), the road to the card under the mouse drawn dark. Drag to pan, the wheel to scroll (Shift for across),
- * Ctrl and the wheel or the buttons to zoom; the mouse over a card gives the whole of it.
+ * typed to find one, and the zoom. The tree itself reads down the page: a column for each branch (how many of it are
+ * known at its head), a band for each step down the road of needs (the ages it spans written across it), each invention
+ * a card in its state's colour (green known, gold in hand with its bar, white open, grey locked), a line from each thing
+ * needed to what needs it (green from what is known) running in the channels between the columns, the road to the card
+ * under the mouse drawn dark. The wheel scrolls it (Shift across, Ctrl to zoom) and a drag pans it; the mouse over a
+ * card gives the whole of it.
  */
 public final class InventionsPage {
 
@@ -40,8 +41,9 @@ public final class InventionsPage {
     private static final String[] FILTERS = { "All", "Open", "Known", "Locked" };
     private static final String[] ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII" };
     /** Card sizes and gaps at the three zooms: compact, normal, large. */
-    private static final int[] CARD_W = { 60, 88, 112 }, CARD_H = { 13, 22, 26 }, GAP_X = { 14, 18, 22 }, GAP_Y = { 3, 4, 5 };
-    private static final int LANE_HEAD = 11, COL_HEAD = 11, PAD = 4;
+    private static final int[] CARD_W = { 66, 82, 112 }, CARD_H = { 13, 22, 26 }, GAP_X = { 10, 10, 16 }, GAP_Y = { 4, 4, 5 };
+    private static final int STEP_HEAD = 10, COL_HEAD = 11, PAD = 4;
+    private static int hoverBranch = -1;
     private static final int KNOWN_LINE = 0xFF4E9A3A, OPEN_LINE = 0xFF6F6F6F, LOCKED_LINE = 0xFF9A9A9A;
 
     // What the reader has chosen, kept while the books stay open (and between openings: it is only a view).
@@ -110,8 +112,10 @@ public final class InventionsPage {
         int ty = y + 17;
 
         // ---- the tools: the view, the filter, the find, the zoom
-        boolean wide = w >= 440;
-        int side = wide ? Math.max(130, w * 3 / 10) : 0;
+        // The scholars beside the tree only when the tree still has room for its cards at their usual size.
+        int side = Math.min(w * 3 / 10, w - width(1) - 6 - UiStyle.S2 - 2);
+        boolean wide = side >= 120;
+        if (!wide) side = 0;
         int treeW = wide ? w - side - UiStyle.S2 : w;
         int bx = x;
         if (!wide) {
@@ -159,37 +163,37 @@ public final class InventionsPage {
         if (h < 40) return null;
         int maxDepth = 1;
         for (Invention inv : Invention.values()) maxDepth = Math.max(maxDepth, inv.depth());
+        int innerW = w - 2 - 4, innerH = h - 2 - COL_HEAD - 4;          // room for the scroll bars
         // The zoom: as asked, or the largest that fits across, or the smallest.
         int z = zoom;
         if (z < 0) {
             z = 0;
-            for (int t = 2; t >= 0; t--) if (width(t, maxDepth) <= w - 2) { z = t; break; }
+            for (int t = 2; t >= 0; t--) if (width(t) <= innerW) { z = t; break; }
         }
         zoomShown = z;
         int cw = CARD_W[z], ch = CARD_H[z], gx = GAP_X[z], gy = GAP_Y[z];
-        // Place every card: its column by its depth, its lane by its branch, stacked within a lane at the same depth.
-        Map<Invention, Place> at = new EnumMap<>(Invention.class);
-        int[] laneTop = new int[BRANCHES.length + 1];
-        int ly = 0;
-        for (int b = 0; b < BRANCHES.length; b++) {
-            laneTop[b] = ly;
-            int[] stack = new int[maxDepth + 1];
-            int most = 1;
-            for (Invention inv : Invention.values()) {
-                if (inv.branch.ordinal() != b) continue;
-                int d = inv.depth();
-                int slot = stack[d]++;
-                most = Math.max(most, stack[d]);
-                at.put(inv, new Place(inv, PAD + (d - 1) * (cw + gx), ly + LANE_HEAD + slot * (ch + gy)));
-            }
-            ly += LANE_HEAD + most * (ch + gy) + gy;
+        int padL = gx / 2 + 2;
+        // Place every card: its column by its branch, its band by its step down the road of needs, stacked in the band.
+        int[] rows = new int[maxDepth + 1];
+        int[][] stack = new int[BRANCHES.length][maxDepth + 1];
+        for (Invention inv : Invention.values()) rows[inv.depth()] = Math.max(rows[inv.depth()], ++stack[inv.branch.ordinal()][inv.depth()]);
+        int[] bandTop = new int[maxDepth + 2];
+        int by = 0;
+        for (int d = 1; d <= maxDepth; d++) {
+            bandTop[d] = by;
+            by += STEP_HEAD + rows[d] * (ch + gy);
         }
-        laneTop[BRANCHES.length] = ly;
-        contentW = width(z, maxDepth);
-        contentH = ly + PAD;
-        // The viewport: a well, the column heads stuck along its top.
+        bandTop[maxDepth + 1] = by;
+        Map<Invention, Place> at = new EnumMap<>(Invention.class);
+        int[][] placed = new int[BRANCHES.length][maxDepth + 1];
+        for (Invention inv : Invention.values()) {
+            int b = inv.branch.ordinal(), d = inv.depth();
+            int slot = placed[b][d]++;
+            at.put(inv, new Place(inv, padL + b * (cw + gx), bandTop[d] + STEP_HEAD + slot * (ch + gy)));
+        }
+        contentW = width(z);
+        contentH = by + PAD;
         vx = x; vy = y; vw = w; vh = h;
-        int innerW = w - 2 - 4, innerH = h - 2 - COL_HEAD - 4;          // room for the scroll bars
         panX = Math.max(0, Math.min(Math.max(0, contentW - innerW), panX));
         panY = Math.max(0, Math.min(Math.max(0, contentH - innerH), panY));
         // What is typed: the first card that answers it brought into view, once, as it changes.
@@ -199,8 +203,8 @@ public final class InventionsPage {
             if (!q.isEmpty()) for (Invention inv : Invention.values()) {
                 if (!inv.title.toLowerCase(Locale.ROOT).contains(q)) continue;
                 Place p = at.get(inv);
-                if (p.x() < panX || p.x() + cw > panX + innerW) panX = Math.max(0, Math.min(Math.max(0, contentW - innerW), p.x() - PAD));
-                if (p.y() < panY || p.y() + ch > panY + innerH) panY = Math.max(0, Math.min(Math.max(0, contentH - innerH), p.y() - LANE_HEAD));
+                if (p.x() < panX || p.x() + cw > panX + innerW) panX = Math.max(0, Math.min(Math.max(0, contentW - innerW), p.x() - padL));
+                if (p.y() < panY || p.y() + ch > panY + innerH) panY = Math.max(0, Math.min(Math.max(0, contentH - innerH), p.y() - STEP_HEAD));
                 break;
             }
         }
@@ -216,42 +220,48 @@ public final class InventionsPage {
                 if (mx >= px && mx < px + cw && my >= py && my < py + ch) { hovered = p.inv(); break; }
             }
         }
-        Set<Invention> road = EnumSet.noneOf(Invention.class);
-        if (hovered != null) {
-            ancestors(hovered, road);
-            for (Invention inv : Invention.values()) if (inv.needs().contains(hovered)) road.add(inv);
-        }
+        Set<Invention> anc = EnumSet.noneOf(Invention.class);
+        if (hovered != null) ancestors(hovered, anc);
         g.enableScissor(clipX0, clipY0, clipX1, clipY1);
-        // The lanes: a faint band for every other one, the branch's name stuck to the left edge.
-        for (int b = 0; b < BRANCHES.length; b++) {
-            int top = oy + laneTop[b], bottom = oy + laneTop[b + 1];
-            if (b % 2 == 1) g.fill(clipX0, top, clipX1, bottom, 0x14000000);
-            g.fill(clipX0, bottom - 1, clipX1, bottom, 0x22000000);
-            String name = BRANCHES[b].toUpperCase(Locale.ROOT);
-            int lx = Math.max(ox + PAD, clipX0 + 3);
-            small(g, font, name, lx, top + 3, UiStyle.TEXT_FAINT);
-            InventionTree.Branch br = InventionTree.Branch.values()[b];
-            if (z > 0) small(g, font, "· " + br.about, lx + (int) (font.width(name) * 0.75F) + 3, top + 3, UiStyle.TEXT_DISABLED);
+        // The steps: a band for each, every other one shaded, its number and the ages it spans written at its head.
+        for (int d = 1; d <= maxDepth; d++) {
+            int top = oy + bandTop[d], bottom = oy + bandTop[d + 1];
+            if (d % 2 == 0) g.fill(clipX0, top, clipX1, bottom, 0x12000000);
+            if (d > 1) g.fill(clipX0, top, clipX1, top + 1, 0x22000000);
+            int lo = 9, hi = -1;
+            for (Invention inv : Invention.values()) if (inv.depth() == d) { lo = Math.min(lo, inv.age); hi = Math.max(hi, inv.age); }
+            String label = ROMAN[Math.min(ROMAN.length - 1, d - 1)] + (hi < 0 ? "" : "  \u00b7  " + ageWord(lo) + (hi > lo ? "\u2013" + ageWord(hi) : "") + " Age");
+            small(g, font, label, Math.max(ox + padL, clipX0 + 3), top + 3, UiStyle.TEXT_FAINT);
         }
-        // The lines: from each thing needed to what needs it, round the corner in the gap before its column.
+        // The lines: from the foot of each thing needed, along under it to the channel beside what needs it, down,
+        // and into its side with an arrow. The channels run between the columns, where no card stands.
         for (int pass = 0; pass < 2; pass++) {                       // the road to the hovered card last, over the rest
             for (Invention inv : Invention.values()) {
                 Place to = at.get(inv);
                 for (Invention need : inv.needs()) {
-                    boolean onRoad = hovered != null && road.contains(inv) && (road.contains(need) || need == hovered) || inv == hovered && road.contains(need);
+                    boolean onRoad = hovered != null && (need == hovered || (inv == hovered || anc.contains(inv)) && anc.contains(need));
                     if ((pass == 1) != onRoad) continue;
                     Place from = at.get(need);
                     String fs = state(byId, need), ts = state(byId, inv);
                     int colour = onRoad ? UiStyle.ACCENT : fs.equals("known") ? KNOWN_LINE : ts.equals("locked") ? LOCKED_LINE : OPEN_LINE;
                     if (!matches(byId, inv, q) || !matches(byId, need, q)) colour = UiStyle.alpha(colour, 0.35F);
-                    int sx = ox + from.x() + cw, sy = oy + from.y() + ch / 2;
-                    int tx = ox + to.x(), tyy = oy + to.y() + ch / 2;
-                    int cx = tx - gx / 2;
                     int t = onRoad ? 2 : 1;
-                    g.fill(sx, sy, cx + t, sy + t, colour);
-                    g.fill(cx, Math.min(sy, tyy), cx + t, Math.max(sy, tyy) + t, colour);
-                    g.fill(cx, tyy, tx - 2, tyy + t, colour);
-                    g.fill(tx - 3, tyy - 1, tx - 1, tyy + t + 1, colour);         // the arrow's head
+                    boolean leftward = to.x() < from.x();
+                    int chanX = ox + (leftward ? to.x() + cw + gx / 2 : to.x() - gx / 2);
+                    int sx = ox + from.x() + cw / 2 + (leftward ? -cw / 4 : -cw / 4 - 2), sy = oy + from.y() + ch;
+                    int runY = sy + Math.max(1, gy / 2);
+                    int ey = oy + to.y() + ch / 2;
+                    int ex = ox + (leftward ? to.x() + cw : to.x());
+                    g.fill(sx, sy, sx + t, runY + t, colour);                                  // down from its foot
+                    g.fill(Math.min(sx, chanX), runY, Math.max(sx, chanX) + t, runY + t, colour);   // along to the channel
+                    g.fill(chanX, Math.min(runY, ey), chanX + t, Math.max(runY, ey) + t, colour);   // down the channel
+                    if (leftward) {
+                        g.fill(ex + 2, ey, chanX + t, ey + t, colour);
+                        g.fill(ex + 1, ey - 1, ex + 3, ey + t + 1, colour);                  // the arrow's head
+                    } else {
+                        g.fill(chanX, ey, ex - 2, ey + t, colour);
+                        g.fill(ex - 3, ey - 1, ex - 1, ey + t + 1, colour);
+                    }
                 }
             }
         }
@@ -262,20 +272,24 @@ public final class InventionsPage {
             card(g, font, m, byId, p.inv(), px, py, cw, ch, z, p.inv() == hovered, matches(byId, p.inv(), q));
         }
         g.disableScissor();
-        // The column heads: the step down the road of needs, and the ages it spans.
+        // The column heads: the branches, stuck along the top.
         g.fill(x + 1, y + 1, x + w - 1, y + 1 + COL_HEAD, UiStyle.PANEL_HEADER);
         g.fill(x + 1, y + COL_HEAD, x + w - 1, y + 1 + COL_HEAD, UiStyle.EDGE_SOFT);
         g.enableScissor(x + 1, y + 1, x + w - 1, y + 1 + COL_HEAD);
-        for (int d = 1; d <= maxDepth; d++) {
-            int lo = 9, hi = -1;
-            for (Invention inv : Invention.values()) if (inv.depth() == d) { lo = Math.min(lo, inv.age); hi = Math.max(hi, inv.age); }
-            String ages = hi < 0 ? "" : ageWord(lo) + (hi > lo ? "–" + ageWord(hi) : "");
-            String label = ROMAN[Math.min(ROMAN.length - 1, d - 1)] + (z > 0 && !ages.isEmpty() ? "  " + ages : "");
-            int cx = ox + PAD + (d - 1) * (cw + gx);
-            small(g, font, UiStyle.clip(font, label, (int) ((cw + gx - 4) / 0.75F)), cx + 1, y + 3, UiStyle.TEXT_MUTED);
+        for (int b = 0; b < BRANCHES.length; b++) {
+            int cx = ox + padL + b * (cw + gx);
+            String name = BRANCHES[b];
+            int known = 0, all = 0;
+            for (Invention inv : Invention.values()) if (inv.branch.ordinal() == b) { all++; if (state(byId, inv).equals("known")) known++; }
+            String count = known + "/" + all;
+            int countW = (int) (font.width(count) * 0.75F);
+            boolean both = font.width(name) + countW + 4 <= cw;
+            g.drawString(font, UiStyle.clip(font, name, both ? cw - countW - 4 : cw - 2), cx + 1, y + 2, UiStyle.TEXT_MUTED, false);
+            if (both) small(g, font, count, cx + cw - countW - 1, y + 3, UiStyle.TEXT_FAINT);
+            if (mx >= cx && mx < cx + cw && my >= y + 1 && my < y + 1 + COL_HEAD) hoverBranch = b;
         }
         g.disableScissor();
-        // The scroll bars: down the right, along the bottom.
+        // The scroll bars: down the right, along the bottom when it is wider than the room.
         UiStyle.scrollBar(g, x + w - 5, clipY0, innerH, panY, Math.max(0, contentH - innerH), innerH);
         int maxX = Math.max(0, contentW - innerW);
         if (maxX > 0) {
@@ -284,11 +298,17 @@ public final class InventionsPage {
             g.fill(clipX0, y + h - 5, clipX0 + track, y + h - 2, 0x30000000);
             g.fill(tx, y + h - 5, tx + thumb, y + h - 2, UiStyle.EDGE);
         }
-        // The key, small, in the corner the scroll bars leave, when it all fits; else in the tooltip of the "?".
         if (hovered != null) {
             List<Component> tip = tip(byId.getOrDefault(hovered.id(), new CompoundTag()));
             tip.add(1, Component.literal(stateWords(m, byId, hovered)));
             return tip;
+        }
+        if (hoverBranch >= 0) {
+            InventionTree.Branch br = InventionTree.Branch.values()[hoverBranch];
+            hoverBranch = -1;
+            int known = 0, all = 0;
+            for (Invention inv : Invention.values()) if (inv.branch == br) { all++; if (state(byId, inv).equals("known")) known++; }
+            return List.of(Component.literal(br.title + ": " + br.about + "."), Component.literal(known + " of " + all + " known."));
         }
         return null;
     }
@@ -321,7 +341,8 @@ public final class InventionsPage {
         if (z == 0) {
             small(g, font, UiStyle.clip(font, title, (int) ((w - 7) / 0.75F)), tx, y + (h - 6) / 2, ink);
         } else {
-            g.drawString(font, UiStyle.clip(font, title, w - 7), tx, y + 3, ink, false);
+            if (font.width(title) <= w - 7) g.drawString(font, title, tx, y + 3, ink, false);
+            else small(g, font, UiStyle.clip(font, title, (int) ((w - 7) / 0.75F)), tx, y + 4, ink);   // a long name, smaller
             small(g, font, UiStyle.clip(font, sub, (int) ((w - 7) / 0.75F)), tx, y + h - 9, subInk);
         }
         if (!lit) g.fill(x, y, x + w, y + h, 0xA0D0D0D0);                // not what is filtered for or found: faded back
@@ -357,8 +378,8 @@ public final class InventionsPage {
         };
     }
 
-    private static int width(int z, int maxDepth) {
-        return PAD * 2 + maxDepth * CARD_W[z] + (maxDepth - 1) * GAP_X[z];
+    private static int width(int z) {
+        return 2 * (GAP_X[z] / 2 + 2) + BRANCHES.length * CARD_W[z] + (BRANCHES.length - 1) * GAP_X[z];
     }
 
     private static String ageWord(int age) {

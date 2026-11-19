@@ -106,10 +106,11 @@ public class StallScreen extends Screen {
         int rent = data.getInt("rent");
         if (mode.equals("let")) {
             Button take = Button.builder(Component.literal("Rent it — " + rent + " coins a week"), b -> send("rent", new CompoundTag()))
-                .bounds(x, by, inner - 96, 18).build();
+                .bounds(x, by, inner - 96, 18).build(UiButton::new);
+            ((UiButton) take).primary();                                    // [screens13] the house look
             take.active = data.getInt("coins") >= rent;
             addRenderableWidget(take);
-            addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(left + w - PAD - 90, by, 90, 18).build());
+            addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(left + w - PAD - 90, by, 90, 18).build(UiButton::new));
             return;
         }
         boolean own = mode.equals("own");
@@ -132,28 +133,28 @@ public class StallScreen extends Screen {
         if (pages() > 1) {
             int px = left + w - PAD - 34;
             addRenderableWidget(Button.builder(Component.literal("‹"), b -> { page = (page + pages() - 1) % pages(); rebuildWidgets(); })
-                .bounds(px, top + TABLE_Y - 20, 16, 12).build());
+                .bounds(px, top + TABLE_Y - 21, 16, 12).build(UiButton::new));
             addRenderableWidget(Button.builder(Component.literal("›"), b -> { page = (page + 1) % pages(); rebuildWidgets(); })
-                .bounds(px + 18, top + TABLE_Y - 20, 16, 12).build());
+                .bounds(px + 18, top + TABLE_Y - 21, 16, 12).build(UiButton::new));
         }
         if (mode.equals("view")) {
-            addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(left + w - PAD - 90, by, 90, 18).build());
+            addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(left + w - PAD - 90, by, 90, 18).build(UiButton::new));
             return;
         }
         // The till.
         int till = data.getInt("till");
         Button tillButton = Button.builder(Component.literal(till > 0 ? "Take the till" : "Till empty"), b -> send("till", new CompoundTag()))
-            .bounds(left + w - PAD - 92, top + HEAD + 2, 92, 16).build();
+            .bounds(left + w - PAD - 92 - UiStyle.S1, top + HEAD + 8, 92, 16).build(UiButton::new);
         tillButton.active = till > 0;
         addRenderableWidget(tillButton);
         int bw = (inner - 3 * 4) / 4;
         if (own) {
-            addRenderableWidget(Button.builder(Component.literal("Save prices"), b -> savePrices()).bounds(x, by, bw, 18).build());
+            addRenderableWidget(UiButton.primary(Button.builder(Component.literal("Save prices"), b -> savePrices()).bounds(x, by, bw, 18)));
         } else {
-            addRenderableWidget(Button.builder(Component.literal("Take my goods"), b -> send("goods", new CompoundTag())).bounds(x, by, bw, 18).build());
+            addRenderableWidget(UiButton.primary(Button.builder(Component.literal("Take my goods"), b -> send("goods", new CompoundTag())).bounds(x, by, bw, 18)));
         }
         Button pay = Button.builder(Component.literal((own ? "Pay a week (" : "Rent again (") + rent + "c)"), b -> send("rent", new CompoundTag()))
-            .bounds(x + bw + 4, by, bw, 18).build();
+            .bounds(x + bw + 4, by, bw, 18).build(UiButton::new);
         pay.active = data.getInt("coins") >= rent;
         addRenderableWidget(pay);
         addRenderableWidget(Button.builder(Component.literal(confirmGiveUp ? "Sure? Give it up" : "Give it up"), b -> {
@@ -163,8 +164,8 @@ public class StallScreen extends Screen {
                 return;
             }
             send("giveup", new CompoundTag());
-        }).bounds(x + 2 * (bw + 4), by, bw, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(x + 3 * (bw + 4), by, bw, 18).build());
+        }).bounds(x + 2 * (bw + 4), by, bw, 18).build(UiButton::new));
+        addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(x + 3 * (bw + 4), by, bw, 18).build(UiButton::new));
     }
 
     private void savePrices() {
@@ -224,7 +225,9 @@ public class StallScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
-        Ui.panel(g, left, top, w, h, HEAD);
+        UiStyle.shadow(g, left, top, w, h);                                  // [screens13] the house panel and header band
+        UiStyle.panel(g, left, top, w, h);
+        UiStyle.headerBand(g, left, top, w, HEAD - 2);
         int x = left + PAD, inner = w - PAD * 2;
         String mode = mode();
         String village = data.getString("village");
@@ -233,7 +236,10 @@ public class StallScreen extends Screen {
             return;
         }
         String owner = data.getString("owner");
-        g.drawString(font, Ui.clip(font, owner + "'s stall — " + village, inner - 130), x, top + 10, Ui.INK, false);
+        String head = owner + "'s stall";
+        UiStyle.title(g, font, UiStyle.clip(font, head, inner - 130), x, top + 7);
+        int hw = Math.min(UiStyle.titleWidth(font, head), inner - 130);
+        UiStyle.text(g, font, "\u00b7 " + village, x + hw + 4, top + 7, inner - 136 - hw, UiStyle.TEXT_FAINT);
         String state = data.getString("state");
         long day = data.getLong("day"), paidTill = data.getLong("paidTill");
         String pill = switch (state) {
@@ -242,23 +248,24 @@ public class StallScreen extends Screen {
             case "held" -> "Given back";
             default -> "";
         };
-        int pc = state.equals("open") ? Ui.GOOD : state.equals("due") ? Ui.WARN : Ui.BAD;
-        if (!pill.isEmpty()) Ui.pill(g, font, pill, left + w - PAD - font.width(pill) - 8, top + 9, pc);
-        // The till and the week.
+        int pc = state.equals("open") ? UiStyle.SUCCESS_FILL : state.equals("due") ? UiStyle.WARNING_FILL : UiStyle.DANGER_FILL;
+        if (!pill.isEmpty()) UiStyle.badge(g, font, pill, left + w - PAD - font.width(pill) - 6, top + 6, pc);
+        // The till and the week, on a card.
+        UiStyle.card(g, x - 2, top + HEAD + 2, inner + 2, 34, 0);
         int till = data.getInt("till");
-        g.drawString(font, "Till: " + till + (till == 1 ? " coin" : " coins"), x, top + HEAD + 6, till > 0 ? Ui.GOOD : Ui.MUTED, false);
+        g.drawString(font, "Till: " + UiStyle.coins(till) + (till > 0 ? "" : " (empty)"), x + 2, top + HEAD + 6, till > 0 ? UiStyle.SUCCESS : UiStyle.TEXT_MUTED, false);
         int md = data.getInt("marketIn");
         String week = "This week " + data.getInt("sold7") + " sold for " + data.getInt("coin7") + "c (today " + data.getInt("soldToday")
             + " for " + data.getInt("coinToday") + "c) · in all " + data.getInt("takenAll") + "c";
-        small(g, Ui.clip(font, week, (int) ((inner - 100) / 0.75)), x, top + HEAD + 18, Ui.MUTED);
+        small(g, Ui.clip(font, week, (int) ((inner - 104) / 0.75)), x + 2, top + HEAD + 18, UiStyle.TEXT_MUTED);
         String when = (md == 0 ? "Market day today: the folk are out buying." : "Market day in " + md + (md == 1 ? " day." : " days."))
             + " Rent " + data.getInt("rent") + "c a week; you have " + data.getInt("coins") + "c.";
         if (mode.equals("held")) when = "Given back: your goods are kept in its barrel for you. Take them, or rent it again.";
-        small(g, Ui.clip(font, when, (int) ((inner - 100) / 0.75)), x, top + HEAD + 27, mode.equals("held") ? Ui.WARN : Ui.MUTED);
+        small(g, Ui.clip(font, when, (int) ((inner - 104) / 0.75)), x + 2, top + HEAD + 26, mode.equals("held") ? UiStyle.WARNING : UiStyle.TEXT_MUTED);
         // The wares.
         boolean own = mode.equals("own");
-        Ui.section(g, font, own ? "Your stock, and your price for a lot" : "In the stall", x, top + TABLE_Y - 19, inner - 40);
-        if (data.getBoolean("worn")) small(g, "(worn things don't sell)", x + C_SOLD, top + TABLE_Y - 19, Ui.WARN);
+        UiStyle.heading(g, font, own ? "Your stock, and your price for a lot" : "In the stall", x, top + TABLE_Y - 20, inner - (pages() > 1 ? 60 : 0));
+        if (data.getBoolean("worn")) small(g, "(worn things don't sell)", x + C_SOLD, top + TABLE_Y - 19, UiStyle.WARNING);
         int hy = top + TABLE_Y - 9;
         small(g, "In it", x + C_COUNT, hy, Ui.FAINT);
         small(g, "Lot", x + C_LOT, hy, Ui.FAINT);
@@ -267,11 +274,12 @@ public class StallScreen extends Screen {
         small(g, "Sold 7d", x + C_SOLD, hy, Ui.FAINT);
         small(g, "The folk", x + C_NOTE, hy, Ui.FAINT);
         List<CompoundTag> list = wares();
+        UiStyle.well(g, x - 3, top + TABLE_Y - 2, inner + 4, rows * ROW_H + 2, UiStyle.PAGE);   // [screens13] the list, recessed
         for (int i = page * rows; i < Math.min(list.size(), (page + 1) * rows); i++) {
             CompoundTag ware = list.get(i);
             int ry = top + TABLE_Y + (i - page * rows) * ROW_H;
             boolean over = mouseX >= x && mouseX < x + inner && mouseY >= ry - 1 && mouseY < ry + ROW_H - 1;
-            g.fill(x - 2, ry - 1, x + inner, ry + ROW_H - 1, over ? Ui.HI : (i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT));
+            g.fill(x - 2, ry - 1, x + inner, ry + ROW_H - 1, over ? UiStyle.TILE_HOVER : (i % 2 == 0 ? UiStyle.CARD : UiStyle.PAGE));
             ItemStack icon = stackOf(ware.getString("item"), ware.getBoolean("ench"));
             if (!icon.isEmpty()) {
                 g.pose().pushPose();
@@ -293,14 +301,15 @@ public class StallScreen extends Screen {
             small(g, Ui.clip(font, judged.words(), (int) ((inner - C_NOTE) / 0.75)), x + C_NOTE, ry + 3, judged.colour());
         }
         if (list.isEmpty()) {
-            small(g, own ? "Nothing in it yet: right-click the barrel and fill it with what you'd sell." : "Nothing in it.", x, top + TABLE_Y + 2, Ui.MUTED);
+            UiStyle.empty(g, font, "Nothing in the stall yet", own ? "Right-click its barrel and fill it with what you'd sell." : "Its keeper has put nothing out.",
+                x - 3, top + TABLE_Y - 2, inner + 4, rows * ROW_H + 2);
         }
-        if (pages() > 1) small(g, (page + 1) + "/" + pages(), left + w - PAD - 52, top + TABLE_Y - 17, Ui.FAINT);
+        if (pages() > 1) small(g, (page + 1) + "/" + pages(), left + w - PAD - 54, top + TABLE_Y - 18, UiStyle.TEXT_FAINT);
         // The books: the last sales, and what was thought too dear.
         int sy = booksY();
         int half = (inner - 8) / 2;
-        Ui.section(g, font, "Sold", x, sy, half);
-        Ui.section(g, font, "Too dear", x + half + 8, sy, half);
+        UiStyle.heading(g, font, "Sold", x, sy, half);
+        UiStyle.heading(g, font, "Too dear", x + half + 8, sy, half);
         ListTag sales = data.getList("sales", Tag.TAG_COMPOUND);
         for (int i = 0; i < Math.min(SALES_LINES, sales.size()); i++) {
             CompoundTag s = sales.getCompound(i);
@@ -308,18 +317,18 @@ public class StallScreen extends Screen {
                 + ", " + s.getInt("price") + "c";
             small(g, Ui.clip(font, line, (int) (half / 0.75)), x, sy + 11 + i * 9, Ui.INK);
         }
-        if (sales.isEmpty()) small(g, "Nothing yet.", x, sy + 11, Ui.MUTED);
+        if (sales.isEmpty()) small(g, "Nothing sold yet.", x, sy + 11, UiStyle.TEXT_FAINT);
         ListTag dear = data.getList("dear", Tag.TAG_COMPOUND);
         for (int i = 0; i < Math.min(SALES_LINES, dear.size()); i++) {
             CompoundTag d = dear.getCompound(i);
             String line = d.getString("who") + ": " + d.getInt("price") + "c for " + d.getString("what") + " (going " + d.getInt("going") + "c)";
-            small(g, Ui.clip(font, line, (int) (half / 0.75)), x + half + 8, sy + 11 + i * 9, Ui.WARN);
+            small(g, Ui.clip(font, line, (int) (half / 0.75)), x + half + 8, sy + 11 + i * 9, UiStyle.WARNING);
         }
-        if (dear.isEmpty()) small(g, "Nobody's turned anything down.", x + half + 8, sy + 11, Ui.MUTED);
+        if (dear.isEmpty()) small(g, "Nobody's turned anything down.", x + half + 8, sy + 11, UiStyle.TEXT_FAINT);
     }
 
     private void drawLet(GuiGraphics g, int x, int inner, String village) {
-        g.drawString(font, Ui.clip(font, "A stall to let — " + village, inner), x, top + 10, Ui.INK, false);
+        UiStyle.title(g, font, Ui.clip(font, "A stall to let — " + village, inner), x, top + 7);
         int rent = data.getInt("rent"), coins = data.getInt("coins"), md = data.getInt("marketIn");
         String[] lines = {
             "A stall of your own on the square: " + rent + " coins a week, paid to the village's treasury. You have " + coins + ".",
