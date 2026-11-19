@@ -181,8 +181,8 @@ public final class InWorld implements PlayerLife.Page {
         return l.startsWith("assistant") || l.startsWith("emotecape");
     }
 
-    static final String[][] TABS = { { "work", "Work" }, { "money", "Money" }, { "capital", "Capital" }, { "business", "Shops & business" },
-        { "civic", "Town & civic" }, { "home", "Home & belonging" }, { "info", "The town's books" } };
+    static final String[][] TABS = { { "work", "Work" }, { "money", "Money" }, { "capital", "Capital" }, { "business", "Shops" },
+        { "civic", "Civic" }, { "home", "Home" }, { "info", "Books" } };
 
     @Override
     public LifePage build(ServerPlayer p, PlayerLife.Ctx c) {

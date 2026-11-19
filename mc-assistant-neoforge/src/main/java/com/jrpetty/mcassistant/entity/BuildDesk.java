@@ -302,7 +302,9 @@ public final class BuildDesk {
             if (st != null && !st.isAir() && st.getBlock().asItem() != net.minecraft.world.item.Items.AIR) {
                 Block b = st.getBlock();
                 boolean had = Crafts.take(level, v, s -> s.is(b.asItem()), 1);
-                if (!had) {
+                String itemKey = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(b.asItem()).toString();
+                CompoundTag bought = t.getCompound("boughtIn");
+                if (!had && !bought.getBoolean(itemKey)) {
                     long since = t.getLong("waitSince");
                     if (since == 0) { t.putLong("waitSince", tick); since = tick; }
                     if (tick - since < WAIT) {
@@ -311,6 +313,8 @@ public final class BuildDesk {
                         waiting = need + " " + new ItemStack(b.asItem()).getHoverName().getString().toLowerCase(Locale.ROOT);
                         break;
                     }
+                    bought.putBoolean(itemKey, true);                         // waited long enough: bought in from now on
+                    t.put("boughtIn", bought);
                 }
                 t.putLong("waitSince", 0);
             }

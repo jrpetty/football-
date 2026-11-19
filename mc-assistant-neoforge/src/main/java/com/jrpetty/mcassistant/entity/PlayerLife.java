@@ -87,6 +87,7 @@ public final class PlayerLife {
 
     /** Open a page for the player, with its arguments. */
     public static void open(ServerPlayer p, String page, @Nullable CompoundTag args) {
+        ServicePoints.closed(p);                                            // a counter's screen it came from is done with
         Ctx c = ctx(p);
         if (!PAGES.containsKey(page)) page = "life";
         boolean resume = (args == null || args.isEmpty()) && c.page.equals(page) && !c.args.isEmpty();   // back where you were

@@ -651,6 +651,12 @@ public class PlayerLifeGameTests {
             PlayerLife.act(p, "life", "say", say);
             Kit.log("[VT] pl11 stand: " + PlayerLife.messageForTests(p));
             helper.assertTrue(!PlayerLife.messageForTests(p).startsWith("!"), "a folk heard it");
+            // The talk menu's own phrases open the player's pages (the clerk, the elder, any folk).
+            String said = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk.get(1), p, com.jrpetty.mcassistant.entity.TalkTopic.SAY, "I'd like to start a business");
+            Kit.log("[VT] pl11 start a business, in talk: " + said + " -> page " + PlayerLife.ctx(p).page);
+            helper.assertTrue(PlayerLife.ctx(p).page.equals("start") && said.contains("charter"), "\"I'd like to start a business\" opens the flow: " + said);
+            com.jrpetty.mcassistant.entity.FolkTalk.answer(folk.get(1), p, com.jrpetty.mcassistant.entity.TalkTopic.SAY, "Any jobs for me on the board?");
+            helper.assertTrue(PlayerLife.ctx(p).page.equals("jobs"), "the jobs board from talk");
             helper.succeed();
         });
     }
