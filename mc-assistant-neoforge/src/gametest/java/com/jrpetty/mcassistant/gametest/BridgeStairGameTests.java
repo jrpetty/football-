@@ -87,7 +87,12 @@ public class BridgeStairGameTests {
         int z0 = Math.min(from.getZ(), to.getZ()) - 12, z1 = Math.max(from.getZ(), to.getZ()) + 12;
         BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, from, to, s.river() - 14, s.river() + s.width() + 13, s.y() - 6, s.y() + 8, z0, z1);
         String walked = folkWalk(level, s.a(), onLine(level, line, s.river() - 6), onLine(level, line, s.river() + s.width() + 5));
-        Kit.log("[VT] " + name + " " + c + "; folk " + walked);
+        // Nothing dropped loose by the building: whatever came up went into the stores.
+        List<net.minecraft.world.entity.item.ItemEntity> loose = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+            new AABB(s.river() - 14, s.y() - 8, z0, s.river() + s.width() + 13, s.y() + 10, z1));
+        Kit.log("[VT] " + name + " " + c + "; folk " + walked + "; loose items " + loose.size()
+            + (loose.isEmpty() ? "" : " " + loose.get(0).getItem() + " at " + loose.get(0).blockPosition().toShortString()));
+        helper.assertTrue(loose.isEmpty(), name + ": nothing dropped loose: " + loose.size());
         helper.assertTrue(c.walked && "ok".equals(walked), name + ": walked dry across: audit " + c.walked + ", folk " + walked);
         return c;
     }
@@ -193,13 +198,19 @@ public class BridgeStairGameTests {
             helper.assertTrue(doors.size() == 4, "four houses");
             BridgeStairAudit.Counts all = new BridgeStairAudit.Counts();
             all.walked = true;
+            int earth = 0;
             for (BlockPos d : doors) {
+                // No earth showing under or beside a flight: everything between the door's level and the ground there stone.
+                for (int k = 1; k <= 4; k++) for (int dx = -1; dx <= 1; dx++) for (int yy = y; yy < d.getY(); yy++) {
+                    if (level.getBlockState(new BlockPos(d.getX() + dx, yy, d.getZ() + k)).is(net.minecraft.tags.BlockTags.DIRT)) earth++;
+                }
                 BlockPos out = d.south(), far = new BlockPos(d.getX(), y, d.getZ() + 7);
                 BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, out, far, d.getX() - 3, d.getX() + 3, y - 3, y + 6, d.getZ() + 1, d.getZ() + 8);
                 Kit.log("[VT] bs05 door at " + d.toShortString() + " (" + (d.getY() - y) + " up): " + c);
                 all.add(c);
             }
-            Kit.log("[VT] bs05 doors all " + all);
+            Kit.log("[VT] bs05 doors all " + all + "; earth showing by the flights " + earth);
+            helper.assertTrue(earth == 0, "no earth showing under or beside a flight: " + earth);
             helper.assertTrue(all.walked, "every door walked to: " + all);
             helper.assertTrue(all.fullSteps == 0 && all.wrongStairs == 0 && all.mixed == 0, "door steps as stairs, one material: " + all);
             helper.succeed();

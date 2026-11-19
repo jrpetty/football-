@@ -520,7 +520,10 @@ public final class BridgeKit {
             if (!was.getFluidState().isEmpty() && put.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED)) {
                 put = put.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true);
             }
-            level.setBlock(p.pos(), put, Block.UPDATE_ALL);
+            // A pier's block set without stirring what is round it: the river bed's sand or gravel under it, nudged, can
+            // fall away into a hollow under the bed and come up through the water as loose items.
+            level.setBlock(p.pos(), put, p.kind() == 'P' || p.kind() == 'A' && !was.getFluidState().isEmpty()
+                ? Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE : Block.UPDATE_ALL);
             laid++;
             plan.cursor++;
         }

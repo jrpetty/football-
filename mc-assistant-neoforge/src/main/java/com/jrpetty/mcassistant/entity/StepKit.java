@@ -12,6 +12,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Half;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * [bridges18] The town's one way of taking a way up a block: a stair, facing the climb, in the way's own stone, never a
@@ -100,11 +102,13 @@ public final class StepKit {
         BlockPos door = d.pos();
         Direction out = d.out();
         int prev = door.getY(), made = 0;
+        List<Integer> feet = new ArrayList<>();
         for (int k = 1; k <= DoorWays.MOST_STEPS + 1; k++) {
             BlockPos col = door.relative(out, k);
             if (!level.hasChunk(col.getX() >> 4, col.getZ() >> 4)) break;
             int f = feet(level, col, prev);
             if (f == Integer.MIN_VALUE || Math.abs(f - prev) > 1) break;
+            feet.add(f);
             if (f == prev - 1 && k > 1) {
                 // Down a step going out: the place before it (the doorstep, or the step above) a stair facing the door.
                 BlockPos hi = door.relative(out, k - 1).atY(prev - 1);
@@ -115,7 +119,65 @@ public final class StepKit {
             }
             prev = f;
         }
+        if (!feet.isEmpty()) support(level, v, door, out, feet);
         return made;
+    }
+
+    /** Earth or nothing: what may be under or beside a flight and is made good in its stone. */
+    private static boolean fill(BlockState st) {
+        if (st.hasBlockEntity()) return false;
+        return st.isAir() || st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.DIRT) || st.is(Blocks.DIRT_PATH)
+            || st.is(Blocks.GRAVEL) || st.is(Blocks.SAND);
+    }
+
+    /** A cobblestone out of the stores and into this place, what was there going back; false if the stores have none. */
+    private static boolean cobble(ServerLevel level, Villages.Village v, BlockPos at, BlockState want, Item cost) {
+        BlockState was = level.getBlockState(at);
+        if (was.getBlock() == want.getBlock()) return true;
+        if (!Crafts.take(level, v, s -> s.is(cost), 1) && !Crafts.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return false;
+        Item back = BridgeKit.back(was);
+        if (back != Items.AIR) Crafts.giveBack(level, v, back, 1);
+        level.setBlock(at, want, Block.UPDATE_ALL);
+        return true;
+    }
+
+    /**
+     * A door's flight made good in its stone: everything under each step that stands above the ground, down to the ground,
+     * cobblestone (no earth showing under or beside the stairs); and where a step stands more than a block over the
+     * ground beside it, a cheek on that open side, cobblestone to the ground and a cobblestone wall on it.
+     */
+    private static void support(ServerLevel level, Villages.Village v, BlockPos door, Direction out, List<Integer> feet) {
+        int ground = feet.get(feet.size() - 1) - 1;                      // where the way meets the ground: the ground's top
+        BlockState stone = Blocks.COBBLESTONE.defaultBlockState();
+        for (int i = 0; i < feet.size(); i++) {
+            BlockPos col = door.relative(out, i + 1);
+            int floor = feet.get(i) - 1;
+            if (floor <= ground) continue;
+            // Under the step: down to the ground's height, and on through any hollow under that to something solid.
+            for (int y = floor - 1, n = 0; y > ground - 4 && n < 8; y--, n++) {
+                BlockPos at = col.atY(y);
+                BlockState st = level.getBlockState(at);
+                if (y <= ground && !(st.isAir() || st.canBeReplaced())) break;
+                if (!fill(st)) {
+                    if (y <= ground) break;
+                    continue;
+                }
+                if (!cobble(level, v, at, stone, Items.COBBLESTONE)) return;
+            }
+            BlockState top = level.getBlockState(col.atY(floor));
+            if (top.is(net.minecraft.tags.BlockTags.DIRT) && !cobble(level, v, col.atY(floor), stone, Items.COBBLESTONE)) return;
+            // The cheeks, on an open side with a drop of more than a block.
+            for (Direction side : new Direction[]{ out.getClockWise(), out.getCounterClockWise() }) {
+                BlockPos s = col.relative(side);
+                if (!(fill(level.getBlockState(s.atY(floor))) && Footways.passable(level, s.atY(floor + 1)) && Footways.passable(level, s.atY(floor + 2)))) continue;
+                int sideGround = floor;
+                while (sideGround > floor - 6 && fill(level.getBlockState(s.atY(sideGround)))
+                    && !level.getBlockState(s.atY(sideGround)).is(net.minecraft.tags.BlockTags.DIRT)) sideGround--;
+                if (floor - sideGround < 2) continue;                            // a block's drop or less: no cheek wanted
+                for (int y = sideGround + 1; y <= floor; y++) if (!cobble(level, v, s.atY(y), stone, Items.COBBLESTONE)) return;
+                if (!cobble(level, v, s.atY(floor + 1), Blocks.COBBLESTONE_WALL.defaultBlockState(), Items.COBBLESTONE_WALL)) return;
+            }
+        }
     }
 
     // ------------------------------------------------------------------ on a road

@@ -51,6 +51,7 @@ public final class BridgeStage {
 
     /** A river from x0 to x1 the whole way from z0 to z1: its water's top at y - 1, three deep, a sand bed. */
     public static void river(ServerLevel level, int x0, int x1, int z0, int z1, int y) {
+        box(level, x0 - 1, x1 + 1, y - 6, y - 5, z0, z1, Blocks.STONE.defaultBlockState());   // nothing under the bed to fall into
         box(level, x0, x1, y - 4, y - 4, z0, z1, Blocks.SAND.defaultBlockState());
         box(level, x0, x1, y - 3, y - 1, z0, z1, Blocks.WATER.defaultBlockState());
     }
@@ -195,7 +196,7 @@ public final class BridgeStage {
         boolean was = TownJobs.instantNow();
         TownJobs.instantForTests(true);
         try {
-            for (int i = 0; i < 16; i++) DoorWays.tick(level, v);
+            for (int i = 0; i < 48; i++) DoorWays.tick(level, v);
         } finally {
             TownJobs.instantForTests(was);
         }
