@@ -525,25 +525,13 @@ public final class FinanceSheet {
         switch (action) {
             case "page" -> {
                 String name = args.getString("who");
-                UUID who = p.getUUID();
-                Player online = p;
-                if (!name.isEmpty() && !name.equalsIgnoreCase(p.getGameProfile().getName())) {
-                    if (!p.hasPermissions(2)) {
-                        send(p, FinancePayload.SAID, said("Only an operator may look at another player's finances."));
-                        return;
-                    }
-                    ServerPlayer other = p.server.getPlayerList().getPlayerByName(name);
-                    if (other != null) { who = other.getUUID(); online = other; }
-                    else {
-                        UUID known = PlayerFinance.byName(name);
-                        if (known == null) {
-                            send(p, FinancePayload.SAID, said("No books for a player called " + name + "."));
-                            return;
-                        }
-                        who = known;
-                        online = null;
-                    }
+                String refused = refusal(p, name);
+                if (refused != null) {
+                    send(p, FinancePayload.SAID, said(refused));
+                    return;
                 }
+                UUID who = whose(p, name);
+                Player online = who.equals(p.getUUID()) ? p : p.server.getPlayerList().getPlayer(who);
                 CompoundTag page = page(level, who, online, who.equals(p.getUUID()));
                 page.putBoolean("op", p.hasPermissions(2));
                 page.putBoolean("open", args.getBoolean("open"));
@@ -552,6 +540,25 @@ public final class FinanceSheet {
             case "link" -> link(p, level, args.getString("k"));
             default -> { }
         }
+    }
+
+    /** Why this player may not see the finances it asked for (another's, by name), or null if it may. Only an operator
+     *  sees another player's. */
+    @Nullable
+    public static String refusal(ServerPlayer asker, String name) {
+        if (name == null || name.isEmpty() || name.equalsIgnoreCase(asker.getGameProfile().getName())) return null;
+        if (!asker.hasPermissions(2)) return "Only an operator may look at another player's finances.";
+        if (asker.server.getPlayerList().getPlayerByName(name) == null && PlayerFinance.byName(name) == null) return "No books for a player called " + name + ".";
+        return null;
+    }
+
+    /** Whose finances a (permitted) ask is for. */
+    public static UUID whose(ServerPlayer asker, String name) {
+        if (name == null || name.isEmpty() || name.equalsIgnoreCase(asker.getGameProfile().getName())) return asker.getUUID();
+        ServerPlayer other = asker.server.getPlayerList().getPlayerByName(name);
+        if (other != null) return other.getUUID();
+        UUID known = PlayerFinance.byName(name);
+        return known != null ? known : asker.getUUID();
     }
 
     /** A row's link: the town's books at a page, a business's books, the player's stall. Only its own. */

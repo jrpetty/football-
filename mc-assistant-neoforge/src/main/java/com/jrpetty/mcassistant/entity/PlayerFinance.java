@@ -142,6 +142,7 @@ public final class PlayerFinance {
             while (ledger.size() > LEDGER) ledger.remove(0);
             me.put("ledger", ledger);
             me.putLong("seq", me.getLong("seq") + 1);
+            if (cash) me.putLong("cashSum", me.getLong("cashSum") + pence);   // every booked coin through the pack, all time
             dirty();
         } catch (RuntimeException ex) {
             LOG.warn("[purse20] could not book a player's flow: {}", ex.toString());
@@ -462,6 +463,16 @@ public final class PlayerFinance {
         CompoundTag d = sub(days, Long.toString(day));
         d.putLong(cat.name(), d.getLong(cat.name()) + pence);
         prune(days, today());
+    }
+
+    /** Tests: every booked coin through the player's pack since its records began (pennies, signed). */
+    public static long cashSumForTests(UUID player) {
+        return player(player).getLong("cashSum");
+    }
+
+    /** Tests: how many entries have ever been booked for the player. */
+    public static long seqForTests(UUID player) {
+        return player(player).getLong("seq");
     }
 
     public static int daysKeptForTests(UUID player) {
