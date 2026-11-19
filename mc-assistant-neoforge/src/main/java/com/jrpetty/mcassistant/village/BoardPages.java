@@ -73,7 +73,9 @@ public final class BoardPages {
         // [capital] The town's capital: the savings club and its loans, the bourse, the land register, the bonds (CapitalPage).
         "Capital",
         // [links12] The region round the town: the towns, the roads and rails between them, how each stands with us, the league table (RegionPage).
-        "Region" };
+        "Region",
+        // [econ4] The Economy dashboard: the price index, wages, work, the treasury, money, trade between towns, the cycle (EconomyPage).
+        "Dashboard" };
 
     /** One of the board's sections: its name, its icon, what it holds, and its pages by name. */
     public record Section(String name, Item icon, String tip, String... pages) {}
@@ -84,7 +86,7 @@ public final class BoardPages {
         new Section("People", Items.PLAYER_HEAD, "Every folk, how they live together, their homes and schooling",
             "Folk", "Society", "Growth", "Homes", "School", "Interviews"),
         new Section("Economy", Items.EMERALD, "Money, what is made and sold, the prices, the jobs and the stores",
-            "Money", "Production", "Prices", "Shops", "Jobs", "Stock", "Stores", "Trade", "Auction", "Trading Post", "Earnings", "Harbour",
+            "Dashboard", "Money", "Production", "Prices", "Shops", "Jobs", "Stock", "Stores", "Trade", "Auction", "Trading Post", "Earnings", "Harbour",
             "Businesses", "Market", "Capital"),                                                                // [business-books] [econ-1a] [capital]
         new Section("Town", Items.BRICKS, "Its buildings, the roads and rails, the maps, the caves and the watch",
             "Buildings", "Transport", "Roads", "Maps", "Caves", "Nether", "Watch", "Cases"),

@@ -123,6 +123,8 @@ public final class MarketMaker {
         IouBook.traceForTests(false);                     // [econ-1d]
         TownBudget.resetForTests();                       // [econ-1d]
         CapitalBook.resetForTests();                      // [capital]
+        EconRegion.resetForTests();                       // [econ4]
+        EconCycle.resetForTests();                        // [econ4]
     }
 
     // ------------------------------------------------------------------ prices

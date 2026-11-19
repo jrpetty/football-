@@ -559,6 +559,7 @@ public final class Market {
         MarketMaker.morning(level, v, day);              // [econ-1a] the market's morning: Market Opening Day, store credit, its surplus, the privatisation
         if (CoinCensus.probing()) CoinCensus.probe("the morning, after MarketMaker.morning");   // [econ-1a] the drift hunt (tests)
         Businesses.morning(level, v, day);              // [business-books] every business's morning: its stock, rent, credit, drawings, orders
+        EconCycle.morning(level, v, day);                // [econ4] the statistics, the treasury's reserve, the merchants between towns, the cycle
         CapitalBook.beforeWages(level, v, day);          // [capital] the bonds the town needs sold: its IOUs funded, its essential wages found
         payWages(level, v);
         Bank.beforeRent(level, v, day);                  // the bank: a saver short of the rent draws it out first (Bank)

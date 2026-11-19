@@ -135,6 +135,8 @@ public final class FolkTalk {
         if (roads != null) return manner(f, roads);
         String tradeWorld = TradeWorld.talk(f, p, topic, text, typed);      // [trade-world] the ships, the roads, "won't you stay?"
         if (tradeWorld != null) return manner(f, tradeWorld);
+        String times = typed ? EconCycle.talk(f, p, text) : null;          // [econ4] prices, trade and the times
+        if (times != null) return manner(f, times);
         String lower = text.toLowerCase(Locale.ROOT);
         if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
             return manner(f, apology(f, p, op, day));
@@ -503,6 +505,7 @@ public final class FolkTalk {
         if (!f.isBaby()) line(sb, "Interviews", Interviews.cardLine(f));      // [interviews] shortlisted; chosen, or not and why
         if (!f.isBaby()) line(sb, "Work", LabourMarket.cardLine(f));          // [labour] its employer and terms, or out of work
         if (!f.isBaby()) line(sb, "Capital", CapitalReport.cardLine(f));        // [capital] its savings, shares and bonds
+        if (!f.isBaby()) line(sb, "The times", EconCycle.cardLine(f));         // [econ4] what it says of prices and the times, untyped
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
         // Its horses: the rancher's gentling and the stable, a rider's horse and rides (Stables).
         String horses = f.isBaby() ? null : Stables.card(f);

@@ -14249,3 +14249,119 @@ track and on gravel, the market's API, a rival's toll, an army's march by the ro
 them and lost trade, the tariffs, an embargo by the town that lost the trade (no talks, the route shut), lifted when
 relations mend; rg05 a pact and then an alliance out of good trade; rg06 the survey and the rivalry kept over a save and
 a restart, the page and the command, a sleeping town's gang's steps laid on waking.
+
+## Towns trading on the market, and prices with booms and busts (econ-4)
+
+### Trade between towns (EconRegion)
+
+- **What a town knows of the others' prices.** Each morning every town's market writes its price sheet: its ask, its bid
+  and its stock of each staple that travels (wheat, bread, roots, apples, cooked meat and fish, the common logs and planks,
+  cobblestone and stone, coal and charcoal, iron and copper, raw and smelted, white wool, leather, glass, sand and clay).
+  A town knows a partner's sheet only as its traders bring it in: as it stood as many days ago as a laden cart takes on
+  the road between them (two thousand four hundred blocks a day, a day at the least). Its partners are the towns it has a
+  road to (its neighbours, its colony, its mother), not at war with it, within six thousand blocks; the length of the
+  road is the road's own where RoadWorks lays one out, else a third over the straight line.
+- **The merchant's sum.** In its morning the market, as merchant, looks over each partner's asks as it knows them, adds
+  the carriage (a fiftieth of a coin a piece for every thousand blocks of road) and its own gate toll (three in the hundred
+  of the value; ten between rivals), and buys where that comes to under nine tenths of the thing's worth at home. The deal
+  is struck at the seller's ask on the day (a stale sheet that no longer pays is let go), for no more than the seller
+  spares over what it keeps (thirty-two and two a head), no more than half the difference between the two towns' stocks
+  (so the gap narrows rather than turns over), a wagon's load (sixty-four) a ware, three wares a partner a day, and a
+  quarter of the market's cash a morning.
+- **Every coin booked, both sides.** The buyer's market pays the seller's market for the goods and the seller's carters
+  (its treasury) for the carriage there and then, booked as the buyer's IMPORT and the seller's EXPORT in the coin census
+  in the same tick; the toll goes into the buyer's own treasury (its budget's "gate tolls"). The goods leave the seller's
+  stores on the market's own account (nobody's household or firm charged) and go by the town's wagon or by the road
+  (Shipments), and come into the buyer's stores as its market's own stock, sold to its folk at its own ask. A load lost on
+  the road is refunded, goods and carriage, booked back both sides. Paying for a shipment on delivery (the trade deals'
+  wagon loads, a player's haul) now books its IMPORT and EXPORT too: those coins had moved between two treasuries with
+  nothing in either census.
+- **What it does.** The importer's stock goes up and the exporter's down, so the next morning's prices (by supply and
+  demand) move toward each other: a town short of a thing imports it, one with a glut exports it, and the gap between two
+  linked towns narrows. Each load that arrives warms the two towns' relations a point (one a day between a pair at most),
+  and a town's first deal with a partner is "a new trade route", a lift to its trade for five days. The trade book keeps
+  each day's trade in and out by ware and by partner for a month.
+
+### The price index, the money supply and the cycle (EconIndex, CycleModel, EconCycle)
+
+- **The figures, each morning.** A household's basket (bread four parts; potatoes, carrots and cooked beef two; wheat,
+  beetroot, apples, cooked cod, logs, cobblestone, coal, iron and wool one each) at today's prices, chain-linked from a
+  hundred on the first morning (a town rising to a village's or a town's price level is not counted as inflation), and
+  inflation over the week; output, the mean wage, those out of work, the population; the money supply (every coin the
+  census counts, the savings club's chest set aside and its savers' deposits counted instead), the club's deposits, the
+  firms' loans, the town's debt (IOUs to its market and its bonds); the treasury; the trade in and out. Sixty mornings
+  are kept.
+- **The cycle.** The council's reckoners keep the town's cycle as an economist would (Goodwin's growth cycle with Minsky's
+  debt, as Keen wrote it, a day a step): employment, the wage share and the firms' debt move one another. Profit is what
+  output leaves after wages and interest; the firms invest by how good it is, borrowing what profit does not pay for, and
+  investment makes output and work grow. So a **boom** (profits good, credit and investment growing, hands taken on), then
+  wages and prices bid up as hands grow scarce and the boom's debt costs more as the council raises its rate: **slowing**;
+  investment falls off and hands are laid off: the **slump**; with hands idle wages fall back, the rate is cut, debts are
+  paid down: **recovering**, and the next boom, about a month round. Nothing in it is rolled on a die. The town's own
+  numbers feed it: its employment as it changes (five in the hundred more out of work moves the reckoning two and a half),
+  its lenders' new loans (the firms' debt grows by them), and real shocks, each for a few days: a drought or a harvest
+  failed (yesterday's crops a third of their usual), a mine's vein run out (its ore under a third of its usual), a raid,
+  a war, a new trade route. Bounded: employment never under four fifths, the wage share and the debt held in their
+  bands, the rate between a half and ten in the hundred; a hard shock brings a slump and the town comes out of it.
+- **The council reacts** as a central bank and a government would. Its **rate** follows employment and the town's
+  inflation (a Taylor rule); the savings club lends over it (its weekly rate moves by the council's margin), so credit is
+  dear in a boom and cheap in a slump; the chronicle has each move of half a point ("the council raised the town's rate to
+  5.5 in the hundred a year, to cool the boom"). Its **works** may owe their market a quarter more in a slump, a tenth more
+  as it recovers, and fifteen in the hundred less in a boom. On its **taxes**, a slump with the treasury sound (five days'
+  wages and more) moves it to ease one; a boom running prices up four in the hundred a week, to raise the profits tax or
+  the toll. The **minimum wage** goes up a coin when prices are up an eighth since it was last set, in a boom or as it
+  slows (weekly). And a folk wants less nerve to found a business in a boom and more in a slump.
+- **What the folk say.** Asked about prices, trade, the times or the economy, a folk answers from its town's times
+  ("Hard times. I've no work, and few are hiring." "Everything's dearer than it was a week back, nine in the hundred, and
+  the wages chase it.") and the council's rate; the same answer is on every grown folk's card ("The times"), so nothing
+  needs typing. The chronicle has each turn of the times. Everything a player sees of it is in the books' Dashboard page
+  and the folk's cards; `/village economy` is the same in words, an extra.
+
+### The treasury that ran dry
+
+long-6's real-world towns grew from eight to thirty and more folk by day thirty while their treasuries ran from four
+and five hundred coins at day ten to nought by day nineteen, with six hundred coins and more in the folk's purses and
+"the wages are hardly paid" in their contentment. Their books say why: the new folk's houses were built by the town's
+works on IOUs to the market; every tax and every house rent, as it came in, went first to pay those IOUs ("Money over
+the last 7 days: 568 in, 109 out ... the treasury up 0 to 0"); and the market, paid, sat on its surplus till its
+weekly day. The treasury's own wages (the watch, the town's own hands) were paid short in between. The town keeps a
+**reserve** now: short of two days of its wage bill in the morning, before the wages, the market pays the treasury its
+cash over its float there and then (both are the town's; at the week's end what the town owes it on its IOUs is set
+against its surplus as before), and three mornings running short, the council is called together on its taxes without
+waiting for its day ("the council, called together on the empty treasury, voted ..."). Measured: two grown towns
+of twenty alike, thirty real mornings each with their households buying bread and their works taking stone (er04): the
+one keeping its reserve at 64 coins at its lowest and never at nought (short of its reserve on 21 mornings, made up out
+of the market's surplus), the old way at nought on a morning; the census at nought drift. A town of sixteen founded and
+left to itself for thirty days under the market (er06), growing to a hundred folk and sixty-three buildings: its treasury
+at 9 coins at its lowest from day ten and never at nought on the last ten mornings (long-6's real towns: nought from day
+nineteen). Its times, as they came: the market open on day five, a boom (days 5 to 7), slowing (8 to 11, prices up 12
+to 18 in the hundred a week as a hamlet of sixteen became a town of ninety, the council's rate up to 7.3 in the
+hundred), a slump (12 to 16, prices falling back), recovering (17), a boom again (18 to 23), slowing (24 to 27) and a
+slump (28 to 30); the index 100, 138 at its highest on day 21, 114 on day 30. The same town without the reserve (er07, cut off at day
+22 by the run's time): its treasury at nought on day 17, three coins on day 18 and twelve on day 19, the IOUs at 811 coins.
+
+### Where you see it
+
+- **The Economy dashboard** (the town's books, Economy, the first page, "Dashboard"): the times as a badge (boom green,
+  slowing amber, slump red, recovering blue) with the week's prices, the index and the council's rate; twelve line charts
+  of the last sixty mornings (the price index, output, the mean wage, those out of work, the treasury, the town's debt,
+  the money supply, the population, the reckoning's employment, the council's rate, the trade bought in and sold out),
+  each with today's figure and, the mouse over it, its lowest, highest and a week ago; a strip of the times morning by
+  morning; then the dashboard in words and the week's trade by ware and by partner town.
+- **`/village economy`**: the same in words (the times, population, output, wages, work, the index and inflation, money,
+  the treasury and debt, the council's reckoning and its levers, the shocks, the council's moves, the partners and the
+  trade), above the old economy page.
+- The chronicle: the market's merchant's buys, the turns of the times, the council's rate, the minimum wage, the
+  treasury's early surplus and the council called on it.
+
+Tests: EconRegionGameTests (x 4,100,000 to 4,200,000, z 90000): er01 two linked towns' wheat gap narrowed by their
+merchants against a pair that does not trade, every coin booked both sides (each town's census moving by its own booked
+flows, the two by nought), their relations warmer, the trade book by ware and partner, a lost load refunded; er02 the
+index (a hundred, up by the basket's weights when bread and roots grow dear), inflation, the money supply, the dashboard's
+tag and the command; er03 a hundred and twenty mornings of a town's cycle (boom, slowing, slump, recovering, twice over;
+the council's rate raised and cut, the lenders dearer in the boom, an easing of the taxes moved in the slump, bolder
+founders in the boom, more room for the works in the slump, the chronicle's hard times, all bounded); er04 two grown
+towns' thirty real mornings each with their households and works spending, the one keeping its reserve never at nought;
+er05 the cycle, the figures, the trade book and the sheets kept with the world; er06 and er07 (optional) thirty days of
+a real town founded and left to itself, with the reserve and without. CycleModelTest: the cycle's arithmetic (it comes
+round, deterministic, the rate dearer in the boom, a hard shock recovered from).
