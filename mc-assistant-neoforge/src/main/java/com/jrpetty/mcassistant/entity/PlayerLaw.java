@@ -281,7 +281,7 @@ public final class PlayerLaw {
         if (paid > 0) {
             Market.payOut(p, paid);
             Ledger.addCoins(village, paid);
-            CoinCensus.playerIn(village, paid);                      // [health]
+            CoinCensus.playerIn(village, paid, p, PlayerFinance.Cat.FINES, "a fine");                      // [health]
         }
         return paid;
     }
@@ -608,7 +608,7 @@ public final class PlayerLaw {
         if (have < fee) return "Your fine is " + fee + " coins, and you've " + have + " on you. Come back when you have it.";
         Market.payOut(p, fee);
         Ledger.addCoins(village, fee);
-        CoinCensus.playerIn(village, fee);                           // [health]
+        CoinCensus.playerIn(village, fee, p, PlayerFinance.Cat.FINES, "a fine paid");                           // [health]
         book[1] = 0;
         Ledger.record(village, p.getUUID(), book);
         r.putBoolean("barred", false);
@@ -952,7 +952,7 @@ public final class PlayerLaw {
             c.putInt("paid", c.getInt("paid") + paid);
             if (p != null && paid + back > 0) {
                 giveCoins(p, paid + back);
-                CoinCensus.playerOut(v.id(), paid + back);           // [health]
+                CoinCensus.playerOut(v.id(), paid + back, p, PlayerFinance.Cat.WAGES, "a constable's pay");           // [health]
                 p.sendSystemMessage(Component.literal("The watch of " + Villages.name(v.id()) + " pays you " + paid + " coins for the case closed, constable.")
                     .withStyle(ChatFormatting.GOLD));
             } else if (paid > 0) {

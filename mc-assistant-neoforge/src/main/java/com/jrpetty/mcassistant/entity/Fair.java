@@ -442,7 +442,7 @@ public final class Fair {
             List<ItemStack> prize = new ArrayList<>();
             if (!ribbon.isEmpty()) prize.add(ribbon);
             if (coins > 0) prize.add(new ItemStack(McAssistantMod.VILLAGE_COIN.get(), coins));
-            CoinCensus.playerOut(id, coins);                         // [health] the purse, the player's (in its pack, or kept for it)
+            CoinCensus.playerOut(id, coins, w.owner, PlayerFinance.Cat.PRIZES, "a prize at the fair");   // [health] [purse20] the purse, the player's (in its pack, or kept for it)
             for (ItemStack s : prize) {
                 if (p != null) give(p, s);
                 else town.owed.add(new Festivals.Owed(w.owner, w.name, s));

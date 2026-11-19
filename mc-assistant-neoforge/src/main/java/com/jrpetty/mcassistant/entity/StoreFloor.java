@@ -436,7 +436,7 @@ public final class StoreFloor {
         if (got.isEmpty()) return "Sold out of " + shown.getHoverName().getString() + " just now.";
         Market.payOut(p, price);
         Ledger.addCoins(id, price);
-        CoinCensus.playerIn(id, price);                               // [health]
+        CoinCensus.playerIn(id, price, p, PlayerFinance.Cat.PURCHASES, "at a shop");                               // [health]
         Economy.sold(id, price);
         Budget.forget(id);
         Stockroom.sold(level, id, Stockroom.Seller.SHOP, shown, lot, price);

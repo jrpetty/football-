@@ -401,7 +401,7 @@ public final class Shifts {
                 int tip = stars >= 5 && level.getRandom().nextBoolean() ? 2 : 1;
                 if (customer.spend(tip)) {
                     Earnings.giveCoins(p, tip);
-                    CoinCensus.playerOut(CoinCensus.purseTown(customer), tip);   // [health]
+                    CoinCensus.playerOut(CoinCensus.purseTown(customer), tip, p, PlayerFinance.Cat.TIPS, "a tip");   // [health]
                     Earnings.record(p, s.village, Earnings.Source.TIPS, tip, customer.displayNameCap(), "as a tip");
                     s.tips += tip;
                 }

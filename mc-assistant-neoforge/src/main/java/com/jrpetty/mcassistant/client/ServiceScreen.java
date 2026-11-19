@@ -51,6 +51,8 @@ public class ServiceScreen extends Screen {
     private CompoundTag data;
     private Panel panel;
     private String kind;
+    private int financeX = -1, financeY;                                     // [purse20] where the finances button was drawn
+    private static final net.minecraft.world.item.ItemStack LEDGER = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WRITABLE_BOOK);
     private int px, py, pw, ph, headerH;
     private boolean compact;
     private int nextNonce;
@@ -195,6 +197,16 @@ public class ServiceScreen extends Screen {
         g.renderItem(COIN, rx, py + (compact ? 5 : S1 + 2));
         g.drawString(font, coins, rx + ICON + 2, py + (compact ? 9 : S1 + 6), TEXT, false);
         if (in(mouseX, mouseY, rx, py + S1, cw, ICON)) hover = "The village coin you carry: " + coins + ".";
+        if ("bank".equals(data.getString("role"))) {                         // [purse20] Your finances, from the bank's counter
+            int fx = rx - S1 - 18, fy = py + (compact ? 3 : S1);
+            boolean overF = in(mouseX, mouseY, fx, fy, 18, 18);
+            tile(g, fx, fy, 18, 18, State.of(true, false, overF));
+            g.renderItem(LEDGER, fx + 1, fy + 1);
+            if (overF) hover = "Your finances: what you have, earn, spend and owe, in every town";
+            financeX = fx;
+            financeY = fy;
+            rx = fx;
+        }
         String pill = open() ? "OPEN" : "CLOSED";
         int pillW = font.width(pill) + 6;
         int pillX = rx - S2 - pillW, pillY = py + (compact ? 8 : S1 + 5);
@@ -246,6 +258,10 @@ public class ServiceScreen extends Screen {
         if (in(mouseX, mouseY, closeX, py + S1, 12, 12)) {
             click();
             onClose();
+            return true;
+        }
+        if (financeX >= 0 && "bank".equals(data.getString("role")) && in(mouseX, mouseY, financeX, financeY, 18, 18)) {   // [purse20]
+            FinanceClient.openFrom(this);
             return true;
         }
         if (panel.mouseClicked(mouseX, mouseY, button)) return true;

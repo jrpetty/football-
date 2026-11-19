@@ -459,7 +459,7 @@ public final class Diplomacy {
         if (coins < PEACE_COST) return "Peace with " + on + "? It would take gifts — " + PEACE_COST + " coins' worth. You've " + coins + ".";
         Market.payOut(p, PEACE_COST);
         Ledger.addCoins(o.id(), PEACE_COST);
-        CoinCensus.playerIn(o.id(), PEACE_COST);                      // [health]
+        CoinCensus.playerIn(o.id(), PEACE_COST, p, PlayerFinance.Cat.GIFTS, "gifts for peace");                      // [health]
         int after = Ledger.relate(village, o.id(), 25);
         long day = f.level().getDayTime() / 24000L;
         String name = p.getName().getString();

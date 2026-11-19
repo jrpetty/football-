@@ -136,7 +136,7 @@ public final class Windmill {
         if (got < n) price = Math.max(Market.askLot(level, v.id(), sample, got), Market.leastLot(level, v.id(), sample, got));
         Market.payOut(p, price);
         Ledger.addCoins(v.id(), price);
-        CoinCensus.playerIn(v.id(), price);                           // [health]
+        CoinCensus.playerIn(v.id(), price, p, PlayerFinance.Cat.PURCHASES, "flour");                           // [health]
         Economy.sold(v.id(), price);
         Stockroom.sold(level, v.id(), Stockroom.Seller.STORES, sample, got, price);
         ItemStack sack = new ItemStack(Items.WHEAT, got);

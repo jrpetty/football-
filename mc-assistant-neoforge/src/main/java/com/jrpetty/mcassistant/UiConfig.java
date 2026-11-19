@@ -15,6 +15,10 @@ public final class UiConfig {
     public static final ModConfigSpec.BooleanValue TOASTS;
     public static final ModConfigSpec.BooleanValue TRACKER;
     public static final ModConfigSpec.ConfigValue<String> PINNED;
+    // [purse20] Your finances: the week's summary, bills due, and the button on the inventory screen.
+    public static final ModConfigSpec.BooleanValue FINANCE_WEEKLY;
+    public static final ModConfigSpec.BooleanValue FINANCE_BILLS;
+    public static final ModConfigSpec.BooleanValue FINANCE_INVENTORY_BUTTON;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -25,6 +29,14 @@ public final class UiConfig {
             .define("tracker", false);
         PINNED = b.comment("The pinned favourite's id (set from the favourites screen).")
             .define("pinned", "");
+        b.pop();
+        b.push("finances");                                                                   // [purse20]
+        FINANCE_WEEKLY = b.comment("A toast at the start of each week: the week's income and spending, and your net worth.")
+            .define("weeklySummary", true);
+        FINANCE_BILLS = b.comment("A toast when bills (rent, taxes, loan payments, fines) are due within two days or overdue.")
+            .define("billAlerts", true);
+        FINANCE_INVENTORY_BUTTON = b.comment("A small coin button beside the inventory screen that opens Your finances.")
+            .define("inventoryButton", true);
         b.pop();
         SPEC = b.build();
     }
@@ -48,5 +60,25 @@ public final class UiConfig {
 
     public static void setPinned(String id) {
         try { PINNED.set(id == null ? "" : id); SPEC.save(); } catch (RuntimeException ignored) { }
+    }
+
+    /** [purse20] */
+    public static boolean financeWeekly() {
+        try { return FINANCE_WEEKLY.get(); } catch (RuntimeException e) { return true; }
+    }
+
+    public static boolean financeBills() {
+        try { return FINANCE_BILLS.get(); } catch (RuntimeException e) { return true; }
+    }
+
+    public static boolean financeButton() {
+        try { return FINANCE_INVENTORY_BUTTON.get(); } catch (RuntimeException e) { return true; }
+    }
+
+    public static void setFinance(int which, boolean on) {
+        try {
+            (which == 0 ? FINANCE_WEEKLY : which == 1 ? FINANCE_BILLS : FINANCE_INVENTORY_BUTTON).set(on);
+            SPEC.save();
+        } catch (RuntimeException ignored) { }
     }
 }

@@ -2094,7 +2094,7 @@ public final class Homes {
         if (held < price) return address(id, v, h) + " is " + price + coins(price) + ". You have " + held + ".";
         Market.payOut(p, price);
         Ledger.addCoins(id, price);
-        CoinCensus.playerIn(id, price);                              // [health]
+        CoinCensus.playerIn(id, price, p, PlayerFinance.Cat.INVESTED, "a house bought");                              // [health]
         h.tenure = Tenure.PLAYER;
         h.landlord = p.getUUID();
         h.landlordName = p.getName().getString();
@@ -2144,7 +2144,7 @@ public final class Homes {
         Ledger.note(v.id(), key, "0");
         ItemStack coins = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), due);
         if (!p.getInventory().add(coins)) p.drop(coins, false);
-        CoinCensus.playerOut(v.id(), due);                           // [health] the rent waiting is counted (CoinCensus.holders)
+        CoinCensus.playerOut(v.id(), due, p, PlayerFinance.Cat.RENT_IN, "rent from your tenants");                           // [health] the rent waiting is counted (CoinCensus.holders)
         Earnings.record(p, v.id(), Earnings.Source.PROPERTY, due, "your tenants in " + Villages.name(v.id()), "in rent");   // [earning]
         return "Your rent: " + due + coins(due) + ".";
     }

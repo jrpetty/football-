@@ -381,7 +381,7 @@ final class StorySmugglers implements QuestStories.Story {
                     if (k > 0 && payer.spend(k)) paid += k;
                 }
                 if (paid > 0) Dealings.giveCoins(p, paid);
-                CoinCensus.playerOut(q.village, paid);               // [health] out of the smugglers' purses
+                CoinCensus.playerOut(q.village, paid, p, PlayerFinance.Cat.REWARDS, "the smugglers' cache");               // [health] out of the smugglers' purses
                 q.flags.put("cut", Integer.toString(paid));
                 q.flags.put("odds", option.equals("cut") ? "5" : "3");
                 q.flags.put("secret", "took " + paid + " coins off the smugglers robbing our stores, and said nothing");

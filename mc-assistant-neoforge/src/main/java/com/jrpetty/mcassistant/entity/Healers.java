@@ -445,7 +445,7 @@ public final class Healers {
         if (poisoned && (own || use != null)) p.removeEffect(MobEffects.POISON);
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
-        CoinCensus.playerIn(village, price);                          // [health]
+        CoinCensus.playerIn(village, price, p, PlayerFinance.Cat.FEES, "the healer");                          // [health]
         Economy.sold(village, price);
         f.getLookControl().setLookAt(p, 30.0F, 30.0F);
         f.swing(InteractionHand.MAIN_HAND);

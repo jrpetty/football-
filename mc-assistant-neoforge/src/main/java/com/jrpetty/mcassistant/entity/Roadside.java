@@ -587,7 +587,7 @@ public final class Roadside {
         Market.payOut(p, ROOM);
         VillageFolkEntity k = keeper(level, h);
         if (k != null) k.earn(ROOM);
-        if (k != null) CoinCensus.playerIn(CoinCensus.purseTown(k), ROOM);   // [health]
+        if (k != null) CoinCensus.playerIn(CoinCensus.purseTown(k), ROOM, p, PlayerFinance.Cat.RENT_OUT, "a room at a roadside inn");   // [health]
         h.rooms++;
         h.takings += ROOM;
         save(h);
@@ -612,7 +612,7 @@ public final class Roadside {
         if (!p.getInventory().add(dish)) p.drop(dish, false);
         VillageFolkEntity k = keeper(level, h);
         if (k != null) k.earn(MEAL);
-        if (k != null) CoinCensus.playerIn(CoinCensus.purseTown(k), MEAL);   // [health]
+        if (k != null) CoinCensus.playerIn(CoinCensus.purseTown(k), MEAL, p, PlayerFinance.Cat.FOOD, "a meal at a roadside inn");   // [health]
         h.meals++;
         h.takings += MEAL;
         save(h);

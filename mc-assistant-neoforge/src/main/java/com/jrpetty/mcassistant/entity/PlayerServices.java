@@ -261,7 +261,7 @@ public final class PlayerServices {
         if (units <= 0) return "Somebody's just taken the last of the " + word + ". Come back later.";
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
-        CoinCensus.playerIn(village, price);                          // [health]
+        CoinCensus.playerIn(village, price, p, PlayerFinance.Cat.FEES, "mending");                          // [health]
         Economy.sold(village, price);
         int before = held.getDamageValue();
         held.setDamageValue(Math.max(0, before - units * per));

@@ -82,7 +82,7 @@ public final class Earnings {
         if (paid <= 0) return 0;
         Economy.spent(village, paid);
         giveCoins(p, paid);
-        CoinCensus.playerOut(village, paid);                         // [health] out of the counted treasury
+        CoinCensus.playerOut(village, paid, p, PlayerFinance.Cat.of(src), (what == null || what.isEmpty() ? from : what + " (" + from + ")"));   // [health] out of the counted treasury [purse20]
         record(p, village, src, paid, from, what);
         return paid;
     }

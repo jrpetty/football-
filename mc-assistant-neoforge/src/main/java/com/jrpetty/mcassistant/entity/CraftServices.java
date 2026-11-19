@@ -197,7 +197,7 @@ public final class CraftServices {
             + ". You've " + Market.coinsHeld(p) + ".";
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
-        CoinCensus.playerIn(village, price);                          // [health]
+        CoinCensus.playerIn(village, price, p, PlayerFinance.Cat.PURCHASES, "a craft order");                          // [health]
         Economy.sold(village, price);
         long day = level.getDayTime() / 24000L;
         ordersOf(village).put(p.getUUID(), new BrewOrder(p.getUUID(), path(b.potion()), day, price));
@@ -229,7 +229,7 @@ public final class CraftServices {
             saveOrders(village);
             int back = Ledger.takeCoins(village, o.paid());
             Dealings.giveCoins(p, back);
-            CoinCensus.playerOut(village, back);                     // [health]
+            CoinCensus.playerOut(village, back, p, PlayerFinance.Cat.REFUNDS, "a craft order paid back");                     // [health]
             return "I'm sorry: the " + name + " never came right. Here's your " + back + coinsWord(back) + " back.";
         }
         return "Your " + name + " isn't off the stand yet. Come back in a while.";
@@ -383,7 +383,7 @@ public final class CraftServices {
         for (Map.Entry<ResourceKey<Enchantment>, Integer> e : spell) reg.getHolder(e.getKey()).ifPresent(h -> held.enchant(h, e.getValue()));
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
-        CoinCensus.playerIn(village, price);                          // [health]
+        CoinCensus.playerIn(village, price, p, PlayerFinance.Cat.FEES, "enchanting");                          // [health]
         Economy.sold(village, price);
         Budget.forget(village);
         f.swing(InteractionHand.MAIN_HAND);
@@ -454,7 +454,7 @@ public final class CraftServices {
         Dealings.give(p, honey);
         Market.payOut(p, price);
         Ledger.addCoins(v.id(), price);
-        CoinCensus.playerIn(v.id(), price);                           // [health]
+        CoinCensus.playerIn(v.id(), price, p, PlayerFinance.Cat.PURCHASES, "from the hives");                           // [health]
         Economy.sold(v.id(), price);
         f.swing(InteractionHand.MAIN_HAND);
         return "None in the stores, but this hive's full: there, a bottle of honey fresh from it. " + price + coinsWord(price) + ", thank you.";
@@ -484,7 +484,7 @@ public final class CraftServices {
         price = priceOf(level, village, p, one, count);
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
-        CoinCensus.playerIn(village, price);                          // [health]
+        CoinCensus.playerIn(village, price, p, PlayerFinance.Cat.PURCHASES, "from a crafter");                          // [health]
         Economy.sold(village, price);
         Budget.forget(village);
         Stockroom.sold(level, village, Stockroom.Seller.STORES, one, count, price);

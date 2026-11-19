@@ -96,7 +96,7 @@ public final class PublicFund {
         n = Math.min(n, have);
         if (!Civics.takeCoins(p, n)) return "You've only " + have + " coins.";
         give(level, v, p.getName().getString(), n);
-        CoinCensus.playerIn(id, n);                                  // [health] the statue fund is counted
+        CoinCensus.playerIn(id, n, p, PlayerFinance.Cat.GIFTS, "the statue fund");                                  // [health] the statue fund is counted
         // The town thinks the better of whoever gives to it.
         for (VillageFolkEntity folk : Civics.grown(id)) folk.persona().feelFor(p.getUUID(), p.getName().getString(), Math.min(3, 1 + n / 10));
         Standing.stir(id, p.getUUID());

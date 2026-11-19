@@ -272,7 +272,7 @@ public final class Laws {
         if (paid > 0) {
             Market.payOut(p, paid);
             Ledger.addCoins(village, paid);
-            CoinCensus.playerIn(village, paid);                           // [health]
+            CoinCensus.playerIn(village, paid, p, PlayerFinance.Cat.FINES, "a fine");                           // [health]
         }
         r[1] += fine - paid;
         return paid == fine ? "You've been fined " + fine + " coins" : "You've been fined " + fine + " coins (" + (fine - paid) + " still owed)";
@@ -291,7 +291,7 @@ public final class Laws {
         int paid = Math.min(coins, r[1]);
         Market.payOut(p, paid);
         Ledger.addCoins(village, paid);
-        CoinCensus.playerIn(village, paid);                           // [health]
+        CoinCensus.playerIn(village, paid, p, PlayerFinance.Cat.FINES, "a fine paid");                           // [health]
         r[1] -= paid;
         Ledger.record(village, p.getUUID(), r);
         if (r[1] == 0) {

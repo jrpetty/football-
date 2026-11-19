@@ -1752,7 +1752,7 @@ public final class Businesses {
         int coins = (int) ((price + 99) / 100);
         if (Market.coinsHeld(p) < coins) return b.name + " is " + coins + " coins. You have " + Market.coinsHeld(p) + ".";
         Market.payOut(p, coins);
-        CoinCensus.flow(village, CoinCensus.Flow.PLAYER_IN, coins);
+        CoinCensus.playerIn(village, coins, p, PlayerFinance.Cat.INVESTED, "a business bought");
         long paid = coins * 100L;
         long handed = 0;
         for (int i = 0; i < b.owners.size(); i++) {
@@ -1794,7 +1794,7 @@ public final class Businesses {
         long in = coins * 100L;
         int parts = (int) Math.max(1, Business.WHOLE * in / (worth + in));
         Market.payOut(p, coins);
-        CoinCensus.flow(village, CoinCensus.Flow.PLAYER_IN, coins);
+        CoinCensus.playerIn(village, coins, p, PlayerFinance.Cat.INVESTED, "bought into a business");
         b.till += in;
         Day d = b.today(day);
         d.capital += in;
@@ -1825,7 +1825,7 @@ public final class Businesses {
         b.ownersDue.put(p.getUUID(), due - coins * 100L);
         ItemStack c = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), coins);
         if (!p.getInventory().add(c)) p.drop(c, false);
-        CoinCensus.flow(village, CoinCensus.Flow.PLAYER_OUT, coins);
+        CoinCensus.playerOut(village, coins, p, PlayerFinance.Cat.DIVIDENDS, "your drawings");
         dirty();
         return "Your drawings: " + coins + " coins.";
     }
@@ -1867,7 +1867,7 @@ public final class Businesses {
         }
         if (!had) return "The stores couldn't find that many after all.";
         Market.payOut(p, coins);
-        CoinCensus.flow(village, CoinCensus.Flow.PLAYER_IN, coins);
+        CoinCensus.playerIn(village, coins, p, PlayerFinance.Cat.PURCHASES, "stock for your stall");
         MarketMaker.inOrTreasury(village, cost[0]);                        // [econ-1a] the market's sale, once it is open
         long change = coins * 100L - cost[0];
         if (change > 0) stall.ownersDue.merge(p.getUUID(), change, Long::sum);  // the odd pennies kept for it

@@ -631,7 +631,7 @@ public final class TaxBook {
         int paid = Math.min(have, owed);
         Market.payOut(p, paid);
         Ledger.addCoins(village, paid);
-        CoinCensus.playerIn(village, paid);                           // [health]
+        CoinCensus.playerIn(village, paid, p, PlayerFinance.Cat.TAXES, "taxes paid");                           // [health]
         Economy.tithe(village, paid);
         long day = CivicLand.day(level);
         book(village, day, "players", paid);

@@ -739,7 +739,7 @@ public final class Dining {
         o.paidCoins -= back;
         ItemStack c = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), back);
         if (back > 0 && !sp.getInventory().add(c)) sp.drop(c, false);
-        CoinCensus.playerOut(o.village, back);                       // [health]
+        CoinCensus.playerOut(o.village, back, sp, PlayerFinance.Cat.REFUNDS, "a meal paid back");                       // [health]
     }
 
     /** The waiter: to the pass, the plate taken up (in hand), to the table, set down; or handed over at the counter. */
@@ -1129,7 +1129,7 @@ public final class Dining {
         o.paid = true;
         int tipped = o.tip;                                          // [health]
         if (tip > 0) tipTheWaiter(level, o, tip, () -> Market.payOut(p, tip));
-        if (o.tip > tipped) CoinCensus.playerIn(o.village, o.tip - tipped);   // [health] into the waiter's purse
+        if (o.tip > tipped) CoinCensus.playerIn(o.village, o.tip - tipped, p, PlayerFinance.Cat.FOOD, "a tip for the waiter");   // [health] into the waiter's purse
         if (o.mode != Mode.TABLE || o.finished()) o.done = true;
         save(level);
         return null;
@@ -1138,7 +1138,8 @@ public final class Dining {
     /** The takings of a sale into the till, booked. */
     static void takings(ServerLevel level, Order o, int coins) {
         Ledger.addCoins(o.village, coins);
-        CoinCensus.playerIn(o.village, coins);                       // [health] a player's bill (the folk pay theirs at Diners)
+        if (o.player) CoinCensus.playerIn(o.village, coins, o.diner, PlayerFinance.Cat.FOOD, "a meal");   // [purse20]
+        else CoinCensus.playerIn(o.village, coins);                  // [health] a player's bill (the folk pay theirs at Diners)
         Economy.sold(o.village, coins);
         Place p = placeOf(level, o);
         Stockroom.Seller seller = p != null && p.kind == DiningPlaces.Kind.TAVERN ? Stockroom.Seller.TAVERN : Stockroom.Seller.CAFE;

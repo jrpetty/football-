@@ -122,6 +122,11 @@ public class VillageScreen extends Screen {
             this.addRenderableWidget(b);
             tx += tw + 2;
         }
+        // [purse20] Your own finances, a tab beside the town's.
+        int fw = font.width("Finances ›") + 14;
+        this.addRenderableWidget(Button.builder(Component.literal("Finances ›"), btn -> FinanceClient.openFrom(this)).bounds(tx, top + HEAD + 1, fw, TABS - 1)
+            .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Your finances: what you have, earn, spend and owe")))
+            .build(b2 -> new Tab(b2, false)));
         // The foot: the pace of time, then Close.
         int fy = top + h - FOOT + 3;
         int closeW = 50;

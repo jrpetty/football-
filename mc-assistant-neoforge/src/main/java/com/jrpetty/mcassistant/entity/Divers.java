@@ -1487,7 +1487,7 @@ public final class Divers {
             if (coins < o.price) return "Your " + o.item + " is here, " + o.count + " of it, " + o.price + " coins. You've " + coins + ".";
             Market.payOut(p, o.price);
             f.earn(o.price);
-            CoinCensus.playerIn(CoinCensus.purseTown(f), o.price);   // [health]
+            CoinCensus.playerIn(CoinCensus.purseTown(f), o.price, p, PlayerFinance.Cat.PURCHASES, "from a diver");   // [health]
             for (ItemStack s : o.lot) if (!p.getInventory().add(s.copy())) p.drop(s.copy(), false);
             ORDERS.remove(f.getUUID());
             return "Here you are: " + o.count + (o.item.equals("clay") ? " clay, fresh off the bed." : " sea pickles. They glow under water.")

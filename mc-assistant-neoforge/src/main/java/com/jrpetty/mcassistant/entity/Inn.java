@@ -270,7 +270,7 @@ public final class Inn {
         Market.payOut(p, price);
         int share = payKeeper(id, keeper, price);                         // [roles-c] the keeper's share; the rest to the till
         till(id, price - share, true);
-        CoinCensus.playerIn(id, price);                                   // [health]
+        CoinCensus.playerIn(id, price, p, PlayerFinance.Cat.RENT_OUT, "a room at the inn");                                   // [health]
         Ledger.note(id, bookingKey(bed), p.getUUID() + "|" + until(level.getDayTime()));
         level.playSound(null, bed, SoundEvents.WOOL_PLACE, SoundSource.BLOCKS, 0.6F, 1.0F);
         String said = FolkTalk.pick(keeper.getRandom(), "There you are: ", "Here's your key: ", "Right you are: ")

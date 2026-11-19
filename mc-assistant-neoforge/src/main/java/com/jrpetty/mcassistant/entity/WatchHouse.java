@@ -708,7 +708,7 @@ final class WatchHouse {
         }
         if (payer == null) return false;
         Ledger.addCoins(v.id(), bail);
-        if (player != null) CoinCensus.playerIn(v.id(), bail);       // [health]
+        if (player != null) CoinCensus.playerIn(v.id(), bail, player, PlayerFinance.Cat.FINES, "bail");       // [health]
         CompoundTag bails = Police.town(v.id()).getCompound("bails");
         CompoundTag one = new CompoundTag();
         one.putUUID("payer", payerId);
@@ -737,7 +737,7 @@ final class WatchHouse {
             net.minecraft.world.entity.player.Player p = level.getPlayerByUUID(one.getUUID("payer"));
             if (p != null) {
                 PlayerLaw.giveCoins(p, coins);
-                CoinCensus.playerOut(v.id(), coins);                 // [health]
+                CoinCensus.playerOut(v.id(), coins, p, PlayerFinance.Cat.REFUNDS, "bail back");                 // [health]
             } else Ledger.addCoins(v.id(), coins);
         } else {
             VillageFolkEntity k = Civics.find(level, one.getUUID("payer"));

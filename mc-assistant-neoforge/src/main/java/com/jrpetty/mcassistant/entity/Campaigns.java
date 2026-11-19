@@ -1156,7 +1156,7 @@ public final class Campaigns {
             int paid = QuestRewards.fromTreasury(level, v.id(), hire);
             if (paid <= 0) return n + " cannot pay a sword for hire just now.";
             Dealings.giveCoins(p, paid);
-            CoinCensus.playerOut(v.id(), paid);                      // [health]
+            CoinCensus.playerOut(v.id(), paid, p, PlayerFinance.Cat.WAGES, "a sword for hire");                      // [health]
             Villages.tell(v.id(), day, p.getName().getString() + " was hired to fight for the town against " + Villages.name(enemy) + ", for " + hire + " coins");
         } else {
             Villages.tell(v.id(), day, p.getName().getString() + " volunteered to fight for the town against " + Villages.name(enemy));
