@@ -478,7 +478,7 @@ public final class FinanceSheet {
         for (Map.Entry<Long, long[]> e : PlayerFinance.history(who).entrySet()) if (e.getKey() <= lastDayOfWeek - 7) before = e.getValue()[0];
         String arrow = before == Long.MIN_VALUE ? "" : s.net() > before ? " ▲" : s.net() < before ? " ▼" : "";
         t.putString("title", "Your week in coin");
-        t.putString("text", "This week: +" + coins(io[0]) + " income, -" + coins(io[1]) + " spending, net worth " + coins(s.net()) + arrow);
+        t.putString("text", "This week: " + (io[0] > 0 ? "+" : "") + coins(io[0]) + " income, " + (io[1] > 0 ? "-" : "") + coins(io[1]) + " spending, net worth " + coins(s.net()) + arrow);
         t.putInt("dir", before == Long.MIN_VALUE ? 0 : Long.compare(s.net(), before));
         return t;
     }
