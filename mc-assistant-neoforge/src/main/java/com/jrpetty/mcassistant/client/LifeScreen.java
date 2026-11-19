@@ -234,7 +234,9 @@ public class LifeScreen extends Screen {
                 int ph = 104, pw = Math.min(iw, 240);
                 if (y + ph >= y0 && y <= y1) {
                     UiStyle.well(g, x, y, pw, ph, 0xFFB9D3E8);
+                    g.enableScissor(Math.max(x, left + PAD), Math.max(y, y0), x + pw, Math.min(y + ph, y1));   // inside its frame
                     BlueprintPicture.draw(g, b.getString("key"), b.getIntArray("cells"), x, y, pw, ph);
+                    g.disableScissor();
                     if (in(mx, my, x, y, pw, ph)) {
                         tips.add("Drag to turn it");
                         picHover = b.getString("key");
@@ -263,7 +265,7 @@ public class LifeScreen extends Screen {
                     bx -= bws[i];
                     boolean on = c.getBoolean("on");
                     String why = c.getString("why");
-                    button(g, c.getString("l"), bx, by, bws[i], mx, my, on, c.getBoolean("main"), on ? why : (why.isEmpty() ? "Not now" : why),
+                    button(g, c.getString("l"), bx, by, bws[i], mx, my, on, c.getBoolean("main"), on ? "" : (why.isEmpty() ? "Not now" : why),
                         () -> press(c));
                     bx -= 3;
                 }

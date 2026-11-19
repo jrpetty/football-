@@ -86,7 +86,9 @@ public final class MyBusinesses implements PlayerLife.Page {
             page.text("Your shop, " + shop.name + ": " + (ShopNeeds.ready(needs) ? "it has everything its trade needs." : "still " + ShopNeeds.missing(needs) + "."));
             for (ShopNeeds.Need n : needs) if (!n.ok()) page.text("  " + n.line() + " — " + n.fix(), 2);
         } else if (t != null) {
-            page.text(t.stall() ? "A stall on the square, its own." : "A room the town lets it.");
+            List<BuildDesk.Status> going = BuildDesk.mine(v.id(), p.getUUID());
+            page.text(!going.isEmpty() ? "Its own building, going up (it trades from the square till it stands)."
+                : t.stall() ? "A stall on the square, its own." : "A room the town lets it.");
         }
         for (BuildDesk.Status s : BuildDesk.mine(v.id(), p.getUUID())) page.bar(s.title(), s.percent() / 100.0, s.done() ? "finished" : s.percent() + "%" + (s.waitingOn().isEmpty() ? "" : ", waiting for " + s.waitingOn()));
         page.heading("Next");

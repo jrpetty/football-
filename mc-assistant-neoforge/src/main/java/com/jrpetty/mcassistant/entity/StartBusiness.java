@@ -256,6 +256,7 @@ public final class StartBusiness implements PlayerLife.Page {
         ghost.putInt("face", facing.get2DDataValue());
         ghost.putBoolean("ok", bad.isEmpty());
         page.ghost(ghost);
+        page.buttons().button("Next: confirm", "step", LifePage.args("s", 3), bad.isEmpty(), "Choose a plot it can go on first").primary();
     }
 
     static void setPlot(PlayerLife.Ctx c, BlockPos at, Direction facing) {

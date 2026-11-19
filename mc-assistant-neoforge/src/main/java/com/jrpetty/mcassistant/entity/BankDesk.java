@@ -84,11 +84,11 @@ final class BankDesk implements ServicePoints.Desk {
         if (action.equals("use")) return ServicePoints.useItYourself(visit);
         // [player15] the business and capital rows
         if (p != null && action.equals("startbiz")) {
-            PlayerLife.open(p, "start", LifePage.args("loan", true));
+            p.server.execute(() -> PlayerLife.open(p, "start", LifePage.args("loan", true)));   // after the counter's own answer
             return ServicePoints.Result.said("Here's how to start one.");
         }
         if (p != null && action.equals("capital")) {
-            PlayerLife.open(p, "all", LifePage.args("tab", "capital"));
+            p.server.execute(() -> PlayerLife.open(p, "all", LifePage.args("tab", "capital")));
             return ServicePoints.Result.said("The capital market.");
         }
         if (p != null && (action.startsWith("club_") || action.equals("borrow") || action.startsWith("bonds"))) {
