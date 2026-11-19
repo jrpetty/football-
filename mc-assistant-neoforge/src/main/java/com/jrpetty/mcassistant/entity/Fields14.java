@@ -14,7 +14,7 @@ import java.util.function.Predicate;
  * walked to. A field's square now wants its middle and most of its ground walked to (Reach.fieldReaches). And where the
  * farmland's side has nothing the farmer can walk to, the field does not go wherever there is soil (it went up the
  * cliff, or across the tarn, and nobody tilled it): it goes on another side of the town, on the farmland's own squares
- * there, or failing those on ground by the town the farmer walks to, out of the way of its lots and buildings. On a
+ * there, or failing those on ground just out past the town the farmer walks to, out of the way of its lots and buildings. On a
  * slope the furrows follow the ground a block up or down at a time (the walk's own step), a terrace to each height,
  * walked up and down from one to the next.
  */
@@ -43,9 +43,9 @@ public final class Fields14 {
                 if (f.fieldGroundFor14(p, VillageFolkEntity.FIELD_MOST)) return p;
             }
         }
-        // Ground by the town: rings out from the town's edge, every fourth column, a small field's room clear.
+        // Ground by the town: rings out from just past the town's edge, every fourth column, a small field's room clear.
         int small = VillageFolkEntity.FIELD_FIRST;
-        int from = Math.max(8, Villages.townReach(town) - 8);
+        int from = Villages.townReach(town) + small + 2;
         for (int r = from; r <= from + 48; r += 4) {
             for (int dx = -r; dx <= r; dx += 4) {
                 for (int dz = -r; dz <= r; dz += 4) {
@@ -53,6 +53,7 @@ public final class Fields14 {
                     BlockPos p = f.surfaceAt(heart.getX() + dx, heart.getZ() + dz);
                     if (p == null || Math.abs(p.getY() - heart.getY()) > VillageFolkEntity.FIELD_CLIMB) continue;
                     if (!walk.fieldReaches(p, small + 1)) continue;
+                    if (!Villages.outsideTown(town, heart, p, small)) continue;          // out of the town's own ground
                     if (Villages.builtOver(town, dx, dz, small + 2, small + 2)) continue;
                     if (VillageFolkEntity.buildingNearFor14(town, p, small + 6)) continue;
                     if (com.jrpetty.mcassistant.village.TownPlan.isStreet(dx, dz) || com.jrpetty.mcassistant.village.TownPlan.isSquare(dx, dz)) continue;

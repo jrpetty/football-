@@ -14143,8 +14143,8 @@ blocks of a square's middle could be walked to, so on a mountain the town marked
 blocks up a sheer face (good ground, flat, a tarn on it), and its first field went there: 156 of its 169 columns out of
 the farmers' walk (fx03, before). After, the farmland goes on the walkable slope the other way, the first field with
 none of its columns out of the walk, and no farmland at all out of it after a day and a quarter of three farmers' work. A field's square now wants its middle walked to and most of its ground (three in five);
-where the farmland's side has none, the field goes on another side's squares, or failing those on ground by the town the
-farmer walks to (off its lots and streets), never up a cliff; and a farmer breaks no new ground the town cannot walk to,
+where the farmland's side has none, the field goes on another side's squares, or failing those on ground just out past
+the town that the farmer walks to (off its lots and streets), never up a cliff; and a farmer breaks no new ground the town cannot walk to,
 so on a slope the furrows follow the ground a block up or down at a time, a terrace to each height, walked from one to
 the next.
 
