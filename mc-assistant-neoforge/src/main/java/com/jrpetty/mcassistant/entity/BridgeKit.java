@@ -127,12 +127,18 @@ public final class BridgeKit {
      */
     @Nullable
     static Column column(ServerLevel level, int x, int z) {
+        return column(level, x, z, false);
+    }
+
+    /** As above; {@code throughTimber}: a timber bridge's own planks and logs looked through too (a stone one going up in its place). */
+    @Nullable
+    static Column column(ServerLevel level, int x, int z, boolean throughTimber) {
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
         int floor = Math.max(level.getMinBuildHeight() + 1, y - 48);
         for (; y > floor; y--) {
             BlockState st = level.getBlockState(new BlockPos(x, y, z));
             if (!st.getFluidState().isEmpty()) return st.getFluidState().is(FluidTags.WATER) ? new Column(y, true) : null;
-            if (partial(st) || st.is(BlockTags.LOGS)) continue;
+            if (partial(st) || st.is(BlockTags.LOGS) || throughTimber && st.is(BlockTags.PLANKS)) continue;
             if (earth(st)) return new Column(y, false);
             // A made block: on the earth (a road, a fill) it is the ground; over water (a deck) the water is.
             int top = y;
@@ -369,7 +375,7 @@ public final class BridgeKit {
         Direction.Axis along = s.alongX() ? Direction.Axis.X : Direction.Axis.Z;
         for (int k = 1; k <= MOST_RAMP; k++) {
             int m = end + step * k;
-            Column g = column(level, s.at(m, 0, 0).getX(), s.at(m, 0, 0).getZ());
+            Column g = column(level, s.at(m, 0, 0).getX(), s.at(m, 0, 0).getZ(), !f.wood());
             if (g == null || g.water()) break;
             int ground = g.y() + 1;
             if (ground == walk) break;
@@ -394,11 +400,13 @@ public final class BridgeKit {
             for (int c = -h; c <= h; c++) {
                 boolean cheek = Math.abs(c) == h;
                 BlockPos at = s.at(m, c, y);
-                Column under = cheek ? column(level, at.getX(), at.getZ()) : g;
+                Column under = cheek ? column(level, at.getX(), at.getZ(), !f.wood()) : g;
                 int base = under == null || under.water() ? g.y() : under.y();
                 for (int q = base + 1; q < y; q++) pieces.add(new Piece(at.atY(q), f.deck().defaultBlockState(), 'A'));
                 pieces.add(new Piece(at, cheek ? pillar(f.beam(), along) : tread, cheek ? 'A' : (landing ? 'L' : 'S')));
-                for (int q = y + 1; q <= y + 3; q++) pieces.add(new Piece(at.atY(q), Blocks.AIR.defaultBlockState(), 'C'));
+                // The railing carried down the ramp on its cheeks: nobody steps up onto the side of it.
+                if (cheek) pieces.add(new Piece(at.above(), f.rail().defaultBlockState(), 'R'));
+                for (int q = y + (cheek ? 2 : 1); q <= y + 3; q++) pieces.add(new Piece(at.atY(q), Blocks.AIR.defaultBlockState(), 'C'));
             }
         }
     }

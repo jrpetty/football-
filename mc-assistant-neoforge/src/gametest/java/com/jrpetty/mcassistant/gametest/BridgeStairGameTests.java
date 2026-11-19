@@ -70,6 +70,7 @@ public class BridgeStairGameTests {
         if (folk.isEmpty()) return "no folk";
         VillageFolkEntity f = folk.get(0);
         f.moveTo(from.getX() + 0.5, from.getY(), from.getZ() + 0.5);
+        f.setOnGround(true);                      // set down on its feet (a folk raised this tick has not touched the ground yet)
         f.getNavigation().stop();
         Path path = f.getNavigation().createPath(to, 1);
         if (path == null) return "no path";

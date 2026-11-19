@@ -139,7 +139,9 @@ public final class StepKit {
                 BlockState there = level.getBlockState(at);
                 if (!(there.isAir() || there.canBeReplaced() || there.getBlock() instanceof StairBlock)) continue;
                 if (there.canBeReplaced() && !there.isAir()) level.setBlock(at, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
-                Block stair = stairFor(surface);
+                // In the stone the road is laid in: the place it climbs to (the one under the stair may be the gravel it was).
+                BlockState above = level.getBlockState(new BlockPos(x + up.getStepX(), next.y(), z + up.getStepZ()));
+                Block stair = stairFor(above.is(Blocks.GRAVEL) || BridgeKit.earth(above) ? surface : above);
                 BlockState now = level.getBlockState(at);
                 if (now.getBlock() == stair && now.getValue(StairBlock.FACING) == up) break;
                 if (now.getBlock() instanceof StairBlock) {
