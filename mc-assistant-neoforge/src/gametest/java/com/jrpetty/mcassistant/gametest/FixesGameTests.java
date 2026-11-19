@@ -522,6 +522,7 @@ public class FixesGameTests {
         Direction[] facing = { Direction.NORTH, Direction.NORTH, Direction.SOUTH };
         String[] name = { "flat", "hill, door uphill", "hill, door downhill" };
         long[] took = { -1, -1, -1 };
+        int[] idle = new int[3];
         for (int i = 0; i < 3; i++) {
             VillageFolkEntity b = builders.get(i);
             packFor(b, "house", at[i], facing[i]);
@@ -537,20 +538,24 @@ public class FixesGameTests {
             boolean all = true;
             for (int i = 0; i < 3; i++) {
                 VillageFolkEntity b = builders.get(i);
-                if (took[i] < 0 && (b.peekJob() == null || b.peekJob().type() != com.jrpetty.mcassistant.entity.Job.Type.BUILD)) {
+                if (took[i] >= 0) continue;
+                all = false;
+                if (tick[0] % 100 != 0) continue;
+                packFor(b, "house", at[i], facing[i]);
+                // Up when its drawing is all laid, or its builder has stopped building it (whatever is left).
+                int miss = missingOf(level, at[i], facing[i]);
+                boolean building = b.debugLine().contains("goals=[Build") || b.peekJob() != null && b.peekJob().type() == com.jrpetty.mcassistant.entity.Job.Type.BUILD;
+                idle[i] = building ? 0 : idle[i] + 1;
+                if (miss <= 3 || idle[i] >= 3) {
                     took[i] = tick[0];
-                    Kit.log("[VT] fx04 " + name[i] + " job over at " + tick[0] + ": " + b.debugLine());
+                    Kit.log("[VT] fx04 " + name[i] + " over at " + tick[0] + " (" + miss + " missing): " + b.debugLine());
                 }
-                if (took[i] < 0) { all = false; if (tick[0] % 200 == 0) packFor(b, "house", at[i], facing[i]); }
             }
             if (!all && tick[0] < 50000) return false;
             List<String> out = new ArrayList<>();
             int[] missing = new int[3];
             for (int i = 0; i < 3; i++) {
-                for (BuildGoal.Placement p : BuildGoal.plan("house", at[i], facing[i], 13)) {
-                    if (p.part() == BuildGoal.Part.CLEAR || p.part() == BuildGoal.Part.BED) continue;
-                    if (com.jrpetty.mcassistant.entity.Restore.judge(level.getBlockState(p.pos()), p) == com.jrpetty.mcassistant.entity.Restore.Kind.MISSING) missing[i]++;
-                }
+                missing[i] = missingOf(level, at[i], facing[i]);
                 out.add(name[i] + " at " + at[i].toShortString() + ": " + (took[i] < 0 ? "not done" : took[i] + " ticks") + ", " + missing[i] + " cells missing");
             }
             Kit.log("[VT] fx04 " + String.join("; ", out));
@@ -562,6 +567,16 @@ public class FixesGameTests {
             helper.runAfterDelay(1, () -> { if (expect.clean()) helper.succeed(); else helper.fail(expect.summary()); });
             return true;
         });
+    }
+
+    /** The cells of a house's drawing not laid yet (beds aside: they are furnished later). */
+    static int missingOf(ServerLevel level, BlockPos anchor, Direction facing) {
+        int n = 0;
+        for (BuildGoal.Placement p : BuildGoal.plan("house", anchor, facing, 13)) {
+            if (p.part() == BuildGoal.Part.CLEAR || p.part() == BuildGoal.Part.BED) continue;
+            if (com.jrpetty.mcassistant.entity.Restore.judge(level.getBlockState(p.pos()), p) == com.jrpetty.mcassistant.entity.Restore.Kind.MISSING) n++;
+        }
+        return n;
     }
 
     /** The builder's pack filled with what the drawing is made of (a stack of each, as many as it wants of what does not
