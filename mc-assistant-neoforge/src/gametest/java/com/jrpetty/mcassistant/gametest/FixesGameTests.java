@@ -42,8 +42,8 @@ public class FixesGameTests {
      * kept up (the rack stocked to the miners' wear, a worn pick changed before it breaks), so the first landing is cut
      * and the works go on without a miner standing for want of a pick.
      */
-    @GameTest(template = "empty", timeoutTicks = 120000, batch = "fx01_picks")
-    public static void fx01_picks(GameTestHelper helper) {
+    @GameTest(template = "empty", timeoutTicks = 120000, required = false, batch = "fx00_mine_town")
+    public static void fx00_mine_town(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         com.jrpetty.mcassistant.entity.MineStairs.resetForTests(level);
@@ -117,7 +117,7 @@ public class FixesGameTests {
             for (java.util.Map.Entry<String, Integer> e : WorksGoal.ENDS.entrySet()) if (e.getKey().contains("pick")) stalls += e.getValue();
             List<String> kit = new ArrayList<>();
             for (VillageFolkEntity m : miners) kit.add(m.getMainHandItem().getItem() + " " + com.jrpetty.mcassistant.entity.Toolrack.left(m.getMainHandItem()) + "%");
-            Kit.log("[VT] fx01 after " + tick[0] + " ticks: first landing at " + (landing[0] < 0 ? "never" : String.format("%.2f days", landing[0] / 24000.0))
+            Kit.log("[VT] fx00 after " + tick[0] + " ticks: first landing at " + (landing[0] < 0 ? "never" : String.format("%.2f days", landing[0] / 24000.0))
                 + "; " + c[0] + " blocks broken, " + WorksGoal.SHIFTS + " shifts, " + stalls + " shifts ended or refused for a pick; miners without a pick "
                 + (100 * without[0] / Math.max(1, samples[0])) + "% of the time; picks made " + tally[0] + ", handed out " + tally[1] + "; in hand now " + kit
                 + "; ends " + WorksGoal.ENDS + " | " + String.join(" | ", MineWorks.report(level, id)));
@@ -128,6 +128,79 @@ public class FixesGameTests {
             helper.runAfterDelay(1, () -> { if (expect.clean()) helper.succeed(); else helper.fail(expect.summary()); });
             return true;
         });
+    }
+
+    /**
+     * The picks' chain: the rack's spares to the miners' count and wear; a smith makes them first while the rack is short,
+     * in iron once the stores hold the bars (the Stone Age too), and mends two worn ones into one; a miner setting out with a
+     * worn pick changes it for a fresh one and hands the worn one in.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "fx01_picks")
+    public static void fx01_picks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Toolrack.resetForTests();
+        level.setDayTime(1000);
+        int cx = 4405000, cz = 90000;
+        Kit.hold(level, cx, cz, 40);
+        Kit.prepare(level, cx, cz, 40);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        List<VillageFolkEntity> miners = new ArrayList<>();
+        VillageFolkEntity smith = null;
+        for (int i = 0; i < 7; i++) {
+            VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+            helper.assertTrue(f != null, "a folk");
+            if (i < 6) { f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE); miners.add(f); }
+            else { f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.SMITH); smith = f; }
+        }
+        UUID id = smith.ownerId();
+        Villages.Village v = Villages.get(id);
+        Villages.ageForTests(id, Villages.Age.STONE);
+        com.jrpetty.mcassistant.entity.Villages.storehouseFirstDoneForTests(id);
+        Kit.stockForGrowth(level, v);
+        com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(Items.STICK, 32));
+        com.jrpetty.mcassistant.entity.Toolrack.Tool pick = com.jrpetty.mcassistant.entity.Toolrack.Tool.PICKAXE;
+        int wantedAtFirst = com.jrpetty.mcassistant.entity.Toolrack.wanted(id, pick);
+        // The smith, the rack short: stone picks (no iron in the stores).
+        String made1 = com.jrpetty.mcassistant.entity.Picks.smith(smith, level);
+        int stone = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.STONE_PICKAXE));
+        // Iron in the stores: iron picks, in the Stone Age.
+        com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(Items.IRON_INGOT, 64));
+        com.jrpetty.mcassistant.entity.Picks.resetForTests();
+        String made2 = com.jrpetty.mcassistant.entity.Picks.smith(smith, level);
+        int iron = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.IRON_PICKAXE));
+        // A miner with a worn pick setting out: a fresh one taken, the worn one handed in.
+        VillageFolkEntity m = miners.get(0);
+        m.removeMatching(st -> st.is(net.minecraft.tags.ItemTags.PICKAXES), 64);
+        m.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        net.minecraft.world.item.ItemStack worn = new net.minecraft.world.item.ItemStack(Items.STONE_PICKAXE);
+        worn.setDamageValue(worn.getMaxDamage() * 3 / 4);
+        m.insertItem(worn);
+        int wornBefore = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.STONE_PICKAXE) && st.isDamaged());
+        boolean changed = com.jrpetty.mcassistant.entity.Picks.beforeShift(level, m);
+        int best = 0;
+        for (net.minecraft.world.item.ItemStack st : m.getInventoryItems()) if (st.is(net.minecraft.tags.ItemTags.PICKAXES)) best = Math.max(best, com.jrpetty.mcassistant.entity.Toolrack.left(st));
+        int wornAfter = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.STONE_PICKAXE) && st.isDamaged());
+        // Another worn one handed in: the two mended into one.
+        net.minecraft.world.item.ItemStack worn2 = new net.minecraft.world.item.ItemStack(Items.STONE_PICKAXE);
+        worn2.setDamageValue(worn2.getMaxDamage() * 2 / 3);
+        com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, worn2);
+        for (int i = 0; i < 5; i++) com.jrpetty.mcassistant.entity.Picks.issuedForTests(id, level.getGameTime());
+        int wantedAfterWear = com.jrpetty.mcassistant.entity.Toolrack.wanted(id, pick);
+        com.jrpetty.mcassistant.entity.Picks.resetSmithForTests();
+        String made3 = com.jrpetty.mcassistant.entity.Picks.smith(smith, level);
+        int mended = com.jrpetty.mcassistant.entity.Picks.mended(id);
+        Kit.log("[VT] fx01 six miners: the rack keeps " + wantedAtFirst + " picks (" + wantedAfterWear + " after six handed out in a day); the smith made: "
+            + made1 + " (" + stone + " stone picks in the stores); with iron: " + made2 + " (" + iron + " iron picks); the miner's worn pick changed "
+            + changed + " (its best now " + best + "% left, worn picks in the stores " + wornBefore + " -> " + wornAfter + "); then: " + made3 + ", mended " + mended);
+        Kit.Expect expect = new Kit.Expect();
+        expect.that(wantedAtFirst >= 3, "a spare for every two miners: " + wantedAtFirst);
+        expect.that(wantedAfterWear > wantedAtFirst, "more kept as they wear them out: " + wantedAfterWear);
+        expect.that(stone >= 2, "stone picks made by the smith: " + stone);
+        expect.that(iron >= 1, "iron picks once there is iron, in the Stone Age: " + iron);
+        expect.that(changed && best >= 90 && wornAfter == wornBefore + 1, "the worn pick changed before the shift and handed in");
+        expect.that(mended >= 1, "two worn picks mended into one: " + mended);
+        if (expect.clean()) helper.succeed(); else helper.fail(expect.summary());
     }
 
     // ============================================================ fx02: the miners walk the works
@@ -320,6 +393,19 @@ public class FixesGameTests {
         Villages.Village v = Villages.get(id);
         Kit.stockForGrowth(level, v);
         com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(Items.WHEAT_SEEDS, 64));
+        // Where the town marks out its farmland, and where the first field goes: how much of its square the farmer walks to.
+        int side = farmers.get(0).chooseFieldsSideForTests();
+        BlockPos site = farmers.get(0).fieldSiteForTests();
+        com.jrpetty.mcassistant.entity.Reach.reset();
+        com.jrpetty.mcassistant.entity.Reach walk0 = com.jrpetty.mcassistant.entity.Reach.of(level, id, heart);
+        int cols = 0, cut = 0;
+        if (site != null && walk0 != null) {
+            for (int dx = -6; dx <= 6; dx++) for (int dz = -6; dz <= 6; dz++) { cols++; if (!walk0.reaches(site.getX() + dx, site.getZ() + dz, 0)) cut++; }
+        }
+        final BlockPos firstSite = site;
+        final int firstCut = cut, firstCols = cols;
+        Kit.log("[VT] fx03 the farmland marked out to side " + side + " (east " + com.jrpetty.mcassistant.village.TownPlan.EAST + "); the first field at "
+            + (site == null ? "none" : site.toShortString() + " (" + (site.getX() - cx) + ", " + (site.getZ() - cz) + "), " + cut + " of " + cols + " of its columns out of the walk"));
         level.getServer().tickRateManager().setTickRate(10000.0F);
         final int[] tick = { 0 };
         MineSiteGameTests.each(helper, () -> {
@@ -335,6 +421,7 @@ public class FixesGameTests {
             Kit.Expect expect = new Kit.Expect();
             expect.that(f[0] >= 40, "fields tilled: " + f[0]);
             expect.that(f[1] == 0 && f[2] == 0, "none out of the farmers' walk: " + f[1] + " (tableland " + f[2] + ")");
+            expect.that(firstSite != null && firstCut * 3 <= firstCols, "the first field where the farmer walks: " + firstCut + " of " + firstCols + " columns out of the walk");
             helper.runAfterDelay(1, () -> { if (expect.clean()) helper.succeed(); else helper.fail(expect.summary()); });
             return true;
         });
@@ -450,7 +537,10 @@ public class FixesGameTests {
             boolean all = true;
             for (int i = 0; i < 3; i++) {
                 VillageFolkEntity b = builders.get(i);
-                if (took[i] < 0 && (b.peekJob() == null || b.peekJob().type() != com.jrpetty.mcassistant.entity.Job.Type.BUILD)) took[i] = tick[0];
+                if (took[i] < 0 && (b.peekJob() == null || b.peekJob().type() != com.jrpetty.mcassistant.entity.Job.Type.BUILD)) {
+                    took[i] = tick[0];
+                    Kit.log("[VT] fx04 " + name[i] + " job over at " + tick[0] + ": " + b.debugLine());
+                }
                 if (took[i] < 0) { all = false; if (tick[0] % 200 == 0) packFor(b, "house", at[i], facing[i]); }
             }
             if (!all && tick[0] < 50000) return false;

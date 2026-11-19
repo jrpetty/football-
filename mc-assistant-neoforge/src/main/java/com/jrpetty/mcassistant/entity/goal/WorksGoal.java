@@ -107,6 +107,8 @@ public class WorksGoal extends Goal {
         teleports = 0;
         if (!(a.level() instanceof ServerLevel)) { finish(""); return; }
         if (outJob) { beginOut("Out of the works."); return; }
+        // [fixes14] Up top, setting out: a worn pick changed for a fresh one off the rack (a spare taken along).
+        if (!MineWorks.below(a) && a instanceof VillageFolkEntity vf && a.level() instanceof ServerLevel sl) com.jrpetty.mcassistant.entity.Picks.beforeShift(sl, vf);
         a.equipBestTool(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
         if (!a.getMainHandItem().isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())) a.topUpKit();
         a.equipBestTool(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());

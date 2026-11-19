@@ -111,6 +111,7 @@ public final class Toolrack {
     public static void resetForTests() {
         LOOKED.clear();
         TALLY.clear();
+        Picks.resetForTests();
     }
 
     // ------------------------------------------------------------------ what is what
@@ -179,6 +180,7 @@ public final class Toolrack {
     public static int wanted(UUID village, Tool tool) {
         int users = users(village, tool);
         if (users <= 0) return 0;
+        if (tool == Tool.PICKAXE) return Picks.wanted(village, users);       // [fixes14] to the miners' count and wear
         return Math.min(MOST, Math.max(1, (users + tool.per - 1) / tool.per));
     }
 
@@ -220,7 +222,7 @@ public final class Toolrack {
     // ------------------------------------------------------------------ the making
 
     private static final Predicate<ItemStack> STONE = s -> s.is(ItemTags.STONE_TOOL_MATERIALS) && s.getComponentsPatch().isEmpty();
-    private static final Predicate<ItemStack> IRON = s -> s.is(Items.IRON_INGOT) && s.getComponentsPatch().isEmpty();
+    static final Predicate<ItemStack> IRON = s -> s.is(Items.IRON_INGOT) && s.getComponentsPatch().isEmpty();
     private static final Predicate<ItemStack> STRING = s -> s.is(Items.STRING) && s.getComponentsPatch().isEmpty();
     private static final Predicate<ItemStack> STICK = s -> s.is(Items.STICK) && s.getComponentsPatch().isEmpty();
     private static final Predicate<ItemStack> PLANK = s -> s.is(ItemTags.PLANKS) && s.getComponentsPatch().isEmpty();
@@ -253,6 +255,11 @@ public final class Toolrack {
         if (timber(level, id) < handle + WOOD_SPARE) return null;
         String kind = tool.suffix.substring(1);
         if (age.ordinal() >= Villages.Age.IRON.ordinal() && ironFree && iron >= tool.head + Crafts.IRON_KEPT + 8) {
+            return item("iron_" + kind);
+        }
+        // [fixes14] The miners' picks in iron as soon as the town has the iron for them (twice the wear of stone), the
+        // Stone Age too: a bar or three in a pick is the mine's own iron back to it, and the age's want keeps its stock.
+        if (tool == Tool.PICKAXE && age.ordinal() >= Villages.Age.STONE.ordinal() && Picks.ironFor(iron, ironFree, tool.head)) {
             return item("iron_" + kind);
         }
         int stoneKept = age == Villages.Age.WOOD ? STONE_SPARE : STONE_SPARE_LATER;
@@ -398,6 +405,9 @@ public final class Toolrack {
         // A bench to hand: its own (every folk carries one), the stores', or a neighbour's.
         if (!Bench.handOf(level, v, maker, null).table()) return null;
         List<String> made = new ArrayList<>();
+        // [fixes14] The worn picks handed in mended first, two into one, as a smith mends them.
+        String mended = Picks.mend(level, v, maker);
+        if (mended != null) { made.add(mended); most--; }
         // The rack is the storehouse's: its making is booked to the storehouse's trade, whoever made it.
         Economy.openCraft(id, StationTask.STORE);
         try {
@@ -427,6 +437,39 @@ public final class Toolrack {
                     "A spare or two for the rack: " + words + ".", "Nobody stands idle for want of a tool in this village."));
             }
         }
+        return words;
+    }
+
+    /**
+     * [fixes14] The smith at its forge, the rack short of picks: worn picks mended, then picks made (two at most), out of
+     * the stores as any spare is. Returns what was made, in words, or null.
+     */
+    @Nullable
+    static String restockPicks(ServerLevel level, Villages.Village v, VillageFolkEntity smith) {
+        UUID id = v.id();
+        if (!Storehouses.stands(id) && Villages.storehouseFirst(id, level.getGameTime())) return null;
+        if (Workshop.keepsTheRack(level, v)) return null;
+        List<String> made = new ArrayList<>();
+        String mended = Picks.mend(level, v, smith);
+        if (mended != null) made.add(mended);
+        Economy.openCraft(id, StationTask.SMITH);
+        try {
+            for (int n = made.size(); n < AT_A_LOOK; n++) {
+                if (onRack(level, id, Tool.PICKAXE) >= wanted(id, Tool.PICKAXE)) break;
+                Item item = tierFor(level, v, Tool.PICKAXE);
+                String one = item == null ? null : make(level, v, smith, Tool.PICKAXE, item);
+                if (one == null) break;
+                made.add(one);
+            }
+        } finally {
+            Economy.closeCraft();
+        }
+        if (made.isEmpty()) return null;
+        String words = String.join(" and ", made);
+        smith.swing(InteractionHand.MAIN_HAND);
+        level.playSound(null, smith.blockPosition(), SoundEvents.VILLAGER_WORK_TOOLSMITH, SoundSource.NEUTRAL, 0.6F, 1.0F);
+        smith.note(AssistantEntity.Deed.THINGS_MADE, made.size());
+        smith.brain("made " + words + " for the miners: the rack was short of picks");
         return words;
     }
 
@@ -463,6 +506,7 @@ public final class Toolrack {
         // Out of the storehouse: in its books, handed over at the counter or booked out to a far plot.
         if (best instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity) Storekeeping.handedOut(f, List.of(got.copy()));
         TALLY.computeIfAbsent(v.id(), k -> new int[2])[1]++;
+        if (tool == Tool.PICKAXE) Picks.issued(v.id(), level.getGameTime());       // [fixes14] the miners' wear, counted
         return got;
     }
 }

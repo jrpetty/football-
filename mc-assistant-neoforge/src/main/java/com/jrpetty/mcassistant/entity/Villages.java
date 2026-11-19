@@ -1719,6 +1719,11 @@ public final class Villages {
      * minutes go by, so that a village which cannot build one is not starved of
      * planks for ever.
      */
+    /** [fixes14] Tests: this town founded long enough ago that its stores are no longer kept for the storehouse. */
+    public static void storehouseFirstDoneForTests(UUID villageId) {
+        FOUNDED.put(villageId, -STOREHOUSE_FIRST - 1);
+    }
+
     public static boolean storehouseFirst(UUID villageId, long gameTime) {
         if (built(villageId, "storage") > 0) return false;
         long since = FOUNDED.computeIfAbsent(villageId, k -> gameTime);
