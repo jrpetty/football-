@@ -652,7 +652,8 @@ public final class BuildOrders {
     /** What the stores hold toward this (timber counted in planks, a log four). */
     static int held(ServerLevel level, UUID village, Item it) {
         Block b = Block.byItem(it);
-        if (b != Blocks.AIR && HousingMarket.wooden(b) && !b.defaultBlockState().is(BlockTags.LOGS)) {
+        if (b != Blocks.AIR && b.defaultBlockState().is(BlockTags.LOGS)) return Market.stock(level, village, s -> s.is(net.minecraft.tags.ItemTags.LOGS));
+        if (b != Blocks.AIR && HousingMarket.wooden(b)) {
             int planks = Market.stock(level, village, s -> s.is(net.minecraft.tags.ItemTags.PLANKS)) + 4 * Market.stock(level, village, s -> s.is(net.minecraft.tags.ItemTags.LOGS));
             return planks / Math.max(1, HousingMarket.planksFor(b));
         }
@@ -698,7 +699,7 @@ public final class BuildOrders {
         double build = minutes / (pace * myShare);
         int short_ = 0;
         double matDays = 0;
-        String lacking = "";
+        List<String> lacks = new ArrayList<>();
         for (Material m : mats) {
             int need = m.count() - supplied.getOrDefault(m.item(), 0);
             if (need <= 0) continue;
@@ -707,7 +708,8 @@ public final class BuildOrders {
             short_ += need - have;
             double[] s = supply(id, m.item());
             double d = s[1] + (need - have) / s[0];
-            if (d > matDays) { matDays = d; lacking = (need - have) + " " + m.name().toLowerCase(Locale.ROOT); }
+            matDays = Math.max(matDays, d);
+            if (lacks.size() < 3) lacks.add((need - have) + " " + m.name().toLowerCase(Locale.ROOT));
         }
         double delay = Math.max(0, matDays - start - build * 0.5);
         double days = start + build + delay;
@@ -718,7 +720,7 @@ public final class BuildOrders {
         why.append(String.format(Locale.ROOT, "; %d crew%s of %d hands", k, k == 1 ? "" : "s", h));
         if (myShare < 1) why.append(priority ? "; the town's essential works first" : "; afternoons only while the town builds its own");
         else if (priority) why.append("; on priority");
-        if (short_ > 0) why.append(String.format(Locale.ROOT, "; %s to be made or bought in (about %.1f days)", lacking, matDays));
+        if (short_ > 0) why.append(String.format(Locale.ROOT, "; %s to be made or bought in (about %.1f days)", String.join(", ", lacks), matDays));
         else why.append("; the materials in the stores");
         if (!supplied.isEmpty()) why.append("; you bring some yourself");
         return new Eta(low, days, high, pos, ahead.size(), k, h, short_, matDays, start, build, why.toString());
@@ -1117,10 +1119,7 @@ public final class BuildOrders {
             if (!o.getString("status").equals("open")) break;
             if (pos >= k) { waiting(level, id, o, "queued: " + ordinal(pos + 1) + " for the builders' crews"); continue; }
             int[] w = window(level, id, o.getBoolean("priority"));
-            if (hod < w[0] || hod >= w[1]) {
-                if (hod < HOURS_A_DAY && hod < w[0]) waiting(level, id, o, "the builders on the town's own building first");
-                continue;
-            }
+            if (hod < w[0] || hod >= w[1]) continue;                  // off the builders' hours (or the town's own building's mornings)
             if (o.getInt("due") > 0 && !collect(level, id, o)) { waiting(level, id, o, "your stage payment of " + o.getInt("due") + " coins"); continue; }
             BlockPos anchor = BlockPos.of(o.getLong("anchor"));
             if (live && !TownJobs.instantNow()) {
@@ -1190,10 +1189,10 @@ public final class BuildOrders {
             long cost = c.item() == Items.AIR ? 0 : prices.getLong(key(c.item()));
             if (c.item() != Items.AIR && cost == 0) cost = pence(unit(level, id, c.item()));
             boolean own = c.item() != Items.AIR && useSupplied(o, c.item());
-            if (!own && cost > 0 && o.getLong("escrow") < cost + 100) {
-                // Held too little for the next block: the next payment falls due now.
+            if (!own && cost > 0 && o.getLong("escrow") < cost) {
+                // Held too little for the next block: the next payment falls due now (none left: the builders' own risk on the odd penny).
                 askNext(o);
-                if (o.getInt("due") <= 0 || !collect(level, id, o)) { shortOf = "your next payment"; break; }
+                if (o.getInt("due") > 0 && !collect(level, id, o)) { shortOf = "your next payment"; break; }
             }
             if (c.item() != Items.AIR && !own) {
                 boolean had;
