@@ -1926,6 +1926,12 @@ public final class HomeMaking {
 
     // [uses16] What its home still wants, for ItemUses (a folk weighing a thing at a stall or a shop), and a piece bought there.
 
+    /** [uses16] Where a piece of a home's plan stands, or null if it is not standing. */
+    @Nullable
+    public static BlockPos pieceAt(UUID village, BlockPos anchor, String key) {
+        return pieceForTests(village, anchor, key);
+    }
+
     /** [uses16] One piece its household's plan still wants: its key and words, what will do, one that would, how many, a basic. */
     public record Wanted(String key, String words, Predicate<ItemStack> what, Item sample, int n, boolean basic) {}
 

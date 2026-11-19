@@ -473,11 +473,11 @@ public final class PlayerStalls {
         if (Market.hungry(v.id())) out.add(new Want(PlayerStalls::food, Use.FOOD, fav));
         else if (marketDay) out.add(new Want(PlayerStalls::food, Use.TREAT, fav));
         Wealth.Tier tier = Wealth.tier(f);
-        if (f.bedPos() != null && f.comforts() < tier.comforts) out.add(new Want(s -> comfort(s, tier) && ItemUses.mayBuy(f, s), Use.HOME, null));   // [uses16] never past what a house takes
+        if (ItemUses.hasNeeds(f)) out.add(new Want(s -> ItemUses.wants(f, s), Use.USE, null));   // [uses16] what it has a real use for, before any comfort
+        if (f.bedPos() != null && f.comforts() < tier.comforts) out.add(new Want(s -> comfort(s, tier) && ItemUses.wants(f, s), Use.HOME, null));   // [uses16] only with a use for it
         if (tier.ordinal() >= Wealth.Tier.WELL_OFF.ordinal() || (marketDay && tier == Wealth.Tier.COMFORTABLE)) {
-            out.add(new Want(PlayerStalls::luxury, Use.LUXURY, null));
+            out.add(new Want(s -> luxury(s) && ItemUses.wants(f, s), Use.LUXURY, null));   // [uses16] only with a use for it
         }
-        if (ItemUses.hasNeeds(f)) out.add(new Want(s -> ItemUses.wants(f, s), Use.USE, null));   // [uses16] whatever else it has a use for
         return out;
     }
 
@@ -609,7 +609,7 @@ public final class PlayerStalls {
             int price = asking(level, id, st, key, s);
             if (going <= 0 || price <= 0) continue;
             int lot = lot(s);
-            int n = Math.min(Math.min(lot, count(box, s)), w.qty());
+            int n = Math.min(count(box, s), w.qty());                       // as many as the use takes, a part lot or several
             if (n <= 0) continue;
             int priceN = n >= lot ? price : Math.max(1, (int) Math.ceil(price * n / (double) lot - 1e-9));
             double goingN = going * n / (double) lot;

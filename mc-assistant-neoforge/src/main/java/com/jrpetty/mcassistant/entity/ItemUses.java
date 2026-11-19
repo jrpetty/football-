@@ -294,7 +294,8 @@ public final class ItemUses {
 
     /** The makings of a trade: metal, gems, string, leather, hides, crops, wool, timber and the like. */
     static boolean input(ItemStack s) {
-        return s.is(Tags.Items.INGOTS) || s.is(Tags.Items.NUGGETS) || s.is(Tags.Items.GEMS) || s.is(Tags.Items.DUSTS)
+        return s.is(Tags.Items.INGOTS) || s.is(Tags.Items.NUGGETS) || s.is(Tags.Items.GEMS) || s.is(Tags.Items.GEMS_PRISMARINE)
+            || s.is(Items.PRISMARINE_SHARD) || s.is(Items.PRISMARINE_CRYSTALS) || s.is(Tags.Items.DUSTS)
             || s.is(Tags.Items.RAW_MATERIALS) || s.is(Tags.Items.STRINGS) || s.is(Tags.Items.LEATHERS) || s.is(Tags.Items.CROPS)
             || s.is(Tags.Items.FEATHERS) || s.is(Tags.Items.BONES) || s.is(Tags.Items.SLIME_BALLS) || s.is(Tags.Items.GUNPOWDERS)
             || s.is(Tags.Items.RODS) || s.is(Tags.Items.ORES) || s.is(Tags.Items.EGGS) || s.is(Tags.Items.MUSHROOMS)
@@ -667,6 +668,10 @@ public final class ItemUses {
                 if (tier.ordinal() < k.from.ordinal()) continue;
                 int have = 0;
                 for (String key : book.keySet()) if (key.startsWith("lux." + k.key + ".")) have++;
+                if (k == Luxuries.Kind.LANTERN) {                             // the home's light hung as a lantern counts
+                    BlockPos lit = HomeMaking.pieceAt(village, h.anchor, "light");
+                    if (lit != null && level.getBlockState(lit).getBlock() instanceof LanternBlock) have++;
+                }
                 if (have >= k.most) continue;
                 out.add(new Need(k == Luxuries.Kind.LANTERN ? Kind.LIGHT : Kind.COMFORT, k.what, sample(k), 1, 0.25,
                     "its home has " + (have == 0 ? "no " : "room for another ") + k.key + (have == 0 ? "" : " (it has " + have + ")"),
@@ -872,7 +877,11 @@ public final class ItemUses {
         if (kinds.contains(Kind.FURNITURE) || kinds.contains(Kind.COMFORT)) return "there's no call or room for " + a + " in my home";
         if (kinds.contains(Kind.MEDICINE)) return "I'm well, thank you";
         if (kinds.contains(Kind.SEED)) return f.stationTask() == StationTask.FARM ? "my furrows are sown" : "I've nowhere to sow it";
-        if (kinds.contains(Kind.BOOK)) return "I'm no great reader";
+        if (kinds.contains(Kind.BOOK)) {
+            Persona p = f.persona();
+            if (!(p.rolled() && (p.hobby() == Persona.Hobby.READING || p.loves() == Persona.Gift.BOOKS))) return "I'm no great reader";
+            return READ.getOrDefault(f.getUUID(), List.of()).contains(title(s)) ? "I've read that one already" : "I've a book on the go — another in a day or two";
+        }
         if (kinds.contains(Kind.INPUT) || kinds.contains(Kind.BUILDING)) return "nobody I work for is short of it";
         if (kinds.contains(Kind.FUEL)) return "our woodpile's stacked";
         return "I've no use for " + a + " (" + k.words + ")";
