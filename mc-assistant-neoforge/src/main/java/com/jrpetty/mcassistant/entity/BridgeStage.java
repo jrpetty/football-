@@ -87,15 +87,15 @@ public final class BridgeStage {
     }
 
     /**
-     * Two towns 160 apart (the second {@code dz} to the side, so the road meets the river slantwise) on flat ground, a river
+     * Two towns 220 apart (the second {@code dz} to the side, so the road meets the river slantwise) on flat ground, a river
      * nine wide across the way between them; their road graded up to {@code grade} by both gangs, out of their stores.
      */
     @Nullable
     public static Scene road(ServerLevel level, int x, int z, int y, int dz, int grade, Villages.Age age) {
-        flat(level, x - 30, x + 190, z - 50, z + dz + 50, y);
-        int rx = x + 76;
+        flat(level, x - 30, x + 250, z - 50, z + dz + 50, y);
+        int rx = x + 106;
         river(level, rx, rx + 8, z - 50, z + dz + 50, y);
-        Villages.Village a = town(level, x, z, y, 7), b = town(level, x + 160, z + dz, y, 7);
+        Villages.Village a = town(level, x, z, y, 7), b = town(level, x + 220, z + dz, y, 7);
         if (a == null || b == null) return null;
         grade(level, a, b, grade, age);
         return new Scene(a, b, y, rx, 9);
@@ -116,13 +116,13 @@ public final class BridgeStage {
         }
     }
 
-    /** A colony's road from its mother 150 off, over a river, laid out of the mother's stores. */
+    /** A colony's road from its mother 210 off, over a river, laid out of the mother's stores. */
     @Nullable
     public static Scene colony(ServerLevel level, int x, int z, int y) {
-        flat(level, x - 30, x + 180, z - 40, z + 60, y);
-        int rx = x + 70;
+        flat(level, x - 30, x + 240, z - 40, z + 60, y);
+        int rx = x + 100;
         river(level, rx, rx + 6, z - 40, z + 60, y);
-        Villages.Village a = town(level, x, z, y, 7), b = town(level, x + 150, z + 10, y, 5);
+        Villages.Village a = town(level, x, z, y, 7), b = town(level, x + 210, z + 10, y, 5);
         if (a == null || b == null) return null;
         boolean was = TownJobs.instantNow();
         TownJobs.instantForTests(true);
@@ -139,19 +139,19 @@ public final class BridgeStage {
         return Roads.line(s.a(), s.b());
     }
 
-    /** A stone road over a stepped hill (a block up every three, six high, then down again) between two towns 160 apart. */
+    /** A stone road over a stepped hill (a block up every three, six high, then down again) between two towns 220 apart. */
     @Nullable
     public static Scene hill(ServerLevel level, int x, int z, int y) {
-        flat(level, x - 30, x + 190, z - 40, z + 40, y);
+        flat(level, x - 30, x + 250, z - 40, z + 40, y);
         for (int k = 0; k < 6; k++) {
-            int x0 = x + 50 + 3 * k, x1 = x + 110 - 3 * k;
+            int x0 = x + 80 + 3 * k, x1 = x + 140 - 3 * k;
             box(level, x0, x1, y + k, y + k, z - 30, z + 30, Blocks.GRASS_BLOCK.defaultBlockState());
             if (k > 0) box(level, x0, x1, y + k - 1, y + k - 1, z - 30, z + 30, Blocks.DIRT.defaultBlockState());
         }
-        Villages.Village a = town(level, x, z, y, 7), b = town(level, x + 160, z, y, 7);
+        Villages.Village a = town(level, x, z, y, 7), b = town(level, x + 220, z, y, 7);
         if (a == null || b == null) return null;
         grade(level, a, b, 3, Villages.Age.IRON);
-        return new Scene(a, b, y, x + 50, 60);
+        return new Scene(a, b, y, x + 80, 60);
     }
 
     /** A stone-brick house five across, its door in the middle of its south wall, its floor at `floor`. */
@@ -212,7 +212,7 @@ public final class BridgeStage {
         Scene col = colony(level, x, z + 280, y);
         view(out, "colony", col);
         Scene hill = hill(level, x, z + 400, y);
-        if (hill != null) out.add("VIEW hill " + (x + 80) + " " + (y + 14) + " " + (z + 400 + 22) + " " + (x + 80) + " " + (y + 5) + " " + (z + 400));
+        if (hill != null) out.add("VIEW hill " + (x + 110) + " " + (y + 14) + " " + (z + 400 + 22) + " " + (x + 110) + " " + (y + 5) + " " + (z + 400));
         List<BlockPos> doors = doors(level, x, z + 520, y);
         if (!doors.isEmpty()) out.add("VIEW doors " + (x + 12) + " " + (y + 6) + " " + (z + 520 + 26) + " " + (x + 12) + " " + (y + 1) + " " + (z + 530));
         return out;

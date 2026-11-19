@@ -98,7 +98,7 @@ public class BridgeStairGameTests {
         ServerLevel level = helper.getLevel();
         int x = 4800000;
         fresh(helper);
-        hold(level, x - 40, x + 200, Z - 60, Z + 80);
+        hold(level, x - 40, x + 260, Z - 60, Z + 80);
         int y = Kit.surface(level, x, Z).getY();
         helper.runAtTickTime(5, () -> {
             BridgeStage.Scene s = BridgeStage.road(level, x, Z, y, 24, 1, Villages.Age.STONE);
@@ -118,7 +118,7 @@ public class BridgeStairGameTests {
         ServerLevel level = helper.getLevel();
         int x = 4804000;
         fresh(helper);
-        hold(level, x - 40, x + 200, Z - 60, Z + 80);
+        hold(level, x - 40, x + 260, Z - 60, Z + 80);
         int y = Kit.surface(level, x, Z).getY();
         helper.runAtTickTime(5, () -> {
             BridgeStage.Scene s = BridgeStage.road(level, x, Z, y, 24, 3, Villages.Age.IRON);
@@ -139,7 +139,7 @@ public class BridgeStairGameTests {
         ServerLevel level = helper.getLevel();
         int x = 4808000;
         fresh(helper);
-        hold(level, x - 40, x + 190, Z - 50, Z + 70);
+        hold(level, x - 40, x + 250, Z - 50, Z + 70);
         int y = Kit.surface(level, x, Z).getY();
         helper.runAtTickTime(5, () -> {
             BridgeStage.Scene s = BridgeStage.colony(level, x, Z, y);
@@ -158,15 +158,15 @@ public class BridgeStairGameTests {
         ServerLevel level = helper.getLevel();
         int x = 4812000;
         fresh(helper);
-        hold(level, x - 40, x + 200, Z - 50, Z + 50);
+        hold(level, x - 40, x + 260, Z - 50, Z + 50);
         int y = Kit.surface(level, x, Z).getY();
         helper.runAtTickTime(5, () -> {
             BridgeStage.Scene s = BridgeStage.hill(level, x, Z, y);
             helper.assertTrue(s != null, "two towns");
             List<int[]> line = RoadWorks.lineForTests(s.a().id(), s.b().id());
-            BlockPos from = onLine(level, line, x + 46), to = onLine(level, line, x + 114);
-            BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, from, to, x + 46, x + 114, y - 4, y + 12, Z - 12, Z + 12);
-            String walked = folkWalk(level, s.a(), onLine(level, line, x + 66), onLine(level, line, x + 80));
+            BlockPos from = onLine(level, line, x + 76), to = onLine(level, line, x + 144);
+            BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, from, to, x + 76, x + 144, y - 4, y + 12, Z - 12, Z + 12);
+            String walked = folkWalk(level, s.a(), onLine(level, line, x + 96), onLine(level, line, x + 110));
             Kit.log("[VT] bs04 hill road " + c + "; folk " + walked);
             helper.assertTrue(c.walked && "ok".equals(walked), "walked over the hill: " + c.walked + ", folk " + walked);
             helper.assertTrue(c.fullSteps == 0 && c.wrongStairs == 0 && c.landings == 0 && c.mixed == 0, "a stepped road: " + c);
