@@ -1691,6 +1691,18 @@ public final class HomeMaking {
                 ItemStack l = peek(f, h, LIGHT);
                 BlockState lamp = l.is(Items.LANTERN) ? Blocks.LANTERN.defaultBlockState()
                     : Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, spot.facing());
+                if (l.is(Items.LANTERN) && !lamp.canSurvive(level, at)) {
+                    // [uses16] A lantern at a torch's spot on the wall: hung from the beam over it, else stood on the floor under it.
+                    BlockState hung = lamp.setValue(LanternBlock.HANGING, true);
+                    if (hung.canSurvive(level, at)) lamp = hung;
+                    else {
+                        for (int dy = 1; dy <= 3; dy++) {
+                            BlockPos down = at.below(dy);
+                            if (!level.getBlockState(down).isAir()) break;
+                            if (lamp.canSurvive(level, down)) { at = down; break; }
+                        }
+                    }
+                }
                 if (!lamp.canSurvive(level, at)) return false;
                 level.setBlock(at, lamp, 3);
                 take(f, h, LIGHT);
