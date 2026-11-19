@@ -373,7 +373,7 @@ public final class PlayerStalls {
         if (s.isEmpty() || Market.isCoin(s)) return 0;
         ItemStack one = s.copyWithCount(1);
         Market.Good g = Budget.goodFor(one);
-        if (g == null) return 0;
+        if (g == null) return ItemUses.fallbackLot(level, village, one);   // [uses16] a useful thing the counter has no price for
         boolean md = Market.marketDay(village, today(level));
         int have = Market.stock(level, village, x -> ItemStack.isSameItemSameComponents(x, one));
         int p = Market.price(level, village, g, one, have, md);
@@ -392,7 +392,9 @@ public final class PlayerStalls {
 
     /** What a folk goes to a stall for. {@code need}: it keeps nothing back in its purse for it. */
     public enum Use {
-        FOOD(true), TREAT(false), TOOL(true), HOME(false), LUXURY(false);
+        FOOD(true), TREAT(false), TOOL(true), HOME(false), LUXURY(false),
+        /** [uses16] Anything else it has a real use for (ItemUses): the town's needs, weighed thing by thing. */
+        USE(false);
 
         final boolean need;
 
@@ -471,10 +473,11 @@ public final class PlayerStalls {
         if (Market.hungry(v.id())) out.add(new Want(PlayerStalls::food, Use.FOOD, fav));
         else if (marketDay) out.add(new Want(PlayerStalls::food, Use.TREAT, fav));
         Wealth.Tier tier = Wealth.tier(f);
-        if (f.bedPos() != null && f.comforts() < tier.comforts) out.add(new Want(s -> comfort(s, tier), Use.HOME, null));
+        if (f.bedPos() != null && f.comforts() < tier.comforts) out.add(new Want(s -> comfort(s, tier) && ItemUses.mayBuy(f, s), Use.HOME, null));   // [uses16] never past what a house takes
         if (tier.ordinal() >= Wealth.Tier.WELL_OFF.ordinal() || (marketDay && tier == Wealth.Tier.COMFORTABLE)) {
             out.add(new Want(PlayerStalls::luxury, Use.LUXURY, null));
         }
+        if (ItemUses.hasNeeds(f)) out.add(new Want(s -> ItemUses.wants(f, s), Use.USE, null));   // [uses16] whatever else it has a use for
         return out;
     }
 
@@ -570,6 +573,103 @@ public final class PlayerStalls {
         if (there) {
             level.playSound(null, b.at(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.6F, 1.1F);
             FolkTalk.speak(f, boughtLine(f, sold, best, use));
+        }
+        return sold;
+    }
+
+    /**
+     * [uses16] A folk weighs everything in a stall against what it (its household, its firm, the town it buys for) has a real
+     * use for now (ItemUses): of the lots it has a use for, at a price it thinks fair and whoever pays for it can pay, the best
+     * value for the use (the work in a tool, the bellyful in food, for the coin), no more of it than the use takes. What it has
+     * no use for goes on the stall's books with the reason ("what would I do with a saddle?"); at the stall, with nothing
+     * bought, it says so. Bought, the thing is put to its use (ItemUses.use). Null if it bought nothing.
+     */
+    @Nullable
+    static Sold buyForUse(ServerLevel level, Villages.Village v, VillageFolkEntity f, Stall st, Booth b, boolean there) {
+        if (!level.isLoaded(b.at()) || !(level.getBlockEntity(b.at()) instanceof Container box)) return null;
+        UUID id = v.id();
+        Offer best = null, dearest = null;
+        ItemUses.Want bestWant = null;
+        double bestScore = -1;
+        String noUse = null;
+        List<String> looked = new ArrayList<>();
+        for (int i = 0; i < box.getContainerSize(); i++) {
+            ItemStack s = box.getItem(i);
+            if (s.isEmpty() || Market.isCoin(s) || s.isDamaged()) continue;
+            String key = key(s);
+            if (looked.contains(key)) continue;
+            looked.add(key);
+            ItemUses.Want w = ItemUses.want(f, s);
+            if (!w.yes()) {
+                if (there) ItemUses.turnedDown(level, id, st.owner, key, f, w.reason());
+                if (noUse == null) noUse = w.reason();
+                continue;
+            }
+            int going = going(level, id, s);
+            int price = asking(level, id, st, key, s);
+            if (going <= 0 || price <= 0) continue;
+            int lot = lot(s);
+            int n = Math.min(Math.min(lot, count(box, s)), w.qty());
+            if (n <= 0) continue;
+            int priceN = n >= lot ? price : Math.max(1, (int) Math.ceil(price * n / (double) lot - 1e-9));
+            double goingN = going * n / (double) lot;
+            boolean villageHas = Market.stock(level, id, x -> ItemStack.isSameItemSameComponents(x, s)) > 0;
+            int least = villageHas ? Market.leastLot(level, id, s, n) : Integer.MAX_VALUE;
+            Offer o = new Offer(s.copyWithCount(1), key, n, priceN, goingN, false);
+            if (priceN > Math.min(least, most(goingN, ItemUses.keen(f, w.need()), villageHas))) {
+                if (dearest == null || o.ratio() > dearest.ratio()) dearest = o;
+                continue;
+            }
+            boolean own = w.need().payer() == ItemUses.Payer.OWN;
+            if (own && f.purse() < priceN + (w.value() >= 0.6 ? 0 : 2)) continue;
+            double score = (0.5 + w.value()) * ItemUses.fit(s, w) * n / priceN;
+            if (best == null || score > bestScore) {
+                best = o;
+                bestWant = w;
+                bestScore = score;
+            }
+        }
+        if (best == null) {
+            if (dearest != null) tooDear(level, v, f, st, dearest, there);
+            else if (there && noUse != null && GRUMBLED.getOrDefault(f.getUUID(), -1L) != today(level)) {
+                GRUMBLED.put(f.getUUID(), today(level));
+                FolkTalk.speak(f, capital(noUse.endsWith("?") ? noUse : noUse + "."));
+            }
+            return null;
+        }
+        ItemStack got = take(box, best.sample(), best.n());
+        String forWhat = st.name + "'s stall";
+        if (got.getCount() < best.n() || !ItemUses.pay(level, f, bestWant, best.price(), got.getCount() + " " + ItemUses.name(got) + " at " + forWhat)) {
+            putBack(box, got);
+            return null;
+        }
+        ItemUses.paid(f, best.price());
+        long day = today(level);
+        roll(st, day);
+        int toll = TaxBook.toll(id, best.price());                 // [civic-land] the market toll, to the treasury
+        st.till += best.price() - toll;
+        Businesses.stallSold(level, id, st.owner, st.name, got, got.getCount(), best.price(), toll);   // [business-books] the stall's own books
+        st.soldAll += got.getCount();
+        st.takenAll += best.price();
+        st.weekCount[0] += got.getCount();
+        st.weekCoin[0] += best.price();
+        ItemUses.Payer payer = bestWant.need().payer();
+        String who = f.displayNameCap() + (payer == ItemUses.Payer.FIRM ? " (for " + bestWant.need().reason().replaceFirst(" is short of.*", "") + ")"
+            : payer == ItemUses.Payer.TOWN ? " (for the town)" : "");
+        st.sales.add(0, new Sale(day, who, best.key(), got.getCount(), best.price()));
+        while (st.sales.size() > SALES_KEPT) st.sales.remove(st.sales.size() - 1);
+        save(id, st);
+        Sold sold = new Sold(st.owner, st.name, got.copy(), best.price());
+        String lotWords = thing(sold.what(), sold.what().getCount());
+        ItemUses.use(f, got, bestWant, forWhat);
+        sign(level, id, b, st);
+        tellOwner(level, st.owner, who + " bought " + sold.what().getCount() + " " + ItemUses.name(sold.what()) + " for " + best.price()
+            + coinWord(best.price()) + " at your stall in " + Villages.name(id) + " (" + bestWant.reason() + "). Till: " + st.till + ".");
+        if (there) {
+            level.playSound(null, b.at(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.6F, 1.1F);
+            FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), capital(lotWords) + " — just what I needed: " + bestWant.reason() + ".",
+                capital(lotWords) + " from " + st.name + "'s stall. I'll put it to good use.",
+                "That's the very thing. " + capital(words(best.price())) + " well spent."));
         }
         return sold;
     }
@@ -811,7 +911,8 @@ public final class PlayerStalls {
         List<String> bought = new ArrayList<>();
         for (Want w : wants(level, v, f, marketDay)) {
             if (bought.size() >= (marketDay ? 2 : 1)) break;
-            Sold s = buyFrom(level, v, f, st, b, w.what(), w.use(), w.favourite(), true);
+            Sold s = w.use() == Use.USE ? buyForUse(level, v, f, st, b, true)          // [uses16]
+                : buyFrom(level, v, f, st, b, w.what(), w.use(), w.favourite(), true);
             if (s != null) bought.add(s.words());
         }
         if (bought.isEmpty()) {
@@ -1470,6 +1571,7 @@ public final class PlayerStalls {
         Stall st = tenantOf(id, b);
         if (st == null) {
             t.putString("mode", "let");
+            t.put("needs", ItemUses.needsTag(level, id, 12));               // [uses16] what the town needs, to stock usefully
             return t;
         }
         State s = st.state(day);
@@ -1546,6 +1648,7 @@ public final class PlayerStalls {
             int[] a = sold.getOrDefault(e.getKey(), new int[2]);
             w.putInt("sold7", a[0]);
             w.putInt("coin7", a[1]);
+            w.put("use", ItemUses.verdictTag(level, id, s));               // [uses16] who here would buy it and why, or why nobody
             wares.add(w);
         }
         t.put("wares", wares);
@@ -1575,6 +1678,8 @@ public final class PlayerStalls {
             dear.add(x);
         }
         t.put("dear", dear);
+        t.put("refused", ItemUses.refusedTag(id, st.owner));               // [uses16] turned down as no use, and why
+        t.put("needs", ItemUses.needsTag(level, id, 12));                  // [uses16] what the town needs now, to stock usefully
     }
 
     /** The players' stalls for the town's books (the Shops page): every tenancy with its books, and how many

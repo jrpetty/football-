@@ -1924,6 +1924,65 @@ public final class HomeMaking {
         return null;
     }
 
+    // [uses16] What its home still wants, for ItemUses (a folk weighing a thing at a stall or a shop), and a piece bought there.
+
+    /** [uses16] One piece its household's plan still wants: its key and words, what will do, one that would, how many, a basic. */
+    public record Wanted(String key, String words, Predicate<ItemStack> what, Item sample, int n, boolean basic) {}
+
+    /** [uses16] The pieces its home's plan still wants that this folk could buy now: the basics first, its own things once the
+     *  basics are in and its means run to them; less what it already carries of its household's own for them. */
+    public static List<Wanted> wanting(VillageFolkEntity f) {
+        List<Wanted> out = new ArrayList<>();
+        UUID village = f.ownerId();
+        if (village == null || f.isBaby() || Homes.lodging(f)) return out;
+        Homes.Home h = Homes.homeOf(village, f.getUUID());
+        if (h == null || Homes.seat(h)) return out;
+        Plan p = load(village, h.anchor.asLong());
+        if (p == null) return out;
+        boolean basics = basicsDone(p);
+        Wealth.Tier tier = Wealth.tier(f);
+        for (Piece q : p.pieces) {
+            if (q.done()) continue;
+            Spec s = q.spec();
+            if (s == null || s.stage() == Stage.OWN && (!basics || tier.ordinal() < s.from().ordinal())) continue;
+            for (Need need : s.needs()) {
+                int have = carrying(f, h, need);
+                if (have < need.n()) out.add(new Wanted(q.key, s.words(), need.what(), need.sample(), need.n() - have, s.stage() == Stage.BASIC));
+            }
+        }
+        return out;
+    }
+
+    /** [uses16] A piece bought somewhere other than the shop (a player's stall or shop): its household's own, to be set out at
+     *  home where its plan has room for it, as a present is. What it says, or null if its plan wants no such thing. */
+    @Nullable
+    public static String bought(VillageFolkEntity f, ItemStack one, String where) {
+        UUID village = f.ownerId();
+        if (village == null || f.isBaby() || one.isEmpty()) return null;
+        Homes.Home h = Homes.homeOf(village, f.getUUID());
+        if (h == null || Homes.seat(h)) return null;
+        Plan p = load(village, h.anchor.asLong());
+        if (p == null) return null;
+        for (Piece q : p.pieces) {
+            if (q.done()) continue;
+            Spec s = q.spec();
+            if (s == null) continue;
+            for (Need need : s.needs()) {
+                if (!need.what().test(one)) continue;
+                Homes.keepsake(one, f, Homes.Source.BOUGHT);
+                q.how = How.BOUGHT;
+                q.state = State.WANTED;
+                q.retry = 0;
+                q.note = "bought at " + where;
+                save(p);
+                NEXT_LOOK.remove(f.getUUID());
+                return FolkTalk.pick(f.getRandom(), cap(s.words()) + " for our home — I'll set it out tonight.",
+                    "Just what the house wanted: " + s.words() + ".");
+            }
+        }
+        return null;
+    }
+
     private static String cap(String s) {
         return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }

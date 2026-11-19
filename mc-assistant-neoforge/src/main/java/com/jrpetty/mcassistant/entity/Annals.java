@@ -572,7 +572,8 @@ public final class Annals {
         out.put("production", production(level, v));
         out.put("shops", Stockroom.inventoryReport(level, id));
         out.put("prices", PriceIndex.report(level, id));        // [econ-prices] the town's prices: the Prices page
-        out.getCompound("shops").put("stalls", PlayerStalls.report(level, id));   // the players' stalls on the square
+        out.getCompound("shops").put("stalls", PlayerStalls.report(level, id));
+        out.getCompound("shops").put("needs", ItemUses.needsTag(level, id, 24));   // [uses16] what the town needs now, and would pay   // the players' stalls on the square
         out.put("workshop", Workshop.report(level, id));        // the shop's workshop: its makers, its order book, the age's say
         out.put("stock", stock(level, v));
         // The storehouse's books, its staff (the storekeeper, the couriers) and its run list: the Stores page.

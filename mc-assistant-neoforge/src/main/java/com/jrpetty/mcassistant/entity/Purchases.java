@@ -341,6 +341,7 @@ public final class Purchases {
             }
             case TOOL, WORK -> { }
             default -> {
+                if (!ItemUses.mayBuy(f, one)) return 0;                         // [uses16] no use to it, or its home has as many as a house takes
                 if (each > willing(f, one, need)) {
                     refuse(level, f, one, each, n);
                     return 0;
