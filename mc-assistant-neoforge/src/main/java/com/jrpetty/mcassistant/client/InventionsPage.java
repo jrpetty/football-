@@ -42,7 +42,7 @@ public final class InventionsPage {
     private static final String[] FILTERS = { "All", "Open", "Known", "Locked" };
     private static final String[] ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII" };
     /** Card sizes and gaps at the three zooms: compact, normal, large. */
-    private static final int[] CARD_W = { 66, 82, 112 }, CARD_H = { 13, 22, 26 }, GAP_X = { 10, 10, 16 }, GAP_Y = { 4, 4, 5 };
+    private static final int[] CARD_W = { 66, 80, 112 }, CARD_H = { 13, 22, 26 }, GAP_X = { 10, 10, 16 }, GAP_Y = { 4, 4, 5 };
     private static final int STEP_HEAD = 10, COL_HEAD = 11, PAD = 4;
     private static int hoverBranch = -1;
     private static final int KNOWN_LINE = 0xFF4E9A3A, OPEN_LINE = 0xFF6F6F6F, LOCKED_LINE = 0xFF9A9A9A;

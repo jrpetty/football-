@@ -15,7 +15,7 @@ class InventionTreeLayoutTest {
 
     /** The page's zooms: compact, normal, large (InventionsPage's CARD_W, CARD_H, GAP_X, GAP_Y and STEP_HEAD). */
     private static final Metrics[] ZOOMS = {
-        new Metrics(66, 13, 10, 4, 10), new Metrics(82, 22, 10, 4, 10), new Metrics(112, 26, 16, 5, 10) };
+        new Metrics(66, 13, 10, 4, 10), new Metrics(80, 22, 10, 4, 10), new Metrics(112, 26, 16, 5, 10) };
 
     @Test
     void everyInventionHasAPlaceAndNoTwoCardsOverlap() {
@@ -63,8 +63,8 @@ class InventionTreeLayoutTest {
 
     @Test
     void theNormalZoomFitsTheBooksOnTheSmallestScreen() {
-        // The books' page at 427 by 240 GUI pixels (GUI 2 at 854x480, GUI 3 at 1280x720) leaves the tree about 372 across.
-        assertTrue(InventionTreeLayout.width(ZOOMS[1]) <= 372, "normal zoom " + InventionTreeLayout.width(ZOOMS[1]));
+        // The books' page at 427 by 240 GUI pixels (GUI 2 at 854x480, GUI 3 at 1280x720) leaves the tree about 369 across (the page less its well and scroll bar).
+        assertTrue(InventionTreeLayout.width(ZOOMS[1]) <= 369, "normal zoom " + InventionTreeLayout.width(ZOOMS[1]));
         assertTrue(InventionTreeLayout.width(ZOOMS[0]) < InventionTreeLayout.width(ZOOMS[1]));
         assertTrue(InventionTreeLayout.width(ZOOMS[1]) < InventionTreeLayout.width(ZOOMS[2]));
     }

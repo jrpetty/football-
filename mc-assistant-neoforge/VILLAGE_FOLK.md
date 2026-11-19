@@ -14153,7 +14153,7 @@ the card under the mouse (all it needs, and what it opens next) drawn dark. The 
 to zoom), a drag pans it, and the mouse over a card gives the whole of it. At its usual size it fits the books on the
 smallest screen across and scrolls down. The layout is plain arithmetic (village/InventionTreeLayout), so the unit
 test (InventionTreeLayoutTest) checks at every zoom that no two cards overlap, what is needed stands above what needs
-it, no line runs through a card, and the usual size fits 372 pixels across.
+it, no line runs through a card, and the usual size fits 369 pixels across.
 
 No new server data: the only server changes are the two operator commands for the auction's pictures and the shop
 tooltip's words.
