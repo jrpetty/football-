@@ -195,7 +195,7 @@ public final class BuildOrders {
 
     static boolean fitting(BuildGoal.Part p) {
         return switch (p) {
-            case BLOCK, WINDOW, DOOR, FENCE, GATE, LADDER, TORCH, OBSIDIAN, CLEAR, WATER -> false;
+            case BLOCK, WINDOW, DOOR, FENCE, GATE, LADDER, OBSIDIAN, CLEAR, WATER -> false;
             default -> true;
         };
     }
@@ -421,6 +421,24 @@ public final class BuildOrders {
             if (overlaps(o.getString("drawing"), at, f, anchor, wx, wz)) return "where another order is going up";
         }
         return "";
+    }
+
+    /** The nearest plot to a spot where this drawing may go (a ring at a time outward), on the ground there; null if none within reach. */
+    @Nullable
+    public static BlockPos suggestPlot(ServerLevel level, UUID village, String drawing, BlockPos near, Direction facing, int reach) {
+        Villages.Village v = Villages.get(village);
+        if (v == null) return null;
+        for (int r = 0; r <= reach; r += 2) {
+            for (int dx = -r; dx <= r; dx += 2) for (int dz = -r; dz <= r; dz += 2) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                int x = near.getX() + dx, z = near.getZ() + dz;
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                BlockPos p = new BlockPos(x, y, z);
+                if (plotProblem(level, v, drawing, p, facing, null).isEmpty()) return p;
+            }
+        }
+        return null;
     }
 
     static boolean overlaps(String structure, BlockPos at, Direction f, BlockPos anchor, int wx, int wz) {
