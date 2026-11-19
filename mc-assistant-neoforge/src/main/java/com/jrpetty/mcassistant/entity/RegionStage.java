@@ -128,6 +128,29 @@ public final class RegionStage {
         return out;
     }
 
+    /** The stage's railway, again (its plan waits on the ground being loaded the first time): from this town to its nearest neighbour. */
+    static List<String> stageRail(ServerLevel level, @Nullable Villages.Village v) {
+        List<String> out = new ArrayList<>();
+        if (v == null) return out;
+        Villages.Village o = null;
+        for (Villages.Village t : Villages.every()) {
+            if (t.id().equals(v.id()) || !t.dim().equals(v.dim())) continue;
+            if (o == null || t.centre().distSqr(v.centre()) < o.centre().distSqr(v.centre())) o = t;
+        }
+        if (o == null) return out;
+        Railways.Line rail = Railways.linkTo(v.id(), o.id());
+        if (rail == null) rail = planRail(level, v, o);
+        boolean open = rail != null && layRailFree(level, v, o);
+        out.add("RAIL " + (rail == null ? "no plan yet (the ground is being loaded: run it again)" : rail.length() + " rails, open " + open));
+        if (rail != null) {
+            BlockPos s = rail.rail(2);
+            out.add("VIEW station " + (s.getX() + 9) + " " + (s.getY() + 6) + " " + (s.getZ() + 9) + " " + s.getX() + " " + s.getY() + " " + s.getZ());
+            BlockPos m = rail.rail(rail.length() / 2);
+            out.add("VIEW line " + (m.getX() + 20) + " " + (m.getY() + 18) + " " + (m.getZ() + 20) + " " + m.getX() + " " + m.getY() + " " + m.getZ());
+        }
+        return out;
+    }
+
     @Nullable
     private static Villages.Village town(ServerLevel level, int x, int z) {
         BlockPos heart = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
