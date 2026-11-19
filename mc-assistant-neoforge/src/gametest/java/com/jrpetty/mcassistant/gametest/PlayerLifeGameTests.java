@@ -828,4 +828,43 @@ public class PlayerLifeGameTests {
             helper.succeed();
         });
     }
+
+    /**
+     * [join21] The town's builders keep a block's gap from a player's building (PlayerGap, Villages.siteFor): a building on
+     * the register, a shop by its room, what a player built itself.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pl14_builders_keep_off")
+    public static void pl14_builders_keep_off(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 4565000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 2);
+        com.jrpetty.mcassistant.entity.BuildOrders.resetForTests();
+        com.jrpetty.mcassistant.entity.PropertyMarket.resetForTests();
+        helper.runAtTickTime(10, () -> {
+            UUID village = folk.get(0).ownerId();
+            BlockPos heart = Kit.surface(level, x, Z);
+            ServerPlayer p = player(helper, heart.offset(7, 0, 0), 30);
+            // A player's building on the register, 7 across (half 3), 15 blocks west of the heart.
+            BlockPos plot = heart.offset(-15, 0, 0);
+            com.jrpetty.mcassistant.entity.PropertyMarket.register(level, village, p.getUUID(), "P", "P's barn", "barn", plot, Direction.NORTH, "", 3, 3);
+            // A town building of half 2 beside it: touching (gap 0) and a block off (gap 1) crowd it; two blocks off do not.
+            helper.assertTrue(com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, plot.offset(3 + 2 + 1, 0, 0), 2, 2), "wall to wall: kept off");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, plot.offset(3 + 2 + 2, 0, 0), 2, 2), "a block's gap is kept clear");
+            helper.assertTrue(!com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, plot.offset(3 + 2 + 3, 0, 0), 2, 2), "past the gap: free");
+            // What a player built itself: two solid blocks of its own.
+            BlockPos own = heart.offset(0, 0, 18);
+            helper.assertTrue(!com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, own, 2, 2), "open ground: free");
+            for (int i = 0; i < 2; i++) {
+                BlockPos b = own.offset(3, i, 0);
+                level.setBlockAndUpdate(b, Blocks.COBBLESTONE.defaultBlockState());
+                com.jrpetty.mcassistant.entity.PlayerBlocks.markForTests(level, b, true);
+            }
+            helper.assertTrue(com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, own, 2, 2), "a player's own wall a block off: kept off");
+            // A shop by its room.
+            PlayerShops.Shop s = shop(helper, level, heart, p);
+            PlayerShops.needs(level, s);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, heart.offset(8, 0, 6), 2, 2), "against the shop: kept off");
+            helper.succeed();
+        });
+    }
 }

@@ -3083,6 +3083,7 @@ public final class Villages {
                     great ? 4 : 2, whyNot(villageId));
                 if (ground == null) continue;
                 if (Floods.lowGround(villageId, ground)) continue;     // [disasters] not on the low ground the river came over
+                if (PlayerGap.crowds(level, villageId, ground, hx, hz)) continue;   // [join21] never on or against a player's building
                 // [districts] A park's lawn at the middle height of its lot, cut and filled to it (ParkGround).
                 ground = ParkGround.floorFor(level, project, ground);
                 valid++;
