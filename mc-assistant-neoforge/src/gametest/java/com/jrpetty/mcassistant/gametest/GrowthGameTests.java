@@ -416,4 +416,41 @@ public class GrowthGameTests {
             helper.succeed();
         });
     }
+
+    /**
+     * [growth22] An Iron Age town short of the iron its age asks for puts it by: with forty bars in its stores (a golem's
+     * thirty-six and more), the golem keeper is told the town is putting its iron by, not handed the age's iron.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "gw07_iron_put_by")
+    public static void gw07_iron_put_by(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 5170000, z = 90000;
+        Kit.reset(level);
+        Kit.hold(level, x, z, 48);
+        Kit.prepare(level, x, z, 48);
+        BlockPos heart = Kit.surface(level, x, z);
+        helper.runAtTickTime(5, () -> {
+            List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+            for (int i = 0; i < 6; i++) folk.add(com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart.east(i), 0.0F));
+            helper.assertTrue(folk.stream().allMatch(java.util.Objects::nonNull), "a town of six");
+            java.util.UUID village = folk.get(0).ownerId();
+            Villages.Village v = Villages.get(village);
+            Villages.ageForTests(village, Villages.Age.IRON);
+            BlockPos chest = Kit.surface(level, x + 3, z + 2);
+            level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+            net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+            box.setItem(0, new net.minecraft.world.item.ItemStack(Items.IRON_INGOT, 40));
+            box.setItem(1, new net.minecraft.world.item.ItemStack(Items.CARVED_PUMPKIN, 2));
+            box.setChanged();
+            Villages.forgetStock();
+            boolean saving = false;
+            for (Villages.Need n : Villages.needs(level, village)) if (n.task() == Villages.Task.IRON) saving = true;
+            String golem = com.jrpetty.mcassistant.entity.Golems.cannotAfford(level, v);
+            Kit.log("[VT] gw07 the age short of iron " + saving + "; a golem: " + golem);
+            helper.assertTrue(saving, "the Iron Age town short of its age's iron");
+            helper.assertTrue(golem != null && golem.contains("putting its iron by"), "no golem out of the age's iron: " + golem);
+            helper.succeed();
+        });
+    }
 }

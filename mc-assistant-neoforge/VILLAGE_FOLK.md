@@ -14899,6 +14899,28 @@ shop's building; pl13 a player's shop competing at the town's counter; pl14 the 
 
 ## A grown town that keeps advancing, and the leftovers (growth-22)
 
+### What held a grown town at the Iron Age
+The 0.319.0 run's town sat in the Iron Age from day 48 to day 183 with "Short of: iron" the only thing on its list, its
+stores reading seven iron day after day. On 0.324.0 (the same seed and spot, run locally) the iron in the stores rose
+to sixteen or a little over and fell back to sixteen again every day through the Stone Age: everything that works iron
+takes whatever is over "the last sixteen bars" (Crafts.IRON_KEPT), and the miners at the works' iron level brought in a
+few ore a day. The smith's tools, its lanterns and pots, the shop's goods, the watch house and the bank already waited
+while the town was putting iron by for its age (Crafts.savingIron); the fire station's cauldrons and bucket rack, the
+constable's badge, the fletcher's crossbows, the foundry's steel, a restored cauldron and a new iron golem did not, and
+each took the age's iron down to its own floor again. They wait now too (a fire station with no iron for a cauldron sets
+a rain barrel by the forge instead, as it did before; the bucket chain at a fire, the golems' mending and the gateway's
+flint and steel do not wait). The mine's report counts the metal in and out by whom, and the shifts (how many, blocks
+and minutes a shift, why they ended), so the next long run says where the iron goes.
+
+### A town grown full keeps making room
+The same town had built every lot its plan could use (212 lots, the rest of them over its river or up a cliff: "no lot
+for the house, lap 510", and for the flats and the town hall too), with seven households waiting for a home and eight
+folk lodging in spare beds; and, careful of its money (its wages hardly paid), Grow did nothing at all: no garden, no
+refacing (its Iron Age houses still oak), and no second storey, the only room it had left to grow into. A town careful
+of its money still puts off its gardens and makeovers, but a home is not a makeover (TownBudget counts homes and beds
+among the essentials): while households wait for one, its houses are raised a storey, one at a time, in what the stores
+can pay for (FullTown). Its colonies go on as before.
+
 ### The hundred days' frozen watch counts the region
 The hundred days' run (tools/realworld/soak.py, FrozenWatch) failed a town on day 183 of the 0.319.0 run for "no new
 building and no new folk for 25 days" while it was sending its folk off to found colonies: its own 107 down to 86, the
@@ -14934,9 +14956,12 @@ stone, a cheek on its open side. A door one or two up keeps its short straight f
 Measured with the builders held to their jobs (a test hook: VillageFolkEntity.holdForTests; BuildGoal's tick books where a
 builder's time goes), a house on a hillside takes no longer a block than one on the flat (13 ticks a placement against 14);
 it has about 70% more to lay (the earth under its floor on the low side, its stone footing, the bank cut back), so it takes
-about 1.6 times as long. The days it took in the world went off the job: a builder taken off its building (its rations, a
-fight, a new trade) and the lead then waiting "not due yet" for the town's whole gap between projects before going back to
-it. A lead coming back to a building its crew has begun (its lot kept) no longer waits for that gap (Villages.resuming).
+about 1.6 times as long. The days it took in the world went off the job: even held, the builder of the house with its
+door downhill was taken off it two thirds done by the town itself, sent to cry the news on the square (the crier's and the
+bell-ringer's pick cleared its jobs: the dawn bell had taken the measuring rig's builders the same way), and a lead taken
+off its building then waited "not due yet" for the town's whole gap between projects before going back to it. The bell and
+the crier now pass over a hand raising one of the town's buildings (Villages.raising), and a lead coming back to a building
+its crew has begun (its lot kept) no longer waits for that gap (Villages.resuming).
 
 ### The metal's books
 The mine's report (`/village mine`) now ends with the town's iron and diamonds in and out yesterday and today, and by whom:
@@ -14944,8 +14969,9 @@ what the miners and the cave team brought in, and what took it out of the stores
 golems, the fire brigade's buckets...) (OreFlow).
 
 ### Tests
-GrowthGameTests gw01-gw05 (x 5,100,000 to 5,200,000, z 90,000): gw01 a drift towards a cliff stops two blocks short and
+GrowthGameTests gw01-gw07 (x 5,100,000 to 5,200,000, z 90,000): gw01 a drift towards a cliff stops two blocks short and
 turns, no opening, the miner never on the slope, the miner's chest booking no refusals; gw02 the gate books a cell asked
 two hundred times once, a look none; gw03 doors three and four up on plinths get turned flights, a door two up its
 straight one, all walked by stairs; gw04 hill houses held to the job, no slower a placement than the flat one; gw05 a lead
-back at its begun building waits for no gap.
+back at its begun building waits for no gap; gw06 a careful town with households waiting raises a house a storey; gw07 an
+Iron Age town short of its age's iron builds no golem out of it.
