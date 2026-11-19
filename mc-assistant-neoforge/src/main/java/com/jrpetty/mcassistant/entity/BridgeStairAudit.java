@@ -34,6 +34,7 @@ import java.util.Set;
  * <li><b>rails</b>: places on the walk over a drop of more than a block with no railing on that side;</li>
  * <li><b>uneven</b>: changes of height along the walk over the water;</li>
  * <li><b>fullSteps</b>: a block up or down the walk onto a full block (no stair or slab to take it);</li>
+ * <li><b>drops</b>: two blocks or more down at once on the walk (a step missing altogether);</li>
  * <li><b>wrongStairs</b>: a stair on the walk that does not face the way up;</li>
  * <li><b>landings</b>: flights of more than six steps with no level place;</li>
  * <li><b>unlit</b>: places on the walk over the water more than seven blocks from a light.</li>
@@ -44,7 +45,7 @@ public final class BridgeStairAudit {
     private BridgeStairAudit() {}
 
     public static final class Counts {
-        public int mixed, gaps, rails, uneven, fullSteps, wrongStairs, landings, unlit, walk, overWater;
+        public int mixed, gaps, rails, uneven, fullSteps, drops, wrongStairs, landings, unlit, walk, overWater;
         public boolean walked;
         public final List<String> families = new ArrayList<>();
         /** Where the first few faults are, to find them by. */
@@ -54,17 +55,17 @@ public final class BridgeStairAudit {
             if (where.size() < 6) where.add(what + "@" + p.toShortString());
         }
 
-        public int faults() { return mixed + gaps + rails + uneven + fullSteps + wrongStairs + landings + unlit; }
+        public int faults() { return mixed + gaps + rails + uneven + fullSteps + drops + wrongStairs + landings + unlit; }
 
         public void add(Counts o) {
-            mixed += o.mixed; gaps += o.gaps; rails += o.rails; uneven += o.uneven; fullSteps += o.fullSteps;
+            mixed += o.mixed; drops += o.drops; gaps += o.gaps; rails += o.rails; uneven += o.uneven; fullSteps += o.fullSteps;
             wrongStairs += o.wrongStairs; landings += o.landings; unlit += o.unlit; walk += o.walk; overWater += o.overWater;
             walked &= o.walked;
         }
 
         @Override
         public String toString() {
-            return "mixed " + mixed + " " + families + ", gaps " + gaps + ", rails " + rails + ", uneven " + uneven + ", fullSteps " + fullSteps
+            return "mixed " + mixed + " " + families + ", gaps " + gaps + ", rails " + rails + ", uneven " + uneven + ", fullSteps " + fullSteps + ", drops " + drops
                 + ", wrongStairs " + wrongStairs + ", landings " + landings + ", unlit " + unlit + " (walk " + walk + ", over water " + overWater
                 + ", dry " + walked + ")" + (where.isEmpty() ? "" : " " + where);
         }
@@ -192,6 +193,7 @@ public final class BridgeStairAudit {
             int dy = p.getY() - prev.getY();
             Direction d = Direction.getNearest(p.getX() - prev.getX(), 0, p.getZ() - prev.getZ());
             if (dy != 0 && water && overWater(level, prev)) { c.uneven++; c.at("uneven", p); }
+            if (Math.abs(dy) >= 2) { c.drops++; c.at("drop " + dy, p); }       // a jump of two or more on the way: no step there at all
             if (dy != 0) {
                 run++;
                 if (run == 7) { c.landings++; c.at("landing", p); }

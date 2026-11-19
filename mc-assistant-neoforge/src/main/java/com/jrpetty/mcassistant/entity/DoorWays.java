@@ -171,8 +171,16 @@ public final class DoorWays {
             } else {
                 int ground = standNear(level, col, walk);
                 // Met: the ground here is a step from the last one at most, with room to stand on it.
-                if (Math.abs(ground - walk) <= 1 && (ground <= walk || passable(level, prev.atY(walk + 2)))) return null;
-                want = ground > walk ? walk + 1 : walk - 1;
+                if (Math.abs(ground - walk) <= 1 && (ground <= walk || passable(level, prev.atY(walk + 2)))) {
+                    // [bridges18] Not on a step the town laid itself with the way dropping on past it (a drop of two left
+                    // halfway down a flight): that is no ground, and the way goes on from it.
+                    if (k == MOST_STEPS || !laidStep(level.getBlockState(col.atY(ground - 1)))) return null;
+                    int beyond = standNear(level, door.relative(out, k + 1), ground);
+                    if (Math.abs(beyond - ground) <= 1) return null;
+                    want = ground;
+                } else {
+                    want = ground > walk ? walk + 1 : walk - 1;
+                }
                 // [build-world] No headroom to step up from the last step (a lamp hung over the doorstep, a porch's eaves):
                 // the bank is cut down level instead, a way into it. Stepped up, the way was "something built" and never
                 // made, and the inn's door opened onto a bank of earth two high.
@@ -209,6 +217,11 @@ public final class DoorWays {
             prev = col;
         }
         return null;
+    }
+
+    /** [bridges18] A step the town laid on a way in (its cobbles, its stairs, the earth it built up), not the world's own ground. */
+    private static boolean laidStep(BlockState st) {
+        return st.is(Blocks.COBBLESTONE) || st.is(Blocks.COBBLESTONE_STAIRS) || st.is(Blocks.COBBLED_DEEPSLATE) || st.is(Blocks.DIRT);
     }
 
     /**

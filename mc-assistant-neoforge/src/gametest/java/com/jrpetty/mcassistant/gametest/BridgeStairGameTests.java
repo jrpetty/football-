@@ -179,7 +179,7 @@ public class BridgeStairGameTests {
             String walked = folkWalk(level, s.a(), onLine(level, line, x + 96), onLine(level, line, x + 110));
             Kit.log("[VT] bs04 hill road " + c + "; folk " + walked);
             helper.assertTrue(c.walked && "ok".equals(walked), "walked over the hill: " + c.walked + ", folk " + walked);
-            helper.assertTrue(c.fullSteps == 0 && c.wrongStairs == 0 && c.landings == 0 && c.mixed == 0, "a stepped road: " + c);
+            helper.assertTrue(c.fullSteps == 0 && c.drops == 0 && c.wrongStairs == 0 && c.landings == 0 && c.mixed == 0, "a stepped road: " + c);
             helper.succeed();
         });
     }
@@ -212,7 +212,7 @@ public class BridgeStairGameTests {
             Kit.log("[VT] bs05 doors all " + all + "; earth showing by the flights " + earth);
             helper.assertTrue(earth == 0, "no earth showing under or beside a flight: " + earth);
             helper.assertTrue(all.walked, "every door walked to: " + all);
-            helper.assertTrue(all.fullSteps == 0 && all.wrongStairs == 0 && all.mixed == 0, "door steps as stairs, one material: " + all);
+            helper.assertTrue(all.fullSteps == 0 && all.drops == 0 && all.wrongStairs == 0 && all.mixed == 0, "door steps as stairs, one material: " + all);
             helper.succeed();
         });
     }
