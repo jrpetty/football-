@@ -153,11 +153,11 @@ public final class WagonManifest {
         if (d != null && d.trip() != null) {
             d.trip().purse += price;
             d.trip().earned += price;
-            CoinCensus.playerIn(CoinCensus.purseTown(d), price);     // [health] into a caravan's purse, counted (CoinCensus.holders)
+            CoinCensus.playerIn(CoinCensus.purseTown(d), price, p, PlayerFinance.Cat.PURCHASES, "from a trade wagon");     // [health] into a caravan's purse, counted (CoinCensus.holders)
             FolkTalk.speak(d, "A pleasure. Safe roads to you!");
         } else {
             com.jrpetty.mcassistant.village.Ledger.addCoins(w.town, price);   // [health] no driver to carry it: the town's, not lost
-            CoinCensus.playerIn(w.town, price);
+            CoinCensus.playerIn(w.town, price, p, PlayerFinance.Cat.PURCHASES, "from a trade wagon");
         }
         w.cargoChanged();
         Villages.tell(w.town, level.getDayTime() / 24000L, "sold " + lot.getCount() + " " + plainName(lot.getItem())

@@ -551,7 +551,7 @@ public final class Quests {
         if (paid > 0) {
             ItemStack coins = new ItemStack(McAssistantMod.VILLAGE_COIN.get(), paid);
             if (!p.getInventory().add(coins)) p.drop(coins, false);
-            CoinCensus.playerOut(id, paid);                          // [health] out of the treasury and the elder's purse
+            CoinCensus.playerOut(id, paid, p, PlayerFinance.Cat.REWARDS, "a posting's reward");                          // [health] out of the treasury and the elder's purse
         }
         p.giveExperiencePoints(5 + q.count / 2);
         String name = p.getName().getString();

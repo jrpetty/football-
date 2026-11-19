@@ -600,7 +600,7 @@ public final class Hustings {
         }
         Market.payOut(p, coins);
         f.earn(coins);
-        CoinCensus.playerIn(CoinCensus.purseTown(f), coins);          // [health]
+        CoinCensus.playerIn(CoinCensus.purseTown(f), coins, p, PlayerFinance.Cat.GIFTS, "a sweetener");          // [health]
         sway(village, f.getUUID(), p.getUUID(), Math.min(30, 10 + coins * 2));
         // Seen by another folk near enough: an offence under the town's laws, there and then (and out already).
         boolean seen = v != null && seenBy(level, village, f, p) != null;

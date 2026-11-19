@@ -342,17 +342,22 @@ public final class Bourse {
         } else {
             Holder sh = "player".equals(sk) ? Holder.PLAYER : Holder.FOLK;
             UUID su = uuid(ask.getString("who"));
+            int had = "player".equals(sk) ? shares(b, Holder.PLAYER, su) : 0;   // [purse20]
             if (!move(b, sh, su, bh, bu, bname, n * SHARE)) {
                 if (buyer != null) buyer.earn(coins);
                 return 0;
             }
-            if ("player".equals(sk)) Accounts.add(Accounts.sub(TownBonds.book(village), "due"), ask.getString("who"), coins * 100L);
-            else {
+            if ("player".equals(sk)) {
+                Accounts.add(Accounts.sub(TownBonds.book(village), "due"), ask.getString("who"), coins * 100L);
+                PlayerFinance.accrued(ask.getString("who"), village, coins * 100L, PlayerFinance.Cat.CASHED);   // [purse20] waiting at the hall
+                PlayerFinance.costSold(su, "share:" + b.id, n, had);
+            } else {
                 VillageFolkEntity seller = folk(village, ask.getString("who"));
                 if (seller != null) seller.earn(coins);
                 else Businesses.toTreasury(village, coins * 100L);              // (the seller gone: the town keeps it for its household)
             }
         }
+        if ("player".equals(bk)) PlayerFinance.costAdd(bu, "share:" + b.id, coins * 100L);   // [purse20] what its shares cost it
         bid.putInt("n", bid.getInt("n") - n);
         ask.putInt("n", ask.getInt("n") - n);
         CompoundTag f = firmBook(village, b.id);
@@ -479,14 +484,14 @@ public final class Bourse {
             }
             if (k <= 0) break;
             Market.payOut(p, coins);
-            CoinCensus.playerIn(village, coins);
+            CoinCensus.playerIn(village, coins, p, PlayerFinance.Cat.INVESTED, "shares bought");
             CompoundTag bid = order(b.id, true, "player", p.getUUID().toString(), p.getName().getString(), k, ask.getLong("price"), day);
             int done = trade(level, village, b, bid, ask, k, ask.getLong("price"), day);
             int paidFor = (int) ((done * ask.getLong("price") + 99) / 100);
             if (paidFor < coins) {
                 // What the trade did not take, back to the player.
                 Dealings.giveCoins(p, coins - paidFor);
-                CoinCensus.playerOut(village, coins - paidFor);
+                CoinCensus.playerOut(village, coins - paidFor, p, PlayerFinance.Cat.INVESTED, "share money not spent, back");
             }
             got += done;
             spent += paidFor;

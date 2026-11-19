@@ -359,6 +359,7 @@ public final class TownBonds {
             case "club", "bank" -> FolkCredit.bondIncome(village, kind, p, "coupon".equals(what));
             case "player" -> {
                 Accounts.add(Accounts.sub(book(village), "due"), who, p);
+                PlayerFinance.accrued(who, village, p, "coupon".equals(what) ? PlayerFinance.Cat.COUPONS : PlayerFinance.Cat.CASHED);   // [purse20]
                 CapitalBook.dirty();
             }
             default -> Businesses.toTreasury(village, p);
@@ -433,7 +434,7 @@ public final class TownBonds {
         long day = level.getDayTime() / 24000L;
         int bp = rateBp(village);
         Market.payOut(p, n);
-        CoinCensus.playerIn(village, n);
+        CoinCensus.playerIn(village, n, p, PlayerFinance.Cat.INVESTED, "town bonds");
         Businesses.toTreasury(village, n * 100L);
         issue(village, "player", p.getUUID().toString(), p.getName().getString(), n * 100L, bp, day);
         long paid = Accounts.debts(village) > 0 ? Accounts.payIous(village, Math.min(n * 100L, Accounts.debts(village)), "bonds sold") : 0;
@@ -454,7 +455,7 @@ public final class TownBonds {
         d.putLong(k, due - coins * 100L);
         if (d.getLong(k) <= 0) d.remove(k);
         Dealings.giveCoins(p, coins);
-        CoinCensus.playerOut(village, coins);
+        PlayerFinance.collected(p, village, coins);                   // [purse20] booked by kind (coupons, title rent, shares sold), counted
         CapitalBook.dirty();
         return "The hall paid you " + coins + Homes.coins(coins) + " on your bonds.";
     }

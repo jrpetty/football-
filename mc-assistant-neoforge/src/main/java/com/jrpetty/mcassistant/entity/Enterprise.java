@@ -1132,7 +1132,7 @@ public final class Enterprise {
         if (Market.coinsHeld(p) < CHARTER_FEE) return "The charter costs " + CHARTER_FEE + " coins; you have " + Market.coinsHeld(p) + ".";
         Market.payOut(p, CHARTER_FEE);
         com.jrpetty.mcassistant.village.Ledger.addCoins(id, CHARTER_FEE);
-        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_IN, CHARTER_FEE);
+        CoinCensus.playerIn(id, CHARTER_FEE, p, PlayerFinance.Cat.FEES, "a firm's charter");
         TownBudget.in(id, "fees", CHARTER_FEE * 100L);
         Business b = found(level, v, t, null, p, Businesses.today(level), null);
         if (b == null) return "The charter could not be drawn up.";

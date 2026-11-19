@@ -593,7 +593,7 @@ public final class FolkCredit {
         n = Math.min(n, Market.coinsHeld(p));
         if (n <= 0) return "You've no coin on you to put by.";
         Market.payOut(p, n);
-        CoinCensus.playerIn(village, n);
+        CoinCensus.playerIn(village, n, p, PlayerFinance.Cat.SAVED, "into the savings club");
         chestIn(village, n * 100L);
         credit(village, p.getUUID(), p.getName().getString(), n);
         return "Into the savings club: " + n + Homes.coins(n) + ". You have " + balance(village, p.getUUID()) + Homes.coins(balance(village, p.getUUID()))
@@ -615,7 +615,7 @@ public final class FolkCredit {
         if (a.getInt(k) <= 0) a.remove(k);
         chestOut(village, n * 100L);
         Dealings.giveCoins(p, n);
-        CoinCensus.playerOut(village, n);
+        CoinCensus.playerOut(village, n, p, PlayerFinance.Cat.DRAWN, "out of the savings club");
         CapitalBook.dirty();
         return "Out of the savings club: " + n + Homes.coins(n) + ".";
     }
@@ -638,7 +638,7 @@ public final class FolkCredit {
         l.putInt("bp", rateBp(village));
         l.putString("name", p.getName().getString());
         Dealings.giveCoins(p, n);
-        CoinCensus.playerOut(village, n);
+        CoinCensus.playerOut(village, n, p, PlayerFinance.Cat.BORROWED, "borrowed against your holdings");
         CapitalBook.dirty();
         return lenderName(village).substring(0, 1).toUpperCase(Locale.ROOT) + lenderName(village).substring(1) + " lent you " + n + Homes.coins(n) + " at "
             + TownBonds.pct(l.getInt("bp")) + " a week, against what you hold with the town. Repay with /village capital repay.";
@@ -652,7 +652,7 @@ public final class FolkCredit {
         n = (int) Math.min(Math.min(n <= 0 ? (owed + 99) / 100 : n, (owed + 99) / 100), Market.coinsHeld(p));
         if (n <= 0) return "You've no coin on you to repay with.";
         Market.payOut(p, n);
-        CoinCensus.playerIn(village, n);
+        CoinCensus.playerIn(village, n, p, PlayerFinance.Cat.LOAN_PAY, "your loan repaid");
         long p100 = n * 100L;
         long interestPart = Math.min(p100, l.getLong("interest"));
         if (bank(village)) Bank.giveFromCapital(village, n, interestPart > 0);

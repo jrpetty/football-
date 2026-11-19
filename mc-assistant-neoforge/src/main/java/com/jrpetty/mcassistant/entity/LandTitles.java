@@ -286,7 +286,7 @@ public final class LandTitles {
         int price = (int) Math.max(1, (t.getLong("value") + 99) / 100);
         if (Market.coinsHeld(p) < price) return t.getString("name") + " costs " + price + Homes.coins(price) + "; you have " + Market.coinsHeld(p) + ".";
         Market.payOut(p, price);
-        CoinCensus.playerIn(village, price);
+        CoinCensus.playerIn(village, price, p, PlayerFinance.Cat.INVESTED, "a land title");
         Businesses.toTreasury(village, price * 100L);
         TownBudget.in(village, "fees", price * 100L);
         long day = level.getDayTime() / 24000L;
@@ -308,6 +308,7 @@ public final class LandTitles {
         if (landlord.isEmpty()) return false;
         long paid = Businesses.payOut(level, village, b, rent, day);
         Accounts.add(Accounts.sub(TownBonds.book(village), "due"), landlord, paid);
+        PlayerFinance.accrued(landlord, village, paid, PlayerFinance.Cat.RENT_IN);   // [purse20]
         Accounts.add(t, "paidAll", paid);
         CapitalBook.dirty();
         return true;

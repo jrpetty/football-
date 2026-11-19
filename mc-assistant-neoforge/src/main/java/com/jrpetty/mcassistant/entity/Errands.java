@@ -294,7 +294,7 @@ public final class Errands {
             if (paid > 0) {
                 ItemStack coins = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), paid);
                 if (!p.getInventory().add(coins)) p.drop(coins, false);
-                CoinCensus.playerOut(home, paid);                    // [health] out of the treasury and the asker's purse
+                CoinCensus.playerOut(home, paid, p, PlayerFinance.Cat.REWARDS, "an errand");                    // [health] out of the treasury and the asker's purse
                 Earnings.record(p, home, Earnings.Source.QUEST, paid, f.displayNameCap(), "for your trouble");                 // [earning]
                 said.append("Here's ").append(paid).append(" coins for your trouble").append(paid < wage ? " — all I could find" : "").append(". ");
             } else {

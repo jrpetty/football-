@@ -400,7 +400,7 @@ public final class NetherGuests {
         }
         Market.payOut(p, CHART_PRICE);
         f.earn(CHART_PRICE);
-        CoinCensus.playerIn(CoinCensus.purseTown(f), CHART_PRICE);    // [health]
+        CoinCensus.playerIn(CoinCensus.purseTown(f), CHART_PRICE, p, PlayerFinance.Cat.PURCHASES, "a nether chart");    // [health]
         long day = level.getDayTime() / 24000L;
         ItemStack map = chartMap(level, village, room, "The Nether, by the runners of " + Villages.name(village),
             "Copied by " + f.displayNameCap() + " of the Nether runners, day " + (day + 1));

@@ -69,7 +69,7 @@ public final class QuestRewards {
             q.flags.put("paid", Integer.toString(paid));
             if (paid > 0) {
                 Dealings.giveCoins(p, paid);
-                CoinCensus.playerOut(q.village, paid);               // [health] out of the treasury or the givers' purses
+                CoinCensus.playerOut(q.village, paid, p, PlayerFinance.Cat.REWARDS, "a quest's reward");               // [health] out of the treasury or the givers' purses
                 Earnings.record(p, q.village, Earnings.Source.QUEST, paid, Villages.name(q.village), "for \"" + q.title + "\"");   // [earning] booked
                 parts.add(paid + (paid == 1 ? " coin" : " coins") + (paid < q.coins ? " (all that could be found)" : ""));
             }

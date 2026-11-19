@@ -78,7 +78,7 @@ public final class Citizens {
                 + coins + ". Come back when you have it.";
             Market.payOut(p, fee);
             Ledger.addCoins(village, fee);
-            CoinCensus.playerIn(village, fee);                            // [health]
+            CoinCensus.playerIn(village, fee, p, PlayerFinance.Cat.FEES, "the citizen's fee");                            // [health]
         }
         Ledger.addCitizen(village, p.getUUID(), name);
         long day = f.level().getDayTime() / 24000L;

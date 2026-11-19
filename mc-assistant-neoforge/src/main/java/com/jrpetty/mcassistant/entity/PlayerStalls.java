@@ -1001,7 +1001,7 @@ public final class PlayerStalls {
         if (!paid) {
             Market.payOut(p, rent);
             Ledger.addCoins(id, rent);
-            CoinCensus.playerIn(id, rent);                           // [health]
+            CoinCensus.playerIn(id, rent, p, PlayerFinance.Cat.RENT_OUT, "stall rent");                           // [health]
             Economy.rent(id, rent);
         }
         if (st == null) st = new Stall(p.getUUID());
@@ -1031,7 +1031,7 @@ public final class PlayerStalls {
         if (coins < rent) return "Another week is " + rent + coinWord(rent) + ". You've " + coins + ".";
         Market.payOut(p, rent);
         Ledger.addCoins(v.id(), rent);
-        CoinCensus.playerIn(v.id(), rent);                           // [health]
+        CoinCensus.playerIn(v.id(), rent, p, PlayerFinance.Cat.RENT_OUT, "stall rent");                           // [health]
         Economy.rent(v.id(), rent);
         boolean reopened = st.state(day) != State.OPEN;
         st.paidTill = Math.max(st.paidTill, day - 1) + WEEK;
@@ -1050,7 +1050,7 @@ public final class PlayerStalls {
         int n = st.till;
         st.till = 0;
         for (int left = n; left > 0; left -= 64) Dealings.giveCoins(p, Math.min(64, left));
-        CoinCensus.playerOut(village, n);                            // [health] the stall's till is counted
+        CoinCensus.playerOut(village, n, p, PlayerFinance.Cat.STALL, "your stall's till");                            // [health] the stall's till is counted
         Earnings.record(p, village, Earnings.Source.STALL, n, "your stall's till", "of takings");   // [earning] booked and told
         if (st.at == null) forget(village, p.getUUID());
         else save(village, st);
@@ -1083,7 +1083,7 @@ public final class PlayerStalls {
         int till = st.till;
         st.till = 0;
         for (int left = till; left > 0; left -= 64) Dealings.giveCoins(p, Math.min(64, left));
-        CoinCensus.playerOut(id, till);                              // [health]
+        CoinCensus.playerOut(id, till, p, PlayerFinance.Cat.STALL, "your stall's till");                              // [health]
         Earnings.record(p, id, Earnings.Source.STALL, till, "your stall's till", "of takings");     // [earning]
         st.at = null;
         forget(id, p.getUUID());

@@ -154,7 +154,7 @@ public final class HaulContracts {
         if (s == null) return Villages.name(from) + "'s stores can't spare it all just now.";
         if (deposit > 0) Market.payOut(p, deposit);
         Ledger.note(from, "escrow/deposit/" + p.getUUID(), Integer.toString(deposit));
-        CoinCensus.playerIn(from, deposit);                                    // [health] the escrow is counted
+        CoinCensus.playerIn(from, deposit, p, PlayerFinance.Cat.HELD, "a haulage deposit");                                    // [health] the escrow is counted
         int left = n;
         while (left > 0) {
             int k = Math.min(left, one.getMaxStackSize());
@@ -200,10 +200,10 @@ public final class HaulContracts {
         int back = (int) Math.round(deposit * got / (double) n);
         if (deposit - back > 0) Ledger.addCoins(from, deposit - back);          // what never came: the neighbour keeps its worth
         Earnings.giveCoins(p, back);
-        CoinCensus.playerOut(from, back);                                      // [health]
+        CoinCensus.playerOut(from, back, p, PlayerFinance.Cat.RELEASED, "a haulage deposit back");                                      // [health]
         if (earned > 0) {
             Earnings.giveCoins(p, earned);
-            CoinCensus.playerOut(to, earned);                                  // [health]
+            CoinCensus.playerOut(to, earned, p, PlayerFinance.Cat.CONTRACTS, "haulage delivered");                                  // [health]
             Earnings.record(p, to, Earnings.Source.CONTRACT, earned, Villages.name(to), "for hauling " + Goods.words(new ItemStack(item), got)
                 + " from " + Villages.name(from));
         }
@@ -264,7 +264,7 @@ public final class HaulContracts {
             if (saved.isEmpty()) Ledger.addCoins(from, deposit);
             else {
                 Earnings.giveCoins(p, deposit);
-                CoinCensus.playerOut(from, deposit);                           // [health]
+                CoinCensus.playerOut(from, deposit, p, PlayerFinance.Cat.RELEASED, "a haulage deposit back");                           // [health]
             }
         }
         Earnings.data(p).remove("haul");

@@ -287,7 +287,7 @@ public final class OutdoorTalk {
         price = price(level, village, sample, count, unwelcome);
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
-        CoinCensus.playerIn(village, price);                          // [health]
+        CoinCensus.playerIn(village, price, p, PlayerFinance.Cat.PURCHASES, "from a folk");                          // [health]
         Economy.sold(village, price);
         Budget.forget(village);
         Stockroom.sold(level, village, Stockroom.Seller.STORES, sample, count, price);
@@ -420,7 +420,7 @@ public final class OutdoorTalk {
         if (coins < price) return name + " would be " + price + " coins" + (saddled ? ", saddle and all" : "") + ". You've " + coins + ".";
         Market.payOut(p, price);
         Ledger.addCoins(v.id(), price);
-        CoinCensus.playerIn(v.id(), price);                           // [health]
+        CoinCensus.playerIn(v.id(), price, p, PlayerFinance.Cat.PURCHASES, "a horse");                           // [health]
         Economy.sold(v.id(), price);
         h.setOwnerUUID(p.getUUID());
         h.removeTag(Stables.STEED);
@@ -475,7 +475,7 @@ public final class OutdoorTalk {
         }
         Market.payOut(p, GOLEM_FEE);
         f.earn(GOLEM_FEE);
-        CoinCensus.playerIn(CoinCensus.purseTown(f), GOLEM_FEE);      // [health]
+        CoinCensus.playerIn(CoinCensus.purseTown(f), GOLEM_FEE, p, PlayerFinance.Cat.FEES, "a golem's keep");      // [health]
         g.addTag(PLAYERS_GOLEM);
         g.setCustomName(Component.literal(p.getName().getString() + "'s golem"));
         f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);

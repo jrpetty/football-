@@ -129,7 +129,7 @@ final class TavernDesk implements ServicePoints.Desk {
         if (!TownWork.take(level, visit.village(), s -> ItemStack.isSameItemSameComponents(s, want), 1)) return ServicePoints.Result.no("That's all gone just now.");
         Market.payOut(p, q.total());
         Ledger.addCoins(village, q.total());
-        CoinCensus.playerIn(village, q.total());                      // [health]
+        CoinCensus.playerIn(village, q.total(), p, PlayerFinance.Cat.FOOD, "at the tavern");                      // [health]
         Economy.sold(village, q.total());
         Stockroom.sold(level, village, Stockroom.Seller.TAVERN, one, 1, q.total());
         if (!p.getInventory().add(one.copy())) p.drop(one.copy(), false);

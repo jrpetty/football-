@@ -68,7 +68,7 @@ public final class Hire {
         }
         Market.payOut(p, price);
         f.earn(price);
-        CoinCensus.playerIn(CoinCensus.purseTown(f), price);          // [health]
+        CoinCensus.playerIn(CoinCensus.purseTown(f), price, p, PlayerFinance.Cat.HANDS, "a hand hired");          // [health]
         boolean more = f.isHired();
         long until = (more ? Math.max(f.hiredUntil, level.getGameTime()) : level.getGameTime()) + DAY;
         if (more) {

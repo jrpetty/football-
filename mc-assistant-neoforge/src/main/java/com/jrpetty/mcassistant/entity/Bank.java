@@ -972,6 +972,7 @@ public final class Bank {
                 a.balance -= k;
                 paid += k;
                 save(id, a);
+                PlayerFinance.internal(who, id, -k * 100L, PlayerFinance.Cat.LOAN_PAY, "the mortgage's week, out of your bank account");   // [purse20]
             }
             if (paid < due && who != null) {
                 String key = "rentdue/" + who;                             // the rent its tenants have paid it (Homes)
@@ -981,6 +982,8 @@ public final class Bank {
                     Ledger.note(id, key, Integer.toString(rent - k));
                     s.cash += k;
                     paid += k;
+                    PlayerFinance.internal(who, id, k * 100L, PlayerFinance.Cat.RENT_IN, "rent from your tenants, kept for the mortgage");   // [purse20]
+                    PlayerFinance.internal(who, id, -k * 100L, PlayerFinance.Cat.LOAN_PAY, "the mortgage's week, out of your rent waiting");
                 }
             }
         } else {
@@ -1132,6 +1135,7 @@ public final class Bank {
             a.balance += got[i];
             a.interestAll += got[i];
             save(village, a);
+            if (a.player && got[i] > 0) PlayerFinance.internal(a.who, village, got[i] * 100L, PlayerFinance.Cat.INTEREST, "interest on your bank account");   // [purse20]
         }
         s.week.paid += pay;
     }
@@ -1373,7 +1377,7 @@ public final class Bank {
             if (n <= 0) return moved + "You've no coin on you to put in.";
             Market.payOut(p, n);
             s.cash += n;
-            CoinCensus.playerIn(id, n);                              // [health] into the counted vault
+            CoinCensus.playerIn(id, n, p, PlayerFinance.Cat.SAVED, "put into the bank");                              // [health] into the counted vault
             Account a = s.accounts.computeIfAbsent(p.getUUID(), k -> new Account(k, true, name, day));
             a.balance += n;
             s.week.deposited += n;
@@ -1392,7 +1396,7 @@ public final class Bank {
             s.cash -= k;
             s.week.withdrawn += k;
             Dealings.giveCoins(p, k);
-            CoinCensus.playerOut(id, k);                             // [health]
+            CoinCensus.playerOut(id, k, p, PlayerFinance.Cat.DRAWN, "taken out of the bank");                             // [health]
             save(id, a);
             saveHead(id, s);
             return moved + "Out of the vault: " + k + Homes.coins(k) + (k < n ? " (all it holds just now)" : "") + ". " + accountLine(id, p.getUUID());
@@ -1404,7 +1408,7 @@ public final class Bank {
             if (n <= 0) return moved + "You've no coin on you to pay it with.";
             Market.payOut(p, n);
             s.cash += n;
-            CoinCensus.playerIn(id, n);                              // [health]
+            CoinCensus.playerIn(id, n, p, PlayerFinance.Cat.LOAN_PAY, "mortgage paid at the bank");                              // [health]
             book(s, l, n);
             l.arrears = Math.max(0, l.arrears - n);
             l.missed = l.arrears <= 0 || l.weekly <= 0 ? 0 : (l.arrears + l.weekly - 1) / l.weekly;
@@ -1515,7 +1519,7 @@ public final class Bank {
             save(id, a);
         }
         if (down - fromAccount > 0) Market.payOut(p, down - fromAccount);
-        CoinCensus.playerIn(id, down - fromAccount);                 // [health] the rest of the price moves between the vault and the treasury
+        CoinCensus.playerIn(id, down - fromAccount, p, PlayerFinance.Cat.INVESTED, "a house bought: the down payment");                 // [health] the rest of the price moves between the vault and the treasury
         s.cash -= lent;
         Ledger.addCoins(id, price);
         Economy.houseSold(id, price);

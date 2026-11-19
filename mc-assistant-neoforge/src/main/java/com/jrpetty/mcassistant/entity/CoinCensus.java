@@ -234,6 +234,30 @@ public final class CoinCensus {
         flow(village, Flow.PLAYER_OUT, coins);
     }
 
+    /** [purse20] The same, written in the player's own books too (PlayerFinance): what kind of money and what for. */
+    public static void playerIn(@Nullable UUID village, long coins, @Nullable net.minecraft.world.entity.player.Player p, PlayerFinance.Cat cat, String what) {
+        playerIn(village, coins);
+        if (coins > 0) PlayerFinance.book(p, village, -coins, cat, what);
+    }
+
+    /** [purse20] The same, written in the player's own books too (PlayerFinance). */
+    public static void playerOut(@Nullable UUID village, long coins, @Nullable net.minecraft.world.entity.player.Player p, PlayerFinance.Cat cat, String what) {
+        playerOut(village, coins);
+        if (coins > 0) PlayerFinance.book(p, village, coins, cat, what);
+    }
+
+    /** [purse20] For a player known only by its id (a prize kept for it while it is away). */
+    public static void playerOut(@Nullable UUID village, long coins, @Nullable UUID player, PlayerFinance.Cat cat, String what) {
+        playerOut(village, coins);
+        if (coins > 0) PlayerFinance.bookId(player, village, coins, cat, what);
+    }
+
+    /** [purse20] For a player known only by its id. */
+    public static void playerIn(@Nullable UUID village, long coins, @Nullable UUID player, PlayerFinance.Cat cat, String what) {
+        playerIn(village, coins);
+        if (coins > 0) PlayerFinance.bookId(player, village, -coins, cat, what);
+    }
+
     /** [health] The town whose count holds this folk's purse: a visitor's, the town it is visiting; a folk's, its own. */
     @Nullable
     public static UUID purseTown(@Nullable VillageFolkEntity f) {

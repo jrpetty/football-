@@ -344,7 +344,7 @@ public final class PlayerTrades extends SavedData {
         if (paid) {
             Market.payOut(p, fee);
             f.earn(fee);
-            CoinCensus.playerIn(CoinCensus.purseTown(f), fee);            // [health]
+            CoinCensus.playerIn(CoinCensus.purseTown(f), fee, p, PlayerFinance.Cat.FEES, "training");            // [health]
         }
         Course c = new Course();
         c.trade = t;

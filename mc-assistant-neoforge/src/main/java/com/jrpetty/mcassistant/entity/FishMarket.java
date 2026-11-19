@@ -887,7 +887,7 @@ public final class FishMarket {
         if (got <= 0) return "All sold!";
         Market.payOut(p, price);
         Ledger.addCoins(id, price);
-        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_IN, price);                                          // [business-books]
+        CoinCensus.playerIn(id, price, p, PlayerFinance.Cat.FOOD, "at the fish market");                                          // [business-books]
         Businesses.service(level, id, Business.Type.FISHMARKET, one, got, price * 100L, true);          // [business-books] the stall's till
         Economy.sold(id, price);
         PriceIndex.bought(id, one, got);

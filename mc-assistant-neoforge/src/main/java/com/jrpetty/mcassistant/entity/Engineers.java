@@ -1358,7 +1358,7 @@ public final class Engineers {
         Machine m = lampAt(level, v, best);
         Market.payOut(p, LAMP_FEE);
         f.earn(LAMP_FEE);
-        CoinCensus.playerIn(CoinCensus.purseTown(f), LAMP_FEE);      // [health]
+        CoinCensus.playerIn(CoinCensus.purseTown(f), LAMP_FEE, p, PlayerFinance.Cat.FEES, "a street lamp");      // [health]
         w.machines.add(0, m);                                           // first: next() takes the first machine building
         save(v.id());
         Villages.tell(v.id(), level.getDayTime() / 24000L, f.displayNameCap() + " took on a street lamp for " + p.getName().getString()

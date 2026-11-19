@@ -432,7 +432,7 @@ final class StoryHeirloom implements QuestStories.Story {
                         if (v == null || !moveOutOfStores(level, q, v, heirloom, p)) return "It's not in the stores any more…";
                         Market.payOut(p, price);
                         com.jrpetty.mcassistant.village.Ledger.addCoins(q.village, price);
-                        CoinCensus.playerIn(q.village, price);       // [health]
+                        CoinCensus.playerIn(q.village, price, p, PlayerFinance.Cat.PURCHASES, "an heirloom bought back");       // [health]
                         homeStep(q);
                         if (child != null) {
                             child.persona().feelFor(p.getUUID(), name, 30);
@@ -504,7 +504,7 @@ final class StoryHeirloom implements QuestStories.Story {
                 if (!moveOutOfStores(level, q, there, heirloom, p)) return "It's gone from our stores, I'm afraid.";
                 Market.payOut(p, price);
                 Ledger.addCoins(there.id(), price);
-                CoinCensus.playerIn(there.id(), price);                       // [health]
+                CoinCensus.playerIn(there.id(), price, p, PlayerFinance.Cat.PURCHASES, "an heirloom bought back");                       // [health]
                 q.flags.put("recovered", "bought back from " + Villages.name(there.id()));
                 homeStep(q);
                 return price + " coins, and it's yours. A pretty thing. I hope it gets home.";

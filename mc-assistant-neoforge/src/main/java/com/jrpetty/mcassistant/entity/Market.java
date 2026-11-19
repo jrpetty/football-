@@ -1295,7 +1295,7 @@ public final class Market {
         if (!TownWork.take(level, v, same, g.bundle())) return "They've not got that to spare just now.";
         payOut(p, price);
         Ledger.addCoins(id, price);
-        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_IN, price);         // [business-books]
+        CoinCensus.playerIn(id, price, p, PlayerFinance.Cat.PURCHASES, "at the market");         // [business-books]
         Economy.sold(id, price);
         Budget.forget(id);
         Stockroom.sold(level, id, seller, shown, g.bundle(), price);
@@ -1363,7 +1363,7 @@ public final class Market {
         }
         hand.shrink(g.bundle());
         int paid = Ledger.takeCoins(id, price);
-        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_OUT, paid);         // [business-books]
+        CoinCensus.playerOut(id, paid, p, PlayerFinance.Cat.SALES, "sold at the market");         // [business-books]
         Businesses.storesIn(id, lot, g.bundle(), paid * 100L);         // [business-books] the stores' cost: what they paid for it
         Economy.spent(id, paid);
         ItemStack coins = new ItemStack(McAssistantMod.VILLAGE_COIN.get(), paid);

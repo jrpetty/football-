@@ -384,7 +384,7 @@ public final class ShopDesk implements ServicePoints.Desk {
         }
         Market.payOut(p, q.total());
         Ledger.addCoins(id, q.total());
-        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_IN, q.total());       // [econ-1e] a player's coin into the town, booked
+        CoinCensus.playerIn(id, q.total(), p, PlayerFinance.Cat.PURCHASES, "at a shop");       // [econ-1e] a player's coin into the town, booked
         Economy.sold(id, q.total());
         Budget.forget(id);
         Stockroom.Seller seller = visit.role() == ServiceRole.CAFE ? Stockroom.Seller.CAFE : Stockroom.Seller.SHOP;

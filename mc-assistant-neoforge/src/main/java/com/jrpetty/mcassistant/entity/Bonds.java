@@ -451,7 +451,7 @@ public final class Bonds {
             Ledger.takeCoins(village, paid);
             ItemStack coins = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), paid);
             if (!p.getInventory().add(coins)) p.drop(coins, false);
-            CoinCensus.playerOut(village, paid);                     // [health]
+            CoinCensus.playerOut(village, paid, p, PlayerFinance.Cat.REWARDS, "for carrying a letter");                     // [health]
         }
         for (UUID v : new UUID[]{ village, from }) {
             for (AssistantEntity a : Villages.folkOf(v)) {

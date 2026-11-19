@@ -167,7 +167,7 @@ public final class Retinue {
         if (Market.coinsHeld(p) < WAGE) return false;
         Market.payOut(p, WAGE);
         man.earn(WAGE);
-        CoinCensus.playerIn(CoinCensus.purseTown(man), WAGE);        // [health]
+        CoinCensus.playerIn(CoinCensus.purseTown(man), WAGE, p, PlayerFinance.Cat.HANDS, "your retinue's wage");        // [health]
         return true;
     }
 

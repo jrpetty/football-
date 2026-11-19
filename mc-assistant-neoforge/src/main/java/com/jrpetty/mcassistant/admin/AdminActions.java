@@ -689,7 +689,7 @@ public final class AdminActions {
         ServerPlayer p = c.server().getPlayerList().getPlayerByName(name);
         if (p == null) return Done.no("No player called " + name + " is online.");
         int fromTreasury = Ledger.takeCoins(v.id(), n);
-        com.jrpetty.mcassistant.entity.CoinCensus.playerOut(v.id(), fromTreasury);   // [health] (the rest minted by decree, never the town's)
+        com.jrpetty.mcassistant.entity.CoinCensus.playerOut(v.id(), fromTreasury, p, com.jrpetty.mcassistant.entity.PlayerFinance.Cat.OTHER_IN, "paid by the town's decree");   // [health] (the rest minted by decree, never the town's)
         int left = n;
         while (left > 0) {
             int k = Math.min(64, left);

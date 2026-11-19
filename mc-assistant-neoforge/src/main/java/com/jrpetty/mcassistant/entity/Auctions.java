@@ -1122,6 +1122,7 @@ public final class Auctions {
             return;
         }
         int price = won.coins();
+        if (won.player()) PlayerFinance.bookId(won.by(), v.id(), -price, PlayerFinance.Cat.PURCHASES, "won at auction: " + lot.name());   // [purse20] the held bid spent
         if (won.player()) {
             s.escrow.remove(won.by());
             keepEscrow(s);
@@ -1145,6 +1146,7 @@ public final class Auctions {
                     give(level, v.id(), lot.ownerId, price - toll, ItemStack.EMPTY,   // [civic-land] the toll
                         "your " + lot.name() + " sold at auction for " + price);
                     // [health] Player to player: only the toll stays in the town; a folk's coin to a player leaves it.
+                    PlayerFinance.bookId(lot.ownerId, v.id(), price - toll, PlayerFinance.Cat.SALES, "sold at auction: " + lot.name());   // [purse20]
                     if (won.player()) CoinCensus.playerIn(v.id(), toll);
                     else CoinCensus.playerOut(v.id(), price - toll);
                 } else {

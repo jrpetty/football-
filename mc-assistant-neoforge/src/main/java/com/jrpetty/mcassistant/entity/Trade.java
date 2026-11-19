@@ -225,7 +225,7 @@ public final class Trade {
             Market.payOut(p, d.coins());
             if (f.ownerId() != null) {
                 com.jrpetty.mcassistant.village.Ledger.addCoins(f.ownerId(), d.coins());
-                CoinCensus.playerIn(f.ownerId(), d.coins());         // [health]
+                CoinCensus.playerIn(f.ownerId(), d.coins(), p, PlayerFinance.Cat.PURCHASES, "traded with a folk");         // [health]
                 Economy.sold(f.ownerId(), d.coins());
             }
         } else {

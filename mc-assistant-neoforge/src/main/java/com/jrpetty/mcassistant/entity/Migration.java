@@ -467,7 +467,7 @@ public final class Migration {
         if (Market.coinsHeld(p) >= RAISE) {
             Market.payOut(p, RAISE);
             f.earn(RAISE);
-            CoinCensus.playerIn(CoinCensus.purseTown(f), RAISE);          // [health]
+            CoinCensus.playerIn(CoinCensus.purseTown(f), RAISE, p, PlayerFinance.Cat.GIFTS, "a folk persuaded to move");          // [health]
             th.persuasion += RAISE_WEIGHT;
             th.by = p.getName().getString();
             keep(home, f.getUUID(), th);

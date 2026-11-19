@@ -144,7 +144,7 @@ public final class Commerce {
                     Ledger.note(village, key, "");
                     int back = Ledger.takeCoins(village, deposit);    // [health] the deposit back out of the treasury it went into
                     Dealings.giveCoins(p, back);
-                    CoinCensus.playerOut(village, back);              // [health]
+                    CoinCensus.playerOut(village, back, p, PlayerFinance.Cat.REFUNDS, "an order's deposit back");              // [health]
                     return "We couldn't make your " + count + " " + name(it) + " in time, I'm sorry. Here's your " + back + " coins back.";
                 }
                 return "Your " + count + " " + name(it) + " aren't all made yet — come back in a day or two (by day " + due + ").";
@@ -154,7 +154,7 @@ public final class Commerce {
             int got = handOver(level, v, p, it, count);
             Market.payOut(p, owe);
             Ledger.addCoins(village, owe);
-            CoinCensus.playerIn(village, owe);                       // [health]
+            CoinCensus.playerIn(village, owe, p, PlayerFinance.Cat.PURCHASES, "a bulk order, the balance");                       // [health]
             Economy.sold(village, owe + deposit);
             Ledger.note(village, key, "");
             return "Here you are: " + got + " " + name(it) + ". " + (owe > 0 ? owe + " coins, and we're square." : "Paid in full. Pleasure doing business.");
@@ -170,7 +170,7 @@ public final class Commerce {
             int paid = got == count ? total : bulkPrice(level, village, want, got);
             Market.payOut(p, paid);
             Ledger.addCoins(village, paid);
-            CoinCensus.playerIn(village, paid);                      // [health]
+            CoinCensus.playerIn(village, paid, p, PlayerFinance.Cat.PURCHASES, "a bulk order");                      // [health]
             Economy.sold(village, paid);
             return "There: " + got + " " + name(want) + " for " + paid + " coins.";
         }
@@ -179,7 +179,7 @@ public final class Commerce {
         if (Market.coinsHeld(p) < deposit) return "We'd have to make most of that: a quarter down — " + deposit + " coins — and it's yours within a week.";
         Market.payOut(p, deposit);
         Ledger.addCoins(village, deposit);
-        CoinCensus.playerIn(village, deposit);                       // [health]
+        CoinCensus.playerIn(village, deposit, p, PlayerFinance.Cat.PURCHASES, "a bulk order, a quarter down");                       // [health]
         Ledger.note(village, key, idOf(want) + "|" + count + "|" + deposit + "|" + (day + 7));
         return "We can spare " + Math.max(0, spare) + " just now, so we'll put the rest by as we make it: " + deposit
             + " coins down, " + (total - deposit) + " when you collect, within the week.";
@@ -239,7 +239,7 @@ public final class Commerce {
             Ledger.takeCoins(village, paid);
             Economy.spent(village, paid);
             Dealings.giveCoins(p, paid);
-            CoinCensus.playerOut(village, paid);                     // [health]
+            CoinCensus.playerOut(village, paid, p, PlayerFinance.Cat.CONTRACTS, "a supply contract delivered");                     // [health]
             Earnings.record(p, village, Earnings.Source.CONTRACT, paid, Villages.name(village), "for the supply contract");   // [earning]
             done++;
             Ledger.note(village, key, c[0] + "|" + s.count() + "|" + price + "|" + c[3] + "|" + day + "|" + done + "|0");
@@ -313,7 +313,7 @@ public final class Commerce {
             if (n <= 0) return "You've no coin on you to put by.";
             Market.payOut(p, n);
             Ledger.addCoins(village, n);
-            CoinCensus.playerIn(village, n);                         // [health]
+            CoinCensus.playerIn(village, n, p, PlayerFinance.Cat.SAVED, "put by at the treasury");                         // [health]
             deposit += n;
         } else if (t.contains("withdraw") || t.contains("take out")) {
             n = Math.min(n <= 0 ? deposit : n, deposit);
@@ -321,7 +321,7 @@ public final class Commerce {
             if (Ledger.coins(village) < n) return "The treasury's short just now — come back after market day.";
             Ledger.takeCoins(village, n);
             Dealings.giveCoins(p, n);
-            CoinCensus.playerOut(village, n);                        // [health]
+            CoinCensus.playerOut(village, n, p, PlayerFinance.Cat.DRAWN, "taken out at the treasury");                        // [health]
             deposit -= n;
         } else if (t.contains("repay") || t.contains("pay back") || t.contains("pay off")) {
             n = Math.min(Math.min(n <= 0 ? loan : n, loan), Market.coinsHeld(p));
@@ -329,7 +329,7 @@ public final class Commerce {
             if (n <= 0) return "You've no coin on you to pay it with.";
             Market.payOut(p, n);
             Ledger.addCoins(village, n);
-            CoinCensus.playerIn(village, n);                         // [health]
+            CoinCensus.playerIn(village, n, p, PlayerFinance.Cat.LOAN_PAY, "the treasury's loan repaid");                         // [health]
             int interest = Math.max(0, Math.min(n, loan - lent));
             lent = Math.max(0, lent - (n - interest));
             if (interest > 0) Ledger.note(village, POOL, Long.toString(num(String.valueOf(Ledger.note(village, POOL))) + interest));
@@ -344,7 +344,7 @@ public final class Commerce {
             if (Ledger.coins(village) - 2 * Market.wageBill(village) < n) return "We can't lend that much just now — the wages come first.";
             Ledger.takeCoins(village, n);
             Dealings.giveCoins(p, n);
-            CoinCensus.playerOut(village, n);                        // [health]
+            CoinCensus.playerOut(village, n, p, PlayerFinance.Cat.BORROWED, "borrowed from the treasury");                        // [health]
             loan = n;
             lent = n;
             since = day;
@@ -418,7 +418,7 @@ public final class Commerce {
         if (Market.coinsHeld(p) < n) return "To invest " + n + " coins you'd need " + n + " coins. You've " + Market.coinsHeld(p) + ".";
         Market.payOut(p, n);
         Ledger.addCoins(village, n);
-        CoinCensus.playerIn(village, n);                             // [health]
+        CoinCensus.playerIn(village, n, p, PlayerFinance.Cat.INVESTED, "put into the town's works");                             // [health]
         Ledger.note(village, key, n + "|" + (day + 14) + "|0");
         String name = p.getName().getString();
         Villages.tell(village, day, name + " put " + n + " coins into the village's works");
@@ -503,7 +503,7 @@ public final class Commerce {
         if (Market.coinsHeld(p) < bid) return "You've not got " + bid + " coins on you.";
         Market.payOut(p, bid);
         Ledger.addCoins(village, bid);                               // [health] held in the treasury: the winner's price, or the outbid's account
-        CoinCensus.playerIn(village, bid);                           // [health]
+        CoinCensus.playerIn(village, bid, p, PlayerFinance.Cat.PURCHASES, "a bid at the treasury's auction");                           // [health]
         if (best > 0 && !a[3].isEmpty()) refund(village, a[3], best);                // the last best bid back into its bidder's account
         Ledger.note(village, "auction", a[0] + "|" + reserve + "|" + bid + "|" + p.getUUID() + "|" + name + "|" + a[5]);
         return "Bid taken: " + bid + " coins for the " + name(it) + ". If nobody beats it, it's yours tomorrow.";
@@ -515,6 +515,7 @@ public final class Commerce {
         int deposit = b == null ? 0 : (int) num(b[0]);
         String rest = b == null || b.length < 3 ? "0|0" : b[1] + "|" + b[2];
         Ledger.note(village, key, (deposit + coins) + "|" + rest);
+        PlayerFinance.internal(PlayerFinance.uuid(player), village, coins * 100L, PlayerFinance.Cat.REFUNDS, "outbid at the treasury's auction: your bid back into your account");   // [purse20]
     }
 
     /** Market day: put the finest spare thing up. The day after: settle it. */
@@ -567,7 +568,7 @@ public final class Commerce {
             int pay = Math.min(ESCORT_PAY, Ledger.coins(from));
             Ledger.takeCoins(from, pay);
             Dealings.giveCoins(p, pay);
-            CoinCensus.playerOut(from, pay);                         // [health]
+            CoinCensus.playerOut(from, pay, p, PlayerFinance.Cat.CONTRACTS, "escorting a caravan");                         // [health]
             Earnings.record(p, from, Earnings.Source.CONTRACT, pay, Villages.name(from), "for guarding the caravan");          // [earning]
             String name = p.getName().getString();
             for (UUID v : new UUID[]{ from, to }) {
@@ -607,7 +608,7 @@ public final class Commerce {
         if (Market.coinsHeld(p) < CHARTER_COST) return "A charter costs " + CHARTER_COST + " coins: the road, the carts, the first loads. You've " + Market.coinsHeld(p) + ".";
         Market.payOut(p, CHARTER_COST);
         Ledger.addCoins(village, CHARTER_COST);
-        CoinCensus.playerIn(village, CHARTER_COST);                  // [health]
+        CoinCensus.playerIn(village, CHARTER_COST, p, PlayerFinance.Cat.FEES, "a charter");                  // [health]
         long day = Dealings.day(f);
         if (!Envoys.pact(village, o.id())) Envoys.sign(village, o.id(), day);
         Ledger.note(village, "charter/" + o.id(), p.getUUID().toString());

@@ -555,7 +555,7 @@ public final class Buskers {
         if (s == null || !Market.isCoin(held) || Market.coinsHeld(p) < 1 || !(f.level() instanceof ServerLevel level)) return false;
         Market.payOut(p, 1);
         f.earn(1);
-        CoinCensus.playerIn(CoinCensus.purseTown(f), 1);             // [health]
+        CoinCensus.playerIn(CoinCensus.purseTown(f), 1, p, PlayerFinance.Cat.GIFTS, "a tip for a busker");             // [health]
         s.take++;
         coin(level, f);
         String name = p.getName().getString();
