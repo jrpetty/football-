@@ -14103,3 +14103,57 @@ the forest, the waters, the desert, the snowy slope), founded and audited, every
 untouched; tf00 (not required) all six at once, for the numbers; tf07 /village spawnat founds at once and then levels;
 tf08 a player's camp down a pit left open and untouched, the world's raw copper down another filled over.
 FoundingGameTests f04 (the tarn let out, its hill graded, nothing running); FoundingPlanTest as it was.
+
+## The screens left plain, and the research tree (screens-13)
+
+The screens UI batch 4 could not reach from its scripted client are now in the same house look (client/UiStyle): a
+panel with a soft shadow, a header band with the title in bold, headings with an engraved rule, lists in recessed
+wells, buttons as the house's tiles (UiButton: a vanilla button drawn as a tile, so its keys, focus, tooltip and
+narration are as they were; a label cut short shows whole in its tooltip; the screen's main action carries the green
+spine), coins as the books write them, and every one laid out to fit a screen 240 GUI pixels high (GUI 2 at 854 by
+480, GUI 3 at 1280 by 720). Nothing they do has changed.
+
+- **The village journal (J).** Its key works: UI batch 4's script had pressed J with the game menu open (an Escape
+  with no screen up opens it, and no key mapping fires over a menu). The page: the village's name in the header with
+  the lines shown of how many, the pages as tabs (Village, Wages, Economy, and Books, which opens the town's books),
+  the page in a well with a scroll bar (the wheel, the arrow keys, Page Up and Down), and the foot: the pace of time
+  as tiles with the pace now marked, and Close. The line count no longer prints under the page buttons, and a list
+  the server writes raw ("Built: []") reads "nothing yet".
+- **A market stall** (`/village stall screen`, or crouch and right-click your stall). The owner and the town in the
+  header with the rent's state as a badge; the till and the week on a card with Take the till; the wares in a
+  recessed list (an empty state when the barrel is empty); Save prices first among the buttons.
+- **A service point** (`/village service open shop|bank|tavern|...`, or the counter): already in the house look;
+  its categories now as wide as the longest name (Household was cut short), the empty basket's words wrapped, and a
+  ware's tooltip says it is usually worth about so many coins, not "1.9".
+- **The auction** (right-click the auctioneer while one is on; operators: `/village auction screen` opens the bid
+  screen where you stand, `/village auction stage` gets one up now in a town of any size, the thing in your hand put
+  up, its first lot called). The lot's item in a well, the bids newest first in a well, the lot now called marked
+  among today's lots, the first bid the primary button.
+- **Founding a village** (the board a spawner puts up; `/village found screen <count>` beside it). The slider in
+  the house look (a recessed track filled to its handle), the usual sizes marked when they are the count, what the
+  count means on a page, Confirm and spawn first. It was 240 high and touched the edges of a 240-high screen.
+- **An assistant's orders** (R looking at one), **its pack** (right-click it, or Pack), **the crew's map** and **the
+  storehouse** (right-click its door). The orders sheet lost an empty band (236 to 216 high). The pack was 260 high and
+  ran off a 240-high screen top and bottom; the empty band over its buttons is gone (the player's slots now at 150, in
+  the menu and the screen alike), the diet is a bar. The map had had no way in since its button on the crew screen
+  gave way to Plots: it is back beside Blocks on the crew screen (it works: drag a patch, click an assistant), laid
+  out to the window. The storehouse's scroll bar is a recessed track with a raised thumb, and it says how full of how
+  much ("25 of 729 stacks").
+
+**The research tree** (the Inventions page of the books, Civic). It was a grid of small boxes crowded onto the page,
+its links unseen. Now: the work in hand on one line with its bar (who chose it, why, and the working model in its
+tooltip), then a bar of tools (the tree or the scholars on a narrow page, side by side when the page is wide; a
+filter by state, all, open, known, locked, that fades the rest back; what is typed finds a card and brings it into
+view; the zoom, minus, plus and Fit). The tree reads down the page: a column for each branch (how many of it are
+known at its head, what it is about in its tooltip), a band for each step down the road of needs (I to IV, the ages
+each spans written across it), each invention a card in its state's colour (green with a tick known, gold in hand
+with its bar, white open with its cost and days, grey locked with its age), a line from each thing needed to what
+needs it, green from what is known, running down the channels between the columns into the card's side; the road to
+the card under the mouse (all it needs, and what it opens next) drawn dark. The wheel scrolls it (Shift across, Ctrl
+to zoom), a drag pans it, and the mouse over a card gives the whole of it. At its usual size it fits the books on the
+smallest screen across and scrolls down. The layout is plain arithmetic (village/InventionTreeLayout), so the unit
+test (InventionTreeLayoutTest) checks at every zoom that no two cards overlap, what is needed stands above what needs
+it, no line runs through a card, and the usual size fits 372 pixels across.
+
+No new server data: the only server changes are the two operator commands for the auction's pictures and the shop
+tooltip's words.
