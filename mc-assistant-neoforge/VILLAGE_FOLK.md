@@ -14909,11 +14909,10 @@ while the town was putting iron by for its age (Crafts.savingIron); the fire sta
 constable's badge, the fletcher's crossbows, the foundry's steel, a restored cauldron and a new iron golem did not, and
 each took the age's iron down to its own floor again. They wait now too (a fire station with no iron for a cauldron sets
 a rain barrel by the forge instead, as it did before; the bucket chain at a fire, the golems' mending and the gateway's
-flint and steel do not wait; nor do the watch's golems, crossbows and the constable's badge: Crafts.ironToSpare). And the
-miners stay down: a shift in the works took on ten pieces of work and climbed out (thirty-four shifts of thirty-five in a
-test ended so, on forty blocks cut a shift, the whole stair climbed out and down again for the next); it takes on thirty
-now, the half day and the evening still ending it. The mine's report counts the metal in and out by whom, and the shifts
-(how many, blocks and minutes a shift, why they ended), so the next long run says where the iron goes.
+flint and steel do not wait; nor do the watch's golems, crossbows and the constable's badge: Crafts.ironToSpare). The
+mine's report counts the metal in and out by whom, and the shifts (how many, blocks and minutes a shift, why they ended),
+so the next long run says where the iron goes. (A shift ends on its tenth piece of work: 34 of 35 shifts in fx02, about
+forty blocks a shift; thirty pieces were tried and cut fewer blocks in all, the miners waiting on one another's claims.)
 
 ### A town grown full keeps making room
 The same town had built every lot its plan could use (212 lots, the rest of them over its river or up a cliff: "no lot

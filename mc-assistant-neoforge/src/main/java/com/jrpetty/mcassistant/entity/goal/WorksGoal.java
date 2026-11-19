@@ -57,11 +57,8 @@ public class WorksGoal extends Goal {
     private String bye = "";
     private boolean saidSealed;
 
-    /** Ticks a shift may run, and the pieces of work it may take on. [growth22] Thirty pieces, not ten: a piece is a few
-     *  blocks (a face's six cells, a branch's five, often fewer where it turns or stops), and thirty-four shifts of thirty-five
-     *  ended on the tenth piece with forty blocks cut, the miner climbing the whole stair out and down again for the next;
-     *  the half day's ticks and the evening still end a shift. */
-    private static final int SHIFT_TICKS = 12000, SHIFT_TASKS = 30;
+    /** Ticks a shift may run, and the pieces of work it may take on. */
+    private static final int SHIFT_TICKS = 12000, SHIFT_TASKS = 10;
     /** How far it reaches from where it stands. */
     private static final double REACH = 4.6;
     /** How many blocks of one vein it follows. */
