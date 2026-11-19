@@ -195,8 +195,15 @@ public class RegionGameTests {
                 int dx = p[0] - x;
                 if (dx <= 41 || dx >= 259) continue;
                 if (dx >= 160 && dx <= 166) {
-                    if (level.getBlockState(new BlockPos(p[0], y - 1 + 1, p[1])).is(net.minecraft.tags.BlockTags.PLANKS)
-                        || level.getBlockState(new BlockPos(p[0], y, p[1])).is(net.minecraft.tags.BlockTags.PLANKS)) deck++;
+                    // [bridges18] The kit's bridge: a clear block over the water, square to the river (a block or two to the side of a slanting line).
+                    boolean over = false;
+                    for (int dz = -2; dz <= 2 && !over; dz++) {
+                        for (int dy = 0; dy <= 1; dy++) {
+                            BlockState d = level.getBlockState(new BlockPos(p[0], y + dy, p[1] + dz));
+                            if (d.is(net.minecraft.tags.BlockTags.PLANKS) || d.is(net.minecraft.tags.BlockTags.LOGS)) over = true;
+                        }
+                    }
+                    if (over) deck++;
                     continue;
                 }
                 land++;
