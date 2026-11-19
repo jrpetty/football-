@@ -140,7 +140,7 @@ public class GrowthGameTests {
             int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint("house");
             for (int k = 0; k < lifts.length; k++) {
                 // A town house of its own drawing on a stone plinth, its floor so many blocks over the meadow.
-                BlockPos a = new BlockPos(x - 8 + 24 * k, y + lifts[k], z + 10);
+                BlockPos a = new BlockPos(x - 8 + 24 * k, y + lifts[k], z + 150);   // out past the plan's streets
                 BridgeStage.box(level, a.getX() - half[0], a.getX() + half[0], y, a.getY() - 1, a.getZ() - half[1], a.getZ() + half[1],
                     Blocks.STONE_BRICKS.defaultBlockState());
                 com.jrpetty.mcassistant.entity.goal.BuildGoal.stamp(level, "house", a, Direction.NORTH, 13,
@@ -303,7 +303,8 @@ public class GrowthGameTests {
                 out.add(name[i] + " at " + at[i].toShortString() + ": " + (took[i] < 0 ? "not done" : took[i] + " ticks") + ", " + parts[i] + " parts, "
                     + missing[i] + " missing, " + String.format("%.1f", perPart[i]) + " ticks a placement, " + jobs[i] + " jobs; goal ticks: all " + st[0]
                     + ", walking " + st[1] + ", stood in its cell " + st[2] + ", pace " + st[3] + ", parts' turns " + st[4] + ", set beside " + st[5]
-                    + ", given up " + st[6] + ", taken off it " + st[7] + " | " + builders.get(i).debugLine());
+                    + ", given up " + st[6] + ", taken off it " + st[7] + " (" + com.jrpetty.mcassistant.entity.goal.BuildGoal.takenOffByForTests(builders.get(i).getUUID())
+                    + ") | " + builders.get(i).debugLine());
             }
             Kit.log("[VT] " + tag + " " + String.join(" ;; ", out));
             com.jrpetty.mcassistant.entity.goal.BuildGoal.stockAtPaceForTests(null);

@@ -14896,3 +14896,56 @@ gallery's quote is BuildOrders.quote's, the deposit in the player's books, the b
 shop and on the register), commands banned (and every player command routed), citizenship; pl12 a shop sale in the
 owner's finances (takings, the Businesses tab, the till a move) and the Sell button opening the property office on the
 shop's building; pl13 a player's shop competing at the town's counter; pl14 the builders' gap.
+
+## A grown town that keeps advancing, and the leftovers (growth-22)
+
+### The hundred days' frozen watch counts the region
+The hundred days' run (tools/realworld/soak.py, FrozenWatch) failed a town on day 183 of the 0.319.0 run for "no new
+building and no new folk for 25 days" while it was sending its folk off to found colonies: its own 107 down to 86, the
+world's folk 298 up to 420, two new towns, renown 99 up to 126. Progress is now a new best in any of: the town's
+buildings, its folk, the world's folk, the towns in the world, its colonies, its renown, its homes made up (a storey
+raised, a house refitted), its upgrades, or a new age. A town where nothing moves at all (the 0.315.0 case: the same
+numbers every day) still fails on day six. `python3 soak.py frozen-replay hundred-metrics.jsonl` plays a run's metrics
+through the watch without a server; `python3 test_frozen_watch.py` checks it on days shaped like the real runs.
+
+### Drifts stop short of the hillside
+A drift driven level out of a mountain met the mountain's flank and broke out into the daylight, and its miners walked out
+of it onto the slope. A drift now keeps two blocks of rock between itself and the open air every way and overhead
+(MineWorks.daylight: any column within two blocks whose ground is no higher than two over the tunnel's roof): it turns
+there as at the edge of the mine's ground, or ends ("stopped two blocks short of the hillside" in the mine's report); ore
+in the hill's skin is left in it; and a cut that does open onto the daylight is stopped up with a block from the miner's
+pack.
+
+### Refused spots asked, not tried
+The town's gate (TownBlocks) refused a field post, a chest or a torch in the same few cells over and over: a miner's
+production chest looked for on the works' shaft pillar (the mine's own ground) every half minute, a torch at the pithead
+every dark tick, a field's post on a road every round of the fields; one long test's log reached a hundred thousand
+refusals. Those searches now ask the gate (allows) instead of trying it, a miner with nowhere for its chest asks again in
+five minutes, and the same cell refused for the same thing within five minutes is booked once.
+
+### Door flights turned along the wall
+A door three or more blocks over the ground before it (a house on a terrace or a plinth) had its way in run straight out,
+a jetty of steps into the street. Now, where there is room along the wall (open ground, nothing built, no other door, no
+bank, not a street), the way in is a landing at the door, level with the floor, and the flight runs down beside the wall
+to the ground (TurnedFlights): each step a stair facing up the flight, the landing flat, filled under in the flight's
+stone, a cheek on its open side. A door one or two up keeps its short straight flight.
+
+### Hill houses
+Measured with the builders held to their jobs (a test hook: VillageFolkEntity.holdForTests; BuildGoal's tick books where a
+builder's time goes), a house on a hillside takes no longer a block than one on the flat (13 ticks a placement against 14);
+it has about 70% more to lay (the earth under its floor on the low side, its stone footing, the bank cut back), so it takes
+about 1.6 times as long. The days it took in the world went off the job: a builder taken off its building (its rations, a
+fight, a new trade) and the lead then waiting "not due yet" for the town's whole gap between projects before going back to
+it. A lead coming back to a building its crew has begun (its lot kept) no longer waits for that gap (Villages.resuming).
+
+### The metal's books
+The mine's report (`/village mine`) now ends with the town's iron and diamonds in and out yesterday and today, and by whom:
+what the miners and the cave team brought in, and what took it out of the stores (the smith's picks, the watch's kit, the
+golems, the fire brigade's buckets...) (OreFlow).
+
+### Tests
+GrowthGameTests gw01-gw05 (x 5,100,000 to 5,200,000, z 90,000): gw01 a drift towards a cliff stops two blocks short and
+turns, no opening, the miner never on the slope, the miner's chest booking no refusals; gw02 the gate books a cell asked
+two hundred times once, a look none; gw03 doors three and four up on plinths get turned flights, a door two up its
+straight one, all walked by stairs; gw04 hill houses held to the job, no slower a placement than the flat one; gw05 a lead
+back at its begun building waits for no gap.

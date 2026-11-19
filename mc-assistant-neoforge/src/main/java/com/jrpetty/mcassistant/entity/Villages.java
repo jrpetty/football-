@@ -2512,6 +2512,18 @@ public final class Villages {
         return pending != null && pending.containsKey(c.project) && open(villageId, c.project);
     }
 
+    /**
+     * [growth22] Is this hand raising one of the town's buildings: a build in hand, or the lead of a crew on one? The bell,
+     * the crier's round and the like pass it over: a builder sent to cry the news had its building taken out of its hands
+     * (its jobs cleared), and the hill house it was raising stood two thirds done until the town's gap brought it back.
+     */
+    public static boolean raising(AssistantEntity f) {
+        Job j = f.peekJob();
+        if (j != null && j.type() == Job.Type.BUILD) return true;
+        UUID v = f.ownerId();
+        return v != null && holdsTheLead(v, f.getUUID(), f.level().getGameTime());
+    }
+
     /** This hand's crew is on this building now. */
     public static void leadOn(UUID villageId, UUID me, String project) {
         Map<UUID, Crew> m = CREWS.get(villageId);

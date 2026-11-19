@@ -237,6 +237,22 @@ public class BuildGoal extends Goal {
     public static void statsForTests(boolean on) {
         statsForTests = on;
         STATS.clear();
+        TAKEN_BY.clear();
+    }
+
+    public static boolean measuring() {
+        return statsForTests;
+    }
+
+    /** Who cleared each builder's jobs while it had a building in hand (tests measuring builds). */
+    private static final Map<java.util.UUID, String> TAKEN_BY = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void takenOffBy(java.util.UUID builder, String who) {
+        TAKEN_BY.merge(builder, who, (a, b) -> a.length() > 300 ? a : a + " ;; " + b);
+    }
+
+    public static String takenOffByForTests(java.util.UUID builder) {
+        return TAKEN_BY.getOrDefault(builder, "");
     }
 
     public static long[] statsForTests(java.util.UUID builder) {

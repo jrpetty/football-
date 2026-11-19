@@ -8871,6 +8871,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public void clearQueue() {
+        // [growth22] Tests measuring builds: who took a builder off its building.
+        if (com.jrpetty.mcassistant.entity.goal.BuildGoal.measuring() && !jobs.isEmpty() && jobs.peek().type() == Job.Type.BUILD) {
+            com.jrpetty.mcassistant.entity.goal.BuildGoal.takenOffBy(getUUID(), StackWalker.getInstance().walk(f -> f.skip(1).limit(4)
+                .map(x -> x.getClassName().substring(x.getClassName().lastIndexOf('.') + 1) + "." + x.getMethodName())
+                .collect(java.util.stream.Collectors.joining(" < "))));
+        }
         this.jobs.clear();
         this.taskGen++;
         // Drop any road detour with it: a stale leg would otherwise re-issue

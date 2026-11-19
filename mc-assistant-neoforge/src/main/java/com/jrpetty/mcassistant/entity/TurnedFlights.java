@@ -91,6 +91,23 @@ public final class TurnedFlights {
      */
     @Nullable
     static List<Step> flight(Level level, DoorWays.Door d, Direction side) {
+        // The flight as first planned, while it is being built and after: its own half-laid fill is no ground to stop at.
+        List<Step> kept = PLANNED.get(key(d, side));
+        if (kept != null) return kept;
+        List<Step> f = plan(level, d, side);
+        if (f != null && f.size() > 2) PLANNED.put(key(d, side), f);
+        return f;
+    }
+
+    /** The flights planned, by door and side. */
+    private static final Map<String, List<Step>> PLANNED = new ConcurrentHashMap<>();
+
+    private static String key(DoorWays.Door d, Direction side) {
+        return d.pos().asLong() + ":" + side.get2DDataValue();
+    }
+
+    @Nullable
+    private static List<Step> plan(Level level, DoorWays.Door d, Direction side) {
         BlockPos door = d.pos();
         int y = door.getY();
         BlockPos landing = door.relative(d.out());
@@ -103,10 +120,11 @@ public final class TurnedFlights {
             int want = y - k + 1;
             BlockPos wall = col.relative(d.out().getOpposite());
             for (int h = -1; h <= 1; h++) if (level.getBlockState(wall.atY(y + h)).getBlock() instanceof DoorBlock) return no("door at " + k);   // another door
+            int prev = k == 1 ? y : want + 1;                                   // the feet of the place before (the landing, a step)
             int g = DoorWays.standNear(level, col, want);
-            if (g > want + 1) return no("bank at " + k + " (" + g + ")");                // a bank along the wall: no room
-            boolean laid = g >= want - 1 && ourTop(level.getBlockState(col.atY(g - 1)));
-            if (g >= want - 1 && !laid) {                                       // the ground: met
+            if (g > prev + 1) return no("bank at " + k + " (" + g + ")");                // a bank along the wall: no room
+            boolean laid = g >= prev - 1 && ourTop(level.getBlockState(col.atY(g - 1)));
+            if (g >= prev - 1 && !laid) {                                       // the ground, a step from the last place: met
                 out.add(new Step(col, g));
                 return out;
             }
@@ -183,6 +201,16 @@ public final class TurnedFlights {
         Direction up = side.getOpposite();
         int ground = f.get(f.size() - 1).feet() - 1;
         BlockState stone = Block.byItem(StepKit.cutFrom(stair)).defaultBlockState();
+        // A rail at the landing's open edges where the ground falls away two and more (the way down is the flight).
+        Step landing = f.get(0);
+        for (Direction open : new Direction[]{ d.out(), side.getOpposite() }) {
+            BlockPos at = landing.col().relative(open).atY(landing.feet());
+            BlockState there = level.getBlockState(at);
+            if (!(there.isAir() || there.canBeReplaced() && there.getFluidState().isEmpty())) continue;
+            if (DoorWays.solid(level, at.below()) || DoorWays.solid(level, at.below(2))) continue;   // a step down at most: no rail
+            if (!Crafts.take(level, v, st -> st.is(net.minecraft.world.item.Items.COBBLESTONE_WALL) || st.is(net.minecraft.world.item.Items.COBBLESTONE), 1)) continue;
+            level.setBlock(at, Blocks.COBBLESTONE_WALL.defaultBlockState(), Block.UPDATE_ALL);
+        }
         for (int i = 1; i < f.size() - 1; i++) {
             Step s = f.get(i), next = f.get(i + 1);
             int floor = s.feet() - 1;
@@ -239,5 +267,6 @@ public final class TurnedFlights {
 
     public static void resetForTests() {
         SIDE.clear();
+        PLANNED.clear();
     }
 }
