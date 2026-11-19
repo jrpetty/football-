@@ -127,7 +127,7 @@ public class RegionGameTests {
 
     /**
      * Two towns 300 apart on flat ground, with a cliff-sided hill on the straight way between them (x + 90 to 120, z -18 to
-     * 18, twelve high), a river across the whole way (x + 160 to 166, three deep) and a player's hut on the straight way
+     * 18, twelve high), a river across the whole way (x + 160 to 166, three deep, z -116 to 116) and a player's hut on the straight way
      * (x + 200 to 205). The ground is made before the towns are raised, so the road is surveyed over it.
      */
     private static UUID[] varied(GameTestHelper helper, int x) {
@@ -136,8 +136,11 @@ public class RegionGameTests {
         int y = Kit.surface(level, x, Z).getY();
         flat(level, x - 48, x + 348, Z - 62, Z + 62, y);
         box(level, x + 90, x + 120, y, y + 11, Z - 18, Z + 18, Blocks.STONE.defaultBlockState());
-        box(level, x + 160, x + 166, y - 3, y - 3, Z - 62, Z + 62, Blocks.SAND.defaultBlockState());
-        box(level, x + 160, x + 166, y - 2, y - 1, Z - 62, Z + 62, Blocks.WATER.defaultBlockState());
+        // The river runs on past the search's reach either way: no way round it.
+        hold(level, x + 150, x + 176, Z - 120, Z + 120);
+        flat(level, x + 156, x + 170, Z - 116, Z + 116, y);
+        box(level, x + 160, x + 166, y - 3, y - 3, Z - 116, Z + 116, Blocks.SAND.defaultBlockState());
+        box(level, x + 160, x + 166, y - 2, y - 1, Z - 116, Z + 116, Blocks.WATER.defaultBlockState());
         box(level, x + 200, x + 205, y, y + 2, Z - 2, Z + 3, Blocks.OAK_PLANKS.defaultBlockState());
         box(level, x + 201, x + 204, y + 1, y + 1, Z - 2, Z - 2, Blocks.GLASS.defaultBlockState());
         UUID a = town(helper, x, Z, y, 7), b = town(helper, x + 300, Z, y, 7);
