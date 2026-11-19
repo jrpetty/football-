@@ -38,7 +38,7 @@ public final class CityPlan {
     /** A step a folk takes: a block up (a jump; two where the folk cut a step into a bank, StuckSpots), three down. */
     private static final int UP = 2, DOWN = 3;
     /** No height known yet (a cell not walked), or ground not loaded (taken as walkable: nothing is known against it). */
-    private static final int NONE = Integer.MIN_VALUE;
+    static final int NONE = Integer.MIN_VALUE;
 
     /** A town's walked streets: the floor height of each reached cell, NONE where not reached. */
     record Net(long at, int[] floor, int reached, int cells) {
@@ -52,13 +52,16 @@ public final class CityPlan {
 
     public static void resetForTests() {
         NETS.clear();
+        DRY.clear();
         SERVED.clear();
         HUNGRY.clear();
+        CityCrossings.resetForTests();
     }
 
     /** Forget a town's walk, so the next look walks it afresh (a test that changed the ground). */
     public static void forget(UUID village) {
         NETS.remove(village);
+        DRY.remove(village);
     }
 
     /** Looks in a row that found nothing but lots off the streets, by town: twelve, and the next look takes one of them. */
@@ -91,11 +94,47 @@ public final class CityPlan {
         return n;
     }
 
+    /** [fixes14] The town's walk with steps cut up and down its banks (four up, six down), never over water. */
+    private static final Map<UUID, Net> DRY = new ConcurrentHashMap<>();
+
+    static Net dryNet(ServerLevel level, Villages.Village v) {
+        long now = level.getGameTime();
+        Net n = DRY.get(v.id());
+        if (n != null && now - n.at() < EVERY && now >= n.at()) return n;
+        n = walk(level, v.centre(), now, 4, 6);
+        DRY.put(v.id(), n);
+        return n;
+    }
+
+    /**
+     * [fixes14] Has the town gone a look or more with lots passed over for want of a street to them (the crossings
+     * over its water are laid then: CityCrossings)?
+     */
+    public static boolean wanting(UUID village) {
+        return HUNGRY.getOrDefault(village, 0) > 0;
+    }
+
+    /**
+     * [fixes14] May a town with nothing on its streets take this lot: its street reached on foot with steps cut into the
+     * banks (a mountain top, a terrace up from the town), but never across water. A lot over the water waits for its
+     * street's crossing to be laid (CityCrossings): the town grew on the far bank of a lake, a street's length of water
+     * from the square, the folk swimming to it.
+     */
+    public static boolean reachesDry(ServerLevel level, Villages.Village v, TownPlan.Lot lot) {
+        int[] f = front(lot);
+        if (f == null) return true;
+        return reached(dryNet(level, v), f, lot.back());
+    }
+
     /**
      * The square and the streets walked from the heart: each cell's floor is found within a step of the cell it was
      * reached from (an arch over a gate or a lamp's post is not a floor; water is never one).
      */
     static Net walk(ServerLevel level, BlockPos heart, long now) {
+        return walk(level, heart, now, UP, DOWN);
+    }
+
+    static Net walk(ServerLevel level, BlockPos heart, long now, int up, int down) {
         int[] floor = new int[SIDE * SIDE];
         java.util.Arrays.fill(floor, NONE);
         int cells = 0;
@@ -115,7 +154,7 @@ public final class CityPlan {
                 if (Math.abs(nx) > R || Math.abs(nz) > R || !walkway(nx, nz)) continue;
                 int i = (nx + R) * SIDE + (nz + R);
                 if (floor[i] != NONE) continue;
-                int f = floorNear(level, heart.getX() + nx, heart.getZ() + nz, h, UP, DOWN);
+                int f = floorNear(level, heart.getX() + nx, heart.getZ() + nz, h, up, down);
                 if (f == NONE || f == WET) continue;
                 floor[i] = f;
                 reached++;
@@ -125,7 +164,7 @@ public final class CityPlan {
         return new Net(now, floor, reached, cells);
     }
 
-    private static final int WET = Integer.MIN_VALUE + 1;
+    static final int WET = Integer.MIN_VALUE + 1;
 
     /**
      * The floor a folk standing at height {@code h} (the block it stands on) would step onto in this column: the highest

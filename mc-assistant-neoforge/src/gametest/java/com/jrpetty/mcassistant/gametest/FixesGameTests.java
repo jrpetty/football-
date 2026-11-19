@@ -31,6 +31,105 @@ import java.util.UUID;
 @PrefixGameTestTemplate(false)
 public class FixesGameTests {
 
+    // ============================================================ fx01: the miners' picks
+
+    /** How long fx01 runs (-Dfx.days), in days. */
+    private static final double PICK_DAYS = Double.parseDouble(System.getProperty("fx.days", "2"));
+
+    /**
+     * A young town in the Stone Age (five miners, a storekeeper, a smith, its stores with stone and timber but not a pick
+     * in them) works its mine in a hill of rock out past its houses, on its own, for two days: the picks wear out and are
+     * kept up (the rack stocked to the miners' wear, a worn pick changed before it breaks), so the first landing is cut
+     * and the works go on without a miner standing for want of a pick.
+     */
+    @GameTest(template = "empty", timeoutTicks = 120000, batch = "fx01_picks")
+    public static void fx01_picks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.MineStairs.resetForTests(level);
+        com.jrpetty.mcassistant.entity.TownDigs.resetForTests();
+        com.jrpetty.mcassistant.entity.Toolrack.resetForTests();
+        level.setDayTime(1000);
+        int cx = 4410000, cz = 90000;
+        Kit.hold(level, cx, cz, 160);
+        Kit.prepare(level, cx, cz, 160);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        int y0 = heart.getY();
+        int sx = cx + 100, sz = cz;
+        // The hill of rock: a flat top of thirty over the shaft's ground, its sides stepped down a block a block.
+        for (int dx = -46; dx <= 46; dx++) {
+            for (int dz = -46; dz <= 46; dz++) {
+                int r = Math.max(Math.abs(dx), Math.abs(dz));
+                int h = r <= 14 ? 30 : Math.max(0, 30 - (r - 14));
+                if (h <= 0) continue;
+                for (int y = y0 - 3; y < y0 + h; y++) {
+                    BlockState st = y == y0 + h - 1 && r > 14 ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.STONE.defaultBlockState();
+                    level.setBlock(new BlockPos(sx + dx, y, sz + dz), st, 2 | 16);
+                }
+            }
+        }
+        int top = y0 + 30;
+        List<VillageFolkEntity> miners = new ArrayList<>();
+        com.jrpetty.mcassistant.entity.AssistantEntity.StationTask[] trades = {
+            com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.STORE, com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.SMITH };
+        VillageFolkEntity first = null;
+        for (int i = 0; i < 7; i++) {
+            VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+            helper.assertTrue(f != null, "a folk");
+            if (first == null) first = f;
+            if (i < 5) { f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE); miners.add(f); }
+            else f.setJob(trades[i - 5]);
+        }
+        UUID id = first.ownerId();
+        Villages.Village v = Villages.get(id);
+        MineWorks.forgetForTests(id);
+        Ledger.note(id, "mine.site", sx + "," + sz);
+        com.jrpetty.mcassistant.entity.MineGround.reserve(level, id, heart, new BlockPos(sx, 0, sz), false);
+        MineWorks.layOutForTests(level, id, top);
+        Kit.stockForGrowth(level, v);
+        com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(Items.STICK, 32));
+        for (VillageFolkEntity m : miners) {
+            m.removeMatching(st -> st.is(net.minecraft.tags.ItemTags.PICKAXES), 64);
+            if (m.getMainHandItem().is(net.minecraft.tags.ItemTags.PICKAXES)) m.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+            m.insertItem(new net.minecraft.world.item.ItemStack(Items.STONE_PICKAXE));
+            m.insertItem(new net.minecraft.world.item.ItemStack(Items.TORCH, 64));
+            m.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(new BlockPos(sx, top, sz), 8, 0), "The Pit");
+        }
+        WorksGoal.resetCountsForTests();
+        level.getServer().tickRateManager().setTickRate(10000.0F);
+        final int[] tick = { 0 }, without = { 0 }, samples = { 0 };
+        final long[] landing = { -1 };
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            if (tick[0] % 24000 == 0) Kit.stockForGrowth(level, v);
+            if (tick[0] % 100 == 0) {
+                for (VillageFolkEntity m : miners) {
+                    samples[0]++;
+                    if (m.countMatching(st -> st.is(net.minecraft.tags.ItemTags.PICKAXES) && st.isCorrectToolForDrops(Blocks.STONE.defaultBlockState())) == 0
+                        && !m.getMainHandItem().isCorrectToolForDrops(Blocks.STONE.defaultBlockState())) without[0]++;
+                }
+                if (landing[0] < 0 && String.join(" ", MineWorks.report(level, id)).matches(".*[1-5] of [1-5] levels open.*")) landing[0] = tick[0];
+            }
+            if (tick[0] < PICK_DAYS * 24000) return false;
+            int[] c = WorksGoal.countsForTests();
+            int[] tally = com.jrpetty.mcassistant.entity.Toolrack.tally(id);
+            int stalls = 0;
+            for (java.util.Map.Entry<String, Integer> e : WorksGoal.ENDS.entrySet()) if (e.getKey().contains("pick")) stalls += e.getValue();
+            List<String> kit = new ArrayList<>();
+            for (VillageFolkEntity m : miners) kit.add(m.getMainHandItem().getItem() + " " + com.jrpetty.mcassistant.entity.Toolrack.left(m.getMainHandItem()) + "%");
+            Kit.log("[VT] fx01 after " + tick[0] + " ticks: first landing at " + (landing[0] < 0 ? "never" : String.format("%.2f days", landing[0] / 24000.0))
+                + "; " + c[0] + " blocks broken, " + WorksGoal.SHIFTS + " shifts, " + stalls + " shifts ended or refused for a pick; miners without a pick "
+                + (100 * without[0] / Math.max(1, samples[0])) + "% of the time; picks made " + tally[0] + ", handed out " + tally[1] + "; in hand now " + kit
+                + "; ends " + WorksGoal.ENDS + " | " + String.join(" | ", MineWorks.report(level, id)));
+            MineSiteGameTests.standDown(level);
+            Kit.Expect expect = new Kit.Expect();
+            expect.that(landing[0] > 0 && landing[0] < 24000, "the first landing cut on the first day: " + landing[0]);
+            expect.that(without[0] * 20 <= samples[0], "no miner long without a pick: " + without[0] + " of " + samples[0]);
+            helper.runAfterDelay(1, () -> { if (expect.clean()) helper.succeed(); else helper.fail(expect.summary()); });
+            return true;
+        });
+    }
+
     // ============================================================ fx02: the miners walk the works
 
     /**
@@ -111,6 +210,10 @@ public class FixesGameTests {
             raised.add(new Ledger.Building(w[0], anchor, Direction.NORTH));
             Kit.log("[VT] fx05 " + w[0] + " at " + anchor.toShortString() + ": " + said);
         }
+        for (int i = 0; i < raised.size(); i++) {
+            int open = openToSky(level, raised.get(i), what[i][0], what[i][1]);
+            Kit.log("[VT] fx05 before the storey, " + what[i][0] + ": " + open + " open, first " + LAST_OPEN);
+        }
         final int[] visits = { 0 }, worst = { 0, 0 }, openVisits = { 0, 0 };
         helper.onEachTick(() -> {
             if (visits[0] < 0 || helper.getTick() % 20 != 0) return;
@@ -173,7 +276,14 @@ public class FixesGameTests {
                     BlockPos c = new BlockPos(x, y, z);
                     if (!level.getBlockState(c).getCollisionShape(level, c).isEmpty()) covered = true;
                 }
-                if (!covered) { open++; if (open == 1) LAST_OPEN = x + "," + roof + "," + z; }
+                if (!covered) {
+                    open++;
+                    if (open == 1) {
+                        StringBuilder col = new StringBuilder();
+                        for (int y = b.anchor().getY(); y <= roof + 3; y++) col.append(y - b.anchor().getY()).append(':').append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(new BlockPos(x, y, z)).getBlock()).getPath()).append(' ');
+                        LAST_OPEN = x + "," + roof + "," + z + " [" + col + "]";
+                    }
+                }
             }
         }
         return open;
@@ -237,9 +347,9 @@ public class FixesGameTests {
             for (int dz = -120; dz <= 120; dz++) {
                 int x = cx + dx, z = cz + dz;
                 boolean pad = Math.abs(dx) <= 24 && Math.abs(dz) <= 24;
-                boolean table = dx >= 44 && dx <= 90 && Math.abs(dz) <= 30;
-                boolean slope = dx <= -40 && dx >= -110 && Math.abs(dz) <= 30;
-                int h = table ? 7 : slope ? (-40 - dx) / 3 : 0;
+                boolean table = dx >= 50 && dx <= 100 && Math.abs(dz) <= 34;
+                boolean slope = dx <= -30 && dx >= -115 && Math.abs(dz) <= 34;
+                int h = table ? 7 : slope ? (-30 - dx) / 3 : 0;
                 for (int y = y0 - 3; y < y0 + 20; y++) {
                     BlockState st;
                     int top = y0 - 1 + h;
@@ -274,8 +384,8 @@ public class FixesGameTests {
                     if (!level.getBlockState(new BlockPos(x, y, z)).is(Blocks.FARMLAND)) continue;
                     all++;
                     if (walk == null || !walk.reaches(x, z, 0)) out++;
-                    if (dx >= 44 && dx <= 90 && Math.abs(dz) <= 30) table++;
-                    if (dx <= -40) slope++;
+                    if (dx >= 50 && dx <= 100 && Math.abs(dz) <= 34) table++;
+                    if (dx <= -30) slope++;
                     break;
                 }
             }
@@ -295,8 +405,8 @@ public class FixesGameTests {
         Kit.reset(level);
         level.setDayTime(1000);
         int cx = 4440000, cz = 90000;
-        Kit.hold(level, cx, cz, 48);
-        Kit.prepare(level, cx, cz, 48);
+        Kit.hold(level, cx, cz, 96);
+        Kit.prepare(level, cx, cz, 96);
         BlockPos heart = Kit.surface(level, cx, cz);
         int hx = cx, hz = cz + 120;
         Kit.hold(level, hx, hz, 48);
@@ -319,7 +429,7 @@ public class FixesGameTests {
         Villages.Village v = Villages.get(id);
         Kit.stockForGrowth(level, v);
         BlockPos[] at = {
-            BuildAuditGameTests.siteOn(level, "house", cx + 20, cz, Direction.NORTH),
+            BuildAuditGameTests.siteOn(level, "house", cx + 20, cz + 70, Direction.NORTH),
             BuildAuditGameTests.siteOn(level, "house", hx + 18, hz, Direction.NORTH),
             BuildAuditGameTests.siteOn(level, "house", hx - 18, hz, Direction.SOUTH) };
         Direction[] facing = { Direction.NORTH, Direction.NORTH, Direction.SOUTH };
@@ -364,21 +474,106 @@ public class FixesGameTests {
         });
     }
 
-    /** The builder's pack filled with a stack of everything the drawing is made of, and earth and stone for the ground. */
+    /** The builder's pack filled with what the drawing is made of (a stack of each, as many as it wants of what does not
+     *  stack), and earth and stone for the ground. */
     static void packFor(VillageFolkEntity b, String structure, BlockPos anchor, Direction facing) {
-        java.util.Set<net.minecraft.world.item.Item> kinds = new java.util.LinkedHashSet<>();
-        kinds.add(Items.COBBLESTONE);
-        kinds.add(Items.DIRT);
+        java.util.Map<net.minecraft.world.item.Item, Integer> kinds = new java.util.LinkedHashMap<>();
+        kinds.put(Items.COBBLESTONE, 64);
+        kinds.put(Items.DIRT, 64);
         for (BuildGoal.Placement p : BuildGoal.plan(structure, anchor, facing, 13)) {
             if (p.part() == BuildGoal.Part.CLEAR) continue;
             net.minecraft.world.item.Item it = BuildWorldGameTests.kit(p);
-            if (it != Items.AIR) kinds.add(it);
+            if (it != Items.AIR) kinds.merge(it, 1, Integer::sum);
         }
         net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> inv = b.getInventoryItems();
+        for (int k = 0; k < inv.size(); k++) inv.set(k, net.minecraft.world.item.ItemStack.EMPTY);
         int i = 0;
-        for (net.minecraft.world.item.Item it : kinds) {
-            if (i >= inv.size()) break;
-            inv.set(i++, new net.minecraft.world.item.ItemStack(it, it.getDefaultMaxStackSize()));
+        for (java.util.Map.Entry<net.minecraft.world.item.Item, Integer> e : kinds.entrySet()) {
+            int max = e.getKey().getDefaultMaxStackSize();
+            int want = max == 1 ? e.getValue() : max;
+            while (want > 0 && i < inv.size()) {
+                int n = Math.min(want, max);
+                inv.set(i++, new net.minecraft.world.item.ItemStack(e.getKey(), n));
+                want -= n;
+            }
         }
+    }
+
+    // ============================================================ fx06: the lake shore
+
+    /** How fast fx06's town is grown: a building every so many ticks (-Dfx.build), for so many days (-Dfx.lakeDays). */
+    private static final int LAKE_BUILD = Integer.getInteger("fx.build", 400);
+    private static final double LAKE_DAYS = Double.parseDouble(System.getProperty("fx.lakeDays", "3"));
+
+    /**
+     * ct01's lake town (forty folk on a meadow cut by a channel of water three wide down the first street east of the
+     * square) grown at the admin's speed, a building every twenty seconds: no building stands where its street is not
+     * walked from the heart; the town carries its street over the water (a bridge laid) before it builds on the far bank.
+     */
+    @GameTest(template = "empty", timeoutTicks = 900000, required = false, batch = "fx06_lake_shore")
+    public static void fx06_lake_shore(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        net.minecraft.server.MinecraftServer server = level.getServer();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Founding.resetForTests(server);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        int cx = 4460000, cz = 90000, folk = 40;
+        int outer = com.jrpetty.mcassistant.village.FoundingPlan.coreRadius(folk) + com.jrpetty.mcassistant.village.FoundingPlan.BAND_MAX;
+        int r = Math.max(outer + 40, com.jrpetty.mcassistant.village.TownPlan.reach() + 12);
+        BuildAuditGameTests.shape(level, BuildAuditGameTests.Ground.MEADOW, cx, cz, r, 9100);
+        CityLookGameTests.channel(level, cx, cz, r);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        Kit.log("[VT] fx06 found " + folk + ": " + Kit.command(level, "village found " + folk + " " + cx + " " + cz));
+        server.tickRateManager().setTickRate(10000.0F);
+        final long[] began = { -1 }, next = { 0 };
+        final UUID[] town = { null };
+        final int[] lastDay = { -1 }, worstOff = { 0 };
+        MineSiteGameTests.each(helper, () -> {
+            long t = helper.getTick();
+            if (began[0] < 0) {
+                if (com.jrpetty.mcassistant.entity.Founding.near(level, heart, 8)) return false;
+                Villages.Village v = Villages.nearest(level, heart, 96);
+                if (v == null) { helper.runAfterDelay(1, () -> helper.fail("no village")); return true; }
+                town[0] = v.id();
+                began[0] = t;
+                Villages.ageForTests(v.id(), Villages.Age.IRON);
+                CityLookGameTests.stock(level, v);
+                return false;
+            }
+            Villages.Village v = Villages.get(town[0]);
+            long ran = t - began[0];
+            int day = (int) (ran / 24000L);
+            if (day != lastDay[0]) {
+                lastDay[0] = day;
+                CityLookGameTests.stock(level, v);
+                Kit.log("[VT] fx06 day " + day + ": " + Villages.headcount(v.id()) + " folk, " + Ledger.buildings(v.id()).size() + " buildings; bridges laid "
+                    + com.jrpetty.mcassistant.entity.CityCrossings.laid(v.id()) + " cells");
+            }
+            if (t >= next[0] && ran < (long) (LAKE_DAYS * 24000L) - 4000L) {
+                next[0] = t + LAKE_BUILD;
+                String p = com.jrpetty.mcassistant.entity.AdminTools.nextProject(v.id());
+                if (p != null) com.jrpetty.mcassistant.entity.AdminTools.buildProject(level, v, p, false);
+                if (ran % 4800 < LAKE_BUILD) {
+                    com.jrpetty.mcassistant.entity.CityPlan.Report rep = com.jrpetty.mcassistant.entity.CityPlan.report(level, v);
+                    worstOff[0] = Math.max(worstOff[0], rep.planned() - rep.onStreets());
+                }
+            }
+            if (ran < (long) (LAKE_DAYS * 24000L)) return false;
+            java.util.Map<String, Object> a = CityLookGameTests.audit(level, v);
+            int across = 0, acrossOn = 0;
+            com.jrpetty.mcassistant.entity.CityPlan.Report rep = com.jrpetty.mcassistant.entity.CityPlan.report(level, v);
+            for (Ledger.Building b : Ledger.buildings(v.id())) {
+                if (b.anchor().getX() - v.centre().getX() >= com.jrpetty.mcassistant.village.TownPlan.RING + com.jrpetty.mcassistant.village.TownPlan.STREET) across++;
+            }
+            Kit.log("[VT] fx06 AUDIT " + a + "; across the water " + across + " buildings; off the streets now " + (rep.planned() - rep.onStreets())
+                + ", at worst " + worstOff[0] + "; bridges laid " + com.jrpetty.mcassistant.entity.CityCrossings.laid(v.id()) + " cells; crossings still to lay "
+                + com.jrpetty.mcassistant.entity.CityCrossings.planForTests(level, v));
+            MineSiteGameTests.standDown(level);
+            int off = rep.planned() - rep.onStreets();
+            Kit.Expect expect = new Kit.Expect();
+            expect.that(off == 0 && worstOff[0] == 0, "no building off the town's streets: " + off + " now, " + worstOff[0] + " at worst");
+            helper.runAfterDelay(1, () -> { if (expect.clean()) helper.succeed(); else helper.fail(expect.summary()); });
+            return true;
+        });
     }
 }
