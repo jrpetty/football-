@@ -476,6 +476,7 @@ public final class TownLod {
         t.coinDue -= coins;
         t.coinsByStep += moved;
         if (r.growth() > 0) t.birthsDue += r.growth() * heads * days;
+        Routes.slept(v.id(), days);                        // [links12] its road gang keeps at the road it was on
         learnOthers(v.id(), t, time, heads);
         save(v.id(), t);
     }

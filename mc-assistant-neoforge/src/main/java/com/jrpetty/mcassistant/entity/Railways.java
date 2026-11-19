@@ -386,7 +386,7 @@ public final class Railways {
         UUID a = v.id(), b = o.id();
         if (a.toString().compareTo(b.toString()) > 0) return false;      // the one plans it, for both
         if (Villages.ageOf(b).ordinal() < Villages.Age.IRON.ordinal()) return false;
-        if (!Envoys.pact(a, b) || !Diplomacy.neighbours(v, o)) return false;
+        if (!(Envoys.pact(a, b) || Rivalry.strongTrade(a, b)) || !Diplomacy.neighbours(v, o)) return false;   // [links12] or a strong trade
         if (Math.sqrt(flat(v.centre(), o.centre())) > LONGEST_LINK) return false;
         if (planAnyway) return true;
         Line mine = mineLine(a);
@@ -1014,6 +1014,7 @@ public final class Railways {
             }
             Villages.tell(v.id(), day, "the railway to " + Villages.name(l.other) + " was opened: " + l.length()
                 + " blocks of rails between the two towns' stations");
+            Region.railOpened(v.id(), l.other, day);                     // [links12] the region's news
         } else {
             Villages.tell(v.id(), day, "the railway to the mine was opened: " + l.length() + " blocks of rails, "
                 + count(l, BOOST) + " torches lighting its powered rails, a station at each end");

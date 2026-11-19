@@ -223,7 +223,7 @@ public final class Roadside {
     @Nullable
     static BlockPos[] site(ServerLevel level, RoadWorks.Road r) {
         int mid = r.mid();
-        boolean alongX = r.alongX();
+        boolean alongX = r.alongX(mid);                                  // [links12] the way a surveyed road runs there
         int[] half = BuildGoal.footprint(DRAWING);
         int off = Math.max(half[0], half[1]) + 4;
         for (int d : new int[]{ 0, 6, -6, 12, -12, 18, -18, 24, -24 }) {

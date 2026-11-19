@@ -139,6 +139,7 @@ public final class Caravans {
 
     /** A trade caravan: what one village has to spare and the other is short of, to be paid for there. */
     static boolean setOutTrade(ServerLevel level, Villages.Village from, Villages.Village to) {
+        if (Rivalry.embargoed(from.id(), to.id())) return false;         // [links12] no trade under an embargo
         VillageFolkEntity carrier = choose(from);
         if (carrier == null) return false;
         // [econ-trade] What the other is short of, as far as this town can spare it (Budget.spare), not a rule of thumb.
@@ -170,8 +171,8 @@ public final class Caravans {
      * provisions out of the stores (a loaf a hundred blocks). Trading is never free.
      */
     static int roadMoney(ServerLevel level, Villages.Village from, VillageFolkEntity carrier, Villages.Village to) {
-        int far = (int) Math.sqrt(from.centre().distSqr(to.centre()));
-        int coins = Ledger.takeCoins(from.id(), Math.max(2, far / 100));
+        int far = Routes.lengthOr(from, to);                             // [links12] by the road, not as the crow flies
+        int coins = Ledger.takeCoins(from.id(), Math.max(2, Routes.roadMoneyOr(from, to, far / 100)));
         if (coins > 0) {
             carrier.earn(coins);
             Economy.spent(from.id(), coins);
@@ -336,7 +337,7 @@ public final class Caravans {
         BlockPos a = CastleWall.pastTheGate(from, Roads.exit(from.centre(), to.centre()));   // [defence] out by the gate
         BlockPos b = CastleWall.pastTheGate(to, Roads.exit(to.centre(), from.centre()));     // [defence] in by the gate
         straight(out, from.centre(), a);
-        List<int[]> road = Roads.bresenham(a.getX(), a.getZ(), b.getX(), b.getZ());
+        List<int[]> road = Routes.alongTheRoad(from, to, a, b);         // [links12] the surveyed road where there is one
         for (int i = 10; i < road.size(); i += 10) out.add(new BlockPos(road.get(i)[0], from.centre().getY(), road.get(i)[1]));
         out.add(b);
         straight(out, b, to.centre().offset(2, 0, 2));
