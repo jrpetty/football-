@@ -515,6 +515,7 @@ public final class Commerce {
         int deposit = b == null ? 0 : (int) num(b[0]);
         String rest = b == null || b.length < 3 ? "0|0" : b[1] + "|" + b[2];
         Ledger.note(village, key, (deposit + coins) + "|" + rest);
+        PlayerFinance.internal(PlayerFinance.uuid(player), village, coins * 100L, PlayerFinance.Cat.REFUNDS, "outbid at the treasury's auction: your bid back into your account");   // [purse20]
     }
 
     /** Market day: put the finest spare thing up. The day after: settle it. */

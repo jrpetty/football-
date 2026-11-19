@@ -60,6 +60,9 @@ public class PlayerFinanceGameTests {
 
     private record Town(UUID id, Villages.Village v, List<VillageFolkEntity> folk) {}
 
+    /** Coin a path's own run hands a player before it deals (the test's, not a booked flow): path/player, pennies. */
+    private static final Map<String, Long> GIVEN = Map.of("the treasury's auction: outbid/1", 4000L);
+
     // ============================================================ the ground (as PlayerCoinGameTests)
 
     private static Town town(GameTestHelper helper, int x) {
@@ -137,6 +140,8 @@ public class PlayerFinanceGameTests {
         try {
             for (PlayerCoinPaths.Path path : paths) {
                 path.setup().run();
+                // The mint puts gold in the player's hand over what it held: an empty slot in hand, so no coin is lost to the test.
+                if (path.name().startsWith("the mint")) for (ServerPlayer pl : players) pl.getInventory().selected = 8;
                 long[] pack0 = new long[players.length], led0 = new long[players.length], seq0 = new long[players.length];
                 for (int i = 0; i < players.length; i++) {
                     pack0[i] = Market.coinsHeld(players[i]) * 100L;
@@ -150,7 +155,7 @@ public class PlayerFinanceGameTests {
                     said = "threw " + e;
                 }
                 for (int i = 0; i < players.length; i++) {
-                    long pack = Market.coinsHeld(players[i]) * 100L - pack0[i];
+                    long pack = Market.coinsHeld(players[i]) * 100L - pack0[i] - GIVEN.getOrDefault(path.name() + "/" + i, 0L);
                     long led = PlayerFinance.cashSumForTests(players[i].getUUID()) - led0[i];
                     long n = PlayerFinance.seqForTests(players[i].getUUID()) - seq0[i];
                     booked += n;
@@ -275,13 +280,14 @@ public class PlayerFinanceGameTests {
         Kit.log("[VT] pf04 " + FolkCredit.playerWithdraws(level, p, id, 10));
         Kit.log("[VT] pf04 " + FolkCredit.playerBorrows(level, p, id, 10));
         Kit.log("[VT] pf04 " + FolkCredit.playerRepays(level, p, id, 4));
-        Kit.log("[VT] pf04 " + TownBonds.playerBuys(level, p, id, 20));
+        Kit.log("[VT] pf04 " + TownBonds.playerBuys(level, p, id, 150));
         Bourse.orderForTests(id, b.id, false, folk.get(0), 5, Bourse.last(level, id, b), day);
         Kit.log("[VT] pf04 " + Bourse.playerBuys(level, p, id, b.name, 5));
         Bourse.orderForTests(id, b.id, true, folk.get(1), 3, Bourse.last(level, id, b) + 5, day);
         Kit.log("[VT] pf04 " + Bourse.playerSells(level, p, id, b.name, 3, 0));
         Kit.log("[VT] pf04 collect: " + TownBonds.playerCollects(p, id));
         // A week on, the bond's coupon, waiting at the hall, then collected.
+        Ledger.addCoins(id, 200);
         TownBonds.morningForTests(level, Villages.get(id), day + 7);
         Kit.log("[VT] pf04 coupon collect: " + TownBonds.playerCollects(p, id));
         long pack = (Market.coinsHeld(p) - pack0) * 100L, led = PlayerFinance.cashSumForTests(me) - led0;
@@ -357,8 +363,13 @@ public class PlayerFinanceGameTests {
                 && PlayerFinance.span(me, now, 7).getOrDefault(Cat.WAGES, 0L) == 700 && PlayerFinance.history(me).size() == PlayerFinance.worthKeptForTests(me),
                 "the same after a save and a load");
             // Privacy: another player asks for p's finances by name.
-            String refused = FinanceSheet.refusal(q, p.getGameProfile().getName());
-            ok.that(refused != null, "another player is refused: " + refused);
+            // (The test's mock players share one name: p is given its own in its books, as a player who is away.)
+            PlayerFinance.nameForTests(me, "PurseTestOwner");
+            String refused = FinanceSheet.refusal(q, "PurseTestOwner", false);
+            ok.that(refused != null, "another player (not an operator) is refused: " + refused);
+            ok.that(FinanceSheet.refusal(q, "PurseTestOwner", true) == null && FinanceSheet.whose(q, "PurseTestOwner").equals(me),
+                "an operator may look, even at a player who is away");
+            ok.that(FinanceSheet.refusal(q, "NobodyByThatName", true) != null, "nobody's books for a name never seen");
             ok.that(FinanceSheet.whose(q, "").equals(q.getUUID()) && FinanceSheet.refusal(q, "") == null, "a player may see its own");
             level.setDayTime(2000L);
             Kit.noLeftoverPlayers(level);

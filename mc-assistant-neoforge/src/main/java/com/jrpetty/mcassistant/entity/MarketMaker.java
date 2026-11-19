@@ -1206,6 +1206,7 @@ public final class MarketMaker {
         }
         ItemStack c = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), coins);
         if (!p.getInventory().add(c)) p.drop(c, false);
+        PlayerFinance.book(p, id, coins, PlayerFinance.Cat.SALES, "gold struck into coin at the mint");   // [purse20] (counted in strike)
         return "The mint struck your " + n + " gold ingot" + (n == 1 ? "" : "s") + " into " + coins + " coins (" + (STRUCK - SEIGNIORAGE)
             + " to the ingot; the mint keeps one).";
     }

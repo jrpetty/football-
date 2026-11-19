@@ -546,8 +546,14 @@ public final class FinanceSheet {
      *  sees another player's. */
     @Nullable
     public static String refusal(ServerPlayer asker, String name) {
+        return refusal(asker, name, asker.hasPermissions(2));
+    }
+
+    /** The same, with whether the asker is an operator given (tests). */
+    @Nullable
+    public static String refusal(ServerPlayer asker, String name, boolean operator) {
         if (name == null || name.isEmpty() || name.equalsIgnoreCase(asker.getGameProfile().getName())) return null;
-        if (!asker.hasPermissions(2)) return "Only an operator may look at another player's finances.";
+        if (!operator) return "Only an operator may look at another player's finances.";
         if (asker.server.getPlayerList().getPlayerByName(name) == null && PlayerFinance.byName(name) == null) return "No books for a player called " + name + ".";
         return null;
     }

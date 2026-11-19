@@ -234,6 +234,12 @@ public final class PlayerFinance {
         return sub(player(player), "basis").getLong(key);
     }
 
+    /** A player's id as the books keep it (a string), or null. */
+    @Nullable
+    static UUID uuid(String s) {
+        try { return s == null || s.isEmpty() ? null : UUID.fromString(s); } catch (IllegalArgumentException e) { return null; }
+    }
+
     // ------------------------------------------------------------------ the records, read
 
     /** The player's compound (made the first time). */
@@ -463,6 +469,11 @@ public final class PlayerFinance {
         CompoundTag d = sub(days, Long.toString(day));
         d.putLong(cat.name(), d.getLong(cat.name()) + pence);
         prune(days, today());
+    }
+
+    /** Tests: the name the books know a player by. */
+    public static void nameForTests(UUID player, String name) {
+        player(player).putString("name", name);
     }
 
     /** Tests: every booked coin through the player's pack since its records began (pennies, signed). */
