@@ -14103,3 +14103,75 @@ the forest, the waters, the desert, the snowy slope), founded and audited, every
 untouched; tf00 (not required) all six at once, for the numbers; tf07 /village spawnat founds at once and then levels;
 tf08 a player's camp down a pit left open and untouched, the world's raw copper down another filled over.
 FoundingGameTests f04 (the tarn let out, its hill graded, nothing running); FoundingPlanTest as it was.
+
+## Buildings built to order, and a market in property (orders-17)
+
+A player can have the town's builders put up any building for it, with an honest price and an honest time, and can sell,
+let or refit what it owns. Everything is done in the world: ask any folk for the **property office** (the talk screen's
+Town group: "I'd like to see the property office"), or open it from the city books' **Property** page.
+
+### The quote (BuildOrders)
+* **Materials**: every block of the drawing in the style chosen (oak, birch, spruce; stone, brick and the civic look as the
+  age allows), at the market's ask today (the stores' price before the market opens), line by line ("71 dark oak stairs at
+  0.15 = 10.8"), less whatever the buyer brings itself (the office counts what it carries, and takes it at the order).
+* **The ground**: the earth inside the walls above the floor cut away, the hollows under it filled with cobblestone (its
+  blocks on the bill, its labour the labourers').
+* **Labour**: block by block, by the trade that lays it: masons (stone, brick), carpenters (timber, doors, fences), roofers
+  (the roof, a tenth dearer and slower the higher it goes: scaffolding), glaziers (glass), fitters (furnaces, chests, beds,
+  lanterns), labourers (the ground). Each trade has its pace (labourers 18 blocks an hour, carpenters 12, masons 10, roofers
+  9, glaziers 8, fitters 6) and its going wage from the labour market (JobWorth); a tenth on top for the tools, the
+  scaffolding and the foreman.
+* **Land**: the plot's value (by its size against a cottage's, where it lies, the housing market and the land index), bought
+  from the town; or a **ground lease** at a twelfth of it a week (four weeks with the deposit, then owed weekly and paid at
+  the office); nothing on the buyer's own land.
+* **Fees**: the permit (a twentieth of the works, two at least), the business rates for four weeks if it is premises, the
+  registry's coin. **The builders' margin**: a tenth of the works. **Priority**: a quarter of the labour and overheads.
+* **Paying**: a deposit (the land, the fees, any priority and three tenths of the works), a stage payment when three tenths
+  is laid (more than half the works), the balance on completion. A cottage in oak in a Stone Age town of six: materials
+  54.9, labour 8.9 (29 hours: masons 5.5, carpenters 11.2, glaziers 1.3, roofers 9.3, fitters 1.8), overheads 0.9, land
+  13, fees 4.2, margin 6.5: 89 coins, 39 down, 40 at the stage, 10 on completion.
+* Not on the square, a street, the mine's ground, another building or order, or outside the town.
+
+### The time
+The town has commission crews (one; two in a town of twenty-four; three in one of forty), each of a hand for every six grown
+folk (two to four), a twentieth quicker each age. They work ten hours a day when the town's own crews are idle or the town is
+thriving, the afternoons only (four hours) while the town is raising a building of its own, eight on a priority order (the
+town's wall, its war works and a house for the homeless still first). The jobs ahead (orders placed before, priority orders,
+a folk's own house going up) are dealt to the crews; the order starts when one comes free; the materials the stores lack
+(and cannot make of their makings) take as long as the town's trades take to turn them out, or two days and more to buy in.
+The estimate is a range with its reasons ("2nd in the builders' queue, behind Wren's cottage; 1 crew of 2 hands; afternoons
+only while the town builds its own; 10 glass panes to be made or bought in (about 3.3 days)"). The builders really lay it a
+course at a time at that pace (the hand the town sends walks to the site; out of the stores and what the buyer brought), and
+the estimate is written again as it goes, with why when it moves ("Day 10: now about day 15 (was 14): waiting for 10 glass
+panes"). A fitting the stores cannot find for three days is left out and not charged. Each block's price goes to the market as
+it is laid, the builders' wages into their purses, the margin and overheads to the treasury at the end; whatever was held and
+not spent comes back. Called off, what was not spent and what the buyer brought that was not laid come back, and what stands
+is the buyer's.
+
+### Property (PropertyMarket)
+Every building a player owns is on the register: one it had built (a house goes on the homes' books, its key in the
+player's pack), one it bought, its own shop (PropertyMarket.register). Its worth: the land, the building at what it would
+cost to build again today less a hundredth a week of wear (four tenths at most), as the housing market stands for a home, and
+the goodwill of a business in it (four weeks of its profit, from its books); its contents if sold with them. The owner sets
+the price; offers come in each morning and stand three days: a household without a home of its own for a house (its purses,
+savings and the bank's mortgage), the town's firms for premises (full value if fit for their trade, less if they must refit),
+the council (four-fifths for a home to let, seven tenths for premises), other players at the office. Accepted, the price goes
+to the seller (into its pack, or waiting at the hall), the title to the buyer, the contents back to the seller unless sold
+with it. A home to let goes to the next household wanting one at the rent asked; premises let to a firm pay their week's rent
+out of its till to the owner's dues at the hall. Folk sell on the same market: a household that owns its house and is saving
+to build, or has outgrown it, puts it up; a player who buys it keeps the household on as tenants. The land register carries a
+title for each building on it.
+
+### Repurposing and extending (Refits)
+A building can be refitted as a home, a shop, a bakery, a smithy, a tavern, a café, a workshop, a warehouse or an inn: the
+office shows what each use needs and what the building lacks (counted where it stands), a quote for the kit, the fitters'
+hours, the permit and the margin, and the builders fit it (each piece against the inside of a wall, never in front of a door);
+the register, the land title and any business in it then say the new use. It can be raised a storey (the old roof off, the
+walls built up, the roof lifted) or given a wing beside it, each with its own quote and time.
+
+### The tests
+`BuildOrdersGameTests` (bo01 to bo10): the quote adds up line by line and follows the prices; the time grows with a busier
+queue and shrinks with more builders and the buyer's own materials; an order is built out of the stores and finishes within
+its estimate; a shortage revises the time with its reason and the work finishes once the stores have it; the deposit, the
+stage and the refund are booked to the coin (the census drifts by nothing); priority costs its premium and goes first; a house
+is sold to a household and a shop to a firm; a shop is refitted as a bakery and a storey quoted; orders survive a save and load.

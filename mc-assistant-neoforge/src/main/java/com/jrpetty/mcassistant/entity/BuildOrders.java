@@ -293,6 +293,7 @@ public final class BuildOrders {
     public record Eta(double low, double days, double high, int position, int ahead, int crews, int hands, int materialsShort,
                       double materialsDays, double startDays, double buildDays, String reason) {
         public String words() {
+            if (high < 1.0) return "within the day";
             return String.format(Locale.ROOT, "about %.1f days (%.1f to %.1f)", days, low, high);
         }
     }
@@ -705,6 +706,9 @@ public final class BuildOrders {
             if (need <= 0) continue;
             int have = held(level, id, m.item());
             if (have >= need) continue;
+            Map<Item, Integer> make = new LinkedHashMap<>();
+            make.put(m.item(), need - have);
+            if (Block.byItem(m.item()) != Blocks.AIR && !HousingMarket.wooden(Block.byItem(m.item())) && Masonry.canAll(level, v, make)) continue;   // made of the makings in the stores
             short_ += need - have;
             double[] s = supply(id, m.item());
             double d = s[1] + (need - have) / s[0];
