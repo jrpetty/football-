@@ -158,7 +158,11 @@ public final class FolkFaces {
                 int[] fixed = image("textures/entity/folk/regalia_dress_" + robe + ".png");
                 if (cloth == null || fixed == null) return false;
                 cutOut(px, cloth, 0xFF000000 | RegaliaLayer.rgb(com.jrpetty.mcassistant.entity.Regalia.mainOf(key.regalia())));
-                cutOut(px, fixed, -1);
+                for (int i = 0; i < px.length; i++) {
+                    int a = fixed[i] >>> 24;
+                    if (a >= 26) px[i] = 0xFF000000 | fixed[i] & 0xFFFFFF;
+                    else if (a > 0) px[i] = 0;                         // under its hem: the trade's coat taken away
+                }
             }
         }
         return true;

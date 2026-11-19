@@ -413,6 +413,11 @@ def skin_box(cv, name):
     return fa.Box(cv, name)
 
 
+# The coat's pixels below a robe's hem, to be cleared out of the folk's picture (the trade's coat must not show under
+# it): written nearly clear (alpha 8), which a cut-out pass never draws and FolkFaces.dressed takes for "clear here".
+CLEAR = set()
+
+
 def hose(fx, cloth=(40, 32, 46), boot=(38, 28, 22), buckle=None):
     for name in ("right_leg", "left_leg"):
         leg = skin_box(fx, name)
@@ -445,6 +450,12 @@ def robe(dye, fx, rows, front_fixed=None, all_fixed=None, base=206):
         d = skin_box(dye, name)
         f = skin_box(fx, name)
         d.around(lambda s, y, sw, h, face, x, n=n: fa.lit(velvet(x, y, base), 1.0 if face == "front" else 0.94) if y < n else False)
+        if name == "coat":
+            for face in SIDES:
+                fx0, fy0, fw, fh = f.f[face]
+                for yy in range(n, fh):
+                    for xx in range(fw):
+                        CLEAR.add((fx0 + xx, fy0 + yy))
         d.fill("top", lambda x, y, w, h: velvet(x, y, base + 8))
         if name == "coat":
             d.fill("bottom", lambda x, y, w, h: fa.lit(velvet(x, y, base), 0.7) if rows >= 18 else False)
@@ -672,6 +683,23 @@ MARKS = [
 ]
 
 
+def png_clearing(cv, clear):
+    """A canvas as a picture, with the pixels to clear written nearly clear (alpha 8)."""
+    import struct
+    import zlib
+    raw = b""
+    for y, row in enumerate(cv.px):
+        raw += b"\x00" + b"".join(
+            bytes((c[0], c[1], c[2], 255)) if c is not None else (b"\x00\x00\x00\x08" if (x, y) in clear else b"\x00\x00\x00\x00")
+            for x, c in enumerate(row))
+
+    def chunk(t, data):
+        body = t + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", SIZE, SIZE, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
 def marks_png():
     """Five signs side by side, each outlined in dark so it reads against the sky; the cloth ones in the town's red and
     gold (the sign is small: it says what kind of ruler, the clothes say whose)."""
@@ -765,8 +793,9 @@ def main():
     pictures = {"regalia_cloth.png": cloth.png(), "regalia_accent.png": accent.png(), "regalia_fixed.png": fixed.png(),
                 "regalia_marks.png": marks_png()}
     for kind, make in DRESSES.items():
+        CLEAR.clear()
         fx, dye = make()
-        pictures["regalia_dress_%s.png" % kind] = fx.png()
+        pictures["regalia_dress_%s.png" % kind] = png_clearing(fx, CLEAR)
         pictures["regalia_dress_%s_dye.png" % kind] = dye.png()
     changed = []
     for name, data in pictures.items():

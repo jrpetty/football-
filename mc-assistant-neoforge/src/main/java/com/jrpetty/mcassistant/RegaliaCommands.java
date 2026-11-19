@@ -43,7 +43,8 @@ public final class RegaliaCommands {
                     .then(Commands.argument("land", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(lands, b))
                         .executes(ctx -> land(ctx, StringArgumentType.getString(ctx, "land")))))
                 .then(Commands.literal("heir").requires(s -> s.hasPermission(2)).executes(ctx -> house(ctx, false)))
-                .then(Commands.literal("wed").requires(s -> s.hasPermission(2)).executes(ctx -> house(ctx, true)))));
+                .then(Commands.literal("wed").requires(s -> s.hasPermission(2)).executes(ctx -> house(ctx, true)))
+                .then(Commands.literal("tag").requires(s -> s.hasPermission(2)).executes(RegaliaCommands::tag))));
     }
 
     private static Villages.Village near(CommandContext<CommandSourceStack> ctx) {
@@ -81,6 +82,24 @@ public final class RegaliaCommands {
         Homeland.Land l;
         try { l = Homeland.Land.valueOf(name.toUpperCase(Locale.ROOT)); } catch (IllegalArgumentException e) { return say(ctx, "No such land."); }
         Homeland.setForTests(v.id(), l);
+        return court(ctx);
+    }
+
+    /** Every one of the town's court tagged "regalia" and "regalia_<kind>" (for /tp and /data in the pictures' scripts),
+     *  the tags of any who no longer wear anything taken off. */
+    private static int tag(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = near(ctx);
+        if (v == null) return 0;
+        Regalia.freshForTests(v.id());
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity f)) continue;
+            for (Regalia.Kind k : Regalia.Kind.values()) f.removeTag("regalia_" + k.name().toLowerCase(Locale.ROOT));
+            f.removeTag("regalia");
+            Regalia.Kind k = Regalia.kind(f);
+            if (k == Regalia.Kind.NONE) continue;
+            f.addTag("regalia");
+            f.addTag("regalia_" + k.name().toLowerCase(Locale.ROOT));
+        }
         return court(ctx);
     }
 
