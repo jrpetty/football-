@@ -196,6 +196,12 @@ public final class PropertyOffice {
         CompoundTag t = new CompoundTag();
         ListTag l = new ListTag();
         Villages.Village v = Villages.get(village);
+        if (!Accounts.town(village).contains(BuildOrders.BOOK, net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            l.add(StringTag.valueOf("#The builders"));
+            l.add(StringTag.valueOf("Nobody has commissioned a building here yet. Ask any folk for the property office: a quote, a time, and the builders at it."));
+            t.put("lines", l);
+            return t;
+        }
         l.add(StringTag.valueOf("#The builders"));
         l.add(StringTag.valueOf(BuildOrders.crews(village) + " commission crew(s) of " + BuildOrders.hands(village) + " hands; "
             + (v != null && BuildOrders.townBusy(level, village) ? "the town is building its own: commissions get the afternoons" : "the town's own crews are free: commissions get the whole day")));

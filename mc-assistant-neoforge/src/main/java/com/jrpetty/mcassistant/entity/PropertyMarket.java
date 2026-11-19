@@ -434,6 +434,7 @@ public final class PropertyMarket {
     /** The morning (Market.payday): offers expire and come in, ground rents and premises' rents fall due, folk list their houses. */
     public static void morning(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
+        if (!Accounts.town(id).contains(BuildOrders.BOOK, Tag.TAG_COMPOUND)) return;   // the town's property market not opened yet
         CompoundTag all = estate(id);
         if (all.isEmpty() && BuildOrders.orders(id).isEmpty()) return;
         CompoundTag book = BuildOrders.book(id);
@@ -812,6 +813,7 @@ public final class PropertyMarket {
 
     /** LandTitles.morning: a title for each building on the register that is not a house already on the homes' books. */
     static void titles(ServerLevel level, UUID village, CompoundTag all, java.util.Set<String> seen, double growth) {
+        if (!Accounts.town(village).contains(BuildOrders.BOOK, Tag.TAG_COMPOUND)) return;
         CompoundTag est = estate(village);
         for (String k : est.getAllKeys()) {
             CompoundTag t = est.getCompound(k);

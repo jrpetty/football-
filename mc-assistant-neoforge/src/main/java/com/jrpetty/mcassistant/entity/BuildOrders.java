@@ -797,6 +797,8 @@ public final class BuildOrders {
     /** The pennies held for players' orders in this town, not yet spent (CoinCensus counts them). */
     public static long heldPence(UUID village) {
         long n = 0;
+        CompoundTag town = Accounts.town(village);
+        if (!town.contains(BOOK, Tag.TAG_COMPOUND)) return 0;          // a town nobody has ordered from: nothing written for it
         CompoundTag all = orders(village);
         for (String k : all.getAllKeys()) n += all.getCompound(k).getLong("escrow");
         return n;
@@ -1092,6 +1094,7 @@ public final class BuildOrders {
         Long last = TICKED.get(id);
         if (last != null && now - last < 300L && now >= last) return;
         TICKED.put(id, now);
+        if (!Accounts.town(id).contains(BOOK, Tag.TAG_COMPOUND)) return;
         CompoundTag all = orders(id);
         if (all.isEmpty()) return;
         double hour = hourNow(level, id);
