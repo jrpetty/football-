@@ -3248,6 +3248,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Just the name over its head, no glyph and no hearts (the folk of /village lineup). */
     protected boolean plainNameTag() { return false; }
 
+    /** [regalia19] Its name as its nameplate gives it (a ruler's with its title: VillageFolkEntity). */
+    protected net.minecraft.network.chat.Component plateName() { return Component.literal(displayNameCap()); }
+
     /**
      * Does it dig as deep as its plot goes, whatever its level? A hired hand works
      * its way down the mine ladder; a village's folk dig where the village sends
@@ -4785,6 +4788,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     private String lastShownMarks = "";
+    private net.minecraft.network.chat.Component lastShownPlate;   // [regalia19]
 
     /** What a long career shows on the nametag. One chevron for a thousand of
      *  the thing this trade is judged on, two for five thousand, three for
@@ -10007,8 +10011,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         char glyph = stationTask == StationTask.NONE ? ' '
             : (!missingEssentials.isEmpty() || upkeepStalled) ? '⚠' : '⚒';
         String marks = milestoneMarks() + roleBadge();         // [econ-store] and a job's title (VillageFolkEntity)
+        net.minecraft.network.chat.Component plate = isWatched() ? plateName() : null;   // [regalia19] a ruler's title
         if (isWatched() && (hp != lastShownHealth || veteranLevel() != lastShownLevel
-            || glyph != lastShownGlyph || !marks.equals(lastShownMarks))) {
+            || glyph != lastShownGlyph || !marks.equals(lastShownMarks) || !plate.equals(lastShownPlate))) {
+            lastShownPlate = plate;
             lastShownMarks = marks;
             lastShownHealth = hp;
             lastShownLevel = veteranLevel();
@@ -10025,7 +10031,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (lastShownLevel >= 1) {
                 name.append(Component.literal("✦" + lastShownLevel + " ").withStyle(ChatFormatting.GOLD));
             }
-            name.append(Component.literal(displayNameCap() + " "));
+            name.append(plate).append(Component.literal(" "));                    // [regalia19] was its bare name
             if (!marks.isEmpty()) {
                 name.append(Component.literal(marks + " ").withStyle(ChatFormatting.AQUA));
             }

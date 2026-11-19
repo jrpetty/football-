@@ -316,6 +316,7 @@ public class VillageFolkEntity extends AssistantEntity {
         long[] coinBefore = accounts >= 0 && CoinCensus.probingFolk() && ownerId() != null ? CoinCensus.quick(ownerId(), this) : null;
         try {
             super.tick();
+            if (accounts >= 0 && (tickCount + getId()) % 20 == 0) showRegalia();   // [regalia19] the ruler's dress, put on and off
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (Throwable t) {
@@ -1813,6 +1814,33 @@ public class VillageFolkEntity extends AssistantEntity {
         builder.define(DATA_MANNER, 0);
         builder.define(DATA_POST, 0);                   // [roles-c]
         builder.define(DATA_ACTION, 0);                 // [anim]
+        builder.define(DATA_REGALIA, 0);                // [regalia19]
+    }
+
+    // ------------------------------ [regalia19] what it wears as the town's ruler (Regalia), for the client ------------
+
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_REGALIA =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
+    /** [regalia19] Its office's dress and the town's colours (Regalia.pack), 0 for none. */
+    public int clientRegalia() { return this.entityData.get(DATA_REGALIA); }
+
+    /** [regalia19] Sent only when it changes: a new ruler dressed, the old one plain again. */
+    public void showRegalia() {
+        int packed = Regalia.packed(this);
+        if (this.entityData.get(DATA_REGALIA) != packed) this.entityData.set(DATA_REGALIA, packed);
+        net.minecraft.network.chat.Component p = Regalia.plate(this);
+        if (!p.equals(plate)) plate = p;                            // kept as it was, so the nameplate sees no change
+    }
+
+    /** [regalia19] Its nameplate's name, as showRegalia last made it (null before). */
+    private net.minecraft.network.chat.Component plate;
+
+    /** [regalia19] Its title on its nameplate: "King Alder of Rushscar". */
+    @Override
+    protected net.minecraft.network.chat.Component plateName() {
+        return showcase || plate == null ? super.plateName() : plate;
     }
 
     // ------------------------------ [anim] what its body is doing (FolkAction), for the client to animate ------------
