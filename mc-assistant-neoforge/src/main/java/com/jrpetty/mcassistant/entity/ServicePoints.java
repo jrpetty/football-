@@ -504,7 +504,8 @@ public final class ServicePoints {
         return action.equals("statement") || action.equals("look") || action.equals("basket") || action.equals("use")
             || action.equals("add") || action.equals("remove") || action.equals("clear") || action.equals("mode")    // [dining] the basket, and
             || action.equals("payNow") || action.equals("pay")                                                      // the bill, after hours too
-            || action.equals("quitShift");                                                                           // [earning] clocking off
+            || action.equals("quitShift")                                                                            // [earning] clocking off
+            || action.equals("startbiz") || action.equals("capital");                                               // [player15] a business, after hours
     }
 
     /** Every second, the open screens brought up to date if what they show has changed (only those, and cheaply). */

@@ -340,6 +340,8 @@ public final class TalkMenu {
             ask("hire", Items.IRON_SWORD, TalkTopic.HIRE, c -> !c.has("child")),
             group("favours", Items.APPLE,
                 ask("shifts", Items.CLOCK, TalkTopic.SHIFTS),                 // [earning] a paid shift, from the boss
+                say("jobs_board", Items.PAPER, "Any jobs for me on the board?"),   // [player15] the openings, to apply for
+                say("my_life", Items.BOOK, "Show me my life in town"),
                 ask("favour", Items.APPLE, TalkTopic.FAVOUR),
                 ask("short", Items.COMPOSTER, TalkTopic.SHORT),
                 ask("lost", Items.BRUSH, TalkTopic.LOST),
@@ -370,7 +372,10 @@ public final class TalkMenu {
                 ask("stall", Items.OAK_FENCE, TalkTopic.STALL),
                 ask("auction", Items.NOTE_BLOCK, TalkTopic.AUCTION),
                 ask("prices", Items.COMPARATOR, TalkTopic.PRICES),
-                say("business_books", Items.WRITABLE_BOOK, "Could I see your books?")),   // [business-books] its business's books
+                say("business_books", Items.WRITABLE_BOOK, "Could I see your books?"),   // [business-books] its business's books
+                say("start_business", Items.WRITABLE_BOOK, "I'd like to start a business"),   // [player15] the three-step charter
+                say("my_businesses", Items.BOOK, "Show me my businesses"),
+                say("my_shop", Items.BARREL, "How's my shop doing?")),
             group("services", Items.SCAFFOLDING,
                 ask("housing", Items.BRICKS, TalkTopic.HOUSING),
                 ask("commission", Items.OAK_PLANKS, TalkTopic.COMMISSION),

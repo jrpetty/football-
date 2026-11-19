@@ -463,6 +463,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // The job market between towns (JobSeekers): reading the notices at the board, saying its
         // goodbyes, or on the road to a new place; the rest of its day waits.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel market && JobSeekers.step(this, market)) return;
+        // [player15] A player's shop: its keeper at the counter in its hours; a customer on its way in, at the shelves, in the queue.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel shopLevel
+                && (ShopKeepers.hold(this, shopLevel) || ShopCustomers.hold(this, shopLevel))) return;
         // A friend passing by, hailed by name (Dealings).
         if (!withAPlayer) Dealings.greet(this);
         // Badly hurt: the brewer's healing, its own or (any trade) one from the stores.
@@ -2595,6 +2598,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (homeComfort(server)) return;              // its savings, spent on its home
         if (Fashion.shopping(this, server)) return;   // [fashion] to the shop for the season's look it wants
         if (PlayerStalls.errand(this, server)) return;   // a player's stall on the square, for what it wants (PlayerStalls)
+        if (ShopCustomers.errand(this, server)) return;  // [player15] a player's own shop, in its hours, for what it wants
         if (shopping(server)) return;                 // market day: a treat from the stalls
         if (lookRound(server)) return;                // the new building everybody is talking about
         if (Museum.visit(this, server)) return;       // round the museum, before a find or two

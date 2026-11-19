@@ -699,6 +699,7 @@ public final class Commerce {
      *  contracts, and friends' letters; and every round, the players' stalls (PlayerStalls). */
     public static void daily(ServerLevel level, Villages.Village v) {
         PlayerStalls.tick(level, v);                    // the players' stalls: rent run out, given back, one to let
+        com.jrpetty.mcassistant.Guard.run("player shops", () -> PlayerShops.tick(level, v));   // [player15] the players' own shops
         long t = level.getDayTime() % 24000L;
         if (t < 6000L || t > 11000L) return;
         long day = level.getDayTime() / 24000L;

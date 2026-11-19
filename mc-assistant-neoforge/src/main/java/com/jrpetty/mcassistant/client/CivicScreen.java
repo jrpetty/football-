@@ -80,7 +80,7 @@ public class CivicScreen extends Screen {
     private void run(String command) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        mc.player.connection.sendCommand(command.startsWith("/") ? command.substring(1) : command);
+        com.jrpetty.mcassistant.net.LifeNetwork.command(command);   // [player15] not as chat: a server may ban commands
     }
 
     private int visible() {

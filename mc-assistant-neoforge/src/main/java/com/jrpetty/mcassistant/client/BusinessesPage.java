@@ -64,7 +64,7 @@ public final class BusinessesPage {
             String id = r.getString("id");
             clicks.add(x, cy - 1, x + w, cy + 9, () -> {
                 var mc = Minecraft.getInstance();
-                if (mc.player != null) mc.player.connection.sendCommand("village business books " + id);
+                if (mc.player != null) com.jrpetty.mcassistant.net.LifeNetwork.command("village business books " + id);   // [player15] not as chat
                 UiStyle.click();
             });
             cy += 10;

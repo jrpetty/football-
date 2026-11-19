@@ -468,6 +468,7 @@ public class CityScreen extends Screen {
         rx = AdminClient.boardButton(g, font, rx, top + 6, mx, my);      // [admin] the admin panel, for operators
         rx = FavouritesClient.boardButton(g, font, rx, top + 6, mx, my);  // [ui] the folk you follow
         rx = FinanceClient.boardButton(g, font, rx, top + 6, mx, my);     // [purse20] your finances
+        rx = LifeClient.boardButtons(g, font, rx, top + 6, mx, my);        // [player15] you, and starting a business
         rx -= UiStyle.S2;
         for (int i = RANGE_NAMES.length - 1; i >= 0; i--) {
             int bw = font.width(RANGE_NAMES[i]) + 8;
@@ -4036,6 +4037,7 @@ public class CityScreen extends Screen {
         if (AdminClient.boardClick(mx, my)) return true;                  // [admin]
         if (FavouritesClient.boardClick(mx, my, this)) return true;       // [ui]
         if (FinanceClient.boardClick(mx, my, this)) return true;          // [purse20]
+        if (LifeClient.boardClick(mx, my)) return true;                   // [player15]
         if (page().equals("Inventions") && InventionsPage.mouseClicked(mx, my, button)) return true;   // [screens13] its tools, a drag
         for (Zone z : new ArrayList<>(zones)) {
             if (mx >= z.x0() && mx < z.x1() && my >= z.y0() && my < z.y1()) { z.act().run(); return true; }

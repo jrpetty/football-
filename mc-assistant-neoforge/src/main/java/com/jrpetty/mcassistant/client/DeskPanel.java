@@ -174,7 +174,7 @@ final class DeskPanel implements ServiceScreen.Panel {
             if (overMinus || overPlus) tip = "Shift for ten at a time";
         }
         int bx = rx + rw - S1 - BUTTON_W;
-        boolean enabled = r.enabled() && (screen.open() || r.action().equals("use")) && !screen.waiting();
+        boolean enabled = r.enabled() && (screen.open() || r.action().equals("use") || r.action().equals("startbiz") || r.action().equals("capital")) && !screen.waiting();   // [player15]
         boolean overButton = ServiceScreen.in(mouseX, mouseY, bx, ry + 3, BUTTON_W, ROW_H - 6);
         boolean clippedB = button(g, font, r.button(), bx, ry + 3, BUTTON_W, ROW_H - 6, State.of(enabled, false, overButton));
         if (overButton) {
@@ -226,7 +226,7 @@ final class DeskPanel implements ServiceScreen.Panel {
     }
 
     private void press(Row r) {
-        boolean enabled = r.enabled() && (screen.open() || r.action().equals("use")) && !screen.waiting();
+        boolean enabled = r.enabled() && (screen.open() || r.action().equals("use") || r.action().equals("startbiz") || r.action().equals("capital")) && !screen.waiting();   // [player15]
         if (!enabled) return;
         click();
         CompoundTag args = r.args().copy();

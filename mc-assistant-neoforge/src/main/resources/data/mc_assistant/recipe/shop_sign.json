@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PSP"
+  ],
+  "key": {
+    "S": {
+      "tag": "minecraft:signs"
+    },
+    "P": {
+      "tag": "minecraft:planks"
+    }
+  },
+  "result": {
+    "id": "mc_assistant:shop_sign",
+    "count": 1
+  }
+}

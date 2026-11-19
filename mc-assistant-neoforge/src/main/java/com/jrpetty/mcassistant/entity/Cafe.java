@@ -196,6 +196,9 @@ public final class Cafe {
         out.add(Stockroom.ware(Items.FLOWER_POT, 2, 1, 8, 1, false));
         out.add(Stockroom.ware(Items.PAINTING, 1, 1, 4, 1, false));
         out.add(Stockroom.ware(Items.ITEM_FRAME, 1, 1, 4, 1, false));
+        // [player15] A shop counter and a shop sign, for a player's own shop: made at the workshop's bench by their recipes.
+        out.add(Stockroom.ware(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get(), 1, 0, 2, 1, false));
+        out.add(Stockroom.ware(com.jrpetty.mcassistant.McAssistantMod.SHOP_SIGN_ITEM.get(), 1, 0, 2, 1, false));
         out.add(Stockroom.ware(Items.LANTERN, 2, 1, 8, 1, false));
         // Glass for a household's windows (Luxuries): sixteen panes cut from six of the smelter's glass.
         out.add(Stockroom.ware(Items.GLASS_PANE, 8, 0, 24, 16, false));

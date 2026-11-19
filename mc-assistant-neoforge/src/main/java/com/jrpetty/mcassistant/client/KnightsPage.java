@@ -158,7 +158,7 @@ public final class KnightsPage {
         UiStyle.button(g, font, label, x, y, w, 12, UiStyle.State.of(true, chosen, over));
         clicks.add(x, y, x + w, y + 12, () -> {
             var mc = Minecraft.getInstance();
-            if (mc.player != null) mc.player.connection.sendCommand(command);
+            if (mc.player != null) com.jrpetty.mcassistant.net.LifeNetwork.command(command);   // [player15] not as chat
             UiStyle.click();
             CityScreen.request();
         });

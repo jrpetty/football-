@@ -301,6 +301,7 @@ public final class CoinCensus {
         long stalls = 0;
         for (PlayerStalls.Stall st : PlayerStalls.all(village)) stalls += st.till * 100L;
         out.put("players' stall tills", stalls);
+        out.put("players' shop tills", PlayerShops.tills(village) * 100L);   // [player15]
         out.put("the poor box", PoorBox.coins(village) * 100L);
         out.put("change held for folk at the market", Accounts.changeHeld(village));   // [econ-1a] their odd pennies
         long visitors = 0;                                                               // [econ-1a] visitors in town, their purses
