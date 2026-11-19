@@ -537,6 +537,7 @@ public final class PropertyMarket {
             long paid = Businesses.payOut(level, village, b, rent, day);
             if (paid > 0) {
                 Accounts.add(Accounts.sub(TownBonds.book(village), "due"), t.getString("owner"), paid);
+                PlayerFinance.accrued(t.getString("owner"), village, paid, PlayerFinance.Cat.RENT_IN);   // [join21] rent, when collected
                 Accounts.add(t, "rentAll", paid);
                 CapitalBook.dirty();
             }
@@ -609,7 +610,7 @@ public final class PropertyMarket {
         }
         if (!done.isEmpty()) return done;
         int things = t.getBoolean("withContents") ? 0 : returnContents(level, village, t, p);
-        BuildOrders.toPlayer(level, village, p.getUUID(), price);
+        BuildOrders.toPlayer(level, village, p.getUUID(), price, PlayerFinance.Cat.CASHED, "sold " + t.getString("name"));   // [join21]
         Earnings.record(p, village, Earnings.Source.PROPERTY, price, "selling " + t.getString("name"), "for a building sold");
         record(village, day, t.getString("name"), price, p.getName().getString(), offer.getString("name"));
         t.putString("listing", "");
@@ -694,7 +695,7 @@ public final class PropertyMarket {
         if (b == null) return offer.getString("name") + " isn't about to pay just now.";
         if (Market.coinsHeld(b) < price) return offer.getString("name") + " hasn't the coin on it just now.";
         Market.payOut(b, price);
-        CoinCensus.playerIn(v.id(), price);
+        CoinCensus.playerIn(v.id(), price, b, PlayerFinance.Cat.INVESTED, "bought " + t.getString("name"));   // [join21]
         toNewOwner(v.id(), t, b);
         b.displayClientMessage(Component.literal("You bought " + t.getString("name") + " for " + price + Homes.coins(price) + "."), false);
         return "";
@@ -730,7 +731,7 @@ public final class PropertyMarket {
         }
         if (!kind.equals("folk")) return "That's not for sale.";
         Market.payOut(p, price);
-        CoinCensus.playerIn(village, price);
+        CoinCensus.playerIn(village, price, p, PlayerFinance.Cat.INVESTED, "bought " + t.getString("name"));   // [join21]
         // The household's price into its purses: the coin stays in the town.
         List<VillageFolkEntity> m = new ArrayList<>();
         Homes.Home h = Homes.homes(village).get(BlockPos.of(t.getLong("anchor")).asLong());
@@ -770,7 +771,7 @@ public final class PropertyMarket {
         if (owed <= 0) return "No ground rent owed.";
         if (Market.coinsHeld(p) < owed) return owed + Homes.coins(owed) + " owed; you have " + Market.coinsHeld(p) + ".";
         Market.payOut(p, owed);
-        CoinCensus.playerIn(village, owed);
+        CoinCensus.playerIn(village, owed, p, PlayerFinance.Cat.RENT_OUT, "ground rent on " + t.getString("name"));   // [join21]
         Businesses.toTreasury(village, owed * 100L);
         TownBudget.in(village, "fees", owed * 100L);
         t.putLong("leaseOwed", 0);

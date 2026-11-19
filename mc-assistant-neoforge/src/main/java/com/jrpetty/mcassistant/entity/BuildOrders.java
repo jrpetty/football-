@@ -865,7 +865,7 @@ public final class BuildOrders {
             if (got > 0) brought.put(e.getKey(), got);
         }
         Market.payOut(buyer, q.deposit);
-        CoinCensus.playerIn(id, q.deposit);
+        CoinCensus.playerIn(id, q.deposit, buyer, PlayerFinance.Cat.INVESTED, "deposit on " + q.name);   // [join21]
         CompoundTag book = book(id);
         int n = book.getInt("next") + 1;
         book.putInt("next", n);
@@ -1396,7 +1396,7 @@ public final class BuildOrders {
         ServerPlayer p = buyer == null || level.getServer() == null ? null : level.getServer().getPlayerList().getPlayer(buyer);
         if (p == null || Market.coinsHeld(p) < due) return false;
         Market.payOut(p, due);
-        CoinCensus.playerIn(village, due);
+        CoinCensus.playerIn(village, due, p, PlayerFinance.Cat.INVESTED, "builders on " + o.getString("name"));   // [join21]
         received(level, village, o, due);
         p.displayClientMessage(net.minecraft.network.chat.Component.literal("Paid " + due + Homes.coins(due) + " to the builders on " + o.getString("name") + "."), false);
         return true;
@@ -1430,7 +1430,7 @@ public final class BuildOrders {
         int due = o.getInt("due");
         if (Market.coinsHeld(p) < due) return due + Homes.coins(due) + " is due; you have " + Market.coinsHeld(p) + ".";
         Market.payOut(p, due);
-        CoinCensus.playerIn(id, due);
+        CoinCensus.playerIn(id, due, p, PlayerFinance.Cat.INVESTED, "builders on " + o.getString("name"));   // [join21]
         received(level, id, o, due);
         return "Paid " + due + Homes.coins(due) + " on " + o.getString("name") + ".";
     }
@@ -1451,7 +1451,7 @@ public final class BuildOrders {
         premium = Math.max(1, premium);
         if (Market.coinsHeld(p) < premium) return "Priority costs " + premium + Homes.coins(premium) + "; you have " + Market.coinsHeld(p) + ".";
         Market.payOut(p, premium);
-        CoinCensus.playerIn(id, premium);
+        CoinCensus.playerIn(id, premium, p, PlayerFinance.Cat.FEES, "priority on " + o.getString("name"));   // [join21]
         Businesses.toTreasury(id, premium * 100L);
         TownBudget.in(id, "fees", premium * 100L);
         o.putBoolean("priority", true);
@@ -1484,7 +1484,7 @@ public final class BuildOrders {
         o.putLong("escrow", 0);
         if (coins > 0) {
             Dealings.giveCoins(p, coins);
-            CoinCensus.playerOut(id, coins);
+            CoinCensus.playerOut(id, coins, p, PlayerFinance.Cat.CASHED, "refund on " + o.getString("name"));   // [join21]
         }
         o.putInt("refunded", coins);
         int items = 0;
@@ -1548,7 +1548,7 @@ public final class BuildOrders {
         o.putLong("escrow", 0);
         int coins = (int) (left / 100);
         if (left % 100 > 0) Businesses.toTreasury(id, left % 100);
-        if (coins > 0) toPlayer(level, id, uuid(o, "buyer"), coins);
+        if (coins > 0) toPlayer(level, id, uuid(o, "buyer"), coins, PlayerFinance.Cat.CASHED, "unspent on " + o.getString("name"));   // [join21]
         o.putInt("refunded", coins);
         o.putString("status", "done");
         o.putLong("done", day);
@@ -1572,13 +1572,19 @@ public final class BuildOrders {
 
     /** Coin to a player: into its pack if it is about, else waiting for it at the hall (counted in the census either way). */
     static void toPlayer(ServerLevel level, UUID village, @Nullable UUID player, int coins) {
+        toPlayer(level, village, player, coins, PlayerFinance.Cat.CASHED, "from the builders");
+    }
+
+    /** [join21] The same, written in the player's own books as so much of a kind (Your finances). */
+    static void toPlayer(ServerLevel level, UUID village, @Nullable UUID player, int coins, PlayerFinance.Cat cat, String what) {
         if (player == null || coins <= 0) { if (coins > 0) Businesses.toTreasury(village, coins * 100L); return; }
         ServerPlayer p = level.getServer() == null ? null : level.getServer().getPlayerList().getPlayer(player);
         if (p != null) {
             Dealings.giveCoins(p, coins);
-            CoinCensus.playerOut(village, coins);
+            CoinCensus.playerOut(village, coins, p, cat, what);   // [join21]
         } else {
             Accounts.add(Accounts.sub(TownBonds.book(village), "due"), player.toString(), coins * 100L);
+            PlayerFinance.accrued(player, village, coins * 100L, cat);   // [join21] booked as this kind when collected
             CapitalBook.dirty();
         }
     }
