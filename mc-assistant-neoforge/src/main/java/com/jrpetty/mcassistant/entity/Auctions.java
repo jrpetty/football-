@@ -1847,6 +1847,35 @@ public final class Auctions {
                 int crowd = startForTests(level, v);
                 ctx.getSource().sendSuccess(() -> Component.literal("AUCTION " + lots.size() + " lots " + lots + "; a crowd of " + crowd), false);
                 return lots.size();
+            }))
+            // [screens13] Operators, for the pictures: the bid screen opened where you stand, whatever is on; and "stage", an
+            // auction got up now in a town of any size (the thing in your hand put up first), its first lot called, the screen open.
+            .then(Commands.literal("screen").requires(src -> src.hasPermission(2)).executes(ctx -> {
+                Villages.Village v = Fleet.here(ctx);
+                if (v == null || !(ctx.getSource().getEntity() instanceof ServerPlayer p)) return 0;
+                screen(ctx.getSource().getLevel(), v, p, "");
+                return 1;
+            }))
+            .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(ctx -> {
+                Villages.Village v = Fleet.here(ctx);
+                if (v == null || !(ctx.getSource().getEntity() instanceof ServerPlayer p)) return 0;
+                ServerLevel level = ctx.getSource().getLevel();
+                int was = fromForTests;
+                fromForTests = 0;
+                String put;
+                List<String> lots;
+                int crowd;
+                try {
+                    put = p.getMainHandItem().isEmpty() ? "nothing in hand" : putUp(level, v, p, 0);
+                    lots = openForTests(level, v);
+                    crowd = startForTests(level, v);
+                } finally {
+                    fromForTests = was;
+                }
+                screen(level, v, p, "");
+                String said = "AUCTION STAGE " + lots.size() + " lots; a crowd of " + crowd + "; " + put;
+                ctx.getSource().sendSuccess(() -> Component.literal(said), false);
+                return lots.size();
             }));
     }
 

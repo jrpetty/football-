@@ -704,6 +704,20 @@ public final class TaxBook {
         // Down: the town angry, or a treasury fuller than it needs; a levy with no war to pay for.
         boolean down = protest || unrest >= TaxUnrest.PROTEST || days >= 14 && !war && share >= 100;
         if (!war && rate(id, Lever.LEVY) > 0 && !down) return new Motion(Lever.LEVY, -1, 0, "the war is over, and the levy with it");
+        // [econ4] The times lean the council: a slump with the treasury sound eases a tax; a boom running prices up raises one.
+        int lean = EconCycle.taxLean(id);
+        if (!down && lean < 0 && !war && days >= 5) {
+            for (Lever l : new Lever[]{ Lever.HEAD, Lever.WAGE, Lever.TOLL, Lever.RATES, Lever.PROFITS }) {
+                int r = rate(id, l);
+                if (r > 0 && movable(id, l)) return new Motion(l, -1, r - 1, "the town is in hard times and the treasury can bear it");
+            }
+        }
+        if (!down && lean > 0 && unrest < TaxUnrest.GRUMBLE && days < 14) {
+            for (Lever l : new Lever[]{ Lever.PROFITS, Lever.TOLL }) {
+                int r = rate(id, l);
+                if (r < 2 && movable(id, l)) return new Motion(l, 1, r + 1, "the boom is running prices up");
+            }
+        }
         if (down) {
             for (Lever l : new Lever[]{ Lever.HEAD, Lever.LEVY, Lever.TOLL, Lever.WAGE, Lever.RATES, Lever.PROFITS }) {   // [econ-1d] (rates)
                 if (l == Lever.LEVY && war && !protest) continue;

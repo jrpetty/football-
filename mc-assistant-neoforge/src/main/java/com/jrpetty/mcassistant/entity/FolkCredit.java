@@ -166,6 +166,7 @@ public final class FolkCredit {
         int dep = (int) (deposits(village) / 100);
         double room = dep <= 0 ? (vault(village) > 0 ? 1.0 : 0.0) : Math.min(1.0, lendable(village) / Math.max(1.0, dep * (100 - RESERVE) / 100.0));
         int bp = (int) Math.round(EMPTY_BP - (EMPTY_BP - FULL_BP) * room + DEFAULT_BP * 10 * defaultRate(village));
+        bp += EconCycle.policyBp(village);                                    // [econ4] the council's rate: dear credit in a boom, cheap in a slump
         return Math.max(LEAST_BP, Math.min(MOST_BP, bp));
     }
 

@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
  */
 public class OrdersScreen extends Screen {
 
-    private static final int W = 288, H = 236;
+    private static final int W = 288, H = 216;                    // [screens13] the empty band under Orders taken out
     private static final int PAD = 10;
 
     // Every vertical position on the page, in one place, so a change to one
@@ -40,9 +40,9 @@ public class OrdersScreen extends Screen {
     private static final int Y_PATCH     = 100;
     private static final int Y_SEC_HAND  = 122;
     private static final int Y_HAND1     = 132;
-    private static final int Y_SEC_DUTY  = 176;
-    private static final int Y_DUTY      = 186;
-    private static final int Y_FOOTER    = 208;
+    private static final int Y_SEC_DUTY  = 156;
+    private static final int Y_DUTY      = 166;
+    private static final int Y_FOOTER    = 188;
 
     private final AssistantEntity bot;
     private int left, top;
@@ -91,7 +91,7 @@ public class OrdersScreen extends Screen {
             .bounds(x + 2 * (w3 + gap), y, inner - 2 * (w3 + gap), h)
             .tooltip(Tooltip.create(Component.literal(
                 "Every plot and the whole crew on one page — assign, trade, shift, copy, undo")))
-            .build());
+            .build(UiButton::new));
 
         // ---- handling ----
         y = top + Y_HAND1;
@@ -117,7 +117,7 @@ public class OrdersScreen extends Screen {
                 "How much it gathers before banking a load: 8, 24, 48, or a full pack. "
                 + "A full pack means fewer trips; a small number means output reaches "
                 + "your chests sooner.")))
-            .build());
+            .build(UiButton::new));
         // Claim Bed retired: they claim their own beds at dusk, and have
         // since b81 — a button for a thing that happens by itself is noise.
         claimBedBtn = add(x + 2 * (w4 + gap), y, w4, h, "Stash", AssistantActions.STASH,
@@ -135,7 +135,7 @@ public class OrdersScreen extends Screen {
                 "How it fights. Auto reads the fight: bow at range, blade in close. "
                 + "Ranged keeps the bow up and its distance. Melee keeps the blade, "
                 + "and leaves creepers alone.")))
-            .build());
+            .build(UiButton::new));
         // How deep, and how it gets there — the whole mining plan in the one
         // slot a miner gets. Labels are terse because a quarter of a slot IS
         // fifteen pixels; the tooltips carry the meaning.
@@ -157,7 +157,7 @@ public class OrdersScreen extends Screen {
             .tooltip(Tooltip.create(Component.literal(
                 "Quarry: cut a level, drop four blocks, cut the next — terraced "
                 + "all the way down to the depth above. Off, it cuts one gallery and stops.")))
-            .build());
+            .build(UiButton::new));
         dropOff = add(x + 3 * (w4 + gap), y, w4, h, "Drop-off", AssistantActions.SET_DROPOFF,
             "Deliver loads to where you're standing");
         escortBtn = add(x + 3 * (w4 + gap), y, w4, h, "Escort ›", AssistantActions.ESCORT_NEXT,
@@ -173,12 +173,12 @@ public class OrdersScreen extends Screen {
             .bounds(x + (w5 + gap), y, w5, h)
             .tooltip(Tooltip.create(Component.literal(
                 "Everything it has done in its career, counted")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Name"),
                 b -> this.minecraft.setScreen(new NameScreen(bot)))
             .bounds(x + 2 * (w5 + gap), y, w5, h)
             .tooltip(Tooltip.create(Component.literal("Give this one a name — pick, don't type")))
-            .build());
+            .build(UiButton::new));
         boolean quietNow = BotInfo.of(bot).quiet();
         this.addRenderableWidget(Button.builder(
                 Component.literal(quietNow ? "Chatty" : "Quiet"), b -> {
@@ -189,9 +189,9 @@ public class OrdersScreen extends Screen {
             .bounds(x + 3 * (w5 + gap), y, w5, h)
             .tooltip(Tooltip.create(Component.literal(
                 "Mute the routine chatter — needs, deaths and paydays still come through")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 4 * (w5 + gap), y, inner - 4 * (w5 + gap), h).build());
+            .bounds(x + 4 * (w5 + gap), y, inner - 4 * (w5 + gap), h).build(UiButton::new));
 
         refreshJobButtons();
     }
@@ -200,7 +200,7 @@ public class OrdersScreen extends Screen {
         Button b = Button.builder(Component.literal(label), btn -> sendOrder(bot, action))
             .bounds(x, y, w, h)
             .tooltip(Tooltip.create(Component.literal(tip)))
-            .build();
+            .build(UiButton::new);
         return this.addRenderableWidget(b);
     }
 
@@ -284,7 +284,9 @@ public class OrdersScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
-        Ui.panel(g, left, top, W, H, 30);
+        UiStyle.shadow(g, left, top, W, H);                                 // [screens13] the house panel and header band
+        UiStyle.panel(g, left, top, W, H);
+        UiStyle.headerBand(g, left, top, W, 29);
 
         int x = left + PAD;
         int inner = W - PAD * 2;
@@ -293,9 +295,9 @@ public class OrdersScreen extends Screen {
         // Header: who, what level, and the one status line that matters.
         String name = bot.clientName();
         Ui.chip(g, x, top + Y_NAME, Ui.job(bot.clientJobOrdinal()));
-        g.drawString(this.font, name, x + 10, top + Y_NAME, Ui.INK, false);
+        UiStyle.title(g, this.font, name, x + 10, top + Y_NAME);
         if (lvl >= 1) {
-            g.drawString(this.font, "✦" + lvl, x + 10 + this.font.width(name) + 6, top + Y_NAME,
+            g.drawString(this.font, "✦" + lvl, x + 10 + UiStyle.titleWidth(this.font, name) + 6, top + Y_NAME,
                 Ui.ACCENT, false);
         }
         String status = Ui.clip(this.font, bot.clientStatus(), inner - 120);
@@ -326,10 +328,13 @@ public class OrdersScreen extends Screen {
             info.dietColour());
 
         // Section headings.
-        Ui.section(g, this.font, "Job", x, top + Y_SEC_JOB, inner);
-        Ui.section(g, this.font, "Ground", x, top + Y_SEC_PATCH, inner);
-        Ui.section(g, this.font, "Orders", x, top + Y_SEC_HAND, inner);
-        Ui.section(g, this.font, "Duty", x, top + Y_SEC_DUTY, inner);
+        UiStyle.heading(g, this.font, "Job", x, top + Y_SEC_JOB, inner);
+        UiStyle.heading(g, this.font, "Ground", x, top + Y_SEC_PATCH, inner);
+        UiStyle.heading(g, this.font, "Orders", x, top + Y_SEC_HAND, inner);
+        UiStyle.heading(g, this.font, "Duty", x, top + Y_SEC_DUTY, inner);
+        // The foot: a rule over the screens it leads to.
+        g.fill(left + 1, top + Y_FOOTER - 5, left + W - 1, top + Y_FOOTER - 4, UiStyle.EDGE_SOFT);
+        g.fill(left + 1, top + Y_FOOTER - 4, left + W - 1, top + Y_FOOTER - 3, UiStyle.HI);
 
     }
 

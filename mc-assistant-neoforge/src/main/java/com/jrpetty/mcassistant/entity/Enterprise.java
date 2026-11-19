@@ -821,7 +821,7 @@ public final class Enterprise {
     static VillageFolkEntity founderFor(UUID village, BusinessType t, long startupPence, long profit7Pence) {
         VillageFolkEntity best = null;
         double bestScore = -1e9;
-        int nerve = nerveFor(profit7Pence, startupPence);
+        int nerve = Math.max(1, nerveFor(profit7Pence, startupPence) + EconCycle.nerveShift(village));   // [econ4] bolder in a boom, warier in a slump
         double share = shareFor(profit7Pence, startupPence);
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f)) continue;

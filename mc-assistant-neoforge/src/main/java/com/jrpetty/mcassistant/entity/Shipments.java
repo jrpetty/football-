@@ -176,11 +176,14 @@ public final class Shipments {
         if (s == null) return;                                                   // settled already (a double report)
         forget(s);
         int pieces = 0;
-        for (ItemStack a : arrived) {
-            if (a.isEmpty()) continue;
-            pieces += a.getCount();
-            ItemStack left = Market.intoStores(level, s.to(), a.copy());
-            if (!left.isEmpty()) Market.intoStores(level, s.from(), left);       // no room at all: back to the sender's books
+        // [econ4] A merchant's load comes into the stores as the market's own stock (it paid for it at the seller's).
+        try (Accounts.Scope own = s.contract().startsWith(EconRegion.CONTRACT) ? Accounts.as(Accounts.Dept.MARKET, Accounts.Purpose.WORK) : null) {
+            for (ItemStack a : arrived) {
+                if (a.isEmpty()) continue;
+                pieces += a.getCount();
+                ItemStack left = Market.intoStores(level, s.to(), a.copy());
+                if (!left.isEmpty()) Market.intoStores(level, s.from(), left);       // no room at all: back to the sender's books
+            }
         }
         // Paid on delivery, for what arrived: the destination's treasury to the origin's.
         int due = s.pieces() <= 0 ? 0 : (int) Math.round(s.coinDue() * Math.min(1.0, pieces / (double) s.pieces()));
@@ -189,6 +192,8 @@ public final class Shipments {
             Ledger.addCoins(s.from(), paid);
             Economy.sold(s.from(), paid);
             Economy.spent(s.to(), paid);
+            CoinCensus.flow(s.to(), CoinCensus.Flow.IMPORT, paid);              // [econ4] coin from one town to another: booked both sides
+            CoinCensus.flow(s.from(), CoinCensus.Flow.EXPORT, paid);
         }
         long day = level.getDayTime() / 24000L;
         Villages.tell(s.to(), day, "a load of " + words(s) + " came in from " + Villages.name(s.from()) + (paid > 0 ? ", paid " + paid + " coin" : ""));

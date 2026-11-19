@@ -257,7 +257,8 @@ public final class ShopDesk implements ServicePoints.Desk {
         StringBuilder sb = new StringBuilder(Goods.name(l.sample()));
         sb.append(": ").append(Goods.of(l.sample()).label.toLowerCase(Locale.ROOT)).append(". ");
         double usual = PriceIndex.usual(l.sample());
-        if (usual > 0) sb.append(String.format(Locale.ROOT, "Usually worth %.1f; ", usual));
+        if (usual > 0) sb.append(usual < 0.75 ? "Usually worth under a coin; "                   // [screens13] in coins, as the shelf asks
+            : "Usually worth about " + Math.round(usual) + (Math.round(usual) == 1 ? " coin; " : " coins; "));
         sb.append(l.own() ? "in the shop's own stock" : l.stock() > 0 ? "fetched from the stores at your asking" : "none in");
         sb.append(". Buying it back, the town pays four fifths.");
         return sb.toString();

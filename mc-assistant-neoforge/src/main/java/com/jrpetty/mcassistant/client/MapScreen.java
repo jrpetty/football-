@@ -18,7 +18,8 @@ import java.util.List;
  */
 public class MapScreen extends Screen {
 
-    private static final int W = 300, H = 236;
+    /** [screens13] The panel, laid out to the window (300 by 236 at the least room, up to 440 by 320). */
+    private int W = 300, H = 236;
     private static final int PAD = 10;
 
     private final List<AssistantEntity> crew = new ArrayList<>();
@@ -44,6 +45,8 @@ public class MapScreen extends Screen {
 
     @Override
     protected void init() {
+        this.W = Math.max(Math.min(300, this.width - 8), Math.min(440, this.width - 16));
+        this.H = Math.max(Math.min(200, this.height - 8), Math.min(320, this.height - 16));
         this.left = (this.width - W) / 2;
         this.top = (this.height - H) / 2;
         this.mapX = left + PAD;
@@ -65,12 +68,12 @@ public class MapScreen extends Screen {
         int w3 = (mapW - 8) / 3;
         this.addRenderableWidget(Button.builder(Component.literal("Crew"),
                 b -> this.minecraft.setScreen(new CrewScreen()))
-            .bounds(left + PAD, top + H - PAD - 18, w3, 18).build());
+            .bounds(left + PAD, top + H - PAD - 18, w3, 18).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Totals"),
                 b -> this.minecraft.setScreen(new TotalsScreen()))
-            .bounds(left + PAD + w3 + 4, top + H - PAD - 18, w3, 18).build());
+            .bounds(left + PAD + w3 + 4, top + H - PAD - 18, w3, 18).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + PAD + 2 * (w3 + 4), top + H - PAD - 18, mapW - 2 * (w3 + 4), 18).build());
+            .bounds(left + PAD + 2 * (w3 + 4), top + H - PAD - 18, mapW - 2 * (w3 + 4), 18).build(UiButton::new));
     }
 
     /** Frame everything worth seeing: you, every bot, and every patch, with a
@@ -180,21 +183,18 @@ public class MapScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
-        Ui.panel(g, left, top, W, H, 26);
+        UiStyle.shadow(g, left, top, W, H);                                 // [screens13] the house panel and header band
+        UiStyle.panel(g, left, top, W, H);
+        UiStyle.headerBand(g, left, top, W, 24);
 
         int x = left + PAD;
-        g.drawString(this.font, "The operation", x, top + 8, Ui.INK, false);
-        Ui.right(g, this.font, (maxX - minX) + " blocks across", left + W - PAD, top + 8, Ui.MUTED);
+        UiStyle.title(g, this.font, "The operation", x, top + 8);
+        Ui.right(g, this.font, (maxX - minX) + " blocks across", left + W - PAD, top + 8, UiStyle.TEXT_FAINT);
 
         // The ground — recessed into the panel the way a vanilla slot is:
         // shadow on top and left, light underneath, so it reads as a window
         // onto the world rather than a grey rectangle on a grey panel.
-        g.fill(mapX, mapY, mapX + mapW, mapY + mapH, Ui.ROW);
-        g.fill(mapX, mapY, mapX + mapW, mapY + 1, Ui.LO);
-        g.fill(mapX, mapY, mapX + 1, mapY + mapH, Ui.LO);
-        g.fill(mapX, mapY + mapH - 1, mapX + mapW, mapY + mapH, Ui.HI);
-        g.fill(mapX + mapW - 1, mapY, mapX + mapW, mapY + mapH, Ui.HI);
-        g.renderOutline(mapX, mapY, mapW, mapH, Ui.EDGE_SOFT);
+        UiStyle.well(g, mapX, mapY, mapW, mapH, UiStyle.PAGE);
         grid(g);
 
         hovered = -1;

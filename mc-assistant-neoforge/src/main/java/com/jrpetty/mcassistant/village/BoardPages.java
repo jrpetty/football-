@@ -71,7 +71,11 @@ public final class BoardPages {
         // [econ-1a] The storehouse as the town's market: its bid and ask, its stock and trades, the privatisation (MarketPage).
         "Market",
         // [capital] The town's capital: the savings club and its loans, the bourse, the land register, the bonds (CapitalPage).
-        "Capital" };
+        "Capital",
+        // [links12] The region round the town: the towns, the roads and rails between them, how each stands with us, the league table (RegionPage).
+        "Region",
+        // [econ4] The Economy dashboard: the price index, wages, work, the treasury, money, trade between towns, the cycle (EconomyPage).
+        "Dashboard" };
 
     /** One of the board's sections: its name, its icon, what it holds, and its pages by name. */
     public record Section(String name, Item icon, String tip, String... pages) {}
@@ -82,12 +86,12 @@ public final class BoardPages {
         new Section("People", Items.PLAYER_HEAD, "Every folk, how they live together, their homes and schooling",
             "Folk", "Society", "Growth", "Homes", "School", "Interviews"),
         new Section("Economy", Items.EMERALD, "Money, what is made and sold, the prices, the jobs and the stores",
-            "Money", "Production", "Prices", "Shops", "Jobs", "Stock", "Stores", "Trade", "Auction", "Trading Post", "Earnings", "Harbour",
+            "Dashboard", "Money", "Production", "Prices", "Shops", "Jobs", "Stock", "Stores", "Trade", "Auction", "Trading Post", "Earnings", "Harbour",
             "Businesses", "Market", "Capital"),                                                                // [business-books] [econ-1a] [capital]
         new Section("Town", Items.BRICKS, "Its buildings, the roads and rails, the maps, the caves and the watch",
             "Buildings", "Transport", "Roads", "Maps", "Caves", "Nether", "Watch", "Cases"),
         new Section("Civic", Items.BELL, "Who leads, what the town studies, what it stands for, and its wars",
-            "Leader", "Research", "Inventions", "Identity", "War", "War map", "Lands", "Taxes", "Knights"),   // [tech-tree] [borders-map] [civic-land]
+            "Leader", "Research", "Inventions", "Identity", "War", "War map", "Lands", "Region", "Taxes", "Knights"),   // [tech-tree] [borders-map] [civic-land] [links12]
         new Section("Culture", Items.PAINTING, "Its banner and customs, what it wears, its library, museum and wonders",
             "Culture", "Fashion", "Library", "Museum", "Perks"),
         new Section("Records", Items.WRITABLE_BOOK, "Its bests and totals, and how it is trending",

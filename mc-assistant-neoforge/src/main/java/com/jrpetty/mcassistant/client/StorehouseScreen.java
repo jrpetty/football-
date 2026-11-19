@@ -32,7 +32,7 @@ public class StorehouseScreen extends AbstractContainerScreen<StorehouseMenu> {
         super.init();
         Button sort = Button.builder(Component.literal("Sort"),
                 b -> click(StorehouseMenu.BUTTON_SORT))
-            .bounds(leftPos + 176 - 7 - 32, topPos + 4, 32, 12).build();
+            .bounds(leftPos + 176 - 7 - 32, topPos + 4, 32, 12).build(UiButton::new);    // [screens13] the house look
         sort.setTooltip(Tooltip.create(Component.literal("Like with like, stacks topped up, in order")));
         addRenderableWidget(sort);
     }
@@ -107,12 +107,12 @@ public class StorehouseScreen extends AbstractContainerScreen<StorehouseMenu> {
         g.fill(bx, by, bx + BAR_W + 6, by + 1, 0xFFFFFFFF);
         g.fill(bx + BAR_W + 5, by, bx + BAR_W + 6, by + BAR_H + 8, 0xFF555555);
         g.fill(bx, by + BAR_H + 7, bx + BAR_W + 6, by + BAR_H + 8, 0xFF555555);
-        g.fill(x + BAR_X, y + BAR_Y, x + BAR_X + BAR_W, y + BAR_Y + BAR_H, 0xFF8B8B8B);
-        g.fill(x + BAR_X, y + BAR_Y, x + BAR_X + BAR_W, y + BAR_Y + 1, 0xFF373737);
+        // [screens13] A recessed track and a raised thumb (UiStyle), lit under the mouse or while dragged.
+        UiStyle.well(g, x + BAR_X, y + BAR_Y, BAR_W, BAR_H, 0xFF8B8B8B);
         int t = y + BAR_Y + (int) Math.round((BAR_H - THUMB) * (menu.row() / (double) Math.max(1, menu.lastRow())));
-        g.fill(x + BAR_X + 1, t, x + BAR_X + BAR_W - 1, t + THUMB, 0xFFF0F0F0);
-        g.fill(x + BAR_X + 1, t + THUMB - 1, x + BAR_X + BAR_W - 1, t + THUMB, 0xFF8B8B8B);
-        g.fill(x + BAR_X + BAR_W - 2, t, x + BAR_X + BAR_W - 1, t + THUMB, 0xFF8B8B8B);
+        boolean hot = dragging || onBar(mouseX, mouseY) && mouseY >= t && mouseY < t + THUMB;
+        UiStyle.tile(g, x + BAR_X + 1, t, BAR_W - 2, THUMB, menu.lastRow() > 0 ? UiStyle.State.of(true, false, hot) : UiStyle.State.DISABLED);
+        for (int i = 0; i < 3; i++) g.fill(x + BAR_X + 3, t + 5 + i * 2, x + BAR_X + BAR_W - 3, t + 6 + i * 2, UiStyle.LO);   // its grip
     }
 
     @Override
@@ -122,7 +122,7 @@ public class StorehouseScreen extends AbstractContainerScreen<StorehouseMenu> {
         if (font.width(title) > room) title = font.plainSubstrByWidth(title, room - font.width("...")) + "...";
         g.drawString(font, title, titleLabelX, titleLabelY, 0x404040, false);
         g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
-        String full = menu.used() + " stacks";
+        String full = menu.used() + " of " + menu.rows() * 9 + " stacks";   // [screens13] how full, of how much
         g.drawString(font, full, 176 - 8 - font.width(full), inventoryLabelY, 0x404040, false);
     }
 

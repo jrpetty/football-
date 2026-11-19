@@ -3074,16 +3074,21 @@ public class VillageGameTests {
             new ItemStack(Items.OAK_SIGN, 16), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
             new ItemStack(Items.DIRT, 64), new ItemStack(Items.DIRT, 64), new ItemStack(Items.TORCH, 16) };
         for (int i = 0; i < roadMakings.length; i++) roadBox.setItem(i, roadMakings[i]);
-        // A pond across the road's way.
-        int px = ax + 100;
+        // [links12] The road surveyed over the land first (Routes), then a pond across its way.
+        java.util.List<int[]> way = com.jrpetty.mcassistant.entity.RoadWorks.lineForTests(mother.id(), colony.id());
+        if (!way.isEmpty() && (way.get(0)[0] - ax) * (way.get(0)[0] - ax) > (way.get(way.size() - 1)[0] - ax) * (way.get(way.size() - 1)[0] - ax)) {
+            way = new java.util.ArrayList<>(way);
+            java.util.Collections.reverse(way);
+        }
+        int px = way.get(59)[0], pz = way.get(59)[1];
         for (int dx = -3; dx <= 3; dx++) for (int dz = -4; dz <= 4; dz++) {
-            BlockPos g = Kit.surface(level, px + dx, az + dz).below();
+            BlockPos g = Kit.surface(level, px + dx, pz + dz).below();
             level.setBlock(g, Blocks.WATER.defaultBlockState(), 3);
         }
         int laid = com.jrpetty.mcassistant.entity.Roads.lay(level, mother, colony, 1000);
         int[] state = com.jrpetty.mcassistant.village.Ledger.road(colony.id());
-        BlockPos mid = Kit.surface(level, ax + 60, az).below();
-        BlockPos deck = Kit.surface(level, px, az).below();
+        BlockPos mid = Kit.surface(level, way.get(19)[0], way.get(19)[1]).below();
+        BlockPos deck = Kit.surface(level, px, pz).below();
         Kit.log("t31 the road: " + laid + " steps laid, done " + (state != null && state[2] == 1) + "; at the middle "
             + level.getBlockState(mid) + "; over the pond " + level.getBlockState(deck)
             + ", its rail " + level.getBlockState(deck.above().relative(Direction.SOUTH, 2)));

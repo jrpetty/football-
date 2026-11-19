@@ -487,7 +487,7 @@ public final class PlayerStalls {
     public record Sold(UUID owner, String ownerName, ItemStack what, int price) {
         /** "bread from Steve's stall", "an iron pickaxe from Steve's stall". */
         public String words() {
-            String w = what.getCount() > 1 || lot(what) > 1 ? nameOf(what).toLowerCase(Locale.ROOT) : thing(what, 1);
+            String w = (what.getCount() > 1 || lot(what) > 1) && !what.has(DataComponents.WRITTEN_BOOK_CONTENT) ? nameOf(what).toLowerCase(Locale.ROOT) : thing(what, 1);
             return w + " from " + ownerName + "'s stall";
         }
     }
@@ -2029,7 +2029,10 @@ public final class PlayerStalls {
 
     /** "8 bread", "an iron pickaxe": so many of a thing, in a sentence. */
     static String thing(ItemStack s, int n) {
+        var book = s.get(DataComponents.WRITTEN_BOOK_CONTENT);                // [uses16] a book by its title, no article: "the book \"The Long Road\""
+        if (book != null) return (n > 1 ? n + " copies of " : "the book ") + "\"" + book.title().raw() + "\"";
         String name = nameOf(s).toLowerCase(Locale.ROOT);
+        if (name.startsWith("the ")) return (n > 1 ? n + " of " : "") + name;
         if (n > 1 || lot(s) > 1) return (n > 1 ? n + " " : "") + name;
         return ("aeiou".indexOf(name.isEmpty() ? 'x' : name.charAt(0)) >= 0 ? "an " : "a ") + name;
     }

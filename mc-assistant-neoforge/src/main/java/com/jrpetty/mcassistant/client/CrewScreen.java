@@ -93,6 +93,13 @@ public class CrewScreen extends Screen {
                 "The block book: what every block does, why you'd build it, "
                 + "when it matters, and the recipe that makes it")))
             .build());
+        // [screens13] The crew's map from above (MapScreen): it had no way in since its button gave way to Plots.
+        this.addRenderableWidget(Button.builder(Component.literal("Map"),
+                b -> { if (this.minecraft != null) this.minecraft.setScreen(new MapScreen()); })
+            .bounds(left + W - PAD - 140, top + 24, 44, 14)
+            .tooltip(Tooltip.create(Component.literal(
+                "Every patch and every assistant on it, seen from above; drag out a new patch")))
+            .build());
 
         // Rows are drawn by hand and clicked through mouseClicked — a stack of
         // vanilla buttons looked like a toolbar, not a list.
@@ -200,15 +207,13 @@ public class CrewScreen extends Screen {
         }
         // Clipped short of the sort toggle that now lives on this line's right.
         // Clipped short of BOTH buttons that share this line.
-        int lineW = inner - 98;
-        if (asking.isEmpty()) {
-            g.drawString(this.font, Ui.clip(this.font,
-                "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond",
-                lineW), x, top + 30, Ui.FAINT, false);
-        } else {
-            g.drawString(this.font, Ui.clip(this.font,
-                "asking for — " + String.join("  ·  ", asking), lineW),
-                x, top + 30, Ui.WARN, false);
+        int lineW = inner - 146;                                       // [screens13] and the Map button's
+        String wagesLine = asking.isEmpty() ? "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond"
+            : "asking for — " + String.join("  ·  ", asking);
+        String shown = Ui.clip(this.font, wagesLine, lineW);
+        g.drawString(this.font, shown, x, top + 30, asking.isEmpty() ? Ui.FAINT : Ui.WARN, false);
+        if (!shown.equals(wagesLine) && mouseX >= x && mouseX < x + lineW && mouseY >= top + 29 && mouseY < top + 39) {
+            setTooltipForNextRenderPass(Component.literal(wagesLine));     // the whole of it, under the mouse
         }
 
         if (crew.isEmpty()) {

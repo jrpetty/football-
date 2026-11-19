@@ -14183,3 +14183,265 @@ moved; iu05 a toolsmith's firm buys the iron its bench wants out of its till, bo
 book and reads it, and not the same book again; iu07 a folk with a cold buys a healing potion and drinks it; iu08 seed
 bought and sown, no more than the furrows; iu09 things judged by class and tags, this mod's rope coil bought by a miner,
 a spawn egg nobody's; iu10 what the town needs and who would buy each ware, on the stall's screen.
+
+## The screens left plain, and the research tree (screens-13)
+
+The screens UI batch 4 could not reach from its scripted client are now in the same house look (client/UiStyle): a
+panel with a soft shadow, a header band with the title in bold, headings with an engraved rule, lists in recessed
+wells, buttons as the house's tiles (UiButton: a vanilla button drawn as a tile, so its keys, focus, tooltip and
+narration are as they were; a label cut short shows whole in its tooltip; the screen's main action carries the green
+spine), coins as the books write them, and every one laid out to fit a screen 240 GUI pixels high (GUI 2 at 854 by
+480, GUI 3 at 1280 by 720). Nothing they do has changed.
+
+- **The village journal (J).** Its key works: UI batch 4's script had pressed J with the game menu open (an Escape
+  with no screen up opens it, and no key mapping fires over a menu). The page: the village's name in the header with
+  the lines shown of how many, the pages as tabs (Village, Wages, Economy, and Books, which opens the town's books),
+  the page in a well with a scroll bar (the wheel, the arrow keys, Page Up and Down), and the foot: the pace of time
+  as tiles with the pace now marked, and Close. The line count no longer prints under the page buttons, and a list
+  the server writes raw ("Built: []") reads "nothing yet".
+- **A market stall** (`/village stall screen`, or crouch and right-click your stall). The owner and the town in the
+  header with the rent's state as a badge; the till and the week on a card with Take the till; the wares in a
+  recessed list (an empty state when the barrel is empty); Save prices first among the buttons.
+- **A service point** (`/village service open shop|bank|tavern|...`, or the counter): already in the house look;
+  its categories now as wide as the longest name (Household was cut short), the empty basket's words wrapped, and a
+  ware's tooltip says it is usually worth about so many coins, not "1.9".
+- **The auction** (right-click the auctioneer while one is on; operators: `/village auction screen` opens the bid
+  screen where you stand, `/village auction stage` gets one up now in a town of any size, the thing in your hand put
+  up, its first lot called). The lot's item in a well, the bids newest first in a well, the lot now called marked
+  among today's lots, the first bid the primary button.
+- **Founding a village** (the board a spawner puts up; `/village found screen <count>` beside it). The slider in
+  the house look (a recessed track filled to its handle), the usual sizes marked when they are the count, what the
+  count means on a page, Confirm and spawn first. It was 240 high and touched the edges of a 240-high screen.
+- **An assistant's orders** (R looking at one), **its pack** (right-click it, or Pack), **the crew's map** and **the
+  storehouse** (right-click its door). The orders sheet lost an empty band (236 to 216 high). The pack was 260 high and
+  ran off a 240-high screen top and bottom; the empty band over its buttons is gone (the player's slots now at 150, in
+  the menu and the screen alike), the diet is a bar. The map had had no way in since its button on the crew screen
+  gave way to Plots: it is back beside Blocks on the crew screen (it works: drag a patch, click an assistant), laid
+  out to the window. The storehouse's scroll bar is a recessed track with a raised thumb, and it says how full of how
+  much ("25 of 729 stacks").
+
+**The research tree** (the Inventions page of the books, Civic). It was a grid of small boxes crowded onto the page,
+its links unseen. Now: the work in hand on one line with its bar (who chose it, why, and the working model in its
+tooltip), then a bar of tools (the tree or the scholars on a narrow page, side by side when the page is wide; a
+filter by state, all, open, known, locked, that fades the rest back; what is typed finds a card and brings it into
+view; the zoom, minus, plus and Fit). The tree reads down the page: a column for each branch (how many of it are
+known at its head, what it is about in its tooltip), a band for each step down the road of needs (I to IV, the ages
+each spans written across it), each invention a card in its state's colour (green with a tick known, gold in hand
+with its bar, white open with its cost and days, grey locked with its age), a line from each thing needed to what
+needs it, green from what is known, running down the channels between the columns into the card's side; the road to
+the card under the mouse (all it needs, and what it opens next) drawn dark. The wheel scrolls it (Shift across, Ctrl
+to zoom), a drag pans it, and the mouse over a card gives the whole of it. At its usual size it fits the books on the
+smallest screen across and scrolls down. The layout is plain arithmetic (village/InventionTreeLayout), so the unit
+test (InventionTreeLayoutTest) checks at every zoom that no two cards overlap, what is needed stands above what needs
+it, no line runs through a card, and the usual size fits 369 pixels across.
+
+No new server data: the only server changes are the two operator commands for the auction's pictures and the shop
+tooltip's words.
+
+## The region: roads between towns, rails, rivals and allies [links12]
+
+Towns that deal with each other are joined by roads that follow the land, later by railways; they come to count each
+other as allies, friends or rivals out of what they gain and lose by each other; and the town's books have a Region page
+with the map of it all and a league table.
+
+### The survey (Routes)
+- **Where the road runs.** The first time two towns have a road between them (neighbours with dealings, a colony and its
+  mother), the way is surveyed from the end of the one's avenue to the end of the other's, over the land as it lies: a
+  search a few blocks a square, every square costing its length, more for each step up or down (a step at a time is
+  fine, two is a cutting and dear, three is a cliff and no way at all), more through the woods, five times over water
+  (a bridge to build) and sixteen times over deep water; a cliff, lava, open sea, another town's ground, a villagers'
+  village and **anybody's building** (whatever the world did not put there: a player's house, a wall, a farm, two blocks
+  clear of it) are not crossed at all. Every block of a stretch is judged as the road will lie, so no corner of a cliff
+  or a house is cut. The way found is then drawn straight wherever a straight run costs no more than the winding one,
+  so the road takes long easy runs and turns where the land makes it. Ground nobody has been near is judged from how
+  the world would make it (the generator's heights, its woods and waters, every fourth block, smooth between), so the
+  survey never wakes the land up.
+- **Kept.** The survey (its turning points) is kept in the first town's notes and every road, path, gravel or stone, is
+  laid on it ever after (RoadWorks, the colony road), whatever is built along it later. Both chronicles say it was
+  surveyed, how long it is, the bridge it wants and how often it turns.
+- **The bridge** is the road's own (RoadWorks): planks with rails on a path or gravel road, stone decked with stone posts
+  on a stone road. On a turning road the road is laid three wide across the way it runs there, its milestones,
+  signposts and lamps to its side, and the inn halfway set back from it the same way.
+- **Both ends.** Each town's gang lays its own half from its end, as before. A town asleep (nobody near: TownLod) does
+  not stop its gang: the steps it would have laid (a hundred and twenty a day, four hundred and eighty at most) are owed
+  it, and laid out of its stores, twenty-four a visit, once it wakes.
+
+### What a route costs (Routes.between)
+- For the rest of the game (the market's carriage between towns, the caravans, envoys, folk moving town, armies) a
+  route is: its length by the road heart to heart; its grade (track, path, gravel, stone: as good as its worse half);
+  whether a railway joins the two; the water it bridges; **the time going takes** (a folk walks three blocks a second on
+  open ground, a tenth quicker on a path, a fifth on gravel, three tenths on stone; a cart on the rails eight; a road
+  with no bridge yet costs a second for every block of water); **the road money** a load costs (a coin every hundred
+  blocks, nine tenths of that on a path, three quarters on gravel, three fifths on stone, two fifths by rail); a rival's
+  **toll**; and whether trade between them is shut by an **embargo**. `Routes.travelTicks` and `Routes.carriage` give
+  the time and the cost straight.
+- **Caravans, envoys, deals' deliveries, wagons, folk moving town** walk the surveyed road (Caravans.way), and a
+  caravan's road money is reckoned by the road. **Armies** march out along the road toward the enemy as far as it
+  goes nearest their camp, then across to it.
+- **A town's reach grows with its links**: each town joined to it by a made road or an open railway counts toward its
+  standing (below).
+
+### Railways between towns
+- A railway between two Iron Age neighbours is laid as before (Railways: the mine's line first, each town its own half,
+  a station at each end, powered rails, banks, trestles and cuttings), for a trade pact **or for a strong trade** between
+  them (a weekly run of trade of twenty-four coins and more), embargo or not. It goes in the region's news when it opens,
+  and the route is the quicker and the cheaper for it.
+
+### Rivals and allies (Rivalry)
+- **Interests, not chance.** Every pair of neighbours keeps a rivalry, 0 to 100, weighed every day:
+  - pushed up by **the ground between them** (lands crowding each other with no border agreed: three a day; an open
+    dispute over the land: two more), **trade lost to each other** (both selling the same goods to the same third town,
+    or the market's word that one undercut the other), **folk poached** (a skilled hand, or any hand to a rival, taken
+    on by the other town) and **renown** (two towns within a quarter of each other's renown vie for the same name);
+  - pulled down by **trade gained** (what the deals between them earned both sides, by their own prices, and the goods
+    carried between them and paid for), an alliance and a border agreed; and easing a point a day.
+- **Rivals** (forty and over): their relation cools a point a day (two at sixty); each values the other's goods a tenth
+  less at the bargaining (a tariff) and charges the other's loads a toll on its road, a coin every two hundred blocks.
+  The news says what they are rivals over.
+- **An embargo** (sixty and over, with relations gone uneasy or worse, and no alliance): the town that has lost the more
+  to the other lays it. No trade talks, no trade caravans, no deliveries, and the deal between them ended. It is lifted
+  once the rivalry falls under thirty-five, relations mend past nought, or they ally.
+- **Good trade** warms relations (a point a day for a weekly run of six coins, two for twenty), signs a **trade pact**
+  between friends with a steady trade (ten), and makes **allies** of close friends (fifty-five and over) with a pact and
+  a rich trade (twenty) and no rivalry to speak of. A rivalry only makes a feud likelier: war still takes a feud and a
+  captain who likes his chances.
+
+### The Region page and /village region
+- The town's books (Civic) have a **Region** page: a map of the towns within fifteen hundred blocks, each a dot in the
+  colour of how it stands with us (allies green, friendly blue, neutral grey, rivals amber, hostile red, ours gold), the
+  roads drawn along their surveys (dotted where nothing is laid, brown a path, grey gravel, dark stone, each half as good
+  as its own gang has made it), railways beside them, an embargo crossed in red; the mouse over a town or a road says all
+  about it. Beside it: the towns and how we stand with each (relation, rivalry and what over, pact, embargo); the roads
+  and railways (length, each half's grade and how far its gang has got, the water bridged, the railway, the time going
+  takes, a load's road money and toll); the **league table** of the region's towns by **standing** (three for every
+  folk, its renown, ten for every age, a coin in twenty-five of its treasury, five for every town it is linked to, a
+  point for every four coins of its weekly trade); and the region's news (roads surveyed and opened, railways opened,
+  pacts, alliances, rivalries, embargoes and their lifting). Every line of it is in both towns' chronicles too.
+- `/village region` says the same in the chat, `/village region books` opens the books at the page, and operators'
+  `/village region stage` sets out two Iron Age towns beside where it is run with a river between them, their road
+  surveyed and made gravel (the bridge with it) and the railway laid with its stations, for the pictures.
+
+Tests: RegionGameTests (x 4,200,000 to 4,300,000, z 90000): rg01 the road surveyed round a cliff-sided hill and a
+player's hut and over a river, laid by both towns' gangs to a path with a plank bridge, the hut untouched, the road
+open end to end in the news; rg02 a railway wanted for a strong trade (not without), planned and laid with a station at
+each end, the route quicker and cheaper by it; rg03 the caravans' way along the road, the route's time and money on a
+track and on gravel, the market's API, a rival's toll, an army's march by the road; rg04 rivals from the ground between
+them and lost trade, the tariffs, an embargo by the town that lost the trade (no talks, the route shut), lifted when
+relations mend; rg05 a pact and then an alliance out of good trade; rg06 the survey and the rivalry kept over a save and
+a restart, the page and the command, a sleeping town's gang's steps laid on waking.
+
+## Towns trading on the market, and prices with booms and busts (econ-4)
+
+### Trade between towns (EconRegion)
+
+- **What a town knows of the others' prices.** Each morning every town's market writes its price sheet: its ask, its bid
+  and its stock of each staple that travels (wheat, bread, roots, apples, cooked meat and fish, the common logs and planks,
+  cobblestone and stone, coal and charcoal, iron and copper, raw and smelted, white wool, leather, glass, sand and clay).
+  A town knows a partner's sheet only as its traders bring it in: as it stood as many days ago as a laden cart takes on
+  the road between them (two thousand four hundred blocks a day, a day at the least). Its partners are the towns it has a
+  road to (its neighbours, its colony, its mother), not at war with it, within six thousand blocks; the length of the
+  road is the road's own where RoadWorks lays one out, else a third over the straight line.
+- **The merchant's sum.** In its morning the market, as merchant, looks over each partner's asks as it knows them, adds
+  the carriage (a fiftieth of a coin a piece for every thousand blocks of road) and its own gate toll (three in the hundred
+  of the value; ten between rivals), and buys where that comes to under nine tenths of the thing's worth at home. The deal
+  is struck at the seller's ask on the day (a stale sheet that no longer pays is let go), for no more than the seller
+  spares over what it keeps (thirty-two and two a head), no more than half the difference between the two towns' stocks
+  (so the gap narrows rather than turns over), a wagon's load (sixty-four) a ware, three wares a partner a day, and a
+  quarter of the market's cash a morning.
+- **Every coin booked, both sides.** The buyer's market pays the seller's market for the goods and the seller's carters
+  (its treasury) for the carriage there and then, booked as the buyer's IMPORT and the seller's EXPORT in the coin census
+  in the same tick; the toll goes into the buyer's own treasury (its budget's "gate tolls"). The goods leave the seller's
+  stores on the market's own account (nobody's household or firm charged) and go by the town's wagon or by the road
+  (Shipments), and come into the buyer's stores as its market's own stock, sold to its folk at its own ask. A load lost on
+  the road is refunded, goods and carriage, booked back both sides. Paying for a shipment on delivery (the trade deals'
+  wagon loads, a player's haul) now books its IMPORT and EXPORT too: those coins had moved between two treasuries with
+  nothing in either census.
+- **What it does.** The importer's stock goes up and the exporter's down, so the next morning's prices (by supply and
+  demand) move toward each other: a town short of a thing imports it, one with a glut exports it, and the gap between two
+  linked towns narrows. Each load that arrives warms the two towns' relations a point (one a day between a pair at most),
+  and a town's first deal with a partner is "a new trade route", a lift to its trade for five days. The trade book keeps
+  each day's trade in and out by ware and by partner for a month.
+
+### The price index, the money supply and the cycle (EconIndex, CycleModel, EconCycle)
+
+- **The figures, each morning.** A household's basket (bread four parts; potatoes, carrots and cooked beef two; wheat,
+  beetroot, apples, cooked cod, logs, cobblestone, coal, iron and wool one each) at today's prices, chain-linked from a
+  hundred on the first morning (a town rising to a village's or a town's price level is not counted as inflation), and
+  inflation over the week; output, the mean wage, those out of work, the population; the money supply (every coin the
+  census counts, the savings club's chest set aside and its savers' deposits counted instead), the club's deposits, the
+  firms' loans, the town's debt (IOUs to its market and its bonds); the treasury; the trade in and out. Sixty mornings
+  are kept.
+- **The cycle.** The council's reckoners keep the town's cycle as an economist would (Goodwin's growth cycle with Minsky's
+  debt, as Keen wrote it, a day a step): employment, the wage share and the firms' debt move one another. Profit is what
+  output leaves after wages and interest; the firms invest by how good it is, borrowing what profit does not pay for, and
+  investment makes output and work grow. So a **boom** (profits good, credit and investment growing, hands taken on), then
+  wages and prices bid up as hands grow scarce and the boom's debt costs more as the council raises its rate: **slowing**;
+  investment falls off and hands are laid off: the **slump**; with hands idle wages fall back, the rate is cut, debts are
+  paid down: **recovering**, and the next boom, about a month round. Nothing in it is rolled on a die. The town's own
+  numbers feed it: its employment as it changes (five in the hundred more out of work moves the reckoning two and a half),
+  its lenders' new loans (the firms' debt grows by them), and real shocks, each for a few days: a drought or a harvest
+  failed (yesterday's crops a third of their usual), a mine's vein run out (its ore under a third of its usual), a raid,
+  a war, a new trade route. Bounded: employment never under four fifths, the wage share and the debt held in their
+  bands, the rate between a half and ten in the hundred; a hard shock brings a slump and the town comes out of it.
+- **The council reacts** as a central bank and a government would. Its **rate** follows employment and the town's
+  inflation (a Taylor rule); the savings club lends over it (its weekly rate moves by the council's margin), so credit is
+  dear in a boom and cheap in a slump; the chronicle has each move of half a point ("the council raised the town's rate to
+  5.5 in the hundred a year, to cool the boom"). Its **works** may owe their market a quarter more in a slump, a tenth more
+  as it recovers, and fifteen in the hundred less in a boom. On its **taxes**, a slump with the treasury sound (five days'
+  wages and more) moves it to ease one; a boom running prices up four in the hundred a week, to raise the profits tax or
+  the toll. The **minimum wage** goes up a coin when prices are up an eighth since it was last set, in a boom or as it
+  slows (weekly). And a folk wants less nerve to found a business in a boom and more in a slump.
+- **What the folk say.** Asked about prices, trade, the times or the economy, a folk answers from its town's times
+  ("Hard times. I've no work, and few are hiring." "Everything's dearer than it was a week back, nine in the hundred, and
+  the wages chase it.") and the council's rate; the same answer is on every grown folk's card ("The times"), so nothing
+  needs typing. The chronicle has each turn of the times. Everything a player sees of it is in the books' Dashboard page
+  and the folk's cards; `/village economy` is the same in words, an extra.
+
+### The treasury that ran dry
+
+long-6's real-world towns grew from eight to thirty and more folk by day thirty while their treasuries ran from four
+and five hundred coins at day ten to nought by day nineteen, with six hundred coins and more in the folk's purses and
+"the wages are hardly paid" in their contentment. Their books say why: the new folk's houses were built by the town's
+works on IOUs to the market; every tax and every house rent, as it came in, went first to pay those IOUs ("Money over
+the last 7 days: 568 in, 109 out ... the treasury up 0 to 0"); and the market, paid, sat on its surplus till its
+weekly day. The treasury's own wages (the watch, the town's own hands) were paid short in between. The town keeps a
+**reserve** now: short of two days of its wage bill in the morning, before the wages, the market pays the treasury its
+cash over its float there and then (both are the town's; at the week's end what the town owes it on its IOUs is set
+against its surplus as before), and three mornings running short, the council is called together on its taxes without
+waiting for its day ("the council, called together on the empty treasury, voted ..."). Measured: two grown towns
+of twenty alike, thirty real mornings each with their households buying bread and their works taking stone (er04): the
+one keeping its reserve at 64 coins at its lowest and never at nought (short of its reserve on 21 mornings, made up out
+of the market's surplus), the old way at nought on a morning; the census at nought drift. A town of sixteen founded and
+left to itself for thirty days under the market (er06), growing to a hundred folk and sixty-three buildings: its treasury
+at 9 coins at its lowest from day ten and never at nought on the last ten mornings (long-6's real towns: nought from day
+nineteen). Its times, as they came: the market open on day five, a boom (days 5 to 7), slowing (8 to 11, prices up 12
+to 18 in the hundred a week as a hamlet of sixteen became a town of ninety, the council's rate up to 7.3 in the
+hundred), a slump (12 to 16, prices falling back), recovering (17), a boom again (18 to 23), slowing (24 to 27) and a
+slump (28 to 30); the index 100, 138 at its highest on day 21, 114 on day 30. The same town without the reserve (er07, cut off at day
+22 by the run's time): its treasury at nought on day 17, three coins on day 18 and twelve on day 19, the IOUs at 811 coins.
+
+### Where you see it
+
+- **The Economy dashboard** (the town's books, Economy, the first page, "Dashboard"): the times as a badge (boom green,
+  slowing amber, slump red, recovering blue) with the week's prices, the index and the council's rate; twelve line charts
+  of the last sixty mornings (the price index, output, the mean wage, those out of work, the treasury, the town's debt,
+  the money supply, the population, the reckoning's employment, the council's rate, the trade bought in and sold out),
+  each with today's figure and, the mouse over it, its lowest, highest and a week ago; a strip of the times morning by
+  morning; then the dashboard in words and the week's trade by ware and by partner town.
+- **`/village economy`**: the same in words (the times, population, output, wages, work, the index and inflation, money,
+  the treasury and debt, the council's reckoning and its levers, the shocks, the council's moves, the partners and the
+  trade), above the old economy page.
+- The chronicle: the market's merchant's buys, the turns of the times, the council's rate, the minimum wage, the
+  treasury's early surplus and the council called on it.
+
+Tests: EconRegionGameTests (x 4,100,000 to 4,200,000, z 90000): er01 two linked towns' wheat gap narrowed by their
+merchants against a pair that does not trade, every coin booked both sides (each town's census moving by its own booked
+flows, the two by nought), their relations warmer, the trade book by ware and partner, a lost load refunded; er02 the
+index (a hundred, up by the basket's weights when bread and roots grow dear), inflation, the money supply, the dashboard's
+tag and the command; er03 a hundred and twenty mornings of a town's cycle (boom, slowing, slump, recovering, twice over;
+the council's rate raised and cut, the lenders dearer in the boom, an easing of the taxes moved in the slump, bolder
+founders in the boom, more room for the works in the slump, the chronicle's hard times, all bounded); er04 two grown
+towns' thirty real mornings each with their households and works spending, the one keeping its reserve never at nought;
+er05 the cycle, the figures, the trade book and the sheets kept with the world; er06 and er07 (optional) thirty days of
+a real town founded and left to itself, with the reserve and without. CycleModelTest: the cycle's arithmetic (it comes
+round, deterministic, the rate dearer in the boom, a hard shock recovered from).

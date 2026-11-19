@@ -590,6 +590,7 @@ public final class Annals {
         out.put("jobmarket", JobMarket.report(level, id));         // the job market between towns: the Jobs page's other view
         out.put("labour", LabourMarket.report(level, id));          // [labour] the town's labour market: the Jobs page's third view
         out.put("capital", CapitalReport.report(level, id));         // [capital] the Capital page: savings and loans, the bourse, land, bonds
+        out.put("econ4", EconReport.report(level, id));             // [econ4] the Economy dashboard: the index, the cycle, trade between towns
         out.put("trade", TradeDeals.report(level, v));             // [econ-trade] the Trade page: the book, the deals, the talks
         out.put("warmap", WarMap.report(level, v));              // [war-scouting] the war map: rivals, reports, pickets, spies
         out.put("caves", CaveDwellers.report(level, v));         // [caves] the caves' report: the Caves page
@@ -604,6 +605,7 @@ public final class Annals {
         out.put("transport", Transport.report(level, v));        // [transport] the lines, the carts, the ferry, the bridge
         out.put("harbour", Harbours.report(level, v));           // [trade-world] the harbour, its light and its ships
         out.put("roads", RoadWorks.report(level, v));            // [trade-world] the roads, their inns, and folk on the move
+        out.put("region", Region.report(level, v));              // [links12] the Region page: the towns round about, the roads and rails, the league
         out.put("perks", Perks.report(level, v));                // [perks] the wonders, the leader's skills and legacies, the folk's quirks and knacks
         out.put("interviews", Interviews.report(level, id));      // [interviews] the interviews coming and held: the Interviews page
         out.put("identity", Identity.report(level, v));          // [identity] the town's ethos, government, laws, traits, fame: the Identity page

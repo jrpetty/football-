@@ -82,7 +82,7 @@ public class AssistantMenu extends AbstractContainerMenu {
         }
 
         // Player inventory (3 rows) + hotbar. Left low enough for two button rows.
-        int invY = 178; // leaves room for the specialisation + area rows above
+        int invY = 150; // leaves room for the specialisation + area rows above ([screens13] the empty band taken out: fits 240 high)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, invY + row * 18));

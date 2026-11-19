@@ -26,7 +26,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
     public AssistantScreen(AssistantMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title);
         this.imageWidth = 176;
-        this.imageHeight = 260;
+        this.imageHeight = 232;                       // [screens13] 260 ran off a screen 240 high
         this.inventoryLabelY = this.imageHeight - 94; // unused label, kept sane
     }
 
@@ -51,17 +51,17 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
                             new com.jrpetty.mcassistant.net.FolkTalkPayload(a.getId(),
                                 com.jrpetty.mcassistant.entity.TalkTopic.OPEN.ordinal(), ""));
                     }
-                }).bounds(x + 8, y + 114, 78, bh).build());
+                }).bounds(x + 8, y + 100, 78, bh).build(UiButton::new));
             // Everything it has done in its life: blocks mined, trees felled, crops in, fish caught.
             this.addRenderableWidget(Button.builder(Component.literal("Work done"), b -> {
                     if (this.minecraft != null && this.minecraft.player != null) {
                         this.minecraft.player.closeContainer();
                         this.minecraft.setScreen(new RecordScreen(a));
                     }
-                }).bounds(x + 90, y + 114, 78, bh)
+                }).bounds(x + 90, y + 100, 78, bh)
                 .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
                     "What it has done: blocks mined, trees felled, crops harvested, things made")))
-                .build());
+                .build(UiButton::new));
             return;
         }
         this.addRenderableWidget(Button.builder(Component.literal("Orders \u203a"), b -> {
@@ -69,8 +69,8 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
                     this.minecraft.player.closeContainer();
                     this.minecraft.setScreen(new OrdersScreen(a));
                 }
-            }).bounds(x + 8, y + 114, 100, bh).build());
-        addButton(x + 112, y + 114, 56, bh, "Stash", AssistantMenu.BTN_DEPOSIT);
+            }).bounds(x + 8, y + 100, 100, bh).build(b2 -> ((UiButton) new UiButton(b2)).primary()));
+        addButton(x + 112, y + 100, 56, bh, "Stash", AssistantMenu.BTN_DEPOSIT);
     }
 
     private Button addButton(int x, int y, int w, int h, String label, int buttonId) {
@@ -78,7 +78,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
             if (this.minecraft != null && this.minecraft.gameMode != null) {
                 this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, buttonId);
             }
-        }).bounds(x, y, w, h).build());
+        }).bounds(x, y, w, h).build(UiButton::new));
     }
 
 
@@ -87,12 +87,10 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         int x = this.leftPos;
         int y = this.topPos;
 
-        // Panel with a beveled border.
-        g.fill(x, y, x + imageWidth, y + imageHeight, PANEL);
-        g.fill(x, y, x + imageWidth, y + 1, PANEL_HI);
-        g.fill(x, y, x + 1, y + imageHeight, PANEL_HI);
-        g.fill(x, y + imageHeight - 1, x + imageWidth, y + imageHeight, PANEL_LO);
-        g.fill(x + imageWidth - 1, y, x + imageWidth, y + imageHeight, PANEL_LO);
+        // [screens13] The house panel, its header band behind the title.
+        UiStyle.shadow(g, x, y, imageWidth, imageHeight);
+        UiStyle.panel(g, x, y, imageWidth, imageHeight);
+        UiStyle.headerBand(g, x, y, imageWidth, 15);
 
         // Slot cells (18x18) matching the menu's slot positions.
         for (int row = 0; row < 3; row++) {
@@ -101,7 +99,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         for (int i = 0; i < AssistantInventoryContainer.EQUIP; i++) {
             drawSlot(g, x + 8 + i * 18, y + 78);
         }
-        int invY = 178;
+        int invY = 150;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) drawSlot(g, x + 8 + col * 18, y + invY + row * 18);
         }
@@ -120,7 +118,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         // One palette, not two: these used to be hand-picked greys and greens
         // that drifted from Ui's every time Ui was retuned. 0x404040 stays,
         // because that is vanilla's own container-title grey.
-        g.drawString(this.font, this.title, 8, 6, 0x404040, false);
+        UiStyle.title(g, this.font, this.title.getString(), 8, 5);
         AssistantEntity a = this.menu.getAssistant();
 
         // Mode sits on the title line, right-aligned. It used to be drawn at
@@ -133,10 +131,10 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
             String traits = folk.clientSocial().split("\\|", -1)[0];
             mode = traits.isEmpty() ? "" : traits;
         }
-        int modeMax = imageWidth - 16 - this.font.width(this.title) - 8;
+        int modeMax = imageWidth - 16 - UiStyle.titleWidth(this.font, this.title.getString()) - 8;
         mode = clipTo(mode, Math.max(20, modeMax));
         g.drawString(this.font, Component.literal(mode),
-            imageWidth - 8 - this.font.width(mode), 6, Ui.FAINT, false);
+            imageWidth - 8 - this.font.width(mode), 5, UiStyle.TEXT_FAINT, false);
         g.drawString(this.font, Component.literal("gear"), 8 + 6 * 18 + 4, 82,
             Ui.FAINT, false);
 
@@ -144,14 +142,13 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         if (a == null) return;
         AssistantEntity.StationTask job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal());
         g.drawString(this.font, Component.literal(trim(job.title + " · " + a.clientZone())),
-            8, 154, Ui.MUTED, false);
+            8, 123, UiStyle.TEXT_MUTED, false);
 
         // What it is running on. Worked out first because the status line below
         // shares its row and has to be clipped to whatever space this leaves.
         BotInfo info = BotInfo.of(a);
         int diet = info.diet();
         int barW = imageWidth - 16;
-        int fill = Math.max(1, barW * Math.max(0, Math.min(100, diet)) / 100);
         int dietColour = diet >= 95 ? Ui.GOOD : diet >= 70 ? Ui.ACCENT
             : diet >= 45 ? Ui.WARN : Ui.BAD;
         String pace = AssistantEntity.foodLabel(diet) + " " + diet + "%";
@@ -160,7 +157,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         int colour = Ui.statusColour(status);
         g.drawString(this.font, Component.literal(
             clipTo(status, imageWidth - 16 - this.font.width(pace) - 6)),
-            8, 165, colour, false);
+            8, 133, colour, false);
         // This screen is packed: slots 18-96, three button rows 96-150, and the
         // player's own inventory from 178. The only free band is 150-178, which
         // already carries the job line and the status line. So the diet shares
@@ -171,9 +168,8 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         // of the Set Area / - / + / Show row. That is what was drawn through
         // the buttons.
         g.drawString(this.font, Component.literal(pace),
-            imageWidth - 8 - this.font.width(pace), 165, dietColour, false);
-        g.fill(8, 174, 8 + barW, 177, 0x30000000);
-        g.fill(8, 174, 8 + fill, 177, 0xFF000000 | dietColour);
+            imageWidth - 8 - this.font.width(pace), 133, dietColour, false);
+        UiStyle.bar(g, 8, 143, barW, 3, Math.max(0, Math.min(100, diet)) / 100F, 0xFF000000 | dietColour);
     }
 
     /** Clip to an explicit width — used where two readouts share a line. */
