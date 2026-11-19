@@ -1702,8 +1702,21 @@ public final class HomeMaking {
                             if (lamp.canSurvive(level, down)) { at = down; break; }
                         }
                     }
+                    if (!lamp.canSurvive(level, at)) {                    // else on the nearest free bit of floor
+                        BlockPos from = at, best = null;
+                        for (BlockPos c : rooms(level, id, h).floor()) {
+                            if (!level.getBlockState(c).isAir() || byADoor(level, c) || !lamp.canSurvive(level, c)
+                                || !TownBlocks.allows(level, v, c, TownBlocks.Why.FURNISH)) continue;
+                            if (best == null || c.distSqr(from) < best.distSqr(from)) best = c;
+                        }
+                        if (best != null) at = best;
+                    }
                 }
-                if (!lamp.canSurvive(level, at)) return false;
+                if (!lamp.canSurvive(level, at)) {
+                    LOG.info("[MCA-HOMEMAKING] {}'s {} would not go at {} ({} below, {} above)", f.displayNameCap(), l.getItem(), at.toShortString(),
+                        level.getBlockState(at.below()), level.getBlockState(at.above()));
+                    return false;
+                }
                 level.setBlock(at, lamp, 3);
                 take(f, h, LIGHT);
                 placed = lamp;
