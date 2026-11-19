@@ -14768,7 +14768,9 @@ assets less liabilities, its lines the holdings); pf05 the ledger capped at two 
 same after a save and a load, and another player refused; pf06 a player in two towns (savings in both, a bond in one,
 a loan in the other): each town's net worth its own holdings less its debts, the towns and the coin in no town adding up
 to the whole net worth, the week's income and spending split by town adding up too, every line and entry with its town.
-(Commissioned buildings, orders-17's, are not on this branch: their lines come with the merge.)
+Since the join (join21): commissioned buildings and the player's buildings on the property register are on the Property
+tab at the register's valuation, a building going up at what has been paid the builders (the stage payment and the
+rest as bills); a player's own shop is on the Businesses tab beside its firms (see the next section).
 
 ## Living in town: your own shop, a job, a business, and no commands needed (player15)
 
@@ -14801,11 +14803,18 @@ done. **Everything you can do** lists every way in (below).
 * **Stock and prices.** Every chest, barrel, shelf and pot inside is stock; mark some **back stock** on the Stock tab
   (the stockroom: customers don't see it, a keeper restocks from it). Each ware's price for a lot, with − and + (shift
   for ten), *Going price* and *Keep back*, beside the going price, how folk will take it, and who would buy it and why.
-* **Customers** (ShopCustomers) come in its hours when they want something it has (the tool of their trade, food when
-  the town is hungry, a treat on market day, a comfort for their home, something nice when well off): they walk to its
-  door, in, look over a shelf, queue at the counter, pay (into the till; the keeper says *That's three, thank you
-  kindly*), say a word and go; too dear, they say so and leave, and it goes on the books. How many come follows its
-  name: four a day at worst, two dozen at best. The buying decision is one method (ShopCustomers.wants).
+* **Customers** (ShopCustomers) come in its hours when it has something they have a real use for now (ItemUses: the
+  tool of their trade or a better one, food for the household, a remedy, seed for bare furrows, a piece for the home,
+  makings their firm is short of, what the town needs through them): they walk to its door, in, look over a shelf,
+  queue at the counter, pay (into the till; the keeper says *That's three, thank you kindly*), say a word and go; too
+  dear, they say so and leave, and it goes on the books. They buy as many as the use takes, at a price they think fair,
+  paid by whoever pays for the need (their purse, their firm's till, the treasury), and put it to its use (a tool taken
+  up, seed sown, a piece set out at home). What they looked at and had no use for goes on the shop's books with their
+  reason (the Stock tab lists it), and the Stock tab's *who would buy it* is ItemUses' verdict on the whole town. How
+  many come follows its name: four a day at worst, two dozen at best. Visitors from other towns look in on their round.
+  A shop also sells **through the town's counter**: a folk buying its needs or a treat there (Purchases, Market) goes to
+  a player's open shop with the ware on its shelves when that is the better buy for it (Sellers.best: the price, the
+  walk, the shop's name; only what it has a use for, at no more than it would pay), off the shelves into the till.
 * **Books and name.** Every sale (who, what, how many, for how much), takings by day for a week and all told, what sold
   out, what was too dear and the going price, the week's mood (pleased, put off, found nothing), and its name in town:
   up with fair prices and sales, down with dear prices and bare shelves, up a little each customer a keeper greets. On
@@ -14817,8 +14826,14 @@ done. **Everything you can do** lists every way in (below).
 * **Rules.** No other player may open its stock or break its counter; folk never take without paying; every coin is
   counted (purse to till inside the town; the licence and rates in; the till out to you, as *paid out to players*); the
   shop's tills are a holder in the coin census. Kept in the ledger, so it outlasts a restart. **Close the shop** pays you
-  its till and lets the keeper go; the goods in its chests were yours all along. Sell, Let and Repurpose buttons lead to
-  the property market (another round's).
+  its till and lets the keeper go; the goods in its chests were yours all along. Its building goes on the town's property
+  register when the shop is set up (a building the town built for you is on it already; one you built is valued at what
+  its walls, floor and roof would cost again, plus its firm's goodwill), and the **Sell, Let and Repurpose** buttons
+  (here and on Your life in town) open the property office on its My property tab with the shop's building first.
+* **In Your finances.** A sale is booked as *shop takings* as the coin goes into the till (net of the market's toll); its
+  rates and its keeper's wages as costs out of the till; the till emptied into your pack is a move, not income again. The
+  Businesses tab lists the shop (the week's takings, costs, profit, stock at the going price, the till); a job's wage from
+  a firm is booked as wages, the licence and a firm's charter as fees. Your life in town's **Finances** opens the screen.
 
 ### A job off the board (PlayerJobs)
 The **jobs board** (Your life in town, any folk's *"Any jobs for me on the board?"*): the town's openings (LabourMarket)
@@ -14846,10 +14861,17 @@ best the town can spare, post an opening, take the best applicant), stock (order
 the going price), money (invest, drawings), shares on the bourse and winding it up.
 
 ### Buildings the town builds for you (BuildDesk, BuildPlots)
-Quoted, paid for and built by the town's hands from the footing up, out of the stores where it has the blocks (the rest
-bought in at the price quoted), with a toast at each quarter (*your shop is 40% built: waiting for 12 dark oak slabs*),
-a bar on Your life in town and a chronicle line when it stands. A shop or premises comes complete: its counter and a
-chest set in, and it is your shop. The town's build orders (another round's) answer the same calls when they land.
+The town's build orders answer (BuildOrders, since the join): each gallery card and the confirm step show the builders'
+own quote (materials at the market's ask, each trade's hours at its wage, overheads, the land bought or leased, the
+permit, rates and registry, the builders' margin; the deposit now, a stage payment at half, the balance when it stands)
+and the time as a range with its reason (the queue, the crews, what the stores lack). The styles are the builders' (the
+timbers, then stone, brick and the civic look as the age allows); a plot must pass the builders' rules as well as the
+ground's. Placed, the town's crews put it up course by course, with a toast at each quarter, a bar on Your life in town
+and My businesses (from BuildOrders.status), the order on the property office's Orders tab, and a chronicle line when it
+stands. A shop or premises comes complete: its counter and a chest set in, and it is your shop (and its firm's
+premises). The 3D pictures and the outline on the ground stay. **The town keeps off**: its own builders pass over a lot
+whose building would stand on or right against a player's building (on the register, a shop by its room, or what a
+player built itself), a block's gap kept (PlayerGap).
 
 ### Everything you can do (InWorld) and no commands
 Every one of the mod's player commands has its way in the world: a block, a screen's button, a talk option, a key; the
@@ -14867,7 +14889,10 @@ nearest one now (for the camera); `/village playershops befriend <player>` makes
 staging the charter, which wants a friend of the town or a citizen).
 
 ### Tests
-PlayerLifeGameTests pl01-pl11 (x 4,500,000 to 4,600,000, z 90,000): the checklist and opening, a sale (coin and goods,
+PlayerLifeGameTests pl01-pl14 (x 4,500,000 to 4,600,000, z 90,000): the checklist and opening, a sale (coin and goods,
 the census to the penny), too dear and the hours, a customer walking in to the counter, the keeper, a restart and
-closing, a job off the board to payday, starting a business, a building the town builds coming complete, commands banned
-(and every player command routed), citizenship.
+closing, a job off the board to payday, starting a business, a building the town builds coming complete (pl09: the
+gallery's quote is BuildOrders.quote's, the deposit in the player's books, the builders put it up, it is the player's
+shop and on the register), commands banned (and every player command routed), citizenship; pl12 a shop sale in the
+owner's finances (takings, the Businesses tab, the till a move) and the Sell button opening the property office on the
+shop's building; pl13 a player's shop competing at the town's counter; pl14 the builders' gap.
