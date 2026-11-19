@@ -692,6 +692,10 @@ public final class BridgeKit {
                 Plan plan = plan(level, v, r.a(), road, r.line(), s, grade >= 3, true);
                 String done = "b18.done/" + plan.key;
                 if (!"1".equals(Ledger.note(r.a(), done))) {
+                    // By a hand of the road gang at the bridge, as any road work.
+                    BlockPos head = plan.shape.at((plan.shape.w0() + plan.shape.w1()) / 2, 0, plan.shape.deckY() + 1);
+                    if (!TownJobs.atWork(level, v, "road/bridge/" + r.other(v.id()), head, "making over the bridge on the road to "
+                        + Villages.name(r.other(v.id())), AssistantEntity.StationTask.HAUL)) return;
                     String out = lay(level, v, plan, budget, false);
                     if (out != null) return;                         // more another day, or the stores short
                     Ledger.note(r.a(), done, "1");
