@@ -44,6 +44,7 @@ public class FinanceScreen extends Screen {
     private static final String[] TABS = {"Overview", "Balance sheet", "Income & spending", "Charts", "Businesses", "Property", "Investments", "Bills", "Ledger", "Notices"};
     private static final String[] GROUPS = {"Cash", "Savings", "Investments", "Property", "Businesses", "Owed to you", "Loans", "Bills owed"};
     private static final int HEAD = 24, TAB_H = 14, FOOT = 14;
+    private static final int LAST_WEEK = 0xFF5A5A5A;
 
     @Nullable private final Screen parent;
     private CompoundTag data = new CompoundTag();
@@ -77,7 +78,7 @@ public class FinanceScreen extends Screen {
         boolean other = !t.getString("name").equals(data.getString("name"));
         data = t;
         if (other) scroll.reset();
-        rebuildWidgets();
+        if (minecraft != null) rebuildWidgets();                            // (not yet shown: init builds them)
     }
 
     public void said(String words) {
@@ -100,7 +101,7 @@ public class FinanceScreen extends Screen {
         lookup = null;
         if (data.getBoolean("op") && w >= 330) {
             int bw = 84;
-            lookup = new EditBox(font, left + w - S2 - 40 - S1 - 34 - S1 - bw, top + 6, bw, 13, Component.literal("Player"));
+            lookup = new EditBox(font, left + w - S2 - 40 - S1 - (font.width("Update") + 10) - S1 - 34 - S1 - bw, top + 6, bw, 13, Component.literal("Player"));
             lookup.setHint(Component.literal("a player's name"));
             lookup.setMaxLength(32);
             addRenderableWidget(lookup);
@@ -174,7 +175,7 @@ public class FinanceScreen extends Screen {
             scrollBar(g, left + w - S1 - 4, bodyTop, bodyBottom - bodyTop, scroll.offset(), scroll.max(), bodyBottom - bodyTop);
         }
         footer(g, mx, my);
-        super.render(g, mx, my, partialTick);
+        for (net.minecraft.client.gui.components.Renderable r : renderables) r.render(g, mx, my, partialTick);   // (not super: it would draw the backdrop again)
         if (tip != null) {
             g.pose().pushPose();
             g.pose().translate(0, 0, 400);
@@ -190,12 +191,12 @@ public class FinanceScreen extends Screen {
         rx -= cw;
         button(g, font, "Close", rx, top + 4, cw, 16, State.of(true, false, in(mx, my, rx, top + 4, cw, 16)));
         zone(rx, top + 4, rx + cw, top + 20, this::onClose);
-        rx -= S1 + 16;
-        boolean overR = in(mx, my, rx, top + 4, 16, 16);
-        tile(g, rx, top + 4, 16, 16, State.of(true, false, overR));
-        g.drawString(font, "↻", rx + 4, top + 8, TEXT, false);
+        int uw = font.width("Update") + 10;
+        rx -= S1 + uw;
+        boolean overR = in(mx, my, rx, top + 4, uw, 16);
+        button(g, font, "Update", rx, top + 4, uw, 16, State.of(true, false, overR));
         if (overR) tip = "Add it all up again";
-        zone(rx, top + 4, rx + 16, top + 20, () -> { UiStyle.click(); askPage(data.getBoolean("self") ? "" : data.getString("name")); });
+        zone(rx, top + 4, rx + uw, top + 20, () -> { UiStyle.click(); askPage(data.getBoolean("self") ? "" : data.getString("name")); });
         if (lookup != null) {
             int bx = rx - S1 - 34;
             boolean over = in(mx, my, bx, top + 4, 34, 16);
@@ -217,8 +218,8 @@ public class FinanceScreen extends Screen {
         String msg;
         int ink = TEXT_FAINT;
         if (fresh && !said.isEmpty()) { msg = said; ink = DANGER; }
-        else if (FinanceClient.OPEN.isUnbound()) msg = "Tip: bind a key to open this anywhere (Controls, \"Your finances\"; we suggest " + FinanceClient.SUGGESTED_KEY + "). Also the coin by your inventory.";
-        else msg = "Open with " + FinanceClient.OPEN.getTranslatedKeyMessage().getString() + ", the coin by your inventory, the journal (J), the city books or the bank counter.";
+        else if (FinanceClient.OPEN.isUnbound()) msg = "Tip: bind a key to open this anywhere (Controls, \"Your finances\"; we suggest " + FinanceClient.SUGGESTED_KEY + "). Also the coin in your inventory (E).";
+        else msg = "Open with " + FinanceClient.OPEN.getTranslatedKeyMessage().getString() + ", the coin in your inventory (E), the journal (J), the city books or the bank counter.";
         int keys = keyCap(g, font, "Esc", left + w - S2 - font.width("Esc") - 4, fy);
         boolean clipped = text(g, font, msg, left + S2, fy + 1, w - 2 * S2 - keys - S2, ink);
         if (clipped && in(mx, my, left + S2, fy, w - 2 * S2 - keys, 10)) tip = msg;
@@ -231,16 +232,16 @@ public class FinanceScreen extends Screen {
         long inL = data.getLong("inLast"), outL = data.getLong("outLast");
         boolean hasAgo = data.contains("netWeekAgo");
         long ago = data.getLong("netWeekAgo");
-        String[] labels = {"Net worth", "Cash", "Income this week", "Spending this week", "Profit / loss"};
+        String[] labels = {"Net worth", "Cash", "Income", "Spending", "Profit / loss"};
         String[] values = {money(net), money(cash), money(in), money(out), signed(in - out)};
         int[] inks = {net >= 0 ? TEXT : DANGER, TEXT, SUCCESS, out > 0 ? DANGER : TEXT, in - out > 0 ? SUCCESS : in - out < 0 ? DANGER : TEXT};
         String[] subs = {hasAgo ? signed(net - ago) + " on the week" : "the first week", data.getBoolean("cashKnown") ? "in your pack" : "when last seen",
             "last week " + money(inL), "last week " + money(outL), "last week " + signed(inL - outL)};
         String[] tips = {"All you have, less all you owe. The arrow: against a week ago.", "The village coin you carry in your pack.",
-            "Wages, shifts, sales, rent, dividends, interest, coupons, rewards: the last seven days.",
-            "Rent, taxes, fees, goods, food, loan payments, fines, gifts: the last seven days.",
+            "Income this week (the last seven days): wages, shifts, sales, rent, dividends, interest, coupons, rewards.",
+            "Spending this week (the last seven days): rent, taxes, fees, goods, food, loan payments, fines, gifts.",
             "Income less spending over the last seven days (savings and investments moved are neither)."};
-        int perRow = Math.max(1, Math.min(5, (cw + S1) / (84 + S1)));
+        int perRow = Math.max(1, Math.min(5, (cw + S1) / (72 + S1)));
         int cardW = (cw - (perRow - 1) * S1) / perRow, cardH = 36;
         for (int i = 0; i < 5; i++) {
             int col = i % perRow, row = i / perRow;
@@ -363,7 +364,7 @@ public class FinanceScreen extends Screen {
         g.fill(x, y + 2, x + 6, y + 6, ACCENT_FILL);
         g.drawString(font, "this week", x + 9, y, TEXT_MUTED, false);
         int lx = x + 9 + font.width("this week") + S2;
-        g.fill(lx, y + 2, lx + 6, y + 6, EDGE_SOFT);
+        g.fill(lx, y + 2, lx + 6, y + 6, LAST_WEEK);
         g.drawString(font, "last week", lx + 9, y, TEXT_MUTED, false);
         text(g, font, "(the last seven days, and the seven before)", lx + 9 + font.width("last week") + S2, y, cw - (lx - x) - 60, TEXT_FAINT);
         y += 13;
@@ -371,7 +372,7 @@ public class FinanceScreen extends Screen {
             empty(g, font, "No money booked yet", "Every coin you earn or spend in a town shows here by kind.", x, y, cw, 40);
             return y + 44;
         }
-        String[][] kinds = {{"INCOME", "Income"}, {"SPENDING", "Spending"}, {"MOVE", "Moved between your own holdings (neither income nor spending)"}};
+        String[][] kinds = {{"INCOME", "Income"}, {"SPENDING", "Spending"}, {"MOVE", "Moved between your holdings"}};
         for (String[] k : kinds) {
             List<CompoundTag> rows = new ArrayList<>();
             long tw = 0, tl = 0, hi = 1;
@@ -394,7 +395,8 @@ public class FinanceScreen extends Screen {
                 int fill = k[0].equals("INCOME") ? SUCCESS_FILL : k[0].equals("SPENDING") ? DANGER_FILL : INFO_FILL;
                 text(g, font, c.getString("label"), x, y + 2, labelW - 4, TEXT_MUTED);
                 bar(g, x + labelW, y + 1, barW, 5, (float) Math.abs(vw) / hi, fill);
-                bar(g, x + labelW, y + 7, barW, 3, (float) Math.abs(vl) / hi, EDGE);
+                int lwPx = (int) (barW * (Math.abs(vl) / (double) hi));
+                if (lwPx > 0) g.fill(x + labelW, y + 7, x + labelW + lwPx, y + 10, LAST_WEEK);             // last week: a dark line, no track
                 String s = signed(vw);
                 g.drawString(font, s, x + cw - font.width(s), y + 2, vw > 0 ? SUCCESS : vw < 0 ? DANGER : TEXT_FAINT, false);
                 if (in(mx, my, x, y, cw, 12)) tip = c.getString("label") + ": this week " + signed(vw) + ", last week " + signed(vl) + ", sixty days " + signed(c.getLong("all")) + ".";
@@ -644,7 +646,8 @@ public class FinanceScreen extends Screen {
             if (over) g.fill(x, y, x + cw, y + 11, 0x18000000);
             long a = e.getLong("a");
             g.drawString(font, "Day " + (e.getLong("d") + 1), x + 2, y + 1, TEXT_FAINT, false);
-            String what = e.getString("w") + (e.getBoolean("i") ? " (account)" : "");
+            String w0 = e.getString("w");
+            String what = (w0.isEmpty() ? w0 : Character.toUpperCase(w0.charAt(0)) + w0.substring(1)) + (e.getBoolean("i") ? " (account)" : "");
             text(g, font, what, x + dayW, y + 1, cw - dayW - townW - amtW - 4, TEXT);
             text(g, font, e.getString("v"), x + cw - amtW - townW, y + 1, townW - 4, TEXT_MUTED);
             String s = signed(a);
@@ -665,7 +668,7 @@ public class FinanceScreen extends Screen {
         heading(g, font, "Notices", x, y, cw);
         y += 13;
         String[] labels = {"The week's summary (a toast at the start of each week)", "Bills due within two days or overdue (a toast, once a day)",
-            "The coin button beside your inventory (E)"};
+            "The coin button in your inventory (E), beside the recipe book"};
         boolean[] on = {UiConfig.financeWeekly(), UiConfig.financeBills(), UiConfig.financeButton()};
         for (int i = 0; i < 3; i++) {
             boolean over = in(mx, my, x, y, cw, 14);
@@ -679,7 +682,7 @@ public class FinanceScreen extends Screen {
         y += S2;
         heading(g, font, "Ways in", x, y, cw);
         y += 13;
-        String[] ways = {"The coin beside your inventory (E), and the creative inventory.",
+        String[] ways = {"The coin in your inventory (E), beside the recipe book; beside the creative inventory.",
             "A key: Controls › MC Assistant › \"Your finances\" (unbound at first; we suggest " + FinanceClient.SUGGESTED_KEY + ").",
             "The village journal (J): the Finances tab.", "The city books: the coin in the header.", "A bank's counter: the coin in its header.",
             "Your life in town: the Finances button."};

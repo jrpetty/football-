@@ -14410,8 +14410,9 @@ stall's next week of rent, a bulk order to collect, interest building on a loan.
 
 ### Where you see it
 
-- **The coin beside the inventory** (E; the creative inventory too): a small tile just outside the panel's top right,
-  following it when the recipe book opens. It can be hidden (Notices tab, or `mc_assistant-ui-client.toml`).
+- **The coin in the inventory** (E): a small tile beside the recipe book's button, a little clear of it, moving with
+  the panel when the recipe book opens; in the creative inventory, beside the panel's bottom right corner (the effects
+  stand at the top of that side), or under its tabs where there is no room. It can be hidden (Notices tab, or `mc_assistant-ui-client.toml`).
 - **A key**, "Your finances" in Controls (unbound at first; K is suggested on the screen).
 - **The village journal** (J): the Finances tab. **The city books**: the coin in the header. **A bank's counter**: the
   ledger book in its header. Other pages open it with `FinanceClient.openFrom(screen)` (server side:

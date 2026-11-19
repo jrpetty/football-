@@ -171,7 +171,7 @@ public final class FinanceSheet {
         if (pl.getLong("owed") > 0) {
             s.liabilities.add(new Row(LOANS, "Loan from " + FolkCredit.lenderName(id), pl.getLong("owed"), town, "page:" + id + ":Capital",
                 "Borrowed against your savings, bonds and shares at " + TownBonds.pct(pl.getInt("bp")) + " a week; " + Businesses.pence(pl.getLong("interest")) + " of it interest."));
-            bill(s, "Loan interest building", town, pl.getLong("interest"), -1, pl.getLong("interest") > pl.getLong("owed") / 4,
+            if (pl.getLong("interest") > 0) bill(s, "Loan interest building", town, pl.getLong("interest"), -1, pl.getLong("interest") > pl.getLong("owed") / 4,
                 "Unpaid interest past a third of the loan and the lender takes your savings against it.");
         }
         // ---- investments: shares, bonds, the town's works
@@ -328,7 +328,7 @@ public final class FinanceSheet {
                 bill(s, "Stall rent", town, rent * 100L, st.paidTill + 1, false, "Another week's rent, to keep your stall open.");
             }
             CompoundTag t = new CompoundTag();
-            t.putString("name", st.name.isEmpty() ? "Your stall" : st.name);
+            t.putString("name", "Your stall");
             t.putString("town", town);
             t.putString("type", "Market stall");
             t.putInt("share", Business.WHOLE);

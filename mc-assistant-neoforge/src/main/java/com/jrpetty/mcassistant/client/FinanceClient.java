@@ -35,7 +35,8 @@ import java.util.List;
 
 /**
  * [purse20] The client's side of a player's finances: the key that opens the screen (unbound till the player binds
- * it; K is the suggestion), the small coin button beside the inventory (E, and the creative inventory), the notices
+ * it; K is the suggestion), the small coin button in the inventory beside the recipe book's (E; beside the creative
+ * inventory's panel), the notices
  * (the week's summary and bills due: UiConfig, each can be turned off) and the open call other screens use (the
  * village journal, the city books, the bank counter, the life-in-town page).
  */
@@ -180,12 +181,26 @@ public final class FinanceClient {
             setTooltip(Tooltip.create(Component.literal("Your finances: what you have, earn, spend and owe")));
         }
 
-        /** Beside the panel's right edge, a little clear of it (room for other mods' buttons along the edge). */
+        /**
+         * In the inventory, beside the recipe book's button (a little clear of it, for other mods' buttons there), so it
+         * moves with the panel as the recipe book opens and shuts; in the creative inventory, beside the panel's bottom
+         * right corner (the effects stand at the top of that side, the page arrows above the panel), or under its bottom
+         * tabs where there is no room beside it.
+         */
         void place() {
             boolean creative = screen instanceof CreativeModeInventoryScreen;
-            int x = screen.getGuiLeft() + screen.getXSize() + 3;
-            int y = screen.getGuiTop() + (creative ? 4 : 2);
-            if (x + width > screen.width - 1) x = screen.getGuiLeft() + screen.getXSize() - width - 4;   // no room outside: just inside
+            int x, y;
+            if (creative) {
+                x = screen.getGuiLeft() + screen.getXSize() + 3;
+                y = screen.getGuiTop() + screen.getYSize() - height - 2;
+                if (x + width > screen.width - 1) {                          // no room beside it: under the bottom tabs
+                    x = screen.getGuiLeft() + screen.getXSize() - width - 1;
+                    y = Math.min(screen.getGuiTop() + screen.getYSize() + 30, screen.height - height - 1);
+                }
+            } else {
+                x = screen.getGuiLeft() + 104 + 20 + 4;
+                y = screen.height / 2 - 22;
+            }
             setX(x);
             setY(y);
             visible = UiConfig.financeButton();
