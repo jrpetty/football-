@@ -432,6 +432,7 @@ public final class Diplomacy {
                 if (apart(v, o) < CROWDED && r < FRIENDLY && !Bonds.border(village, o.id())) sb.append("They're too close — that's half the trouble. ");
                 sb.append(Borders.about(village, o.id()));                // [borders-map] a quarrel over the land
                 sb.append(Bonds.about(village, o, f.level().getDayTime() / 24000L));
+                sb.append(Rivalry.about(village, o.id()));                // [links12] rivals, an embargo, the road there
             }
             told++;
         }

@@ -192,6 +192,22 @@ public final class Rivalry {
     /** What the rivalry is about, in words ("" if nothing). */
     public static String why(UUID x, UUID y) { return state(x, y).why; }
 
+    /** [Diplomacy.rivals: a folk asked "Neighbours?"] What it says of the rivalry, an embargo and the road there; "" if nothing. */
+    public static String about(UUID me, UUID other) {
+        StringBuilder sb = new StringBuilder();
+        String on = Villages.name(other);
+        UUID by = embargoBy(me, other);
+        if (by != null) sb.append(by.equals(me) ? "We've put an embargo on " + on + ": not a cart goes there till it's lifted. "
+            : on + " has put an embargo on us, the spiteful lot. ");
+        else if (rivals(me, other)) sb.append("They're our rivals, over " + (why(me, other).isEmpty() ? "everything" : why(me, other))
+            + "; we tax their goods and they tax ours. ");
+        else if (tradeRun(me, other) >= 10) sb.append("The trade with " + on + " does us good. ");
+        Routes.Info i = Routes.between(me, other);
+        if (i != null && (i.grade() > 0 || i.rail())) sb.append("It's " + Region.time(i.travelTicks()) + " to " + on + " by "
+            + (i.rail() ? "the railway" : "the road, " + i.gradeWords()) + ". ");
+        return sb.toString();
+    }
+
     // ------------------------------------------------------------------ the day
 
     /**
