@@ -101,57 +101,92 @@ public final class StepKit {
     static int door(ServerLevel level, Villages.Village v, DoorWays.Door d) {
         BlockPos door = d.pos();
         Direction out = d.out();
+        Block stair = houseStair(level, door, out);
         int prev = door.getY(), made = 0;
         List<Integer> feet = new ArrayList<>();
+        List<Direction> ups = new ArrayList<>();
         for (int k = 1; k <= DoorWays.MOST_STEPS + 1; k++) {
             BlockPos col = door.relative(out, k);
             if (!level.hasChunk(col.getX() >> 4, col.getZ() >> 4)) break;
             int f = feet(level, col, prev);
             if (f == Integer.MIN_VALUE || Math.abs(f - prev) > 1) break;
             feet.add(f);
+            ups.add(null);
             if (f == prev - 1 && k > 1) {
                 // Down a step going out: the place before it (the doorstep, or the step above) a stair facing the door.
                 BlockPos hi = door.relative(out, k - 1).atY(prev - 1);
-                if (set(level, v, hi, out.getOpposite(), Blocks.COBBLESTONE_STAIRS, false)) made++;
+                if (set(level, v, hi, out.getOpposite(), stair, false)) made++;
+                ups.set(k - 2, out.getOpposite());
             } else if (f == prev + 1) {
                 // Up a step going out (a sunk door): this place a stair facing away from the door.
-                if (set(level, v, col.atY(f - 1), out, Blocks.COBBLESTONE_STAIRS, false)) made++;
+                if (set(level, v, col.atY(f - 1), out, stair, false)) made++;
+                ups.set(k - 1, out);
             }
             prev = f;
         }
-        if (!feet.isEmpty()) support(level, v, door, out, feet);
+        if (!feet.isEmpty()) support(level, v, door, out, feet, ups, stair);
         return made;
     }
 
-    /** Earth or nothing: what may be under or beside a flight and is made good in its stone. */
+    /** The stair a door's flight is built of: the house's own stone where it is stone (its wall by the door, else its
+     *  footing), cobblestone else. One stone for the whole flight. */
+    static Block houseStair(ServerLevel level, BlockPos door, Direction out) {
+        for (BlockPos p : new BlockPos[]{ door.relative(out.getClockWise()), door.relative(out.getCounterClockWise()), door.below() }) {
+            BlockState st = level.getBlockState(p);
+            if (st.is(Blocks.STONE_BRICKS) || st.is(Blocks.MOSSY_STONE_BRICKS) || st.is(Blocks.POLISHED_ANDESITE) || st.is(Blocks.BRICKS)
+                || st.is(Blocks.COBBLED_DEEPSLATE) || st.is(Blocks.MOSSY_COBBLESTONE)) return stairFor(st);
+        }
+        return Blocks.COBBLESTONE_STAIRS;
+    }
+
+    /** Earth, nothing, or an earlier flight's own stone (or its old cheek posts): what may be made good in the flight's stone. */
     private static boolean fill(BlockState st) {
         if (st.hasBlockEntity()) return false;
         return st.isAir() || st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.DIRT) || st.is(Blocks.DIRT_PATH)
-            || st.is(Blocks.GRAVEL) || st.is(Blocks.SAND);
+            || st.is(Blocks.GRAVEL) || st.is(Blocks.SAND) || st.is(Blocks.COBBLESTONE) || st.is(Blocks.COBBLESTONE_WALL)
+            || st.getBlock() instanceof StairBlock;
     }
 
-    /** A cobblestone out of the stores and into this place, what was there going back; false if the stores have none. */
-    private static boolean cobble(ServerLevel level, Villages.Village v, BlockPos at, BlockState want, Item cost) {
+    /** One block of the flight's stone (or its stair) out of the stores into this place, what was there going back. */
+    private static boolean put(ServerLevel level, Villages.Village v, BlockPos at, BlockState want) {
         BlockState was = level.getBlockState(at);
-        if (was.getBlock() == want.getBlock()) return true;
-        if (!Crafts.take(level, v, s -> s.is(cost), 1) && !Crafts.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return false;
+        if (was == want) return true;
+        Item exact = want.getBlock().asItem();
+        Item base = want.getBlock() instanceof StairBlock ? cutFrom(want.getBlock()) : exact;
+        if (!(want.getBlock() instanceof StairBlock && Crafts.take(level, v, s -> s.is(exact), 1)) && !Crafts.take(level, v, s -> s.is(base), 1)) return false;
         Item back = BridgeKit.back(was);
         if (back != Items.AIR) Crafts.giveBack(level, v, back, 1);
         level.setBlock(at, want, Block.UPDATE_ALL);
         return true;
     }
 
+    /** Take a block out of the way into the stores (an old cheek's post). */
+    private static void lift(ServerLevel level, Villages.Village v, BlockPos at) {
+        BlockState was = level.getBlockState(at);
+        if (was.isAir()) return;
+        Item back = BridgeKit.back(was);
+        if (back != Items.AIR) Crafts.giveBack(level, v, back, 1);
+        level.setBlock(at, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+    }
+
     /**
-     * A door's flight made good in its stone: everything under each step that stands above the ground, down to the ground,
-     * cobblestone (no earth showing under or beside the stairs); and where a step stands more than a block over the
-     * ground beside it, a cheek on that open side, cobblestone to the ground and a cobblestone wall on it.
+     * A door's flight made into a built stair: under every step above the ground a solid fill of the flight's stone, flush
+     * with its sides, down to the ground; and where the ground beside a step is two or more below it, a cheek on each open
+     * side, the same both sides: a stair of the same stone level with the step and facing the same way, filled under to the
+     * ground, so each side is one even slope from the door down. Old cheek posts (an earlier way of doing it) taken away.
      */
-    private static void support(ServerLevel level, Villages.Village v, BlockPos door, Direction out, List<Integer> feet) {
+    private static void support(ServerLevel level, Villages.Village v, BlockPos door, Direction out, List<Integer> feet,
+                                List<Direction> ups, Block stair) {
         int ground = feet.get(feet.size() - 1) - 1;                      // where the way meets the ground: the ground's top
-        BlockState stone = Blocks.COBBLESTONE.defaultBlockState();
+        BlockState stone = Block.byItem(cutFrom(stair)).defaultBlockState();
+        Direction[] sides = { out.getClockWise(), out.getCounterClockWise() };
         for (int i = 0; i < feet.size(); i++) {
             BlockPos col = door.relative(out, i + 1);
             int floor = feet.get(i) - 1;
+            for (Direction side : sides) {
+                BlockPos post = col.relative(side).atY(floor + 1);
+                if (level.getBlockState(post).is(Blocks.COBBLESTONE_WALL)) lift(level, v, post);   // an old cheek's post
+            }
             if (floor <= ground) continue;
             // Under the step: down to the ground's height, and on through any hollow under that to something solid.
             for (int y = floor - 1, n = 0; y > ground - 4 && n < 8; y--, n++) {
@@ -162,20 +197,29 @@ public final class StepKit {
                     if (y <= ground) break;
                     continue;
                 }
-                if (!cobble(level, v, at, stone, Items.COBBLESTONE)) return;
+                if (!put(level, v, at, stone)) return;
             }
             BlockState top = level.getBlockState(col.atY(floor));
-            if (top.is(net.minecraft.tags.BlockTags.DIRT) && !cobble(level, v, col.atY(floor), stone, Items.COBBLESTONE)) return;
-            // The cheeks, on an open side with a drop of more than a block.
-            for (Direction side : new Direction[]{ out.getClockWise(), out.getCounterClockWise() }) {
+            if (!(top.getBlock() instanceof StairBlock) && fill(top) && !put(level, v, col.atY(floor), stone)) return;
+            // The cheeks: only where the drop beside the step is two or more, and on both sides or neither.
+            if (feet.get(i) - (ground + 1) < 2) continue;
+            Direction up = ups.get(i);
+            BlockState cheek = up == null ? stone : BridgeKit.stair(stair, up, false);
+            boolean both = true;
+            for (Direction side : sides) {
                 BlockPos s = col.relative(side);
-                if (!(fill(level.getBlockState(s.atY(floor))) && Footways.passable(level, s.atY(floor + 1)) && Footways.passable(level, s.atY(floor + 2)))) continue;
-                int sideGround = floor;
-                while (sideGround > floor - 6 && fill(level.getBlockState(s.atY(sideGround)))
-                    && !level.getBlockState(s.atY(sideGround)).is(net.minecraft.tags.BlockTags.DIRT)) sideGround--;
-                if (floor - sideGround < 2) continue;                            // a block's drop or less: no cheek wanted
-                for (int y = sideGround + 1; y <= floor; y++) if (!cobble(level, v, s.atY(y), stone, Items.COBBLESTONE)) return;
-                if (!cobble(level, v, s.atY(floor + 1), Blocks.COBBLESTONE_WALL.defaultBlockState(), Items.COBBLESTONE_WALL)) return;
+                if (!fill(level.getBlockState(s.atY(floor))) || !Footways.passable(level, s.atY(floor + 1)) || !Footways.passable(level, s.atY(floor + 2))) both = false;
+            }
+            if (!both) continue;
+            for (Direction side : sides) {
+                BlockPos s = col.relative(side);
+                for (int y = floor - 1, n = 0; n < 8; y--, n++) {
+                    BlockState st = level.getBlockState(s.atY(y));
+                    if (y <= ground && !(st.isAir() || st.canBeReplaced())) break;
+                    if (!fill(st)) break;
+                    if (!put(level, v, s.atY(y), stone)) return;
+                }
+                if (!put(level, v, s.atY(floor), cheek)) return;
             }
         }
     }

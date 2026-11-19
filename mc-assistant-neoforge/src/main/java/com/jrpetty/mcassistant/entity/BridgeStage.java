@@ -227,6 +227,20 @@ public final class BridgeStage {
         return out;
     }
 
+    /** The doors' scene alone beside (x, z) (/village region stage bridges doors), with its front and three-quarter views. */
+    static List<String> stageDoors(ServerLevel level, BlockPos at) {
+        List<String> out = new ArrayList<>();
+        int x = at.getX() + 40, z = at.getZ();
+        int y = Math.max(level.getSeaLevel() + 2, at.getY());
+        force(level, x, z, true);
+        List<BlockPos> doors = doors(level, x, z, y);
+        force(level, x, z, false);
+        for (BlockPos d : doors) out.add("DOOR " + d.toShortString() + " (" + (d.getY() - y) + " up)");
+        out.add("VIEW front " + (x + 6) + " " + (y + 4) + " " + (z + 27) + " " + (x + 6) + " " + (y + 1) + " " + (z + 12));
+        out.add("VIEW quarter " + (x + 24) + " " + (y + 7) + " " + (z + 25) + " " + (x + 6) + " " + (y + 1) + " " + (z + 12));
+        return out;
+    }
+
     private static void force(ServerLevel level, int x, int z, boolean on) {
         for (int cx = (x - 48) >> 4; cx <= (x + 260) >> 4; cx++) for (int cz = (z - 96) >> 4; cz <= (z + 120) >> 4; cz++) level.setChunkForced(cx, cz, on);
     }

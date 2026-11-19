@@ -283,7 +283,11 @@ public final class Region {
                 List<String> out = BridgeStage.stage(ctx.getSource().getLevel(), BlockPos.containing(ctx.getSource().getPosition()));
                 ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", out)), false);
                 return out.size();
-            })).then(Commands.literal("rail").executes(ctx -> {
+            }).then(Commands.literal("doors").executes(ctx -> {
+                List<String> out = BridgeStage.stageDoors(ctx.getSource().getLevel(), BlockPos.containing(ctx.getSource().getPosition()));
+                ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", out)), false);
+                return out.size();
+            }))).then(Commands.literal("rail").executes(ctx -> {
                 List<String> out = RegionStage.stageRail(ctx.getSource().getLevel(), here(ctx));
                 ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", out)), false);
                 return out.size();
