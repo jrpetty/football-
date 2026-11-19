@@ -847,10 +847,10 @@ public class PlayerLifeGameTests {
             // A player's building on the register, 7 across (half 3), 15 blocks west of the heart.
             BlockPos plot = heart.offset(-15, 0, 0);
             com.jrpetty.mcassistant.entity.PropertyMarket.register(level, village, p.getUUID(), "P", "P's barn", "barn", plot, Direction.NORTH, "", 3, 3);
-            // A town building of half 2 beside it: touching (gap 0) and a block off (gap 1) crowd it; two blocks off do not.
+            // A town building of half 2 beside it: over it or wall to wall crowds it; with a block's gap between, it may go up.
+            helper.assertTrue(com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, plot.offset(3 + 2, 0, 0), 2, 2), "over its wall: kept off");
             helper.assertTrue(com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, plot.offset(3 + 2 + 1, 0, 0), 2, 2), "wall to wall: kept off");
-            helper.assertTrue(com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, plot.offset(3 + 2 + 2, 0, 0), 2, 2), "a block's gap is kept clear");
-            helper.assertTrue(!com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, plot.offset(3 + 2 + 3, 0, 0), 2, 2), "past the gap: free");
+            helper.assertTrue(!com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, plot.offset(3 + 2 + 2, 0, 0), 2, 2), "a block's gap between: free");
             // What a player built itself: two solid blocks of its own.
             BlockPos own = heart.offset(0, 0, 18);
             helper.assertTrue(!com.jrpetty.mcassistant.entity.PlayerGap.crowds(level, village, own, 2, 2), "open ground: free");

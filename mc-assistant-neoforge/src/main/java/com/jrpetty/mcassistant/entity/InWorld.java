@@ -158,6 +158,8 @@ public final class InWorld implements PlayerLife.Page {
         r("fletcher", "info", "The fletcher: the Production page", "page:Production"),
         r("diver", "info", "The diver: the Harbour page", "page:Harbour"),
         r("redstone", "info", "The redstone works: the Production page", "page:Production"),
+        r("region", "info", "The region round the town (its neighbours, roads and trade): the Region page of the city books", "page:Region"),   // [join21]
+        r("regalia", "civic", "Who wears the town's regalia: the ruler crowned and robed in the street, its house and its council; the Leader's page names them", "page:Leader"),   // [join21]
         r("sweeper", "info", "The sweeper: the Town page", "page:Town"),
         r("founding", "info", "Founding a town: the village board (its founding screen)", ""),
         r("spawn", "info", "A town of folk: set a Village Folk spawner, or found one at a village board", ""));
