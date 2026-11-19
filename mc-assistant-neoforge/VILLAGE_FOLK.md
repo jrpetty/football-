@@ -14647,3 +14647,42 @@ level from the pithead, hardly a hop; fx03 the mountain town's farmland on groun
 the hill houses' rig; fx05 a house and a hall raised a storey with no column of their rooms open to the sky; fx06 (not
 required, minutes long) ct01's lake town at the admin's speed, nothing off its streets; fx00 (not required) a young town's
 mine in a hill of rock for two days, for the numbers.
+
+## Bridges and steps that look built, not scattered [bridges18]
+
+Every bridge and every step the folk lay now comes out of one kit, so a crossing looks the same from one town to the
+next and nothing is patched together from whatever the stores had that day.
+
+- **Road bridges** (the roads between towns, RoadWorks; a colony's road, Roads; entity/BridgeKit). The road gang no
+  longer lays planks flush on the water a line at a time, ragged where the road meets the river slantwise and without
+  railings on its first pass. The whole crossing is drawn at once and laid a dozen blocks a step: square to the river
+  on the middle line of the crossing; a level deck as wide as the road and a block more each side, a clear block over
+  the water so a boat passes under it (or level with the lower bank where the banks stand high); abutments under the
+  ends; piers at even spacing (four to six apart, the same either side of the middle) down to the river bed; a fence
+  (timber) or a wall (stone) along both edges; a post with a lantern at each end and lanterns at even spacing between;
+  stairs of the bridge's own material at both ends down to the ground, the road's width, cheek blocks either side and
+  a landing every four steps on a long ramp. A path or a gravel road gets a timber bridge (a plank deck between log
+  beams, log posts with a cross beam for piers); a stone road a stone bridge (the deck edge to edge in stone, piers the
+  deck's width with an arch's shoulders, upside-down stairs, either side). The material is chosen once for the whole
+  bridge from what the stores hold (stone bricks if there are enough for all of it, else cobblestone; log beams if
+  there are logs, else planks) and the bridge waits for that material rather than taking another. When a road is made
+  stone the timber bridge is rebuilt in stone on the same lines, its timber going back into the stores. The road's own
+  kerbs, milestones and lamps keep off the bridge's ramps. A town's crossings are kept in its notes, so a restart draws
+  the same bridge.
+- **The ferry's stone bridge** (Bridges) is built in one stone, chosen when it is begun (stone bricks if the stores
+  hold most of it, else cobblestone), never a patchwork of bricks, cobbles and stone; its lanterns stand at both ends of
+  both walls and at even spacing between.
+- **Steps.** At a door (DoorWays), once the way in is walkable, each place a block above the next is made a
+  cobblestone stair facing up the way: a door stands on a single stair or a short flight, never on a bare block. On a
+  gravel or stone road (RoadWorks) that climbs a block from one place to the next, a stair across the road's width in
+  its stone (stone brick stairs on stone bricks, cobblestone stairs on cobbles and gravel): a hill road is a stepped
+  road and nobody jumps.
+- **Old saves.** Once a day a town whose gang is not out on a road goes over its own roads' crossings and lays the
+  kit's bridge where the old flush planks were (a few dozen blocks a day, out of its stores), taking the old planks and
+  rails up into the stores. Only the town's own roads' crossings are touched, never a player's build: a block with
+  anything in it, or anything built that is no bridge's, is left where it is.
+- **Checked by** entity/BridgeStairAudit (mixed materials, gaps in the deck, missing railings over a drop, changes of
+  height along the deck, full blocks to climb, stairs facing the wrong way, long flights with no landing, dark places
+  over the water, and the walk across) and BridgeStairGameTests (bs01 a path's timber bridge, bs02 a stone road's
+  bridge, bs03 a colony road's bridge, bs04 a stone road over a stepped hill, bs05 doors one, two and three blocks off
+  the ground and one sunk); the pictures' stage is /village region stage bridges (operators).

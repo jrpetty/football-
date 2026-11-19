@@ -115,6 +115,7 @@ public final class RoadWorks {
         LINES.clear();
         WINDOW.clear();
         Roadside.resetForTests();
+        BridgeKit.resetForTests();                                       // [bridges18]
         Routes.resetForTests();                                          // [links12]
     }
 
@@ -259,6 +260,7 @@ public final class RoadWorks {
         UUID id = v.id();
         if (Villages.headcount(id) < 6) return;
         Road working = workingOn(v);
+        if (working == null) BridgeKit.tidy(level, v);                  // [bridges18] an old bridge of the town's roads made over, gently
         if (working == null) {
             if (level.getGameTime() % 1200L >= 200L) return;              // a look for the next road once a minute
             working = choose(level, v);
@@ -336,6 +338,11 @@ public final class RoadWorks {
             if (!decree && !inATown(level, p[0], p[1]) && !TownJobs.atWork(level, v, works, Visitors.surface(level, head),
                     "making the road to " + Villages.name(o) + " " + GRADES[next], AssistantEntity.StationTask.HAUL)) break;
             String unpaid = step(level, v, r, i, next);
+            if (BridgeKit.MORE.equals(unpaid)) {                          // [bridges18] part of a bridge laid: more there next
+                laid++;
+                h.waiting = "";
+                continue;
+            }
             if (unpaid != null) {
                 h.waiting = unpaid;
                 break;
@@ -434,6 +441,11 @@ public final class RoadWorks {
     static String step(ServerLevel level, Villages.Village v, Road r, int i, int grade) {
         int[] p = r.line().get(i);
         if (inATown(level, p[0], p[1]) || VanillaVillages.within(level, p[0], p[1], 4)) return null;
+        // [bridges18] Water under this step (or the kit's bridge over it already): the bridge across the whole crossing.
+        boolean[] dry = { false };
+        String bridged = BridgeKit.roadStep(level, v, r, i, grade, dry);
+        if (!dry[0]) return bridged;
+        boolean nearBridge = BridgeKit.nearBridge(r.a(), "road/" + r.b(), i, 8);
         Roads.Ground g = Roads.ground(level, p[0], p[1]);
         if (g == null) return null;
         boolean alongX = r.alongX(i);                                    // [links12] the way it runs here
@@ -468,6 +480,10 @@ public final class RoadWorks {
                 }
             }
             clearAbove(level, v, top);
+        }
+        if (nearBridge) return null;                                     // [bridges18] the bridge's ramps: its own kerbs and lights
+        if (grade >= 2) {                                                // [bridges18] a block up the road: a stair, in the stone either side
+            for (int j = Math.max(0, i - 1); j <= Math.min(r.length() - 1, i + 1); j++) StepKit.road(level, v, r, j, r.alongX(j));
         }
         if (grade >= 3) kerbs(level, v, r, i, roadY, alongX);
         if (grade >= 2) {
