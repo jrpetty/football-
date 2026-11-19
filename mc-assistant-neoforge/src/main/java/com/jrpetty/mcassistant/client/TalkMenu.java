@@ -396,6 +396,7 @@ public final class TalkMenu {
                 PLANNER_NEXT,                                                // [roles-e] the town planner's plans
                 // [civic-land] The taxes (any folk), and a knight's own: its service, its vote, its retinue.
                 say("taxes", Items.GOLD_NUGGET, "What are the taxes here?"),
+                say("property", Items.OAK_DOOR, "I'd like to see the property office"),   // [orders17] building orders, the register, the market
                 TAX_PAY,
                 say("tax_lower", Items.FEATHER, "The taxes should be lower"),
                 say("knight_service", Items.IRON_SWORD, "What's my standing in the town's service?"),
