@@ -362,7 +362,7 @@ public final class ItemUses {
     public record Verdict(boolean yes, String who, String why, int buyers, int qty, int mostEach) {
         /** "Tom, farmer: its hoe is nearly worn through (and 2 more)", or "Nobody: the homes are lit already". */
         public String line() {
-            if (!yes) return "Nobody needs it: " + why;
+            if (!yes) return why.contains("can't afford") ? why : "Nobody needs it: " + why;
             return who + ": " + why + (buyers > 1 ? " (and " + (buyers - 1) + " more)" : "");
         }
     }
@@ -839,6 +839,18 @@ public final class ItemUses {
         return room;
     }
 
+    /** The most whoever pays for this need could pay now, coin: its purse, its firm's till, the treasury. */
+    static int means(VillageFolkEntity f, Need n) {
+        return switch (n.payer()) {
+            case OWN -> f.purse();
+            case FIRM -> {
+                Business b = n.firm() == null || f.ownerId() == null ? null : Businesses.of(f.ownerId(), n.firm());
+                yield b == null ? 0 : (int) Math.min(Integer.MAX_VALUE, b.till / 100);
+            }
+            case TOWN -> f.ownerId() == null ? 0 : Ledger.coins(f.ownerId());
+        };
+    }
+
     private static boolean canAfford(VillageFolkEntity f, Need n, int price) {
         return switch (n.payer()) {
             case OWN -> f.purse() >= price;
@@ -1187,13 +1199,18 @@ public final class ItemUses {
         if (kinds.isEmpty()) return new Verdict(false, "", "what would anybody here do with " + counted(s, 1) + "?", 0, 0, 0);
         int buyers = 0, qty = 0, most = 0;
         Want best = null;
-        VillageFolkEntity bestF = null;
+        VillageFolkEntity bestF = null, broke = null;
+        int brokeN = 0;
         Map<String, Integer> why = new HashMap<>();
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || !f.isAlive()) continue;
             Want w = want(f, s);
             if (!w.yes()) {
                 why.merge(w.reason(), 1, Integer::sum);
+                if (w.reason().startsWith("I can't afford")) {             // wanted, but its purse won't run to it
+                    brokeN++;
+                    if (broke == null) broke = f;
+                }
                 continue;
             }
             buyers++;
@@ -1203,6 +1220,11 @@ public final class ItemUses {
                 best = w;
                 bestF = f;
             }
+        }
+        if (best == null && broke != null) {
+            String who = broke.displayNameCap() + (broke.stationTask() == StationTask.NONE ? "" : ", " + broke.stationTask().name().toLowerCase(Locale.ROOT));
+            return new Verdict(false, who, who + " needs it but can't afford it just now" + (brokeN > 1 ? " (and " + (brokeN - 1) + " more)" : "")
+                + ": priced lower, it would sell", 0, 0, 0);
         }
         if (best == null) {
             Kind k = kinds.iterator().next();
@@ -1248,6 +1270,7 @@ public final class ItemUses {
                 double each = worthEach(level, village, n.sample());
                 int most = Math.max(1, (int) Math.floor(each * keen(f, n) + 1e-9));
                 if (keen(f, n) >= 1.0) most = Math.max(most, (int) Math.ceil(each - 1e-9));
+                most = Math.min(most, means(f, n));                            // no more than whoever pays has
                 String key = n.key().startsWith("piece.seat") ? "piece.seat" : n.key().startsWith("armour.") || n.key().startsWith("input.")
                     ? n.key() : n.key().startsWith("tool") ? "tool." + PlayerStalls.key(n.sample()) : n.key();
                 TownNeed was = by.get(key);

@@ -318,7 +318,8 @@ public class StallScreen extends Screen {
             g.drawString(font, ware.getInt("sold7") > 0 ? Integer.toString(ware.getInt("sold7")) : "—", x + C_SOLD, ry + 2, Ui.INK, false);
             Judged judged = judge(price, going);
             CompoundTag use = ware.getCompound("use");                            // [uses16] nobody here has a use for it
-            if (use.contains("useful") && !use.getBoolean("useful")) judged = new Judged("no use to anybody here", Ui.BAD);
+            if (use.contains("useful") && !use.getBoolean("useful")) judged = use.getString("why").contains("can't afford")
+                ? new Judged("wanted: too dear for them", Ui.WARN) : new Judged("nobody needs it", Ui.BAD);
             small(g, Ui.clip(font, judged.words(), (int) ((inner - C_NOTE) / 0.75)), x + C_NOTE, ry + 3, judged.colour());
         }
         if (list.isEmpty()) {

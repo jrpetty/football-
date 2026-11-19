@@ -14162,7 +14162,7 @@ for and who has a use for it, buy only that, in the number the use takes, and pu
     carrying it home to hang in its home"), and what it would buy now and why.
   - The stall's screen: a button **What the town needs** turns the wares' table over to what the town's folk,
     households, firms and departments want now, how many folk, how many in all, the most one would pay and why (also on
-    a stall to let, before you rent it). Each ware's row says "no use to anybody here" when nobody would buy it; the mouse
+    a stall to let, before you rent it). Each ware's row says "nobody needs it" when nobody would buy it, or "wanted: too dear for them" when somebody needs it but cannot pay that much ("Tom, guard, needs it but can't afford it just now"); "pays up to" is never more than the payer has; the mouse
     over it says what it is for and who would buy it and why ("Tom, guard: it goes on its rounds with no helmet (and 2
     more); up to 9c each, 3 wanted in all"), or why nobody would ("Nobody needs it: nobody here rides"). The books' second
     column, **Turned down**, has what was thought too dear and what was turned down as no use, and why.
