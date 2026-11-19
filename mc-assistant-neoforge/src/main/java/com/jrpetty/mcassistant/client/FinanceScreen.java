@@ -242,12 +242,13 @@ public class FinanceScreen extends Screen {
         long ago = data.getLong("netWeekAgo");
         boolean oneTown = data.contains("town");
         if (oneTown) cash = data.getCompound("groups").getLong("Savings");
-        String[] labels = {oneTown ? "Net worth here" : "Net worth", oneTown ? "Savings here" : "Cash", "Income", "Spending", "Profit / loss"};
+        String[] labels = {"Net worth", oneTown ? "Savings" : "Cash", "Income", "Spending", "Profit / loss"};
         String[] values = {money(net), money(cash), money(in), money(out), signed(in - out)};
         int[] inks = {net >= 0 ? TEXT : DANGER, TEXT, SUCCESS, out > 0 ? DANGER : TEXT, in - out > 0 ? SUCCESS : in - out < 0 ? DANGER : TEXT};
-        String[] subs = {hasAgo ? signed(net - ago) + " on the week" : "the first week", oneTown ? "bank, club, treasury" : data.getBoolean("cashKnown") ? "in your pack" : "when last seen",
+        String[] subs = {hasAgo ? signed(net - ago) + " on the week" : "first week", oneTown ? "put by here" : data.getBoolean("cashKnown") ? "in your pack" : "when last seen",
             "last week " + money(inL), "last week " + money(outL), "last week " + signed(inL - outL)};
-        String[] tips = {"All you have, less all you owe. The arrow: against a week ago.", "The village coin you carry in your pack.",
+        String[] tips = {oneTown ? "All you have in " + data.getString("town") + ", less all you owe it. The arrow: against a week ago." : "All you have, less all you owe. The arrow: against a week ago.",
+            oneTown ? "What you have put by in " + data.getString("town") + ": its bank, savings club and treasury." : "The village coin you carry in your pack.",
             "Income this week (the last seven days): wages, shifts, sales, rent, dividends, interest, coupons, rewards.",
             "Spending this week (the last seven days): rent, taxes, fees, goods, food, loan payments, fines, gifts.",
             "Income less spending over the last seven days (savings and investments moved are neither)."};
