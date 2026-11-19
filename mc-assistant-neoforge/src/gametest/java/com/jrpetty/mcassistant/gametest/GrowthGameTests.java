@@ -418,8 +418,9 @@ public class GrowthGameTests {
     }
 
     /**
-     * [growth22] An Iron Age town short of the iron its age asks for puts it by: with forty bars in its stores (a golem's
-     * thirty-six and more), the golem keeper is told the town is putting its iron by, not handed the age's iron.
+     * [growth22] An Iron Age town short of the iron its age asks for puts it by: with forty bars in its stores it has none to
+     * spare for what can wait (the fire station's cauldron and buckets, the foundry's steel, a restored cauldron); with what
+     * its age asks for in the stores, it has. (Its watch's kit, its golems, its crossbows and its constable's badge never wait.)
      */
     @GameTest(template = "empty", timeoutTicks = 300, batch = "gw07_iron_put_by")
     public static void gw07_iron_put_by(GameTestHelper helper) {
@@ -446,10 +447,17 @@ public class GrowthGameTests {
             Villages.forgetStock();
             boolean saving = false;
             for (Villages.Need n : Villages.needs(level, village)) if (n.task() == Villages.Task.IRON) saving = true;
+            boolean spare = com.jrpetty.mcassistant.entity.Crafts.ironToSpare(level, v);
+            box.setItem(2, new net.minecraft.world.item.ItemStack(Items.IRON_INGOT, 64));
+            box.setItem(3, new net.minecraft.world.item.ItemStack(Items.IRON_INGOT, 64));
+            box.setItem(4, new net.minecraft.world.item.ItemStack(Items.IRON_INGOT, 64));
+            box.setChanged();
+            Villages.forgetStock();
+            boolean spareAfter = com.jrpetty.mcassistant.entity.Crafts.ironToSpare(level, v);
             String golem = com.jrpetty.mcassistant.entity.Golems.cannotAfford(level, v);
-            Kit.log("[VT] gw07 the age short of iron " + saving + "; a golem: " + golem);
-            helper.assertTrue(saving, "the Iron Age town short of its age's iron");
-            helper.assertTrue(golem != null && golem.contains("putting its iron by"), "no golem out of the age's iron: " + golem);
+            Kit.log("[VT] gw07 the age short of iron " + saving + ", iron to spare " + spare + "; with 232 bars, to spare " + spareAfter + "; a golem: " + golem);
+            helper.assertTrue(saving && !spare, "the Iron Age town short of its age's iron has none to spare: saving " + saving + ", spare " + spare);
+            helper.assertTrue(spareAfter, "with its age's iron in the stores it has");
             helper.succeed();
         });
     }

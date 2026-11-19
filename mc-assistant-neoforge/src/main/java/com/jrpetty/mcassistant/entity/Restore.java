@@ -810,7 +810,7 @@ public final class Restore {
             case FENCE -> make(level, v, 4, Blocks.OAK_FENCE, Items.OAK_FENCE, 2);
             case GATE -> make(level, v, 4, Blocks.OAK_FENCE_GATE, Items.OAK_FENCE_GATE, 0);
             case BARREL -> make(level, v, 7, Blocks.BARREL, Items.BARREL, 0);
-            case CAULDRON -> !Crafts.savingIron(level, v) && Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 7) ? Blocks.CAULDRON.defaultBlockState() : null;   // [growth22]
+            case CAULDRON -> Crafts.ironToSpare(level, v) && Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 7) ? Blocks.CAULDRON.defaultBlockState() : null;   // [growth22]
             default -> null;
         };
     }

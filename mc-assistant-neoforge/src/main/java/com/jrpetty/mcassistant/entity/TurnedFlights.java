@@ -93,7 +93,7 @@ public final class TurnedFlights {
     static List<Step> flight(Level level, DoorWays.Door d, Direction side) {
         // The flight as first planned, while it is being built and after: its own half-laid fill is no ground to stop at.
         List<Step> kept = PLANNED.get(key(d, side));
-        if (kept != null) return kept;
+        if (kept != null && kept.get(0).col().equals(d.pos().relative(d.out())) && kept.get(0).feet() == d.pos().getY()) return kept;
         List<Step> f = plan(level, d, side);
         if (f != null && f.size() > 2) PLANNED.put(key(d, side), f);
         return f;

@@ -212,7 +212,7 @@ public final class InventionArms {
         if (!Inventions.known(id, Invention.STEEL) || !InventionWorks.stands(id, InventionWorks.FOUNDRY)) return null;
         if (Crafts.stock(level, v, steelIngot()) >= STEEL_KEPT) return null;
         if (Crafts.stock(level, v, s -> s.is(Items.IRON_INGOT)) <= Crafts.IRON_KEPT || Crafts.stock(level, v, s -> s.is(ItemTags.COALS)) < 1) return null;
-        if (Crafts.savingIron(level, v)) return null;                    // [growth22] no steel out of the iron the age is putting by
+        if (!Crafts.ironToSpare(level, v)) return null;                  // [growth22] no steel out of the iron the age is putting by
         if (!Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 1)) return null;
         if (!Crafts.take(level, v, s -> s.is(ItemTags.COALS), 1)) {
             Crafts.store(level, v, new ItemStack(Items.IRON_INGOT));

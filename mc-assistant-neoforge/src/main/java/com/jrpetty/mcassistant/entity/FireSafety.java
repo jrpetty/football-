@@ -420,7 +420,7 @@ public final class FireSafety {
             BlockPos spot = cauldronSpot(level, b);
             if (spot == null) continue;
             // A cauldron put by, or seven iron, and never the town's last sixteen (its tools and its age want them).
-            boolean pot = Market.stock(level, v.id(), s -> s.is(Items.CAULDRON)) > 0 || !Crafts.savingIron(level, v) && Market.stock(level, v.id(), s -> s.is(Items.IRON_INGOT)) >= 7 + IRON_KEPT;   // [growth22] not out of the age's iron
+            boolean pot = Market.stock(level, v.id(), s -> s.is(Items.CAULDRON)) > 0 || Crafts.ironToSpare(level, v) && Market.stock(level, v.id(), s -> s.is(Items.IRON_INGOT)) >= 7 + IRON_KEPT;   // [growth22] not out of the age's iron
             // [fields] No iron to spare for a cauldron: a rain barrel out of the stores by it instead (FieldTools).
             if (!pot && FieldTools.barrelInstead(level, v, spot, FireBrigade.named(b.structure()))) {
                 t.cauldronsAt.add(spot.asLong());
@@ -432,7 +432,7 @@ public final class FireSafety {
             if (!pot) return n;
             if (!TownJobs.atWork(level, v, "firesafety", spot, "setting a cauldron of water by " + FireBrigade.named(b.structure()))) return n;
             if (!Crafts.take(level, v, s -> s.is(Items.CAULDRON), 1)
-                    && !(!Crafts.savingIron(level, v) && Market.stock(level, v.id(), s -> s.is(Items.IRON_INGOT)) >= 7 + IRON_KEPT && Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 7))) return n;   // [growth22]
+                    && !(Crafts.ironToSpare(level, v) && Market.stock(level, v.id(), s -> s.is(Items.IRON_INGOT)) >= 7 + IRON_KEPT && Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 7))) return n;   // [growth22]
             // Its water: a bucket of the stores' (the bucket back empty), else filled at the water near, else the rain's.
             BlockState put = Blocks.CAULDRON.defaultBlockState();
             if (Crafts.take(level, v, s -> s.is(Items.WATER_BUCKET), 1)) {
@@ -510,7 +510,7 @@ public final class FireSafety {
         boolean any = false;
         while (have < RACK) {
             boolean got = Crafts.take(level, v, s -> s.is(Items.BUCKET), 1)
-                || !Crafts.savingIron(level, v) && Market.stock(level, v.id(), s -> s.is(Items.IRON_INGOT)) >= 3 + IRON_KEPT && Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 3);   // [growth22]
+                || Crafts.ironToSpare(level, v) && Market.stock(level, v.id(), s -> s.is(Items.IRON_INGOT)) >= 3 + IRON_KEPT && Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 3);   // [growth22]
             if (!got) break;
             if (!putIn(level, racks, new ItemStack(Items.BUCKET))) {
                 Crafts.store(level, v, new ItemStack(Items.BUCKET));
