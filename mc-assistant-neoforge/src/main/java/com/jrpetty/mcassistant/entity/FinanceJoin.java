@@ -128,10 +128,15 @@ public final class FinanceJoin {
         for (String oid : BuildOrders.ordersOf(id, s.who)) {
             BuildOrders.Status st = BuildOrders.status(level, oid);
             if (st == null || !(st.status.equals("open") || st.status.equals("awaiting"))) continue;
-            long paid = Math.max(0, st.paid) * 100L;
+            // The works paid for so far (laid, or held for what is still to be laid): the land is its plot's line on the
+            // register, and the permit, rates and registry are spent.
+            CompoundTag o = BuildOrders.order(oid);
+            long sunk = o == null ? 0 : o.getLong("land") + o.getLong("fees") + o.getLong("premium");
+            long paid = Math.max(0, st.paid * 100L - sunk);
             s.assets.add(new FinanceSheet.Row(FinanceSheet.PROPERTY, "Going up: " + st.name, paid, town, link,
-                st.percent + "% built (" + st.stage + "); " + st.paid + " of " + st.total + "c paid to the builders so far"
-                    + (st.refundable > 0 ? ", " + st.refundable + "c of it still held and refundable" : "") + "."));
+                st.percent + "% built (" + st.stage + "); " + st.paid + " of " + st.total + "c paid to the builders so far, "
+                    + Businesses.pence(paid) + " of it for the works (the land is on its own line, the fees spent)"
+                    + (st.refundable > 0 ? "; " + st.refundable + "c still held and refundable" : "") + "."));
             if (st.due > 0) FinanceSheet.bill(s, "Builders: " + st.name, town, st.due * 100L, day, st.status.equals("awaiting"),
                 st.status.equals("awaiting") ? "The balance: the keys wait for it." : "The stage payment, now half of it is laid.");
             int rest = Math.max(0, st.total - st.paid - st.due);

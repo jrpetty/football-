@@ -141,6 +141,7 @@ public class LifeScreen extends Screen {
             tx += tw + 2;
         }
         // the body, scrolled
+        headerZones = zones.size();                                         // [join21] the header's own: Close, Back, the tabs
         int y0 = contentTop(), y1 = contentBottom();
         UiStyle.well(g, left + PAD - 2, y0 - 2, w - PAD * 2 + 4, y1 - y0 + 2, UiStyle.PAGE);
         g.enableScissor(left + PAD, y0, left + w - PAD, y1);
@@ -384,7 +385,7 @@ public class LifeScreen extends Screen {
             for (int i = zones.size() - 1; i >= 0; i--) {
                 int[] z = zones.get(i);
                 if (mx >= z[0] && mx < z[2] && my >= z[1] && my < z[3]) {
-                    boolean header = z[1] < contentTop();
+                    boolean header = i < headerZones;                       // [join21] a body button scrolled up under the tabs is not one
                     if (!header && !inBody) continue;
                     acts.get(i).run();
                     return true;
@@ -395,6 +396,8 @@ public class LifeScreen extends Screen {
     }
 
     private String picHover = "";
+    /** [join21] How many of the zones are the header's (drawn before the body). */
+    private int headerZones;
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {

@@ -141,7 +141,7 @@ public class PropertyScreen extends Screen {
         g.disableScissor();
         contentH = y + scroll - top;
         scrollBar(g, px + pw - S2 - 4, top, bottom - top, scroll, Math.max(0, contentH - (bottom - top)), bottom - top);
-        super.render(g, mouseX, mouseY, partialTick);
+        for (var r : renderables) r.render(g, mouseX, mouseY, partialTick);   // [join21] not super.render: it blurred the page drawn above
     }
 
     private List<String> wrap(String s, int w) {
