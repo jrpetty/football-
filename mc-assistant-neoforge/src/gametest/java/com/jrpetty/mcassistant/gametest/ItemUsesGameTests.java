@@ -113,6 +113,7 @@ public class ItemUsesGameTests {
         box.setItem(2, new ItemStack(Items.COBBLESTONE, 64));
         box.setItem(3, new ItemStack(Items.COBBLESTONE, 64));
         box.setItem(4, new ItemStack(Items.RED_WOOL, 8));
+        box.setItem(5, new ItemStack(Items.POTATO, 64));                 // the town not hungry: each folk buys for its own wants
         Villages.forgetStock();
     }
 

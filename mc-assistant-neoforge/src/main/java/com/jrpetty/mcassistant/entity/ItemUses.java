@@ -1019,6 +1019,10 @@ public final class ItemUses {
     /** A tool or a blade, taken up: in its hand and its pack, the one it replaces (the worse) to the stores. */
     private static String takeUp(ServerLevel level, Villages.Village v, VillageFolkEntity f, ItemStack got) {
         Toolrack.Tool tool = Toolrack.of(f.stationTask());
+        if (tool == null || !Toolrack.is(tool, got)) {                     // a work item (a rope, props), a tool beside its own
+            stash(level, v, f, got);
+            return "keeps it in its pack for its work";
+        }
         ItemStack one = got.split(1);
         String old = "";
         if (tool != null) {
