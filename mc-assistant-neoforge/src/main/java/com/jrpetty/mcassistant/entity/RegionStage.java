@@ -98,6 +98,7 @@ public final class RegionStage {
             out.add("no road between them");
             return out;
         }
+        for (int i = 0; i < r.length(); i += 8) level.getChunk(r.line().get(i)[0] >> 4, r.line().get(i)[1] >> 4);   // the ground along it awake
         for (Villages.Village v : new Villages.Village[]{ a, b }) {
             UUID o = r.other(v.id());
             for (int g = 1; g <= 2; g++) {
