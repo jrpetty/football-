@@ -482,7 +482,9 @@ public final class RoadWorks {
             clearAbove(level, v, top);
         }
         if (nearBridge) return null;                                     // [bridges18] the bridge's ramps: its own kerbs and lights
-        if (grade >= 2) StepKit.road(level, v, r, i, alongX);           // [bridges18] a block up the road: a stair
+        if (grade >= 2) {                                                // [bridges18] a block up the road: a stair, in the stone either side
+            for (int j = Math.max(0, i - 1); j <= Math.min(r.length() - 1, i + 1); j++) StepKit.road(level, v, r, j, r.alongX(j));
+        }
         if (grade >= 3) kerbs(level, v, r, i, roadY, alongX);
         if (grade >= 2) {
             milestone(level, v, r, i, alongX);

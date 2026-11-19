@@ -47,6 +47,12 @@ public final class BridgeStairAudit {
         public int mixed, gaps, rails, uneven, fullSteps, wrongStairs, landings, unlit, walk, overWater;
         public boolean walked;
         public final List<String> families = new ArrayList<>();
+        /** Where the first few faults are, to find them by. */
+        public final List<String> where = new ArrayList<>();
+
+        void at(String what, BlockPos p) {
+            if (where.size() < 6) where.add(what + "@" + p.toShortString());
+        }
 
         public int faults() { return mixed + gaps + rails + uneven + fullSteps + wrongStairs + landings + unlit; }
 
@@ -60,7 +66,7 @@ public final class BridgeStairAudit {
         public String toString() {
             return "mixed " + mixed + " " + families + ", gaps " + gaps + ", rails " + rails + ", uneven " + uneven + ", fullSteps " + fullSteps
                 + ", wrongStairs " + wrongStairs + ", landings " + landings + ", unlit " + unlit + " (walk " + walk + ", over water " + overWater
-                + ", dry " + walked + ")";
+                + ", dry " + walked + ")" + (where.isEmpty() ? "" : " " + where);
         }
     }
 
@@ -173,33 +179,33 @@ public final class BridgeStairAudit {
         int run = 0;
         for (int i = 0; i < w.size(); i++) {
             BlockPos p = w.get(i);
-            if (wet(level, p)) { c.gaps++; c.walked = false; continue; }
+            if (wet(level, p)) { c.gaps++; c.walked = false; c.at("gap", p); continue; }
             boolean water = overWater(level, p);
             if (water) {
                 c.overWater++;
                 boolean lit = false;
                 for (BlockPos l : lights) if (Math.abs(l.getX() - p.getX()) + Math.abs(l.getZ() - p.getZ()) <= 7 && Math.abs(l.getY() - p.getY()) <= 4) { lit = true; break; }
-                if (!lit) c.unlit++;
+                if (!lit) { c.unlit++; c.at("dark", p); }
             }
             if (i == 0) continue;
             BlockPos prev = w.get(i - 1);
             int dy = p.getY() - prev.getY();
             Direction d = Direction.getNearest(p.getX() - prev.getX(), 0, p.getZ() - prev.getZ());
-            if (dy != 0 && water && overWater(level, prev)) c.uneven++;
+            if (dy != 0 && water && overWater(level, prev)) { c.uneven++; c.at("uneven", p); }
             if (dy != 0) {
                 run++;
-                if (run == 7) c.landings++;
+                if (run == 7) { c.landings++; c.at("landing", p); }
                 if (Math.abs(dy) == 1) {
                     BlockPos hiFloor = (dy > 0 ? p : prev).below();
                     Direction up = dy > 0 ? d : d.getOpposite();
                     BlockState f = level.getBlockState(hiFloor);
                     if (f.getBlock() instanceof StairBlock) {
-                        if (f.getValue(StairBlock.HALF) != net.minecraft.world.level.block.state.properties.Half.BOTTOM || f.getValue(StairBlock.FACING) != up) c.wrongStairs++;
+                        if (f.getValue(StairBlock.HALF) != net.minecraft.world.level.block.state.properties.Half.BOTTOM || f.getValue(StairBlock.FACING) != up) { c.wrongStairs++; c.at("facing", hiFloor); }
                     } else {
                         boolean eased = f.getBlock() instanceof SlabBlock && f.getValue(SlabBlock.TYPE) == SlabType.BOTTOM;
                         BlockState lo = level.getBlockState((dy > 0 ? prev : p).below());
                         if (lo.getBlock() instanceof SlabBlock && lo.getValue(SlabBlock.TYPE) == SlabType.BOTTOM) eased = true;
-                        if (!eased) c.fullSteps++;
+                        if (!eased) { c.fullSteps++; c.at("step " + f.getBlock().getDescriptionId().replace("block.minecraft.", ""), hiFloor); }
                     }
                 }
             } else {
@@ -215,6 +221,7 @@ public final class BridgeStairAudit {
                     if (!drop) continue;
                     if (railing(level.getBlockState(s)) || railing(level.getBlockState(s.above()))) continue;
                     c.rails++;
+                    c.at("rail", s);
                 }
             }
         }
