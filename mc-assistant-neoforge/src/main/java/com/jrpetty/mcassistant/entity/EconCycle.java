@@ -383,6 +383,12 @@ public final class EconCycle {
         return times + " " + prices + rate;
     }
 
+    /** [econ4] What a folk says of the times on its card (no typing needed): its answer to "how are the times?". */
+    public static String cardLine(VillageFolkEntity f) {
+        if (f.ownerId() == null || phase(f.ownerId()) == null) return "";
+        return talk(f, null, "the times");
+    }
+
     /** One line on the town's times, for its status and books. */
     public static String line(UUID id) {
         CycleModel.Phase ph = phase(id);

@@ -14167,7 +14167,9 @@ FoundingGameTests f04 (the tarn let out, its hill graded, nothing running); Foun
   slows (weekly). And a folk wants less nerve to found a business in a boom and more in a slump.
 - **What the folk say.** Asked about prices, trade, the times or the economy, a folk answers from its town's times
   ("Hard times. I've no work, and few are hiring." "Everything's dearer than it was a week back, nine in the hundred, and
-  the wages chase it.") and the council's rate. The chronicle has each turn of the times.
+  the wages chase it.") and the council's rate; the same answer is on every grown folk's card ("The times"), so nothing
+  needs typing. The chronicle has each turn of the times. Everything a player sees of it is in the books' Dashboard page
+  and the folk's cards; `/village economy` is the same in words, an extra.
 
 ### The treasury that ran dry
 
