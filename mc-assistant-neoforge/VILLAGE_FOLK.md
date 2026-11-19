@@ -14191,7 +14191,8 @@ at 9 coins at its lowest from day ten and never at nought on the last ten mornin
 nineteen). Its times, as they came: the market open on day five, a boom (days 5 to 7), slowing (8 to 11, prices up 12
 to 18 in the hundred a week as a hamlet of sixteen became a town of ninety, the council's rate up to 7.3 in the
 hundred), a slump (12 to 16, prices falling back), recovering (17), a boom again (18 to 23), slowing (24 to 27) and a
-slump (28 to 30); the index 100, 138 at its highest on day 21, 114 on day 30. ER07_RESULT
+slump (28 to 30); the index 100, 138 at its highest on day 21, 114 on day 30. The same town without the reserve (er07, cut off at day
+22 by the run's time): its treasury at nought on day 17, three coins on day 18 and twelve on day 19, the IOUs at 811 coins.
 
 ### Where you see it
 
