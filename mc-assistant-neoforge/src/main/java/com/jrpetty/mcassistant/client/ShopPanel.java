@@ -183,7 +183,9 @@ final class ShopPanel implements ServiceScreen.Panel {
         this.w = w;
         this.h = h;
         compact = w < 380;
-        catW = compact ? 22 : 76;
+        int longest = 0;                                                   // [screens13] room for the longest name (Household)
+        for (String[] c : cats) longest = Math.max(longest, font().width(c[1]));
+        catW = compact ? 22 : Math.max(76, Math.min(92, longest + ICON + 12));
         basketW = compact ? 112 : 140;
         basketX = x + w - basketW;
         listX = x + catW + S1;
@@ -532,7 +534,13 @@ final class ShopPanel implements ServiceScreen.Panel {
             ry += 20;
         }
         g.disableScissor();
-        if (quoted.isEmpty()) text(g, font, "Empty. Pick something with +.", bx + S1 + 2, listTop + 2, basketW - S2, TEXT_FAINT);
+        if (quoted.isEmpty()) {                                            // [screens13] wrapped, not cut short
+            int ey = listTop + 2;
+            for (net.minecraft.util.FormattedCharSequence line : TextCache.splitPlain(font, "Empty. Pick something with +.", basketW - S2 - 4)) {
+                g.drawString(font, line, bx + S1 + 2, ey, TEXT_FAINT, false);
+                ey += LINE;
+            }
+        }
         // The sums.
         int fy = by + bh - footH;
         g.fill(bx + S1, fy - 2, bx + basketW - S1, fy - 1, EDGE_SOFT);

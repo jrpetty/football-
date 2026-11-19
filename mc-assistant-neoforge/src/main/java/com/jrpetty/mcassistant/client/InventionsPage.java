@@ -2,6 +2,7 @@ package com.jrpetty.mcassistant.client;
 
 import com.jrpetty.mcassistant.village.InventionTree;
 import com.jrpetty.mcassistant.village.InventionTree.Invention;
+import com.jrpetty.mcassistant.village.InventionTreeLayout;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.nbt.CompoundTag;
@@ -60,9 +61,6 @@ public final class InventionsPage {
     private static int panFromX, panFromY;
     private record Zone(int x0, int y0, int x1, int y1, Runnable act) {}
     private static final List<Zone> ZONES = new ArrayList<>();
-
-    /** A card's place in the tree, in the tree's own pixels. */
-    private record Place(Invention inv, int x, int y) {}
 
     /** The page. Returns the tooltip for what the mouse is over, or null. */
     @Nullable
@@ -172,27 +170,12 @@ public final class InventionsPage {
         }
         zoomShown = z;
         int cw = CARD_W[z], ch = CARD_H[z], gx = GAP_X[z], gy = GAP_Y[z];
-        int padL = gx / 2 + 2;
-        // Place every card: its column by its branch, its band by its step down the road of needs, stacked in the band.
-        int[] rows = new int[maxDepth + 1];
-        int[][] stack = new int[BRANCHES.length][maxDepth + 1];
-        for (Invention inv : Invention.values()) rows[inv.depth()] = Math.max(rows[inv.depth()], ++stack[inv.branch.ordinal()][inv.depth()]);
-        int[] bandTop = new int[maxDepth + 2];
-        int by = 0;
-        for (int d = 1; d <= maxDepth; d++) {
-            bandTop[d] = by;
-            by += STEP_HEAD + rows[d] * (ch + gy);
-        }
-        bandTop[maxDepth + 1] = by;
-        Map<Invention, Place> at = new EnumMap<>(Invention.class);
-        int[][] placed = new int[BRANCHES.length][maxDepth + 1];
-        for (Invention inv : Invention.values()) {
-            int b = inv.branch.ordinal(), d = inv.depth();
-            int slot = placed[b][d]++;
-            at.put(inv, new Place(inv, padL + b * (cw + gx), bandTop[d] + STEP_HEAD + slot * (ch + gy)));
-        }
-        contentW = width(z);
-        contentH = by + PAD;
+        InventionTreeLayout.Layout lay = InventionTreeLayout.layout(metrics(z));
+        int padL = lay.m().padLeft();
+        int[] bandTop = lay.bandTop();
+        Map<Invention, InventionTreeLayout.Place> at = lay.places();
+        contentW = lay.width();
+        contentH = lay.height() + PAD;
         vx = x; vy = y; vw = w; vh = h;
         panX = Math.max(0, Math.min(Math.max(0, contentW - innerW), panX));
         panY = Math.max(0, Math.min(Math.max(0, contentH - innerH), panY));
@@ -202,7 +185,7 @@ public final class InventionsPage {
             lastFind = q;
             if (!q.isEmpty()) for (Invention inv : Invention.values()) {
                 if (!inv.title.toLowerCase(Locale.ROOT).contains(q)) continue;
-                Place p = at.get(inv);
+                InventionTreeLayout.Place p = at.get(inv);
                 if (p.x() < panX || p.x() + cw > panX + innerW) panX = Math.max(0, Math.min(Math.max(0, contentW - innerW), p.x() - padL));
                 if (p.y() < panY || p.y() + ch > panY + innerH) panY = Math.max(0, Math.min(Math.max(0, contentH - innerH), p.y() - STEP_HEAD));
                 break;
@@ -215,7 +198,7 @@ public final class InventionsPage {
         // Which card the mouse is over, and the road to it (all it needs, and what needs it next).
         Invention hovered = null;
         if (overTree && !dragging) {
-            for (Place p : at.values()) {
+            for (InventionTreeLayout.Place p : at.values()) {
                 int px = ox + p.x(), py = oy + p.y();
                 if (mx >= px && mx < px + cw && my >= py && my < py + ch) { hovered = p.inv(); break; }
             }
@@ -237,17 +220,17 @@ public final class InventionsPage {
         // and into its side with an arrow. The channels run between the columns, where no card stands.
         for (int pass = 0; pass < 2; pass++) {                       // the road to the hovered card last, over the rest
             for (Invention inv : Invention.values()) {
-                Place to = at.get(inv);
+                InventionTreeLayout.Place to = at.get(inv);
                 for (Invention need : inv.needs()) {
                     boolean onRoad = hovered != null && (need == hovered || (inv == hovered || anc.contains(inv)) && anc.contains(need));
                     if ((pass == 1) != onRoad) continue;
-                    Place from = at.get(need);
+                    InventionTreeLayout.Place from = at.get(need);
                     String fs = state(byId, need), ts = state(byId, inv);
                     int colour = onRoad ? UiStyle.ACCENT : fs.equals("known") ? KNOWN_LINE : ts.equals("locked") ? LOCKED_LINE : OPEN_LINE;
                     if (!matches(byId, inv, q) || !matches(byId, need, q)) colour = UiStyle.alpha(colour, 0.35F);
                     int t = onRoad ? 2 : 1;
                     boolean leftward = to.x() < from.x();
-                    int chanX = ox + (leftward ? to.x() + cw + gx / 2 : to.x() - gx / 2);
+                    int chanX = ox + lay.channelX(need, inv);
                     int sx = ox + from.x() + cw / 2 + (leftward ? -cw / 4 : -cw / 4 - 2), sy = oy + from.y() + ch;
                     int runY = sy + Math.max(1, gy / 2);
                     int ey = oy + to.y() + ch / 2;
@@ -266,7 +249,7 @@ public final class InventionsPage {
             }
         }
         // The cards.
-        for (Place p : at.values()) {
+        for (InventionTreeLayout.Place p : at.values()) {
             int px = ox + p.x(), py = oy + p.y();
             if (px > clipX1 || px + cw < clipX0 || py > clipY1 || py + ch < clipY0) continue;
             card(g, font, m, byId, p.inv(), px, py, cw, ch, z, p.inv() == hovered, matches(byId, p.inv(), q));
@@ -378,8 +361,12 @@ public final class InventionsPage {
         };
     }
 
+    private static InventionTreeLayout.Metrics metrics(int z) {
+        return new InventionTreeLayout.Metrics(CARD_W[z], CARD_H[z], GAP_X[z], GAP_Y[z], STEP_HEAD);
+    }
+
     private static int width(int z) {
-        return 2 * (GAP_X[z] / 2 + 2) + BRANCHES.length * CARD_W[z] + (BRANCHES.length - 1) * GAP_X[z];
+        return InventionTreeLayout.width(metrics(z));
     }
 
     private static String ageWord(int age) {

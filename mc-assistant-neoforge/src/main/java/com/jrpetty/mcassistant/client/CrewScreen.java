@@ -207,15 +207,13 @@ public class CrewScreen extends Screen {
         }
         // Clipped short of the sort toggle that now lives on this line's right.
         // Clipped short of BOTH buttons that share this line.
-        int lineW = inner - 98;
-        if (asking.isEmpty()) {
-            g.drawString(this.font, Ui.clip(this.font,
-                "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond",
-                lineW), x, top + 30, Ui.FAINT, false);
-        } else {
-            g.drawString(this.font, Ui.clip(this.font,
-                "asking for — " + String.join("  ·  ", asking), lineW),
-                x, top + 30, Ui.WARN, false);
+        int lineW = inner - 146;                                       // [screens13] and the Map button's
+        String wagesLine = asking.isEmpty() ? "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond"
+            : "asking for — " + String.join("  ·  ", asking);
+        String shown = Ui.clip(this.font, wagesLine, lineW);
+        g.drawString(this.font, shown, x, top + 30, asking.isEmpty() ? Ui.FAINT : Ui.WARN, false);
+        if (!shown.equals(wagesLine) && mouseX >= x && mouseX < x + lineW && mouseY >= top + 29 && mouseY < top + 39) {
+            setTooltipForNextRenderPass(Component.literal(wagesLine));     // the whole of it, under the mouse
         }
 
         if (crew.isEmpty()) {
