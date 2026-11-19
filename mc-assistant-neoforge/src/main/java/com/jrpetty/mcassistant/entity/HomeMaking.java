@@ -1691,7 +1691,32 @@ public final class HomeMaking {
                 ItemStack l = peek(f, h, LIGHT);
                 BlockState lamp = l.is(Items.LANTERN) ? Blocks.LANTERN.defaultBlockState()
                     : Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, spot.facing());
-                if (!lamp.canSurvive(level, at)) return false;
+                if (l.is(Items.LANTERN) && !lamp.canSurvive(level, at)) {
+                    // [uses16] A lantern at a torch's spot on the wall: hung from the beam over it, else stood on the floor under it.
+                    BlockState hung = lamp.setValue(LanternBlock.HANGING, true);
+                    if (hung.canSurvive(level, at)) lamp = hung;
+                    else {
+                        for (int dy = 1; dy <= 3; dy++) {
+                            BlockPos down = at.below(dy);
+                            if (!level.getBlockState(down).isAir()) break;
+                            if (lamp.canSurvive(level, down)) { at = down; break; }
+                        }
+                    }
+                    if (!lamp.canSurvive(level, at)) {                    // else on the nearest free bit of floor
+                        BlockPos from = at, best = null;
+                        for (BlockPos c : rooms(level, id, h).floor()) {
+                            if (!level.getBlockState(c).isAir() || byADoor(level, c) || !lamp.canSurvive(level, c)
+                                || !TownBlocks.allows(level, v, c, TownBlocks.Why.FURNISH)) continue;
+                            if (best == null || c.distSqr(from) < best.distSqr(from)) best = c;
+                        }
+                        if (best != null) at = best;
+                    }
+                }
+                if (!lamp.canSurvive(level, at)) {
+                    LOG.info("[MCA-HOMEMAKING] {}'s {} would not go at {} ({} below, {} above)", f.displayNameCap(), l.getItem(), at.toShortString(),
+                        level.getBlockState(at.below()), level.getBlockState(at.above()));
+                    return false;
+                }
                 level.setBlock(at, lamp, 3);
                 take(f, h, LIGHT);
                 placed = lamp;
@@ -1921,6 +1946,73 @@ public final class HomeMaking {
         }
         // Not a piece it wants, but household stock all the same (food, fuel, candles): its own, to be put by at home.
         if (Housekeeping.stock(one) != null) Homes.keepsake(one, f, Homes.Source.GIFT);
+        return null;
+    }
+
+    // [uses16] What its home still wants, for ItemUses (a folk weighing a thing at a stall or a shop), and a piece bought there.
+
+    /** [uses16] Where a piece of a home's plan stands, or null if it is not standing. */
+    @Nullable
+    public static BlockPos pieceAt(UUID village, BlockPos anchor, String key) {
+        return pieceForTests(village, anchor, key);
+    }
+
+    /** [uses16] One piece its household's plan still wants: its key and words, what will do, one that would, how many, a basic. */
+    public record Wanted(String key, String words, Predicate<ItemStack> what, Item sample, int n, boolean basic) {}
+
+    /** [uses16] The pieces its home's plan still wants that this folk could buy now: the basics first, its own things once the
+     *  basics are in and its means run to them; less what it already carries of its household's own for them. */
+    public static List<Wanted> wanting(VillageFolkEntity f) {
+        List<Wanted> out = new ArrayList<>();
+        UUID village = f.ownerId();
+        if (village == null || f.isBaby() || Homes.lodging(f)) return out;
+        Homes.Home h = Homes.homeOf(village, f.getUUID());
+        if (h == null || Homes.seat(h)) return out;
+        Plan p = load(village, h.anchor.asLong());
+        if (p == null) return out;
+        boolean basics = basicsDone(p);
+        Wealth.Tier tier = Wealth.tier(f);
+        List<VillageFolkEntity> household = Homes.loadedMembers(village, h);
+        for (Piece q : p.pieces) {
+            if (q.done()) continue;
+            Spec s = q.spec();
+            if (s == null || s.stage() == Stage.OWN && (!basics || tier.ordinal() < s.from().ordinal())) continue;
+            for (Need need : s.needs()) {
+                int have = carrying(f, h, need);                              // what the household carries for it already, any of them
+                for (VillageFolkEntity m : household) if (m != f) have += carrying(m, h, need);
+                if (have < need.n()) out.add(new Wanted(q.key, s.words(), need.what(), need.sample(), need.n() - have, s.stage() == Stage.BASIC));
+            }
+        }
+        return out;
+    }
+
+    /** [uses16] A piece bought somewhere other than the shop (a player's stall or shop): its household's own, to be set out at
+     *  home where its plan has room for it, as a present is. What it says, or null if its plan wants no such thing. */
+    @Nullable
+    public static String bought(VillageFolkEntity f, ItemStack one, String where) {
+        UUID village = f.ownerId();
+        if (village == null || f.isBaby() || one.isEmpty()) return null;
+        Homes.Home h = Homes.homeOf(village, f.getUUID());
+        if (h == null || Homes.seat(h)) return null;
+        Plan p = load(village, h.anchor.asLong());
+        if (p == null) return null;
+        for (Piece q : p.pieces) {
+            if (q.done()) continue;
+            Spec s = q.spec();
+            if (s == null) continue;
+            for (Need need : s.needs()) {
+                if (!need.what().test(one)) continue;
+                Homes.keepsake(one, f, Homes.Source.BOUGHT);
+                q.how = How.BOUGHT;
+                q.state = State.WANTED;
+                q.retry = 0;
+                q.note = "bought at " + where;
+                save(p);
+                NEXT_LOOK.remove(f.getUUID());
+                return FolkTalk.pick(f.getRandom(), cap(s.words()) + " for our home — I'll set it out tonight.",
+                    "Just what the house wanted: " + s.words() + ".");
+            }
+        }
         return null;
     }
 

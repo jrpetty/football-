@@ -1303,6 +1303,15 @@ public class CityScreen extends Screen {
             players.putBoolean("built", true);
             sellers.add(players);
         }
+        // [uses16] What the town needs now (ItemUses): what its folk, households, firms and departments would buy, and pay.
+        ListTag needList = rep.getList("needs", Tag.TAG_COMPOUND);
+        if (!needList.isEmpty()) {
+            CompoundTag nd = new CompoundTag();
+            nd.putString("id", "needs");
+            nd.putString("name", "what the town needs");
+            nd.putBoolean("built", true);
+            sellers.add(nd);
+        }
         if (sellers.isEmpty()) {
             g.drawString(font, "No shop, café, tavern or market stands yet.", x, y, Ui.MUTED, false);
             return;
@@ -1347,6 +1356,10 @@ public class CityScreen extends Screen {
         if (rep.getBoolean("marketDay")) small(g, "Market day today", x + cw - (int) (font.width("Market day today") * 0.75), y + 2, Ui.GOOD);
         if (pick.getString("id").equals("players")) {
             playerStalls(g, x, y + 15, cw, ch - 15, mx, my, stalls);
+            return;
+        }
+        if (pick.getString("id").equals("needs")) {
+            townNeeds(g, x, y + 15, cw, ch - 15, mx, my, needList);
             return;
         }
         // The seller's week.
@@ -1435,6 +1448,48 @@ public class CityScreen extends Screen {
         if (wares.isEmpty()) small(g, "Nothing on its books yet.", x, ty, Ui.MUTED);
         small(g, Ui.clip(font, wares.size() + " wares · the stock it keeps follows what sells · the mouse over a ware for its books"
             + (wares.size() > rowsFit ? " · scroll for more" : ""), (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+    }
+
+    /**
+     * [uses16] What the town needs now (entity/ItemUses): each thing its folk, households, firms and departments have a real
+     * use for, how many folk want it and how many in all, the most one would pay for one, and why: what a player's stall or
+     * shop would sell. The mouse over a row for who, and how pressing.
+     */
+    private void townNeeds(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my, ListTag list) {
+        small(g, Ui.clip(font, "What the folk would buy now, and pay: stock a stall or a shop with these and they'll come for them.", (int) (cw / 0.75)), x, y, Ui.MUTED);
+        int ty = y + 12;
+        String[] heads = { "Thing", "For", "Folk", "How many", "Pays up to", "Why" };
+        int[] cols = { 0, cw * 26 / 100, cw * 40 / 100, cw * 47 / 100, cw * 56 / 100, cw * 66 / 100 };
+        heads(g, heads, cols, x, ty);
+        ty += 10;
+        int rowsFit = Math.max(1, (y + ch - 10 - ty) / 10);
+        int start = Math.max(0, Math.min(scroll, Math.max(0, list.size() - rowsFit)));
+        for (int i = start; i < Math.min(list.size(), start + rowsFit); i++) {
+            CompoundTag r = list.getCompound(i);
+            boolean over = mx >= x && mx < x + cw && my >= ty - 1 && my < ty + 9;
+            g.fill(x - 2, ty - 1, x + cw, ty + 9, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            icon(g, r.getString("item"), x, ty - 1, 0.6F);
+            small(g, Ui.clip(font, capital(r.getString("name")), (int) ((cols[1] - 14) / 0.75)), x + 11, ty + 1, Ui.INK);
+            small(g, Ui.clip(font, r.getString("kind"), (int) ((cols[2] - cols[1] - 2) / 0.75)), x + cols[1], ty + 1, Ui.MUTED);
+            small(g, num(r.getInt("folk")), x + cols[2], ty + 1, Ui.INK);
+            small(g, num(r.getInt("qty")), x + cols[3], ty + 1, Ui.INK);
+            small(g, r.getInt("most") + "c each", x + cols[4], ty + 1, GREEN);
+            small(g, Ui.clip(font, r.getString("why"), (int) ((cw - cols[5]) / 0.75)), x + cols[5], ty + 1, r.getDouble("urgency") >= 0.7 ? Ui.WARN : Ui.MUTED);
+            if (over) {
+                List<Component> tip = new ArrayList<>();
+                tip.add(Component.literal(capital(r.getString("name")) + " — " + r.getString("kind")));
+                tip.add(Component.literal(r.getInt("folk") + (r.getInt("folk") == 1 ? " folk wants" : " folk want") + " it, " + r.getInt("qty")
+                    + " in all; " + r.getString("who") + " first: " + r.getString("why") + "."));
+                tip.add(Component.literal("The most one would pay: " + r.getInt("most") + "c each (its means, its nature, and how badly it needs it)."));
+                hover = tip;
+                hoverX = mx;
+                hoverY = my;
+            }
+            ty += 10;
+        }
+        if (list.isEmpty()) small(g, "Nobody needs anything just now.", x, ty, Ui.MUTED);
+        small(g, Ui.clip(font, list.size() + " things wanted · the mouse over a row for who and why" + (list.size() > rowsFit ? " · scroll for more" : ""),
+            (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
     }
 
     /**

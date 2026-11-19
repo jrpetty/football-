@@ -546,6 +546,7 @@ public final class FolkTalk {
         line(sb, "Making home", HomeMaking.cardLine(f));    // [home-making] what it is doing for its home, what it still wants
         line(sb, "At home", Housekeeping.cardLine(f));      // [home-making] its home's stocks, what is short
         line(sb, "Shopping", Needs.cardLine(f));            // [shops-homes] what it wants from the shop, and last bought
+        line(sb, "Uses", ItemUses.cardLine(f));             // [uses16] what it last bought and did with it; what it would buy now
         line(sb, "Business", ShopBusiness.cardLine(f));     // [shops-homes] the keeper: what sells, what it's short of, the till
         line(sb, "Style", Fashion.cardLine(f));             // [fashion] what it wears, its colours, the season's look
         for (String[] l : Visitors.cardLines(f)) line(sb, l[0], l[1]);   // [batchG] its gifts on show, its dog, its visits
