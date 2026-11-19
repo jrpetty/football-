@@ -424,7 +424,7 @@ public final class StartBusiness implements PlayerLife.Page {
         if (Market.coinsHeld(p) < total) return "!You need " + PlayerLife.coins(total) + "; you have " + Market.coinsHeld(p) + ".";
         Market.payOut(p, Enterprise.CHARTER_FEE);
         com.jrpetty.mcassistant.village.Ledger.addCoins(v.id(), Enterprise.CHARTER_FEE);
-        CoinCensus.playerIn(v.id(), Enterprise.CHARTER_FEE);
+        CoinCensus.playerIn(v.id(), Enterprise.CHARTER_FEE, p, PlayerFinance.Cat.FEES, "a firm's charter");   // [join21]
         TownBudget.in(v.id(), "fees", Enterprise.CHARTER_FEE * 100L);
         Business b = Enterprise.found(level, v, t, null, p, Businesses.today(level), null);
         if (b == null) return "!The charter could not be drawn up (your fee is kept by the treasury).";

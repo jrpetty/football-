@@ -56,7 +56,7 @@ public final class PlayerFinance {
     /** What kind of money it was. Saved by name, so the order may change; new ones go anywhere. */
     public enum Cat {
         WAGES(Kind.INCOME, "Wages"), SHIFTS(Kind.INCOME, "Shift pay"), TIPS(Kind.INCOME, "Tips"), SALES(Kind.INCOME, "Sales"),
-        STALL(Kind.INCOME, "Stall takings"), CONTRACTS(Kind.INCOME, "Contracts & haulage"), RENT_IN(Kind.INCOME, "Rent received"),
+        STALL(Kind.INCOME, "Stall takings"), SHOP(Kind.INCOME, "Shop takings") /* [join21] a player's shop, into its till */, CONTRACTS(Kind.INCOME, "Contracts & haulage"), RENT_IN(Kind.INCOME, "Rent received"),
         DIVIDENDS(Kind.INCOME, "Dividends & drawings"), INTEREST(Kind.INCOME, "Interest earned"), COUPONS(Kind.INCOME, "Bond coupons"),
         REWARDS(Kind.INCOME, "Rewards & bounties"), PRIZES(Kind.INCOME, "Prizes & winnings"), REFUNDS(Kind.INCOME, "Refunds"),
         OTHER_IN(Kind.INCOME, "Other income"),
@@ -66,7 +66,8 @@ public final class PlayerFinance {
         LOSSES(Kind.SPENDING, "Losses & forfeits"), OTHER_OUT(Kind.SPENDING, "Other spending"),
         SAVED(Kind.MOVE, "Into savings"), DRAWN(Kind.MOVE, "Out of savings"), BORROWED(Kind.MOVE, "Borrowed"),
         INVESTED(Kind.MOVE, "Property & investments bought"), CASHED(Kind.MOVE, "Property & investments sold"),
-        HELD(Kind.MOVE, "Deposits put down"), RELEASED(Kind.MOVE, "Deposits back");
+        HELD(Kind.MOVE, "Deposits put down"), RELEASED(Kind.MOVE, "Deposits back"),
+        TILL(Kind.MOVE, "Taken from your shop's till");   // [join21] its takings were booked as they came in
 
         public final Kind kind;
         public final String label;

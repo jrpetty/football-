@@ -1026,7 +1026,7 @@ public class FinanceScreen extends Screen {
     private String kindOf(String cat) {
         for (Tag t : data.getList("cats", Tag.TAG_COMPOUND)) if (((CompoundTag) t).getString("c").equals(cat)) return ((CompoundTag) t).getString("kind");
         return switch (cat) {
-            case "SAVED", "DRAWN", "BORROWED", "INVESTED", "CASHED", "HELD", "RELEASED" -> "MOVE";
+            case "SAVED", "DRAWN", "BORROWED", "INVESTED", "CASHED", "HELD", "RELEASED", "TILL" -> "MOVE";   // [join21] TILL
             case "RENT_OUT", "TAXES", "FEES", "HANDS", "PURCHASES", "FOOD", "LOAN_PAY", "FINES", "GIFTS", "LOSSES", "OTHER_OUT" -> "SPENDING";
             default -> "INCOME";
         };

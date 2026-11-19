@@ -260,7 +260,7 @@ public final class PlayerJobs {
             b.allTime.wages += coins * 100L;
             Businesses.dirty();
             Dealings.giveCoins(p, coins);
-            CoinCensus.playerOut(town, coins);
+            CoinCensus.playerOut(town, coins, p, PlayerFinance.Cat.WAGES, "wages from " + employerName);   // [join21]
             Earnings.record(p, town, Earnings.Source.SHIFT, coins, employerName, "in wages");
             return coins;
         }

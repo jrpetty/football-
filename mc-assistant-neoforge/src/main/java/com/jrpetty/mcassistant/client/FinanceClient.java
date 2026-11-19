@@ -119,8 +119,9 @@ public final class FinanceClient {
             case FinancePayload.PAGE -> {
                 if (mc.screen instanceof FinanceScreen s) s.receive(t);
                 else if (wantOpen || t.getBoolean("open")) {
+                    Screen parent = wantOpen ? openParent : mc.screen;      // [join21] opened by the server (Your life in town): back to that page
                     wantOpen = false;
-                    FinanceScreen s = new FinanceScreen(openParent);
+                    FinanceScreen s = new FinanceScreen(parent);
                     s.receive(t);
                     mc.setScreen(s);
                 }

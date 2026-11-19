@@ -535,7 +535,7 @@ public final class PlayerShops {
             }
             Market.payOut(p, fee);
             Ledger.addCoins(s.village, fee);
-            CoinCensus.playerIn(s.village, fee);
+            CoinCensus.playerIn(s.village, fee, p, PlayerFinance.Cat.FEES, "the licence for " + s.name);   // [join21]
             TownBudget.in(s.village, "fees", fee * 100L);
             s.licensed = true;
             Villages.tell(s.village, today(level), s.ownerName + " opened a shop of their own, " + s.name);
@@ -560,7 +560,7 @@ public final class PlayerShops {
         if (n <= 0) return 0;
         s.till = 0;
         for (int left = n; left > 0; left -= 64) Dealings.giveCoins(p, Math.min(64, left));
-        CoinCensus.playerOut(s.village, n);
+        CoinCensus.playerOut(s.village, n, p, PlayerFinance.Cat.TILL, s.name + "'s till");   // [join21] the takings were booked as they came in
         Earnings.record(p, s.village, Earnings.Source.STALL, n, s.name + "'s till", "of takings");
         save(s);
         return n;
@@ -585,6 +585,8 @@ public final class PlayerShops {
         roll(s, day);
         int toll = TaxBook.toll(s.village, price);
         s.till += price - toll;
+        PlayerFinance.internal(s.owner, s.village, (price - toll) * 100L, PlayerFinance.Cat.SHOP, who + " bought " + got.getCount() + " "
+            + PlayerStalls.nameOf(got).toLowerCase(Locale.ROOT) + " at " + s.name + (toll > 0 ? " (less " + toll + " toll)" : ""));   // [join21] the owner's books, as it comes in
         s.soldAll += got.getCount();
         s.takenAll += price;
         s.weekCount[0] += got.getCount();
@@ -695,6 +697,7 @@ public final class PlayerShops {
         if (paid > 0) {
             Ledger.addCoins(s.village, paid);
             TownBudget.in(s.village, "rates", paid * 100L);
+            PlayerFinance.internal(s.owner, s.village, -paid * 100L, PlayerFinance.Cat.TAXES, "rates for " + s.name + ", out of its till");   // [join21]
         }
         save(s);
         if (s.tell) tellOwner(level, s.owner, s.name + " paid " + PlayerLife.coins(paid) + " in rates" + (s.ratesOwed > 0 ? "; " + s.ratesOwed + " still owed" : "") + ".");

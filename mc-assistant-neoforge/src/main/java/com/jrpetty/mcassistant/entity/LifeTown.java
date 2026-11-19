@@ -125,15 +125,12 @@ public final class LifeTown implements PlayerLife.Page {
     }
 
     /**
-     * Your finances (another round's screen: net worth, assets and liabilities, income and spending, bills, a ledger): the
-     * one place it is opened from here. Until it lands, the headline numbers; merged, this is FinanceSheet.open(p) and "#open:".
+     * Your finances (net worth, assets and liabilities, income and spending, bills, a ledger): the one place it is opened
+     * from here. [join21] purse-20's screen: FinanceSheet.open sends the page and opens it.
      */
     static String finances(ServerPlayer p) {
-        Villages.Village v = PlayerLife.here(p);
-        if (v == null) return "!No town here.";
-        int[] week = Earnings.earned(p, v.id(), p.level().getDayTime() / 24000L, 7);
-        return "You carry " + PlayerLife.coins(Market.coinsHeld(p)) + ", with " + PlayerLife.coins(FolkCredit.balance(v.id(), p.getUUID()))
-            + " saved; this week you earned " + PlayerLife.coins(Earnings.sum(week)) + " here. (The full finances screen is coming.)";
+        FinanceSheet.open(p);
+        return "#open:";
     }
 
     /** The town's books open at a page. */
