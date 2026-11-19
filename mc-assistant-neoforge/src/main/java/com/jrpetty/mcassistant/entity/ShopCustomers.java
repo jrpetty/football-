@@ -210,8 +210,10 @@ public final class ShopCustomers {
         ShopNeeds.Survey sv = PlayerShops.survey(level, s);
         switch (t.leg) {
             case DOOR -> {
-                if (closeTo(f, t.door, 1.6)) next(f, t, Leg.IN);
-                else walk(f, t, t.door, 0.8);
+                if (closeTo(f, t.door, 1.6)) {
+                    door(level, sv, f, true);                                 // in at the door: it opens it
+                    next(f, t, Leg.IN);
+                } else walk(f, t, t.door, 0.8);
             }
             case IN -> {
                 if (t.shelf.equals(BlockPos.ZERO)) pickShelf(level, f, t, s, sv);
@@ -255,8 +257,11 @@ public final class ShopCustomers {
                 }
             }
             case OUT -> {
-                if (closeTo(f, t.door, 1.6) || f.tickCount - t.legAt > LEG) end(f, t, s);
-                else walk(f, t, t.door, 0.8);
+                if (f.tickCount - t.legAt == 1) door(level, sv, f, true);
+                if (closeTo(f, t.door, 1.6) || f.tickCount - t.legAt > LEG) {
+                    door(level, sv, f, false);                                // and shuts it behind it
+                    end(f, t, s);
+                } else walk(f, t, t.door, 0.8);
             }
             default -> { }
         }
@@ -265,6 +270,17 @@ public final class ShopCustomers {
             return false;
         }
         return t.leg != Leg.DONE;
+    }
+
+    /** The shop's door nearest this folk, opened or shut as a customer would. */
+    private static void door(ServerLevel level, ShopNeeds.Survey sv, VillageFolkEntity f, boolean open) {
+        BlockPos best = null;
+        for (BlockPos d : sv.doors) if (best == null || d.distSqr(f.blockPosition()) < best.distSqr(f.blockPosition())) best = d;
+        if (best == null || best.distSqr(f.blockPosition()) > 9) return;
+        var st = level.getBlockState(best);
+        if (st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock door && st.getValue(net.minecraft.world.level.block.DoorBlock.OPEN) != open) {
+            door.setOpen(f, level, st, best, open);
+        }
     }
 
     private static void next(VillageFolkEntity f, Visit t, Leg leg) {
