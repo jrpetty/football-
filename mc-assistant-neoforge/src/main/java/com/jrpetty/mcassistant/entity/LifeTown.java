@@ -70,7 +70,7 @@ public final class LifeTown implements PlayerLife.Page {
         for (Business b : firms) page.row(null, b.name, Enterprise.line(level, id, b), "").button("Run it", "firm", LifePage.args("firm", b.id));
         page.buttons().button("Start a business", "start", null).button("The town's businesses", "books", LifePage.args("page", "Businesses"));
         // building
-        List<BuildDesk.Status> builds = BuildDesk.mine(id, p.getUUID());
+        List<BuildDesk.Status> builds = BuildDesk.mine(level, id, p.getUUID());
         if (!builds.isEmpty()) {
             page.heading("Going up for you");
             for (BuildDesk.Status b : builds) page.bar(b.title(), b.percent() / 100.0, b.done() ? "finished" : b.percent() + "%" + (b.waitingOn().isEmpty() ? "" : ": waiting for " + b.waitingOn()));

@@ -5,16 +5,13 @@ import com.jrpetty.mcassistant.Showcase;
 import com.jrpetty.mcassistant.entity.goal.Blueprints;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
 import com.jrpetty.mcassistant.village.Ledger;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
@@ -22,65 +19,53 @@ import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Half;
-import net.minecraft.world.level.levelgen.Heightmap;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
 /**
  * [player15] A building the town builds for a player: the one place the player's screens ask for a quote, place the
- * order, watch it go up and cancel it. The town's build orders (another round's BuildOrders: the builders' queue, honest
- * costs, the property market) answer behind these same calls; until they land, a plain engine here does the work, so
- * the gallery, the plot and the progress all work now:
+ * order, watch it go up and cancel it. [join21] The town's build orders answer every call (BuildOrders: the builders'
+ * queue, honest costs line by line, the deposit and the stage payments, the time with its reason, the property register),
+ * so the gallery, the confirm step, the progress bars and toasts and the property office all tell the same story:
  * <ul>
- * <li><b>The quote</b>: every block of the drawing at the town's price, the builders' hours at a craftsman's rate (twelve
- *     blocks an hour), the plot, the permit; a deposit of the whole; how long, and why.</li>
- * <li><b>Building</b>: the town's hands lay it a few blocks at a time from the footing up, out of the stores where the
- *     stores have the block (the rest bought at the market's price, which the quote paid for), and say what they are
- *     waiting on; a word to the player at each quarter, a line in the chronicle when it stands. A shop or premises comes
- *     complete: its counter and a chest for its stock are set in when the walls are up, and it is the player's shop.</li>
+ * <li><b>The quote</b> is BuildOrders.quote's: materials at the market's ask, each trade's hours at its wage, overheads,
+ *     the land (bought or leased), the permit, rates and registry, the builders' margin; a deposit down, a stage payment at
+ *     half, the balance on completion; how long, as a range, and why.</li>
+ * <li><b>Building</b>: the town's own crews put it up course by course (BuildOrders), and say what they wait on; a word to
+ *     the player at each quarter. A shop or premises comes complete: when it stands, its counter and a chest for its stock
+ *     are set in, and it is the player's shop (and its firm's premises, if a firm ordered it).</li>
  * </ul>
- * Orders kept in the town's ledger (notes "pbuild/&lt;id&gt;").
+ * The link from an order to what it is for (a firm's premises, a shop) is kept in the town's ledger (notes
+ * "pbuild2/&lt;order&gt;").
  */
 public final class BuildDesk {
 
     private BuildDesk() {}
 
-    private static final String NOTE = "pbuild/";
-    /** Blocks laid every two seconds by the plain engine, and how long it waits on the stores before buying a block in. */
-    static final int PER_STEP = 8, WAIT = 400;
+    private static final String NOTE = "pbuild2/";
 
-    /** The styles a building may be had in: the wood of the walls and the roof, or stone. */
-    public enum Style {
-        OAK("oak", "Oak and spruce", Showcase.OAK),
-        BIRCH("birch", "Birch and dark oak", Showcase.BIRCH),
-        BRICK("brick", "Spruce under brick", Showcase.SPRUCE),
-        STONE("stone", "Stone and slate", new Showcase.Palette(Blocks.STONE_BRICKS, Blocks.DARK_OAK_LOG, Blocks.DEEPSLATE_TILE_STAIRS,
-            Blocks.DEEPSLATE_TILE_SLAB, Blocks.DEEPSLATE_TILES, Blocks.SPRUCE_PLANKS, Blocks.DARK_OAK_DOOR, Blocks.DARK_OAK_FENCE,
-            Blocks.DARK_OAK_FENCE_GATE, Blocks.GRAY_BED, Blocks.GRAY_CARPET));
+    /** The styles a building may be had in here (BuildOrders: the timbers, then stone, brick and the civic look as the age allows). */
+    public static List<String> styles(UUID village) {
+        return BuildOrders.styles(village);
+    }
 
-        public final String id, label;
-        public final Showcase.Palette palette;
-
-        Style(String id, String label, Showcase.Palette palette) {
-            this.id = id;
-            this.label = label;
-            this.palette = palette;
-        }
-
-        public static Style of(String id) {
-            for (Style s : values()) if (s.id.equals(id)) return s;
-            return OAK;
-        }
+    /** A style's name on a button. */
+    public static String styleLabel(String style) {
+        return switch (style) {
+            case "oak" -> "Oak";
+            case "birch" -> "Birch";
+            case "spruce" -> "Spruce";
+            case "stone" -> "Stone";
+            case "brick" -> "Brick";
+            case "civic" -> "Civic";
+            default -> style;
+        };
     }
 
     /** A building the town will put up for a player: its drawing, what it is called, what it suits and what is in it. */
@@ -118,264 +103,164 @@ public final class BuildDesk {
         };
     }
 
-    // ------------------------------------------------------------------ the quote
+    // ------------------------------------------------------------------ the quote (BuildOrders')
 
-    public record Line(String what, ItemStack item, int count, double each, double total) {}
+    /** What putting this up here would cost, all told, and how long it would take: the town's builders' own quote. */
+    public static BuildOrders.Quote quote(ServerLevel level, UUID village, String blueprint, String style, BlockPos plot, Direction facing, UUID buyer) {
+        return BuildOrders.quote(level, village, blueprint, style, plot, facing, buyer);
+    }
 
-    public record Quote(String blueprint, String style, BlockPos plot, Direction facing, List<Line> materials, double labourHours,
-                        double labour, double land, double fees, double margin, double total, int deposit, int etaLow, int etaHigh,
-                        String etaWhy) {}
-
-    /** What putting this up here would cost, all told, and how long it would take. */
-    public static Quote quote(ServerLevel level, UUID village, String blueprint, Style style, BlockPos plot, Direction facing, UUID buyer) {
-        Map<Block, Integer> counts = new LinkedHashMap<>();
-        Function<BuildGoal.Placement, BlockState> paint = Showcase.painter(style.palette);
-        int blocks = 0;
-        for (BuildGoal.Placement p : BuildGoal.plan(blueprint, plot, facing, 8)) {
-            BlockState st = paint.apply(p);
-            if (st == null || st.isAir()) continue;
-            counts.merge(st.getBlock(), 1, Integer::sum);
-            blocks++;
+    /** "materials 120c (oak planks, glass...), labour 40c (32 hours), ...: 230c all told" and the time, for a card. */
+    public static List<String> quoteLines(BuildOrders.Quote q) {
+        List<String> out = new ArrayList<>();
+        StringBuilder m = new StringBuilder();
+        List<BuildOrders.Material> mats = new ArrayList<>(q.materials);
+        mats.sort((a, b) -> Double.compare(b.total(), a.total()));
+        for (int i = 0; i < Math.min(3, mats.size()); i++) {
+            BuildOrders.Material x = mats.get(i);
+            m.append(i == 0 ? "" : ", ").append(x.count() - x.supplied()).append(" ").append(x.name().toLowerCase(Locale.ROOT));
         }
-        List<Line> lines = new ArrayList<>();
-        double materials = 0;
-        for (Map.Entry<Block, Integer> e : counts.entrySet()) {
-            ItemStack one = new ItemStack(e.getKey().asItem());
-            if (one.isEmpty()) continue;
-            double each = Math.max(0.02, CostBook.atMarket(level, village, one));
-            lines.add(new Line(one.getHoverName().getString(), one, e.getValue(), each, each * e.getValue()));
-            materials += each * e.getValue();
-        }
-        lines.sort(Comparator.comparingDouble(Line::total).reversed());
-        double hours = blocks / 12.0;
-        double rate = Math.max(1, JobWorth.rate(AssistantEntity.StationTask.SMITH, village)) / 10.0;
-        double labour = hours * rate;
-        int[] g = BuildGoal.footprint(blueprint);
-        double land = 4 + (2 * g[0] + 1) * (2 * g[1] + 1) / 10.0;
-        double fees = Math.max(2, (materials + labour) / 20.0);
-        double total = Math.ceil(materials + labour + land + fees);
-        int busy = orders(village).size();
-        int low = busy == 0 ? 1 : 1 + busy, high = low + 1;
-        String why = busy == 0 ? "the town's hands are free to start at once" : busy + " order" + (busy == 1 ? "" : "s") + " ahead of yours";
-        return new Quote(blueprint, style.id, plot.immutable(), facing, lines, hours, labour, land, fees, 0, total, (int) total, low, high, why);
+        out.add(String.format(Locale.ROOT, "Materials %.0fc (%s%s), labour %.0fc (%.0f hours), overheads %.0fc, land %.0fc (%s), fees %.0fc, builders' margin %.0fc: %dc all told.",
+            q.materialsCost, m, mats.size() > 3 ? "..." : "", q.labourCost, q.labourHours, q.overheads, q.landCost, q.landTerms, q.fees, q.margin, q.total));
+        out.add("Paid " + q.deposit + "c down, " + q.stage + "c at half built, " + q.balance + "c when it stands."
+            + (q.eta == null ? "" : " Ready in " + q.eta.words() + ": " + q.eta.reason() + "."));
+        return out;
     }
 
     // ------------------------------------------------------------------ orders
 
-    public record Status(String id, String title, int percent, String stage, String waitingOn, int etaLow, int etaHigh, boolean done) {
+    /** An order as the player's pages show it: its id, name, how far on, the stage, what it waits on, when, what is due. */
+    public record Status(String id, String title, int percent, String stage, String waitingOn, String eta, int due, boolean done) {
         public String words() {
-            return done ? title + " stands, finished." : title + " is " + percent + "% built" + (waitingOn.isEmpty() ? "" : ": waiting for " + waitingOn);
+            return done ? title + " stands, finished." : title + " is " + percent + "% built" + (waitingOn.isEmpty() ? "" : ": " + waitingOn);
         }
     }
 
-    /** Place the order: the whole of the quote out of the player's pack into the treasury. Returns its id, or "!why". */
-    public static String place(ServerLevel level, ServerPlayer p, UUID village, Quote q, String purpose, @Nullable String firm) {
-        if (Market.coinsHeld(p) < q.deposit()) return "!It costs " + PlayerLife.coins(q.deposit()) + " and you have " + Market.coinsHeld(p) + ".";
-        String bad = BuildPlots.whyNot(level, Villages.get(village), q.blueprint(), q.plot(), q.facing());
+    /** Place the order with the town's builders (BuildOrders.place takes the deposit). Returns its id, or "!why". */
+    public static String place(ServerLevel level, ServerPlayer p, UUID village, BuildOrders.Quote q, String purpose, @Nullable String firm) {
+        if (!q.ok) return "!Not there: " + q.why + ".";
+        String bad = BuildPlots.whyNot(level, Villages.get(village), q.drawing, q.plot, q.facing);
         if (!bad.isEmpty()) return "!Not there: " + bad + ".";
-        Market.payOut(p, q.deposit());
-        Ledger.addCoins(village, q.deposit());
-        CoinCensus.playerIn(village, q.deposit());
-        TownBudget.in(village, "fees", q.deposit() * 100L);
-        int seq = Integer.parseInt(Ledger.note(village, NOTE + "seq") == null ? "0" : Ledger.note(village, NOTE + "seq")) + 1;
-        Ledger.note(village, NOTE + "seq", Integer.toString(seq));
-        String id = "b" + seq;
+        BuildOrders.Result r = BuildOrders.place(level, p, q);
+        if (!r.ok()) return "!" + r.message();
         CompoundTag o = new CompoundTag();
-        o.putString("id", id);
+        o.putString("order", r.orderId());
         o.putUUID("owner", p.getUUID());
-        o.putString("ownerName", p.getGameProfile().getName());
-        o.putString("blueprint", q.blueprint());
-        o.putString("style", q.style());
-        o.putLong("plot", q.plot().asLong());
-        o.putInt("facing", q.facing().get2DDataValue());
         o.putString("purpose", purpose);
         if (firm != null) o.putString("firm", firm);
-        o.putInt("laid", 0);
-        o.putInt("of", BuildGoal.plan(q.blueprint(), q.plot(), q.facing(), 8).size());
-        o.putInt("paid", q.deposit());
-        o.putLong("day", level.getDayTime() / 24000L);
-        Ledger.note(village, NOTE + id, o.toString());
-        Design d = design(q.blueprint());
-        Villages.tell(village, level.getDayTime() / 24000L, p.getGameProfile().getName() + " commissioned " + (d == null ? "a building" : d.title().toLowerCase(Locale.ROOT))
-            + " of their own: " + PlayerLife.coins(q.deposit()) + " all told");
-        return id;
+        o.putInt("quarter", 0);
+        Ledger.note(village, NOTE + r.orderId(), o.toString());
+        return r.orderId();
     }
 
-    static List<CompoundTag> orders(UUID village) {
-        List<CompoundTag> out = new ArrayList<>();
+    /** The links in this town: order id -> what it is for. */
+    static Map<String, CompoundTag> links(UUID village) {
+        Map<String, CompoundTag> out = new java.util.LinkedHashMap<>();
         for (Map.Entry<String, String> e : Ledger.notes(village).entrySet()) {
-            if (!e.getKey().startsWith(NOTE) || e.getKey().equals(NOTE + "seq")) continue;
+            if (!e.getKey().startsWith(NOTE)) continue;
             try {
-                CompoundTag t = TagParser.parseTag(e.getValue());
-                if (!t.getBoolean("done")) out.add(t);
+                out.put(e.getKey().substring(NOTE.length()), TagParser.parseTag(e.getValue()));
             } catch (Exception ex) {
                 // a note that could not be read is left alone
             }
         }
-        out.sort(Comparator.comparing(t -> t.getString("id")));
         return out;
     }
 
-    /** The player's orders in this town, done and not. */
-    public static List<Status> mine(UUID village, UUID player) {
+    /** The player's orders with the town's builders here, going up and lately done (the last two days). */
+    public static List<Status> mine(ServerLevel level, UUID village, UUID player) {
         List<Status> out = new ArrayList<>();
-        for (Map.Entry<String, String> e : Ledger.notes(village).entrySet()) {
-            if (!e.getKey().startsWith(NOTE) || e.getKey().equals(NOTE + "seq")) continue;
-            try {
-                CompoundTag t = TagParser.parseTag(e.getValue());
-                if (t.getUUID("owner").equals(player) && (!t.getBoolean("done") || t.getLong("doneDay") + 2 >= dayNow())) out.add(status(t));
-            } catch (Exception ex) {
-                // skip
-            }
+        long day = level.getDayTime() / 24000L;
+        for (String id : BuildOrders.ordersOf(village, player)) {
+            BuildOrders.Status s = BuildOrders.status(level, id);
+            if (s == null || s.status.equals("cancelled")) continue;
+            CompoundTag o = BuildOrders.order(id);
+            if (s.status.equals("done") && o != null && o.getLong("done") + 2 < day) continue;
+            out.add(view(s));
         }
         return out;
     }
 
-    private static long dayNow() {
-        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        return server == null ? 0 : server.overworld().getDayTime() / 24000L;
+    static Status view(BuildOrders.Status s) {
+        boolean done = s.status.equals("done");
+        String name = s.name.isEmpty() ? "Your building" : "Your " + s.name.replaceFirst("^an? ", "");
+        return new Status(s.orderId, name, done ? 100 : s.percent, s.stage, s.waitingOn,
+            s.eta == null || done ? "" : s.eta.words(), s.due, done);
     }
 
     @Nullable
-    public static Status status(UUID village, String id) {
-        String n = Ledger.note(village, NOTE + id);
-        if (n == null) return null;
-        try {
-            return status(TagParser.parseTag(n));
-        } catch (Exception e) {
-            return null;
-        }
+    public static Status status(ServerLevel level, String id) {
+        BuildOrders.Status s = BuildOrders.status(level, id);
+        return s == null ? null : view(s);
     }
 
-    static Status status(CompoundTag t) {
-        Design d = design(t.getString("blueprint"));
-        int of = Math.max(1, t.getInt("of"));
-        int pct = Math.min(100, t.getInt("laid") * 100 / of);
-        int left = Math.max(0, of - t.getInt("laid"));
-        int eta = left == 0 ? 0 : 1;
-        return new Status(t.getString("id"), d == null ? "Your building" : "Your " + d.title().substring(2).toLowerCase(Locale.ROOT), pct,
-            t.getBoolean("done") ? "done" : t.getInt("laid") == 0 ? "waiting to start" : "going up", t.getString("waiting"), eta, eta + 1, t.getBoolean("done"));
+    /** Cancel it (BuildOrders: the builders keep what they earned, what was held and not spent comes back). */
+    public static String cancel(ServerLevel level, ServerPlayer p, String id) {
+        return BuildOrders.cancel(level, p, id);
     }
 
-    /** Cancel it: what was not yet laid refunded (its share of the price), the rest stands as far as it got. */
-    public static String cancel(ServerLevel level, ServerPlayer p, UUID village, String id) {
-        String n = Ledger.note(village, NOTE + id);
-        if (n == null) return "!No such order.";
-        CompoundTag t;
-        try { t = TagParser.parseTag(n); } catch (Exception e) { return "!No such order."; }
-        if (!t.getUUID("owner").equals(p.getUUID()) || t.getBoolean("done")) return "!That isn't yours to cancel.";
-        int refund = (int) Math.floor(t.getInt("paid") * (1.0 - t.getInt("laid") / (double) Math.max(1, t.getInt("of"))) * 0.9);
-        refund = Math.min(refund, Ledger.coins(village));
-        if (refund > 0) {
-            Ledger.takeCoins(village, refund);
-            Dealings.giveCoins(p, refund);
-            CoinCensus.playerOut(village, refund);
-        }
-        Ledger.forget(village, NOTE + id);
-        return "Cancelled: " + PlayerLife.coins(refund) + " back (what was not yet built, less a tenth for the trouble).";
-    }
+    // ------------------------------------------------------------------ following the orders
 
-    // ------------------------------------------------------------------ the plain engine
-
-    /** Every couple of seconds for a town: the orders' next blocks laid. */
+    /** Every couple of seconds for a town (PlayerShops.tick): a word at each quarter; a finished shop fitted out. */
     public static void tick(ServerLevel level, Villages.Village v) {
-        for (CompoundTag t : orders(v.id())) step(level, v, t);
-    }
-
-    static void step(ServerLevel level, Villages.Village v, CompoundTag t) {
-        String bp = t.getString("blueprint");
-        BlockPos plot = BlockPos.of(t.getLong("plot"));
-        Direction facing = Direction.from2DDataValue(t.getInt("facing"));
-        if (!level.isLoaded(plot)) return;
-        Style style = Style.of(t.getString("style"));
-        Function<BuildGoal.Placement, BlockState> paint = Showcase.painter(style.palette);
-        List<BuildGoal.Placement> plan = BuildGoal.plan(bp, plot, facing, 8);
-        plan.sort(Comparator.comparingInt((BuildGoal.Placement p) -> p.pos().getY()));
-        int laid = t.getInt("laid");
-        if (laid == 0) BuildGoal.clearWildPlants(level, bp, plot, facing, 8);
-        Set<BuildGoal.Placement> now = new HashSet<>();
-        String waiting = "";
-        long tick = level.getGameTime();
-        for (int i = laid; i < plan.size() && now.size() < PER_STEP; i++) {
-            BuildGoal.Placement p = plan.get(i);
-            BlockState st = paint.apply(p);
-            if (st != null && !st.isAir() && st.getBlock().asItem() != net.minecraft.world.item.Items.AIR) {
-                Block b = st.getBlock();
-                boolean had = Crafts.take(level, v, s -> s.is(b.asItem()), 1);
-                String itemKey = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(b.asItem()).toString();
-                CompoundTag bought = t.getCompound("boughtIn");
-                if (!had && !bought.getBoolean(itemKey)) {
-                    long since = t.getLong("waitSince");
-                    if (since == 0) { t.putLong("waitSince", tick); since = tick; }
-                    if (tick - since < WAIT) {
-                        int need = 0;
-                        for (int k = i; k < plan.size(); k++) { BlockState s2 = paint.apply(plan.get(k)); if (s2 != null && s2.getBlock() == b) need++; }
-                        waiting = need + " " + new ItemStack(b.asItem()).getHoverName().getString().toLowerCase(Locale.ROOT);
-                        break;
-                    }
-                    bought.putBoolean(itemKey, true);                         // waited long enough: bought in from now on
-                    t.put("boughtIn", bought);
-                }
-                t.putLong("waitSince", 0);
+        for (Map.Entry<String, CompoundTag> e : links(v.id()).entrySet()) {
+            CompoundTag t = e.getValue();
+            if (t.getBoolean("fitted")) continue;
+            BuildOrders.Status s = BuildOrders.status(level, e.getKey());
+            if (s == null || s.status.equals("cancelled")) {
+                Ledger.forget(v.id(), NOTE + e.getKey());
+                continue;
             }
-            now.add(p);
-        }
-        if (!now.isEmpty()) BuildGoal.stampOnly(level, bp, plot, facing, 8, paint, now::contains);
-        int was = t.getInt("laid") * 100 / Math.max(1, t.getInt("of"));
-        t.putInt("laid", laid + now.size());
-        t.putString("waiting", waiting);
-        int pct = t.getInt("laid") * 100 / Math.max(1, t.getInt("of"));
-        ServerPlayer owner = level.getServer().getPlayerList().getPlayer(t.getUUID("owner"));
-        Status s = status(t);
-        if (owner != null && pct / 25 > was / 25 && pct < 100) PlayerShops.notify(owner, s.words());
-        Ledger.note(v.id(), NOTE + t.getString("id"), t.toString());
-        if (t.getInt("laid") >= plan.size()) {
-            t.putBoolean("done", true);
-            Ledger.note(v.id(), NOTE + t.getString("id"), t.toString());
-            finish(level, v, t, plan, facing, owner);
-            Ledger.note(v.id(), NOTE + t.getString("id"), t.toString());
+            ServerPlayer owner = t.hasUUID("owner") && level.getServer() != null ? level.getServer().getPlayerList().getPlayer(t.getUUID("owner")) : null;
+            int q = s.status.equals("done") ? 4 : s.percent / 25;
+            if (q > t.getInt("quarter") && owner != null) {
+                t.putInt("quarter", q);
+                if (q < 4) PlayerShops.notify(owner, view(s).words() + (s.eta == null ? "" : "; done in " + s.eta.words()));
+                Ledger.note(v.id(), NOTE + e.getKey(), t.toString());
+            }
+            if (s.status.equals("done") && owner != null) {
+                CompoundTag o = BuildOrders.order(e.getKey());
+                if (o != null) finish(level, v, t, o, owner);
+                t.putBoolean("fitted", true);
+                Ledger.note(v.id(), NOTE + e.getKey(), t.toString());
+            }
         }
     }
 
-    /** It stands: a shop or premises gets its counter and a chest, and is the player's shop; the chronicle has it. */
-    static void finish(ServerLevel level, Villages.Village v, CompoundTag t, List<BuildGoal.Placement> plan, Direction facing, @Nullable ServerPlayer owner) {
-        t.putBoolean("done", true);
-        t.putLong("doneDay", level.getDayTime() / 24000L);
-        Design d = design(t.getString("blueprint"));
-        boolean home = d != null && HOMES.contains(d);
-        String title = d == null ? "a building" : d.title().toLowerCase(Locale.ROOT);
-        Villages.tell(v.id(), level.getDayTime() / 24000L, t.getString("ownerName") + "'s " + title.substring(2) + " was finished, every block of it paid for");
-        if (owner != null) {
-            PlayerShops.notify(owner, "Your " + title.substring(2) + " is finished!");
-            owner.sendSystemMessage(Component.literal("Your " + title.substring(2) + " is finished at " + BlockPos.of(t.getLong("plot")).toShortString() + ".").withStyle(ChatFormatting.GREEN));
-        }
-        if (home) return;
+    /** It stands: a shop or premises gets its counter and a chest, and is the player's shop (and its firm's premises). */
+    static void finish(ServerLevel level, Villages.Village v, CompoundTag t, CompoundTag o, ServerPlayer owner) {
+        String drawing = o.getString("drawing");
+        PlayerShops.notify(owner, "Your " + BuildOrders.title(drawing).replaceFirst("^an? ", "") + " is finished!");
+        if (BuildOrders.home(drawing)) return;
+        BlockPos anchor = BlockPos.of(o.getLong("anchor"));
+        Direction facing = Direction.from2DDataValue(o.getInt("facing"));
+        List<BuildGoal.Placement> plan = BuildGoal.plan(drawing, anchor, facing, 8);
         // The counter: in place of its first cask or barrel, else just inside the door, facing the way in.
-        BlockPos counter = null, chest = null;
+        BlockPos counter = null, chest = null, door = null;
         for (BuildGoal.Placement p : plan) {
             if (counter == null && p.part() == BuildGoal.Part.BARREL) counter = p.pos();
             else if (chest == null && p.part() == BuildGoal.Part.CHEST) chest = p.pos();
+            if (door == null && p.part() == BuildGoal.Part.DOOR) door = p.pos();
         }
-        BlockPos door = null;
-        for (BuildGoal.Placement p : plan) if (p.part() == BuildGoal.Part.DOOR) { door = p.pos(); break; }
         if (counter == null && door != null) counter = door.relative(facing.getOpposite(), 2);
-        if (counter != null) {
-            level.setBlockAndUpdate(counter, McAssistantMod.SHOP_COUNTER.get().defaultBlockState()
-                .setValue(com.jrpetty.mcassistant.block.ShopCounterBlock.FACING, facing));
+        if (counter == null || !level.isLoaded(counter)) return;
+        level.setBlockAndUpdate(counter, McAssistantMod.SHOP_COUNTER.get().defaultBlockState()
+            .setValue(com.jrpetty.mcassistant.block.ShopCounterBlock.FACING, facing));
+        if (chest == null || !level.getBlockState(chest).is(Blocks.CHEST)) {
+            BlockPos c = counter.relative(facing.getOpposite()).relative(facing.getClockWise());
+            if (level.getBlockState(c).isAir()) level.setBlockAndUpdate(c, Blocks.CHEST.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, facing));
         }
-        if (chest == null && counter != null) {
-            chest = counter.relative(facing.getOpposite()).relative(facing.getClockWise());
-            if (level.getBlockState(chest).isAir()) level.setBlockAndUpdate(chest, Blocks.CHEST.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, facing));
-        }
-        if (counter != null && owner != null && PlayerShops.of(v.id(), owner.getUUID()) == null) PlayerShops.placed(level, counter, owner, true);
+        if (PlayerShops.of(v.id(), owner.getUUID()) == null) PlayerShops.placed(level, counter, owner, true);
         String firm = t.getString("firm");
-        if (!firm.isEmpty() && counter != null) {
+        if (!firm.isEmpty()) {
             Business b = Businesses.of(v.id(), firm);
             if (b != null) {
                 b.at = counter;
+                CompoundTag r = Enterprise.rec(v.id(), b.id);
+                if (r != null) r.putLong("at", counter.asLong());
                 Businesses.dirty();
             }
-            PlayerShops.Shop s = owner == null ? null : PlayerShops.of(v.id(), owner.getUUID());
+            PlayerShops.Shop s = PlayerShops.of(v.id(), owner.getUUID());
             if (s != null) { s.firm = firm; PlayerShops.save(s); }
         }
     }
@@ -383,8 +268,8 @@ public final class BuildDesk {
     // ------------------------------------------------------------------ the picture
 
     /** The drawing's blocks for the picture, in this style: x, y, z and the block's state id, four ints each. */
-    public static int[] picture(String blueprint, Style style) {
-        Function<BuildGoal.Placement, BlockState> paint = Showcase.painter(style.palette);
+    public static int[] picture(String blueprint, String style) {
+        Function<BuildGoal.Placement, BlockState> paint = Showcase.painter(BuildOrders.palette(style));   // [join21] the builders' own palette
         List<Integer> out = new ArrayList<>();
         Direction facing = Direction.SOUTH;
         for (BuildGoal.Placement p : BuildGoal.plan(blueprint, BlockPos.ZERO, facing, 8)) {
@@ -438,23 +323,9 @@ public final class BuildDesk {
         return out.isEmpty() ? "bare walls" : String.join(", ", out);
     }
 
-    /** Tests: the plain engine run till the order stands (or so many steps). */
-    public static void buildForTests(ServerLevel level, Villages.Village v, String id, int steps) {
-        for (int i = 0; i < steps; i++) {
-            String n = Ledger.note(v.id(), NOTE + id);
-            if (n == null) return;
-            try {
-                CompoundTag t = TagParser.parseTag(n);
-                if (t.getBoolean("done")) return;
-                t.putLong("waitSince", level.getGameTime() - WAIT - 1);
-                step(level, v, t);
-            } catch (Exception e) {
-                return;
-            }
-        }
-    }
-
-    static int heightAt(ServerLevel level, int x, int z) {
-        return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+    /** Tests: the link kept for an order (what it is for), or null. */
+    @Nullable
+    public static CompoundTag linkForTests(UUID village, String orderId) {
+        return links(village).get(orderId);
     }
 }

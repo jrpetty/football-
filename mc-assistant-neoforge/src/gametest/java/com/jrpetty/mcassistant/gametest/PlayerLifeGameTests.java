@@ -514,34 +514,90 @@ public class PlayerLifeGameTests {
 
     // ============================================================ the town builds it
 
-    /** A shop the town builds: quoted, placed, built, and complete with its counter: the player's shop, ready. */
-    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pl09_town_builds_it")
+    /** The town's stores with what the builders lay (oak, cobble, glass, the kit), as the build orders' own tests stock them. */
+    private static void builderStores(ServerLevel level, BlockPos heart) {
+        net.minecraft.world.item.Item[] goods = { Items.OAK_PLANKS, Items.OAK_PLANKS, Items.OAK_PLANKS, Items.OAK_PLANKS, Items.OAK_PLANKS, Items.OAK_PLANKS,
+            Items.OAK_PLANKS, Items.OAK_PLANKS, Items.OAK_LOG, Items.OAK_LOG, Items.COBBLESTONE, Items.COBBLESTONE, Items.COBBLESTONE,
+            Items.STONE_BRICKS, Items.STONE_BRICKS, Items.GLASS, Items.GLASS_PANE, Items.TORCH, Items.LANTERN, Items.WHITE_WOOL,
+            Items.RED_CARPET, Items.POPPY, Items.BARREL, Items.FURNACE, Items.SMOKER, Items.CRAFTING_TABLE, Items.CHEST, Items.OAK_STAIRS,
+            Items.OAK_SLAB, Items.OAK_DOOR, Items.OAK_FENCE, Items.SPRUCE_PLANKS, Items.SPRUCE_LOG, Items.SPRUCE_STAIRS, Items.SPRUCE_SLAB };
+        List<ItemStack> stacks = new ArrayList<>();
+        for (net.minecraft.world.item.Item it : goods) stacks.add(new ItemStack(it, new ItemStack(it).getMaxStackSize()));
+        for (int c = 0; c * 27 < stacks.size(); c++) {
+            BlockPos chest = heart.offset(-6 + 2 * c, 0, -8);
+            level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+            Container box = (Container) level.getBlockEntity(chest);
+            for (int k = 0; k < 27 && c * 27 + k < stacks.size(); k++) box.setItem(k, stacks.get(c * 27 + k));
+            box.setChanged();
+        }
+    }
+
+    /**
+     * [join21] A shop the town builds, through the town's build orders (BuildOrders): the Start a business gallery's card
+     * shows the builders' own quote (the same total as BuildOrders.quote for that plot), the order is placed (its deposit
+     * booked in the player's finances), the builders put it up, and when it stands it is fitted with its counter and a chest
+     * and is the player's shop, complete; the building is on the property register.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pl09_town_builds_it")
     public static void pl09_town_builds_it(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 4540000;
-        List<VillageFolkEntity> folk = town(helper, level, x, 2);
+        List<VillageFolkEntity> folk = town(helper, level, x, 6);
+        com.jrpetty.mcassistant.entity.BuildOrders.resetForTests();
+        com.jrpetty.mcassistant.entity.PropertyMarket.resetForTests();
         level.setDayTime(1000);
         helper.runAtTickTime(10, () -> {
             UUID village = folk.get(0).ownerId();
             Villages.Village v = Villages.get(village);
             BlockPos heart = Kit.surface(level, x, Z);
+            builderStores(level, heart);
+            Villages.forgetStores(village);
             ServerPlayer p = player(helper, heart, 64);
-            p.getInventory().setItem(1, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
-            List<BuildPlots.Plot> plots = BuildPlots.find(level, v, "shop", 3);
-            Kit.log("[VT] pl09 plots " + plots);
-            helper.assertTrue(!plots.isEmpty(), "a free plot for a shop");
-            BuildPlots.Plot pl = plots.get(0);
-            BuildDesk.Quote q = BuildDesk.quote(level, village, "shop", BuildDesk.Style.OAK, pl.at(), pl.facing(), p.getUUID());
-            double mat = q.materials().stream().mapToDouble(BuildDesk.Line::total).sum();
-            Kit.log("[VT] pl09 quote " + q.total() + " = materials " + mat + " + labour " + q.labour() + " + land " + q.land() + " + fees " + q.fees());
-            helper.assertTrue(Math.abs(Math.ceil(mat + q.labour() + q.land() + q.fees()) - q.total()) < 1e-6, "the quote adds up");
-            helper.assertTrue(BuildDesk.picture("shop", BuildDesk.Style.OAK).length > 400, "a picture from its drawing");
+            for (int i = 1; i < 6; i++) p.getInventory().setItem(i, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+            BuildPlots.Plot pl = BuildPlots.first(level, v, "shop");
+            Kit.log("[VT] pl09 plot " + pl);
+            helper.assertTrue(pl != null, "a free plot for a shop");
+            String style = BuildDesk.styles(village).get(0);
+            com.jrpetty.mcassistant.entity.BuildOrders.Quote q = BuildDesk.quote(level, village, "shop", style, pl.at(), pl.facing(), p.getUUID());
+            com.jrpetty.mcassistant.entity.BuildOrders.Quote theirs = com.jrpetty.mcassistant.entity.BuildOrders.quote(level, village, "shop", style, pl.at(), pl.facing(), p.getUUID());
+            for (String line : BuildDesk.quoteLines(q)) Kit.log("[VT] pl09 card: " + line);
+            helper.assertTrue(q.ok, "the builders will build there: " + q.why);
+            helper.assertTrue(q.total == theirs.total && q.deposit == theirs.deposit && q.eta != null, "the desk's quote is the builders' own: " + q.total + " / " + theirs.total);
+            helper.assertTrue(BuildDesk.picture("shop", style).length > 400, "a picture from its drawing");
+            // The gallery's card for a shop shows that total.
+            PlayerLife.open(p, "start", null);
+            PlayerLife.Ctx c = PlayerLife.ctx(p);
+            c.args.putString("prem", "build");
+            c.args.putString("bp", "shop");
+            c.args.putInt("step", 2);
+            CompoundTag page = PlayerLife.pageForTests(p);
+            String card = null;
+            for (Tag t : page.getList("blocks", Tag.TAG_COMPOUND)) {
+                CompoundTag b = (CompoundTag) t;
+                if (b.getString("l").contains("A shop")) card = b.getString("r");
+            }
+            Kit.log("[VT] pl09 gallery card value " + card + " (builders' total " + theirs.total + ")");
+            helper.assertTrue(card != null && card.replaceAll("[^0-9]", "").equals(Integer.toString(theirs.total)), "the gallery's card shows the builders' total: " + card + " vs " + theirs.total);
+            // Ordered: the deposit down, in the player's own books.
+            int had = coins(p);
             String id = BuildDesk.place(level, p, village, q, "shop", null);
             helper.assertTrue(!id.startsWith("!"), "placed: " + id);
-            BuildDesk.buildForTests(level, v, id, 2000);
-            BuildDesk.Status st = BuildDesk.status(village, id);
-            Kit.log("[VT] pl09 status " + (st == null ? null : st.words()));
-            helper.assertTrue(st != null && st.done(), "it stands");
+            helper.assertTrue(had - coins(p) == q.deposit, "the deposit taken: " + (had - coins(p)) + " of " + q.deposit);
+            long day = level.getDayTime() / 24000L;
+            long invested = com.jrpetty.mcassistant.entity.PlayerFinance.span(p.getUUID(), day, 1).getOrDefault(com.jrpetty.mcassistant.entity.PlayerFinance.Cat.INVESTED, 0L);
+            helper.assertTrue(invested == -q.deposit * 100L, "the deposit in the player's books: " + invested);
+            helper.assertTrue(BuildDesk.mine(level, village, p.getUUID()).size() == 1, "on the life page's 'going up for you'");
+            for (int i = 0; i < 20 * 12; i++) {
+                CompoundTag o = com.jrpetty.mcassistant.entity.BuildOrders.orderForTests(id);
+                if (o == null || !o.getString("status").equals("open") && !o.getString("status").equals("awaiting")) break;
+                if (o.getString("status").equals("awaiting")) com.jrpetty.mcassistant.entity.BuildOrders.pay(level, p, id);
+                com.jrpetty.mcassistant.entity.BuildOrders.hoursForTests(level, v, 2);
+            }
+            BuildDesk.Status st = BuildDesk.status(level, id);
+            Kit.log("[VT] pl09 status " + (st == null ? null : st.words() + " / " + st.stage() + " / " + st.waitingOn()));
+            helper.assertTrue(st != null && st.done(), "it stands: " + (st == null ? null : st.stage() + " " + st.waitingOn()));
+            BuildDesk.tick(level, v);
             PlayerShops.Shop s = PlayerShops.of(village, p.getUUID());
             helper.assertTrue(s != null, "the town's building is the player's shop");
             List<ShopNeeds.Need> needs = PlayerShops.needs(level, s);
@@ -550,6 +606,7 @@ public class PlayerLifeGameTests {
             Kit.log("[VT] pl09 its checklist: " + sb);
             helper.assertTrue(needs.stream().filter(n -> List.of("counter", "walls", "door", "stock").contains(n.id())).allMatch(ShopNeeds.Need::ok),
                 "built complete: counter, walls, door, stock: " + sb);
+            helper.assertTrue(!com.jrpetty.mcassistant.entity.PropertyMarket.ownedBy(village, p.getUUID()).isEmpty(), "on the property register, the player's");
             helper.succeed();
         });
     }

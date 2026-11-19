@@ -49,6 +49,19 @@ public final class BuildPlots {
         return out;
     }
 
+    /** [join21] The first plot for this drawing: the nearest of {@link #find}, else the builders' own suggestion near the square. */
+    @Nullable
+    public static Plot first(ServerLevel level, Villages.Village v, String blueprint) {
+        List<Plot> found = find(level, v, blueprint, 1);
+        if (!found.isEmpty()) return found.get(0);
+        BlockPos c = v.centre();
+        for (Direction f : Direction.Plane.HORIZONTAL) {
+            BlockPos at = BuildOrders.suggestPlot(level, v.id(), blueprint, c.offset(16, 0, 16), f, 64);
+            if (at != null && whyNot(level, v, blueprint, at, f).isEmpty()) return new Plot(at, f, label(c, at));
+        }
+        return null;
+    }
+
     /** Its front to the square. */
     public static Direction toward(BlockPos from, BlockPos to) {
         int dx = to.getX() - from.getX(), dz = to.getZ() - from.getZ();
@@ -65,6 +78,8 @@ public final class BuildPlots {
     /** Why a building may not go here ("" if it may): off the town, a street, the mine, a building in the way, steep ground. */
     public static String whyNot(ServerLevel level, @Nullable Villages.Village v, String blueprint, BlockPos at, Direction facing) {
         if (v == null) return "no town here";
+        String builders = BuildOrders.plotProblem(level, v, blueprint, at, facing, null);   // [join21] the town's builders' own rules first
+        if (!builders.isEmpty()) return "it would be " + builders;
         if (at.distSqr(v.centre()) > 110.0 * 110.0) return "too far out of town";
         int[] g = BuildGoal.footprint(blueprint);
         int gx = facing.getAxis() == Direction.Axis.Z ? g[0] : g[1], gz = facing.getAxis() == Direction.Axis.Z ? g[1] : g[0];

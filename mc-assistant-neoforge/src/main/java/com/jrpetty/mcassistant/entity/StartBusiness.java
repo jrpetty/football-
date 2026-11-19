@@ -180,45 +180,37 @@ public final class StartBusiness implements PlayerLife.Page {
     /** The gallery: each drawing with its picture, size, what is in it, its quote and how long; then its plot. */
     static void gallery(ServerLevel level, ServerPlayer p, Villages.Village v, PlayerLife.Ctx c, LifePage page, String suited) {
         String bp = c.args.getString("bp");
-        BuildDesk.Style style = BuildDesk.Style.of(c.args.getString("style"));
-        String[] sv = new String[BuildDesk.Style.values().length], sl = new String[sv.length];
-        for (int i = 0; i < sv.length; i++) { sv[i] = BuildDesk.Style.values()[i].id; sl[i] = BuildDesk.Style.values()[i].label; }
-        page.choice("style", "In", sv, sl, style.id);
+        List<String> styles = BuildDesk.styles(v.id());                      // [join21] the builders' styles, as the age allows
+        String style = styles.contains(c.args.getString("style")) ? c.args.getString("style") : styles.get(0);
+        String[] sv = styles.toArray(new String[0]), sl = new String[sv.length];
+        for (int i = 0; i < sv.length; i++) sl[i] = BuildDesk.styleLabel(sv[i]);
+        page.choice("style", "In", sv, sl, style);
         page.buttons().button("Show it in this style", "style", null);
         List<BuildDesk.Design> designs = new ArrayList<>(BuildDesk.PREMISES);
         designs.sort(Comparator.comparingInt(d -> d.blueprint().equals(suited) ? 0 : 1));
+        List<String> drawings = BuildOrders.drawings(v.id());
         for (BuildDesk.Design d : designs) {
-            if (!com.jrpetty.mcassistant.entity.goal.Blueprints.has(d.blueprint())) continue;
+            if (!drawings.contains(d.blueprint())) continue;                 // [join21] what the builders will take an order for
             int[] size = BuildDesk.size(d.blueprint());
-            List<BuildPlots.Plot> plots = BuildPlots.find(level, v, d.blueprint(), 1);
-            BuildDesk.Quote q = plots.isEmpty() ? null : BuildDesk.quote(level, v.id(), d.blueprint(), style, plots.get(0).at(), plots.get(0).facing(), p.getUUID());
+            BuildPlots.Plot plot = BuildPlots.first(level, v, d.blueprint());
+            BuildOrders.Quote q = plot == null ? null : BuildDesk.quote(level, v.id(), d.blueprint(), style, plot.at(), plot.facing(), p.getUUID());
             page.picture(d.blueprint(), BuildDesk.picture(d.blueprint(), style));
             boolean on = d.blueprint().equals(bp);
             page.row(null, (on ? "✔ " : "") + d.title() + (d.blueprint().equals(suited) ? " (suits it best)" : "") + " — " + size[0] + " by " + size[1] + ", "
                     + size[2] + (size[2] == 1 ? " storey" : " storeys"), "For a " + d.suits() + ". Inside: " + BuildDesk.furnishing(d.blueprint()) + ".",
-                    q == null ? "no plot" : PlayerLife.coins((long) q.total()))
+                    q == null ? "no plot" : PlayerLife.coins(q.total))
                 .button(on ? "Chosen" : "Choose", "bp", LifePage.args("bp", d.blueprint()), q != null, "No plot in town fits it");
-            if (q != null) page.text(quoteLine(q), 4);
+            if (q != null) for (String line : BuildDesk.quoteLines(q)) page.text(line, 4);   // [join21] the builders' quote and time
             if (on) place(level, p, v, c, page, d.blueprint(), style);
         }
     }
 
-    static String quoteLine(BuildDesk.Quote q) {
-        StringBuilder m = new StringBuilder();
-        for (int i = 0; i < Math.min(3, q.materials().size()); i++) {
-            BuildDesk.Line l = q.materials().get(i);
-            m.append(i == 0 ? "" : ", ").append(l.count()).append(" ").append(l.what().toLowerCase(Locale.ROOT));
-        }
-        double mat = 0;
-        for (BuildDesk.Line l : q.materials()) mat += l.total();
-        return String.format(Locale.ROOT, "Materials %.0fc (%s...), labour %.0fc (%.0f hours), land %.0fc, fees %.0fc: %.0fc all told. Ready in %d-%d days: %s.",
-            mat, m, q.labour(), q.labourHours(), q.land(), q.fees(), q.total(), q.etaLow(), q.etaHigh(), q.etaWhy());
-    }
-
     /** The plot: a small map of the town's free plots, the chosen one outlined on the ground; nudged and turned. */
-    static void place(ServerLevel level, ServerPlayer p, Villages.Village v, PlayerLife.Ctx c, LifePage page, String bp, BuildDesk.Style style) {
+    static void place(ServerLevel level, ServerPlayer p, Villages.Village v, PlayerLife.Ctx c, LifePage page, String bp, String style) {
         List<BuildPlots.Plot> plots = BuildPlots.find(level, v, bp, 6);
-        if (!c.args.contains("px") && !plots.isEmpty()) setPlot(c, plots.get(0).at(), plots.get(0).facing());
+        BuildPlots.Plot first = plots.isEmpty() ? BuildPlots.first(level, v, bp) : plots.get(0);   // [join21] else BuildOrders.suggestPlot's
+        if (first != null && plots.isEmpty()) plots = List.of(first);
+        if (!c.args.contains("px") && first != null) setPlot(c, first.at(), first.facing());
         if (!c.args.contains("px")) {
             page.text("No free plot in town fits it.", 3);
             return;
@@ -271,20 +263,23 @@ public final class StartBusiness implements PlayerLife.Page {
         BusinessTypes.BusinessType t = BusinessTypes.of(c.args.getString("kind"));
         if (t == null) { c.args.putInt("step", 1); kinds(level, p, v, c, page); return; }
         int fee = Enterprise.CHARTER_FEE;
-        BuildDesk.Quote q = buildQuote(level, p, v, c);
-        int total = fee + (q == null ? 0 : q.deposit());
+        BuildOrders.Quote q = buildQuote(level, p, v, c);
+        int total = fee + (q == null ? 0 : q.deposit);
         int have = Market.coinsHeld(p);
         page.heading("Your " + t.noun() + " in " + Villages.name(v.id()));
         page.row(icon(t), t.nameFor(p.getGameProfile().getName()), "a " + t.noun() + ", sells " + wares(t), "").button("Change", "step", LifePage.args("s", 1));
         String prem = c.args.getString("prem");
         PlayerShops.Shop shop = PlayerShops.of(v.id(), p.getUUID());
         page.row(null, "Premises: " + (prem.equals("shop") && shop != null ? "your shop, " + shop.name : prem.equals("build") && q != null
-                ? BuildDesk.design(q.blueprint()).title().toLowerCase(Locale.ROOT) + " the town builds, " + BuildPlots.label(v.centre(), q.plot())
+                ? BuildOrders.title(q.drawing) + " the town builds, " + BuildPlots.label(v.centre(), q.plot)
                 : t.stall() ? "a stall on the square" : "a room the town lets"), "", "").button("Change", "step", LifePage.args("s", 2));
         page.heading("The cost");
         page.row(null, "The charter, to the town", "", PlayerLife.coins(fee));
-        if (q != null) {
-            page.row(null, "The building, all told", quoteLine(q), PlayerLife.coins(q.deposit()));
+        if (q != null) {                                                     // [join21] the builders' quote: the deposit now, the rest as it goes up
+            page.row(null, "The building: its deposit now", "Of " + PlayerLife.coins(q.total) + " all told; " + q.stage + "c more at half built, "
+                + q.balance + "c when it stands", PlayerLife.coins(q.deposit));
+            for (String line : BuildDesk.quoteLines(q)) page.text(line, 4);
+            if (!q.ok) page.text("✘ The builders won't build there: " + q.why + ". Choose another plot.", 3);
         }
         page.row(null, "All told", "You have " + PlayerLife.coins(have), PlayerLife.coins(total));
         String standing = mayCharter(level, v, p);
@@ -314,9 +309,11 @@ public final class StartBusiness implements PlayerLife.Page {
     }
 
     @Nullable
-    static BuildDesk.Quote buildQuote(ServerLevel level, ServerPlayer p, Villages.Village v, PlayerLife.Ctx c) {
+    static BuildOrders.Quote buildQuote(ServerLevel level, ServerPlayer p, Villages.Village v, PlayerLife.Ctx c) {
         if (!c.args.getString("prem").equals("build") || !c.args.contains("px") || c.args.getString("bp").isEmpty()) return null;
-        return BuildDesk.quote(level, v.id(), c.args.getString("bp"), BuildDesk.Style.of(c.args.getString("style")),
+        List<String> styles = BuildDesk.styles(v.id());
+        String style = styles.contains(c.args.getString("style")) ? c.args.getString("style") : styles.get(0);
+        return BuildDesk.quote(level, v.id(), c.args.getString("bp"), style,
             new BlockPos(c.args.getInt("px"), c.args.getInt("py"), c.args.getInt("pz")), Direction.from2DDataValue(c.args.getInt("face")), p.getUUID());
     }
 
@@ -336,7 +333,11 @@ public final class StartBusiness implements PlayerLife.Page {
         page.row(new ItemStack(Items.NAME_TAG), "Set its prices", "Its costs and a markup", "").button("Set prices", "next", LifePage.args("tab", "prices"));
         page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get()), "Fund it", "Coin in its till to pay for stock and wages", "").button("Invest", "next", LifePage.args("tab", "money"));
         page.row(new ItemStack(Items.WRITABLE_BOOK), "Its books", "Takings, costs and profit", "").button("Open the books", "books", null);
-        if (c.args.getString("prem").equals("build")) page.text("The town's hands start on its building now: you'll be told as it goes up.", 4);
+        if (c.args.getString("prem").equals("build")) {                      // [join21] the builders' order, as it stands
+            BuildDesk.Status st = c.args.getString("order").isEmpty() ? null : BuildDesk.status(level, c.args.getString("order"));
+            page.text("The town's builders have your order" + (st == null ? "" : ": " + st.stage() + (st.eta().isEmpty() ? "" : ", done in " + st.eta()))
+                + ". You'll be told as it goes up; the rest is paid as it does (the property office has the order).", 4);
+        }
     }
 
     @Override
@@ -410,13 +411,13 @@ public final class StartBusiness implements PlayerLife.Page {
         if (t == null || !BusinessTypes.allowed(v.id()).contains(t)) return "!Choose a kind the town can have.";
         String may = mayCharter(level, v, p);
         if (!may.isEmpty()) return "!" + may;
-        BuildDesk.Quote q = buildQuote(level, p, v, c);
+        BuildOrders.Quote q = buildQuote(level, p, v, c);
         if (c.args.getString("prem").equals("build")) {
             if (q == null) return "!Choose a building and its plot first.";
-            String bad = BuildPlots.whyNot(level, v, q.blueprint(), q.plot(), q.facing());
+            String bad = !q.ok ? q.why : BuildPlots.whyNot(level, v, q.drawing, q.plot, q.facing);
             if (!bad.isEmpty()) return "!Its plot won't do: " + bad + ".";
         }
-        int total = Enterprise.CHARTER_FEE + (q == null ? 0 : q.deposit());
+        int total = Enterprise.CHARTER_FEE + (q == null ? 0 : q.deposit);
         if (borrow > 0 && Market.coinsHeld(p) < total) {
             String said = FolkCredit.playerBorrows(level, p, v.id(), Math.min(borrow, total - Market.coinsHeld(p)));
             if (Market.coinsHeld(p) < total) return "!The bank said: " + said;
