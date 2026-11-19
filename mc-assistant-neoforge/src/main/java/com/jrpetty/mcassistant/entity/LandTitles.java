@@ -121,6 +121,7 @@ public final class LandTitles {
             value(t, earns, growth, home ? Privatisation.TITLE_PENCE : 0);
             if (home && b.open && t.getInt("idleDays") >= IDLE_DAYS && landlord.isEmpty()) offerIdle(level, v, b, t, day);
         }
+        PropertyMarket.titles(level, id, all, seen, growth);            // [orders17] the players' buildings on the register
         for (String k : new ArrayList<>(all.getAllKeys())) if (!seen.contains(k)) all.remove(k);
         // The index, and the rents that follow it.
         long sum = 0;

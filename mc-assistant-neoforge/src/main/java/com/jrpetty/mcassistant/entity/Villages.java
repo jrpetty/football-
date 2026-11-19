@@ -3192,6 +3192,32 @@ public final class Villages {
     }
 
     /**
+     * [orders17] A player's commissioned building (BuildOrders) or its property (PropertyMarket): every lot of the plan its
+     * footprint touches is spoken for, so the town builds round it; freed again if the order is called off unbuilt.
+     */
+    public static void holdLot(UUID villageId, BlockPos anchor, int hw, int hd, net.minecraft.core.Direction facing) {
+        lotCells(villageId, anchor, hw, hd, facing, true);
+    }
+
+    public static void freeLot(UUID villageId, BlockPos anchor, int hw, int hd, net.minecraft.core.Direction facing) {
+        lotCells(villageId, anchor, hw, hd, facing, false);
+    }
+
+    private static void lotCells(UUID villageId, BlockPos anchor, int hw, int hd, net.minecraft.core.Direction facing, boolean hold) {
+        Village v = get(villageId);
+        if (v == null) return;
+        boolean turned = facing.getAxis() == net.minecraft.core.Direction.Axis.X;
+        int wx = turned ? hd : hw, wz = turned ? hw : hd;
+        java.util.Set<Long> taken = LOT_TAKEN.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : com.jrpetty.mcassistant.village.TownPlan.lots()) {
+            int lh = Math.max(lot.halfAcross(), lot.halfDeep());
+            int x = v.centre().getX() + lot.x(), z = v.centre().getZ() + lot.z();
+            if (Math.abs(x - anchor.getX()) > lh + wx || Math.abs(z - anchor.getZ()) > lh + wz) continue;
+            for (long cell : lot.cells()) { if (hold) taken.add(cell); else taken.remove(cell); }
+        }
+    }
+
+    /**
      * [econ-housing] A folk's own house stands: its site comes off the list of what is going up, its lot spoken for as any
      * built on; given up before a block is laid (the household could not pay after all), the lot is free again.
      */

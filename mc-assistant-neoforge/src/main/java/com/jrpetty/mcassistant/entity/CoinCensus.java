@@ -286,6 +286,7 @@ public final class CoinCensus {
         out.put("the wonder fund", TownWonders.heldFor(village) * 100L);
         out.put("the statue fund", PublicFund.held(village) * 100L);
         out.put("held for a house going up", HousingMarket.escrowForTests(village) * 100L);
+        out.put("held for players' building orders", BuildOrders.heldPence(village));   // [orders17] deposits and stages not yet spent
         out.put("haul contracts' escrow", HaulContracts.escrowed(village) * 100L);
         // [health] The rent a player's tenants have paid, waiting for the player at the treasury (or the bank's round).
         long rentDue = 0;
