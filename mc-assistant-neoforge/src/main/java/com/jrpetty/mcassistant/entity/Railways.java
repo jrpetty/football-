@@ -1203,7 +1203,7 @@ public final class Railways {
         if (overWater) {
             if (!free && !Crafts.usePlanks(level, v, 1)) return Laid.UNPAID;
             level.setBlock(under, Blocks.SPRUCE_PLANKS.defaultBlockState(), 3);
-            if (i % 3 == 0) post(level, v, under.below(), free, true);
+            if (i % 3 == 0) post(level, v, l, under.below(), free, true);
             return Laid.LAID;
         }
         if (depth <= BANK) {
@@ -1213,17 +1213,31 @@ public final class Railways {
         }
         if (!free && !Crafts.usePlanks(level, v, 1)) return Laid.UNPAID;
         level.setBlock(under, Blocks.SPRUCE_PLANKS.defaultBlockState(), 3);
-        if (i % 2 == 0) post(level, v, under.below(), free, false);
+        if (i % 2 == 0) post(level, v, l, under.below(), free, false);
         return Laid.LAID;
     }
 
-    /** A post of spruce fence down from here to the ground or the bed, as far as the stores' planks run. */
-    private static void post(ServerLevel level, Villages.Village v, BlockPos top, boolean free, boolean wet) {
+    /** [bridges18] Whether a line's trestle posts are logs (the stores had the logs when its first post went in) or fence. */
+    private static final Map<String, Boolean> LOG_POSTS = new ConcurrentHashMap<>();
+
+    /**
+     * A post down from here to the ground or the bed, as far as the stores run: [bridges18] a spruce log, as the road bridge's
+     * timber posts, where the stores had logs for the line's trestles when it was begun; a spruce fence else. One or the
+     * other for the whole line, never both.
+     */
+    private static void post(ServerLevel level, Villages.Village v, Line l, BlockPos top, boolean free, boolean wet) {
+        boolean logs = LOG_POSTS.computeIfAbsent(v.id() + "/" + l.key, k -> free || Market.stock(level, v.id(), s -> s.is(net.minecraft.tags.ItemTags.LOGS)) >= 24);
         BlockPos p = top;
         for (int d = 0; d < MOST_FILL + 8; d++) {
             BlockState s = level.getBlockState(p);
             boolean water = !s.getFluidState().isEmpty();
             if (!s.isAir() && !water && !s.canBeReplaced()) return;
+            if (logs) {
+                if (!free && !Crafts.take(level, v, x -> x.is(net.minecraft.tags.ItemTags.LOGS), 1)) return;
+                level.setBlock(p, Blocks.SPRUCE_LOG.defaultBlockState(), 3);
+                p = p.below();
+                continue;
+            }
             if (!free && !Crafts.fence(level, v)) return;
             BlockState fence = Blocks.SPRUCE_FENCE.defaultBlockState();
             if (water) fence = fence.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true);
