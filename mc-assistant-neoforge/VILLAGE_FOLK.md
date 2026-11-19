@@ -14249,3 +14249,55 @@ track and on gravel, the market's API, a rival's toll, an army's march by the ro
 them and lost trade, the tariffs, an embargo by the town that lost the trade (no talks, the route shut), lifted when
 relations mend; rg05 a pact and then an alliance out of good trade; rg06 the survey and the rivalry kept over a save and
 a restart, the page and the command, a sleeping town's gang's steps laid on waking.
+
+## The ruler looks the part: crowns, chains of office, circlets and plumes [regalia19]
+
+Whoever leads a town is dressed for it, so the king (or the mayor, or the elder) can be picked out of a crowd at a
+glance. What a folk wears follows from the town's government (Government) and its land's title for an elected leader
+(Homeland), worked out for the whole town at a time (entity/Regalia) and sent to the client in one number with the
+town's two banner colours: the field of its banner, and its first charge (a pale field gives way to the charge, so a
+cape is never white on white).
+
+- **A monarch** (the hereditary lord): a gold crown set with rubies, sapphires and emeralds, its points and pearls
+  standing above the head over a cap of velvet in the town's colour, a gold orb and cross on top; a long cape of the
+  town's colour lined with its second, edged and hemmed with ermine (white with its black tails) and a gold line inside
+  it, swinging out behind as it walks; an ermine collar with a gold clasp; a robe of the colour to the shins with ermine
+  down its front between two lines of gold, a gold girdle and an ermine hem, gold and ermine at the cuffs; dark hose and
+  black boots with gold buckles; and a gold sceptre with a ruby, carried upright in the hand it does not work with
+  whenever that hand is free and it is standing about, talking, listening, leading or preaching. Its title is **Lord**,
+  and **King** once its house holds a city, a capital or a vassal town.
+- **The royal house** (the lord's heir and its partner): a gold coronet with small points, a short cape and the ermine
+  collar, a tunic of the colour trimmed in gold. "Fen, heir of Rushscar", "Wren, consort of Rushscar".
+- **An elected leader** (the harbourmaster, reeve, warden, hearthkeeper, thane, wellkeeper, herdmaster, fen-reeve,
+  mayor; a guild republic's guildmaster; a commune's steward): a gold chain of office over the shoulders with its
+  medallion enamelled in the town's second colour; a dark formal coat to the shins faced in the town's colour, a white
+  cravat and gilt buttons; a magistrate's hat of dark felt with a band of the colour, a gold buckle and a gold-laced brim.
+- **An elder** (a council's speaker, the plains' elder, the chaplain): a silver circlet with a pale stone, a long staff
+  of wood with a silver head, a robe of undyed wool with a stole of the town's colour and a silver fringe. The rest of
+  a council of elders wear the circlet ("Elder Yarrow").
+- **A chief** (the jungle's chief, the mesa's headman): a band of the town's colour set with gold beads and a crest of
+  plumes standing round the back of the head, a beaded mantle, a tunic with a gold zigzag, gold arm-bands, and a staff
+  with coloured bindings and a plume. A fantasy circlet of the town's own, nothing borrowed from any real people.
+
+On its nameplate its title, in gold: **"King Alder of Rushscar"**, "Mayor Bryn of Cherrywick", "Speaker Harper of
+Rushwell"; and a small sign over its head (a crown, a coronet, a chain of office, a silver circlet, a plumed band),
+growing a little with distance, drawn with the other marks and off when they are (the client's marks setting). The
+dress changes hands with the seat: at an election, a succession, a coup or a vote of no confidence the old ruler is
+plain again and the new one robed within a couple of seconds. A helmet goes on instead of a crown, a breastplate over a
+collar or a chain. While robed, a ruler's trade kit and its own coat and hat are put away; a councillor keeps its own.
+
+Cost: the robe, the coat and the hose are baked into the folk's own picture (FolkFaces.dressed, with the trade's coat
+cleared under a robe's hem), and the crown, capes, chains, circlets, staffs and plumes are one small model drawn in
+three passes (cloth, second colour, gold), each one batch for every ruler in sight (FolkBatch). The art is
+tools/regalia_art.py (textures/entity/folk/regalia_*.png and RegaliaModel's boxes).
+
+`/village regalia` lists the nearest town's court with their titles. Operators: `/village regalia land <land>` sets the
+town's land (its elected leader's title and dress follow it), `/village regalia heir` and `/village regalia wed` make the
+nearest folk the lord's eldest child or its partner, and `/village regalia tag` tags the court ("regalia",
+"regalia_monarch"...) for the pictures' scripts.
+
+Tests: RegaliaGameTests (x 4,900,000 to 4,910,000, z 90000): rl01 a lordship's crown, its heir's and partner's coronets
+and nobody else's, "Lord ... of ..." on the plate and "King" with a vassal, the town's two colours, and the crown passing
+to the heir at the lord's death with the old partner's coronet taken off; rl02 a mayor's chain of office handed on at an
+election by the folk's own ticks, the chief, the elder, the thane and the headman by land, the council's speaker and
+its elders, the guildmaster with no council left, and the chaplain.
