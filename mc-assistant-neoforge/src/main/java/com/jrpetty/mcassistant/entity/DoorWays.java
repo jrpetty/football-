@@ -75,6 +75,7 @@ public final class DoorWays {
                     CURSOR.put(v.id(), cursor);
                     return;
                 }
+                StepKit.door(level, v, d);                 // [bridges18] a block up or down the way in: a stair, not a block
                 if (approach(level, v, d, BUDGET) != 0) {  // [paths] then the path from it to the street, paved and lit
                     CURSOR.put(v.id(), cursor);
                     return;

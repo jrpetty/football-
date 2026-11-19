@@ -164,8 +164,8 @@ public class BridgeStairGameTests {
             BridgeStage.Scene s = BridgeStage.hill(level, x, Z, y);
             helper.assertTrue(s != null, "two towns");
             List<int[]> line = RoadWorks.lineForTests(s.a().id(), s.b().id());
-            BlockPos from = onLine(level, line, x + 40), to = onLine(level, line, x + 120);
-            BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, from, to, x + 40, x + 120, y - 4, y + 12, Z - 12, Z + 12);
+            BlockPos from = onLine(level, line, x + 46), to = onLine(level, line, x + 114);
+            BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, from, to, x + 46, x + 114, y - 4, y + 12, Z - 12, Z + 12);
             String walked = folkWalk(level, s.a(), onLine(level, line, x + 66), onLine(level, line, x + 80));
             Kit.log("[VT] bs04 hill road " + c + "; folk " + walked);
             helper.assertTrue(c.walked && "ok".equals(walked), "walked over the hill: " + c.walked + ", folk " + walked);

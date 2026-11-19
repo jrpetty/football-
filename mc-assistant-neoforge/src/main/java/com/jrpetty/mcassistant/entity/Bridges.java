@@ -373,7 +373,11 @@ public final class Bridges {
         for (int p = 0; p <= span; p++) {
             for (int l : new int[]{ -2, 2 }) out.add(new Place(a.relative(way, p).relative(side, l).above(), 'W', way));
         }
-        for (int p = 3; p < span; p += 6) {
+        // [bridges18] A lantern at each end of both walls and at even spacing between, the same either side of the middle.
+        List<Integer> lamps = new ArrayList<>(BridgeKit.lamps(0, span));
+        lamps.add(0);
+        lamps.add(span);
+        for (int p : lamps) {
             for (int l : new int[]{ -2, 2 }) out.add(new Place(a.relative(way, p).relative(side, l).above(2), 'L', way));
         }
         // The stairs down to the ground at each end.
@@ -420,12 +424,13 @@ public final class Bridges {
     static int build(ServerLevel level, Villages.Village v, Ferries.Crossing c, int steps, boolean free) {
         List<Place> plan = PLANS.computeIfAbsent(v.id(), k -> plan(level, c));
         if (plan.isEmpty()) return 0;
+        chooseStone(level, v, plan.size(), free);                     // [bridges18] the bridge's one stone, chosen once
         int laid = 0;
         int i = Math.max(0, Math.min(c.bridgeDone, plan.size()));
         while (i < plan.size() && laid < steps) {
             Place p = plan.get(i);
             if (!level.isLoaded(p.pos())) break;
-            if (done(level, p)) { i++; continue; }
+            if (done(level, p, bricks(level, v))) { i++; continue; }
             if (!free && !TownJobs.atWork(level, v, "bridge", p.pos(), "building the stone bridge", AssistantEntity.StationTask.MINE)) break;
             BlockState st = paid(level, v, p, free);
             if (st == null && p.what() == 'L') { i++; continue; }    // no lantern to hand: the wall goes without
@@ -443,7 +448,7 @@ public final class Bridges {
         c.bridgeDone = i;
         if (i >= plan.size()) {
             boolean all = true;
-            for (Place p : plan) if (p.what() != 'L' && level.isLoaded(p.pos()) && !done(level, p)) { all = false; c.bridgeDone = 0; break; }
+            for (Place p : plan) if (p.what() != 'L' && level.isLoaded(p.pos()) && !done(level, p, bricks(level, v))) { all = false; c.bridgeDone = 0; break; }
             if (all) {
                 open(level, v, c, plan);
                 return laid;
@@ -453,15 +458,31 @@ public final class Bridges {
         return laid;
     }
 
+    /** [bridges18] The note of the stone the bridge is built in: one stone for all of it, never a patchwork of what came to hand. */
+    static final String STONE = "b18.ferrystone";
+
+    /** The bridge's stone: stone bricks, unless it was put down to cobblestone when it was begun. */
+    static boolean bricks(ServerLevel level, Villages.Village v) {
+        return !"cobblestone".equals(Ledger.note(v.id(), STONE));
+    }
+
+    /** Chosen once from the stores: stone bricks if they hold enough for most of it (the masons make the rest), else cobblestone. */
+    private static void chooseStone(ServerLevel level, Villages.Village v, int blocks, boolean free) {
+        String s = Ledger.note(v.id(), STONE);
+        if (s != null && !s.isEmpty()) return;
+        boolean enough = free || Market.stock(level, v.id(), x -> x.is(Items.STONE_BRICKS)) >= blocks * 3 / 4;
+        Ledger.note(v.id(), STONE, enough ? "stone bricks" : "cobblestone");
+    }
+
     /** Is this block of the bridge there already? */
-    private static boolean done(ServerLevel level, Place p) {
+    private static boolean done(ServerLevel level, Place p, boolean bricks) {
         BlockState st = level.getBlockState(p.pos());
         return switch (p.what()) {
-            case 'S', 'R' -> st.getBlock() instanceof StairBlock;
-            case 'W' -> st.getBlock() instanceof net.minecraft.world.level.block.WallBlock;
+            case 'S', 'R' -> st.is(bricks ? Blocks.STONE_BRICK_STAIRS : Blocks.COBBLESTONE_STAIRS);
+            case 'W' -> st.is(bricks ? Blocks.STONE_BRICK_WALL : Blocks.COBBLESTONE_WALL);
             case 'L' -> st.getBlock() instanceof net.minecraft.world.level.block.LanternBlock;
-            default -> st.is(Blocks.STONE_BRICKS) || st.is(Blocks.COBBLESTONE) || st.is(Blocks.STONE) || st.is(Blocks.CHISELED_STONE_BRICKS)
-                || st.is(Blocks.MOSSY_STONE_BRICKS) || st.is(Blocks.CRACKED_STONE_BRICKS);
+            default -> bricks ? st.is(Blocks.STONE_BRICKS) || st.is(Blocks.CHISELED_STONE_BRICKS) || st.is(Blocks.MOSSY_STONE_BRICKS)
+                || st.is(Blocks.CRACKED_STONE_BRICKS) : st.is(Blocks.COBBLESTONE) || st.is(Blocks.MOSSY_COBBLESTONE);
         };
     }
 
@@ -475,24 +496,21 @@ public final class Bridges {
             if (light != null) Masonry.unlight(level, v, light);
             return null;
         }
-        Item from = free ? Items.STONE_BRICKS : take(level, v);
-        if (from == null) return null;
-        boolean bricks = from == Items.STONE_BRICKS;
-        boolean cobble = from == Items.COBBLESTONE;
+        // [bridges18] Only the bridge's own stone: the stores short of it, the bridge waits for it.
+        boolean bricks = bricks(level, v);
+        if (!free && take(level, v, bricks) == null) return null;
         return switch (p.what()) {
-            case 'S' -> (bricks ? Blocks.STONE_BRICK_STAIRS : cobble ? Blocks.COBBLESTONE_STAIRS : Blocks.STONE_STAIRS).defaultBlockState()
-                .setValue(StairBlock.FACING, p.facing()).setValue(StairBlock.HALF, Half.TOP);
-            case 'R' -> (bricks ? Blocks.STONE_BRICK_STAIRS : cobble ? Blocks.COBBLESTONE_STAIRS : Blocks.STONE_STAIRS).defaultBlockState()
-                .setValue(StairBlock.FACING, p.facing()).setValue(StairBlock.HALF, Half.BOTTOM);
+            case 'S', 'R' -> (bricks ? Blocks.STONE_BRICK_STAIRS : Blocks.COBBLESTONE_STAIRS).defaultBlockState()
+                .setValue(StairBlock.FACING, p.facing()).setValue(StairBlock.HALF, p.what() == 'S' ? Half.TOP : Half.BOTTOM);
             case 'W' -> (bricks ? Blocks.STONE_BRICK_WALL : Blocks.COBBLESTONE_WALL).defaultBlockState();
-            default -> (bricks ? Blocks.STONE_BRICKS : cobble ? Blocks.COBBLESTONE : Blocks.STONE).defaultBlockState();
+            default -> (bricks ? Blocks.STONE_BRICKS : Blocks.COBBLESTONE).defaultBlockState();
         };
     }
 
-    /** A block of the stores' stone taken: stone bricks first, then cobblestone, then stone. */
+    /** A block of the bridge's stone taken from the stores: stone bricks; or cobblestone (a block of stone does for one). */
     @Nullable
-    private static Item take(ServerLevel level, Villages.Village v) {
-        for (Item it : new Item[]{ Items.STONE_BRICKS, Items.COBBLESTONE, Items.STONE }) {
+    private static Item take(ServerLevel level, Villages.Village v, boolean bricks) {
+        for (Item it : bricks ? new Item[]{ Items.STONE_BRICKS } : new Item[]{ Items.COBBLESTONE, Items.STONE }) {
             if (TownWork.take(level, v, s -> s.is(it), 1)) return it;
         }
         return null;
@@ -518,6 +536,7 @@ public final class Bridges {
         Ferries.save(v.id(), c);
         Ferries.retire(level, v, c);
         PLANS.remove(v.id());
+        Ledger.forget(v.id(), STONE);                                 // [bridges18] the next bridge chooses its own stone
     }
 
     // ------------------------------------------------------------------ the books, the tests, the showcase

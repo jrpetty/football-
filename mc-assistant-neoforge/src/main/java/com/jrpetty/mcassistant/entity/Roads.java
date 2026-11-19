@@ -146,6 +146,10 @@ public final class Roads {
             // stops where it is, and goes on from there another visit, once there is more put by.
             int y = step(level, mother, colony, p[0], p[1], lastY, alongX, next);
             if (y == UNPAID) break;
+            if (y == MORE) {                                             // [bridges18] part of a bridge laid: more there next
+                laid++;
+                continue;
+            }
             lastY = y;
             next++;
             laid++;
@@ -203,6 +207,8 @@ public final class Roads {
 
     /** What step returns when the mother's stores could not pay for the step: the road waits there. */
     static final int UNPAID = Integer.MIN_VALUE;
+    /** [bridges18] What step returns when it laid part of a bridge and there is more of it to lay there. */
+    static final int MORE = Integer.MIN_VALUE + 1;
 
     /**
      * One step of the road: its three-wide surface (or a bridge), cleared above. Returns its height,
@@ -214,6 +220,11 @@ public final class Roads {
         if (inATown(level, x, z)) return lastY;
         // [emerald] Through a village of the game's villagers the road is their paths: nothing laid, nothing cleared.
         if (VanillaVillages.within(level, x, z, 4)) return lastY;
+        // [bridges18] Water under this step (or the kit's bridge over it already): the bridge across the whole crossing.
+        boolean[] dry = { false };
+        String bridged = BridgeKit.colonyStep(level, mother, colony.id(), line(mother, colony), index, dry);
+        if (!dry[0]) return bridged == null ? lastY : BridgeKit.MORE.equals(bridged) ? MORE : UNPAID;
+        boolean nearBridge = BridgeKit.nearBridge(colony.id(), "colony", index, 10);
         Ground g = ground(level, x, z);
         if (g == null) return lastY;
         if (g.water) {
@@ -248,6 +259,8 @@ public final class Roads {
             for (int[] c : brush(x, z)) {
                 Ground here = c[0] == x && c[1] == z ? g : ground(level, c[0], c[1]);
                 if (here == null || here.water) continue;
+                if (nearBridge && (BridgeKit.made(level.getBlockState(new BlockPos(c[0], here.y, c[1])))
+                    || BridgeKit.made(level.getBlockState(new BlockPos(c[0], here.y + 1, c[1]))))) continue;   // [bridges18] the bridge's ramp
                 BlockPos top = new BlockPos(c[0], want, c[1]);
                 if (here.y < want) {
                     // Banked up with the stores' cobblestone, and a spadeful of their earth on top
@@ -280,7 +293,7 @@ public final class Roads {
         }
         // A lamp now and then, beside the road, out in the wilds: two lengths of fence and a
         // lantern (or a torch) out of the mother's stores, or no lamp there (the road doesn't wait on it).
-        if (index % LAMP_EVERY == LAMP_EVERY / 2) {
+        if (index % LAMP_EVERY == LAMP_EVERY / 2 && !nearBridge) {         // [bridges18] the bridge has its own lights
             int lx = alongX ? x : x + 2, lz = alongX ? z + 2 : z;
             Ground lg = ground(level, lx, lz);
             if (lg != null && !lg.water && Math.abs(lg.y - want) <= 1) {
