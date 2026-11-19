@@ -188,7 +188,8 @@ public final class RegionPage {
             int colour = t.getBoolean("me") ? GOLD : 0xFF000000 | t.getInt("colour");
             g.fill(tx - 3, ty - 3, tx + 4, ty + 4, 0xFF000000);
             g.fill(tx - 2, ty - 2, tx + 3, ty + 3, colour);
-            small(g, font, t.getString("name"), tx + 5, ty - 3, Ui.INK);
+            int nameW = (int) (font.width(t.getString("name")) * 0.75F);
+            small(g, font, t.getString("name"), tx + 5 + nameW > x + side - 2 ? tx - 5 - nameW : tx + 5, ty - 3, Ui.INK);
             if (Math.abs(mx - tx) <= 4 && Math.abs(my - ty) <= 4) {
                 tip = t.getBoolean("me") ? List.of(Component.literal(t.getString("name") + " (us)"), Component.literal(t.getInt("folk") + " folk, " + t.getString("age")))
                     : List.of(Component.literal(t.getString("name") + ": " + t.getString("stance")),
