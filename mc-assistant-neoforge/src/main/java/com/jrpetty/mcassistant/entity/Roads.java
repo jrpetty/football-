@@ -227,6 +227,9 @@ public final class Roads {
         boolean nearBridge = BridgeKit.nearBridge(colony.id(), "colony", index, 10);
         Ground g = ground(level, x, z);
         if (g == null) return lastY;
+        // [bridges18] On the bridge's ramp: the ramp is the way here, and its height is not the road's to follow.
+        if (!g.water && nearBridge && (BridgeKit.made(level.getBlockState(new BlockPos(x, g.y, z)))
+            || BridgeKit.made(level.getBlockState(new BlockPos(x, g.y + 1, z))))) return lastY;
         if (g.water) {
             int deck = g.y + 1;
             for (int side = -2; side <= 2; side++) {
