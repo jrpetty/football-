@@ -63,6 +63,10 @@ public final class Picks {
         issued(village, now);
     }
 
+    public static void emptyRackForTests(ServerLevel level, Villages.Village v) {
+        while (Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PICKAXES), 1)) { }
+    }
+
     public static void resetSmithForTests() {
         SMITH.clear();
     }
@@ -181,6 +185,32 @@ public final class Picks {
             f.brain("took a spare pick along for the shift");
         }
         return true;
+    }
+
+    /**
+     * A miner with no pick it can cut stone with (worn through in the works, or none to start with): a spare off the
+     * rack, sent down to it as a courier brings one out; and the rack empty, one made there and then of the stores'
+     * stone and timber (or iron) and sent. True if it has one now. (Miners whose picks broke at the bottom of the works
+     * stood there for half a day: the walk up for another went nowhere, and the rack was empty when they got there.)
+     */
+    public static boolean sendDown(ServerLevel level, VillageFolkEntity f) {
+        NOW = level.getGameTime();
+        UUID id = f.ownerId();
+        Villages.Village v = id == null ? null : Villages.get(id);
+        if (v == null) return false;
+        ItemStack got = Purchases.tool(level, v, f, Toolrack.Tool.PICKAXE);
+        if (got.isEmpty()) {
+            if (!Storehouses.stands(id) && Villages.storehouseFirst(id, level.getGameTime())) return false;
+            net.minecraft.world.item.Item item = Toolrack.tierFor(level, v, Toolrack.Tool.PICKAXE);
+            if (item == null || Toolrack.make(level, v, null, Toolrack.Tool.PICKAXE, item) == null) return false;
+            got = Purchases.tool(level, v, f, Toolrack.Tool.PICKAXE);
+            if (got.isEmpty()) return false;
+            f.brain("a pick made at the stores and sent down: mine was worn through");
+        } else {
+            f.brain("a spare pick sent down off the rack: mine was worn through");
+        }
+        f.equipBestTool(Blocks.STONE.defaultBlockState());
+        return f.getMainHandItem().isCorrectToolForDrops(Blocks.STONE.defaultBlockState());
     }
 
     /**

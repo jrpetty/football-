@@ -157,13 +157,21 @@ public class FixesGameTests {
         Villages.Village v = Villages.get(id);
         Villages.ageForTests(id, Villages.Age.STONE);
         com.jrpetty.mcassistant.entity.Villages.storehouseFirstDoneForTests(id);
-        Kit.stockForGrowth(level, v);
-        com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(Items.STICK, 32));
+        for (int k = 0; k < 4; k++) {
+            BlockPos chest = Kit.surface(level, heart.getX() + 4 + k, heart.getZ() - 4);
+            level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        }
+        for (net.minecraft.world.item.ItemStack st : new net.minecraft.world.item.ItemStack[]{ new net.minecraft.world.item.ItemStack(Items.COBBLESTONE, 64),
+                new net.minecraft.world.item.ItemStack(Items.COBBLESTONE, 64), new net.minecraft.world.item.ItemStack(Items.OAK_LOG, 64),
+                new net.minecraft.world.item.ItemStack(Items.STICK, 32), new net.minecraft.world.item.ItemStack(Items.CRAFTING_TABLE, 1) })
+            com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, st);
         com.jrpetty.mcassistant.entity.Toolrack.Tool pick = com.jrpetty.mcassistant.entity.Toolrack.Tool.PICKAXE;
         int wantedAtFirst = com.jrpetty.mcassistant.entity.Toolrack.wanted(id, pick);
         // The smith, the rack short: stone picks (no iron in the stores).
         String made1 = com.jrpetty.mcassistant.entity.Picks.smith(smith, level);
         int stone = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.STONE_PICKAXE));
+        com.jrpetty.mcassistant.entity.Picks.emptyRackForTests(level, v);
         // Iron in the stores: iron picks, in the Stone Age.
         com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(Items.IRON_INGOT, 64));
         com.jrpetty.mcassistant.entity.Picks.resetForTests();
@@ -190,6 +198,13 @@ public class FixesGameTests {
         com.jrpetty.mcassistant.entity.Picks.resetSmithForTests();
         String made3 = com.jrpetty.mcassistant.entity.Picks.smith(smith, level);
         int mended = com.jrpetty.mcassistant.entity.Picks.mended(id);
+        // A miner whose pick broke below, the rack bare: one made at the stores and sent down.
+        VillageFolkEntity m2 = miners.get(1);
+        m2.removeMatching(st -> st.is(net.minecraft.tags.ItemTags.PICKAXES), 64);
+        m2.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        com.jrpetty.mcassistant.entity.Picks.emptyRackForTests(level, v);
+        boolean sent = com.jrpetty.mcassistant.entity.Picks.sendDown(level, m2);
+        Kit.log("[VT] fx01 a miner with no pick and the rack bare: one sent down " + sent + " (" + m2.getMainHandItem().getItem() + ")");
         Kit.log("[VT] fx01 six miners: the rack keeps " + wantedAtFirst + " picks (" + wantedAfterWear + " after six handed out in a day); the smith made: "
             + made1 + " (" + stone + " stone picks in the stores); with iron: " + made2 + " (" + iron + " iron picks); the miner's worn pick changed "
             + changed + " (its best now " + best + "% left, worn picks in the stores " + wornBefore + " -> " + wornAfter + "); then: " + made3 + ", mended " + mended);
@@ -200,6 +215,7 @@ public class FixesGameTests {
         expect.that(iron >= 1, "iron picks once there is iron, in the Stone Age: " + iron);
         expect.that(changed && best >= 90 && wornAfter == wornBefore + 1, "the worn pick changed before the shift and handed in");
         expect.that(mended >= 1, "two worn picks mended into one: " + mended);
+        expect.that(sent, "a pick sent down to a miner whose pick broke, the rack bare");
         if (expect.clean()) helper.succeed(); else helper.fail(expect.summary());
     }
 
@@ -279,6 +295,8 @@ public class FixesGameTests {
         for (String[] w : what) {
             BlockPos anchor = BuildAuditGameTests.siteOn(level, w[0], cx - 14 + 28 * k++, cz + 20, Direction.NORTH);
             String said = BuildGoal.buildNowForTests(hand, w[0], anchor, Direction.NORTH, BuildWorldGameTests::stock);
+            // Whole, roof and all (the builder's gate keeps it off the plan's street cells by the heart).
+            BuildGoal.stampOnly(level, w[0], anchor, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK), p -> p.part() != BuildGoal.Part.CLEAR);
             Ledger.built(id, w[0], anchor, Direction.NORTH);
             raised.add(new Ledger.Building(w[0], anchor, Direction.NORTH));
             Kit.log("[VT] fx05 " + w[0] + " at " + anchor.toShortString() + ": " + said);
@@ -536,6 +554,7 @@ public class FixesGameTests {
             tick[0]++;
             if (level.getDayTime() % 24000L > 11000L) level.setDayTime(1000);
             boolean all = true;
+            if (tick[0] == 3 || tick[0] == 60) for (int i = 0; i < 3; i++) Kit.log("[VT] fx04 " + name[i] + " at " + tick[0] + ": " + builders.get(i).debugLine());
             for (int i = 0; i < 3; i++) {
                 VillageFolkEntity b = builders.get(i);
                 if (took[i] >= 0) continue;

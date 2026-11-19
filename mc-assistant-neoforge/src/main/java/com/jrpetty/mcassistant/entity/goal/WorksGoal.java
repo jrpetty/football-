@@ -112,6 +112,9 @@ public class WorksGoal extends Goal {
         a.equipBestTool(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
         if (!a.getMainHandItem().isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())) a.topUpKit();
         a.equipBestTool(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+        // [fixes14] Still none: one sent down off the rack (made at the stores if the rack is empty).
+        if (!a.getMainHandItem().isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
+                && a instanceof VillageFolkEntity vf2 && a.level() instanceof ServerLevel sl2) com.jrpetty.mcassistant.entity.Picks.sendDown(sl2, vf2);
         if (!a.getMainHandItem().isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())) {
             if (MineWorks.below(a)) { beginOut("Out — I need a pickaxe before I dig any more."); return; }
             finish("I need a pickaxe before I can work the mine.");
@@ -186,6 +189,9 @@ public class WorksGoal extends Goal {
         if (a.isPackFull() || freeSlots() <= 1) return "Pack's full — up to bank it.";
         if (!a.getMainHandItem().isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())) {
             a.equipBestTool(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+            // [fixes14] A fresh one sent down, and the shift goes on.
+            if (!a.getMainHandItem().isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
+                    && a instanceof VillageFolkEntity vf && com.jrpetty.mcassistant.entity.Picks.sendDown(level, vf)) return null;
             if (!a.getMainHandItem().isCorrectToolForDrops(net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())) return "My pick's done — up for another.";
         }
         long t = level.getDayTime() % 24000L;
