@@ -41,13 +41,17 @@ import static com.jrpetty.mcassistant.client.UiStyle.*;
  */
 public class FinanceScreen extends Screen {
 
-    private static final String[] TABS = {"Overview", "Balance sheet", "Income & spending", "Charts", "Businesses", "Property", "Investments", "Bills", "Ledger", "Notices"};
+    private static final String[] TABS = {"Overview", "By town", "Balance sheet", "Income & spending", "Charts", "Businesses", "Property", "Investments", "Bills", "Ledger", "Notices"};
+    private static final int OVERVIEW = 0, BY_TOWN = 1, BALANCE = 2, CATEGORIES = 3, CHARTS = 4, BUSINESSES = 5, PROPERTY = 6, INVESTMENTS = 7, BILLS = 8, LEDGER = 9, NOTICES = 10;
     private static final String[] GROUPS = {"Cash", "Savings", "Investments", "Property", "Businesses", "Owed to you", "Loans", "Bills owed"};
     private static final int HEAD = 24, TAB_H = 14, FOOT = 14;
     private static final int LAST_WEEK = 0xFF5A5A5A;
 
     @Nullable private final Screen parent;
-    private CompoundTag data = new CompoundTag();
+    /** The page as the server sent it, and as it is shown (all of it, or one town's part: the town filter). */
+    private CompoundTag full = new CompoundTag(), data = new CompoundTag();
+    private String townFilter = "";
+    private final java.util.Map<String, net.minecraft.world.item.ItemStack> banners = new java.util.HashMap<>();
     private int tab;
     private int left, top, w, h;
     private final Scroll scroll = new Scroll();
@@ -75,9 +79,11 @@ public class FinanceScreen extends Screen {
     }
 
     public void receive(CompoundTag t) {
-        boolean other = !t.getString("name").equals(data.getString("name"));
-        data = t;
-        if (other) scroll.reset();
+        boolean other = !t.getString("name").equals(full.getString("name"));
+        full = t;
+        if (other) { scroll.reset(); townFilter = ""; }
+        banners.clear();
+        data = view();
         if (minecraft != null) rebuildWidgets();                            // (not yet shown: init builds them)
     }
 
@@ -157,16 +163,18 @@ public class FinanceScreen extends Screen {
             g.enableScissor(left + S1, bodyTop, left + w - S1, bodyBottom);
             drawingBody = true;
             int y0 = bodyTop + S1 - scroll.offset();
+            if (tab != NOTICES && tab != BY_TOWN) y0 = townBar(g, cx, y0, cw, mx, my);
             int end = switch (tab) {
-                case 1 -> balance(g, cx, y0, cw, mx, my);
-                case 2 -> categories(g, cx, y0, cw, mx, my);
-                case 3 -> charts(g, cx, y0, cw, mx, my);
-                case 4 -> businesses(g, cx, y0, cw, mx, my);
-                case 5 -> property(g, cx, y0, cw, mx, my);
-                case 6 -> investments(g, cx, y0, cw, mx, my);
-                case 7 -> bills(g, cx, y0, cw, mx, my, 99);
-                case 8 -> ledger(g, cx, y0, cw, mx, my);
-                case 9 -> notices(g, cx, y0, cw, mx, my);
+                case BY_TOWN -> byTown(g, cx, y0, cw, mx, my);
+                case BALANCE -> balance(g, cx, y0, cw, mx, my);
+                case CATEGORIES -> categories(g, cx, y0, cw, mx, my);
+                case CHARTS -> charts(g, cx, y0, cw, mx, my);
+                case BUSINESSES -> businesses(g, cx, y0, cw, mx, my);
+                case PROPERTY -> property(g, cx, y0, cw, mx, my);
+                case INVESTMENTS -> investments(g, cx, y0, cw, mx, my);
+                case BILLS -> bills(g, cx, y0, cw, mx, my, 99);
+                case LEDGER -> ledger(g, cx, y0, cw, mx, my);
+                case NOTICES -> notices(g, cx, y0, cw, mx, my);
                 default -> overview(g, cx, y0, cw, mx, my);
             };
             g.disableScissor();
@@ -232,10 +240,12 @@ public class FinanceScreen extends Screen {
         long inL = data.getLong("inLast"), outL = data.getLong("outLast");
         boolean hasAgo = data.contains("netWeekAgo");
         long ago = data.getLong("netWeekAgo");
-        String[] labels = {"Net worth", "Cash", "Income", "Spending", "Profit / loss"};
+        boolean oneTown = data.contains("town");
+        if (oneTown) cash = data.getCompound("groups").getLong("Savings");
+        String[] labels = {oneTown ? "Net worth here" : "Net worth", oneTown ? "Savings here" : "Cash", "Income", "Spending", "Profit / loss"};
         String[] values = {money(net), money(cash), money(in), money(out), signed(in - out)};
         int[] inks = {net >= 0 ? TEXT : DANGER, TEXT, SUCCESS, out > 0 ? DANGER : TEXT, in - out > 0 ? SUCCESS : in - out < 0 ? DANGER : TEXT};
-        String[] subs = {hasAgo ? signed(net - ago) + " on the week" : "the first week", data.getBoolean("cashKnown") ? "in your pack" : "when last seen",
+        String[] subs = {hasAgo ? signed(net - ago) + " on the week" : "the first week", oneTown ? "bank, club, treasury" : data.getBoolean("cashKnown") ? "in your pack" : "when last seen",
             "last week " + money(inL), "last week " + money(outL), "last week " + signed(inL - outL)};
         String[] tips = {"All you have, less all you owe. The arrow: against a week ago.", "The village coin you carry in your pack.",
             "Income this week (the last seven days): wages, shifts, sales, rent, dividends, interest, coupons, rewards.",
@@ -410,10 +420,12 @@ public class FinanceScreen extends Screen {
     private int charts(GuiGraphics g, int x, int y, int cw, int mx, int my) {
         boolean two = cw >= 300;
         int colW = two ? (cw - S2) / 2 : cw, ch = 54;
-        String[][] c = {{"sNet", "Net worth"}, {"sCash", "Cash you carry"}, {"sIn", "Income a day"}, {"sOut", "Spending a day"}};
-        int[] colours = {ACCENT, WARNING_FILL, SUCCESS_FILL, DANGER_FILL};
+        boolean oneTown = data.contains("town");
+        String[][] c = oneTown ? new String[][]{{"sNet", "Net worth here"}, {"sIn", "Income a day here"}, {"sOut", "Spending a day here"}}
+            : new String[][]{{"sNet", "Net worth"}, {"sCash", "Cash you carry"}, {"sIn", "Income a day"}, {"sOut", "Spending a day"}};
+        int[] colours = oneTown ? new int[]{ACCENT, SUCCESS_FILL, DANGER_FILL} : new int[]{ACCENT, WARNING_FILL, SUCCESS_FILL, DANGER_FILL};
         int yy = y;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < c.length; i++) {
             int col = two ? i % 2 : 0;
             int bx = x + col * (colW + S2), by = two ? y + (i / 2) * (ch + 26) : yy;
             long[] v = data.getLongArray(c[i][0]);
@@ -421,11 +433,12 @@ public class FinanceScreen extends Screen {
             heading(g, font, c[i][1], bx, by, colW);
             String s = money(last);
             g.drawString(font, s, bx + colW - font.width(s), by + 10, TEXT, false);
-            int end = chart(g, bx, by + 11 + 9, colW, ch, c[i][0], i < 2, colours[i], mx, my);
+            int end = chart(g, bx, by + 11 + 9, colW, ch, c[i][0], c[i][0].equals("sNet") || c[i][0].equals("sCash"), colours[i], mx, my);
             yy = end + S2;
         }
-        text(g, font, "Net worth and cash are written each morning and whenever you open this; income and spending as they are booked.", x, (two ? y + 2 * (ch + 26) : yy) + 2, cw, TEXT_FAINT);
-        return (two ? y + 2 * (ch + 26) : yy) + 14;
+        int rows = (c.length + 1) / 2;
+        text(g, font, "Net worth and cash are written each morning and whenever you open this; income and spending as they are booked.", x, (two ? y + rows * (ch + 26) : yy) + 2, cw, TEXT_FAINT);
+        return (two ? y + rows * (ch + 26) : yy) + 14;
     }
 
     /** A chart of sixty days from the page's series (pennies), the day under the mouse read out. Returns the bottom. */
@@ -569,7 +582,7 @@ public class FinanceScreen extends Screen {
         for (Tag t : bills) {
             if (n++ >= most) {
                 text(g, font, "and " + (bills.size() - most) + " more on the Bills tab", x + 4, y, cw - 4, TEXT_FAINT);
-                int bt = 7;
+                int bt = BILLS;
                 zone(x, y, x + cw, y + 10, () -> { tab = bt; scroll.reset(); });
                 return y + 12;
             }
@@ -693,6 +706,205 @@ public class FinanceScreen extends Screen {
         y += S2;
         text(g, font, "Only you see your finances. An operator can look anybody's up from the header.", x, y, cw, TEXT_FAINT);
         return y + 12;
+    }
+
+    // ------------------------------------------------------------------ [purse20] by town
+
+    /** The page as shown: all of it, or only what is in (and with) the town the filter names. */
+    private CompoundTag view() {
+        if (townFilter.isEmpty()) return full;
+        CompoundTag c = townCard(townFilter);
+        if (c == null) { townFilter = ""; return full; }
+        CompoundTag v = full.copy();
+        v.putString("town", c.getString("name"));
+        v.putString("vid", townFilter);
+        for (String k : new String[]{"net", "assets", "liabilities", "inWeek", "outWeek", "inLast", "outLast", "firstSeen"}) v.put(k, c.get(k) == null ? net.minecraft.nbt.LongTag.valueOf(0) : c.get(k).copy());
+        v.put("cats", c.getList("cats", Tag.TAG_COMPOUND).copy());
+        v.put("groups", c.getCompound("groups").copy());
+        v.putLongArray("sNet", c.getLongArray("sNet"));
+        v.putLongArray("sIn", c.getLongArray("sIn"));
+        v.putLongArray("sOut", c.getLongArray("sOut"));
+        v.remove("sCash");
+        v.remove("netWeekAgo");
+        long[] sn = c.getLongArray("sNet");
+        if (sn.length >= 8 && c.getInt("firstSeen") <= sn.length - 8) v.putLong("netWeekAgo", sn[sn.length - 8]);
+        for (String k : new String[]{"assetRows", "liabilityRows", "businesses", "properties", "shares", "bonds", "bills", "ledger"}) {
+            ListTag in = full.getList(k, Tag.TAG_COMPOUND), out = new ListTag();
+            for (Tag t : in) if (townFilter.equals(((CompoundTag) t).getString("vid"))) out.add(t.copy());
+            v.put(k, out);
+        }
+        return v;
+    }
+
+    @Nullable
+    private CompoundTag townCard(String vid) {
+        for (Tag t : full.getList("towns", Tag.TAG_COMPOUND)) if (((CompoundTag) t).getString("vid").equals(vid)) return (CompoundTag) t;
+        return null;
+    }
+
+    private void filter(String vid) {
+        townFilter = vid;
+        data = view();
+        scroll.reset();
+    }
+
+    /** The town filter, at the top of a page: every town as a chip, "All towns" first. Returns the bottom. */
+    private int townBar(GuiGraphics g, int x, int y, int cw, int mx, int my) {
+        ListTag towns = full.getList("towns", Tag.TAG_COMPOUND);
+        if (towns.isEmpty()) return y;
+        int cx = x;
+        g.drawString(font, "Town:", cx, y + 2, TEXT_FAINT, false);
+        cx += font.width("Town:") + 4;
+        List<String[]> chips = new ArrayList<>();
+        chips.add(new String[]{"", "All towns"});
+        for (Tag t : towns) chips.add(new String[]{((CompoundTag) t).getString("vid"), ((CompoundTag) t).getString("name")});
+        for (String[] c : chips) {
+            int cwid = font.width(c[1]) + 8;
+            if (cx + cwid > x + cw) { cx = x + font.width("Town:") + 4; y += 14; }
+            boolean on = townFilter.equals(c[0]);
+            int tint = c[0].isEmpty() ? EDGE_SOFT : 0xFF000000 | townColour(c[0]);
+            chip(g, font, c[1], cx, y, on ? ACCENT_FILL : tint);
+            if (in(mx, my, cx, y, cwid, 12)) tip = c[0].isEmpty() ? "Everything, in every town" : "Only what you have, owe and deal in " + c[1];
+            String vid = c[0];
+            zone(cx, y, cx + cwid, y + 12, () -> { UiStyle.click(); filter(vid); });
+            cx += cwid + 3;
+        }
+        return y + 16;
+    }
+
+    private int townColour(String vid) {
+        CompoundTag c = townCard(vid);
+        return c == null ? 0x808080 : c.getInt("colour");
+    }
+
+    private net.minecraft.world.item.ItemStack banner(CompoundTag c) {
+        return banners.computeIfAbsent(c.getString("vid"), k -> CulturePage.banner(c.getCompound("banner")));
+    }
+
+    /** By town: a card for each town (click one for its detail), or the one town's detail. */
+    private int byTown(GuiGraphics g, int x, int y, int cw, int mx, int my) {
+        ListTag towns = full.getList("towns", Tag.TAG_COMPOUND);
+        if (towns.isEmpty()) {
+            empty(g, font, "Nothing in any town yet", "Save, invest, rent a stall or buy a house in a town and it shows here.", x, y, cw, 40);
+            return y + 44;
+        }
+        if (!townFilter.isEmpty() && townCard(townFilter) != null) return townDetail(g, x, y, cw, mx, my, townCard(townFilter));
+        long sum = 0;
+        for (Tag t : towns) sum += ((CompoundTag) t).getLong("net");
+        text(g, font, towns.size() + (towns.size() == 1 ? " town" : " towns") + " · " + money(sum) + " in them, " + money(full.getLong("unplacedWorth"))
+            + " in no town (the coin you carry) = net worth " + money(full.getLong("net")), x, y, cw, TEXT_MUTED);
+        y += 12;
+        boolean two = cw >= 300;
+        int colW = two ? (cw - S1) / 2 : cw, ch = 64;
+        int i = 0, rowTop = y;
+        for (Tag t : towns) {
+            CompoundTag c = (CompoundTag) t;
+            int col = two ? i % 2 : 0;
+            if (col == 0 && i > 0) rowTop += ch + S1;
+            int bx = x + col * (colW + S1), by = rowTop;
+            boolean over = in(mx, my, bx, by, colW, ch);
+            card(g, bx, by, colW, ch, 0xFF000000 | UiStyle.accentFill(c.getInt("colour")));
+            if (over) g.fill(bx + 3, by + 1, bx + colW - 1, by + ch - 1, 0x14000000);
+            net.minecraft.world.item.ItemStack flag = banner(c);
+            int tx = bx + 7;
+            if (!flag.isEmpty()) { g.renderItem(flag, tx, by + 4); tx += 18; }
+            String nw = money(c.getLong("net"));
+            g.drawString(font, Component.literal(clip(font, c.getString("name"), colW - (tx - bx) - font.width(nw) - 14)).withStyle(ChatFormatting.BOLD), tx, by + 4, TEXT, false);
+            g.drawString(font, Component.literal(nw).withStyle(ChatFormatting.BOLD), bx + colW - font.width(nw) - 6, by + 4, c.getLong("net") >= 0 ? TEXT : DANGER, false);
+            List<String> roles = new ArrayList<>();
+            for (Tag r : c.getList("roles", Tag.TAG_STRING)) roles.add(r.getAsString());
+            text(g, font, roles.isEmpty() ? "You deal here" : String.join(" · ", roles), tx, by + 14, colW - (tx - bx) - 6, TEXT_MUTED);
+            String week = "This week " + signed(c.getLong("inWeek")) + " in, " + signed(-c.getLong("outWeek")) + " out";
+            text(g, font, week, bx + 7, by + 26, colW - 12, TEXT);
+            text(g, font, breakdown(c), bx + 7, by + 37, colW - 12, TEXT_MUTED);
+            text(g, font, ownership(c), bx + 7, by + 48, colW - 12, TEXT_FAINT);
+            if (over) tip = c.getString("name") + ": " + breakdown(c) + ". " + ownership(c) + ". Click for everything you have there.";
+            String vid = c.getString("vid");
+            zone(bx, by, bx + colW, by + ch, () -> { UiStyle.click(); filter(vid); });
+            i++;
+        }
+        return rowTop + ch + S1;
+    }
+
+    /** "Bank 80c · Bonds 20c · Businesses 70c · Debts 10c" from a town card's groups. */
+    private static String breakdown(CompoundTag c) {
+        CompoundTag gr = c.getCompound("groups");
+        String[][] names = {{"Savings", "Bank"}, {"Investments", "Shares & bonds"}, {"Property", "Property"}, {"Businesses", "Businesses"},
+            {"Owed to you", "Owed to you"}, {"Loans", "Loans"}, {"Bills owed", "Bills"}};
+        List<String> out = new ArrayList<>();
+        for (String[] n : names) if (gr.getLong(n[0]) != 0) out.add(n[1] + " " + money(Math.abs(gr.getLong(n[0]))));
+        return out.isEmpty() ? "Nothing held here" : String.join(" · ", out);
+    }
+
+    /** "Land: 3 of 166 titles · Mill 25%, Smithy 5%". */
+    private static String ownership(CompoundTag c) {
+        List<String> out = new ArrayList<>();
+        if (c.getInt("titlesAll") > 0) out.add("Land: " + c.getInt("titlesMine") + " of " + c.getInt("titlesAll") + " titles");
+        for (Tag t : c.getList("firms", Tag.TAG_COMPOUND)) {
+            CompoundTag f = (CompoundTag) t;
+            int parts = f.getInt("parts");
+            out.add(f.getString("name") + " " + (parts >= 10000 ? "100%" : parts % 100 == 0 ? parts / 100 + "%" : String.format(Locale.ROOT, "%.1f%%", parts / 100.0))
+                + (parts < 10000 ? " (" + parts / 100 + " of 100 shares)" : ""));
+        }
+        return out.isEmpty() ? "No share of its land or firms" : String.join(" · ", out);
+    }
+
+    /** One town: its card's head, every holding there (each a click from its page), the bills due there, its charts and
+     *  its slice of the ledger. */
+    private int townDetail(GuiGraphics g, int x, int y, int cw, int mx, int my, CompoundTag c) {
+        int bw = chip(g, font, "\u2039 All towns", x, y, EDGE_SOFT);
+        zone(x, y, x + bw, y + 12, () -> { UiStyle.click(); filter(""); });
+        if (in(mx, my, x, y, bw, 12)) tip = "Back to every town";
+        y += 16;
+        net.minecraft.world.item.ItemStack flag = banner(c);
+        int tx = x;
+        if (!flag.isEmpty()) { g.renderItem(flag, x, y); tx += 20; }
+        title(g, font, clip(font, c.getString("name"), cw - 120), tx, y);
+        String nw = "net worth here " + money(c.getLong("net"));
+        g.drawString(font, nw, x + cw - font.width(nw), y, c.getLong("net") >= 0 ? TEXT : DANGER, false);
+        List<String> roles = new ArrayList<>();
+        for (Tag r : c.getList("roles", Tag.TAG_STRING)) roles.add(r.getAsString());
+        text(g, font, (roles.isEmpty() ? "You deal here" : String.join(" · ", roles)) + " · this week " + signed(c.getLong("inWeek")) + " in, "
+            + signed(-c.getLong("outWeek")) + " out", tx, y + 10, cw - (tx - x), TEXT_MUTED);
+        y += 22;
+        text(g, font, ownership(c), x, y, cw, TEXT_FAINT);
+        y += 13;
+        y = balance(g, x, y, cw, mx, my) + S1;
+        heading(g, font, "Bills due here", x, y, cw);
+        y = bills(g, x, y + 11, cw, mx, my, 6) + S1;
+        heading(g, font, "Net worth here, income and spending, sixty days", x, y, cw);
+        y += 11;
+        boolean three = cw >= 330;
+        int colW = three ? (cw - 2 * S1) / 3 : cw;
+        String[] keys = {"sNet", "sIn", "sOut"};
+        int[] colours = {ACCENT, SUCCESS_FILL, DANGER_FILL};
+        int yy = y;
+        for (int i = 0; i < 3; i++) {
+            int bx = three ? x + i * (colW + S1) : x, by = three ? y : yy;
+            yy = chart(g, bx, by, colW, 40, keys[i], i == 0, colours[i], mx, my) + S1;
+        }
+        y = (three ? y + 40 + S1 : yy) + S1;
+        heading(g, font, "Your ledger here (newest first)", x, y, cw);
+        y += 12;
+        ListTag led = data.getList("ledger", Tag.TAG_COMPOUND);
+        if (led.isEmpty()) { text(g, font, "Nothing booked with " + c.getString("name") + " lately.", x + 4, y, cw - 4, TEXT_FAINT); return y + 12; }
+        int shown = 0;
+        for (int i = led.size() - 1; i >= 0 && shown < 10; i--, shown++) {
+            CompoundTag e = led.getCompound(i);
+            long a = e.getLong("a");
+            g.drawString(font, "Day " + (e.getLong("d") + 1), x + 2, y + 1, TEXT_FAINT, false);
+            String w0 = e.getString("w");
+            text(g, font, w0.isEmpty() ? w0 : Character.toUpperCase(w0.charAt(0)) + w0.substring(1), x + font.width("Day 0000") + 4, y + 1, cw - 130, TEXT);
+            String sv = signed(a);
+            g.drawString(font, sv, x + cw - font.width(sv) - 2, y + 1, a > 0 ? SUCCESS : DANGER, false);
+            y += 11;
+        }
+        if (led.size() > 10) {
+            text(g, font, "All " + led.size() + " on the Ledger tab \u203A", x + 4, y, cw - 4, ACCENT);
+            zone(x, y, x + cw, y + 10, () -> { tab = LEDGER; scroll.reset(); });
+            y += 12;
+        }
+        return y;
     }
 
     // ------------------------------------------------------------------ tables

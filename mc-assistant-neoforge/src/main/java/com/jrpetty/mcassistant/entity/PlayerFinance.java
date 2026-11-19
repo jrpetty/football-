@@ -127,6 +127,10 @@ public final class PlayerFinance {
             CompoundTag d = sub(days, Long.toString(day));
             d.putLong(cat.name(), d.getLong(cat.name()) + pence);
             prune(days, day);
+            // [purse20] The same, by the town it was with ("" for none).
+            CompoundTag td = sub(sub(sub(me, "townDays"), Long.toString(day)), village == null ? "" : village.toString());
+            td.putLong(cat.name(), td.getLong(cat.name()) + pence);
+            prune(sub(me, "townDays"), day);
             // The ledger.
             ListTag ledger = me.getList("ledger", Tag.TAG_COMPOUND);
             CompoundTag e = new CompoundTag();
@@ -281,6 +285,39 @@ public final class PlayerFinance {
         return out;
     }
 
+    /** The categories with one town ("" for none) over the {@code n} days to {@code to} (inclusive). */
+    public static Map<Cat, Long> spanTown(UUID player, String town, long to, int n) {
+        Map<Cat, Long> out = new EnumMap<>(Cat.class);
+        CompoundTag all = sub(player(player), "townDays");
+        for (long d = to - n + 1; d <= to; d++) {
+            CompoundTag t = all.getCompound(Long.toString(d)).getCompound(town);
+            for (String k : t.getAllKeys()) {
+                Cat c = Cat.named(k);
+                if (c != null) out.merge(c, t.getLong(k), Long::sum);
+            }
+        }
+        return out;
+    }
+
+    /** Every town the player has dealt with in the last sixty days (ids as strings; "" for flows with no town). */
+    public static java.util.Set<String> townsDealt(UUID player) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        CompoundTag all = sub(player(player), "townDays");
+        for (String d : all.getAllKeys()) out.addAll(all.getCompound(d).getAllKeys());
+        return out;
+    }
+
+    /** What the player was worth in one town each day (pennies), by day. */
+    public static Map<Long, Long> historyTown(UUID player, String town) {
+        Map<Long, Long> out = new java.util.TreeMap<>();
+        CompoundTag h = sub(player(player), "worth");
+        for (String k : h.getAllKeys()) {
+            CompoundTag tw = h.getCompound(k).getCompound("tw");
+            try { if (tw.contains(town)) out.put(Long.parseLong(k), tw.getLong(town)); } catch (NumberFormatException ignored) { }
+        }
+        return out;
+    }
+
     /** Income (pennies, over nought) and spending (pennies, over nought) in a set of categories. */
     public static long[] inOut(Map<Cat, Long> m) {
         long in = 0, out = 0;
@@ -309,13 +346,16 @@ public final class PlayerFinance {
     }
 
     /** Today's worth, written (FinanceSheet, when it works the player's holdings out). */
-    static void worth(UUID player, long day, long net, long cash, long assets, long liabilities) {
+    static void worth(UUID player, long day, long net, long cash, long assets, long liabilities, Map<String, Long> towns) {
         CompoundTag h = sub(player(player), "worth");
         CompoundTag w = new CompoundTag();
         w.putLong("n", net);
         w.putLong("c", cash);
         w.putLong("a", assets);
         w.putLong("l", liabilities);
+        CompoundTag tw = new CompoundTag();
+        for (Map.Entry<String, Long> e : towns.entrySet()) tw.putLong(e.getKey(), e.getValue());
+        w.put("tw", tw);
         h.put(Long.toString(day), w);
         prune(h, day);
         dirty();

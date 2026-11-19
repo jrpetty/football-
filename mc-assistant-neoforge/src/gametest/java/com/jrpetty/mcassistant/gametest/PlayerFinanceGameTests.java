@@ -325,6 +325,92 @@ public class PlayerFinanceGameTests {
         helper.succeed();
     }
 
+    // ============================================================ pf06 two towns, split by town
+
+    /** A town of five with its market open (no reset: the caller resets once for both towns). */
+    private static UUID marketTown(GameTestHelper helper, ServerLevel level, int x, List<VillageFolkEntity> folk) {
+        Kit.hold(level, x, Z, 64);
+        Kit.prepare(level, x, Z, 64);
+        StationTask[] trades = { StationTask.SMITH, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.GUARD };
+        for (int i = 0; i < trades.length; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x - 6 + i * 2, Z - 4), 0.0F);
+            helper.assertTrue(f != null, "folk " + i);
+            f.ensurePersona();
+            f.setJob(trades[i]);
+            f.keepTradeForTests();
+            folk.add(f);
+        }
+        UUID id = folk.get(folk.size() - trades.length).ownerId();
+        Villages.ageForTests(id, Villages.Age.STONE);
+        Ledger.addCoins(id, 600);
+        MarketMaker.openForTests(level, Villages.get(id));
+        return id;
+    }
+
+    /**
+     * A player with holdings in two towns (savings in both, a bond in one, a loan in the other): the By town cards split
+     * its net worth and its week's income and spending, and every line, bill and ledger entry carries its town; the
+     * towns' shares and what is in no town add up to the whole.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pf06_two_towns")
+    public static void pf06_two_towns(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        MarketMaker.liveForTests(true);
+        Enterprise.resetForTests();
+        Enterprise.autoForTests(false);
+        level.setDayTime(8 * 24000L + 7000L);
+        List<VillageFolkEntity> fa = new ArrayList<>(), fb = new ArrayList<>();
+        UUID a = marketTown(helper, level, 5011100, fa), b = marketTown(helper, level, 5014100, fb);
+        helper.assertTrue(!a.equals(b), "two towns");
+        ServerPlayer p = player(helper, fa.get(0), 300);
+        UUID me = p.getUUID();
+        long day = level.getDayTime() / 24000L;
+        Kit.Expect ok = new Kit.Expect();
+        Kit.log("[VT] pf06 A " + FolkCredit.playerDeposits(level, p, a, 30));
+        Kit.log("[VT] pf06 A " + TownBonds.playerBuys(level, p, a, 20));
+        Kit.log("[VT] pf06 B " + FolkCredit.playerDeposits(level, p, b, 40));
+        Kit.log("[VT] pf06 B " + FolkCredit.playerBorrows(level, p, b, 5));
+        Kit.log("[VT] pf06 B " + FolkCredit.playerWithdraws(level, p, b, 0));
+        CompoundTag page = FinanceSheet.page(level, me, p, true);
+        ListTag towns = page.getList("towns", Tag.TAG_COMPOUND);
+        long nets = 0, ins = page.getLong("unplacedIn"), outs = page.getLong("unplacedOut");
+        CompoundTag ca = null, cb = null;
+        for (Tag t : towns) {
+            CompoundTag c = (CompoundTag) t;
+            nets += c.getLong("net");
+            ins += c.getLong("inWeek");
+            outs += c.getLong("outWeek");
+            if (c.getString("vid").equals(a.toString())) ca = c;
+            if (c.getString("vid").equals(b.toString())) cb = c;
+            Kit.log("[VT] pf06 town " + c.getString("name") + ": net " + c.getLong("net") + ", groups " + c.getCompound("groups") + ", in " + c.getLong("inWeek") + ", out " + c.getLong("outWeek"));
+        }
+        ok.that(ca != null && cb != null, "a card for each town");
+        ok.that(nets + page.getLong("unplacedWorth") == page.getLong("net"), "the towns' net worth and the coin in no town add up to the whole: "
+            + nets + " + " + page.getLong("unplacedWorth") + " against " + page.getLong("net"));
+        ok.that(ins == page.getLong("inWeek") && outs == page.getLong("outWeek"), "the towns' income and spending add up to the week's: " + ins + "/" + outs
+            + " against " + page.getLong("inWeek") + "/" + page.getLong("outWeek"));
+        if (ca != null && cb != null) {
+            long expectA = FolkCredit.balance(a, me) * 100L + TownBonds.heldBy(a, me);
+            ok.that(ca.getLong("net") == expectA, "town A: its savings and its bond: " + ca.getLong("net") + " against " + expectA);
+            long loan = 0;
+            for (Tag t : page.getList("liabilityRows", Tag.TAG_COMPOUND)) if (((CompoundTag) t).getString("vid").equals(b.toString())) loan += ((CompoundTag) t).getLong("v");
+            ok.that(loan > 0 && cb.getLong("net") == FolkCredit.balance(b, me) * 100L - loan, "town B: its savings less its loan: " + cb.getLong("net"));
+            ok.that(ca.getCompound("groups").getLong("Investments") == TownBonds.heldBy(a, me), "the bond is in town A's investments");
+        }
+        boolean placed = true;
+        for (Tag t : page.getList("assetRows", Tag.TAG_COMPOUND)) {
+            CompoundTag r = (CompoundTag) t;
+            if (!r.getString("g").equals(FinanceSheet.CASH) && r.getString("vid").isEmpty()) placed = false;
+        }
+        for (Tag t : page.getList("ledger", Tag.TAG_COMPOUND)) if (((CompoundTag) t).getString("vid").isEmpty()) placed = false;
+        ok.that(placed, "every holding but the coin carried, and every ledger entry, carries its town");
+        Enterprise.autoForTests(true);
+        Kit.noLeftoverPlayers(level);
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
     // ============================================================ pf05 kept, capped, saved and loaded, private
 
     /**

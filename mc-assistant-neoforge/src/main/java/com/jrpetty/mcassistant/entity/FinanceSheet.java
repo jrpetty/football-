@@ -40,7 +40,15 @@ public final class FinanceSheet {
     private FinanceSheet() {}
 
     /** A line of the balance sheet: its group, words, value (pennies), the town, a link (to its own screen), a tooltip. */
-    public record Row(String group, String label, long value, String town, String link, String tip) {
+    public record Row(String group, String label, long value, String town, String link, String tip, String townId) {
+        public Row(String group, String label, long value, String town, String link, String tip) {
+            this(group, label, value, town, link, tip, "");
+        }
+
+        Row withTown(String id) {
+            return new Row(group, label, value, town, link, tip, id);
+        }
+
         CompoundTag tag() {
             CompoundTag t = new CompoundTag();
             t.putString("g", group);
@@ -49,6 +57,7 @@ public final class FinanceSheet {
             t.putString("t", town);
             t.putString("k", link);
             t.putString("tip", tip);
+            t.putString("vid", townId);
             return t;
         }
     }
@@ -91,6 +100,22 @@ public final class FinanceSheet {
         public int bills() {
             return bills.size();
         }
+
+        /** [purse20] What the player has and owes in each town (by its id): {assets, liabilities} pennies. */
+        public Map<String, long[]> byTown() {
+            Map<String, long[]> out = new java.util.LinkedHashMap<>();
+            for (Row r : assets) if (!r.townId().isEmpty()) out.computeIfAbsent(r.townId(), k -> new long[2])[0] += r.value();
+            for (Row r : liabilities) if (!r.townId().isEmpty()) out.computeIfAbsent(r.townId(), k -> new long[2])[1] += r.value();
+            return out;
+        }
+
+        /** The total of what is in no town (the coin carried), pennies. */
+        public long unplaced() {
+            long n = 0;
+            for (Row r : assets) if (r.townId().isEmpty()) n += r.value();
+            for (Row r : liabilities) if (r.townId().isEmpty()) n -= r.value();
+            return n;
+        }
     }
 
     public static final String CASH = "Cash", SAVINGS = "Savings", INVESTMENTS = "Investments", PROPERTY = "Property",
@@ -122,13 +147,23 @@ public final class FinanceSheet {
         for (Villages.Village v : Villages.every()) {
             UUID id = v.id();
             String town = Villages.name(id);
+            int a0 = s.assets.size(), l0 = s.liabilities.size();
+            int[] lists0 = { s.businesses.size(), s.properties.size(), s.shares.size(), s.bonds.size(), s.bills.size() };
             try {
                 town(level, s, v, id, town, key, day);
             } catch (RuntimeException e) {
                 com.jrpetty.mcassistant.Guard.struck("the finances in " + town, e);
             }
+            // [purse20] Every line and list entry made for this town carries its id (the By town view, the filter).
+            String vid = id.toString();
+            for (int i = a0; i < s.assets.size(); i++) s.assets.set(i, s.assets.get(i).withTown(vid));
+            for (int i = l0; i < s.liabilities.size(); i++) s.liabilities.set(i, s.liabilities.get(i).withTown(vid));
+            ListTag[] lists = { s.businesses, s.properties, s.shares, s.bonds, s.bills };
+            for (int k = 0; k < lists.length; k++) for (int i = lists0[k]; i < lists[k].size(); i++) lists[k].getCompound(i).putString("vid", vid);
         }
-        PlayerFinance.worth(who, day, s.net(), s.cash, s.assetsTotal(), s.liabilitiesTotal());
+        Map<String, Long> nets = new java.util.LinkedHashMap<>();
+        for (Map.Entry<String, long[]> e : s.byTown().entrySet()) nets.put(e.getKey(), e.getValue()[0] - e.getValue()[1]);
+        PlayerFinance.worth(who, day, s.net(), s.cash, s.assetsTotal(), s.liabilitiesTotal(), nets);
         return s;
     }
 
@@ -465,7 +500,127 @@ public final class FinanceSheet {
         billsOut.addAll(sorted);
         t.put("bills", billsOut);
         t.put("ledger", PlayerFinance.ledger(who));
+        t.put("towns", towns(level, s, who, day));
+        long[] nw = PlayerFinance.inOut(PlayerFinance.spanTown(who, "", day, 7));
+        t.putLong("unplacedIn", nw[0]);
+        t.putLong("unplacedOut", nw[1]);
+        t.putLong("unplacedWorth", s.unplaced());
         return t;
+    }
+
+    /**
+     * [purse20] One card for each town the player has anything in (a holding, a debt, a bill, money with it in sixty
+     * days, a place in it as a citizen, knight or constable): its name, colour and banner; what the player is in it; its
+     * net worth there and its groups; income and spending with it, this week and last, by kind; sixty days of charts; and
+     * what share it holds of the town's land and of each firm.
+     */
+    static ListTag towns(ServerLevel level, Sheet s, UUID who, long day) {
+        Map<String, long[]> by = s.byTown();
+        java.util.Set<String> ids = new java.util.LinkedHashSet<>(by.keySet());
+        for (String k : PlayerFinance.townsDealt(who)) if (!k.isEmpty()) ids.add(k);
+        for (Villages.Village v : Villages.every()) {
+            UUID id = v.id();
+            if (Citizens.is(id, who) || Knights.isKnight(id, who) || PlayerLaw.sworn(id, who)) ids.add(id.toString());
+        }
+        ListTag out = new ListTag();
+        for (String vid : ids) {
+            UUID id;
+            try { id = UUID.fromString(vid); } catch (IllegalArgumentException e) { continue; }
+            Villages.Village v = Villages.get(id);
+            CompoundTag c = new CompoundTag();
+            c.putString("vid", vid);
+            c.putString("name", Villages.name(id));
+            c.putInt("colour", Villages.colour(id));
+            if (v != null) {
+                try { c.put("banner", Heraldry.report(level, v)); } catch (RuntimeException ignored) { }
+            }
+            // What the player is in it.
+            ListTag roles = new ListTag();
+            if (Citizens.is(id, who)) roles.add(net.minecraft.nbt.StringTag.valueOf("Citizen"));
+            if (Knights.isKnight(id, who)) roles.add(net.minecraft.nbt.StringTag.valueOf("Knight"));
+            if (PlayerLaw.sworn(id, who)) roles.add(net.minecraft.nbt.StringTag.valueOf("Constable"));
+            long[] ab = by.getOrDefault(vid, new long[2]);
+            c.putLong("assets", ab[0]);
+            c.putLong("liabilities", ab[1]);
+            c.putLong("net", ab[0] - ab[1]);
+            CompoundTag groups = new CompoundTag();
+            for (Row r : s.assets) if (r.townId().equals(vid)) groups.putLong(r.group(), groups.getLong(r.group()) + r.value());
+            for (Row r : s.liabilities) if (r.townId().equals(vid)) groups.putLong(r.group(), groups.getLong(r.group()) - r.value());
+            c.put("groups", groups);
+            boolean home = false, landlord = false, trader = false, owner = false;
+            for (Row r : s.assets) if (r.townId().equals(vid)) {
+                if (r.group().equals(PROPERTY) && !r.label().startsWith("Title: ")) landlord = true;
+                if (r.link().startsWith("stall:")) trader = true;
+                if (r.link().startsWith("books:")) owner = true;
+            }
+            for (Tag e : s.properties) if (((CompoundTag) e).getString("vid").equals(vid) && ((CompoundTag) e).getLong("rentIn") == 0 && "House".equals(((CompoundTag) e).getString("kind"))) home = true;
+            if (home) roles.add(net.minecraft.nbt.StringTag.valueOf("Home owner"));
+            else if (landlord) roles.add(net.minecraft.nbt.StringTag.valueOf("Landlord"));
+            if (owner) roles.add(net.minecraft.nbt.StringTag.valueOf("Business owner"));
+            if (trader) roles.add(net.minecraft.nbt.StringTag.valueOf("Stallholder"));
+            c.put("roles", roles);
+            // Its share of the land and of the firms.
+            CompoundTag titles = LandTitles.titles(id);
+            int mine = 0;
+            for (String k : titles.getAllKeys()) if (who.toString().equals(titles.getCompound(k).getString("landlord"))) mine++;
+            c.putInt("titlesMine", mine);
+            c.putInt("titlesAll", titles.getAllKeys().size());
+            ListTag firms = new ListTag();
+            for (Business b : Businesses.all(id)) {
+                if (b.mirror()) continue;
+                int parts = 0;
+                for (Business.Stake st : b.owners) if (st.holder() == Business.Holder.PLAYER && who.equals(st.who())) parts += st.parts();
+                if (parts <= 0) continue;
+                CompoundTag f = new CompoundTag();
+                f.putString("name", b.name);
+                f.putInt("parts", parts);
+                firms.add(f);
+            }
+            c.put("firms", firms);
+            // Money with it.
+            Map<PlayerFinance.Cat, Long> w = PlayerFinance.spanTown(who, vid, day, 7), lw = PlayerFinance.spanTown(who, vid, day - 7, 7),
+                all = PlayerFinance.spanTown(who, vid, day, PlayerFinance.DAYS);
+            long[] io = PlayerFinance.inOut(w), lio = PlayerFinance.inOut(lw);
+            c.putLong("inWeek", io[0]);
+            c.putLong("outWeek", io[1]);
+            c.putLong("inLast", lio[0]);
+            c.putLong("outLast", lio[1]);
+            ListTag cats = new ListTag();
+            for (PlayerFinance.Cat cat : PlayerFinance.Cat.values()) {
+                long x = w.getOrDefault(cat, 0L), y = lw.getOrDefault(cat, 0L), z = all.getOrDefault(cat, 0L);
+                if (x == 0 && y == 0 && z == 0) continue;
+                CompoundTag r = new CompoundTag();
+                r.putString("c", cat.name());
+                r.putString("label", cat.label);
+                r.putString("kind", cat.kind.name());
+                r.putLong("w", x);
+                r.putLong("lw", y);
+                r.putLong("all", z);
+                cats.add(r);
+            }
+            c.put("cats", cats);
+            int n = PlayerFinance.DAYS;
+            long[] net = new long[n], in = new long[n], outs = new long[n];
+            Map<Long, Long> hist = PlayerFinance.historyTown(who, vid);
+            Long carry = null;
+            int firstSeen = -1;
+            for (Map.Entry<Long, Long> e : hist.entrySet()) if (e.getKey() <= day - n) carry = e.getValue();
+            for (int i = 0; i < n; i++) {
+                long d = day - n + 1 + i;
+                if (hist.containsKey(d)) carry = hist.get(d);
+                if (carry != null && firstSeen < 0) firstSeen = i;
+                net[i] = carry == null ? 0 : carry;
+                long[] dio = PlayerFinance.inOut(PlayerFinance.spanTown(who, vid, d, 1));
+                in[i] = dio[0];
+                outs[i] = dio[1];
+            }
+            c.putLongArray("sNet", net);
+            c.putLongArray("sIn", in);
+            c.putLongArray("sOut", outs);
+            c.putInt("firstSeen", Math.max(0, firstSeen));
+            out.add(c);
+        }
+        return out;
     }
 
     // ------------------------------------------------------------------ the notices
