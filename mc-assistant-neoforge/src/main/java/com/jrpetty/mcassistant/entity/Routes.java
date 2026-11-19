@@ -365,7 +365,16 @@ public final class Routes {
                 }
                 return new int[]{ y, flags };
             }
-            // Ground nobody is near: how the world would make it, without waking it.
+            // Ground nobody is near: how the world would make it, without waking it; judged every fourth block and
+            // drawn smooth between (the world's own lie of the land is smooth at that scale).
+            int x0 = Math.floorDiv(x, 4) * 4, z0 = Math.floorDiv(z, 4) * 4;
+            if (x0 != x || z0 != z) {
+                int[] g00 = at(x0, z0), g10 = at(x0 + 4, z0), g01 = at(x0, z0 + 4), g11 = at(x0 + 4, z0 + 4);
+                double fx = (x - x0) / 4.0, fz = (z - z0) / 4.0;
+                double y = g00[0] * (1 - fx) * (1 - fz) + g10[0] * fx * (1 - fz) + g01[0] * (1 - fx) * fz + g11[0] * fx * fz;
+                int[] near = fx < 0.5 ? (fz < 0.5 ? g00 : g01) : (fz < 0.5 ? g10 : g11);
+                return new int[]{ (int) Math.round(y), near[1] | flags };
+            }
             var gen = level.getChunkSource().getGenerator();
             var rs = level.getChunkSource().randomState();
             int surface = gen.getBaseHeight(x, z, Heightmap.Types.WORLD_SURFACE_WG, level, rs) - 1;
@@ -431,9 +440,9 @@ public final class Routes {
             double c = d;
             boolean wet0 = (g0[1] & 1) != 0, wet1 = (g1[1] & 1) != 0;
             if (!wet0 && !wet1) {
-                double slope = Math.abs(g1[0] - g0[0]) / d;
-                if (slope > 0.9) return -1;                                   // a cliff: no cart goes up that
-                c += d * 8.0 * slope * slope;
+                int dh = Math.abs(g1[0] - g0[0]);
+                if (dh >= 3) return -1;                                       // a cliff: no cart goes up that
+                c += 3.0 * dh + (dh == 2 ? 20.0 : 0.0);                       // a step up or down at a time; two is a cutting
             } else if (wet0 != wet1) {
                 if (Math.abs(g1[0] - g0[0]) > 3) return -1;                   // a bank too high to bridge from
             }
@@ -465,17 +474,15 @@ public final class Routes {
                 if (u == goal) { found = true; break; }
                 if (++looked > BUDGET) break;
                 int ui = u / h, uj = u % h;
-                int[] gu = u == start ? at(s.getX(), s.getZ()) : at(cx(ui), cz(uj));
                 for (int[] dd : dirs) {
                     int vi = ui + dd[0], vj = uj + dd[1];
                     if (vi < 0 || vj < 0 || vi >= w || vj >= h) continue;
                     int v = vi * h + vj;
                     if (shut[v]) continue;
-                    int[] gv = v == goal ? at(e.getX(), e.getZ()) : at(cx(vi), cz(vj));
-                    double d = cell * (dd[0] != 0 && dd[1] != 0 ? Math.sqrt(2) : 1.0);
-                    double c = cost(gu, gv, d);
+                    // Every block of the step judged, as the road will lie: no corner of a cliff or a house cut.
+                    double c = segment(xy(u, u == start, false), xy(v, false, v == goal));
                     if (c < 0 && v != goal) continue;
-                    if (c < 0) c = d * 20;
+                    if (c < 0) c = cell * 20;
                     double ng = g[u] + c;
                     if (ng < g[v]) {
                         g[v] = ng;
@@ -515,16 +522,16 @@ public final class Routes {
             return new int[]{ cx(u / h), cz(u % h) };
         }
 
-        /** The cost of a straight stretch, sampled a half square at a time; negative if it would cross no way. */
+        /** The cost of a straight stretch, block by block along the line the road would take; negative if it crosses no way. */
         double segment(int[] p, int[] q) {
-            double len = Math.hypot(q[0] - p[0], q[1] - p[1]);
-            int n = Math.max(1, (int) Math.ceil(len / (cell / 2.0)));
+            List<int[]> steps = Roads.bresenham(p[0], p[1], q[0], q[1]);
+            if (steps.size() < 2) return 0;
+            double len = Math.hypot(q[0] - p[0], q[1] - p[1]), each = len / (steps.size() - 1);
             double c = 0;
             int[] prev = at(p[0], p[1]);
-            for (int k = 1; k <= n; k++) {
-                int x = (int) Math.round(p[0] + (q[0] - p[0]) * k / (double) n), z = (int) Math.round(p[1] + (q[1] - p[1]) * k / (double) n);
-                int[] gk = at(x, z);
-                double step = cost(prev, gk, len / n);
+            for (int k = 1; k < steps.size(); k++) {
+                int[] gk = at(steps.get(k)[0], steps.get(k)[1]);
+                double step = cost(prev, gk, each);
                 if (step < 0) return -1;
                 c += step;
                 prev = gk;
