@@ -135,6 +135,8 @@ public final class FolkTalk {
         if (roads != null) return manner(f, roads);
         String tradeWorld = TradeWorld.talk(f, p, topic, text, typed);      // [trade-world] the ships, the roads, "won't you stay?"
         if (tradeWorld != null) return manner(f, tradeWorld);
+        String times = typed ? EconCycle.talk(f, p, text) : null;          // [econ4] prices, trade and the times
+        if (times != null) return manner(f, times);
         String lower = text.toLowerCase(Locale.ROOT);
         if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
             return manner(f, apology(f, p, op, day));

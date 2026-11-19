@@ -148,7 +148,8 @@ public final class TownBudget {
     /** What the town may owe its market before it puts off its works: half a week's revenue; ten coins at least, [econ-1d] and
      *  two coins a grown folk (a young town of twenty, its revenue still to come in, put its houses off at ten coins owed). */
     public static long limit(UUID village) {
-        return Math.max(Math.max(LEAST_LIMIT, LEAST_A_HEAD * grown(village)), Math.round(week(village) * WEEK_SHARE));
+        return Math.round(Math.max(Math.max(LEAST_LIMIT, LEAST_A_HEAD * grown(village)), Math.round(week(village) * WEEK_SHARE))
+            * EconCycle.spendFactor(village));                              // [econ4] more in a slump, less in a boom
     }
 
     /**
