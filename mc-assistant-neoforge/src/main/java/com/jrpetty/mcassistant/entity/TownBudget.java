@@ -185,6 +185,8 @@ public final class TownBudget {
      * homes and beds, food, water, walls, the age's buildings) always go ahead, so it never deadlocks.
      */
     public static int pressure(UUID village) {
+        Integer forced = village == null ? null : PRESSURE_FOR_TESTS.get(village);   // [growth22] tests
+        if (forced != null) return forced;
         if (village == null || !MarketMaker.live(village)) return 0;
         // Looked at as the town spends (every take on its works): reckoned at most once a second a town.
         net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
@@ -199,6 +201,12 @@ public final class TownBudget {
     }
 
     private static final java.util.Map<UUID, long[]> PRESSURE = new java.util.concurrent.ConcurrentHashMap<>();
+    /** [growth22] Tests: a town's money held this tight (null: as it is). */
+    private static final java.util.Map<UUID, Integer> PRESSURE_FOR_TESTS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void pressureForTests(UUID village, @javax.annotation.Nullable Integer p) {
+        if (p == null) PRESSURE_FOR_TESTS.remove(village); else PRESSURE_FOR_TESTS.put(village, p);
+    }
 
     /** [econ-1d] What the works may spend in a day: a day's share of the week's revenue, and of what it may still borrow. */
     public static long allowance(UUID village) {

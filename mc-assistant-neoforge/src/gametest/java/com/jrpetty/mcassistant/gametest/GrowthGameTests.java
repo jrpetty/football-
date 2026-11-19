@@ -355,4 +355,65 @@ public class GrowthGameTests {
             helper.succeed();
         });
     }
+
+    /**
+     * [growth22] A town careful of its money (its gardens and makeovers put off) with households waiting for a home still
+     * raises its houses a storey: a home is no makeover. The 0.319.0 town, its plan built to the last usable lot and seven
+     * households waiting, raised none in a hundred days.
+     */
+    @GameTest(template = "empty", timeoutTicks = 600, batch = "gw06_full_town_storeys")
+    public static void gw06_full_town_storeys(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 5160000, z = 90000;
+        Kit.reset(level);
+        Kit.hold(level, x, z, 64);
+        Kit.prepare(level, x, z, 64);
+        BlockPos heart = Kit.surface(level, x, z);
+        helper.runAtTickTime(5, () -> {
+            List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+            for (int i = 0; i < 8; i++) folk.add(com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart.east(i % 4).south(i / 4), 0.0F));
+            helper.assertTrue(folk.stream().allMatch(java.util.Objects::nonNull), "a town of eight");
+            java.util.UUID village = folk.get(0).ownerId();
+            Villages.Village v = Villages.get(village);
+            Villages.ageForTests(village, Villages.Age.IRON);
+            BlockPos chest = Kit.surface(level, x + 3, z + 1);
+            level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+            net.minecraft.world.Container growing = (net.minecraft.world.Container) level.getBlockEntity(chest);
+            net.minecraft.world.item.ItemStack[] makings = {
+                new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 64), new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 64),
+                new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 64), new net.minecraft.world.item.ItemStack(Items.OAK_LOG, 64),
+                new net.minecraft.world.item.ItemStack(Items.COBBLESTONE, 64), new net.minecraft.world.item.ItemStack(Items.COBBLESTONE, 64),
+                new net.minecraft.world.item.ItemStack(Items.STONE_BRICKS, 64), new net.minecraft.world.item.ItemStack(Items.BRICKS, 64),
+                new net.minecraft.world.item.ItemStack(Items.BRICKS, 64), new net.minecraft.world.item.ItemStack(Items.WHITE_WOOL, 32),
+                new net.minecraft.world.item.ItemStack(Items.GLASS_PANE, 32), new net.minecraft.world.item.ItemStack(Items.TORCH, 16) };
+            for (int i = 0; i < makings.length; i++) growing.setItem(i, makings[i]);
+            BlockPos houseAt = Kit.surface(level, x, z - 26);
+            com.jrpetty.mcassistant.entity.goal.BuildGoal.stamp(level, "house", houseAt, Direction.NORTH, 13,
+                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            com.jrpetty.mcassistant.village.Ledger.built(village, "house", houseAt, Direction.NORTH);
+            Villages.recountBeds(village);
+            Villages.bedsMadeUp(level, village);
+            com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+            int waiting = com.jrpetty.mcassistant.entity.FullTown.waitingForTests(level, village);
+            com.jrpetty.mcassistant.entity.TownBudget.pressureForTests(village, 1);
+            boolean careful = com.jrpetty.mcassistant.entity.TownBudget.frugal(village);
+            boolean was = com.jrpetty.mcassistant.entity.TownJobs.instantNow();
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            int laid = 0;
+            try {
+                for (int i = 0; i < 80 && !com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt); i++) {
+                    laid += com.jrpetty.mcassistant.entity.Grow.work(level, v, 3000);
+                }
+            } finally {
+                com.jrpetty.mcassistant.entity.TownJobs.instantForTests(was);
+                com.jrpetty.mcassistant.entity.TownBudget.pressureForTests(village, null);
+            }
+            boolean grown = com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt);
+            Kit.log("[VT] gw06 households waiting " + waiting + ", careful " + careful + ", laid " + laid + ", the house raised " + grown);
+            helper.assertTrue(waiting > 0 && careful, "households waiting (" + waiting + ") in a careful town (" + careful + ")");
+            helper.assertTrue(grown, "the house raised a storey all the same: " + laid + " laid");
+            helper.succeed();
+        });
+    }
 }

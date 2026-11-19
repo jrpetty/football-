@@ -207,7 +207,7 @@ public final class Grow {
         UUID id = v.id();
         Villages.Age age = Villages.ageOf(id);
         if (age.ordinal() < Villages.Age.STONE.ordinal()) return 0;
-        if (TownBudget.frugal(id)) return 0;                               // [capital] careful of its money: its gardens and makeovers wait
+        if (TownBudget.frugal(id)) return FullTown.storeysOnly(level, v, age, budget);   // [capital] careful of its money: its gardens and makeovers wait ([growth22] not its homes)
         int done = 0;
         // [city9] The first house still without its garden has it seen to each round, before any storey goes up: in the
         // Iron Age the round stopped at the first house still to be raised, and the gardens past it waited for days.
