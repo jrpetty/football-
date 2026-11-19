@@ -207,18 +207,27 @@ public final class BridgeStage {
         List<String> out = new ArrayList<>();
         int x = at.getX() + 40, z = at.getZ();
         int y = Math.max(level.getSeaLevel() + 2, at.getY());
-        for (int cx = (x - 64) >> 4; cx <= (x + 260) >> 4; cx++) for (int cz = (z - 80) >> 4; cz <= (z + 980) >> 4; cz++) level.setChunkForced(cx, cz, true);
-        Scene wood = road(level, x, z, y, 24, 1, Villages.Age.STONE);
-        view(out, "timber", wood);
-        Scene stone = road(level, x, z + 220, y, 24, 3, Villages.Age.IRON);
-        view(out, "stone", stone);
-        Scene col = colony(level, x, z + 440, y);
-        view(out, "colony", col);
-        Scene hill = hill(level, x, z + 660, y);
-        if (hill != null) out.add("VIEW hill " + (x + 110) + " " + (y + 14) + " " + (z + 660 + 22) + " " + (x + 110) + " " + (y + 5) + " " + (z + 660));
-        List<BlockPos> doors = doors(level, x, z + 880, y);
-        if (!doors.isEmpty()) out.add("VIEW doors " + (x + 12) + " " + (y + 6) + " " + (z + 880 + 26) + " " + (x + 12) + " " + (y + 1) + " " + (z + 890));
+        // Each scene's ground held while it is built, and let go after (the whole stage held at once is a great deal of ground).
+        force(level, x, z, true);
+        view(out, "timber", road(level, x, z, y, 24, 1, Villages.Age.STONE));
+        force(level, x, z, false);
+        force(level, x, z + 220, true);
+        view(out, "stone", road(level, x, z + 220, y, 24, 3, Villages.Age.IRON));
+        force(level, x, z + 220, false);
+        force(level, x, z + 440, true);
+        view(out, "colony", colony(level, x, z + 440, y));
+        force(level, x, z + 440, false);
+        force(level, x, z + 660, true);
+        if (hill(level, x, z + 660, y) != null) out.add("VIEW hill " + (x + 110) + " " + (y + 14) + " " + (z + 660 + 22) + " " + (x + 110) + " " + (y + 5) + " " + (z + 660));
+        force(level, x, z + 660, false);
+        force(level, x, z + 880, true);
+        if (!doors(level, x, z + 880, y).isEmpty()) out.add("VIEW doors " + (x + 12) + " " + (y + 6) + " " + (z + 880 + 26) + " " + (x + 12) + " " + (y + 1) + " " + (z + 890));
+        force(level, x, z + 880, false);
         return out;
+    }
+
+    private static void force(ServerLevel level, int x, int z, boolean on) {
+        for (int cx = (x - 48) >> 4; cx <= (x + 260) >> 4; cx++) for (int cz = (z - 96) >> 4; cz <= (z + 120) >> 4; cz++) level.setChunkForced(cx, cz, on);
     }
 
     private static void view(List<String> out, String name, @Nullable Scene s) {
