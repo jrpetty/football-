@@ -544,11 +544,16 @@ public class FixesGameTests {
         boolean[] begun = new boolean[3];
         for (int i = 0; i < 3; i++) {
             VillageFolkEntity b = builders.get(i);
-            packFor(b, "house", at[i], facing[i]);
+            // A builder of the town's, set to it: its trade given first (a trade given while it builds stops the build), its
+            // own brain kept off other work.
+            b.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.STORE);
+            b.setAutonomous(false);
+            BuildWorldGameTests.stock(b, null);
             b.teleportTo(at[i].getX() + 0.5, Kit.surface(level, at[i].getX(), at[i].getZ() + 9).getY(), at[i].getZ() + 9.5);
             b.clearQueue();
             b.enqueue(com.jrpetty.mcassistant.entity.Job.buildAt("house", at[i], facing[i], 0));
         }
+        BuildGoal.stockAtPaceForTests(BuildWorldGameTests::stock);
         level.getServer().tickRateManager().setTickRate(10000.0F);
         final int[] tick = { 0 };
         MineSiteGameTests.each(helper, () -> {
@@ -561,7 +566,6 @@ public class FixesGameTests {
                 if (took[i] >= 0) continue;
                 all = false;
                 if (tick[0] % 100 != 0) continue;
-                packFor(b, "house", at[i], facing[i]);
                 // Up when its drawing is all laid, or its builder has stopped building it (whatever is left).
                 int miss = missingOf(level, at[i], facing[i]);
                 boolean building = b.debugLine().contains("goals=[Build") || b.peekJob() != null && b.peekJob().type() == com.jrpetty.mcassistant.entity.Job.Type.BUILD;
@@ -580,6 +584,7 @@ public class FixesGameTests {
                 out.add(name[i] + " at " + at[i].toShortString() + ": " + (took[i] < 0 ? "not done" : took[i] + " ticks") + ", " + missing[i] + " cells missing");
             }
             Kit.log("[VT] fx04 " + String.join("; ", out));
+            BuildGoal.stockAtPaceForTests(null);
             MineSiteGameTests.standDown(level);
             Kit.Expect expect = new Kit.Expect();
             for (int i = 0; i < 3; i++) expect.that(took[i] > 0 && missing[i] <= 3, name[i] + " built: " + took[i] + " ticks, " + missing[i] + " missing");
