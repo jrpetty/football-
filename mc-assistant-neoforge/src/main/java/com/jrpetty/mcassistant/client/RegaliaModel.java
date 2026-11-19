@@ -119,8 +119,8 @@ public final class RegaliaModel {
         head.addOrReplaceChild("crown_band", CubeListBuilder.create().texOffs(92, 35).addBox(-4.0F, -13.0F, -4.0F, 8.0F, 4.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
         head.addOrReplaceChild("crown_cap", CubeListBuilder.create().texOffs(64, 60).addBox(-3.5F, -12.0F, -3.5F, 7.0F, 2.0F, 7.0F), PartPose.ZERO);
         head.addOrReplaceChild("crown_orb", CubeListBuilder.create().texOffs(108, 60).addBox(-1.0F, -14.0F, -1.0F, 2.0F, 2.0F, 2.0F).texOffs(32, 70).addBox(-0.5F, -15.0F, -0.5F, 1.0F, 1.0F, 1.0F), PartPose.ZERO);
-        body.addOrReplaceChild("cape_long", CubeListBuilder.create().texOffs(16, 0).addBox(-4.5F, 0.0F, 0.0F, 9.0F, 21.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 0.2F, 3.4F, 0.08F, 0.0F, 0.0F));
-        body.addOrReplaceChild("cape_short", CubeListBuilder.create().texOffs(64, 35).addBox(-4.5F, 0.0F, 0.0F, 9.0F, 12.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 0.2F, 3.4F, 0.08F, 0.0F, 0.0F));
+        body.addOrReplaceChild("cape_long", CubeListBuilder.create().texOffs(16, 0).addBox(-4.5F, 0.0F, 0.0F, 9.0F, 21.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 0.2F, 3.4F, 0.14F, 0.0F, 0.0F));
+        body.addOrReplaceChild("cape_short", CubeListBuilder.create().texOffs(64, 35).addBox(-4.5F, 0.0F, 0.0F, 9.0F, 12.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 0.2F, 3.4F, 0.14F, 0.0F, 0.0F));
         body.addOrReplaceChild("ermine_collar", CubeListBuilder.create().texOffs(66, 49).addBox(-5.0F, -0.8F, -3.5F, 10.0F, 3.0F, 7.0F, new CubeDeformation(0.3F)), PartPose.ZERO);
         rightArm.addOrReplaceChild("sceptre_right", CubeListBuilder.create().texOffs(84, 35).addBox(-0.5F, -11.0F, -0.5F, 1.0F, 12.0F, 1.0F).texOffs(116, 60).addBox(-1.0F, -13.0F, -1.0F, 2.0F, 2.0F, 2.0F), PartPose.offsetAndRotation(-1.0F, 9.5F, -0.5F, 0.5F, 0.0F, 0.0F));
         leftArm.addOrReplaceChild("sceptre_left", CubeListBuilder.create().texOffs(88, 35).addBox(-0.5F, -11.0F, -0.5F, 1.0F, 12.0F, 1.0F).texOffs(0, 70).addBox(-1.0F, -13.0F, -1.0F, 2.0F, 2.0F, 2.0F), PartPose.offsetAndRotation(1.0F, 9.5F, -0.5F, 0.5F, 0.0F, 0.0F));

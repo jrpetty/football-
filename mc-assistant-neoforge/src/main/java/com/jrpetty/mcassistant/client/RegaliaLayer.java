@@ -175,7 +175,7 @@ public class RegaliaLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
         float t = age - s.markAt;
         if (s.mark > 0 && t >= 0 && t <= FolkAction.MARK_TICKS) return;          // its other mark has the place just now
         boolean named = folk.isCustomNameVisible() && far < 64 * 64;
-        float size = far < 16 * 16 ? 0.16F : 0.16F + (float) Math.min(0.14, (Math.sqrt(far) - 16) * 0.004);   // it grows a little with distance
+        float size = 0.2F + (float) Math.min(0.18, Math.max(0.0, Math.sqrt(far) - 8.0) * 0.006);   // it grows a little with distance
         boolean quest = far <= 48 * 48 && QuestClient.mark(folk.getId()) != 0;     // its "!" or "?" stands just over the name
         float y = folk.getBbHeight() + (named ? 0.78F : 0.5F) + (quest ? 0.14F : 0.0F) + (far >= 14 * 14 ? 0.62F : 0.0F)
             + Mth.sin(age * 0.06F) * 0.02F;

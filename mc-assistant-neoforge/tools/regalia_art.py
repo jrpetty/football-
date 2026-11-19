@@ -51,8 +51,8 @@ PARTS = [
     ("crown_cap", "head", (0, 0, 0), (0, 0, 0), [(-3.5, -12, -3.5, 7, 2, 7, 0)], "m"),
     ("crown_orb", "head", (0, 0, 0), (0, 0, 0), [(-1, -14, -1, 2, 2, 2, 0), (-0.5, -15, -0.5, 1, 1, 1, 0)], "m"),
     # The long cape, from the shoulders nearly to the heels, its edge and hem of ermine; and the short one of the house.
-    ("cape_long", "body", (0, 0.2, 3.4), (0.08, 0, 0), [(-4.5, 0, 0, 9, 21, 1, 0)], "m"),
-    ("cape_short", "body", (0, 0.2, 3.4), (0.08, 0, 0), [(-4.5, 0, 0, 9, 12, 1, 0)], "r"),
+    ("cape_long", "body", (0, 0.2, 3.4), (0.14, 0, 0), [(-4.5, 0, 0, 9, 21, 1, 0)], "m"),
+    ("cape_short", "body", (0, 0.2, 3.4), (0.14, 0, 0), [(-4.5, 0, 0, 9, 12, 1, 0)], "r"),
     # The ermine collar round the shoulders, a gold clasp at the throat.
     ("ermine_collar", "body", (0, 0, 0), (0, 0, 0), [(-5, -0.8, -3.5, 10, 3, 7, 0.3)], "mr"),
     # The sceptre, upright in the free hand (the arm brought forward, the sceptre turned back upright on it).
