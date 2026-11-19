@@ -14103,3 +14103,83 @@ the forest, the waters, the desert, the snowy slope), founded and audited, every
 untouched; tf00 (not required) all six at once, for the numbers; tf07 /village spawnat founds at once and then levels;
 tf08 a player's camp down a pit left open and untouched, the world's raw copper down another filled over.
 FoundingGameTests f04 (the tarn let out, its hill graded, nothing running); FoundingPlanTest as it was.
+
+## Folk buy what they can use, and use what they buy (uses-16)
+
+A player who rented a stall could fill it with anything, and the folk bought by four rules (the tool of their trade, food
+in a hungry town, a comfort while their standing ran to more, something nice when well off): a lantern a house had no
+room for, a chest that sat in a pack for ever, and nothing at all of what the town really needed (a guard's armour, a
+sick folk's potion, the seed for a farmer's bare furrows, the iron a toolsmith's bench was short of). Anything the town's
+own counter had no price for ("nobody here deals in it") nobody would even look at. Now the folk know what a thing is
+for and who has a use for it, buy only that, in the number the use takes, and put it to that use.
+
+- **Knowing things** (ItemUses.kinds). Any item is read for what it is for: food to eat; a tool of a trade; a weapon,
+  armour or arrows for the watch and the hunters; furniture, a light or a comfort for a home; household things (a
+  bucket); building stuff; a maker's makings; seed and saplings; feed for the pens; a remedy; a book; clothes and dye; a
+  keepsake (by a folk's taste: flowers, gems, sweets...); fuel; a luxury; music; tack for a horse. This mod's work items
+  are known too (the miner's props and rope, the woodcutter's saw, the courier's crates). A thing of another mod is read
+  by its class (armour, a tool of a tier, a block of furniture or a light or building stuff, something edible) and by the
+  shared tags every mod tags its things with (c:ingots, c:gems, c:seeds, c:crops, c:dyes, c:foods, c:tools...). What
+  nobody here would do anything with (spawn eggs, the game master's blocks) is nobody's. A useful thing the town's
+  counter has no price for is priced by its worth on the price list (its recipe, its rarity), a coin at the least.
+- **Needs, and how many** (ItemUses.needsOf). Each folk keeps a list, looked at afresh every few seconds, most pressing
+  first, each need with what will do, how many it would use and why:
+  - the tool of its trade when it has none, its own is nearly worn through (a third left), or, comfortable, a better
+    metal than its stone one; the watch's and the hunter's blade the same; this mod's work items its trade keeps;
+  - armour a guard, a hunter, the cave team or a nether runner lacks (or has nearly worn through), a piece a slot;
+    arrows for a bow it carries; boots for anybody barefoot;
+  - a remedy for the ill or the hurt, now;
+  - its household's stocks (Housekeeping): food when its larder is low (as many as fill it, never past sixteen), fuel,
+    candles, a remedy for the cupboard;
+  - the pieces its home's plan still wants (HomeMaking): a light for a dark home, a chest, the larder barrel, a stove, a
+    table and seats, and its own things as its means run to them; a comfort while its standing runs to more and its home
+    has fewer of that kind than a house takes (Luxuries: two rugs, one lantern...);
+  - seed for the bare furrows of its field (one a furrow), saplings for a woodcutter to replant, feed for the troughs
+    (bought by the rancher for the town's pens, paid by the town), a book for a reader (one it has not read, every few
+    days), a keepsake to its taste for one comfortable or better, a luxury for the well-off;
+  - the makings its firm's bench is short of (InputWants, the firm's books, or its wares' recipes), bought by its hand
+    out of the firm's till; the builders' timber and stone short in the stores, bought by the storekeeper or a courier
+    out of the treasury.
+- **Weighing a thing** (ItemUses.want). A ware is bought only for a real use on that list, no more of it than the use
+  takes (four loaves for a folk with nothing to eat, not the stall's lot of eight; one lantern for a dark home; eight
+  seed for eight bare furrows), at no more than whoever pays will go to (the folk's means and nature as before, a tenth
+  more when the need is pressing; a firm and the town the going price; never over the town's own price for what the town
+  has), the better value for the use preferred (the work in a tool, the cover in armour, the bellyful in food, for the
+  coin). What it has no use for it turns down, with the reason on the stall's books ("what would I do with a saddle? I've
+  no horse", "my home's lit already", "too many lanterns already", "my own hoe is good yet", "I'm well, thank you"), and
+  says so at the stall when it bought nothing. The town's shops' counters use the same check for what a folk can do
+  without (Purchases.decide): never a thing nobody could use, never a comfort past what a house takes.
+- **Using it** (ItemUses.use). A tool or a blade is taken up (in its hand), the one it replaces to the stores; armour and
+  boots are put on, a garment worn (Fashion); food, fuel, candles and the cupboard's remedy are the household's own, put
+  by at home; a light or a piece of furniture is carried home and set out where its home's plan has room for it, as the
+  household sets out everything (HomeMaking: a lantern hung, a chest against a wall, the right way round), a comfort set
+  out by Luxuries; a remedy is drunk there and then by the ill (the cold eased, the hurt healed, the bottle kept); a book
+  is read and kept; seed is sown in the bare furrows; saplings and arrows go in its pack; feed into the stores for the
+  troughs; a firm's makings into the stores bonded in the firm's name (its bench draws on them first, not paying the
+  market for them again); the builders' timber and stone into the stores. Each use is remembered and on the folk's card.
+- **Where you see it.**
+  - The folk's card, **Uses**: what it last bought, where, and what it did with it ("bought a lantern from Dev's stall;
+    carrying it home to hang in its home"), and what it would buy now and why.
+  - The stall's screen: a button **What the town needs** turns the wares' table over to what the town's folk,
+    households, firms and departments want now, how many folk, how many in all, the most one would pay and why (also on
+    a stall to let, before you rent it). Each ware's row says "no use to anybody here" when nobody would buy it; the mouse
+    over it says what it is for and who would buy it and why ("Tom, guard: it goes on its rounds with no helmet (and 2
+    more); up to 9c each, 3 wanted in all"), or why nobody would ("Nobody needs it: nobody here rides"). The books' second
+    column, **Turned down**, has what was thought too dear and what was turned down as no use, and why.
+  - The city books, **Shops** page: a tab **What the town needs** with the same list, the mouse over a row for who and
+    how pressing.
+  - Every sale's word to the stall's keeper says what it was bought for.
+- **For other shops.** The API a player's own shop (or any other seller) calls: ItemUses.want(folk, stack) gives a Want
+  {kind, qty, value, mostEach, reason}; ItemUses.pay(level, folk, want, coins, what) takes the coin out of whoever pays;
+  ItemUses.use(folk, stack, want, from) puts it to its use; ItemUses.judge / verdictTag(level, village, stack) say who in
+  the town would buy a thing and why, or why nobody; ItemUses.needsTag(level, village, n) is the town's needs for a screen;
+  ItemUses.turnedDown / refusedTag keep a seller's books of what was turned down.
+
+Tests: ItemUsesGameTests (x 4,600,000 to 4,640,000, z 90000) iu01 a farmer with a worn hoe buys an iron one and takes it
+up, the old one to the stores, the saddle beside it turned down on the books; iu02 a guard buys a breastplate and a
+helmet and wears them, and not a second helmet; iu03 a dark home's lantern bought, carried home and hung, and the second
+left in the stall; iu04 bread (four, not the lot of eight), not the saddle, nothing more on a second look, the coin only
+moved; iu05 a toolsmith's firm buys the iron its bench wants out of its till, bonded in its name; iu06 a reader buys a
+book and reads it, and not the same book again; iu07 a folk with a cold buys a healing potion and drinks it; iu08 seed
+bought and sown, no more than the furrows; iu09 things judged by class and tags, this mod's rope coil bought by a miner,
+a spawn egg nobody's; iu10 what the town needs and who would buy each ware, on the stall's screen.
