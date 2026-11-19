@@ -14249,6 +14249,11 @@ businesses list send their buttons through the same way (net/LifeNetwork "cmd"):
 standing (never an operator's), only the mod's own commands, never as chat, so a server that bans commands does not stop
 them. Operators' tools (admin, the animators' anim, the stage) are not a player's.
 
+### For operators
+`/village playershops` lists the town's players' shops; `/village playershops visit` sends the nearest few folk to the
+nearest one now (for the camera); `/village playershops befriend <player>` makes the town think well of a player (for
+staging the charter, which wants a friend of the town or a citizen).
+
 ### Tests
 PlayerLifeGameTests pl01-pl11 (x 4,500,000 to 4,600,000, z 90,000): the checklist and opening, a sale (coin and goods,
 the census to the penny), too dear and the hours, a customer walking in to the counter, the keeper, a restart and
