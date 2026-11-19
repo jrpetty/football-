@@ -796,7 +796,7 @@ public class FinanceScreen extends Screen {
             + " in no town (the coin you carry) = net worth " + money(full.getLong("net")), x, y, cw, TEXT_MUTED);
         y += 12;
         boolean two = cw >= 300;
-        int colW = two ? (cw - S1) / 2 : cw, ch = 64;
+        int colW = two ? (cw - S1) / 2 : cw, ch = 74;
         int i = 0, rowTop = y;
         for (Tag t : towns) {
             CompoundTag c = (CompoundTag) t;
@@ -817,8 +817,9 @@ public class FinanceScreen extends Screen {
             text(g, font, roles.isEmpty() ? "You deal here" : String.join(" · ", roles), tx, by + 14, colW - (tx - bx) - 6, TEXT_MUTED);
             String week = "This week " + signed(c.getLong("inWeek")) + " in, " + signed(-c.getLong("outWeek")) + " out";
             text(g, font, week, bx + 7, by + 26, colW - 12, TEXT);
-            text(g, font, breakdown(c), bx + 7, by + 37, colW - 12, TEXT_MUTED);
-            text(g, font, ownership(c), bx + 7, by + 48, colW - 12, TEXT_FAINT);
+            List<net.minecraft.util.FormattedCharSequence> bl = font.split(Component.literal(breakdown(c)), colW - 12);   // two lines, the rest in the tooltip
+            for (int k = 0; k < Math.min(2, bl.size()); k++) g.drawString(font, bl.get(k), bx + 7, by + 37 + k * 10, TEXT_MUTED, false);
+            text(g, font, ownership(c), bx + 7, by + 59, colW - 12, TEXT_FAINT);
             if (over) tip = c.getString("name") + ": " + breakdown(c) + ". " + ownership(c) + ". Click for everything you have there.";
             String vid = c.getString("vid");
             zone(bx, by, bx + colW, by + ch, () -> { UiStyle.click(); filter(vid); });
