@@ -14417,6 +14417,15 @@ stall's next week of rent, a bulk order to collect, interest building on a loan.
 - **The village journal** (J): the Finances tab. **The city books**: the coin in the header. **A bank's counter**: the
   ledger book in its header. Other pages open it with `FinanceClient.openFrom(screen)` (server side:
   `FinanceSheet.open(player)`).
+- **By town**: every holding, debt, bill and ledger entry carries the town it is in (or with). One card for each town
+  the player has anything in (a holding, a debt, money with it in sixty days, a place in it as a citizen, knight or
+  constable): the town's banner and colour, what the player is there (citizen, knight, constable, home owner or landlord,
+  business owner, stallholder), its net worth there, the week's income and spending with that town, the breakdown (bank,
+  shares and bonds, property, businesses, owed to it, loans, bills) and its share of the town's land ("3 of 166 titles")
+  and of each firm ("Lily's Tools 5% (5 of 100 shares)"). A card opens the town's detail: its holdings and debts (each a
+  click from its page), the bills due there, net worth there and the income and spending with it over sixty days, and
+  its slice of the ledger. The towns' net worth and the coin carried (in no town) add up to the whole. Every other tab
+  has a town filter across its top ("All towns", then each town), showing only that town's part.
 - The screen's tabs: Overview (net worth with its trend over the week, cash, income and spending this week, profit or
   loss, net worth over sixty days, the bills due soon, the week's money by kind), Balance sheet (groups that fold, each
   line a click from its page: the town's capital, homes, land or money page, a business's books, the stall), Income and
@@ -14435,4 +14444,7 @@ pack moving by exactly what its ledger booked, every entry with a kind, fines an
 the capital markets (savings in and out, a loan and its repayment, bonds bought and a coupon a week later, shares bought
 and sold and their price collected at the hall) each in its category, and the balance sheet adding up (net worth is
 assets less liabilities, its lines the holdings); pf05 the ledger capped at two hundred, sixty days kept, all of it the
-same after a save and a load, and another player refused.
+same after a save and a load, and another player refused; pf06 a player in two towns (savings in both, a bond in one,
+a loan in the other): each town's net worth its own holdings less its debts, the towns and the coin in no town adding up
+to the whole net worth, the week's income and spending split by town adding up too, every line and entry with its town.
+(Commissioned buildings, orders-17's, are not on this branch: their lines come with the merge.)
