@@ -126,7 +126,7 @@ public final class LifeTown implements PlayerLife.Page {
 
     /**
      * Your finances (another round's screen: net worth, assets and liabilities, income and spending, bills, a ledger): the
-     * one place it is opened from here. Until it lands, the headline numbers.
+     * one place it is opened from here. Until it lands, the headline numbers; merged, this is FinanceSheet.open(p) and "#open:".
      */
     static String finances(ServerPlayer p) {
         Villages.Village v = PlayerLife.here(p);
