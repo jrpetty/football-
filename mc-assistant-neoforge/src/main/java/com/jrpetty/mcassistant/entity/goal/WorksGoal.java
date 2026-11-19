@@ -484,6 +484,17 @@ public class WorksGoal extends Goal {
                 if (!saidSealed) { saidSealed = true; a.sayRoutine(lava ? "Lava behind the rock — stopped it with cobble." : "Water coming in — walled it off."); }
             } else if (lava) openLava = true;
         }
+        // [growth22] And the open air it broke through to (a hill's flank): stopped up again with a block from the pack.
+        if (task != null && task.kind != MineWorks.Kind.SHAFT) {
+            for (Direction d : Direction.values()) {
+                if (d == Direction.DOWN) continue;
+                BlockPos side = pos.relative(d);
+                BlockState ss = level.getBlockState(side);
+                if (!(ss.isAir() || ss.canBeReplaced() && ss.getFluidState().isEmpty()) || inTask(side)) continue;
+                if (side.getY() < level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, side.getX(), side.getZ())) continue;
+                if (seal(side, false)) { SEALED++; DAYLIGHT_SEALED++; }
+            }
+        }
         sweep(pos);
         if (openLava) { beginOut("Lava, and nothing to stop it with — out of here."); return; }
         BlockPos above = pos.above();
@@ -536,6 +547,7 @@ public class WorksGoal extends Goal {
             BlockPos p = q.poll();
             BlockState s = level.getBlockState(p);
             if (!MineWorks.mayCut(level, v, p, s)) continue;
+            if (MineWorks.daylight(level, p, 1)) continue;          // [growth22] ore in the hill's skin stays: taking it opens the drift to the slope
             vein.add(p);
             n++;
             for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++) {
@@ -650,7 +662,7 @@ public class WorksGoal extends Goal {
 
     // ------------------------------------------------------------------ for the tests
 
-    public static volatile int TELEPORTS, BROKEN, SEALED, LEFT;
+    public static volatile int TELEPORTS, BROKEN, SEALED, LEFT, DAYLIGHT_SEALED;   // [growth22] DAYLIGHT_SEALED
     private static final java.util.Map<java.util.UUID, String> STATE = new java.util.concurrent.ConcurrentHashMap<>();
 
     /** Tests: what this miner's shift is at. */
