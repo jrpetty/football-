@@ -162,6 +162,8 @@ public final class FolkTalk {
         if (civic != null) return manner(f, civic);
         String realm = typed ? CivicLand.talk(f, p, text) : null;    // [civic-land] the taxes; a knight's title, retinue, vote, manor
         if (realm != null) return manner(f, realm);
+        String office = typed ? PropertyOffice.talk(f, p, text) : null;   // [orders17] the property office: building orders, the register, the market
+        if (office != null) return manner(f, office);
         // [civic] A newcomer at the town's edge answers for itself; and "I vote aye" is a citizen's vote (Referendums).
         String newcomer = Newcomers.talk(f, p, topic, text);
         if (newcomer != null) return manner(f, newcomer);

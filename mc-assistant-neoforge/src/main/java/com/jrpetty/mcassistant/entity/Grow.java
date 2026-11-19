@@ -92,6 +92,7 @@ public final class Grow {
         if (!furnish(level, v)) shelve(level, v);
         work(level, v, Ethos.growBudget(id, 24));                    // [identity] and more at a time; less in a traditional one
         HousingMarket.tick(level, v);                                // [econ-housing] the council's houses costed; a folk's own house going up
+        BuildOrders.tick(level, v);                                  // [orders17] the players' commissioned buildings going up
     }
 
     /**
