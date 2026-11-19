@@ -1178,10 +1178,18 @@ public final class Market {
             double each = Purchases.priceEach(level, v.id(), one, f);
             // [econ-1e] A firm of the town's folk with it on its shelf (a bakery's loaves on market day): the best of them, as at
             // any counter (Sellers); the sale its own. The town's market sold the firm's loaves as its own before.
-            Sellers.Offer seller = Sellers.best(level, v, one, f, each, 1);
-            if (seller.firm() != null) each = seller.price();
+            Sellers.Offer seller = Sellers.best(level, v, one, f, each, 1, false, true);   // [join21] players' shops too
+            if (seller.firm() != null || seller.shop() != null) each = seller.price();
             int n = Math.min(have, Purchases.decide(level, f, one, each, Purchases.Need.TREAT, 1));
             if (n <= 0 || !Purchases.canPay(f, each * n)) continue;
+            if (seller.shop() != null) {                                     // [join21] a player's shop's: off its shelves, into its till
+                int sold = ShopCustomers.counterSale(level, f, f, seller.shop(), one, n, each);
+                if (sold > 0) {
+                    PriceIndex.bought(v.id(), one, sold);
+                    return (sold > 1 ? sold + " " : "") + it.getDescription().getString().toLowerCase();
+                }
+                continue;
+            }
             if (seller.firm() != null && Enterprise.held(seller.firm(), Stockroom.key(one)) < n) n = 1;
             if (!TownWork.take(level, v, s -> s.is(it), n)) continue;
             int paid = Purchases.charge(level, f, v.id(), each * n, false, one, n);

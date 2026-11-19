@@ -33,8 +33,13 @@ public final class Sellers {
     /** A firm never asks under this of the going price (its own cost-plus would undersell everybody at first). */
     static final double LEAST_OF_GOING = 0.4;
 
-    /** The seller chosen: a firm (null for the town's own counter), its price each, and the buyer's reckoning of it. */
-    public record Offer(@Nullable Business firm, double price, double utility) {}
+    /** The seller chosen: a firm (null for the town's own counter), its price each, and the buyer's reckoning of it;
+     *  [join21] or a player's own shop (ShopCustomers.counterOffer). */
+    public record Offer(@Nullable Business firm, double price, double utility, @Nullable PlayerShops.Shop shop) {
+        public Offer(@Nullable Business firm, double price, double utility) {
+            this(firm, price, utility, null);
+        }
+    }
 
     /** What a firm asks for one of this today, coin. */
     public static double priceOf(ServerLevel level, UUID village, Business b, ItemStack one) {
@@ -111,12 +116,20 @@ public final class Sellers {
 
     /** [econ-1d] The same; {@code looking}: only weighing what to buy (no stock-out marked against a firm that has none). */
     public static Offer best(ServerLevel level, Villages.Village v, ItemStack one, @Nullable VillageFolkEntity buyer, double townEach, int n, boolean looking) {
+        return best(level, v, one, buyer, townEach, n, looking, false);
+    }
+
+    /** [join21] The same; {@code shops}: the players' own shops with it on their shelves compete too (a buyer that has a use
+     *  for it, ItemUses, at a price it thinks fair); the caller then buys there (ShopCustomers.counterSale). */
+    public static Offer best(ServerLevel level, Villages.Village v, ItemStack one, @Nullable VillageFolkEntity buyer, double townEach, int n, boolean looking,
+                             boolean shops) {
         UUID id = v.id();
         double going = Market.askEach(level, id, one);
         BlockPos from = buyer != null ? buyer.blockPosition() : v.centre();
         double dTown = Math.sqrt(from.distSqr(counter(level, v)));
         Offer best = new Offer(null, townEach, utility(townEach, going, dTown, reputation(id, null)));
-        if (!MarketMaker.live(id) && !ANY_FOR_TESTS) return best;
+        Offer shop = shops ? ShopCustomers.counterOffer(level, id, buyer, one, n, going, from) : null;   // [join21] a player's shop
+        if (!MarketMaker.live(id) && !ANY_FOR_TESTS) return shop != null && shop.utility() > best.utility() ? shop : best;
         String key = Stockroom.key(one);
         // [supply] The town's counter is an offer only while the market has some of its own: what is on the shelf past that is
         // the firms', bonded in their names (Bonded), and the counter had been "selling" a bakery's loaves at its own price.
@@ -136,7 +149,8 @@ public final class Sellers {
             double u = utility(p, going, d, reputation(id, b));
             if (u > best.utility()) best = new Offer(b, p, u);
         }
-        return best.firm() == null ? town : best;                                // [supply] (no firm had it: the counter as before)
+        Offer chosen = best.firm() == null ? town : best;                        // [supply] (no firm had it: the counter as before)
+        return shop != null && shop.utility() > chosen.utility() ? shop : chosen;   // [join21]
     }
 
     private static volatile boolean ANY_FOR_TESTS;

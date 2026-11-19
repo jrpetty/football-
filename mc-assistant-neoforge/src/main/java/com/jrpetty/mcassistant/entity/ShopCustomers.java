@@ -447,6 +447,75 @@ public final class ShopCustomers {
         return lotWords + " at " + s.name;
     }
 
+    // ------------------------------------------------------------------ [join21] at the town's counter
+
+    /**
+     * A player's shop as a seller to a folk buying at the town's counter (Sellers.best): the best open shop with {@code n}
+     * of this on its shelves, for a buyer that has a use for it (ItemUses) at no more than it would pay for that use, weighed
+     * as any seller is (the price, the walk, the shop's name). Null if none would do.
+     */
+    @Nullable
+    static Sellers.Offer counterOffer(ServerLevel level, UUID village, @Nullable VillageFolkEntity buyer, ItemStack one, int n, double going, BlockPos from) {
+        if (buyer == null || one.isEmpty() || n <= 0) return null;
+        List<PlayerShops.Shop> shops = PlayerShops.all(village);
+        if (shops.isEmpty()) return null;
+        ItemUses.Want w = null;
+        String key = PlayerStalls.key(one);
+        Sellers.Offer best = null;
+        for (PlayerShops.Shop s : shops) {
+            if (s.owner.equals(buyer.getUUID()) || !level.isLoaded(s.anchor) || PlayerShops.state(level, s) != PlayerShops.State.OPEN) continue;
+            int have = 0;
+            for (Container c : PlayerShops.shelves(level, s)) have += count(c, one);
+            if (have < n) continue;
+            int price = PlayerShops.asking(level, s, key, one);
+            if (price <= 0) continue;
+            if (w == null) {
+                w = ItemUses.want(buyer, one);
+                if (!w.yes()) return null;                                   // no use for it: the town's counter, as before
+            }
+            double each = price / (double) Math.max(1, PlayerStalls.lot(one));
+            if (each > w.mostEach() + 1e-9) continue;                        // dearer than it would pay for its use
+            double u = Sellers.utility(each, going, Math.sqrt(from.distSqr(s.anchor)), s.rep);
+            if (best == null || u > best.utility()) best = new Sellers.Offer(null, each, u, s);
+        }
+        return best;
+    }
+
+    /**
+     * The sale, when a player's shop won a counter purchase: {@code n} of it off the shop's shelves, paid out of the payer's
+     * purse into the shop's till (its books and its owner's), into the pack of the folk it is for. Returns how many (nought:
+     * nothing sold, nothing moved).
+     */
+    public static int counterSale(ServerLevel level, VillageFolkEntity payer, VillageFolkEntity to, PlayerShops.Shop s, ItemStack one, int n, double each) {
+        if (n <= 0 || PlayerShops.state(level, s) != PlayerShops.State.OPEN) return 0;
+        int coins = Math.max(1, (int) Math.ceil(each * n - 1e-9));
+        if (payer.purse() < coins) return 0;
+        List<Container> shelves = PlayerShops.shelves(level, s);
+        List<Container> from = new ArrayList<>();
+        List<ItemStack> taken = new ArrayList<>();
+        int got = 0;
+        for (Container c : shelves) {
+            if (got >= n) break;
+            ItemStack g = take(c, one, n - got);
+            if (g.isEmpty()) continue;
+            from.add(c);
+            taken.add(g);
+            got += g.getCount();
+        }
+        if (got < n || !payer.spend(coins)) {
+            for (int i = 0; i < taken.size(); i++) putBack(from.get(i), taken.get(i));
+            return 0;
+        }
+        ItemStack lot = one.copyWithCount(n);
+        int going = PlayerStalls.going(level, s.village, one);
+        PlayerShops.booked(level, s, payer.displayNameCap() + " (through the town's counter)", lot, coins, going * n / (double) Math.max(1, PlayerStalls.lot(one)));
+        ItemStack left = to.insertGiven(lot.copy());
+        Villages.Village v = Villages.get(to.ownerId());
+        if (!left.isEmpty() && v != null) Crafts.store(level, v, left);
+        payer.brain("bought " + PlayerStalls.thing(lot, n) + " of " + s.name);
+        return n;
+    }
+
     static int count(Container box, ItemStack like) {
         int n = 0;
         for (int i = 0; i < box.getContainerSize(); i++) {

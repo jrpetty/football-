@@ -786,4 +786,46 @@ public class PlayerLifeGameTests {
             helper.succeed();
         });
     }
+
+    /**
+     * [join21] A player's shop competes at the town's counter (Sellers.best): a farmer without a hoe, buying at the counter,
+     * goes to the shop when its hoe is the better buy for it (it has a use for one, ItemUses, at a price it thinks fair), and
+     * to the town's counter when that is cheaper; the shop's sale comes off its shelves into its till.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pl13_shop_at_the_counter")
+    public static void pl13_shop_at_the_counter(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 4560000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 2);
+        level.setDayTime(1000);
+        helper.runAtTickTime(10, () -> {
+            UUID village = folk.get(0).ownerId();
+            Villages.Village v = Villages.get(village);
+            BlockPos heart = Kit.surface(level, x, Z);
+            ServerPlayer p = player(helper, heart.offset(7, 0, 0), 30);
+            PlayerShops.Shop s = shop(helper, level, heart, p);
+            PlayerShops.priceForTests(s, new ItemStack(Items.STONE_HOE), 1);
+            VillageFolkEntity f = folk.get(1);
+            f.setJob(AssistantEntity.StationTask.FARM);
+            f.removeMatching(it -> it.is(net.minecraft.tags.ItemTags.HOES), 64);
+            f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            ItemStack hoe = new ItemStack(Items.STONE_HOE);
+            com.jrpetty.mcassistant.entity.Sellers.Offer dear = com.jrpetty.mcassistant.entity.Sellers.best(level, v, hoe, f, 40, 1, false, true);
+            com.jrpetty.mcassistant.entity.Sellers.Offer cheap = com.jrpetty.mcassistant.entity.Sellers.best(level, v, hoe, f, 0.2, 1, false, true);
+            com.jrpetty.mcassistant.entity.Sellers.Offer without = com.jrpetty.mcassistant.entity.Sellers.best(level, v, hoe, f, 40, 1, false, false);
+            Kit.log("[VT] pl13 town at 40: " + (dear.shop() == null ? "the counter" : dear.shop().name + " at " + dear.price())
+                + "; town at 0.2: " + (cheap.shop() == null ? "the counter" : cheap.shop().name));
+            helper.assertTrue(dear.shop() == s, "the shop's hoe the better buy than the counter's dear one");
+            helper.assertTrue(cheap.shop() == null, "the counter's cheaper hoe wins");
+            helper.assertTrue(without.shop() == null, "without the shops, the counter as before");
+            int till = s.till, purse = f.purse();
+            int sold = ShopCustomers.counterSale(level, f, f, s, hoe, 1, dear.price());
+            Container c = (Container) level.getBlockEntity(chestAt(heart));
+            Kit.log("[VT] pl13 sold " + sold + "; till " + till + " -> " + s.till + "; purse " + purse + " -> " + f.purse() + "; chest " + count(c, Items.STONE_HOE));
+            helper.assertTrue(sold == 1 && s.till > till && f.purse() < purse && count(c, Items.STONE_HOE) == 2
+                && f.countCarried(it -> it.is(Items.STONE_HOE)) == 1, "off the shop's shelf into its till, the hoe to the farmer");
+            helper.assertTrue(s.sales.size() == 1, "on the shop's books");
+            helper.succeed();
+        });
+    }
 }

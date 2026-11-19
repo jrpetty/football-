@@ -407,14 +407,24 @@ public final class Purchases {
         ItemStack pick = choose(level, village, payer == null ? f : payer, f, offer, need);
         double each = priceEach(level, village, pick, payer);
         // [econ-1b] Where a firm of the town's own folk has it too, the buyer goes to the best: price, the walk, its name.
-        Sellers.Offer seller = Sellers.best(level, v, pick, payer == null ? f : payer, each, n);
-        if (seller.firm() != null) each = seller.price();
+        Sellers.Offer seller = Sellers.best(level, v, pick, payer == null ? f : payer, each, n, false, payer != null);   // [join21] players' shops too
+        if (seller.firm() != null || seller.shop() != null) each = seller.price();
         int k = payer == null ? n : decide(level, payer, pick, each, need, n);
         if (k <= 0) return 0;
         boolean earner = payer != null && !payer.isBaby() && payer.stationTask() != StationTask.NONE;
         if (payer != null && !need.essential && !canPay(payer, each * k)) {
             refuse(level, payer, pick, each, k);                             // more than it would (or could) pay
             return 0;
+        }
+        if (seller.shop() != null && payer != null) {                        // [join21] bought of a player's shop: its shelves, its till
+            int sold = ShopCustomers.counterSale(level, payer, f, seller.shop(), pick, k, each);
+            if (sold > 0) {
+                PriceIndex.bought(village, pick, sold);
+                if (need == Need.FOOD) FoodBasket.bought(f.getUUID(), pick);
+                lastGot = pick.copyWithCount(sold);
+                return sold;
+            }
+            each = priceEach(level, village, pick, payer);                   // gone off its shelves meanwhile: the town's counter after all
         }
         Predicate<ItemStack> exact = s -> ItemStack.isSameItemSameComponents(s, pick);
         int got = take(level, v, exact, k, need);
