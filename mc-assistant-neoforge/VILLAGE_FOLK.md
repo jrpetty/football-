@@ -14103,3 +14103,95 @@ the forest, the waters, the desert, the snowy slope), founded and audited, every
 untouched; tf00 (not required) all six at once, for the numbers; tf07 /village spawnat founds at once and then levels;
 tf08 a player's camp down a pit left open and untouched, the world's raw copper down another filled over.
 FoundingGameTests f04 (the tarn let out, its hill graded, nothing running); FoundingPlanTest as it was.
+
+## The region: roads between towns, rails, rivals and allies [links12]
+
+Towns that deal with each other are joined by roads that follow the land, later by railways; they come to count each
+other as allies, friends or rivals out of what they gain and lose by each other; and the town's books have a Region page
+with the map of it all and a league table.
+
+### The survey (Routes)
+- **Where the road runs.** The first time two towns have a road between them (neighbours with dealings, a colony and its
+  mother), the way is surveyed from the end of the one's avenue to the end of the other's, over the land as it lies: a
+  search a few blocks a square, every square costing its length, more for each step up or down (a step at a time is
+  fine, two is a cutting and dear, three is a cliff and no way at all), more through the woods, five times over water
+  (a bridge to build) and sixteen times over deep water; a cliff, lava, open sea, another town's ground, a villagers'
+  village and **anybody's building** (whatever the world did not put there: a player's house, a wall, a farm, two blocks
+  clear of it) are not crossed at all. Every block of a stretch is judged as the road will lie, so no corner of a cliff
+  or a house is cut. The way found is then drawn straight wherever a straight run costs no more than the winding one,
+  so the road takes long easy runs and turns where the land makes it. Ground nobody has been near is judged from how
+  the world would make it (the generator's heights, its woods and waters, every fourth block, smooth between), so the
+  survey never wakes the land up.
+- **Kept.** The survey (its turning points) is kept in the first town's notes and every road, path, gravel or stone, is
+  laid on it ever after (RoadWorks, the colony road), whatever is built along it later. Both chronicles say it was
+  surveyed, how long it is, the bridge it wants and how often it turns.
+- **The bridge** is the road's own (RoadWorks): planks with rails on a path or gravel road, stone decked with stone posts
+  on a stone road. On a turning road the road is laid three wide across the way it runs there, its milestones,
+  signposts and lamps to its side, and the inn halfway set back from it the same way.
+- **Both ends.** Each town's gang lays its own half from its end, as before. A town asleep (nobody near: TownLod) does
+  not stop its gang: the steps it would have laid (a hundred and twenty a day, four hundred and eighty at most) are owed
+  it, and laid out of its stores, twenty-four a visit, once it wakes.
+
+### What a route costs (Routes.between)
+- For the rest of the game (the market's carriage between towns, the caravans, envoys, folk moving town, armies) a
+  route is: its length by the road heart to heart; its grade (track, path, gravel, stone: as good as its worse half);
+  whether a railway joins the two; the water it bridges; **the time going takes** (a folk walks three blocks a second on
+  open ground, a tenth quicker on a path, a fifth on gravel, three tenths on stone; a cart on the rails eight; a road
+  with no bridge yet costs a second for every block of water); **the road money** a load costs (a coin every hundred
+  blocks, nine tenths of that on a path, three quarters on gravel, three fifths on stone, two fifths by rail); a rival's
+  **toll**; and whether trade between them is shut by an **embargo**. `Routes.travelTicks` and `Routes.carriage` give
+  the time and the cost straight.
+- **Caravans, envoys, deals' deliveries, wagons, folk moving town** walk the surveyed road (Caravans.way), and a
+  caravan's road money is reckoned by the road. **Armies** march out along the road toward the enemy as far as it
+  goes nearest their camp, then across to it.
+- **A town's reach grows with its links**: each town joined to it by a made road or an open railway counts toward its
+  standing (below).
+
+### Railways between towns
+- A railway between two Iron Age neighbours is laid as before (Railways: the mine's line first, each town its own half,
+  a station at each end, powered rails, banks, trestles and cuttings), for a trade pact **or for a strong trade** between
+  them (a weekly run of trade of twenty-four coins and more), embargo or not. It goes in the region's news when it opens,
+  and the route is the quicker and the cheaper for it.
+
+### Rivals and allies (Rivalry)
+- **Interests, not chance.** Every pair of neighbours keeps a rivalry, 0 to 100, weighed every day:
+  - pushed up by **the ground between them** (lands crowding each other with no border agreed: three a day; an open
+    dispute over the land: two more), **trade lost to each other** (both selling the same goods to the same third town,
+    or the market's word that one undercut the other), **folk poached** (a skilled hand, or any hand to a rival, taken
+    on by the other town) and **renown** (two towns within a quarter of each other's renown vie for the same name);
+  - pulled down by **trade gained** (what the deals between them earned both sides, by their own prices, and the goods
+    carried between them and paid for), an alliance and a border agreed; and easing a point a day.
+- **Rivals** (forty and over): their relation cools a point a day (two at sixty); each values the other's goods a tenth
+  less at the bargaining (a tariff) and charges the other's loads a toll on its road, a coin every two hundred blocks.
+  The news says what they are rivals over.
+- **An embargo** (sixty and over, with relations gone uneasy or worse, and no alliance): the town that has lost the more
+  to the other lays it. No trade talks, no trade caravans, no deliveries, and the deal between them ended. It is lifted
+  once the rivalry falls under thirty-five, relations mend past nought, or they ally.
+- **Good trade** warms relations (a point a day for a weekly run of six coins, two for twenty), signs a **trade pact**
+  between friends with a steady trade (ten), and makes **allies** of close friends (fifty-five and over) with a pact and
+  a rich trade (twenty) and no rivalry to speak of. A rivalry only makes a feud likelier: war still takes a feud and a
+  captain who likes his chances.
+
+### The Region page and /village region
+- The town's books (Civic) have a **Region** page: a map of the towns within fifteen hundred blocks, each a dot in the
+  colour of how it stands with us (allies green, friendly blue, neutral grey, rivals amber, hostile red, ours gold), the
+  roads drawn along their surveys (dotted where nothing is laid, brown a path, grey gravel, dark stone, each half as good
+  as its own gang has made it), railways beside them, an embargo crossed in red; the mouse over a town or a road says all
+  about it. Beside it: the towns and how we stand with each (relation, rivalry and what over, pact, embargo); the roads
+  and railways (length, each half's grade and how far its gang has got, the water bridged, the railway, the time going
+  takes, a load's road money and toll); the **league table** of the region's towns by **standing** (three for every
+  folk, its renown, ten for every age, a coin in twenty-five of its treasury, five for every town it is linked to, a
+  point for every four coins of its weekly trade); and the region's news (roads surveyed and opened, railways opened,
+  pacts, alliances, rivalries, embargoes and their lifting). Every line of it is in both towns' chronicles too.
+- `/village region` says the same in the chat, `/village region books` opens the books at the page, and operators'
+  `/village region stage` sets out two Iron Age towns beside where it is run with a river between them, their road
+  surveyed and made gravel (the bridge with it) and the railway laid with its stations, for the pictures.
+
+Tests: RegionGameTests (x 4,200,000 to 4,300,000, z 90000): rg01 the road surveyed round a cliff-sided hill and a
+player's hut and over a river, laid by both towns' gangs to a path with a plank bridge, the hut untouched, the road
+open end to end in the news; rg02 a railway wanted for a strong trade (not without), planned and laid with a station at
+each end, the route quicker and cheaper by it; rg03 the caravans' way along the road, the route's time and money on a
+track and on gravel, the market's API, a rival's toll, an army's march by the road; rg04 rivals from the ground between
+them and lost trade, the tariffs, an embargo by the town that lost the trade (no talks, the route shut), lifted when
+relations mend; rg05 a pact and then an alliance out of good trade; rg06 the survey and the rivalry kept over a save and
+a restart, the page and the command, a sleeping town's gang's steps laid on waking.
