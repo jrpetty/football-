@@ -283,6 +283,7 @@ public final class PropertyMarket {
         boolean plot = "plot".equals(t.getString("use"));
         double b = plot ? 0 : rebuild(level, village, drawing, t.getString("style").isEmpty() ? "oak" : t.getString("style"));
         if ("unfinished".equals(t.getString("use"))) b = t.getLong("cost") / 100.0 * 0.5;
+        if (drawing.isEmpty() && t.contains("rebuild")) b = t.getLong("rebuild") / 100.0;   // [join21] a player's own building: its walls at today's prices (PropertyDesk)
         long day = level.getDayTime() / 24000L;
         long age = Math.max(0, day - t.getLong("built"));
         double wear = plot ? 0 : b * Math.min(WEAR_MOST / 100.0, age / 7.0 * WEAR_WEEK / 1000.0);

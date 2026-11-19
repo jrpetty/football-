@@ -49,6 +49,8 @@ public final class PropertyOffice {
         final Map<String, List<String>> quotes = new HashMap<>();
         @Nullable List<String> quote;
         String msg = "";
+        /** [join21] The building the player came about (its shop's Sell, Let or Repurpose), shown first. */
+        String focus = "";
     }
 
     private static final Map<UUID, Form> FORMS = new ConcurrentHashMap<>();
@@ -64,6 +66,21 @@ public final class PropertyOffice {
     }
 
     public static void open(ServerPlayer p) {
+        send(p);
+    }
+
+    /** [join21] Open the office on a tab, with one of the player's buildings first and a word on what to do with it
+     *  (its shop's Sell, Let and Repurpose buttons). */
+    public static void openOn(ServerPlayer p, String tab, @Nullable String key, String what) {
+        Form f = form(p);
+        f.tab = tab;
+        f.focus = key == null ? "" : key;
+        f.msg = key == null ? "You hold no building on the register here yet: a shop goes on it when it is set up, a building you commission when it stands."
+            : switch (what) {
+                case "sell" -> "Your shop's building is first: set its price and put it up for sale (with its contents, or without).";
+                case "let" -> "Your shop's building is first: set the rent and offer it to let; a firm looking for premises may take it.";
+                default -> "Your shop's building is first: choose its new use for a refit quote, or add a storey or a wing.";
+            };
         send(p);
     }
 
@@ -304,7 +321,8 @@ public final class PropertyOffice {
     }
 
     static void property(ServerLevel level, ServerPlayer p, UUID id, Form f, ListTag rows) {
-        List<PropertyMarket.Property> mine = PropertyMarket.ownedBy(id, p.getUUID());
+        List<PropertyMarket.Property> mine = new ArrayList<>(PropertyMarket.ownedBy(id, p.getUUID()));
+        if (!f.focus.isEmpty()) mine.sort(java.util.Comparator.comparingInt(pr -> pr.key().equals(f.focus) ? 0 : 1));   // [join21] the one it came about first
         if (mine.isEmpty()) rows.add(row(List.of("You hold no buildings on the register here. A building you commission is put on it when it stands.")));
         for (PropertyMarket.Property pr : mine) {
             String k = pr.key();
