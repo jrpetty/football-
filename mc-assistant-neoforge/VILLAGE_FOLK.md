@@ -14182,8 +14182,16 @@ weekly day. The treasury's own wages (the watch, the town's own hands) were paid
 **reserve** now: short of two days of its wage bill in the morning, before the wages, the market pays the treasury its
 cash over its float there and then (both are the town's; at the week's end what the town owes it on its IOUs is set
 against its surplus as before), and three mornings running short, the council is called together on its taxes without
-waiting for its day ("the council, called together on the empty treasury, voted ..."). Measured: ER04_RESULT
-ER06_RESULT
+waiting for its day ("the council, called together on the empty treasury, voted ..."). Measured: two grown towns
+of twenty alike, thirty real mornings each with their households buying bread and their works taking stone (er04): the
+one keeping its reserve at 64 coins at its lowest and never at nought (short of its reserve on 21 mornings, made up out
+of the market's surplus), the old way at nought on a morning; the census at nought drift. A town of sixteen founded and
+left to itself for thirty days under the market (er06), growing to a hundred folk and sixty-three buildings: its treasury
+at 9 coins at its lowest from day ten and never at nought on the last ten mornings (long-6's real towns: nought from day
+nineteen). Its times, as they came: the market open on day five, a boom (days 5 to 7), slowing (8 to 11, prices up 12
+to 18 in the hundred a week as a hamlet of sixteen became a town of ninety, the council's rate up to 7.3 in the
+hundred), a slump (12 to 16, prices falling back), recovering (17), a boom again (18 to 23), slowing (24 to 27) and a
+slump (28 to 30); the index 100, 138 at its highest on day 21, 114 on day 30. ER07_RESULT
 
 ### Where you see it
 
