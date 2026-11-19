@@ -1719,6 +1719,11 @@ public final class Villages {
      * minutes go by, so that a village which cannot build one is not starved of
      * planks for ever.
      */
+    /** [fixes14] Tests: this town founded long enough ago that its stores are no longer kept for the storehouse. */
+    public static void storehouseFirstDoneForTests(UUID villageId) {
+        FOUNDED.put(villageId, -STOREHOUSE_FIRST - 1);
+    }
+
     public static boolean storehouseFirst(UUID villageId, long gameTime) {
         if (built(villageId, "storage") > 0) return false;
         long since = FOUNDED.computeIfAbsent(villageId, k -> gameTime);
@@ -3068,7 +3073,8 @@ public final class Villages {
                 if (!lotLoaded(level, x, z, hx, hz)) { waiting = true; continue; }
                 // [city9] Only where the street before its door is walked from the heart (CityPlan): never a lot over the
                 // water or up a cliff from the town, until a few looks have found nothing else (an island town).
-                if (!CityPlan.hungry(villageId) && !CityPlan.reaches(level, v, lot)) { offWalk = true; continue; }
+                // [fixes14] And never over the water, however hungry: a lot there waits for its street's crossing (CityCrossings).
+                if (!CityPlan.reaches(level, v, lot) && !(CityPlan.hungry(villageId) && CityPlan.reachesDry(level, v, lot))) { offWalk = true; continue; }
                 // The great buildings (the hall above all: no Iron Age without one) want the most
                 // ground of anything, and on a mountainside found none flat to six blocks across
                 // twenty: a town of fifty-eight sat in the Stone Age for want of one. Missed on

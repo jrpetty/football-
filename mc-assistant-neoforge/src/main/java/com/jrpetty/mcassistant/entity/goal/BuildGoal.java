@@ -228,6 +228,11 @@ public class BuildGoal extends Goal {
         return g.lastWords == null ? "" : g.lastWords;
     }
 
+    /** [fixes14] Tests: what every builder is handed for the cell it comes to, its pace and its reach its own (null: off). */
+    public static void stockAtPaceForTests(@Nullable java.util.function.BiConsumer<AssistantEntity, Placement> stock) {
+        stockForTests = stock;
+    }
+
     public BuildGoal(AssistantEntity assistant) {
         this.assistant = assistant;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));

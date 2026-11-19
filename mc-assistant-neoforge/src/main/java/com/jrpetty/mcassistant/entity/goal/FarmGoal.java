@@ -598,6 +598,12 @@ public class FarmGoal extends Goal {
         BlockState g = assistant.level().getBlockState(pos);
         if (!(g.is(Blocks.DIRT) || g.is(Blocks.GRASS_BLOCK) || g.is(Blocks.COARSE_DIRT)
               || g.is(Blocks.FARMLAND))) return false;
+        // [fixes14] New ground only where the town walks to (a block up or down from the next: the field stepped down a
+        // slope in terraces), never the top of a bank the farmer jumped down from and the town cannot reach.
+        if (!g.is(Blocks.FARMLAND) && assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity f && f.ownerId() != null) {
+            com.jrpetty.mcassistant.entity.Reach walk = com.jrpetty.mcassistant.entity.Reach.last(f.ownerId());
+            if (walk != null && walk.covers(pos.getX(), pos.getZ()) && !walk.reaches(pos.getX(), pos.getZ(), 0)) return false;
+        }
         return isPlantableSpace(pos.above());
     }
 

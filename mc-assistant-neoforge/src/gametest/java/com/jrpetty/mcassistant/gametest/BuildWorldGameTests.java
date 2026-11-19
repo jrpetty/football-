@@ -535,7 +535,7 @@ public class BuildWorldGameTests {
         };
     }
 
-    private static Item kit(BuildGoal.Placement p) {
+    static Item kit(BuildGoal.Placement p) {   // [fixes14] shared with FixesGameTests
         return switch (p.part()) {
             case BLOCK -> kit(p.style());
             case FURNACE -> Items.FURNACE;

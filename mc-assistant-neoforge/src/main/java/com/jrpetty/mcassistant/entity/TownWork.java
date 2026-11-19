@@ -68,6 +68,7 @@ public final class TownWork {
         if (now - PAVED.getOrDefault(v.id(), -100000L) < PAVE_EVERY && now >= PAVED.getOrDefault(v.id(), 0L)) return;
         if (Villages.headcount(v.id()) < TownJobs.SETTLED) return;          // a young town: its trades first, its streets on the full round
         streets(level, v, now);
+        CityCrossings.work(level, v, now);                                     // [fixes14] its streets carried over the water
     }
 
     private static void streets(ServerLevel level, Villages.Village v, long now) {

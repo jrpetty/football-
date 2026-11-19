@@ -754,6 +754,13 @@ public final class MineWorks {
     @Nullable
     private static Task faceTask(ServerLevel level, Works w, Lvl l, Drift d, VillageFolkEntity f, long now) {
         if (d.closed != '-') return null;
+        // [fixes14] Turned and turned again and got nowhere (a cave or the open works on every side of its tip): closed. A
+        // miner took its face up a thousand times in two days, each time "stopped: cave" before a block was cut.
+        if (d.turns > d.path.length() + 8) {
+            d.closed = d.why;
+            save(w);
+            return null;
+        }
         Direction dir = d.dir();
         BlockPos tip = d.path.length() == 0 ? new BlockPos(d.ox, l.y(), d.oz) : d.cell(d.path.length() - 1, l.y());
         Direction head = Direction.from2DDataValue(d.heading);

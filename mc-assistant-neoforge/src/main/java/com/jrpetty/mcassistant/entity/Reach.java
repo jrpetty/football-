@@ -99,6 +99,35 @@ public final class Reach {
         return reaches(p.getX(), p.getZ(), slack);
     }
 
+    /** [fixes14] Does the survey go out as far as this column? */
+    public boolean covers(int x, int z) {
+        return Math.abs(x - heart.getX()) < R && Math.abs(z - heart.getZ()) < R;
+    }
+
+    /** [fixes14] How much of the square round this column (every other column of it) can be walked to, from 0 to 1. */
+    public double share(int x, int z, int r) {
+        int cx = x - heart.getX() + R, cz = z - heart.getZ() + R;
+        int all = 0, walked = 0;
+        for (int dx = -r; dx <= r; dx += 2) {
+            for (int dz = -r; dz <= r; dz += 2) {
+                int ix = cx + dx, iz = cz + dz;
+                all++;
+                if (ix < 0 || iz < 0 || ix >= SIZE || iz >= SIZE) continue;
+                if (dist[ix * SIZE + iz] != 0) walked++;
+            }
+        }
+        return all == 0 ? 0 : walked / (double) all;
+    }
+
+    /**
+     * [fixes14] A field's square the farmer can work: its middle walked to (or a step or two from it), and most of the
+     * square with it. The middle within six of the walk let in a field whose every furrow lay up a cliff from the town: on
+     * a mountain the farmland went out on a tableland seven blocks up a sheer face, and nobody ever tilled it.
+     */
+    public boolean fieldReaches(BlockPos p, int half) {
+        return reaches(p.getX(), p.getZ(), 2) && share(p.getX(), p.getZ(), half) >= 0.6;
+    }
+
     /** The walked column nearest this one, within {@code slack} blocks; -1 if none. */
     private int nearestWalked(int x, int z, int slack) {
         int cx = x - heart.getX() + R, cz = z - heart.getZ() + R;

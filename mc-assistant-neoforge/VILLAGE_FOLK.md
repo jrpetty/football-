@@ -14569,3 +14569,81 @@ queue and shrinks with more builders and the buyer's own materials; an order is 
 its estimate; a shortage revises the time with its reason and the work finishes once the stores have it; the deposit, the
 stage and the refund are booked to the coin (the census drifts by nothing); priority costs its premium and goes first; a house
 is sold to a household and a shop to a firm; a shop is refitted as a bakery and a storey quoted; orders survive a save and load.
+
+
+## Miners' picks, the walk underground, mountain fields, hill houses, a raise under its roof, the lake shore (fixes-14)
+
+<!-- [fixes14] entity/Picks, entity/goal/WorksGoal (walk, straight), entity/MineWorks (faceTask), entity/Reach (fieldReaches),
+entity/Fields14, entity/goal/FarmGoal (isTillable), entity/Grow (raise), entity/CityPlan (reachesDry), entity/CityCrossings,
+entity/TownWork (paving); FixesGameTests -->
+
+Six things players saw in real towns, each measured before and after with a game test (FixesGameTests, x 4,400,000 to
+4,500,000, z 90000).
+
+**The miners' picks** (entity/Picks). A stone pick is worn through in a hundred and thirty blocks, half a shift. The rack
+kept a spare for every four miners whatever they wore out, a pick was changed only once it was a fifth from breaking, and
+a miner whose pick broke at the bottom of the works walked up "for another" and, the rack bare, stood idle: in the
+photographed mountain town of thirty (Wood Age, six miners, day nine) three of its six miners stood in the works with no
+pick in their packs, the last work they did five thousand ticks and more before. Now the rack keeps a spare pick for
+every four miners at the least and as many as half a day wears out (the last day's handing out; twelve at most); picks are made of iron as
+soon as the stores hold the bars past what the smith keeps back (the Stone Age too, past a good deal more while the town
+puts iron by for its age); two worn picks handed in are mended into one before a new one is made; a miner setting out
+for a shift with its pick a third worn or less changes it for a fresh one off the rack and hands the worn one in (one
+with no spare and a pick half gone takes a spare along); a miner whose pick breaks has a spare sent down off the rack,
+made there and then of the stores' stone and timber if the rack is bare, and works on; and while the rack is short of
+picks the town's smith makes them at its forge before anything else.
+
+**The walk underground** (WorksGoal). A miner going along the works made for the next few cells of the tunnel with the
+pathfinder, which counts a spot a block off as reached: it stopped at the edge of the cell before, short of where the
+works wanted it, and after four seconds was put there. Now a spot in sight along the tunnel (every block of the way open
+two high, at its own level or a step of the stair's) is walked to straight; out of sight, the pathfinder is asked for the
+spot itself; stuck three seconds, a hop and the pathfinder's way; and only after eight seconds is it put there. A miner
+whose place of work is out of sight down the stair or round a turn goes there by the tunnels, not across the rock. A
+drift that turned and turned again without a block cut (a cave or the open works on every side of its tip) is closed: one
+was taken up a thousand times in two days, "stopped: cave" each time. Measured (fx02, four miners working a level from
+the pithead for thirty thousand ticks): before 921 hops in 15 shifts (61 a shift; 601 in 58, ten a shift, on the plain
+rig), after 0 hops in 44 shifts, and 1,326 blocks cut against 469.
+
+**Mountain fields** (Reach.fieldReaches, Fields14, FarmGoal). The farmland's side was let in when a column within six
+blocks of a square's middle could be walked to, so on a mountain the town marked out its farmland on a tableland seven
+blocks up a sheer face (good ground, flat, a tarn on it), and its first field went there: 156 of its 169 columns out of
+the farmers' walk (fx03, before). After, the farmland goes on the walkable slope the other way, the first field with
+none of its columns out of the walk, and no farmland at all out of it after a day and a quarter of three farmers' work. A field's square now wants its middle walked to and most of its ground (three in five);
+where the farmland's side has none, the field goes on another side's squares, or failing those on ground just out past
+the town that the farmer walks to (off its lots and streets), never up a cliff; and a farmer breaks no new ground the town cannot walk to,
+so on a slope the furrows follow the ground a block up or down at a time, a terrace to each height, walked from one to
+the next.
+
+**A storey raised under its roof** (Grow.raise). The old roof came off first and the new storey went up a layer at a time,
+so a hall stood open to the sky for most of a day while it was raised. The new storey's walls and roof now go up first,
+wherever they are clear of the old roof, a layer at a time from the bottom, so the new roof stands over the old; then each
+block of the old roof is swapped for the new storey's block there in the same moment (or taken out where the new storey
+has none), under the new roof. A storey paid for is kept with the world, so a restart goes on with it and does not pay
+twice. Measured (fx05, a whole house and a whole meeting hall in the Iron Age raised a visit at a time, a visit's budget
+of twelve): before, the house's rooms had up to 49 columns open to the sky over 8 visits and the hall's up to 135 over 23;
+after, not one column at any visit of either.
+
+**The lake shore** (CityPlan.reachesDry, CityCrossings). A town that had filled every lot its streets reached took, after
+a dozen looks, a lot off its streets, and in a fast-built town that was across the water: in ct01's lake town grown at the
+admin's speed (a building every twenty seconds, three days) the pitch went up across the channel (fx06 before: 1 of 69
+off the streets). A lot over the water is never taken so now: a town with nothing else left takes only a lot its street
+reaches with steps cut up and down its banks, never across water. Instead, once it has passed lots over for want of a
+street, it carries the street over: where a street it walks runs into water and out onto dry ground within nine blocks,
+the street's whole width is decked across at the bank's height, in the town's planks (cobblestone where it has no timber
+to spare), by a hand at the town's works, a few blocks a visit; the deck down, the walk goes on over it, the news says
+"the town laid a bridge over the water", and the lots on the far bank are on the streets like any other. After (fx06, the same growth): none off the streets at any
+look (the worst of the three days nought, against one), 42 cells of bridge laid over the channel, five buildings on the
+far bank on the town's own streets, and the town's street cells walked from the heart 94 in a hundred against 56.
+
+**Left as it is, with the reason.** The hill houses: a measuring rig (fx04, not required) puts three builders to a house
+each, on the flat and on a hillside with the door up and down, each cell's makings handed them, their pace and reach their
+own; the town's own brain still takes the test's builders off to its work and trades before they finish, so it has no
+before and after yet, and the builders' ways on a hill lot are as build-5 and long-6 left them. A hill house's drawing
+with its cut and fill is half as big again as on the flat (481 parts against 289), all of it laid at the builder's pace.
+
+Tests (FixesGameTests): fx01 the picks' chain (the rack to the miners' count and wear, stone then iron from the smith in
+the Stone Age, a worn pick changed and mended, a pick sent down to a miner whose pick broke); fx02 four miners working a
+level from the pithead, hardly a hop; fx03 the mountain town's farmland on ground its farmers walk to; fx04 (not required)
+the hill houses' rig; fx05 a house and a hall raised a storey with no column of their rooms open to the sky; fx06 (not
+required, minutes long) ct01's lake town at the admin's speed, nothing off its streets; fx00 (not required) a young town's
+mine in a hill of rock for two days, for the numbers.

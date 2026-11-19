@@ -3468,7 +3468,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (raisedAChild(12.0)) return;                // the village grew
         // The rack of spare tools, seen to by whoever is at the stores with a moment: the storekeeper
         // at its counter, or a hand at the heart with nothing of its own to do (Toolrack).
-        if (level() instanceof net.minecraft.server.level.ServerLevel rack) Toolrack.tend(this, rack);
+        if (level() instanceof net.minecraft.server.level.ServerLevel rack) {
+            Picks.smith(this, rack);                   // [fixes14] the smith makes the miners' picks first while the rack is short
+            Toolrack.tend(this, rack);
+        }
 
         // A storekeeper works the chests directly and has nothing to haul: its
         // days were spent standing at the heart (two runs, two storekeepers, not
@@ -4983,7 +4986,7 @@ public class VillageFolkEntity extends AssistantEntity {
         try {
             for (int[] f : Villages.fieldSquares(side)) {
                 // A square the farmer cannot walk to from the town is no field of the town's.
-                if (walk != null && !walk.reaches(heart.getX() + f[0], heart.getZ() + f[1], FIELD_MOST / 2)) continue;
+                if (walk != null && !walk.fieldReaches(heart.offset(f[0], 0, f[1]), FIELD_MOST / 2)) continue;   // [fixes14] most of it
                 BlockPos p = surfaceAt(heart.getX() + f[0], heart.getZ() + f[1]);
                 // Not up a mountain or down a ravine from the town: a farmer walks there and back
                 // every day, and a field it cannot get to is no field (the mountains' hundred days).
@@ -4998,6 +5001,20 @@ public class VillageFolkEntity extends AssistantEntity {
         } finally {
             neighbours = null;
         }
+    }
+
+    /** [fixes14] For Fields14: is this ground a field could go on, and free of anybody's plot? */
+    boolean fieldGroundFor14(BlockPos p, int radius) {
+        neighbours = Villages.folkOf(ownerId());
+        try {
+            return !taken(p, radius) && (soilField(p) || farmable(p));
+        } finally {
+            neighbours = null;
+        }
+    }
+
+    static boolean buildingNearFor14(UUID town, BlockPos p, int within) {
+        return buildingNear(town, p, within);
     }
 
     /** Does any of the village's buildings stand within this many blocks of the spot? */
@@ -5038,7 +5055,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     continue;
                 }
                 // Over a ridge or across a pond from the town: no use, however good the soil.
-                if (walk != null && !walk.reaches(at, FIELD_MOST / 2)) continue;
+                if (walk != null && !walk.fieldReaches(at, FIELD_MOST / 2)) continue;   // [fixes14] most of it walked to
                 BlockPos p = surfaceAt(at.getX(), at.getZ());
                 if (p == null || Math.abs(p.getY() - heart.getY()) > FIELD_CLIMB) continue;
                 if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST)) { score -= 4; continue; }
@@ -5160,7 +5177,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 Reach walk = town != null && level() instanceof net.minecraft.server.level.ServerLevel sl
                     ? Reach.of(sl, town, heart) : null;
                 java.util.function.Predicate<BlockPos> near = p -> clear.test(p)
-                    && (walk == null || walk.reaches(p, FIELD_MOST / 2));
+                    && (walk == null || walk.fieldReaches(p, FIELD_MOST / 2));          // [fixes14] most of it walked to
                 // The village's farmland first: its fields side by side, on the side of the town it chose.
                 BlockPos plot = farmlandPlot(heart, walk);
                 if (plot != null) yield plot;
@@ -5170,8 +5187,11 @@ public class VillageFolkEntity extends AssistantEntity {
                 BlockPos wet = nearestWaterField(heart, out, keep, near);
                 if (wet == null) wet = scan(from, SCAN, 6, keep, p -> near.test(p) && farmable(p));
                 if (wet == null) wet = scan(from, SCAN, 6, keep, p -> near.test(p) && soilField(p));
+                // [fixes14] Nothing out on the farmland's side the farmer can walk to: a field on another side of the town,
+                // or by it, on ground the farmer walks to (never up a cliff from the town: a field there was never tilled).
+                if (wet == null && walk != null) wet = Fields14.fallback(this, heart, walk, near);
                 // Nothing the town can walk to (its ground still coming in): wherever there is soil.
-                if (wet == null && walk != null) {
+                if (wet == null && walk == null) {
                     plot = farmlandPlot(heart, null);
                     if (plot != null) yield plot;
                     wet = nearestWaterField(heart, out, keep, clear);
