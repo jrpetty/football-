@@ -200,6 +200,12 @@ public final class TradeDeals {
         CACHE.remove(d.buyer);
     }
 
+    /** [links12] An embargo (Rivalry): the deal between these two ended, nothing more owed either way. */
+    static void endFor(UUID a, UUID b) {
+        Deal d = deal(a, b);
+        if (d != null) drop(d);
+    }
+
     private static void drop(Deal d) {
         Ledger.forget(d.seller, "deal/" + d.buyer);
         Ledger.forget(d.buyer, "deal/" + d.seller);
@@ -325,6 +331,7 @@ public final class TradeDeals {
 
     /** Should these two talk trade (Envoys.choose)? No deal between them and something to trade, or a deal near its end. */
     public static boolean talksDue(ServerLevel level, UUID a, UUID b, long day) {
+        if (Rivalry.embargoed(a, b)) return false;                       // [links12] no talks under an embargo
         String last = Ledger.note(a, "talks.last/" + b);
         try {
             if (last != null && !last.isEmpty() && day - Long.parseLong(last) < 4) return false;
@@ -408,6 +415,7 @@ public final class TradeDeals {
         UUID from = d.sellerSends ? d.seller : d.buyer, to = d.other(from);
         Villages.Village fv = Villages.get(from), tv = Villages.get(to);
         if (fv == null || tv == null) return false;
+        if (Rivalry.embargoed(from, to)) return false;                   // [links12] nothing sets out under an embargo
         // [market] The trade wagons carry it when there are any (Shipments); with none, a caravan walks it, and with no
         // hand for a caravan the road carries it all the same: a delivery never simply fails to set out.
         VillageFolkEntity carrier = Shipments.hasCarrier() ? null : Caravans.choose(fv);

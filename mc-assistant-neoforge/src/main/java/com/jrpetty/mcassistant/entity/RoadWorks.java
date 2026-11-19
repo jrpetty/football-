@@ -100,6 +100,12 @@ public final class RoadWorks {
             int[] s = line.get(0), e = line.get(line.size() - 1);
             return Math.abs(e[0] - s[0]) >= Math.abs(e[1] - s[1]);
         }
+
+        /** [links12] Which way the road runs at step i (a surveyed road turns): its line a few steps either side. */
+        boolean alongX(int i) {
+            int[] s = line.get(Math.max(0, i - 3)), e = line.get(Math.min(line.size() - 1, i + 3));
+            return Math.abs(e[0] - s[0]) >= Math.abs(e[1] - s[1]);
+        }
     }
 
     private static final Map<String, List<int[]>> LINES = new ConcurrentHashMap<>();
@@ -109,6 +115,7 @@ public final class RoadWorks {
         LINES.clear();
         WINDOW.clear();
         Roadside.resetForTests();
+        Routes.resetForTests();                                          // [links12]
     }
 
     static String key(UUID a, UUID b) {
@@ -124,7 +131,7 @@ public final class RoadWorks {
         if (far > LONGEST) return null;
         List<int[]> line = LINES.computeIfAbsent(key(a.id(), b.id()), k -> {
             BlockPos s = Roads.exit(a.centre(), b.centre()), e = Roads.exit(b.centre(), a.centre());
-            return Roads.bresenham(s.getX(), s.getZ(), e.getX(), e.getZ());
+            return Routes.line(a.id(), b.id(), s, e);                    // [links12] surveyed over the land (Routes)
         });
         if (line.size() < SHORTEST) return null;
         return new Road(a.id(), b.id(), line);
@@ -194,6 +201,12 @@ public final class RoadWorks {
         return r != null && r[2] == 1;
     }
 
+    /** [links12] My half of the road to that town: {its grade, steps laid toward the next}. */
+    public static int[] halfState(UUID me, UUID other) {
+        Half h = half(me, other);
+        return new int[]{ h.grade, h.laid };
+    }
+
     /** The road's grade, as good as its worse half. */
     public static int grade(UUID x, UUID y) {
         return Math.min(half(x, y).grade, half(y, x).grade);
@@ -257,6 +270,7 @@ public final class RoadWorks {
                 + GRADES[h.grade + 1] + " as far as the halfway mark");
         }
         work(level, v, working, STEPS);
+        Routes.catchUp(level, v, workingOn(v));                         // [links12] what the gang laid while the town slept
     }
 
     /** The road the town's gang is on, if any (and still a road). */
@@ -340,6 +354,7 @@ public final class RoadWorks {
             release(level, id, o);
             Villages.tell(id, day, "the road to " + Villages.name(o) + " was made " + GRADES[next] + " as far as the halfway mark");
             if (half(o, id).grade >= next) Villages.tell(o, day, "the road to " + Villages.name(id) + " is " + GRADES[next] + " end to end now");
+            if (half(o, id).grade >= next) Region.roadOpened(id, o, next, day);                       // [links12] the region's news
             LOG.info("[MCA-ROADS] {}: its half of the road to {} is {} now", Villages.name(id), Villages.name(o), GRADES[next]);
         }
         save(id, o, h);
@@ -421,7 +436,7 @@ public final class RoadWorks {
         if (inATown(level, p[0], p[1]) || VanillaVillages.within(level, p[0], p[1], 4)) return null;
         Roads.Ground g = Roads.ground(level, p[0], p[1]);
         if (g == null) return null;
-        boolean alongX = r.alongX();
+        boolean alongX = r.alongX(i);                                    // [links12] the way it runs here
         if (g.water()) return bridge(level, v, r, i, grade, g.y(), alongX);
         int roadY = g.y();
         for (int c = -1; c <= 1; c++) {

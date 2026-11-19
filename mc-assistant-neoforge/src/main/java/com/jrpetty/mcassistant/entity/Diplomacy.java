@@ -218,6 +218,7 @@ public final class Diplomacy {
         delta += Perks.warmth(x, day) + Perks.warmth(y, day);
         // Memories, borders, truces, marriages, feasts, contests, a hand when short (Bonds).
         delta += Bonds.daily(level, a, b, day, r, crowded, rng);
+        delta += Rivalry.daily(level, a, b, day, r);        // [links12] trade gained and lost, the ground, poached folk, renown
         // With nothing to keep it hot or cold, a relation drifts back toward nothing — unless the
         // memory is warm: a fresh kindness or a fresh grudge holds it where it is.
         if (delta == 0 && r != 0 && !kin(x, y) && !Envoys.pact(x, y) && Math.abs(Bonds.feeling(x, y, day)) < 10) delta = r > 0 ? -1 : 1;

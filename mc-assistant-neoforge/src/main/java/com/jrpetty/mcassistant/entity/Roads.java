@@ -87,7 +87,7 @@ public final class Roads {
         return LINES.computeIfAbsent(colony.id(), k -> {
             BlockPos a = exit(mother.centre(), colony.centre());
             BlockPos b = exit(colony.centre(), mother.centre());
-            return bresenham(a.getX(), a.getZ(), b.getX(), b.getZ());
+            return Routes.line(mother.id(), colony.id(), a, b);          // [links12] surveyed over the land, as every road (Routes)
         });
     }
 
@@ -159,6 +159,7 @@ public final class Roads {
             long day = level.getDayTime() / 24000L;
             Villages.tell(mother.id(), day, "the road to " + Villages.name(id) + " was finished");
             Villages.tell(id, day, "the road to " + Villages.name(mother.id()) + " was finished");
+            Region.roadOpened(mother.id(), id, 1, day);                   // [links12] the region's news
         }
         return laid;
     }

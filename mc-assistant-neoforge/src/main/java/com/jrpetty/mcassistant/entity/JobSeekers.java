@@ -649,6 +649,7 @@ public final class JobSeekers {
         String t = JobMarket.a(o.title());
         if (f == null) return;                                    // the offer waits in its town's notes (offered)
         if (f.ownerId() == null) return;
+        Rivalry.poached(f.ownerId(), town, o.task() == null ? 0 : f.tradeLevel(o.task()));   // [links12] a hand gone over
         LEAVING.put(folk, new Leaving(f.ownerId(), town, o.id(), o.task(), because, f.tickCount));
         VISITS.remove(folk);
         f.clearQueue();

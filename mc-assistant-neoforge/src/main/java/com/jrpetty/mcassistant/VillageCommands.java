@@ -260,6 +260,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.WatchKit.command())        // [guard-kit] the watch's kit, on order, and its cost
             .then(com.jrpetty.mcassistant.entity.WatchClears.command())     // [watch-clears] /village monsters: about, killed, fallen
             .then(com.jrpetty.mcassistant.entity.Transport.command())       // [transport] /village transport: lines, carts, ferry, bridge
+            .then(com.jrpetty.mcassistant.entity.Region.command())          // [links12] /village region: the towns, roads, rails, rivals, league
             .then(com.jrpetty.mcassistant.entity.CaveDwellers.command())    // [caves] the cave dwellers and the caves' report
             .then(com.jrpetty.mcassistant.entity.Fletchers.command())       // [fletcher] the fletcher, the watch's arrows, practice
             .then(com.jrpetty.mcassistant.entity.Golems.command())          // [golems] the golem keeper and the town's golems

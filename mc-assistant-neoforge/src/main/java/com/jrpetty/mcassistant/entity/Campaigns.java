@@ -671,10 +671,14 @@ public final class Campaigns {
     /** Its road from here to there: out by the avenue, along the road, in. */
     static void route(Campaign c, int i, BlockPos from, BlockPos to) {
         List<BlockPos> way = new ArrayList<>();
+        List<BlockPos> road = Routes.march(c.town(i), c.town(1 - i), from, to);   // [links12] along the road toward the enemy
+        if (road != null) way.addAll(road);
+        else {
         way.add(from);
         BlockPos exit = Roads.exit(from, to);
         if (exit.distSqr(from) > 16) way.add(exit);
         way.add(to);
+        }
         c.ways.set(i, way);
         c.along[i] = 0;
         ArmyInns.plan(c, i);                                              // [realm-polish] an inn on a long march's way

@@ -230,7 +230,8 @@ public final class TradeTalks {
             int n = lots(Math.min(offerEach(e, every), wantEach(want, every)), e.ware().lot);
             if (n < e.ware().lot) continue;
             double vs = TradeBook.worth(level, s.town(), e.item()), vb = TradeBook.worth(level, b.town(), e.item())
-                * Fame.importWorth(b.town(), s.town(), e.item());   // [identity] its tariffs; the seller's fame and rank
+                * Fame.importWorth(b.town(), s.town(), e.item())    // [identity] its tariffs; the seller's fame and rank
+                * Rivalry.worth(b.town(), s.town());                 // [links12] a rival's tariff
             double gain = (vb - vs) * n;
             // [market] Food first for a town going hungry: its want ranks over any other gain.
             double rank = e.ware() == TradeBook.Ware.FOOD && Market.hungry(b.town()) ? gain * FOOD_FIRST : gain;
