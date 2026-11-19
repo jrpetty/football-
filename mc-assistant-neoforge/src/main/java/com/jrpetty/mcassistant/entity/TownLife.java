@@ -433,7 +433,8 @@ public final class TownLife {
             boolean clear = true;
             for (int h = 0; h <= 2; h++) if (!level.getBlockState(foot.above(h)).isAir()) clear = false;
             if (!clear) continue;
-            if (v != null && !TownBlocks.mayAll(level, v, TownBlocks.Why.FIELD, foot, foot.above(), foot.above(2))) continue;   // [integrity]
+            if (v != null && !(TownBlocks.allows(level, v, foot, TownBlocks.Why.FIELD) && TownBlocks.allows(level, v, foot.above(), TownBlocks.Why.FIELD)
+                && TownBlocks.allows(level, v, foot.above(2), TownBlocks.Why.FIELD))) continue;   // [integrity] [growth22] a spot looked for: asked, not tried
             Direction look = Direction.getNearest((double) (centre.getX() - x), 0.0, (double) (centre.getZ() - z));
             if (look.getAxis() == Direction.Axis.Y) look = Direction.NORTH;
             if (!free && (Crafts.stock(level, v, st -> st.is(Items.CARVED_PUMPKIN) || st.is(Items.PUMPKIN)) == 0

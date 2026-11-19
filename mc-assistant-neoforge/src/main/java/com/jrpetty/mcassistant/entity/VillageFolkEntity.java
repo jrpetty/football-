@@ -6599,7 +6599,9 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // Nowhere on its own level by the edge towards the town (a bank under a cliff): by the middle of the plot.
         if (spot == null) spot = chestSpot(level, c.getX() + 1, c.getZ() + 1, c.getY());
-        if (spot == null) return null;
+        // [growth22] Nowhere at all (a miner whose plot is the works' shaft, on the mine's own ground): asked again in five
+        // minutes, not every half minute.
+        if (spot == null) { productionTick = tickCount + 5400; return null; }
         if (countCarried(s -> s.is(net.minecraft.world.item.Items.CHEST)) == 0) {
             drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.CHEST), 1, buildStoresRadius());
         }
@@ -6642,7 +6644,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     if (!below.isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP) || !below.getFluidState().isEmpty()) continue;
                     if (!level.getBlockState(p).canBeReplaced() || !level.getBlockState(p).getFluidState().isEmpty()) continue;
                     if (below.is(Blocks.FARMLAND)) continue;
-                    if (!TownBlocks.mayPlace(level, p, TownBlocks.Why.FIELD)) continue;   // [integrity] the next spot over, never a road or a way in
+                    if (!TownBlocks.allows(level, p, TownBlocks.Why.FIELD)) continue;   // [integrity] the next spot over, never a road or a way in ([growth22] asked, not tried: no refusal booked)
                     boolean onAPlot = false;
                     if (village != null) {
                         for (AssistantEntity a : Villages.folkOf(village)) {

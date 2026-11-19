@@ -151,8 +151,13 @@ public final class TownBlocks {
         if (v == null || level.isClientSide()) return true;
         Here h = here(level, v, pos);
         boolean ok = allowed(level, v, pos, why, h, null);
-        if (!ok) refused(v, pos, why, h, null);
+        if (!ok) refused(level, v, pos, why, h, null);
         return ok;
+    }
+
+    /** As allows, for the town whose ground this is (none: yes). [growth22] */
+    public static boolean allows(Level level, BlockPos pos, Why why) {
+        return level.isClientSide() || allows(level, townAt(level, pos), pos, why);
     }
 
     /** Would the gate let this be set here, asked while looking for a spot (no refusal booked: nothing was tried)? */
@@ -179,7 +184,7 @@ public final class TownBlocks {
         if (v == null || level.isClientSide()) return true;
         Here h = here(level, v, pos);
         boolean ok = allowed(level, v, pos, why, h, ownAnchor);
-        if (!ok) refused(v, pos, why, h, ownAnchor);
+        if (!ok) refused(level, v, pos, why, h, ownAnchor);
         return ok;
     }
 
@@ -607,7 +612,19 @@ public final class TownBlocks {
         return REFUSALS.get();
     }
 
-    private static void refused(Villages.Village v, BlockPos pos, Why why, Here h, @Nullable BlockPos own) {
+    /** [growth22] The cells refused lately, for what, and when: the same cell asked again for the same thing within
+     *  {@link #REASKED} ticks is not booked again. A miner's chest asked for on the shaft's pillar (the mine's ground)
+     *  every half minute, a torch at the pithead every night, a field post on a road every round of the fields: the
+     *  same few cells refused over and over came to a hundred thousand refusals in one long test's log. */
+    private static final Map<Long, Long> LATELY = java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>(256, 0.75f, true) {
+        @Override protected boolean removeEldestEntry(Map.Entry<Long, Long> e) { return size() > 4096; }
+    });
+    static final long REASKED = 6000L;
+
+    private static void refused(Level level, Villages.Village v, BlockPos pos, Why why, Here h, @Nullable BlockPos own) {
+        long key = pos.asLong() * 31L + why.ordinal(), now = level.getGameTime();
+        Long was = LATELY.put(key, now);
+        if (was != null && now - was < REASKED && now >= was) return;          // [growth22] asked again: booked already
         int n = REFUSALS.incrementAndGet();
         REFUSED.addLast(new Refusal(pos.immutable(), why, h.zone, h.owner == null ? null : h.owner.design));
         while (REFUSED.size() > 400) REFUSED.pollFirst();

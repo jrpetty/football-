@@ -3917,7 +3917,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             BlockPos p = feet.relative(dir);
             if (level().getBlockState(p).canBeReplaced()
                 && level().getBlockState(p.below()).isSolid()
-                && TownBlocks.mayPlace(level(), p, TownBlocks.Why.LAMP)) {                     // [integrity]
+                && TownBlocks.allows(level(), p, TownBlocks.Why.LAMP)) {                     // [integrity] ([growth22] asked, not tried)
                 final net.minecraft.world.item.Item want = lamp.getItem();
                 if (removeMatching(s -> s.is(want), 1) == 1) {
                     level().setBlockAndUpdate(p, lit.defaultBlockState());
@@ -5601,7 +5601,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (level().getMaxLocalRawBrightness(pos) >= 6) return;
         if (!level().getBlockState(pos).canBeReplaced()) return;
         if (!level().getBlockState(pos.below()).isFaceSturdy(level(), pos.below(), net.minecraft.core.Direction.UP)) return;
-        if (!TownBlocks.mayPlace(level(), pos, TownBlocks.Why.LAMP)) return;       // [integrity] not in a road, a doorway, a room
+        if (!TownBlocks.allows(level(), pos, TownBlocks.Why.LAMP)) return;       // [integrity] not in a road, a doorway, a room ([growth22] asked every dark tick: no refusal booked)
         if (removeMatching(s -> s.is(Items.TORCH), 1) == 1) {
             level().setBlockAndUpdate(pos, Blocks.TORCH.defaultBlockState());
         }
