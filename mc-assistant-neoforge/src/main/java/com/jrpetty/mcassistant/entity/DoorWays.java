@@ -221,7 +221,8 @@ public final class DoorWays {
 
     /** [bridges18] A step the town laid on a way in (its cobbles, its stairs, the earth it built up), not the world's own ground. */
     private static boolean laidStep(BlockState st) {
-        return st.is(Blocks.COBBLESTONE) || st.is(Blocks.COBBLESTONE_STAIRS) || st.is(Blocks.COBBLED_DEEPSLATE) || st.is(Blocks.DIRT);
+        return st.is(Blocks.COBBLESTONE) || st.getBlock() instanceof net.minecraft.world.level.block.StairBlock || st.is(Blocks.COBBLED_DEEPSLATE)
+            || st.is(Blocks.DIRT) || st.is(Blocks.STONE_BRICKS);
     }
 
     /**
