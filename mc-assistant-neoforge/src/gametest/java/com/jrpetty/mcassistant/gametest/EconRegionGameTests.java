@@ -161,7 +161,7 @@ public class EconRegionGameTests {
             long da = CoinCensus.count(a) - ca, db = CoinCensus.count(b) - cb, ba = CoinCensus.netFlowPence(a) - fa, bb = CoinCensus.netFlowPence(b) - fb;
             ok.that(da == ba && db == bb, "day " + k + ": each town's coin moved by what it booked: " + da + "=" + ba + ", " + db + "=" + bb);
             ok.that(da + db == 0, "day " + k + ": the two towns' coin together the same: " + da + " + " + db);
-            for (EconRegion.Deal dl : done) { deals++; moved += dl.n(); }
+            for (EconRegion.Deal dl : done) if (dl.item() == Items.WHEAT) { deals++; moved += dl.n(); }
             gap = MarketMaker.mid(level, b, wheat) / MarketMaker.mid(level, a, wheat);
             ctl = MarketMaker.mid(level, d, wheat) / MarketMaker.mid(level, c, wheat);
             Kit.log(String.format(Locale.ROOT, "[VT] er01 day %d: %d deals (%s), %d loads in; wheat cheap town %d, dear town %d; gap %.2f (control %.2f); coin %+d / %+d",

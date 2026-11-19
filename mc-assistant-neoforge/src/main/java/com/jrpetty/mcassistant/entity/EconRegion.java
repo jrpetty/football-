@@ -365,13 +365,18 @@ public final class EconRegion {
         CompoundTag pending = Accounts.sub(data(s.to()), "pending");
         CompoundTag pd = pending.getCompound(s.id().toString());
         pending.remove(s.id().toString());
-        long goods = pd.getLong("goods");
-        if (goods > 0) {
-            long back = MarketMaker.cashOut(s.from(), goods) / 100 * 100;
-            MarketMaker.cashIn(s.to(), back);
-            CoinCensus.flow(s.from(), CoinCensus.Flow.IMPORT, back / 100);
-            CoinCensus.flow(s.to(), CoinCensus.Flow.EXPORT, back / 100);
-            Villages.tell(s.to(), level.getDayTime() / 24000L, Villages.name(s.from()) + " paid back " + Businesses.pence(back) + " for the load lost on the road");
+        long goods = pd.getLong("goods"), carriage = pd.getLong("carriage");
+        if (goods + carriage > 0) {
+            // The goods' price out of the seller's market, the carriage out of its treasury (its carters never delivered).
+            long back = MarketMaker.cashOut(s.from(), goods), cart = Businesses.fromTreasury(s.from(), carriage);
+            MarketMaker.cashIn(s.from(), back % 100);                          // whole coins between towns: the odd pennies stay
+            Businesses.toTreasury(s.from(), cart % 100);
+            back -= back % 100;
+            cart -= cart % 100;
+            MarketMaker.cashIn(s.to(), back + cart);
+            CoinCensus.flow(s.from(), CoinCensus.Flow.IMPORT, (back + cart) / 100);
+            CoinCensus.flow(s.to(), CoinCensus.Flow.EXPORT, (back + cart) / 100);
+            Villages.tell(s.to(), level.getDayTime() / 24000L, Villages.name(s.from()) + " paid back " + Businesses.pence(back + cart) + " for the load lost on the road");
         }
         Accounts.dirty();
     }

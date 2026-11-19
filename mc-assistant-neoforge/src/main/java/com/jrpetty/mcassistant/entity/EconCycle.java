@@ -128,7 +128,9 @@ public final class EconCycle {
         // The town's own employment, where its labour market counts it and it has hands enough to count.
         int grown = 0;
         for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) grown++;
-        if (grown >= 6 && LabourMarket.live(id)) m.observe(1 - EconIndex.last(id, "unemp", 0) / 1000.0, 0.15);
+        double seen = 1 - EconIndex.last(id, "unemp", 0) / 1000.0;
+        if (grown >= 6 && LabourMarket.live(id) && s.contains("seenEmp")) m.observeChange(seen - s.getDouble("seenEmp"), 0.5);
+        s.putDouble("seenEmp", seen);
         // New loans the town's lenders made since yesterday: the firms' debt grows by them, against a month's output.
         long lent = FolkCredit.lentLately(id) / 100;
         long lentWas = s.contains("lent") ? s.getLong("lent") : lent;

@@ -80,11 +80,13 @@ public final class CycleModel {
         output = Math.max(1, output * (1 + growth * DT));
     }
 
-    /** The town's own numbers blended in, each as far as it is known (NaN: not known). */
-    public void observe(double employmentSeen, double weight) {
-        if (!Double.isNaN(employmentSeen) && employmentSeen >= 0.5 && employmentSeen <= 1.0) {
-            employment = clamp(employment * (1 - weight) + Math.min(0.995, Math.max(0.80, employmentSeen)) * weight, 0.80, 0.995);
-        }
+    /**
+     * The town's own employment moved since yesterday (a share: -0.05, five in the hundred more out of work): the reckoning's
+     * employment moved by so much of it. Its changes, not its level: a small town has every grown folk at a trade most days,
+     * and its level pinned the reckoning at full employment, where the cycle cannot turn.
+     */
+    public void observeChange(double change, double weight) {
+        if (!Double.isNaN(change)) employment = clamp(employment + Math.max(-0.05, Math.min(0.05, change)) * weight, 0.80, 0.995);
     }
 
     /** The debt the town's firms took on beyond the model's (new loans), as a share of a day's output: added. */
