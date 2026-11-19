@@ -1972,12 +1972,14 @@ public final class HomeMaking {
         if (p == null) return out;
         boolean basics = basicsDone(p);
         Wealth.Tier tier = Wealth.tier(f);
+        List<VillageFolkEntity> household = Homes.loadedMembers(village, h);
         for (Piece q : p.pieces) {
             if (q.done()) continue;
             Spec s = q.spec();
             if (s == null || s.stage() == Stage.OWN && (!basics || tier.ordinal() < s.from().ordinal())) continue;
             for (Need need : s.needs()) {
-                int have = carrying(f, h, need);
+                int have = carrying(f, h, need);                              // what the household carries for it already, any of them
+                for (VillageFolkEntity m : household) if (m != f) have += carrying(m, h, need);
                 if (have < need.n()) out.add(new Wanted(q.key, s.words(), need.what(), need.sample(), need.n() - have, s.stage() == Stage.BASIC));
             }
         }

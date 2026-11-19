@@ -1018,7 +1018,7 @@ public final class ItemUses {
         f.brain(line);
         f.persona().remember(day, "I " + line.replace("; ", " and ").replace(" its ", " my "), n.urgency() >= 0.7 ? 2 : 1);
         com.mojang.logging.LogUtils.getLogger().info("[MCA-USES] {} {} (for {}: {})", f.displayNameCap(), line, n.kind().words, n.reason());
-        forget(f);
+        forgetTown(village);                                                  // its household's needs, and the town's, looked at again
         return new Used(true, did);
     }
 
