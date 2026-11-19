@@ -44,6 +44,8 @@ public class StallScreen extends Screen {
     /** Prices typed and not yet sent, by ware. */
     private final Map<String, String> edits = new HashMap<>();
     private boolean confirmGiveUp;
+    /** [uses16] The wares' table turned over to what the town needs now (to stock usefully). */
+    private boolean needs;
 
     public StallScreen(CompoundTag data) {
         super(Component.literal("Market stall"));
@@ -104,6 +106,9 @@ public class StallScreen extends Screen {
         int by = buttonsY();
         String mode = mode();
         int rent = data.getInt("rent");
+        // [uses16] What the town needs: a page of its own over the wares.
+        addRenderableWidget(Button.builder(Component.literal(needs ? "Back to the stall" : "What the town needs"), b -> { needs = !needs; rebuildWidgets(); })
+            .bounds(left + w - PAD - 150 - (mode.equals("let") ? 0 : 40), top + (mode.equals("let") ? HEAD + 2 : TABLE_Y - 21), 110, 13).build());
         if (mode.equals("let")) {
             Button take = Button.builder(Component.literal("Rent it — " + rent + " coins a week"), b -> send("rent", new CompoundTag()))
                 .bounds(x, by, inner - 96, 18).build();
@@ -114,7 +119,7 @@ public class StallScreen extends Screen {
         }
         boolean own = mode.equals("own");
         // The prices, a box a row on this page.
-        if (own) {
+        if (own && !needs) {
             List<CompoundTag> list = wares();
             for (int i = page * rows; i < Math.min(list.size(), (page + 1) * rows); i++) {
                 CompoundTag ware = list.get(i);
@@ -129,7 +134,7 @@ public class StallScreen extends Screen {
                 addRenderableWidget(box);
             }
         }
-        if (pages() > 1) {
+        if (pages() > 1 && !needs) {
             int px = left + w - PAD - 34;
             addRenderableWidget(Button.builder(Component.literal("‹"), b -> { page = (page + pages() - 1) % pages(); rebuildWidgets(); })
                 .bounds(px, top + TABLE_Y - 20, 16, 12).build());
@@ -229,7 +234,10 @@ public class StallScreen extends Screen {
         String mode = mode();
         String village = data.getString("village");
         if (mode.equals("let")) {
-            drawLet(g, x, inner, village);
+            if (needs) {
+                g.drawString(font, Ui.clip(font, "A stall to let — " + village, inner - 120), x, top + 10, Ui.INK, false);
+                drawNeeds(g, x, top + HEAD + 20, inner, buttonsY() - 6, mouseX, mouseY);
+            } else drawLet(g, x, inner, village);
             return;
         }
         String owner = data.getString("owner");
@@ -257,6 +265,11 @@ public class StallScreen extends Screen {
         small(g, Ui.clip(font, when, (int) ((inner - 100) / 0.75)), x, top + HEAD + 27, mode.equals("held") ? Ui.WARN : Ui.MUTED);
         // The wares.
         boolean own = mode.equals("own");
+        if (needs) {
+            drawNeeds(g, x, top + TABLE_Y - 8, inner, booksY() - 6, mouseX, mouseY);
+            drawBooks(g, x, inner);
+            return;
+        }
         Ui.section(g, font, own ? "Your stock, and your price for a lot" : "In the stall", x, top + TABLE_Y - 19, inner - 40);
         if (data.getBoolean("worn")) small(g, "(worn things don't sell)", x + C_SOLD, top + TABLE_Y - 19, Ui.WARN);
         int hy = top + TABLE_Y - 9;
@@ -290,17 +303,23 @@ public class StallScreen extends Screen {
             g.drawString(font, going > 0 ? going + "c" : "—", x + C_GOING, ry + 2, Ui.MUTED, false);
             g.drawString(font, ware.getInt("sold7") > 0 ? Integer.toString(ware.getInt("sold7")) : "—", x + C_SOLD, ry + 2, Ui.INK, false);
             Judged judged = judge(price, going);
+            CompoundTag use = ware.getCompound("use");                            // [uses16] nobody here has a use for it
+            if (use.contains("useful") && !use.getBoolean("useful")) judged = new Judged("no use to anybody here", Ui.BAD);
             small(g, Ui.clip(font, judged.words(), (int) ((inner - C_NOTE) / 0.75)), x + C_NOTE, ry + 3, judged.colour());
         }
         if (list.isEmpty()) {
             small(g, own ? "Nothing in it yet: right-click the barrel and fill it with what you'd sell." : "Nothing in it.", x, top + TABLE_Y + 2, Ui.MUTED);
         }
         if (pages() > 1) small(g, (page + 1) + "/" + pages(), left + w - PAD - 52, top + TABLE_Y - 17, Ui.FAINT);
-        // The books: the last sales, and what was thought too dear.
+        drawBooks(g, x, inner);
+    }
+
+    /** The books: the last sales, and what was thought too dear or [uses16] no use. */
+    private void drawBooks(GuiGraphics g, int x, int inner) {
         int sy = booksY();
         int half = (inner - 8) / 2;
         Ui.section(g, font, "Sold", x, sy, half);
-        Ui.section(g, font, "Too dear", x + half + 8, sy, half);
+        Ui.section(g, font, "Turned down", x + half + 8, sy, half);
         ListTag sales = data.getList("sales", Tag.TAG_COMPOUND);
         for (int i = 0; i < Math.min(SALES_LINES, sales.size()); i++) {
             CompoundTag s = sales.getCompound(i);
@@ -310,12 +329,51 @@ public class StallScreen extends Screen {
         }
         if (sales.isEmpty()) small(g, "Nothing yet.", x, sy + 11, Ui.MUTED);
         ListTag dear = data.getList("dear", Tag.TAG_COMPOUND);
-        for (int i = 0; i < Math.min(SALES_LINES, dear.size()); i++) {
+        ListTag refused = data.getList("refused", Tag.TAG_COMPOUND);
+        int line = 0;
+        for (int i = 0; i < dear.size() && line < SALES_LINES; i++, line++) {
             CompoundTag d = dear.getCompound(i);
-            String line = d.getString("who") + ": " + d.getInt("price") + "c for " + d.getString("what") + " (going " + d.getInt("going") + "c)";
-            small(g, Ui.clip(font, line, (int) (half / 0.75)), x + half + 8, sy + 11 + i * 9, Ui.WARN);
+            String l = d.getString("who") + ": " + d.getInt("price") + "c for " + d.getString("what") + " too dear (going " + d.getInt("going") + "c)";
+            small(g, Ui.clip(font, l, (int) (half / 0.75)), x + half + 8, sy + 11 + line * 9, Ui.WARN);
         }
-        if (dear.isEmpty()) small(g, "Nobody's turned anything down.", x + half + 8, sy + 11, Ui.MUTED);
+        for (int i = 0; i < refused.size() && line < SALES_LINES; i++, line++) {   // [uses16] no use to it, and why
+            CompoundTag d = refused.getCompound(i);
+            String l = d.getString("who") + ", " + d.getString("what") + ": \"" + d.getString("why") + "\"";
+            small(g, Ui.clip(font, l, (int) (half / 0.75)), x + half + 8, sy + 11 + line * 9, Ui.MUTED);
+        }
+        if (dear.isEmpty() && refused.isEmpty()) small(g, "Nobody's turned anything down.", x + half + 8, sy + 11, Ui.MUTED);
+    }
+
+    /** [uses16] What the town's folk, households, firms and departments want now, and the most they'd pay: what to stock. */
+    private void drawNeeds(GuiGraphics g, int x, int y, int inner, int bottom, int mouseX, int mouseY) {
+        Ui.section(g, font, "What the town needs now, and would pay", x, y - 11, inner - 160);
+        ListTag list = data.getList("needs", Tag.TAG_COMPOUND);
+        small(g, "Thing", x + 15, y, Ui.FAINT);
+        small(g, "Folk", x + 120, y, Ui.FAINT);
+        small(g, "How many", x + 146, y, Ui.FAINT);
+        small(g, "Pays up to", x + 186, y, Ui.FAINT);
+        small(g, "Why", x + 232, y, Ui.FAINT);
+        int ry = y + 10;
+        for (int i = 0; i < list.size() && ry + ROW_H <= bottom; i++) {
+            CompoundTag n = list.getCompound(i);
+            boolean over = mouseX >= x && mouseX < x + inner && mouseY >= ry - 1 && mouseY < ry + ROW_H - 1;
+            g.fill(x - 2, ry - 1, x + inner, ry + ROW_H - 1, over ? Ui.HI : (i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT));
+            ItemStack icon = stackOf(n.getString("item"), false);
+            if (!icon.isEmpty()) {
+                g.pose().pushPose();
+                g.pose().translate(x, ry - 1, 0);
+                g.pose().scale(0.8F, 0.8F, 1F);
+                g.renderItem(icon, 0, 0);
+                g.pose().popPose();
+            }
+            g.drawString(font, Ui.clip(font, n.getString("name"), 102), x + 15, ry + 2, Ui.INK, false);
+            g.drawString(font, Integer.toString(n.getInt("folk")), x + 120, ry + 2, Ui.INK, false);
+            g.drawString(font, Integer.toString(n.getInt("qty")), x + 146, ry + 2, Ui.INK, false);
+            g.drawString(font, n.getInt("most") + "c each", x + 186, ry + 2, Ui.GOOD, false);
+            small(g, Ui.clip(font, n.getString("why"), (int) ((inner - 232) / 0.75)), x + 232, ry + 3, n.getDouble("urgency") >= 0.7 ? Ui.WARN : Ui.MUTED);
+            ry += ROW_H;
+        }
+        if (list.isEmpty()) small(g, "Nobody here needs anything just now.", x, ry, Ui.MUTED);
     }
 
     private void drawLet(GuiGraphics g, int x, int inner, String village) {
@@ -355,7 +413,7 @@ public class StallScreen extends Screen {
         List<CompoundTag> list = wares();
         for (int i = page * rows; i < Math.min(list.size(), (page + 1) * rows); i++) {
             int ry = top + TABLE_Y + (i - page * rows) * ROW_H;
-            if (mouseX < x || mouseX >= x + C_PRICE || mouseY < ry - 1 || mouseY >= ry + ROW_H - 1) continue;
+            if (needs || mouseX < x || mouseX >= x + C_PRICE || mouseY < ry - 1 || mouseY >= ry + ROW_H - 1) continue;
             CompoundTag ware = list.get(i);
             int going = ware.getInt("going"), price = price(ware), lot = ware.getInt("lot");
             List<Component> tip = new ArrayList<>();
@@ -371,6 +429,12 @@ public class StallScreen extends Screen {
                 tip.add(Component.literal(price <= 0 ? "Kept back: not for sale." : "Yours: " + price + "c" + (ware.getBoolean("set") ? "" : " (the going price)")));
             }
             if (ware.getInt("sold7") > 0) tip.add(Component.literal("Sold " + ware.getInt("sold7") + " this week for " + ware.getInt("coin7") + "c."));
+            CompoundTag use = ware.getCompound("use");                            // [uses16] who would buy it, and why
+            if (use.contains("useful")) {
+                tip.add(Component.literal("What it's for: " + use.getString("uses") + "."));
+                tip.add(Component.literal(use.getBoolean("useful") ? "Who'd buy it: " + use.getString("line") + "; up to " + use.getInt("most") + "c each, "
+                    + use.getInt("wantQty") + " wanted in all." : use.getString("line") + "."));
+            }
             UiStyle.componentTooltip(g, font, tip, mouseX, mouseY);   // [ui] wrapped once, to its room
             break;
         }
