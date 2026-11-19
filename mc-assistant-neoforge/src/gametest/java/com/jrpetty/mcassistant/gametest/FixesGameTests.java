@@ -541,6 +541,7 @@ public class FixesGameTests {
         String[] name = { "flat", "hill, door uphill", "hill, door downhill" };
         long[] took = { -1, -1, -1 };
         int[] idle = new int[3];
+        boolean[] begun = new boolean[3];
         for (int i = 0; i < 3; i++) {
             VillageFolkEntity b = builders.get(i);
             packFor(b, "house", at[i], facing[i]);
@@ -564,8 +565,9 @@ public class FixesGameTests {
                 // Up when its drawing is all laid, or its builder has stopped building it (whatever is left).
                 int miss = missingOf(level, at[i], facing[i]);
                 boolean building = b.debugLine().contains("goals=[Build") || b.peekJob() != null && b.peekJob().type() == com.jrpetty.mcassistant.entity.Job.Type.BUILD;
-                idle[i] = building ? 0 : idle[i] + 1;
-                if (miss <= 3 || idle[i] >= 3) {
+                if (building) begun[i] = true;
+                idle[i] = building || !begun[i] ? 0 : idle[i] + 1;
+                if (miss <= 3 || idle[i] >= 5 || !begun[i] && tick[0] > 6000) {
                     took[i] = tick[0];
                     Kit.log("[VT] fx04 " + name[i] + " over at " + tick[0] + " (" + miss + " missing): " + b.debugLine());
                 }
