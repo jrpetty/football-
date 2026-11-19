@@ -520,6 +520,7 @@ public final class Golems {
     public static String cannotAfford(ServerLevel level, Villages.Village v) {
         int iron = ironInStores(level, v), watch = ironForTheWatch(level, v);
         if (iron < IRON_EACH) return "short of iron: " + iron + " ingots in the stores, and a golem takes " + IRON_EACH;
+        if (Crafts.savingIron(level, v)) return "the town is putting its iron by for its age";   // [growth22]
         if (iron - IRON_EACH < watch) return "short of iron for the watch: a golem's " + IRON_EACH + " ingots would leave " + (iron - IRON_EACH)
             + " of the " + watch + " the watch's armour and blades still want";
         if (!pumpkin(level, v)) return "no pumpkin for its head (a carved one, or a farm pumpkin and shears to carve it)";

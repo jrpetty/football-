@@ -1612,6 +1612,8 @@ public final class MineWorks {
         out.addAll(MineDemand.lines(level, w, plan));
         for (String e : lately(village, 4)) out.add("Lately: " + e.substring(e.indexOf(' ') + 1));
         out.addAll(OreFlow.lines(village, level.getDayTime() / 24000L));   // [growth22] the metal in and out, by whom
+        String shifts = com.jrpetty.mcassistant.entity.goal.WorksGoal.shiftsLine();   // [growth22] the shifts' books
+        if (shifts != null) out.add(shifts);
         return out;
     }
 

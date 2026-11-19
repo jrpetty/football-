@@ -221,6 +221,7 @@ public class WorksGoal extends Goal {
     private void finish(String message) {
         if (!outJob && tasks > 0) SHIFTS++;                      // [fixes14]
         ENDS.merge(message.isEmpty() ? "-" : message, 1, Integer::sum);
+        if (!outJob && tasks > 0) { SHIFT_BLOCKS += broke; SHIFT_TICKS_ALL += shiftTicks; }   // [growth22] the books' averages
         MineWorks.event(a, "shift over: " + message + " (" + tasks + " pieces, " + broke + " blocks, " + teleports + " hops)");
         if (!message.isEmpty()) a.sayRoutine(message);
         if (!outJob) a.noteJobOutcome(oreTaken > 0 || broke > 8);
@@ -677,6 +678,19 @@ public class WorksGoal extends Goal {
 
     /** [fixes14] Shifts worked, and the last few hops with what stood in the way (the tests read them). */
     public static volatile int SHIFTS;
+    /** [growth22] Blocks broken and ticks spent over all the shifts counted in SHIFTS. */
+    public static volatile long SHIFT_BLOCKS, SHIFT_TICKS_ALL;
+
+    /** [growth22] The shifts in words, for the mine's report: how many, blocks and minutes a shift, why they ended. */
+    public static String shiftsLine() {
+        if (SHIFTS <= 0) return null;
+        java.util.List<java.util.Map.Entry<String, Integer>> e = new java.util.ArrayList<>(ENDS.entrySet());
+        e.sort((x, y) -> y.getValue() - x.getValue());
+        StringBuilder sb = new StringBuilder("Shifts: " + SHIFTS + ", " + (SHIFT_BLOCKS / SHIFTS) + " blocks and " + (SHIFT_TICKS_ALL / SHIFTS / 1200)
+            + " minutes a shift; ended:");
+        for (int i = 0; i < Math.min(5, e.size()); i++) sb.append(i == 0 ? " " : ", ").append(e.get(i).getKey()).append(" ").append(e.get(i).getValue());
+        return sb.toString();
+    }
     private static final java.util.concurrent.ConcurrentLinkedDeque<String> HOPS = new java.util.concurrent.ConcurrentLinkedDeque<>();
 
     public static final java.util.Map<String, Integer> ENDS = new java.util.concurrent.ConcurrentHashMap<>();
@@ -699,6 +713,8 @@ public class WorksGoal extends Goal {
 
     public static void resetCountsForTests() {
         SHIFTS = 0;
+        SHIFT_BLOCKS = 0;
+        SHIFT_TICKS_ALL = 0;
         HOPS.clear();
         ENDS.clear();
         TELEPORTS = 0;

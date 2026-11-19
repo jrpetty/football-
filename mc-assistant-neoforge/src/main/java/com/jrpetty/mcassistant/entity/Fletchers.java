@@ -735,6 +735,7 @@ public final class Fletchers {
         boolean hook = Crafts.stock(level, v, s -> s.is(Items.TRIPWIRE_HOOK)) > 0;
         int iron = hook ? 1 : 2;
         if (Crafts.stock(level, v, s -> s.is(Items.STRING)) < 2 || Crafts.stock(level, v, s -> s.is(Items.IRON_INGOT)) < iron) return null;
+        if (Crafts.savingIron(level, v)) return null;                    // [growth22] the bows wait while the age's iron is put by
         if (!hook) {
             // The hook first, at the table: an ingot over a stick over a plank.
             if (!Crafts.planks(level, v, 1) || !sticks(level, v, 1)) return null;

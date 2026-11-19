@@ -533,6 +533,7 @@ public final class Police extends SavedData {
         // Iron and gold worked together: an Iron Age thing (Tiers), as the constable is an Iron Age town's.
         if (!Tiers.allows(level, Villages.ageOf(id), com.jrpetty.mcassistant.item.PoliceItems.CONSTABLE_BADGE.get())) return null;
         if (Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.IRON_INGOT)) < 1 + Crafts.IRON_KEPT / 4) return null;
+        if (Crafts.savingIron(level, v)) return null;                    // [growth22] not out of the iron the age is putting by
         if (Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.GOLD_NUGGET)) < 4) {
             if (!Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.GOLD_INGOT), 1)) return null;
             Crafts.store(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET, 9));
