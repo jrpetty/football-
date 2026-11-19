@@ -301,10 +301,11 @@ public class RegionGameTests {
         ServerLevel level = helper.getLevel();
         int x = 4212000;
         fresh(helper);
-        hold(level, x - 48, x + 228, Z - 48, Z + 48);
+        hold(level, x - 48, x + 268, Z - 48, Z + 48);
         int y = Kit.surface(level, x, Z).getY();
-        flat(level, x - 48, x + 228, Z - 40, Z + 40, y);
-        UUID a = town(helper, x, Z, y, 6), b = town(helper, x + 180, Z, y, 6);
+        flat(level, x - 48, x + 268, Z - 40, Z + 40, y);
+        UUID a = town(helper, x, Z, y, 6), b = town(helper, x + 220, Z, y, 6);
+        helper.assertTrue(!a.equals(b), "two towns");
         helper.runAtTickTime(5, () -> {
             long day = level.getDayTime() / 24000L;
             Ledger.relate(a, b, 5 - Ledger.relation(a, b));

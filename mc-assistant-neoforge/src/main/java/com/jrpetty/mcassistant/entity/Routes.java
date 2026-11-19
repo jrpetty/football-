@@ -497,7 +497,7 @@ public final class Routes {
             int i = 0;
             while (i < path.size() - 1) {
                 int best = i + 1;
-                for (int j = Math.min(path.size() - 1, i + 40); j > i + 1; j--) {
+                for (int j = Math.min(path.size() - 1, i + 100); j > i + 1; j--) {
                     double seg = segment(xy(path.get(i), i == 0, false), xy(path.get(j), false, j == path.size() - 1));
                     if (seg >= 0 && seg <= (g[path.get(j)] - g[path.get(i)]) * 1.02 + 0.5) { best = j; break; }
                 }
