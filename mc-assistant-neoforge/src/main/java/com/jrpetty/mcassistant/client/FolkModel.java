@@ -529,6 +529,8 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         boolean helmet = !folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
             && !folk.getItemBySlot(EquipmentSlot.HEAD).is(com.jrpetty.mcassistant.item.NetherItems.GOLD_CHARM.get());
         boolean ownHat = FashionLayer.hatOn(folk);          // [fashion] off work, its own hat instead of its trade's
+        int regalia = folk.clientRegalia();                 // [regalia19] a ruler's crown instead of its trade's hat
+        ownHat |= com.jrpetty.mcassistant.entity.Regalia.crowned(regalia) && !young;
         boolean bare = com.jrpetty.mcassistant.entity.Manner.bareOf(folk.clientManner());   // [individual] its work hat off of an evening
         long mine = 1L << outfit;
         for (int i = 0; i < worn.length; i++) {
@@ -537,6 +539,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             boolean own = this.own[i];
             boolean show = own || (wornWith[i] & mine) != 0;
             worn[i].visible = show && !(onHead[i] && !own && ((helmet && !overHelmet[i]) || ownHat || bare));
+            if (!own && com.jrpetty.mcassistant.entity.Regalia.robed(regalia) && !young) worn[i].visible = false;   // [regalia19] robed for office
         }
         individualParts(folk, trade, mine, helmet, ownHat);   // [individual] its hair under a hat, its pipe, its stick
         // [guard-kit] Armour over the clothes, not under them: the hair under a helmet, the coat under a breastplate or
@@ -618,6 +621,14 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         FolkPoses.apply(this, folk, limbSwing, limbSwingAmount, ageInTicks, young);   // [individual] its gait and its moments
         FolkAnimations.apply(rig, folk, ageInTicks, rightMain, young, attackTime);    // [anim] what it is doing: its work, its life
         missilePose(folk, rightMain);                                  // [war-bows] over the gait: a drawn bow, a crossbow spanned
+        int carried = regalia == 0 || young ? RegaliaModel.NO_HAND : RegaliaLayer.holds(folk);   // [regalia19] the sceptre, the staff
+        if (carried != RegaliaModel.NO_HAND) {
+            ModelPart arm = carried == RegaliaModel.LEFT ? leftArm : rightArm;
+            arm.xRot = arm.xRot * 0.2F - 0.5F;
+            arm.yRot *= 0.3F;
+            arm.zRot = (carried == RegaliaModel.LEFT ? -1 : 1) * 0.06F;
+            for (int i = 0; i < worn.length; i++) if (kind[i] == KIND_CANE_LEFT || kind[i] == KIND_CANE_RIGHT) worn[i].visible = false;
+        }
         if (AnimPerf.on) { AnimPerf.setupNs += System.nanoTime() - t0; AnimPerf.posed++; }   // [anim]
     }
 

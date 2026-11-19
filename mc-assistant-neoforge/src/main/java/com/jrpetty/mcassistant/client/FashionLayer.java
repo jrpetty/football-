@@ -55,7 +55,8 @@ public class FashionLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
     /** Is its own hat on just now (off work, no helmet)? FolkModel puts its trade's head kit away under it. */
     public static boolean hatOn(VillageFolkEntity folk) {
         long p = folk.clientStyle();
-        return p != 0 && Style.hatOn(p) && Style.hatShape(p) > 0 && !folk.isBaby() && folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
+        return p != 0 && Style.hatOn(p) && Style.hatShape(p) > 0 && !folk.isBaby() && folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
+            && !com.jrpetty.mcassistant.entity.Regalia.crowned(folk.clientRegalia());   // [regalia19] its crown, its circlet instead
     }
 
     private static int dye(int id) {
@@ -91,7 +92,8 @@ public class FashionLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
         if (folk.isInvisible() || folk.isBaby()) return;
         long p = folk.clientStyle();
         if (p == 0) return;
-        boolean breastplate = folk.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof ArmorItem;
+        boolean breastplate = folk.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof ArmorItem
+            || com.jrpetty.mcassistant.entity.Regalia.robed(folk.clientRegalia());   // [regalia19] robed for its office instead
         boolean leggings = folk.getItemBySlot(EquipmentSlot.LEGS).getItem() instanceof ArmorItem;
         pieces = 0;
         Garment body = Garment.byShape(Garment.Slot.BODY, Style.bodyShape(p));

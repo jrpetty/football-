@@ -103,6 +103,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new Finery(this));
         this.addLayer(new FolkFaceLayer(this, context.bakeLayer(FolkFaceLayer.LAYER)));   // [anim] a blink, a smile, words on its lips
         this.addLayer(new FashionLayer(this, new FashionModel(context.bakeLayer(FashionModel.LAYER))));   // [fashion] its own clothes
+        this.addLayer(new RegaliaLayer(this, new RegaliaModel(context.bakeLayer(RegaliaModel.LAYER))));   // [regalia19] a ruler's crown, cape, chain
         this.addLayer(new Glow(this));
         this.addLayer(new Armour(this,                // [guard-kit] armour cut to a folk (FolkArmourModel)
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.INNER)),
@@ -126,7 +127,9 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         if (!folk.isInvisible() && !folk.isBaby() && !AnimDev.unbaked) {
             int t = trade(folk);
             int tier = folk.clientWealth();
-            ResourceLocation dressed = FolkFaces.dressed(folk, t, dyeOf(folk, t), tier >= 0 && tier < FINERY.length && FINERY[tier] != null ? tier : -1);
+            int robe = RegaliaLayer.baked(folk);                      // [regalia19] a ruler's robe, in place of its finery
+            if (robe != 0) tier = -1;
+            ResourceLocation dressed = FolkFaces.dressed(folk, t, dyeOf(folk, t), tier >= 0 && tier < FINERY.length && FINERY[tier] != null ? tier : -1, robe);
             if (dressed != null) {
                 seen.baked = true;
                 return dressed;
@@ -236,7 +239,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
                            float netHeadYaw, float headPitch) {
             if (folk.isInvisible() || folk.isBaby() || folk.animSeen().baked) return;   // [anim] baked into its picture
             int tier = folk.clientWealth();
-            if (tier < 0 || tier >= FINERY.length || FINERY[tier] == null) return;
+            if (tier < 0 || tier >= FINERY.length || FINERY[tier] == null || RegaliaLayer.baked(folk) != 0) return;   // [regalia19] robed
             renderColoredCutoutModel(getParentModel(), FINERY[tier], pose, buffer, light, folk, -1);
         }
     }
@@ -385,6 +388,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         double far = this.entityRenderDispatcher.distanceToSqr(folk);
         FolkEffects.tick(folk, far);                                    // [anim] sparks, chips, steam, notes: once a tick, in sight only
         FolkMarks.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick, far, packedLight);   // [anim] an idea, a coin, Zzz
+        RegaliaLayer.mark(folk, pose, buffer, this.entityRenderDispatcher, partialTick, far);   // [regalia19] a crown over a ruler's name
         if (far < 24 * 24 && bubble(folk, pose, buffer)) return;
         if (far > 48 * 48 || folk.isNoAi()) return;     // a folk stood up to be looked at says nothing
         ItemStack icon = jobIcon(folk, far);

@@ -67,8 +67,8 @@ public final class FolkFaces {
     private static final long STRETCH_NS = 12_000_000L;
 
     /** A picture: a folk's face and marks, and (dressed) its outfit, its dye's colour and its finery, or -1 for none. */
-    private record Key(long look, int marks, int outfit, int dye, int finery) {
-        Key(long look, int marks) { this(look, marks, -1, 0, -1); }
+    private record Key(long look, int marks, int outfit, int dye, int finery, int regalia) {
+        Key(long look, int marks) { this(look, marks, -1, 0, -1, 0); }
     }
 
     private static final Map<Key, ResourceLocation> KEPT = new LinkedHashMap<>(64, 0.75F, true) {
@@ -100,10 +100,10 @@ public final class FolkFaces {
      * Null while it is not made yet (a few a frame): the caller draws the passes as before.
      */
     @Nullable
-    public static ResourceLocation dressed(VillageFolkEntity folk, int outfit, int dye, int finery) {
+    public static ResourceLocation dressed(VillageFolkEntity folk, int outfit, int dye, int finery, int regalia) {
         long look = folk.clientLook();
         if (!Looks.known(look) || broken) return null;
-        return picture(new Key(look, folk.clientMarks() & PICTURE_MARKS, outfit, dye, finery));
+        return picture(new Key(look, folk.clientMarks() & PICTURE_MARKS, outfit, dye, finery, regalia));   // [regalia19] and a ruler's robe
     }
 
     @Nullable
@@ -150,6 +150,16 @@ public final class FolkFaces {
             int[] fine = image("textures/entity/folk/wealth_" + key.finery() + ".png");
             if (fine == null) return false;
             cutOut(px, fine, -1);
+        }
+        if (key.regalia() != 0) {                                     // [regalia19] a ruler's robe over all of it, in its town's colour
+            String robe = RegaliaLayer.dressOf(com.jrpetty.mcassistant.entity.Regalia.kindOf(key.regalia()));
+            if (robe != null) {
+                int[] cloth = image("textures/entity/folk/regalia_dress_" + robe + "_dye.png");
+                int[] fixed = image("textures/entity/folk/regalia_dress_" + robe + ".png");
+                if (cloth == null || fixed == null) return false;
+                cutOut(px, cloth, 0xFF000000 | RegaliaLayer.rgb(com.jrpetty.mcassistant.entity.Regalia.mainOf(key.regalia())));
+                cutOut(px, fixed, -1);
+            }
         }
         return true;
     }
