@@ -42,7 +42,7 @@ public final class LifeTown implements PlayerLife.Page {
         page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get()), "You carry " + PlayerLife.coins(Market.coinsHeld(p)),
                 "Earned here today " + PlayerLife.coins(earned.length > 0 ? earned[0] : 0) + ", this week " + PlayerLife.coins(Earnings.sum(earned))
                     + "; at the bank " + PlayerLife.coins(FolkCredit.balance(id, p.getUUID())), "")
-            .button("The Earnings page", "earnings", null);
+            .button("The Earnings page", "earnings", null).button("Finances", "finances", null);
         // work
         page.heading("Work");
         String job = PlayerJobs.line(p);
@@ -113,6 +113,7 @@ public final class LifeTown implements PlayerLife.Page {
             case "earnings" -> { books(p, "Earnings"); return "#close"; }
             case "books" -> { books(p, args.getString("page")); return "#close"; }
             case "property" -> { return PropertyDesk.open(p, args.getString("what"), "life"); }
+            case "finances" -> { return finances(p); }
             case "citizen" -> { return sayToNearest(p, "May I live here?"); }
             case "council" -> { return sayToNearest(p, "Who's on the council?"); }
             case "say" -> { return sayToNearest(p, args.getString("t")); }
@@ -121,6 +122,18 @@ public final class LifeTown implements PlayerLife.Page {
             case "rent" -> { return Homes.playerCollects(level, p); }
             default -> { return null; }
         }
+    }
+
+    /**
+     * Your finances (another round's screen: net worth, assets and liabilities, income and spending, bills, a ledger): the
+     * one place it is opened from here. Until it lands, the headline numbers.
+     */
+    static String finances(ServerPlayer p) {
+        Villages.Village v = PlayerLife.here(p);
+        if (v == null) return "!No town here.";
+        int[] week = Earnings.earned(p, v.id(), p.level().getDayTime() / 24000L, 7);
+        return "You carry " + PlayerLife.coins(Market.coinsHeld(p)) + ", with " + PlayerLife.coins(FolkCredit.balance(v.id(), p.getUUID()))
+            + " saved; this week you earned " + PlayerLife.coins(Earnings.sum(week)) + " here. (The full finances screen is coming.)";
     }
 
     /** The town's books open at a page. */
