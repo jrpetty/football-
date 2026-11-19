@@ -61,7 +61,7 @@ public final class DoorWays {
         }
     }
 
-    private static final Fix BLOCKED = new Fix(null, true);
+    static final Fix BLOCKED = new Fix(null, true);
 
     /** One visit (TownWork.tick): the next doors whose way in is not walkable, mended by a hand at them. */
     public static void tick(ServerLevel level, Villages.Village v) {
@@ -158,6 +158,8 @@ public final class DoorWays {
      */
     @Nullable
     public static Fix next(Level level, Door d) {
+        Direction turn = TurnedFlights.side(level, d);                   // [growth22] a long flight turned along the wall
+        if (turn != null) return TurnedFlights.next(level, d, turn);
         BlockPos door = d.pos();
         Direction out = d.out();
         int walk = door.getY();
@@ -230,7 +232,7 @@ public final class DoorWays {
      * down with something under it and two blocks of room over it. Well above when the column is solid
      * that high (a bank to cut steps into), well below when there is nothing to stand on (a drop).
      */
-    private static int standNear(Level level, BlockPos col, int walk) {
+    static int standNear(Level level, BlockPos col, int walk) {
         for (int y = walk + 3; y >= walk - 6; y--) {
             if (solid(level, col.atY(y - 1)) && room(level, col.atY(y))) return y;
         }
@@ -238,7 +240,7 @@ public final class DoorWays {
     }
 
     /** A roof over this spot (a porch's, an arcade's, a room's): something built within eight over it. */
-    private static boolean roofed(Level level, BlockPos col, int walk) {
+    static boolean roofed(Level level, BlockPos col, int walk) {
         for (int y = walk + 2; y <= walk + 9; y++) {
             BlockPos p = col.atY(y);
             BlockState st = level.getBlockState(p);
@@ -259,7 +261,7 @@ public final class DoorWays {
     /** What is in this cell that must come out for a folk to walk through it: null when it is clear;
      *  BLOCKED when it is something built, or anything under a roof. */
     @Nullable
-    private static Fix clear(Level level, BlockPos cell, boolean roofed) {
+    static Fix clear(Level level, BlockPos cell, boolean roofed) {
         if (passable(level, cell)) return null;
         if (!roofed && diggable(level, cell, level.getBlockState(cell))) return new Fix(cell, true);
         return BLOCKED;
@@ -277,7 +279,7 @@ public final class DoorWays {
             && !st.is(Blocks.MOSSY_COBBLESTONE);
     }
 
-    private static boolean passable(Level level, BlockPos p) {
+    static boolean passable(Level level, BlockPos p) {
         BlockState st = level.getBlockState(p);
         return st.getCollisionShape(level, p).isEmpty() && !st.getFluidState().is(FluidTags.LAVA);
     }
@@ -286,7 +288,7 @@ public final class DoorWays {
         return passable(level, feet) && passable(level, feet.above());
     }
 
-    private static boolean solid(Level level, BlockPos p) {
+    static boolean solid(Level level, BlockPos p) {
         return !level.getBlockState(p).getCollisionShape(level, p).isEmpty();
     }
 
@@ -305,6 +307,7 @@ public final class DoorWays {
      */
     public static int approach(ServerLevel level, Villages.Village v, Door d, int budget) {
         if (!Footways.live()) return 0;
+        if (TurnedFlights.side(level, d) != null) return 0;             // [growth22] its flight comes down along the wall to the ground
         List<BlockPos> way = pathTo(v, d);
         if (way == null) return 0;
         int done = 0;

@@ -349,6 +349,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level().isClientSide) return;
         FolkAction.tick(this);                                 // [anim] what its body is doing, for the client
         if (showcase) return;
+        if (HELD_FOR_TESTS.contains(getUUID())) return;        // [growth22] tests: held to the job in hand, nothing else
         if (laterLine != null && tickCount >= laterAt) {
             FolkTalk.speak(this, laterLine);
             laterLine = null;
@@ -2044,6 +2045,13 @@ public class VillageFolkEntity extends AssistantEntity {
         meals.ate(level().getGameTime(), meal.getHoverName().getString());
         FolkAction.ate(this, meal);                                 // [anim] a bite to the mouth, and crumbs
         Cuisine.ate(this, meal);                                    // [culture2] its town's own dish, or a neighbour's
+    }
+
+    /** [growth22] Tests: folk held to the job in hand (its goals run; its day, its town's calls and its own notions do not). */
+    private static final java.util.Set<UUID> HELD_FOR_TESTS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public static void holdForTests(UUID folk, boolean held) {
+        if (held) HELD_FOR_TESTS.add(folk); else HELD_FOR_TESTS.remove(folk);
     }
 
     public void makeShowcase(StationTask trade) {
