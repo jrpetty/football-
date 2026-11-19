@@ -72,7 +72,10 @@ public final class BridgeStage {
               new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64) },
             { new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64),
               new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64),
-              new ItemStack(Items.STONE_BRICK_SLAB, 64), new ItemStack(Items.STONE_BRICK_STAIRS, 64), new ItemStack(Items.STONE_BRICK_WALL, 64) } };
+              new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64),
+              new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64),
+              new ItemStack(Items.STONE_BRICK_SLAB, 64), new ItemStack(Items.STONE_BRICK_STAIRS, 64), new ItemStack(Items.STONE_BRICK_STAIRS, 64),
+              new ItemStack(Items.STONE_BRICK_WALL, 64) } };
         for (int k = 0; k < chests.length; k++) {
             BlockPos c = heart.offset(-3 - k, 0, -5);
             level.setBlock(c, Blocks.CHEST.defaultBlockState(), 3);
@@ -142,11 +145,11 @@ public final class BridgeStage {
     /** A stone road over a stepped hill (a block up every three, six high, then down again) between two towns 220 apart. */
     @Nullable
     public static Scene hill(ServerLevel level, int x, int z, int y) {
-        flat(level, x - 30, x + 250, z - 40, z + 40, y);
+        flat(level, x - 30, x + 250, z - 90, z + 90, y);
         for (int k = 0; k < 6; k++) {
             int x0 = x + 80 + 3 * k, x1 = x + 140 - 3 * k;
-            box(level, x0, x1, y + k, y + k, z - 30, z + 30, Blocks.GRASS_BLOCK.defaultBlockState());
-            if (k > 0) box(level, x0, x1, y + k - 1, y + k - 1, z - 30, z + 30, Blocks.DIRT.defaultBlockState());
+            box(level, x0, x1, y + k, y + k, z - 80, z + 80, Blocks.GRASS_BLOCK.defaultBlockState());
+            if (k > 0) box(level, x0, x1, y + k - 1, y + k - 1, z - 80, z + 80, Blocks.DIRT.defaultBlockState());
         }
         Villages.Village a = town(level, x, z, y, 7), b = town(level, x + 220, z, y, 7);
         if (a == null || b == null) return null;

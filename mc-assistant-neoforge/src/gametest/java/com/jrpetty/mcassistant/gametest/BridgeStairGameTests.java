@@ -158,14 +158,18 @@ public class BridgeStairGameTests {
         ServerLevel level = helper.getLevel();
         int x = 4812000;
         fresh(helper);
-        hold(level, x - 40, x + 260, Z - 50, Z + 50);
+        hold(level, x - 40, x + 260, Z - 100, Z + 100);
         int y = Kit.surface(level, x, Z).getY();
         helper.runAtTickTime(5, () -> {
             BridgeStage.Scene s = BridgeStage.hill(level, x, Z, y);
             helper.assertTrue(s != null, "two towns");
             List<int[]> line = RoadWorks.lineForTests(s.a().id(), s.b().id());
             BlockPos from = onLine(level, line, x + 76), to = onLine(level, line, x + 144);
-            BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, from, to, x + 76, x + 144, y - 4, y + 12, Z - 12, Z + 12);
+            // The road's own width: the walk kept to it, not off over the hill's grass beside it.
+            int z0 = Integer.MAX_VALUE, z1 = Integer.MIN_VALUE;
+            for (int[] p : line) if (p[0] >= x + 76 && p[0] <= x + 144) { z0 = Math.min(z0, p[1] - 1); z1 = Math.max(z1, p[1] + 1); }
+            Kit.log("[VT] bs04 the road over the hill from z " + z0 + " to " + z1 + " (the hill " + (Z - 80) + " to " + (Z + 80) + ")");
+            BridgeStairAudit.Counts c = BridgeStairAudit.audit(level, from, to, x + 76, x + 144, y - 4, y + 12, z0, z1);
             String walked = folkWalk(level, s.a(), onLine(level, line, x + 96), onLine(level, line, x + 110));
             Kit.log("[VT] bs04 hill road " + c + "; folk " + walked);
             helper.assertTrue(c.walked && "ok".equals(walked), "walked over the hill: " + c.walked + ", folk " + walked);
