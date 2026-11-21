@@ -1,0 +1,67 @@
+# [redstone] The melon and pumpkin farm: eight stems on watered farmland, each with one place for its fruit.
+#
+# Every stem has stems on either side, the water behind it (no fruit grows over water) and, in front, a
+# bare spot on mud: the only place its melon or pumpkin can come. Above the stem an observer looks down
+# at it. A stem turns into an attached stem the moment its fruit appears, so the observer pulses up into
+# the block over it, the redstone beside that block powers the piston on which it lies, and the piston,
+# hanging over the fruit spot, comes down and breaks the fruit. The slices (or the pumpkin) are pressed
+# onto the mud, the hopper under the mud takes them, and the hoppers pass them along to the chest at the
+# right-hand end. The observer watches the stem, never the fruit's spot the piston comes into, so the
+# machine does not set itself going again; the stem, its fruit gone, goes on growing more.
+#
+# "stem" is a melon or a pumpkin stem, whichever seeds the stores give (the engineer can plant both).
+name melon_farm
+key # casing
+key = casing_slab type=bottom
+key g glass
+key m mud
+key ~ water
+key f farmland moisture=7
+key H hopper facing=right
+key C chest facing=front
+key p piston facing=down
+key o observer facing=down
+key r redstone_wire
+key T stem
+layer -2
+##########
+##########
+##########
+##########
+##########
+layer -1
+##########
+##########
+##########
+#HHHHHHHHC
+##########
+layer 0
+##########
+#~~~~~~~~#
+#ffffffff#
+#mmmmmmmm.
+#gggggggg#
+layer 1
+##########
+#........#
+#TTTTTTTT#
+#........#
+#gggggggg#
+layer 2
+##########
+#........#
+#oooooooo#
+#pppppppp#
+#gggggggg#
+layer 3
+##########
+#........#
+##########
+#rrrrrrrr#
+#........#
+layer 4
+##########
+#........#
+==========
+==========
+==========

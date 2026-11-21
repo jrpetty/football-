@@ -1,0 +1,88 @@
+# The armoury: a small stone house where the town keeps its arms, apart from its stores. Racks of chests
+# along the back wall for the swords, the bows and the armour, the smith's anvil by the door to see to
+# an edge or a dent before a blade goes out, a grindstone across from it, two lanterns hung from the
+# ceiling. The war footing fills it from the smith's work and the militia draws its arms from it
+# (WarWorks, Militia). Its chests are its own: nothing in them is the stores', or ever sold.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name armoury
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.LSSSSSL.
+.SCC.CCS.
+.S.....S.
+.S.....S.
+.Sa...VS.
+.LSSDSSL.
+.........
+layer 1
+.........
+.LSSSSSL.
+.S.....S.
+.G.....G.
+.S.....S.
+.S.....S.
+.LSS.SSL.
+.........
+layer 2
+.........
+.LSSSSSL.
+.S.....S.
+.S..j..S.
+.S.....S.
+.S..j..S.
+.LSSSSSL.
+.........
+layer 3
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>.......<
+layer 4
+.>.....<.
+.>SSSSS<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>SSSSS<.
+.>.....<.
+layer 5
+..>...<..
+..>SSS<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>SSS<..
+..>...<..
+layer 6
+...>.<...
+...>S<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>S<...
+...>.<...
+layer 7
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....

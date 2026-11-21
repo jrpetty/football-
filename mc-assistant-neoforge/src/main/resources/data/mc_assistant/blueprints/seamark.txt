@@ -1,0 +1,149 @@
+# The harbour light (entity/Harbours): a banded stone tower on the shore beside the harbour office, a ladder up the
+# inside to a railed gallery round a glass lamp room. In the lamp room is the beacon, a fire the keeper lights at dusk
+# with a coal from the stores and puts out at dawn, so the ships over the sea can find the harbour in the dark.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name seamark
+layer -1
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+layer 0
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..SDS..
+.......
+layer 1
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..S.S..
+.......
+layer 2
+.......
+..SSS..
+.S.H.S.
+.G...G.
+.S...S.
+..SSS..
+...j...
+layer 3
+.......
+..ZZZ..
+.Z.H.Z.
+.Z...Z.
+.Z...Z.
+..ZZZ..
+...|...
+layer 4
+.......
+..ZZZ..
+.Z.H.Z.
+.G...G.
+.Z...Z.
+..ZGZ..
+.......
+layer 5
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..SSS..
+.......
+layer 6
+.......
+..SSS..
+.S.H.S.
+.G...G.
+.S...S.
+..SGS..
+.......
+layer 7
+.......
+..ZZZ..
+.Z.H.Z.
+.Z...Z.
+.Z...Z.
+..ZZZ..
+.......
+layer 8
+.......
+..ZZZ..
+.Z.H.Z.
+.Z...Z.
+.Z...Z.
+..ZZZ..
+.......
+layer 9
+SSSSSSS
+SSSSSSS
+SSSHSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
+layer 10
+PPPPPPP
+P.....P
+P.L.L.P
+P.OhO.P
+P.LOL.P
+P.....P
+PPPPPPP
+layer 11
+.......
+.......
+..L.L..
+..O.O..
+..LOL..
+.......
+.......
+layer 12
+.......
+.......
+..LOL..
+..O.O..
+..LOL..
+.......
+.......
+layer 13
+.......
+.SSSSS.
+.SSSSS.
+.SSSSS.
+.SSSSS.
+.SSSSS.
+.......
+layer 14
+.......
+.vvvvv.
+.>...<.
+.>...<.
+.>...<.
+.^^^^^.
+.......
+layer 15
+.......
+.......
+..vvv..
+..>R<..
+..^^^..
+.......
+.......
+layer 16
+.......
+.......
+.......
+...P...
+.......
+.......
+.......

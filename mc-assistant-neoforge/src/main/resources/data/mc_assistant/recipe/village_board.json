@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SSS",
+    "PBP",
+    "S S"
+  ],
+  "key": {
+    "S": {
+      "tag": "minecraft:signs"
+    },
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "B": {
+      "item": "minecraft:book"
+    }
+  },
+  "result": {
+    "id": "mc_assistant:village_board",
+    "count": 1
+  }
+}

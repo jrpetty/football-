@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "mc_assistant:block/stocks" },
+    "facing=east": { "model": "mc_assistant:block/stocks", "y": 90 },
+    "facing=south": { "model": "mc_assistant:block/stocks", "y": 180 },
+    "facing=west": { "model": "mc_assistant:block/stocks", "y": 270 }
+  }
+}

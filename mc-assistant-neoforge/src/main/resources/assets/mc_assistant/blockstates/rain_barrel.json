@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "water=0": {
+   "model": "mc_assistant:block/rain_barrel_0"
+  },
+  "water=1": {
+   "model": "mc_assistant:block/rain_barrel_1"
+  },
+  "water=2": {
+   "model": "mc_assistant:block/rain_barrel_2"
+  },
+  "water=3": {
+   "model": "mc_assistant:block/rain_barrel_3"
+  },
+  "water=4": {
+   "model": "mc_assistant:block/rain_barrel_4"
+  }
+ }
+}

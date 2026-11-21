@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "mc_assistant:block/job_board_top",
+    "bottom": "mc_assistant:block/job_board_top",
+    "side": "mc_assistant:block/job_board_side",
+    "particle": "mc_assistant:block/job_board_side"
+  }
+}

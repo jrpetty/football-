@@ -1,0 +1,11 @@
+{
+  "parent": "mc_assistant:block/service_counter",
+  "textures": {
+    "body": "minecraft:block/birch_planks",
+    "panel": "minecraft:block/chiseled_bookshelf_side",
+    "top": "minecraft:block/stripped_oak_log",
+    "till": "minecraft:block/spruce_log",
+    "brass": "minecraft:block/emerald_block",
+    "particle": "minecraft:block/birch_planks"
+  }
+}

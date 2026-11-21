@@ -1,0 +1,16 @@
+# [admin] Example script: an Iron Age war. Run it with /village admin run iron-age-war where you want the first town.
+# One command a line (the slash is optional), # for comments, and:
+#   wait <seconds>           a pause
+#   waitfor <n> [town:x]     until the town (nearest, or named) has n folk (three minutes at most)
+#   say <text>               a line to whoever ran it
+say An Iron Age war: two towns of fifty, at war, armies in the field.
+village admin world found 50 iron
+waitfor 45
+village admin world rival 300 50
+waitfor 45 town:newest
+village admin economy fill age town:all
+village admin army raise 16 iron town:all
+village admin army war rival
+wait 2
+village admin army phase march
+say The armies are on the march.

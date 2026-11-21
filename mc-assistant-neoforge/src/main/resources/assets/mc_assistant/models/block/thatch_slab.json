@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "bottom": "mc_assistant:block/thatch_top",
+    "top": "mc_assistant:block/thatch_top",
+    "side": "mc_assistant:block/thatch"
+  }
+}

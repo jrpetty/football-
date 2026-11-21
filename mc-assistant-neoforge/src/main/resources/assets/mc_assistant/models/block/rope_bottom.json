@@ -1,0 +1,217 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "particle": "mc_assistant:block/rope",
+    "rope": "mc_assistant:block/rope",
+    "stake": "mc_assistant:block/pit_prop",
+    "stake_end": "mc_assistant:block/pit_prop_end"
+  },
+  "elements": [
+    {
+      "from": [
+        6.5,
+        5,
+        2
+      ],
+      "to": [
+        9.5,
+        16,
+        5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rope",
+          "uv": [
+            6.5,
+            0.0,
+            9.5,
+            11
+          ]
+        },
+        "south": {
+          "texture": "#rope",
+          "uv": [
+            6.5,
+            0.0,
+            9.5,
+            11
+          ]
+        },
+        "east": {
+          "texture": "#rope",
+          "uv": [
+            2,
+            0.0,
+            5,
+            11
+          ]
+        },
+        "west": {
+          "texture": "#rope",
+          "uv": [
+            2,
+            0.0,
+            5,
+            11
+          ]
+        },
+        "up": {
+          "texture": "#rope",
+          "uv": [
+            6.5,
+            2,
+            9.5,
+            5
+          ]
+        },
+        "down": {
+          "texture": "#rope",
+          "uv": [
+            6.5,
+            2,
+            9.5,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        6,
+        2.5,
+        1.5
+      ],
+      "to": [
+        10,
+        5.5,
+        5.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rope",
+          "uv": [
+            6,
+            10.5,
+            10,
+            13.5
+          ]
+        },
+        "south": {
+          "texture": "#rope",
+          "uv": [
+            6,
+            10.5,
+            10,
+            13.5
+          ]
+        },
+        "east": {
+          "texture": "#rope",
+          "uv": [
+            1.5,
+            10.5,
+            5.5,
+            13.5
+          ]
+        },
+        "west": {
+          "texture": "#rope",
+          "uv": [
+            1.5,
+            10.5,
+            5.5,
+            13.5
+          ]
+        },
+        "up": {
+          "texture": "#rope",
+          "uv": [
+            6,
+            1.5,
+            10,
+            5.5
+          ]
+        },
+        "down": {
+          "texture": "#rope",
+          "uv": [
+            6,
+            1.5,
+            10,
+            5.5
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        0,
+        2.5
+      ],
+      "to": [
+        9,
+        2.5,
+        4.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rope",
+          "uv": [
+            7,
+            13.5,
+            9,
+            16.0
+          ]
+        },
+        "south": {
+          "texture": "#rope",
+          "uv": [
+            7,
+            13.5,
+            9,
+            16.0
+          ]
+        },
+        "east": {
+          "texture": "#rope",
+          "uv": [
+            2.5,
+            13.5,
+            4.5,
+            16.0
+          ]
+        },
+        "west": {
+          "texture": "#rope",
+          "uv": [
+            2.5,
+            13.5,
+            4.5,
+            16.0
+          ]
+        },
+        "up": {
+          "texture": "#rope",
+          "uv": [
+            7,
+            2.5,
+            9,
+            4.5
+          ]
+        },
+        "down": {
+          "texture": "#rope",
+          "uv": [
+            7,
+            2.5,
+            9,
+            4.5
+          ]
+        }
+      }
+    }
+  ]
+}

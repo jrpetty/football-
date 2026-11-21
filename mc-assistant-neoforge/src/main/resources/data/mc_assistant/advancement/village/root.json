@@ -1,0 +1,28 @@
+{
+  "display": {
+    "icon": {
+      "id": "mc_assistant:village_board"
+    },
+    "title": {
+      "text": "Village Life"
+    },
+    "description": {
+      "text": "Folk who run their own towns, and your place among them"
+    },
+    "frame": "task",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "hidden": false,
+    "background": "minecraft:textures/block/spruce_planks.png"
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

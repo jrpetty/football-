@@ -1,0 +1,19 @@
+{
+  "type": "mc_assistant:trained",
+  "trade": "smith",
+  "category": "equipment",
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "P": { "item": "minecraft:iron_pickaxe" }
+  },
+  "pattern": [
+    "ICI",
+    " I ",
+    " P "
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:reinforced_pickaxe"
+  }
+}

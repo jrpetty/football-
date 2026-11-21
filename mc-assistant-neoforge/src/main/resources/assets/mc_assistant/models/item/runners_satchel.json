@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "mc_assistant:item/runners_satchel"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "mc_assistant:filled": 0.0001
+      },
+      "model": "mc_assistant:item/runners_satchel_full"
+    }
+  ]
+}
