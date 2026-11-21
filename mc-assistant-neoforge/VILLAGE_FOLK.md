@@ -30,7 +30,7 @@ Then the **welcome card** says what happens next (the ground levelled, the found
 buttons for the next steps once they have come: *Find the elder* (who glows), *The town's books*, *Follow the elder*
 (a favourite), *Your life in town*. A notice says when all the founders are there.
 
-The same screen opens from a folk (*World* → *Start a village of my own*), the **New village** button in a village
+The same screen opens from a folk (*Ask* → *Favours* → *Start a village of my own*), the **New village** button in a village
 board's header (the town's books), a Village Folk Spawner or Charter right-clicked in the air out of reach of a town,
 and a spawner's waiting board (there the spot is the board's, so it opens on the size). Founding from the screen uses up
 a Founding Kit, else a spawner, else a charter (`foundingNeedsItem`; free in creative). A player out in the wild with no
@@ -46,7 +46,7 @@ town of their own (founded, citizen of, or being founded) is reminded now and th
 `foundingTownsPerPlayer` (3; 0 for no limit; operators and a single-player world's owner have none), `foundingFreeKit`,
 `foundingNeedsItem`, `foundingTravel` and `foundingTravelReach`, `foundingSiteReach`, `foundingHints`, and
 `villageFoundingMost` for the largest founding. The rules hold for a spawner and a charter too. Tested in
-`FoundingEasyGameTests` (fe01 to fe06) and `SiteScoreTest`.
+`FoundingEasyGameTests` (fe01 to fe07) and `SiteScoreTest`.
 
 | How | What you do |
 |---|---|
