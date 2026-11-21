@@ -342,6 +342,7 @@ public final class TalkMenu {
                 ask("shifts", Items.CLOCK, TalkTopic.SHIFTS),                 // [earning] a paid shift, from the boss
                 say("jobs_board", Items.PAPER, "Any jobs for me on the board?"),   // [player15] the openings, to apply for
                 say("my_life", Items.BOOK, "Show me my life in town"),
+                say("found_own", Items.OAK_SAPLING, "I'd like to start a village of my own"),   // [found23] the founding screen
                 ask("favour", Items.APPLE, TalkTopic.FAVOUR),
                 ask("short", Items.COMPOSTER, TalkTopic.SHORT),
                 ask("lost", Items.BRUSH, TalkTopic.LOST),
@@ -444,7 +445,6 @@ public final class TalkMenu {
                 prompt("nether_ask", Items.BLAZE_ROD, TalkTopic.NETHER, "Runners, bring us blaze rods", trade("NETHER")),
                 say("nether_go", Items.FLINT_AND_STEEL, "Can I come through with you?", trade("NETHER")),
                 say("nether_chart", Items.FILLED_MAP, "Could I buy a copy of your chart?", trade("NETHER"))),
-            say("found_own", Items.OAK_SAPLING, "I'd like to start a village of my own"),   // [found23] the founding screen
             group("maps_group", Items.CARTOGRAPHY_TABLE,
                 MAPS,
                 ask("town_map", Items.FILLED_MAP, TalkTopic.TOWN_MAP),
