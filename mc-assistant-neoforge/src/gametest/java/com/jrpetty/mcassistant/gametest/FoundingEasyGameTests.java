@@ -296,6 +296,7 @@ public class FoundingEasyGameTests {
                 helper.assertTrue(FoundingEasy.hasOwn(p) && !FoundingEasy.wantsHint(p), "with a town of their own, no more hints");
 
                 FoundingEasy.rulesForTests("everyone", 0, true);
+                p.getInventory().clearContent();                               // the spawner given back would do for a kit
                 Founding.Outcome bare = FoundingEasy.found(p, x - 150, Z, 8, "", "", false);
                 Kit.log("fe06 no kit: " + bare.message());
                 helper.assertTrue(!bare.ok() && bare.message().contains("Founding Kit"), "without a kit, refused, and told what it takes");

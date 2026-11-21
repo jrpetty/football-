@@ -49,6 +49,11 @@ public final class SiteFinder {
 
     /** Look round {@code centre}, {@code reach} blocks. */
     public static Result find(ServerLevel level, BlockPos centre, int reach) {
+        return find(level, centre, reach, false);
+    }
+
+    /** As find; {@code board} for a spawner's waiting board, whose own founding is not in the way of its spot. */
+    public static Result find(ServerLevel level, BlockPos centre, int reach, boolean board) {
         int span = reach + AROUND;
         int size = 2 * span / STEP + 1;
         int x0 = centre.getX() - span, z0 = centre.getZ() - span;
@@ -80,7 +85,7 @@ public final class SiteFinder {
         int seaLevel = level.getSeaLevel();
 
         List<Pick> all = new ArrayList<>();
-        Pick here = judge(level, centre, centre, kinds, ground, logs, size, x0, z0, seaLevel, true);
+        Pick here = judge(level, centre, centre, kinds, ground, logs, size, x0, z0, seaLevel, true, board);
         for (int dx = -reach; dx <= reach; dx += GRID) {
             for (int dz = -reach; dz <= reach; dz += GRID) {
                 if (dx * dx + dz * dz > reach * reach || dx * dx + dz * dz < 32 * 32) continue;
@@ -88,7 +93,7 @@ public final class SiteFinder {
                 int i = (x - x0) / STEP, j = (z - z0) / STEP;
                 if (i < 0 || j < 0 || i >= size || j >= size || kinds[i * size + j] == UNKNOWN) continue;
                 BlockPos at = new BlockPos(x, ground[i * size + j], z);
-                Pick p = judge(level, centre, at, kinds, ground, logs, size, x0, z0, seaLevel, false);
+                Pick p = judge(level, centre, at, kinds, ground, logs, size, x0, z0, seaLevel, false, false);
                 if (p != null && p.no().isEmpty()) all.add(p);
             }
         }
@@ -142,7 +147,7 @@ public final class SiteFinder {
 
     /** The verdict on one spot. */
     private static Pick judge(ServerLevel level, BlockPos player, BlockPos at, byte[] kinds, int[] ground, String[] logs, int size,
-                              int x0, int z0, int seaLevel, boolean here) {
+                              int x0, int z0, int seaLevel, boolean here, boolean board) {
         SiteScore.Ground g = new SiteScore.Ground();
         int ci = (at.getX() - x0) / STEP, cj = (at.getZ() - z0) / STEP;
         int core = CORE / STEP, around = (CORE + AROUND) / STEP;
@@ -202,7 +207,7 @@ public final class SiteFinder {
                 LevelChunk ch = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
                 if (ch == null) continue;
                 g.hollowRead++;
-                for (int dy = 2; dy <= 6; dy++) {
+                for (int dy = 2; dy <= 6 && ground[k] - dy > level.getMinBuildHeight(); dy++) {
                     BlockState s = ch.getBlockState(new BlockPos(x, ground[k] - dy, z));
                     if (s.isAir() || !s.getFluidState().isEmpty()) { g.hollowColumns++; break; }
                 }
@@ -222,7 +227,7 @@ public final class SiteFinder {
             int spare = theirs + VanillaVillages.MARGIN - VanillaVillages.CLEAR - 4;
             if (spare < room) { room = spare; town = "a village of villagers"; }
         }
-        if (Founding.near(level, at, Villages.VILLAGE_RANGE * 2)) { room = -1; town = "a town being founded"; }
+        if (!board && Founding.near(level, at, Villages.VILLAGE_RANGE * 2)) { room = -1; town = "a town being founded"; }
         g.townAt = room;
         g.town = town;
         SiteScore.Verdict v = SiteScore.judge(g);

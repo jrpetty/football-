@@ -161,7 +161,7 @@ public final class FoundingEasy {
         t.putLong("board", board.asLong());
         t.putInt("start", start);
         t.putString("need", "");                                             // the spawner was spent setting the board up
-        write(t, SiteFinder.find(level, s.heart, 0));
+        write(t, SiteFinder.find(level, s.heart, 0, true));
         send(p, FoundEasyPayload.OPEN, t);
         return true;
     }
