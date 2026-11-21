@@ -230,7 +230,7 @@ public final class Makers {
         uncrafted("village_coin", "coin is struck only at the town's mint (since the market there is no furnace recipe): money "
             + "anybody could fire for themselves would be worth nothing");
         // The player's own tools: the shop's workshop makes them to a player's order, out of the stores.
-        for (String t : List.of("job_board", "village_charter", "assistant_spawner", "village_folk_spawner", "place_marker", "zone_marker",
+        for (String t : List.of("job_board", "village_charter", "founding_kit", "assistant_spawner", "village_folk_spawner", "place_marker", "zone_marker",   // [found23] the kit
                 "shop_counter", "shop_sign")) {   // [player15] a player's own shop
             declare(t, "the shop's workshop", PLAYERS, "Workshop.order");
         }
