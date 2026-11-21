@@ -9,10 +9,49 @@ Everything is obtainable in **survival**.
 
 ## Getting a village
 
+**The easy way (no commands, nothing to know).** Every new player is given a **Founding Kit** the first time they join
+(config `foundingFreeKit`). Right-click it, or press **U** (*Your life in town*) and choose **Start a village**, and the
+founding screen opens:
+
+1. **Where.** *Here*, and up to three better spots near (within `foundingSiteReach`, 160 blocks, of ground already
+   loaded) that the town finds for you, each scored out of a hundred with the reason: *flat meadow by a river, oak wood
+   20 blocks*. Flat ground counts most; then dry ground under the square, water and wood near it, solid ground under it
+   (no caves), above the sea, and clear of other towns (a spot too near a town, in the sea or mostly water is not
+   offered). A map of the ground round about shows them (H is here, 1 to 3 the others, red squares are towns). The one
+   picked is outlined on the real ground: gold the square, green its first ring of lots and street, white the ground to
+   be made level. **Look at it** puts the screen away to walk round and see it; **U** brings it back.
+2. **How big**: a *Hamlet of 8*, a *Village of 25*, a *Town of 70*, a *City of 250*, or any number on the slider (2 to
+   `villageFoundingMost`), with what that means (ground levelled, trades, homes, the cost to a server); its **name**
+   (suggested; *Another* for a new one, or type your own) and its **look** (the themes on offer); and **Take me there**
+   (carried to the edge of its ground, falling softly, if the server allows it: `foundingTravel`, within
+   `foundingTravelReach`, 256 blocks). **Confirm and found.**
+
+Then the **welcome card** says what happens next (the ground levelled, the founders coming, the first buildings) with
+buttons for the next steps once they have come: *Find the elder* (who glows), *The town's books*, *Follow the elder*
+(a favourite), *Your life in town*. A notice says when all the founders are there.
+
+The same screen opens from a folk (*World* → *Start a village of my own*), the **New village** button in a village
+board's header (the town's books), a Village Folk Spawner or Charter right-clicked in the air out of reach of a town,
+and a spawner's waiting board (there the spot is the board's, so it opens on the size). Founding from the screen uses up
+a Founding Kit, else a spawner, else a charter (`foundingNeedsItem`; free in creative). A player out in the wild with no
+town of their own (founded, citizen of, or being founded) is reminded now and then (`foundingHints`).
+
+| Recipe | Makes |
+|---|---|
+| 2 bread, wheat seeds, any planks, a gold nugget (shapeless) | **Founding Kit** |
+| 4 bread round a gold nugget (a plus sign); or 8 bread round a gold ingot | **Village Folk Spawner** |
+| paper, bread, wheat seeds, a gold nugget (shapeless); or the old shaped recipe | **Village Charter** |
+
+**Server owners** (`mc_assistant-common.toml`): `foundingWho` (everyone, citizens, operators; operators always may),
+`foundingTownsPerPlayer` (3; 0 for no limit; operators and a single-player world's owner have none), `foundingFreeKit`,
+`foundingNeedsItem`, `foundingTravel` and `foundingTravelReach`, `foundingSiteReach`, `foundingHints`, and
+`villageFoundingMost` for the largest founding. The rules hold for a spawner and a charter too. Tested in
+`FoundingEasyGameTests` (fe01 to fe06) and `SiteScoreTest`.
+
 | How | What you do |
 |---|---|
-| **Village Folk Spawner** (recommended) | Craft it — 8 bread round a gold ingot — and *place* it. The first one puts the village board up on the spot; go to the board and choose how many folk start the village, from two to five hundred (see *Founding a village: choose how many*). The ground round about is made level for them, and they come, with the founding stores in a chest where the spawner stood. Each one placed after that, within reach of the village, adds one settler. That is the last thing a village needs from you. |
-| **Village Charter** | Right-click the ground. Founds a town of **seventy** there (config `villageCharterFolk`; use a spawner and its board to choose any other number): its ground is made level first, as for a spawner, and the folk come when the heart of it is level, each with a bed at the camp and the town's treasury opened with their savings (four coins a head). Craftable with paper, bread, a gold ingot, seeds and a chest. |
+| **Village Folk Spawner** | Craft it — 4 bread round a gold nugget, or 8 bread round a gold ingot — and *place* it. The first one puts the village board up on the spot; go to the board and choose how many folk start the village, from two to five hundred (see *Founding a village: choose how many*). The ground round about is made level for them, and they come, with the founding stores in a chest where the spawner stood. Each one placed after that, within reach of the village, adds one settler. That is the last thing a village needs from you. |
+| **Village Charter** | Right-click the ground. Founds a town of **seventy** there (config `villageCharterFolk`; use a spawner and its board to choose any other number): its ground is made level first, as for a spawner, and the folk come when the heart of it is level, each with a bed at the camp and the town's treasury opened with their savings (four coins a head). Craftable with paper, bread, a gold ingot, seeds and a chest, or just paper, bread, seeds and a gold nugget. |
 | **Where to find them** | In creative, everything the mod adds is in its own **Village Folk** tab (the spawner is also under Functional Blocks). In survival, every recipe is in the recipe book from the moment you join; the spawner is a gold ingot in the middle of the crafting grid with bread in all eight squares round it. |
 | **/village spawn [1-100]** | Out of reach of a village, founds one two blocks ahead of you, its ground made level first (at least two folk); in reach of one, stands that many more up in it. `spawnat <x> <z> [n]` for the console and scripts founds at once, levelling nothing. |
 | **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. Each has its ground made level before its folk come, as a founding at a board does. |
