@@ -196,7 +196,7 @@ public final class AssistantConfig {
         FOUNDING_WHO = b.comment(                                                         // [found23]
                 "Who may found a town (the founding screen, a spawner, a charter): everyone, citizens (a citizen",
                 "of some town), or operators. Operators always may; commands are for operators either way.")
-            .defineInList("foundingWho", "everyone", java.util.List.of("everyone", "citizens", "operators"));
+            .define("foundingWho", "everyone", o -> o instanceof String w && (w.equals("everyone") || w.equals("citizens") || w.equals("operators")));
         FOUNDING_TOWNS_PER_PLAYER = b.comment(
                 "How many towns one player may found (those still standing, and those being founded). 0: no limit.",
                 "Operators, and the owner of a single-player world, have no limit.")
