@@ -62,6 +62,8 @@ public class FoundingScreen extends Screen {
     private DynamicTexture mapTex;
     private ResourceLocation mapId;
     private int mapX0, mapZ0, mapSize, mapStep;
+    /** The part of the map shown: the ground seen, squared (cells from the map's corner, and how many across). */
+    private int viewI, viewJ, viewN;
 
     public FoundingScreen(CompoundTag t) {
         super(Component.literal(t.getString("mode").equals("board") ? "Found a village" : "Start a village"));
@@ -217,7 +219,7 @@ public class FoundingScreen extends Screen {
         bakeMap();
         int by = top + h - PAD - 20;
         this.addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> this.onClose()).bounds(left + PAD, by, 70, 20).build(UiButton::new));
-        Button look = Button.builder(Component.literal("Look at it"), b -> FoundingClient.look(this)).bounds(left + PAD + 74, by, 90, 20).build(UiButton::new);
+        Button look = Button.builder(Component.literal("Look at it"), b -> FoundingClient.look(this, where())).bounds(left + PAD + 74, by, 90, 20).build(UiButton::new);
         look.setTooltip(Tooltip.create(Component.literal("Put this away and see the spot outlined on the ground. Press U to come back.")));
         this.addRenderableWidget(look);
         Button next = UiButton.primary(Button.builder(Component.literal("Next: how big"), b -> { step = 2; rebuild(); })
@@ -288,7 +290,7 @@ public class FoundingScreen extends Screen {
         } else {
             this.addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> this.onClose()).bounds(left + PAD, by, 60, 20).build(UiButton::new));
         }
-        Button look = Button.builder(Component.literal("Look at it"), b -> FoundingClient.look(this)).bounds(left + PAD + 64, by, 80, 20).build(UiButton::new);
+        Button look = Button.builder(Component.literal("Look at it"), b -> FoundingClient.look(this, where())).bounds(left + PAD + 64, by, 80, 20).build(UiButton::new);
         look.setTooltip(Tooltip.create(Component.literal("Put this away and see the town's ground outlined. Press U to come back.")));
         this.addRenderableWidget(look);
         String why = blocked();
@@ -296,6 +298,13 @@ public class FoundingScreen extends Screen {
         go.active = why.isEmpty();
         go.setTooltip(Tooltip.create(Component.literal(why.isEmpty() ? "The ground is made level first; the folk come as soon as the heart of it is." : why)));
         this.addRenderableWidget(go);
+    }
+
+    /** Where the spot picked is, in words, for the line shown while looking at it. */
+    private String where() {
+        Pick p = pick();
+        if (p == null || board || p.here()) return "The spot is where you stand";
+        return "Spot " + (chosen + 1) + " is " + p.dist() + " blocks " + p.bearing() + " (the tall gold post)";
     }
 
     private String presetTip(int i) {
@@ -399,6 +408,16 @@ public class FoundingScreen extends Screen {
             }
         }
         mapTex.upload();
+        int i0 = size, j0 = size, i1 = -1, j1 = -1;
+        for (int i = 0; i < size; i++) for (int j = 0; j < size; j++) if (kinds[i * size + j] != 0) {
+            i0 = Math.min(i0, i); i1 = Math.max(i1, i); j0 = Math.min(j0, j); j1 = Math.max(j1, j);
+        }
+        if (i1 < 0) { viewI = 0; viewJ = 0; viewN = size; }
+        else {
+            viewN = Math.min(size, Math.max(i1 - i0, j1 - j0) + 3);
+            viewI = Math.max(0, Math.min(size - viewN, (i0 + i1) / 2 - viewN / 2));
+            viewJ = Math.max(0, Math.min(size - viewN, (j0 + j1) / 2 - viewN / 2));
+        }
         mapId = ResourceLocation.fromNamespaceAndPath("mc_assistant", "founding/map");
         Minecraft.getInstance().getTextureManager().register(mapId, mapTex);
     }
@@ -409,11 +428,11 @@ public class FoundingScreen extends Screen {
     }
 
     private int mapPx(int x) {
-        return left + PAD + (int) Math.round((x - mapX0) / (double) (mapSize * mapStep) * MAP);
+        return left + PAD + (int) Math.round(((x - mapX0) / (double) mapStep - viewI) / viewN * MAP);
     }
 
     private int mapPy(int z) {
-        return top + 26 + (int) Math.round((z - mapZ0) / (double) (mapSize * mapStep) * MAP);
+        return top + 26 + (int) Math.round(((z - mapZ0) / (double) mapStep - viewJ) / viewN * MAP);
     }
 
     private int rowY(int i) {
@@ -453,7 +472,9 @@ public class FoundingScreen extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
+        // Not blurred: the world, and the outline on it, stays to be seen round the panel.
+        if (this.minecraft == null || this.minecraft.level == null) super.renderBackground(g, mouseX, mouseY, partialTick);
+        else g.fill(0, 0, this.width, this.height, 0x30000000);
         UiStyle.shadow(g, left, top, W, h);
         UiStyle.panel(g, left, top, W, h);
         UiStyle.headerBand(g, left, top, W, 20);
@@ -468,7 +489,7 @@ public class FoundingScreen extends Screen {
     private void where(GuiGraphics g, int mx, int my) {
         int x = left + PAD, y = top + 26;
         UiStyle.well(g, x - 1, y - 1, MAP + 2, MAP + 2, UiStyle.WELL);
-        if (mapId != null) g.blit(mapId, x, y, MAP, MAP, 0F, 0F, mapSize, mapSize, mapSize, mapSize);
+        if (mapId != null) g.blit(mapId, x, y, MAP, MAP, (float) viewI, (float) viewJ, viewN, viewN, mapSize, mapSize);
         g.enableScissor(x, y, x + MAP, y + MAP);
         Pick sel = pick();
         if (sel != null && mapSize > 0) {

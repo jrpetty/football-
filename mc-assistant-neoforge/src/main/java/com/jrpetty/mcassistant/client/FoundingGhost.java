@@ -67,7 +67,7 @@ public final class FoundingGhost {
         else square(ps, lines, lv, ring, 1F, 0.25F, 0.2F, pulse);
         square(ps, lines, lv, square, 1F, 0.82F, 0.2F, 1F);
         int gy = ground(lv, x, z);
-        LevelRenderer.renderLineBox(ps, lines, new AABB(x + 0.3, gy, z + 0.3, x + 0.7, gy + 6, z + 0.7), 1F, 0.82F, 0.2F, 1F);
+        LevelRenderer.renderLineBox(ps, lines, new AABB(x + 0.3, gy, z + 0.3, x + 0.7, gy + 32, z + 0.7), 1F, 0.82F, 0.2F, 1F);   // seen from afar
         buf.endBatch(RenderType.lines());
         ps.popPose();
     }

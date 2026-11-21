@@ -23,10 +23,10 @@ public final class LifeTown implements PlayerLife.Page {
         ServerLevel level = p.serverLevel();
         Villages.Village v = PlayerLife.here(p);
         String town = v == null ? "no town" : Villages.name(v.id());
-        LifePage page = new LifePage("life", "Your life in town", v == null ? "You're out in the wild: find a town" : "In " + town, p.registryAccess());
+        LifePage page = new LifePage("life", "Your life in town", v == null ? "You're out in the wild: find a town, or start your own" : "In " + town, p.registryAccess());   // [found23]
         if (v == null) {
             FoundingEasy.lifeRows(p, page);                                   // [found23] start a village of your own
-            page.text("Towns grow wherever folk settle. Walk till you find one, then come back here.", 4);
+            page.text("Or walk till you find a town, then come back here.", 4);
             page.buttons().button("Everything you can do", "all", null);
             return page;
         }

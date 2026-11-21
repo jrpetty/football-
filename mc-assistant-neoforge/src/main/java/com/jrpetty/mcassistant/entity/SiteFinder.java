@@ -150,9 +150,10 @@ public final class SiteFinder {
                               int x0, int z0, int seaLevel, boolean here, boolean board) {
         SiteScore.Ground g = new SiteScore.Ground();
         int ci = (at.getX() - x0) / STEP, cj = (at.getZ() - z0) / STEP;
-        int core = CORE / STEP, around = (CORE + AROUND) / STEP;
+        // the square and first ring for its lie; the ground a village of twenty-five levels for its water
+        int core = CORE / STEP, wide = FoundingPlan.coreRadius(25) / STEP, around = (CORE + AROUND) / STEP;
         List<Integer> hs = new ArrayList<>();
-        int known = 0, cols = 0;
+        int known = 0, cols = 0, wideKnown = 0;
         int nearestWater = Integer.MAX_VALUE, nearestTree = Integer.MAX_VALUE, waterK = -1, treeK = -1;
         for (int di = -around; di <= around; di++) {
             for (int dj = -around; dj <= around; dj++) {
@@ -163,19 +164,22 @@ public final class SiteFinder {
                 int k = i * size + j;
                 byte kind = kinds[k];
                 int d = (int) Math.round(Math.sqrt(d2) * STEP);
+                if (d2 <= wide * wide && kind != UNKNOWN) {
+                    wideKnown++;
+                    if (kind == WATER || kind == LAVA) g.wetColumns++;
+                }
                 if (d2 <= core * core) {
                     cols++;
                     if (kind == UNKNOWN) continue;
                     known++;
-                    if (kind == WATER || kind == LAVA) g.wetColumns++;
-                    else hs.add(ground[k]);
+                    if (kind != WATER && kind != LAVA) hs.add(ground[k]);
                 }
                 if (kind == WATER && d < nearestWater) { nearestWater = d; waterK = k; }
                 if (kind == TREE && d < nearestTree) { nearestTree = d; treeK = k; }
                 if (kind == TREE) g.treeColumns++;
             }
         }
-        g.columns = known;
+        g.columns = wideKnown;
         g.heights = hs.stream().mapToInt(Integer::intValue).toArray();
         int k0 = ci >= 0 && cj >= 0 && ci < size && cj < size ? ci * size + cj : -1;
         g.centreWet = k0 >= 0 && (kinds[k0] == WATER || kinds[k0] == LAVA);

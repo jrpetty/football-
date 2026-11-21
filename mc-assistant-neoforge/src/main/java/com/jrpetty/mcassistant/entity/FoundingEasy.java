@@ -147,8 +147,9 @@ public final class FoundingEasy {
         t.putBoolean("travel", AssistantConfig.foundingTravel());
         t.putInt("travelReach", AssistantConfig.foundingTravelReach());
         send(p, FoundEasyPayload.OPEN, t);
-        LOG.info("[MCA-FOUND] {} opened the founding screen ({}): {} spots, here {}", p.getGameProfile().getName(), from, r.picks().size(),
-            r.picks().get(0).no().isEmpty() ? r.picks().get(0).score() + " " + r.picks().get(0).words() : r.picks().get(0).no());
+        StringBuilder said = new StringBuilder();
+        for (SiteFinder.Pick k : r.picks()) said.append("; ").append(k.at().toShortString()).append(' ').append(k.no().isEmpty() ? k.score() + " " + k.words() : k.no());
+        LOG.info("[MCA-FOUND] {} opened the founding screen ({}): {} spots{}", p.getGameProfile().getName(), from, r.picks().size(), said);
     }
 
     /** A spawner's waiting board right-clicked: the same screen, its spot fixed at the board's. True when it was sent. */
@@ -405,7 +406,7 @@ public final class FoundingEasy {
         String no = mayFound(p);
         String need = need(p);
         String sub = no != null ? no : !need.isEmpty() ? need
-            : "Pick a spot (here, or the best near), a size and a name. The folk come, level the ground and build it themselves.";
+            : "Pick a spot, a size and a name: the folk do the rest.";
         page.row(new ItemStack(McAssistantMod.FOUNDING_KIT.get()), "Start a village of your own", sub, "")
             .button("Start a village", "found", null).primary();
     }

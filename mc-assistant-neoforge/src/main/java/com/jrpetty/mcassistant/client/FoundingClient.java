@@ -33,6 +33,7 @@ public final class FoundingClient {
 
     @Nullable private static FoundingScreen looking;
     private static long lookUntil;
+    private static String lookWhere = "";
 
     /** From the server (FoundEasyNetwork). */
     public static void heard(int kind, CompoundTag t) {
@@ -59,8 +60,9 @@ public final class FoundingClient {
 
     // ------------------------------------------------------------------ looking at the spot
 
-    static void look(FoundingScreen s) {
+    static void look(FoundingScreen s, String where) {
         looking = s;
+        lookWhere = where;
         lookUntil = System.currentTimeMillis() + 120_000;
         Minecraft.getInstance().setScreen(null);
     }
@@ -98,7 +100,7 @@ public final class FoundingClient {
         }
         if (mc.screen != null) return;
         GuiGraphics g = e.getGuiGraphics();
-        String line = "Looking at the spot: gold is the square, green the first ring, white the ground made level.";
+        String line = lookWhere + ": gold is the square, green the first ring, white the ground made level.";
         String back = "Press U to go back to the founding screen.";
         int w = g.guiWidth();
         int lw = Math.max(mc.font.width(line), mc.font.width(back)) + 12;

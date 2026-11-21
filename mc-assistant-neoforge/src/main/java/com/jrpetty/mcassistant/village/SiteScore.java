@@ -17,7 +17,7 @@ public final class SiteScore {
     public static final class Ground {
         /** Heights of the dry columns under the square and its first ring (no trees, no water). */
         public int[] heights = new int[0];
-        /** How many of the columns read under the square were water (or lava). */
+        /** How many of the columns read under the ground a village would level were water (or lava), of how many read. */
         public int wetColumns, columns;
         /** Of the columns read for hollows, how many had a cave or a pocket of air within five of the top. */
         public int hollowColumns, hollowRead;
@@ -104,18 +104,18 @@ public final class SiteScore {
         int c = b.indexOf(':');
         if (c >= 0) b = b.substring(c + 1);
         if (b.contains("cherry")) return "cherry grove";
+        if (b.contains("taiga")) return b.contains("snow") ? "snowy pine woods" : "pine woods";
+        if (b.contains("snow") || b.contains("ice") || b.contains("frozen")) return "snowfield";
         if (b.contains("meadow") || b.contains("plains")) return "meadow";
         if (b.contains("birch")) return "birch wood";
         if (b.contains("dark_forest")) return "dark wood";
         if (b.contains("forest")) return "woodland";
-        if (b.contains("taiga")) return b.contains("snow") ? "snowy pine woods" : "pine woods";
         if (b.contains("jungle")) return "jungle";
         if (b.contains("savanna")) return "savanna";
         if (b.contains("desert")) return "desert";
         if (b.contains("badlands")) return "badlands";
         if (b.contains("swamp")) return "marsh";
         if (b.contains("beach") || b.contains("shore")) return "shore";
-        if (b.contains("snow") || b.contains("ice") || b.contains("frozen")) return "snowfield";
         if (b.contains("hill") || b.contains("peak") || b.contains("slope") || b.contains("windswept") || b.contains("grove")) return "upland";
         if (b.contains("river")) return "riverbank";
         if (b.contains("ocean")) return "sea";
