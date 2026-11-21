@@ -13,6 +13,7 @@
   "key.mc_assistant.emote_wheel": "Emote wheel (wave, bow, shake hands...)",
   "entity.mc_assistant.village_folk": "Village Folk",
   "item.mc_assistant.village_charter": "Village Charter",
+  "item.mc_assistant.founding_kit": "Founding Kit",
   "block.mc_assistant.village_folk_spawner": "Village Folk Spawner",
   "itemGroup.mc_assistant": "Village Folk",
   "item.mc_assistant.village_coin": "Village Coin",
@@ -607,5 +608,7 @@
   "talk.mc_assistant.jobs_board": "The jobs board",
   "talk.mc_assistant.jobs_board.tip": "Apply for an opening, be interviewed, be hired; or take a day's shift",
   "talk.mc_assistant.my_life": "My life in town",
-  "talk.mc_assistant.my_life.tip": "Your work, shop, home, standing and what to do next (the U key)"
+  "talk.mc_assistant.my_life.tip": "Your work, shop, home, standing and what to do next (the U key)",
+  "talk.mc_assistant.found_own": "Start a village of my own",
+  "talk.mc_assistant.found_own.tip": "The founding screen: where (here, or the best spots near), how big, its name"
 }

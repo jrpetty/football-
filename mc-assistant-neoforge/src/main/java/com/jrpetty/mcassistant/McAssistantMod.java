@@ -182,6 +182,10 @@ public final class McAssistantMod {
         ITEMS.registerItem("village_charter",
             com.jrpetty.mcassistant.item.VillageCharterItem::new);
 
+    /** [found23] Founding Kit: right-click to start a town (the founding screen). One is given to each new player. */
+    public static final DeferredItem<net.minecraft.world.item.Item> FOUNDING_KIT =
+        ITEMS.registerItem("founding_kit", com.jrpetty.mcassistant.item.FoundingKitItem::new);
+
     /** A village's coin: minted from its gold from the Iron Age, paid out in wages, spent
      *  at its stalls, and what a player is paid in when they sell to it. */
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
@@ -338,6 +342,7 @@ public final class McAssistantMod {
             .displayItems((params, out) -> {
                 out.accept(FOLK_SPAWNER_ITEM.get());
                 out.accept(VILLAGE_CHARTER.get());
+                out.accept(FOUNDING_KIT.get());                                  // [found23]
                 out.accept(VILLAGE_COIN.get());
                 out.accept(RIBBON_ITEM.get());                       // [civic]
                 out.accept(FISHING_NET.get());                           // [fleet]
@@ -469,6 +474,7 @@ public final class McAssistantMod {
             event.accept(ASSISTANT_SPAWNER_ITEM);
             event.accept(FOLK_SPAWNER_ITEM);
             event.accept(VILLAGE_CHARTER);
+            event.accept(FOUNDING_KIT);                                          // [found23]
             event.accept(JOB_BOARD_ITEM);
             event.accept(STOREHOUSE_ITEM);
             event.accept(VILLAGE_BOARD_ITEM);

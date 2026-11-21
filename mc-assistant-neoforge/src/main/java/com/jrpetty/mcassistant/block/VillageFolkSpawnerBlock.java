@@ -61,8 +61,10 @@ public class VillageFolkSpawnerBlock extends Block {
         server.levelEvent(2001, pos, Block.getId(state));
         server.removeBlock(pos, false);
         if (Villages.nearest(server, pos, Villages.VILLAGE_RANGE * 2) == null) {
-            com.jrpetty.mcassistant.entity.Founding.Outcome asked =
-                com.jrpetty.mcassistant.entity.Founding.propose(server, pos, player, yaw);
+            String barred = player == null ? null : com.jrpetty.mcassistant.entity.FoundingEasy.mayFound(player);   // [found23] the server's rules
+            com.jrpetty.mcassistant.entity.Founding.Outcome asked = barred != null
+                ? new com.jrpetty.mcassistant.entity.Founding.Outcome(false, barred, null)
+                : com.jrpetty.mcassistant.entity.Founding.propose(server, pos, player, yaw);
             if (player == null) return;
             if (!asked.ok() && !player.getAbilities().instabuild) {
                 // Give the spawner back rather than eating it.

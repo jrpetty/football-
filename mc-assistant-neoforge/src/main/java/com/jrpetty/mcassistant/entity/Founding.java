@@ -103,6 +103,8 @@ public final class Founding extends SavedData {
         /** A town already standing whose ground is levelled round it (/village level): nobody comes. */
         boolean existing;
         String soil = "";
+        /** [found23] The name and look chosen on the founding screen (empty: the town's own). */
+        String name = "", theme = "";
         // Not kept: the ground as read, and when it was last held or told about.
         @Nullable FoundingPlan.Ground ground;
         @Nullable byte[] tops;
@@ -141,6 +143,8 @@ public final class Founding extends SavedData {
             if (village != null) t.putUUID("Village", village);
             if (existing) t.putBoolean("Existing", true);
             t.putString("Soil", soil);
+            if (!name.isEmpty()) t.putString("Name", name);                // [found23]
+            if (!theme.isEmpty()) t.putString("Theme", theme);
             return t;
         }
 
@@ -165,6 +169,8 @@ public final class Founding extends SavedData {
             s.village = t.hasUUID("Village") ? t.getUUID("Village") : null;
             s.existing = t.getBoolean("Existing");
             s.soil = t.getString("Soil");
+            s.name = t.getString("Name");                                   // [found23]
+            s.theme = t.getString("Theme");
             // The ground as read is not kept: after a restart it is waited for and walked again, and
             // the work goes on from the column it had got to (the level and the soil are kept).
             s.phase = LOAD;
@@ -441,6 +447,31 @@ public final class Founding extends SavedData {
             + (2 * s.radius + 1) + " blocks across. Its folk carry on meanwhile.", null);
     }
 
+    /** [found23] The name and look chosen on the founding screen, for the founding at this board (given when it is founded). */
+    public static void dress(ServerLevel level, BlockPos board, String name, String theme) {
+        Site s = siteAt(level, board);
+        Founding f = of(level.getServer());
+        if (s == null || f == null) return;
+        s.name = name == null ? "" : name;
+        s.theme = theme == null ? "" : theme;
+        f.setDirty();
+    }
+
+    /** [found23] Foundings waiting or under way that this player began (not yet finished). */
+    public static int underWayFor(@Nullable MinecraftServer server, UUID player) {
+        Founding f = of(server);
+        if (f == null) return 0;
+        int n = 0;
+        for (Site s : f.sites) if (!s.existing && player.equals(s.founder)) n++;
+        return n;
+    }
+
+    /** [found23] How far along the founding nearest here is (a percentage), or -1 if there is none. */
+    public static int percentNear(ServerLevel level, BlockPos pos, int range) {
+        Site s = siteNear(level, pos, range);
+        return s == null || s.state != UNDER_WAY ? -1 : percent(s);
+    }
+
     /** The waiting board was taken down: the founding is called off. */
     public static void calledOff(ServerLevel level, BlockPos board) {
         Founding f = of(level.getServer());
@@ -455,6 +486,7 @@ public final class Founding extends SavedData {
 
     /** Right-clicking a waiting board: the founding screen, its count at {@code start} (0 for the usual party). */
     public static void offer(ServerPlayer player, VillageBoardBlockEntity board, int start) {
+        if (FoundingEasy.offerBoard(player, board.getBlockPos(), start > 0 ? start : VillageFolkSpawnerBlock.foundingParty())) return;   // [found23]
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
             new com.jrpetty.mcassistant.net.FoundingScreenPayload(board.getBlockPos(), true,
                 start > 0 ? start : VillageFolkSpawnerBlock.foundingParty(), most(),
@@ -881,6 +913,7 @@ public final class Founding extends SavedData {
         int camped = VillageSpawner.pitchCamp(level, centre, s.count);
         VillageSpawner.foundingStores(level, centre, s.count, camped);
         Market.openTreasury(s.village, s.count);
+        FoundingEasy.founded(s.village, s.name, s.theme);               // [found23] the name and look chosen
         f.setDirty();
         LOG.info("[MCA-FOUND] {} is founded at {}; {} more to come", Villages.name(s.village), centre.toShortString(), s.count - 1);
         return true;
@@ -986,6 +1019,7 @@ public final class Founding extends SavedData {
         Villages.tell(id, day, folk + " founders came to " + Villages.name(id) + ", and the ground was levelled for them, "
             + across + " blocks across");
         Advancements.founded(level, s.founder, id);          // [batchG] its founder written down, and the founder's toast
+        FoundingEasy.finished(level, s.founder, id);         // [found23] the founder's notice
         LOG.info("[MCA-FOUND] {} is founded: {} folk, the ground levelled {} across", Villages.name(id), folk, across);
         if (s.ground != null && s.level != UNSET) LOG.info("[MCA-FOUND] {}: {}", Villages.name(id), flatness(level, s));
         Villages.Village v = Villages.get(id);

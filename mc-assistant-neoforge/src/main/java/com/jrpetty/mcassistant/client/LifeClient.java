@@ -25,7 +25,7 @@ public final class LifeClient {
 
     public static final KeyMapping OPEN = new KeyMapping("key.mc_assistant.life", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U, "key.categories.mc_assistant");
 
-    private static final int[] YOU = new int[4], START = new int[4];
+    private static final int[] YOU = new int[4], START = new int[4], FOUND = new int[4];
 
     @EventBusSubscriber(modid = McAssistantMod.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
     public static final class Keys {
@@ -45,7 +45,7 @@ public final class LifeClient {
         public static void onClientTick(ClientTickEvent.Post event) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.getConnection() == null) return;
-            while (OPEN.consumeClick()) if (mc.screen == null) open("life");
+            while (OPEN.consumeClick()) if (mc.screen == null && !FoundingClient.resume()) open("life");   // [found23] back to the founding screen
         }
     }
 
@@ -55,6 +55,7 @@ public final class LifeClient {
 
     /** The books' header buttons, right to left from {@code right}; returns the new right edge. */
     public static int boardButtons(GuiGraphics g, Font font, int right, int y, int mx, int my) {
+        right = one(g, font, "New village", right, y, mx, my, FOUND, "Start a village of your own, somewhere near: the founding screen.");   // [found23]
         right = one(g, font, "Start a business", right, y, mx, my, START, "Open a business of your own: a kind, its premises, the charter.");
         return one(g, font, "You", right, y, mx, my, YOU, "Your life in town: your work, shop, home, standing, and what to do next.");
     }
@@ -76,6 +77,7 @@ public final class LifeClient {
     public static boolean boardClick(double mx, double my) {
         if (in(YOU, mx, my)) { UiStyle.click(); open("life"); return true; }
         if (in(START, mx, my)) { UiStyle.click(); open("start"); return true; }
+        if (in(FOUND, mx, my)) { UiStyle.click(); FoundingClient.ask("open", "board"); return true; }   // [found23]
         return false;
     }
 

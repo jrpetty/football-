@@ -240,6 +240,10 @@ public final class PlayerLife {
     @Nullable
     public static String heard(VillageFolkEntity f, ServerPlayer p, String text) {
         String t = text == null ? "" : text.toLowerCase(java.util.Locale.ROOT).trim();
+        if (t.contains("village of my own") || t.contains("town of my own")) {   // [found23] the founding screen
+            FoundingEasy.open(p, "talk");
+            return "A place of your own? Good. Here's what the land round about looks like.";
+        }
         String page = t.contains("my life in town") ? "life" : t.contains("start a business") ? "start" : t.contains("my businesses") ? "firm"
             : t.contains("jobs board") || t.contains("jobs for me") ? "jobs" : t.equals("my shop") || t.contains("my shop doing") ? "shop" : null;
         if (page == null) return null;

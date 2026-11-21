@@ -25,6 +25,7 @@ public final class LifeTown implements PlayerLife.Page {
         String town = v == null ? "no town" : Villages.name(v.id());
         LifePage page = new LifePage("life", "Your life in town", v == null ? "You're out in the wild: find a town" : "In " + town, p.registryAccess());
         if (v == null) {
+            FoundingEasy.lifeRows(p, page);                                   // [found23] start a village of your own
             page.text("Towns grow wherever folk settle. Walk till you find one, then come back here.", 4);
             page.buttons().button("Everything you can do", "all", null);
             return page;
@@ -109,6 +110,7 @@ public final class LifeTown implements PlayerLife.Page {
         Villages.Village v = PlayerLife.here(p);
         switch (action) {
             case "jobs", "shop", "start", "all" -> { PlayerLife.open(p, action, null); return "#open:"; }
+            case "found" -> { FoundingEasy.open(p, "life"); return "#open:"; }   // [found23]
             case "firm" -> { PlayerLife.open(p, "firm", LifePage.args("firm", args.getString("firm"))); return "#open:"; }
             case "earnings" -> { books(p, "Earnings"); return "#close"; }
             case "books" -> { books(p, args.getString("page")); return "#close"; }

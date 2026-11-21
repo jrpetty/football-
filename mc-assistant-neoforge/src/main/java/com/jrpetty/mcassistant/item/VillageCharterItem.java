@@ -42,6 +42,10 @@ public class VillageCharterItem extends Item {
         // as any other — it used to have a copy of its own that had quietly
         // fallen behind the real one.
         boolean founding = Villages.nearest(level, spot, Villages.VILLAGE_RANGE * 2) == null;
+        if (founding && com.jrpetty.mcassistant.entity.FoundingEasy.mayFound(player) != null) {   // [found23] the server's rules
+            player.displayClientMessage(Component.literal(com.jrpetty.mcassistant.entity.FoundingEasy.mayFound(player)), true);
+            return InteractionResult.CONSUME;
+        }
         if (founding) {
             // A new village has its ground made ready first, as one founded at a board does (entity/Founding):
             // the folk come when the heart of it is level.

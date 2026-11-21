@@ -44,6 +44,10 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_FOUNDING_MOST;
     public static final ModConfigSpec.IntValue VILLAGE_CHARTER_FOLK;
+    // [found23] starting a town: who may, how many each, the free kit, the walk there
+    public static final ModConfigSpec.ConfigValue<String> FOUNDING_WHO;
+    public static final ModConfigSpec.IntValue FOUNDING_TOWNS_PER_PLAYER, FOUNDING_TRAVEL_REACH, FOUNDING_SITE_REACH;
+    public static final ModConfigSpec.BooleanValue FOUNDING_FREE_KIT, FOUNDING_NEEDS_ITEM, FOUNDING_TRAVEL, FOUNDING_HINTS;
     public static final ModConfigSpec.BooleanValue VILLAGE_WARS;
     public static final ModConfigSpec.BooleanValue TOWN_BORDERS;          // [borders-map]
     public static final ModConfigSpec.IntValue TOWN_BORDER_REACH;         // [borders-map]
@@ -189,6 +193,36 @@ public final class AssistantConfig {
                 "choose anything from two to villageFoundingMost before confirming. (Villages the world grows",
                 "on its own are founded with villageMinFolk to villageMaxFolk; colonies with villageMinFolk.)")
             .defineInRange("villageCharterFolk", 70, 2, 500);
+        FOUNDING_WHO = b.comment(                                                         // [found23]
+                "Who may found a town (the founding screen, a spawner, a charter): everyone, citizens (a citizen",
+                "of some town), or operators. Operators always may; commands are for operators either way.")
+            .defineInList("foundingWho", "everyone", java.util.List.of("everyone", "citizens", "operators"));
+        FOUNDING_TOWNS_PER_PLAYER = b.comment(
+                "How many towns one player may found (those still standing, and those being founded). 0: no limit.",
+                "Operators, and the owner of a single-player world, have no limit.")
+            .defineInRange("foundingTownsPerPlayer", 3, 0, 1000);
+        FOUNDING_FREE_KIT = b.comment(
+                "Give every player one Founding Kit the first time they join: right-click it to start a town.")
+            .define("foundingFreeKit", true);
+        FOUNDING_NEEDS_ITEM = b.comment(
+                "Starting a town from the founding screen (the U page, a folk, a village board) uses up a Founding Kit,",
+                "a Village Folk Spawner or a Village Charter from the player's pack. Off: it is free. Creative: always free.")
+            .define("foundingNeedsItem", true);
+        FOUNDING_TRAVEL = b.comment(
+                "Let the founding screen's \"Take me there\" carry the player to the spot chosen, if it is within",
+                "foundingTravelReach. Off: they walk.")
+            .define("foundingTravel", true);
+        FOUNDING_TRAVEL_REACH = b.comment(
+                "How far \"Take me there\" may carry a player, in blocks.")
+            .defineInRange("foundingTravelReach", 256, 0, 100000);
+        FOUNDING_SITE_REACH = b.comment(
+                "How far round the player the founding screen looks for good spots for a town, in blocks (only ground",
+                "already loaded is read).")
+            .defineInRange("foundingSiteReach", 160, 32, 256);
+        FOUNDING_HINTS = b.comment(
+                "Tell a player with no town of their own, out in the wild, that they can start one (a notice now and",
+                "then, and on first joining).")
+            .define("foundingHints", true);
         VILLAGE_WARS = b.comment(
                 "Let towns go to war with each other: a feud that boils over, a war council, scouts sent to count",
                 "the enemy, the town on a war footing, war bands, raids, sieges and peace talks. Off, a feud",
@@ -405,6 +439,14 @@ public final class AssistantConfig {
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
     public static int villageFoundingMost() { return read(VILLAGE_FOUNDING_MOST, 500); }
     public static int villageCharterFolk() { return read(VILLAGE_CHARTER_FOLK, 70); }
+    public static String foundingWho() { return read(FOUNDING_WHO, "everyone"); }                 // [found23]
+    public static int foundingTownsPerPlayer() { return read(FOUNDING_TOWNS_PER_PLAYER, 3); }
+    public static boolean foundingFreeKit() { return read(FOUNDING_FREE_KIT, true); }
+    public static boolean foundingNeedsItem() { return read(FOUNDING_NEEDS_ITEM, true); }
+    public static boolean foundingTravel() { return read(FOUNDING_TRAVEL, true); }
+    public static int foundingTravelReach() { return read(FOUNDING_TRAVEL_REACH, 256); }
+    public static int foundingSiteReach() { return read(FOUNDING_SITE_REACH, 160); }
+    public static boolean foundingHints() { return read(FOUNDING_HINTS, true); }
     public static boolean villageWars() { return read(VILLAGE_WARS, true); }
     public static boolean townBorders() { return read(TOWN_BORDERS, true); }                 // [borders-map]
     public static int townBorderReach() { return read(TOWN_BORDER_REACH, 100); }             // [borders-map]
