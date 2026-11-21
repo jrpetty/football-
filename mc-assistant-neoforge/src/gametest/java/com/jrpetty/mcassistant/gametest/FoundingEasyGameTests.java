@@ -265,6 +265,54 @@ public class FoundingEasyGameTests {
         });
     }
 
+    // ============================================================ a spawner's board
+
+    /**
+     * A spawner set down puts the board up; right-clicking it opens the same screen, on its spot (mode "board", no kit
+     * asked for, here not counted as in its own way); confirming there with a name founds it, and the welcome card comes.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "fe07_board")
+    public static void fe07_board(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Founding.resetForTests(level.getServer());
+        int x = 5260000;
+        ground(level, x, Z, 120);
+        helper.runAtTickTime(5, () -> {
+            ServerPlayer p = player(helper, Kit.surface(level, x, Z - 4));
+            try {
+                BlockPos at = Kit.surface(level, x, Z);
+                level.setBlock(at, McAssistantMod.FOLK_SPAWNER.get().defaultBlockState(), 3);
+                VillageFolkSpawnerBlock.placed(level, at, level.getBlockState(at), p, 0F);
+                BlockPos board = Founding.boardNear(level, at, 64);
+                helper.assertTrue(board != null && level.getBlockEntity(board) instanceof com.jrpetty.mcassistant.block.VillageBoardBlockEntity,
+                    "the spawner puts the board up");
+                var be = (com.jrpetty.mcassistant.block.VillageBoardBlockEntity) level.getBlockEntity(board);
+                List<CompoundTag> opened = catchSent(FoundEasyPayload.OPEN);
+                be.showTo(p);
+                helper.assertTrue(opened.size() == 1, "right-clicking the board opens the founding screen");
+                CompoundTag t = opened.get(0);
+                CompoundTag here = t.getList("picks", Tag.TAG_COMPOUND).getCompound(0);
+                Kit.log("fe07 board screen: mode " + t.getString("mode") + ", need '" + t.getString("need") + "', here " + here);
+                helper.assertTrue(t.getString("mode").equals("board") && t.getString("need").isEmpty(), "on the board's spot, no kit asked for");
+                helper.assertTrue(here.getString("no").isEmpty(), "its own founding is not in its way");
+                p.moveTo(board.getX() + 0.5, board.getY(), board.getZ() - 3.5);
+                List<CompoundTag> welcome = catchSent(FoundEasyPayload.WELCOME);
+                CompoundTag a = new CompoundTag();
+                a.putLong("board", board.asLong());
+                a.putInt("count", 8);
+                a.putString("name", "Boardwick");
+                FoundingEasy.act(p, "board", a);
+                Kit.log("fe07 confirmed: under way " + (be.founding() == Founding.UNDER_WAY) + ", welcome " + welcome);
+                helper.assertTrue(be.founding() == Founding.UNDER_WAY, "confirmed at the board");
+                helper.assertTrue(welcome.size() == 1 && welcome.get(0).getString("name").equals("Boardwick"), "the welcome card comes");
+            } finally {
+                clean();
+            }
+            helper.succeed();
+        });
+    }
+
     // ============================================================ the server's rules
 
     /**

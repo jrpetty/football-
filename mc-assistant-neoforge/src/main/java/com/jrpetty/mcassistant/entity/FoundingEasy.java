@@ -314,12 +314,19 @@ public final class FoundingEasy {
 
     /** Over to the near side of the town's ground, outside what is levelled, falling softly if the ground moves. */
     private static boolean carry(ServerLevel level, ServerPlayer p, BlockPos heart, int folk) {
-        double dx = p.getX() - heart.getX(), dz = p.getZ() - heart.getZ();
-        double len = Math.max(1, Math.sqrt(dx * dx + dz * dz));
+        double from = Math.atan2(p.getZ() - heart.getZ(), p.getX() - heart.getX());
         int out = FoundingPlan.coreRadius(folk) + 10;
-        int x = heart.getX() + (int) Math.round(dx / len * out), z = heart.getZ() + (int) Math.round(dz / len * out);
-        level.getChunk(x >> 4, z >> 4);
-        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        int x = heart.getX(), z = heart.getZ(), y = heart.getY();
+        // the near side first, then round about, to dry ground (not into the lake beside it)
+        for (int turn : new int[]{ 0, 1, -1, 2, -2, 3, -3, 4 }) {
+            double a = from + turn * Math.PI / 4;
+            int tx = heart.getX() + (int) Math.round(Math.cos(a) * out), tz = heart.getZ() + (int) Math.round(Math.sin(a) * out);
+            level.getChunk(tx >> 4, tz >> 4);
+            int ty = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, tx, tz);
+            if (!level.getFluidState(new BlockPos(tx, ty - 1, tz)).isEmpty() || !level.getFluidState(new BlockPos(tx, ty, tz)).isEmpty()) continue;
+            x = tx; z = tz; y = ty;
+            break;
+        }
         float face = (float) Math.toDegrees(Math.atan2(-(heart.getX() - x), heart.getZ() - z));
         p.teleportTo(level, x + 0.5, y, z + 0.5, face, 10.0F);
         p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 30, 0, false, false, true));
