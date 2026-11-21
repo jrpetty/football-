@@ -14,7 +14,7 @@ import net.minecraft.network.chat.Component;
  */
 public class WelcomeScreen extends Screen {
 
-    private static final int W = 300, H = 210, PAD = 10;
+    private static final int W = 300, H = 244, PAD = 10;
     private final CompoundTag data;
     private int left, top, h = H;
 

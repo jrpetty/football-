@@ -578,7 +578,7 @@ public class FoundingScreen extends Screen {
         UiStyle.well(g, x - 2, y - 2, inner + 4, bottom - (y - 2), UiStyle.PAGE);
         Pick p = pick();
         if (p != null) {
-            y = line(g, "Where", (board ? "at the board: " : p.here() ? "here: " : p.dist() + " blocks " + p.bearing() + ": ") + p.words() + ".", x, y, inner, UiStyle.TEXT, 1);
+            y = line(g, "Where", (board ? "at the board: " : p.here() ? "here: " : p.dist() + " blocks " + p.bearing() + ": ") + p.words() + ".", x, y, inner, UiStyle.TEXT, 2);
         }
         int across = 2 * FoundingPlan.coreRadius(count) + 1;
         y = line(g, "Ground", "about " + across + " by " + across + " blocks made level, the edges sloped into the land.", x, y, inner, UiStyle.TEXT, 1);

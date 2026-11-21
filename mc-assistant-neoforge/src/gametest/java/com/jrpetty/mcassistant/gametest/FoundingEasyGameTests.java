@@ -254,6 +254,13 @@ public class FoundingEasyGameTests {
             helper.assertTrue(named.equals(name), "with the name chosen: " + named);
             helper.assertTrue(who[0].getUUID().equals(com.jrpetty.mcassistant.entity.Advancements.founder(v.id())), "its founder written down");
             helper.assertTrue(SiteFinder.townsOf(level, who[0].getUUID()) == 1, "one town of theirs");
+            // the welcome card's "Find the elder": whoever leads them glows
+            CompoundTag a = new CompoundTag();
+            a.putIntArray("heart", new int[]{ heart.getX(), heart.getY(), heart.getZ() });
+            FoundingEasy.act(who[0], "elder", a);
+            boolean glows = false;
+            for (var f : Villages.folkOf(v.id())) if (f.hasEffect(net.minecraft.world.effect.MobEffects.GLOWING)) glows = true;
+            helper.assertTrue(glows, "Find the elder makes one of them glow");
             helper.succeed();
         });
     }

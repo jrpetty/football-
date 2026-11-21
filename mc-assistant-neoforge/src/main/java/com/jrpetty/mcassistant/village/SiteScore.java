@@ -81,7 +81,7 @@ public final class SiteScore {
         StringBuilder w = new StringBuilder();
         w.append(sd < 1.2 && spread <= 2 ? "flat" : sd < 2.5 ? "gentle" : sd < 4.5 ? "rolling" : "steep").append(' ').append(g.land);
         if (g.waterAt >= 0 && g.waterAt <= 64) w.append(" by ").append(article(g.water)).append(g.water.isEmpty() ? "water" : g.water);
-        if (g.woodAt >= 0 && g.woodAt <= 72) w.append(", ").append(g.wood.isEmpty() ? "" : g.wood + " ").append("wood ").append(Math.max(4, round5(g.woodAt))).append(" blocks");
+        if (g.woodAt >= 0 && g.woodAt <= 72) w.append(", ").append(g.wood.isEmpty() ? "trees " : g.wood + " wood ").append(Math.max(4, round5(g.woodAt))).append(" blocks");
         else w.append(", no wood near");
         if (hollow > 0.2) w.append(", caves under it");
         if (wet > 0.1) w.append(", wet ground");
