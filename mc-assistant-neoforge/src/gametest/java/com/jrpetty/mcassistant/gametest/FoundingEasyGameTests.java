@@ -77,6 +77,8 @@ public class FoundingEasyGameTests {
         int x = 5200000;
         ground(level, x, Z, 16);
         ServerPlayer p = player(helper, Kit.surface(level, x, Z));
+        // a stand-in player is logged in as it is made (and given its kit then): made new again
+        p.getPersistentData().remove(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG);
         boolean first = FoundingEasy.welcomeNewPlayer(p);
         boolean second = FoundingEasy.welcomeNewPlayer(p);
         Kit.log("fe01 first " + first + " second " + second + " kits " + kits(p));

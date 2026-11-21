@@ -490,6 +490,7 @@ public final class FoundingEasy {
 
     static void send(ServerPlayer p, int kind, CompoundTag t) {
         if (TEST_SINK != null) TEST_SINK.accept(kind, t);
+        if (p.connection == null || !p.connection.hasChannel(FoundEasyPayload.TYPE)) return;   // a test's stand-in player, a client without the mod
         PacketDistributor.sendToPlayer(p, new FoundEasyPayload(kind, t));
     }
 

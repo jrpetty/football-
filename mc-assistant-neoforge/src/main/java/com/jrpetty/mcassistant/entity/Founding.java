@@ -497,6 +497,7 @@ public final class Founding extends SavedData {
     private static void closeScreens(ServerLevel level, BlockPos board) {
         for (ServerPlayer p : level.players()) {
             if (p.blockPosition().distSqr(board) > 64.0 * 64.0) continue;
+            if (p.connection == null || !p.connection.hasChannel(com.jrpetty.mcassistant.net.FoundingScreenPayload.TYPE)) continue;   // [found23] a stand-in player
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p,
                 new com.jrpetty.mcassistant.net.FoundingScreenPayload(board, false, 0, 0, 0, 0));
         }
