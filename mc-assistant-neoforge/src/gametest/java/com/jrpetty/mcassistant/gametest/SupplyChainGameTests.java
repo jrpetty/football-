@@ -256,6 +256,7 @@ public class SupplyChainGameTests {
         MineWorksGameTests.zone(r, m, 16);
         int y1 = MineWorks.levelY(level, v, MineWorks.IRON);
         MineWorksGameTests.tower(r, y1 - 3);
+        MineWorksGameTests.bed(r, y1, 30, Blocks.STONE, 0, 3232L);              // room for its drifts: bare rock
         MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - y1) / 3) + 1, m);
         MineWorks.roomForTests(level, v, MineWorks.IRON);
         // A while's work: a few hundred blocks of drift, no ore.
