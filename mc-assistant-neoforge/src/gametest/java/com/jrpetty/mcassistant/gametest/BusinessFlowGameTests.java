@@ -564,6 +564,7 @@ public class BusinessFlowGameTests {
             helper.assertTrue(s.keeper != null, "a keeper");
             // The restart.
             Businesses.reloadForTests(level.registryAccess());
+            com.jrpetty.mcassistant.SessionReset.openingForTests(Businesses::resetForTests);   // the world opening's resets
             PlayerShops.forgetCacheForTests();
             Business back = Businesses.of(village, firmId);
             Kit.log("[VT] bf06 after the restart: firm " + (back == null ? null : back.name + " open " + back.open + " owners " + back.ownersWords()));

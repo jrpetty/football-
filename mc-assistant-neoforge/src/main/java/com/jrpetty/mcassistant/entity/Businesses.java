@@ -1914,9 +1914,13 @@ public final class Businesses {
         PRICE_FOR_TESTS.clear();
         PRICE_MEMO.clear();
         SPARE_ALL_FOR_TESTS = false;
-        store().towns.clear();
+        // [biz25] A world opening or closing runs this too (SessionReset): the books are kept with the world, so they are
+        // left alone there. Clearing them at every server start lost every town's businesses (a player's firm among them).
+        if (!com.jrpetty.mcassistant.SessionReset.opening()) {
+            store().towns.clear();
+            dirty();
+        }
         lastCents = -1;
-        dirty();
         CoinCensus.resetForTests();
     }
 

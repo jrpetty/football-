@@ -57,6 +57,17 @@ public final class SessionReset {
         }
     }
 
+    /** [biz25] Tests: run this as a world opening would run it (what is kept with the world left alone). */
+    public static void openingForTests(Runnable r) {
+        boolean was = opening;
+        opening = true;
+        try {
+            r.run();
+        } finally {
+            opening = was;
+        }
+    }
+
     /** Wipe every piece of in-memory village and crew state. */
     public static void resetAll() {
         Villages.resetForTests();
