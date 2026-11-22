@@ -196,6 +196,15 @@ public final class Businesses {
         return store().towns.computeIfAbsent(village, k -> new Town());
     }
 
+    /** [biz25] Tests: the books written out and read back, as a server stop and start does (throws if they can't be written). */
+    public static void reloadForTests(net.minecraft.core.HolderLookup.Provider p) {
+        Store s = store();
+        CompoundTag t = s.save(new CompoundTag(), p);
+        Store back = Store.load(t, p);
+        s.towns.clear();
+        s.towns.putAll(back.towns);
+    }
+
     static void dirty() {
         store().setDirty();
     }
@@ -1905,9 +1914,13 @@ public final class Businesses {
         PRICE_FOR_TESTS.clear();
         PRICE_MEMO.clear();
         SPARE_ALL_FOR_TESTS = false;
-        store().towns.clear();
+        // [biz25] A world opening or closing runs this too (SessionReset): the books are kept with the world, so they are
+        // left alone there. Clearing them at every server start lost every town's businesses (a player's firm among them).
+        if (!com.jrpetty.mcassistant.SessionReset.opening()) {
+            store().towns.clear();
+            dirty();
+        }
         lastCents = -1;
-        dirty();
         CoinCensus.resetForTests();
     }
 

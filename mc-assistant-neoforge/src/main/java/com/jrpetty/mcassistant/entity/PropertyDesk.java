@@ -30,6 +30,7 @@ public final class PropertyDesk {
     public static String open(ServerPlayer p, String what, String from) {
         Villages.Village v = PlayerLife.here(p);
         if (v == null) return "!The property office keeps a town's register: go to one.";
+        if (what.equals("orders")) { PropertyOffice.openOn(p, "orders", null, "orders"); return "#open:"; }   // [biz25] the builders' orders
         PlayerShops.Shop s = PlayerShops.of(v.id(), p.getUUID());
         String key = s == null ? null : register(p.serverLevel(), s);
         PropertyOffice.openOn(p, "property", key, what);

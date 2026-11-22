@@ -201,7 +201,7 @@ public class LifeScreen extends Screen {
             case "bar" -> {
                 int lw = Math.min(150, iw / 3);
                 UiStyle.text(g, font, b.getString("l"), x, y + 2, lw - 4, UiStyle.TEXT);
-                int rw = Math.min(110, font.width(b.getString("r")) + 4);
+                int rw = Math.min(Math.max(110, (iw - lw) / 2), font.width(b.getString("r")) + 4);   // [biz25] its words whole, the bar shorter
                 UiStyle.bar(g, x + lw, y + 2, iw - lw - rw - 4, 8, b.getFloat("f"), UiStyle.ACCENT_FILL);
                 UiStyle.text(g, font, b.getString("r"), x + iw - rw, y + 2, rw, UiStyle.TEXT_MUTED);
                 return y + 13;
@@ -252,16 +252,25 @@ public class LifeScreen extends Screen {
                 // a row
                 ListTag btns = b.getList("b", Tag.TAG_COMPOUND);
                 boolean bare = b.getString("l").isEmpty() && b.getString("s").isEmpty() && b.getString("r").isEmpty();
-                int rh = bare ? BTN_H + 4 : b.getString("s").isEmpty() ? ROW_H - 4 : ROW_H + 2;
-                if (y + rh < y0 || y > y1) shown = false;
-                if (!shown) return y + rh;
-                int bx = x + iw;
                 int[] bws = new int[btns.size()];
                 int all = 0;
                 for (int i = 0; i < btns.size(); i++) {
-                    bws[i] = Math.min(150, font.width(btns.getCompound(i).getString("l")) + 12);
+                    bws[i] = Math.min(bare ? iw : Math.max(150, iw / 3), font.width(btns.getCompound(i).getString("l")) + 12);   // [biz25] room for the whole label
                     all += bws[i] + 3;
                 }
+                int tx = x + (b.contains("icon") ? 20 : 0);
+                String right = b.getString("r");
+                int rw = right.isEmpty() ? 0 : Math.min(120, font.width(right) + 6);
+                int room = Math.max(20, x + iw - all - rw - tx - 4);
+                // [biz25] a long line under the label wraps (three lines at most) rather than being cut short
+                List<FormattedCharSequence> sub = b.getString("s").isEmpty() ? List.of() : font.split(Component.literal(b.getString("s")), room);
+                int subLines = Math.min(3, sub.size());
+                List<FormattedCharSequence> head = font.split(Component.literal(b.getString("l")), room);   // the label wraps too (two lines)
+                int extra = Math.max(0, Math.min(2, head.size()) - 1) * 10;
+                int rh = bare ? BTN_H + 4 : subLines == 0 ? ROW_H - 4 + extra : ROW_H + 2 + (subLines - 1) * 10 + extra;
+                if (y + rh < y0 || y > y1) shown = false;
+                if (!shown) return y + rh;
+                int bx = x + iw;
                 int by = y + (rh - BTN_H) / 2;
                 if (bare) bx = x + all;                                       // a row of buttons on its own reads from the left
                 for (int i = btns.size() - 1; i >= 0; i--) {
@@ -274,23 +283,17 @@ public class LifeScreen extends Screen {
                     bx -= 3;
                 }
                 if (bare) return y + rh;
-                int tx = x;
                 if (b.contains("icon")) {
                     ItemStack icon = ItemStack.parseOptional(Minecraft.getInstance().level.registryAccess(), b.getCompound("icon"));
                     g.renderItem(icon, x, y + (rh - 16) / 2);
-                    tx += 20;
                 }
-                String right = b.getString("r");
-                int rw = right.isEmpty() ? 0 : Math.min(120, font.width(right) + 6);
-                int room = Math.max(20, x + iw - all - rw - tx - 4);
-                if (b.getString("s").isEmpty()) {
-                    UiStyle.text(g, font, b.getString("l"), tx, y + (rh - 8) / 2, room, UiStyle.TEXT);
-                } else {
-                    UiStyle.text(g, font, b.getString("l"), tx, y + 3, room, UiStyle.TEXT);
-                    UiStyle.text(g, font, b.getString("s"), tx, y + 13, room, UiStyle.TEXT_MUTED);
-                    if (font.width(b.getString("s")) > room && in(mx, my, tx, y + 12, room, 10)) tips.add(b.getString("s"));
+                int ly = subLines == 0 ? y + (rh - 8 - extra) / 2 : y + 3;
+                for (int i = 0; i < Math.min(2, head.size()); i++) g.drawString(font, head.get(i), tx, ly + i * 10, UiStyle.TEXT, false);
+                if (subLines > 0) {
+                    for (int i = 0; i < subLines; i++) g.drawString(font, sub.get(i), tx, y + 13 + extra + i * 10, UiStyle.TEXT_MUTED, false);   // the rest in its tooltip
+                    if (sub.size() > subLines && in(mx, my, tx, y + 12 + extra, room, subLines * 10)) tips.add(b.getString("s"));
                 }
-                if (font.width(b.getString("l")) > room && in(mx, my, tx, y + 2, room, 10)) tips.add(b.getString("l"));
+                if (head.size() > 2 && in(mx, my, tx, ly, room, 20)) tips.add(b.getString("l"));
                 if (rw > 0) UiStyle.text(g, font, right, x + iw - all - rw, y + (rh - 8) / 2, rw, UiStyle.TEXT_MUTED);
                 g.fill(x, y + rh - 1, x + iw, y + rh, 0x22000000);
                 return y + rh;

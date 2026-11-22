@@ -84,6 +84,10 @@ public final class BizGuide {
         return out;
     }
 
+    static String capital(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
     /** The first step not done yet, or null when the shop is up and selling. */
     @Nullable
     public static Step next(List<Step> steps) {
@@ -195,6 +199,81 @@ public final class BizGuide {
         if (b == null || b.id == null) return false;
         for (PlayerShops.Shop s : PlayerShops.all(village)) if (b.id.equals(s.firm)) return true;
         return false;
+    }
+
+    // ------------------------------------------------------------------ a player's firm in trouble
+
+    /** Days a player's new firm is given before its creditors may take it to court, however its till stands. */
+    public static final int FIRM_GRACE = 7;
+
+    /** Is a player among this business's owners? */
+    static boolean playerOwned(Business b) {
+        for (Business.Stake st : b.owners) if (st.holder() == Business.Holder.PLAYER) return true;
+        return false;
+    }
+
+    /**
+     * A player's firm with no cash and its credit gone, or owing more than it is worth: its owners told, in chat once a
+     * day and on Your businesses, what is wrong, what to do (put coin in its till on the Money tab, stock it, a hand) and
+     * how many days are left before its creditors may take it to court. Never a silent close.
+     */
+    static void firmWarning(ServerLevel level, UUID village, Business b, CompoundTag r, long day) {
+        String line = firmWarningLine(b, r, day);
+        r.putString("warning", line);
+        if (line.isEmpty() || r.getLong("warned") == day + 1) return;
+        r.putLong("warned", day + 1);
+        if (level.getServer() == null) return;
+        for (Business.Stake st : b.owners) {
+            if (st.holder() != Business.Holder.PLAYER || st.who() == null) continue;
+            ServerPlayer p = level.getServer().getPlayerList().getPlayer(st.who());
+            if (p != null) p.sendSystemMessage(Component.literal(line).withStyle(ChatFormatting.RED));
+        }
+    }
+
+    /** What is wrong with a player's firm and how long it has, or "" when nothing is. */
+    static String firmWarningLine(Business b, CompoundTag r, long day) {
+        int broke = r.getInt("broke"), under = r.getInt("under");
+        if (broke <= 0 && under <= 0) return "";
+        long age = day - b.opened;
+        int leftBroke = broke > 0 ? Enterprise.BROKE_DAYS - broke : Integer.MAX_VALUE;
+        int leftUnder = under > 0 ? Enterprise.UNDER_DAYS - under : Integer.MAX_VALUE;
+        long left = Math.max(FIRM_GRACE - age, Math.min(leftBroke, leftUnder));
+        String what = broke > 0 ? "has no coin in its till and its credit is spent" : "owes more than it is worth";
+        return b.name + " " + what + ": put coin in its till (Your businesses, Money), stock it or take on a hand, or its creditors may take it to court"
+            + (left <= 0 ? " at the court's next sitting." : " in " + left + (left == 1 ? " day." : " days."));
+    }
+
+    /** The warning a firm's page shows (as the last morning reckoned it), or "". */
+    static String firmWarning(UUID village, Business b) {
+        CompoundTag r = Enterprise.rec(village, b.id);
+        return r == null ? "" : r.getString("warning");
+    }
+
+    // ------------------------------------------------------------------ a shop's goodwill
+
+    /** Days of a shop's recent profit its goodwill is worth: a fortnight (its stock and its owner's work are not sold with it). */
+    static final int GOODWILL_DAYS = 14;
+
+    /**
+     * What a running shop's custom adds to its building's value, chartered or not: a fortnight of what it has made a day
+     * lately over its costs (its keeper's wage, the rates), from its own books; nothing for a shop that loses money or has
+     * not sold. A modest sum: the buyer gets the custom, not the owner's stock or work.
+     */
+    static int shopGoodwill(ServerLevel level, UUID village, CompoundTag t) {
+        if (!"player".equals(t.getString("ownerKind"))) return 0;
+        UUID owner;
+        try { owner = UUID.fromString(t.getString("owner")); } catch (IllegalArgumentException e) { return 0; }
+        PlayerShops.Shop s = PlayerShops.of(village, owner);
+        if (s == null || !inside(t, s.anchor) || s.soldAll <= 0) return 0;
+        long today = PlayerShops.today(level);
+        PlayerShops.roll(s, today);
+        int days = (int) Math.max(1, Math.min(PlayerShops.WEEK, today - s.since + 1));
+        long takings = 0;
+        for (int i = 0; i < days; i++) takings += s.weekCoin[i];
+        int keptDays = s.keeper == null ? 0 : (int) Math.max(0, Math.min(days, today - s.keeperSince));
+        long costs = (long) s.wage * keptDays + (long) TaxBook.ratesCoins(village) * days / PlayerShops.WEEK;
+        long perDay = (takings - costs) / days;
+        return (int) Math.max(0, perDay * GOODWILL_DAYS);
     }
 
     // ------------------------------------------------------------------ the keeper's sums

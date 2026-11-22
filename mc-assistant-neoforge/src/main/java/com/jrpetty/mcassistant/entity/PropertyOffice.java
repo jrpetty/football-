@@ -75,6 +75,11 @@ public final class PropertyOffice {
         Form f = form(p);
         f.tab = tab;
         f.focus = key == null ? "" : key;
+        if (what.equals("orders")) {                                         // [biz25] following a building going up
+            f.msg = "Your orders with the town's builders: how far on, what they wait for, and what is due (pay it here).";
+            send(p);
+            return;
+        }
         if (what.equals("buy")) {                                            // [biz25] buying premises for a shop
             f.msg = "Buildings for sale in town are here: buy one, then set a Shop Counter in it and it is your shop.";
             send(p);

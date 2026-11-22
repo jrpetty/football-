@@ -52,7 +52,14 @@ public final class LifeTown implements PlayerLife.Page {
         // the shop
         page.heading("Your shop");
         PlayerShops.Shop s = PlayerShops.of(id, p.getUUID());
-        if (s == null) {
+        List<BuildDesk.Status> goingUp = BuildDesk.mine(level, id, p.getUUID());   // [biz25] a shop on order is not "no shop"
+        if (s == null && !goingUp.isEmpty()) {
+            BuildDesk.Status g = goingUp.get(0);
+            page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), g.done() ? "Your shop stands" : "Your shop is going up: " + g.percent() + "% built",
+                    g.done() ? "Its counter and a chest are being set in: its screen opens for you to name, register and stock it"
+                        : (g.waitingOn().isEmpty() ? "" : BizGuide.capital(g.waitingOn()) + ". ") + (g.eta().isEmpty() ? "" : "Done in " + g.eta() + "."), "")
+                .button("The property office", "property", LifePage.args("what", "orders"));
+        } else if (s == null) {
             page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), "No shop yet",
                     "A building with a Shop Counter: yours, one the town builds you, or one you buy; you stock it, folk buy", "")
                 .button("Open a shop", "start", LifePage.args("kind", "shop")).primary().button("How it works", "shop", null);   // [biz25] one way in, step by step
@@ -77,7 +84,7 @@ public final class LifeTown implements PlayerLife.Page {
         List<BuildDesk.Status> builds = BuildDesk.mine(level, id, p.getUUID());
         if (!builds.isEmpty()) {
             page.heading("Going up for you");
-            for (BuildDesk.Status b : builds) page.bar(b.title(), b.percent() / 100.0, b.done() ? "finished" : b.percent() + "%" + (b.waitingOn().isEmpty() ? "" : ": waiting for " + b.waitingOn()));
+            for (BuildDesk.Status b : builds) page.bar(b.title(), b.percent() / 100.0, b.done() ? "finished" : b.percent() + "%" + (b.waitingOn().isEmpty() ? "" : ": " + b.waitingOn()));   // [biz25] not "waiting for waiting for"
         }
         // home
         page.heading("Home");
