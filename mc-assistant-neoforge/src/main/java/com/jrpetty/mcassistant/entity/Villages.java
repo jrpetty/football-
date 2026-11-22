@@ -3012,6 +3012,9 @@ public final class Villages {
         Map<String, Site> pending = SITES.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>());
         Site have = pending.get(project);
         if (have != null) return have;
+        // [city26] No lot is chosen while the founding is still making the town's ground: a site claimed then stood on the
+        // ground as it was (its floor measured from it), and the way in to its door kept the levelling off that street.
+        if (Founding.shaping(level, v.centre(), 16)) return null;
 
         Site site = null;
         if (project.equals("fortify")) {

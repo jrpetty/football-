@@ -854,6 +854,9 @@ public final class Founding extends SavedData {
         return water == Integer.MAX_VALUE ? 0 : GroundWork.quay(level, x, z, g.target[i], water, top);
     }
 
+    /** [city26] Tests: log each column the looking-over finds wrong, and who was about it. */
+    public static boolean DEBUG_MEND = Boolean.getBoolean("c26.mend");
+
     /** The most times the square is looked over again for anything the levelling left wrong. */
     private static final int GOOD_PASSES = 3;
 
@@ -895,6 +898,21 @@ public final class Founding extends SavedData {
                 // The edge in whatever each column was, as the levelling dressed it; the square in the town's soil.
                 Block top = !square && s.tops != null && s.tops[i] > 0 ? Terraform.edgeTop(Terraform.top(s.tops[i]), s.surface) : s.surface;
                 if (!Terraform.wantsWork(level, chunk, x, z, y, want, top, square)) continue;
+                if (DEBUG_MEND) {                                                       // [city26] who knocks the ground about
+                    StringBuilder who = new StringBuilder();
+                    for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity) null,
+                            new net.minecraft.world.phys.AABB(x - 6, y - 4, z - 6, x + 7, y + 6, z + 7), e -> !(e instanceof net.minecraft.world.entity.item.ItemEntity))) {
+                        who.append(' ').append(e.getType().toShortString()).append('@').append(e.blockPosition().toShortString());
+                        if (e instanceof net.minecraft.world.entity.Mob mob) {
+                            mob.goalSelector.getAvailableGoals().stream().filter(net.minecraft.world.entity.ai.goal.WrappedGoal::isRunning)
+                                .forEach(gl -> who.append('[').append(gl.getGoal().getClass().getSimpleName()).append(']'));
+                        }
+                        if (e instanceof AssistantEntity a) who.append('{').append(a.stationTask()).append('}');
+                    }
+                    Villages.Village tv = TownBlocks.townAt(level, new BlockPos(x, want, z));
+                    LOG.info("[MCA-MEND] pass {} {}, {}: ground y={} want {} (top {}; zone {}); about: {}", s.goodPass, x, z, y, want,
+                        level.getBlockState(new BlockPos(x, y, z)).getBlock(), tv == null ? "-" : TownBlocks.zone(level, tv, new BlockPos(x, want, z)), who);
+                }
                 if (Terraform.shape(level, chunk, x, z, y, want, square, top, s.felling) > 0) s.goodMended++;
                 if (g.terrace != null) TerraceWalls.build(level, g, i, x, z, s.surface);           // [city26] its wall again
                 if (g.terrace != null) TerraceWalls.step(level, g, i, x, z, s.surface);            // [city26] its step again
