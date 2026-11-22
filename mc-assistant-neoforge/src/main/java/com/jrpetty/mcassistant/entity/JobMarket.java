@@ -721,6 +721,9 @@ public final class JobMarket {
         { "powderhut", "FIREWORKS" },                                                       // [fireworks]
         { "maproom", "CARTOGRAPHER" },                                                          // [cartographer]
         { "restaurant", "COOK" },                                                               // [dining] its kitchen and its floor
+        // [biz30] The tavern's barkeep, the bakery's baker and the inn's keeper are cooks too (Hospitality): a town with a
+        // tavern and no café (Ravenscar) never sent for a cook, and its bar stood all night with nobody behind it.
+        { "tavern", "COOK" }, { "bakery", "COOK" }, { "inn", "COOK" }, { "guesthouse", "COOK" },
     };
 
     /** How many hands short the town is at a trade, as its shape has it (the trade's share, less who works it). */
