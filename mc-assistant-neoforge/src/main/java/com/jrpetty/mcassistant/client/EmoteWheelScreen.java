@@ -4,7 +4,6 @@ import com.jrpetty.mcassistant.entity.FolkAction.Act;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
 
 /**
  * [anim] The emote wheel (V, by default): the player's emotes round a ring, the one under the pointer lit, played on a
@@ -32,11 +31,21 @@ public final class EmoteWheelScreen extends Screen {
 
     private Act[] emotes() { return PlayerEmotesClient.emotes(); }
 
+    /** [ui29] Where the boxes were last laid, and how wide: in two columns (a small GUI) the box under the mouse is the one. */
+    private int[][] laid = new int[0][];
+    private int[] laidW = new int[0];
+
     private int under(double mx, double my) {
+        if (ScreenFit.isColumns(laid, width)) {
+            for (int i = 0; i < laid.length; i++) {
+                if (Math.abs(mx - laid[i][0]) * 2 <= laidW[i] && Math.abs(my - laid[i][1]) * 2 <= BOX_H + 2) return i;
+            }
+            return -1;
+        }
         double dx = mx - width / 2.0, dy = my - height / 2.0;
         if (dx * dx + dy * dy < 22 * 22) return -1;
         int n = emotes().length;
-        double ang = Math.atan2(dx / Math.min(RING_X, width / 2 - 50), -dy / Math.min(RING_Y, height / 2 - 24));           // round the ellipse, as the boxes are
+        double ang = Math.atan2(dx / ScreenFit.ringRadiusX(width, RING_X), -dy / ScreenFit.ringRadiusY(height, RING_Y));           // round the ellipse, as the boxes are
         if (ang < 0) ang += Math.PI * 2;
         return (int) Math.round(ang / (Math.PI * 2 / n)) % n;
     }
@@ -47,33 +56,24 @@ public final class EmoteWheelScreen extends Screen {
         hovered = under(mx, my);
         int cx = width / 2, cy = height / 2;
         Act[] e = emotes();
-        // [ui29] each box as wide as its words, the ring kept on the screen, and a box that would land on one already
-        // drawn pushed out along its spoke until it is clear (the long names at the bottom overlapped at every scale)
-        int rx = Math.min(RING_X, width / 2 - 50), ry = Math.min(RING_Y, height / 2 - 24);
-        java.util.List<int[]> placed = new java.util.ArrayList<>();
+        // [ui29] each box as wide as its words, the ring kept on the screen and off the hotbar, and a box that would land on
+        // one already drawn pushed out along its spoke until it is clear (ScreenFit.ring; the long names overlapped at every scale)
+        String[] words = new String[e.length];
+        int[] bw = new int[e.length];
         for (int i = 0; i < e.length; i++) {
-            double ang = i * Math.PI * 2 / e.length;
-            String words = (i < 9 ? (i + 1) + " " : "") + PlayerEmotesClient.words(e[i]);
-            int bw = Math.max(BOX_W, font.width(words) + 10);
-            float sx = Mth.sin((float) ang), sy = -Mth.cos((float) ang);
-            int x = cx, y = cy;
-            for (int push = 0; push <= 60; push += 2) {
-                x = cx + Math.round(sx * (rx + push));
-                y = cy + Math.round(sy * (ry + push * 0.6F));
-                x = Math.max(bw / 2 + 2, Math.min(width - bw / 2 - 2, x));
-                y = Math.max(BOX_H / 2 + 2, Math.min(height - BOX_H / 2 - 2, y));
-                boolean clear = true;
-                for (int[] o : placed) {
-                    if (Math.abs(o[0] - x) * 2 < o[2] + bw + 4 && Math.abs(o[1] - y) < BOX_H + 3) { clear = false; break; }
-                }
-                if (clear) break;
-            }
-            placed.add(new int[] { x, y, bw });
+            words[i] = (i < 9 ? (i + 1) + " " : "") + PlayerEmotesClient.words(e[i]);
+            bw[i] = Math.max(BOX_W, font.width(words[i]) + 10);
+        }
+        int[][] at = ScreenFit.ring(width, height, bw, BOX_H, RING_X, RING_Y);
+        laid = at;
+        laidW = bw;
+        for (int i = 0; i < e.length; i++) {
+            int x = at[i][0], y = at[i][1];
             boolean lit = i == hovered;
-            int x0 = x - bw / 2, y0 = y - BOX_H / 2;
-            g.fill(x0 - 1, y0 - 1, x0 + bw + 1, y0 + BOX_H + 1, RIM);
-            g.fill(x0, y0, x0 + bw, y0 + BOX_H, lit ? LIT : PANEL);
-            g.drawString(font, words, x - font.width(words) / 2, y - 4, lit ? DARK_INK : INK, false);
+            int x0 = x - bw[i] / 2, y0 = y - BOX_H / 2;
+            g.fill(x0 - 1, y0 - 1, x0 + bw[i] + 1, y0 + BOX_H + 1, RIM);
+            g.fill(x0, y0, x0 + bw[i], y0 + BOX_H, lit ? LIT : PANEL);
+            g.drawString(font, words[i], x - font.width(words[i]) / 2, y - 4, lit ? DARK_INK : INK, false);
         }
         String mid = hovered >= 0 ? PlayerEmotesClient.words(e[hovered]) : "Emotes";
         int w = Math.max(64, font.width(mid) + 16);

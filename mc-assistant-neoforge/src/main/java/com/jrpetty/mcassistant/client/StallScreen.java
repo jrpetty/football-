@@ -323,7 +323,7 @@ public class StallScreen extends Screen {
             small(g, Ui.clip(font, judged.words(), (int) ((inner - C_NOTE) / 0.75)), x + C_NOTE, ry + 3, judged.colour());
         }
         if (list.isEmpty()) {
-            UiStyle.empty(g, font, "Nothing in the stall yet", own ? "Right-click its barrel and fill it with what you'd sell." : "Its keeper has put nothing out.",
+            UiStyle.empty(g, font, "Nothing in the stall yet", own ? "Right-click its barrel to fill it; crouch and right-click for this screen." : "Its keeper has put nothing out.",
                 x - 3, top + TABLE_Y - 2, inner + 4, rows * ROW_H + 2);
         }
         if (pages() > 1) small(g, (page + 1) + "/" + pages(), left + w - PAD - 54, top + TABLE_Y - 18, UiStyle.TEXT_FAINT);

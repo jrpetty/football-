@@ -125,7 +125,7 @@ public class CrewScreen extends Screen {
             })
             .bounds(x + 3 * (w4 + gap), by, w4, h)
             .tooltip(Tooltip.create(Component.literal("Everything you can tell this one to do")))
-            .build(UiButton::new));
+            .build(UiButton::new)).active = !crew.isEmpty();
 
         // Patches you've set up once and can crew up later.
         by += h + gap;
@@ -145,9 +145,10 @@ public class CrewScreen extends Screen {
     }
 
     private void order(int x, int y, int w, int h, String label, int action, String tip) {
-        this.addRenderableWidget(Button.builder(Component.literal(label), b -> {
+        Button b = this.addRenderableWidget(Button.builder(Component.literal(label), btn -> {
             if (picked >= 0 && picked < crew.size()) OrdersScreen.sendOrder(crew.get(picked), action);
         }).bounds(x, y, w, h).tooltip(Tooltip.create(Component.literal(tip))).build(UiButton::new));
+        b.active = !crew.isEmpty();                                       // [ui29] nobody to order: the orders shown off, not dead
     }
 
     @Override
