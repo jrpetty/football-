@@ -63,7 +63,17 @@ public final class LapseBuild {
         for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(v.id()).entrySet()) {
             Villages.Site s = e.getValue();
             double d = s.anchor().distSqr(p.blockPosition());
-            if (d < bd && com.jrpetty.mcassistant.entity.goal.Blueprints.has(e.getKey())) { bd = d; best = new Ledger.Building(e.getKey(), s.anchor(), s.facing()); }
+            if (d >= bd || !com.jrpetty.mcassistant.entity.goal.Blueprints.has(e.getKey())) continue;
+            // (One half up already is no time-lapse: a building from its footing is, below.)
+            int all = 0, up = 0;
+            for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement pl : com.jrpetty.mcassistant.entity.goal.BuildGoal.plan(e.getKey(), s.anchor(), s.facing(), 13)) {
+                if (pl.part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.CLEAR) continue;
+                all++;
+                if (!level.getBlockState(pl.pos()).isAir()) up++;
+            }
+            if (up * 2 > all) continue;
+            bd = d;
+            best = new Ledger.Building(e.getKey(), s.anchor(), s.facing());
         }
         if (best == null) {
             // None under way near: the town's next building (a house, if it wants one) on the lot its plan gives it,

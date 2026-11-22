@@ -86,7 +86,9 @@ public final class Busywork {
 
     /** Tests: the pastimes begun, by kind. */
     public static Map<Kind, Integer> begunForTests() {
-        return new java.util.EnumMap<>(BEGUN);
+        java.util.EnumMap<Kind, Integer> out = new java.util.EnumMap<>(Kind.class);
+        out.putAll(BEGUN);
+        return out;
     }
 
     /** [life28] A hand with nothing at all to do just now: at a pastime, or stood idle a while with its day free (TownJobs). */
