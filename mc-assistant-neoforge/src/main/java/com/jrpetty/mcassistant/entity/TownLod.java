@@ -378,7 +378,7 @@ public final class TownLod {
         int r = areaChunks(v.id());
         ChunkPos c = new ChunkPos(v.centre());
         List<Parked> let = ChunkLoad.releaseWithin(level, c.x - r, c.z - r, c.x + r, c.z + r,
-            (owner, chunk) -> !awakeTownOwns(level, chunk) && !aPlayersCrew(level, owner));
+            (owner, chunk) -> SleepClaims.letGo(level, v, owner, chunk) && !aPlayersCrew(level, owner));   // [growth24] by whose it is, not whose square it lies in
         t.parked.addAll(let);
         save(v.id(), t);
         saveParked(v.id(), t);
@@ -413,17 +413,6 @@ public final class TownLod {
         return level.getEntity(owner) instanceof AssistantEntity a && !(a instanceof VillageFolkEntity);
     }
 
-    /** Is this chunk inside the ground of a town that is awake (so not to be let go for a sleeping neighbour)? */
-    private static boolean awakeTownOwns(ServerLevel level, long chunk) {
-        int x = ChunkPos.getX(chunk), z = ChunkPos.getZ(chunk);
-        for (Villages.Village v : Villages.every()) {
-            if (!v.dim().equals(level.dimension()) || away(v.id())) continue;
-            int r = areaChunks(v.id());
-            if (Math.abs(x - (v.centre().getX() >> 4)) <= r && Math.abs(z - (v.centre().getZ() >> 4)) <= r) return true;
-        }
-        return false;
-    }
-
     /**
      * ChunkLoad's question before it forces chunks: is this request on the ground of a sleeping town (and of no
      * awake one)? If so it is kept for the town's waking instead, and true is returned.
@@ -431,16 +420,8 @@ public final class TownLod {
     public static boolean park(ServerLevel level, UUID owner, int chunkX, int chunkZ) {
         if (asleep == 0 || aPlayersCrew(level, owner)) return false;
         long chunk = ChunkPos.asLong(chunkX, chunkZ);
-        Town sleeper = null;
-        UUID asleepId = null;
-        for (Villages.Village v : Villages.every()) {
-            if (!v.dim().equals(level.dimension())) continue;
-            int r = areaChunks(v.id());
-            if (Math.abs(chunkX - (v.centre().getX() >> 4)) > r || Math.abs(chunkZ - (v.centre().getZ() >> 4)) > r) continue;
-            if (!away(v.id())) return false;
-            sleeper = TOWNS.get(v.id());
-            asleepId = v.id();
-        }
+        UUID asleepId = SleepClaims.parkWith(level, owner, chunk);           // [growth24] the request's own town, asleep
+        Town sleeper = asleepId == null ? null : TOWNS.get(asleepId);
         if (sleeper == null) return false;
         Parked p = new Parked(owner, chunk);
         if (!sleeper.parked.contains(p)) {

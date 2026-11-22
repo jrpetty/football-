@@ -74,6 +74,36 @@ public final class Fuel {
         return Villages.ageOf(village) != Villages.Age.WOOD || !ageWants(level, village, Villages.Task.LOGS);
     }
 
+    // ------------------------------------------------------------------ [growth24] the smelters' coal
+
+    /** Over the floor, this much more coal is kept back for the smelters (two of their draws) from every other use. */
+    public static final int SMELT_SPARE = 16;
+
+    /**
+     * [growth24] Is the stores' coal kept back for the smelters now (from the Stone Age): under the floor and two smelters' draws more? A
+     * smelter draws coal only while the stores are over the floor (VillageFolkEntity.coalLow); the town's other uses (a
+     * street light's torch, a campfire, the fish smoked, the lighthouse lit, a festival's bonfire) drew it from nothing
+     * upward, one at a time, and an Iron Age town of sixty-five held 0 to 4 coal from one week to the next with three
+     * smelters and its iron raw. Those uses now wait (or burn wood) while the stores are this low.
+     */
+    public static boolean keptForSmelting(ServerLevel level, @Nullable UUID village) {
+        if (village == null || Villages.get(village) == null) return false;
+        if (Villages.ageOf(village) == Villages.Age.WOOD) return false;     // the ore is smelted from the Stone Age on
+        return inStores(level, village) < floor(Villages.headcount(village)) + SMELT_SPARE;
+    }
+
+    /** [growth24] Tests: so much coal (or charcoal) taken out of the stores for the town's works (TownWork.take). */
+    public static boolean takeCoalForTests(ServerLevel level, UUID village, int n) {
+        Villages.Village v = Villages.get(village);
+        return v != null && TownWork.take(level, v, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), n);
+    }
+
+    /** Does this draw on the stores take coal or charcoal? */
+    public static boolean drawsCoal(java.util.function.Predicate<net.minecraft.world.item.ItemStack> what) {
+        return what.test(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL))
+            || what.test(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHARCOAL));
+    }
+
     // ------------------------------------------------------------------ [wf] the coal seam
 
     /**

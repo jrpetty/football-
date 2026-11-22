@@ -15016,3 +15016,71 @@ two hundred times once, a look none; gw03 doors three and four up on plinths get
 straight one, all walked by stairs; gw04 hill houses held to the job, no slower a placement than the flat one; gw05 a lead
 back at its begun building waits for no gap; gw06 a careful town with households waiting raises a house a storey; gw07 an
 Iron Age town short of its age's iron builds no golem out of it.
+
+## The Iron Age stall broken, and the sleeping towns let go (growth-24)
+
+### Why eight miners brought up no iron and no coal
+The four-hundred-day run's town (0.324) came into the Iron Age on day 61 and stayed there 245 days, short of iron on 304
+of its 306 mornings, with eight miners and three smelters. Its mine had five levels, planned once off the main shaft, each a
+grid of drifts and branches inside the mine's ground (set aside once, round the first face: 37 faces). The levels were cut
+out one after another: the coal level (Y84) closed at the edges of the ground after 322 blocks of tunnel by day 10, the
+copper level by day 35, the iron level by day 45 (2,686 blocks, 382 ore of every kind), the gold level by day 75 and the
+deep level by day 140. From day 80 on its miners came up most shifts with "Nothing free to cut in the works just now"; its
+iron fell from 15 to nought and stayed there, its coal from forty to between nought and four, and what ore it had (the
+copper and coal of the upper levels) had come in only as a by-product of the levels cut for iron.
+
+### The next level of an ore
+A real mine worked out at one level opens another off the same shaft. Now a level is worked out when every drift on it is
+closed and every branch off them cut: it is marked so for good (the works' note), the town is told ("the miners worked out
+the iron level of the mine (Y15); the second iron level is to be opened off the shaft at Y21"), and the next level of the
+same ore is planned two turns of the stair (six blocks) above or below the last, where the ground is still rich in that
+ore: under the coal level, round the iron level at 21, 9, 27, 3, over the deep level. A level of one ore never comes nearer
+another ore's first level than its own, so the levels of two ores never meet; each level of an ore keeps four blocks of rock
+from the next. Up to five more a level, each opened when the one before is worked out (MineLevels). The miners are shared
+out over the levels not worked out (MineDemand.share) and nobody is sent back over a level that is: each new level is a
+fresh grid of drifts in the same ground, with its own landing cut and furnished at its corner of the shaft. The mine's
+report names them ("the second iron level"), counts each one's ore, and marks a level "worked out".
+
+### The miners kept at the mine
+With the levels no longer running out, a local run's town of fifty-nine came into the Iron Age on day 26 with six to ten
+miners and held 0 to 8 iron for a week: the works booked three shifts in five days. The miners' days went to the town's
+works (levelling and filling the next lots, a fifth of a day), to lending a hand at the logs (nearly half of one miner's
+day) and to the walk; a tenth of their day or less was spent down the works. While the age asks for iron or diamonds, a
+miner is no longer called to the town's works and, with nothing in its own line for a moment, waits for its next shift
+instead of being lent out (MineHands). Not for the Stone Age's coal: kept at the mine for it, a Stone Age town's miners no
+longer lent a hand at the logs, and it stood a week at eleven buildings with no timber for its next house.
+
+### Coal kept back for the smelters
+A smelter draws coal only while the stores hold more than their floor (Fuel). The town's other uses drew it from nought
+upward a lump at a time: a street light's torch, a campfire, the fish smoked, the lighthouse lit, a festival's bonfire.
+Those uses now take none, from the Stone Age on, while the stores are under the floor and two smelters' draws more (sixteen); they wait, or burn
+wood where they can (Fuel.keptForSmelting). The mine's books (`/village mine`) count coal and charcoal in and out by whom,
+with the iron and the diamonds, and a draw by one of the folk's own doings is named by it (VillageFolkEntity.something), not
+by the folk's class alone: the local run's Iron Age town drew 13 to 25 iron a day "by VillageFolkEntity" against 15 to 26
+mined, and its iron stood between 5 and 24 instead of climbing to the 64 its age asks.
+
+### A lot made small enough to pay for the road
+Envoys came home "no deal: the buyer cannot pay what the seller must have" where the lot was cut down to what the buyer could
+pay but not to what it could pay with the haul on top. The lot is now made smaller until what the buyer can pay covers the
+seller's least and the carting too (TradeTalks.lay). A buyer with no coin to spare and nothing the seller wants still gets
+no deal: that is the town's budget, not the bargaining.
+
+### A sleeping town's chunks let go
+A town with nobody near sleeps and is stepped at its rates; the chunks it and its folk keep loaded are let go. But a chunk
+was let go only if it lay outside the ground of every town still awake, and a town's ground is a square of its whole stores'
+reach and more: sixteen chunks each way for a town of sixty-five. In the run the one town held awake had five neighbours
+inside its square; asleep, they kept 250 to 330 folk loaded and working in full (the towns further off kept 2 to 60), and
+the server's cost a tick followed them up from 6 ms to between 20 and 40 of its 50. Now a request for a chunk is judged by
+whose it is (SleepClaims): the sleeping town's own (its heart's ring, or one of its folk) is let go wherever it lies; an awake
+town's folk's is kept; one nobody can be put to (a trip's own) goes with the town whose heart is nearest of those covering
+the chunk. The same rule parks a request made while a town sleeps for its waking.
+
+### Tests
+Growth24GameTests (x 5,400,000 to 5,500,000, z 90,000): gw24_01 an Iron Age town short of iron, its iron level cut to its
+ends: the miner marks it worked out, the second iron level is planned six blocks over it, its landing cut and a drift
+driven, and raw iron comes in from it; the news tells of it. gw24_02 coal under the floor and two smelters' draws is kept
+from the town's works, and taken when there is plenty. gw24_03 an awake town of fourteen held, a town of six asleep a
+hundred and fifty blocks off inside its ground: the sleeper's heart chunk is let go and its folk saved with it (on the old
+rule its own ring and its folk's tickets kept it loaded, all six folk working), the awake town's folk all stay. gw24_04 an
+Iron Age town short of iron sends a farmer to the levelling, never one of its miners; in the Wood Age the mine is
+asked nothing, and a miner goes.

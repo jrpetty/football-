@@ -171,7 +171,7 @@ public final class MineDemand {
     /** May a miner with a pick of this tier work this level at all: a wooden pick the top level only; the deep level an iron one. */
     static boolean mayWork(List<MineWorks.Lvl> plan, MineWorks.Lvl l, int tier) {
         if (tier < 2) return l == plan.get(0);
-        return !(l.id() == MineWorks.DEEP && tier < 3);
+        return !(MineLevels.base(l.id()) == MineWorks.DEEP && tier < 3);   // [growth24] the deep level's further levels too
     }
 
     /** As the age would have it (the depth VillageFolkEntity.seekTheSeam set its plot to): the nearest level it may work. */
@@ -211,7 +211,7 @@ public final class MineDemand {
             double bestScore = 0.15;            // less than this is no want worth a miner: where the age sends it
             Ore bestOre = null;
             for (MineWorks.Lvl l : plan) {
-                if (!mayWork(plan, l, tier)) continue;
+                if (!mayWork(plan, l, tier) || MineLevels.spent(w, l.id())) continue;   // [growth24] never to a level worked out
                 double score = 0, top = 0;
                 Ore most = null;
                 for (Ore o : Ore.values()) {
@@ -287,6 +287,7 @@ public final class MineDemand {
             MineWorks.Lvl best = null;
             double r = 0.05;
             for (MineWorks.Lvl l : plan) {
+                if (MineLevels.spent(w, l.id())) continue;                      // [growth24]
                 double x = rich(o, l.y(), mountain, badlands);
                 if (x > r) { r = x; best = l; }
             }

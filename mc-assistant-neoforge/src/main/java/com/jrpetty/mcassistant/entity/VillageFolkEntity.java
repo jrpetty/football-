@@ -3570,6 +3570,8 @@ public class VillageFolkEntity extends AssistantEntity {
             return true;
         }
 
+        // [growth24] A miner while the age waits on the mine: its next shift, not the logs or the builder's hod (MineHands).
+        if (stationTask() == StationTask.MINE && MineHands.kept(server, village)) return false;
         if (helping != null && helpTheBuilder(server, village)) return true;
         if (tickCount - lastHelpTick < 1200) return false;   // one attempt a minute, at most
         for (Villages.Need need : Villages.needs(server, village)) {

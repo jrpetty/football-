@@ -22,7 +22,7 @@ public final class OreFlow {
 
     private OreFlow() {}
 
-    public enum Metal { IRON, DIAMOND }
+    public enum Metal { IRON, DIAMOND, COAL }   // [growth24] coal and charcoal too: the smelters' fuel
 
     /** One day's tally: per metal, per who, in (positive) and out (negative). */
     private static final class Day {
@@ -38,11 +38,12 @@ public final class OreFlow {
         if (s.is(Items.IRON_INGOT) || s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE)
             || s.is(Items.IRON_BLOCK) || s.is(Items.RAW_IRON_BLOCK)) return Metal.IRON;
         if (s.is(Items.DIAMOND) || s.is(Items.DIAMOND_ORE) || s.is(Items.DEEPSLATE_DIAMOND_ORE) || s.is(Items.DIAMOND_BLOCK)) return Metal.DIAMOND;
+        if (s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.COAL_ORE) || s.is(Items.DEEPSLATE_COAL_ORE) || s.is(Items.COAL_BLOCK)) return Metal.COAL;   // [growth24]
         return null;
     }
 
     static int units(ItemStack s, int n) {
-        return s.is(Items.IRON_BLOCK) || s.is(Items.RAW_IRON_BLOCK) || s.is(Items.DIAMOND_BLOCK) ? 9 * n : n;
+        return s.is(Items.IRON_BLOCK) || s.is(Items.RAW_IRON_BLOCK) || s.is(Items.DIAMOND_BLOCK) || s.is(Items.COAL_BLOCK) ? 9 * n : n;
     }
 
     private static Day today(UUID village, long day) {
@@ -80,10 +81,13 @@ public final class OreFlow {
     /** What took it out: the first of the town's own classes on the way to the stores that is not the stores' own. */
     static String taker() {
         return StackWalker.getInstance().walk(frames -> frames
-            .map(StackWalker.StackFrame::getClassName)
-            .filter(c -> c.startsWith("com.jrpetty.mcassistant") && !c.endsWith(".OreFlow") && !c.endsWith(".TownWork")
-                && !c.endsWith(".Crafts") && !c.endsWith(".Market") && !c.endsWith(".ZoneChests"))
-            .findFirst().map(c -> c.substring(c.lastIndexOf('.') + 1)).map(OreFlow::word).orElse("?"));
+            .filter(f -> { String c = f.getClassName(); return c.startsWith("com.jrpetty.mcassistant") && !c.endsWith(".OreFlow") && !c.endsWith(".TownWork")
+                && !c.endsWith(".Crafts") && !c.endsWith(".Market") && !c.endsWith(".ZoneChests"); })
+            .findFirst().map(f -> {
+                String c = f.getClassName().substring(f.getClassName().lastIndexOf('.') + 1);
+                // [growth24] The folk's own classes do a hundred things: which of them took it.
+                return c.endsWith("FolkEntity") || c.equals("AssistantEntity") ? c + "." + f.getMethodName() : word(c);
+            }).orElse("?"));
     }
 
     /** A taker's class in the town's words (the smelter's raw iron comes back as bars: it is no use of it). */

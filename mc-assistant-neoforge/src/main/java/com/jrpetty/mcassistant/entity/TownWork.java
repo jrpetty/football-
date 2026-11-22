@@ -286,6 +286,7 @@ public final class TownWork {
      *  out of its own workshop chest first (WorkStock), and only the rest out of the stores. */
     static boolean take(ServerLevel level, Villages.Village v, Predicate<ItemStack> what, int n) {
         if (TownLod.away(v.id())) return TownLod.take(v.id(), what, n);      // [scale] out of a sleeping town's kept stores
+        if (Fuel.drawsCoal(what) && Fuel.keptForSmelting(level, v.id())) return false;   // [growth24] the smelters' coal kept back
         List<ItemStack> own = WorkStock.takeOwn(what, n);
         int got = 0;
         for (ItemStack s : own) got += s.getCount();

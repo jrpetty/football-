@@ -153,7 +153,8 @@ public final class MineWorks {
         int rooms;                  // a bit a level: its landing cut and furnished
         int nextId = 1;
         long week = -1;
-        final int[] oreWeek = new int[5], oreAll = new int[5];
+        final int[] oreWeek = new int[MineLevels.BASES * (MineLevels.MOST + 1)], oreAll = new int[MineLevels.BASES * (MineLevels.MOST + 1)];   // [growth24] a count a level, further levels too
+        int spent;                  // [growth24] a bit a level worked out (MineLevels)
         int dug, heap;
         boolean head;
         final List<Drift> drifts = new ArrayList<>();
@@ -219,6 +220,8 @@ public final class MineWorks {
             .append(',').append(w.head ? 1 : 0);
         for (int i = 0; i < 5; i++) sb.append(',').append(w.oreWeek[i]);
         for (int i = 0; i < 5; i++) sb.append(',').append(w.oreAll[i]);
+        sb.append(',').append(w.spent);                                          // [growth24] the levels worked out, and the further levels' ore
+        for (int i = 5; i < w.oreWeek.length; i++) sb.append(',').append(w.oreWeek[i]).append(',').append(w.oreAll[i]);
         sb.append('|');
         for (int i = 0; i < w.drifts.size(); i++) {
             Drift d = w.drifts.get(i);
@@ -256,6 +259,11 @@ public final class MineWorks {
             w.head = "1".equals(h[9]);
             for (int i = 0; i < 5; i++) w.oreWeek[i] = Integer.parseInt(h[10 + i]);
             for (int i = 0; i < 5; i++) w.oreAll[i] = Integer.parseInt(h[15 + i]);
+            if (h.length > 20) w.spent = Integer.parseInt(h[20]);                  // [growth24] (an older note has none)
+            for (int i = 5, k = 21; i < w.oreWeek.length && k + 1 < h.length; i++, k += 2) {
+                w.oreWeek[i] = Integer.parseInt(h[k]);
+                w.oreAll[i] = Integer.parseInt(h[k + 1]);
+            }
             if (parts.length > 1 && !parts[1].isEmpty()) {
                 for (String s : parts[1].split(";")) {
                     String[] f = s.split(":", -1);
@@ -362,6 +370,7 @@ public final class MineWorks {
             int n = Math.max(1, (w.top - Math.max(w.top - 12, level.getMinBuildHeight() + 4)) / 3);
             out.add(new Lvl(COAL, NAMES[COAL], n, w.top - 3 * n));
         }
+        MineLevels.extend(level, w, out, floor);           // [growth24] the next level of an ore whose level is worked out
         return out;
     }
 
@@ -483,9 +492,9 @@ public final class MineWorks {
         public String words() {
             return switch (kind) {
                 case SHAFT -> "sinking the main shaft";
-                case ROOM -> "cutting the landing of " + NAMES[level];
-                case FACE -> "driving a drift on " + NAMES[level];
-                case BRANCH -> "cutting a branch on " + NAMES[level];
+                case ROOM -> "cutting the landing of " + MineLevels.name(level);   // [growth24] further levels named too
+                case FACE -> "driving a drift on " + MineLevels.name(level);
+                case BRANCH -> "cutting a branch on " + MineLevels.name(level);
             };
         }
     }
@@ -538,7 +547,7 @@ public final class MineWorks {
         long now = level.getGameTime();
         newWeek(level, w);
         Lvl want = MineDemand.levelFor(level, w, plan, f);
-        Task t = workOn(level, w, plan, want, f, now);
+        Task t = MineLevels.spent(w, want.id()) ? null : workOn(level, w, plan, want, f, now);   // [growth24] a worked-out level never looked over again
         if (t != null) return t;
         // Nothing free on its own level: the nearest other it may work.
         List<Lvl> others = new ArrayList<>(plan);
@@ -546,7 +555,7 @@ public final class MineWorks {
         others.sort(java.util.Comparator.comparingInt(l -> Math.abs(l.y() - want.y())));
         int tier = f.pickTierCarried();
         for (Lvl l : others) {
-            if (!MineDemand.mayWork(plan, l, tier)) continue;
+            if (!MineDemand.mayWork(plan, l, tier) || MineLevels.spent(w, l.id())) continue;   // [growth24]
             t = workOn(level, w, plan, l, f, now);
             if (t != null) return t;
         }
@@ -700,6 +709,7 @@ public final class MineWorks {
             Task t = faceTask(level, w, l, d, f, now);
             if (t != null) return t;
         }
+        if (MineLevels.workedOut(level, w, l, here)) MineLevels.markSpent(level, w, l);   // [growth24] nothing left on it: the next level of its ore
         return null;
     }
 
@@ -1060,7 +1070,7 @@ public final class MineWorks {
         if (w == null) return;
         newWeek(level, w);
         w.dug += t.broke;
-        if (t.level >= 0 && t.level < 5) {
+        if (t.level >= 0 && t.level < w.oreWeek.length) {                       // [growth24] further levels counted too
             w.oreWeek[t.level] += t.ore;
             w.oreAll[t.level] += t.ore;
         }
@@ -1085,7 +1095,7 @@ public final class MineWorks {
                     w.rooms |= 1 << t.level;
                     Lvl l = lvl(plan, t.level);
                     if (l != null) furnish(level, w, l);
-                    Villages.tell(w.village, level.getDayTime() / 24000L, "the landing of " + NAMES[t.level] + " of the mine was cut, and its drifts begun");
+                    Villages.tell(w.village, level.getDayTime() / 24000L, "the landing of " + MineLevels.name(t.level) + " of the mine was cut, and its drifts begun");
                 }
             }
             case FACE -> {
@@ -1596,7 +1606,8 @@ public final class MineWorks {
             boolean reached = w.sunk > l.corner();
             out.add(cap(l.name()) + " (Y" + l.y() + "): " + (!reached ? "the shaft not down to it yet"
                 : (w.rooms & (1 << l.id())) == 0 ? "the landing being cut" : drifts + " drifts, " + branches + " branches, " + cells + " blocks of tunnel")
-                + "; ore this week " + w.oreWeek[l.id()] + " (" + w.oreAll[l.id()] + " in all)" + (on.isEmpty() ? "" : "; " + String.join("; ", on)) + ".");
+                + "; ore this week " + w.oreWeek[l.id()] + " (" + w.oreAll[l.id()] + " in all)" + (MineLevels.spent(w, l.id()) ? "; worked out" : "")   // [growth24]
+                + (on.isEmpty() ? "" : "; " + String.join("; ", on)) + ".");
             int shown = 0;
             for (Drift d : w.drifts) {
                 if (d.level != l.id() || shown++ >= 6) continue;
