@@ -739,9 +739,26 @@ public final class Founding extends SavedData {
                 + " let out of the square), {} left round buildings; {} columns to the camp, from column {}",
             g.order.length, (System.nanoTime() - t0) / 1_000_000L, g.filledPonds, g.keptWater, g.drained, g.protectedColumns,
             g.campIndex, s.cursor);
+        if (g.terrace != null) LOG.info("[MCA-FOUND] [city26] a hillside: {} columns terraced round the heart at y={}; down the avenues "
+            + "(every four blocks out, north/east/south/west): {}", g.terraced, s.level, avenues(g));
         LOG.info("[MCA-FOUND] [terra10] {} columns built over down holes, {} of holes left for what is in them, {} of shallow or"
             + " enclosed water filled, {} of lava covered", g.buried, g.keptHoles, g.shallows, g.lava);
         s.phase = SHAPE;
+    }
+
+    /** [city26] The planned heights down the four avenues from the heart, every four blocks: for the log. */
+    private static String avenues(FoundingPlan.Ground g) {
+        StringBuilder sb = new StringBuilder();
+        int[][] ways = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+        for (int[] w : ways) {
+            if (sb.length() > 0) sb.append(" / ");
+            for (int d = 0; d <= g.outer; d += 4) {
+                int i = g.index(w[0] * d, w[1] * d);
+                sb.append(d == 0 ? "" : " ").append(g.target[i]).append(g.terrace[i] == com.jrpetty.mcassistant.village.Terraces.NONE ? "e" : "")
+                    .append(g.kind[i] == FoundingPlan.LAND || g.kind[i] == FoundingPlan.FILL ? "" : "k" + g.kind[i]);
+            }
+        }
+        return sb.toString();
     }
 
     /** [terra10] The columns read as somebody's building, how many, and the first few of them by what is there. */
@@ -1076,17 +1093,21 @@ public final class Founding extends SavedData {
             int x = s.heart.getX() + dx, z = s.heart.getZ() + dz;
             int y = Terraform.groundY(level, x, z);
             if (y == Integer.MIN_VALUE) continue;
+            // [city26] A terraced column is measured against its terrace (its wall's coping is its top).
+            int want = g.terrace != null && g.terrace[i] != com.jrpetty.mcassistant.village.Terraces.NONE && g.target != null ? g.target[i] : s.level;
+            if (want != s.level && y < want && TerraceWalls.isWall(level.getBlockState(new BlockPos(x, want, z)))) y = want;
             worked++;
-            if (y == s.level) at++;
+            if (y == want) at++;
             else {
-                if (y > s.level) up++; else down++;
-                if (Math.abs(y - s.level) > most) {
-                    most = Math.abs(y - s.level);
+                if (y > want) up++; else down++;
+                if (Math.abs(y - want) > most) {
+                    most = Math.abs(y - want);
                     first = x + "," + z + " at y=" + y;
                 }
             }
         }
-        return "the square measured: " + worked + " columns, " + at + " at y=" + s.level + ", " + up + " above and "
+        return "the square measured: " + worked + " columns, " + at + (g.terrace != null ? " at their terraces' heights (" + g.terraced
+            + " terraced, the heart at y=" + s.level + ")" : " at y=" + s.level) + ", " + up + " above and "
             + down + " below" + (most > 0 ? " (the farthest off " + first + ")" : "")
             + "; held off by the plan " + (g.heldBank + g.heldBuilt)
             + " (" + g.heldBank + " for the bank of water, " + g.heldBuilt + " beside something built"

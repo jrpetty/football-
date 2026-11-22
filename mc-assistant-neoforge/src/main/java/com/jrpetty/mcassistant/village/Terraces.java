@@ -283,9 +283,14 @@ public final class Terraces {
         for (int k = 0; k < c; k++) {
             int j = nb[k];
             byte kj = g.kind[j];
-            // A drop on the terraces, or between a terrace and the edge's bank beside it (either way up); never one on
-            // the edge alone, which is a walkable bank.
-            if ((!mine && g.terrace[j] == NONE) || (kj != FoundingPlan.LAND && kj != FoundingPlan.FILL)) continue;
+            // A drop on the terraces, or between a terrace and the edge's bank beside it (either way up).
+            if (kj != FoundingPlan.LAND && kj != FoundingPlan.FILL) continue;
+            // On the edge alone, only a drop of three or more the plan made steeper than the land had it (where a street
+            // leaves the terraces up the hill): faced too, not left a raw face of earth.
+            if (!mine && g.terrace[j] == NONE) {
+                int drop = g.target[i] - g.target[j];
+                if (drop < WALL_FROM + 1 || drop <= Math.abs(g.ground[i] - g.ground[j])) continue;
+            }
             low = Math.min(low, g.target[j]);
         }
         if (low == Integer.MAX_VALUE || g.target[i] - low < WALL_FROM) return NONE;
