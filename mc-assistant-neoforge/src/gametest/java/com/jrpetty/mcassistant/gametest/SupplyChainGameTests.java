@@ -1027,4 +1027,65 @@ public class SupplyChainGameTests {
         }
         helper.succeed();
     }
+
+    // ============================================================ sc15 [econ32b] past the Diamond Age
+
+    /**
+     * [econ32b] The age after the Diamond Age: a Diamond Age town with the diamonds, twice the Iron Age's iron, food put by
+     * and its lighthouse and chapel built comes into the Nether Age, which asks for the gateway: ten obsidian, twice the
+     * Diamond Age's diamonds (the pick that cuts the obsidian comes out of them), the gateway itself and food. The works
+     * share their miners out to the age's ore first (AgeOres): in the Diamond Age short of iron, the iron goes first.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "sc15_past_diamond")
+    public static void sc15_past_diamond(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6652000, 40, 6, StationTask.FARM);
+        helper.assertTrue(folk.size() == 6, "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.Village vv = Villages.get(v);
+        Kit.Expect ok = new Kit.Expect();
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        clearStores(level, v);
+        int iron = 2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(6);
+        int diamonds = com.jrpetty.mcassistant.village.VillageMath.diamondsWanted(6);
+        int food = com.jrpetty.mcassistant.village.VillageMath.foodWanted(6);
+        // Short of iron: the age asks for it, and the works count what the age still wants.
+        Market.intoStoresForTests(level, v, new ItemStack(Items.DIAMOND, diamonds));
+        Market.intoStoresForTests(level, v, new ItemStack(Items.IRON_INGOT, 10));
+        for (int left = food + 64; left > 0; left -= 64) Market.intoStoresForTests(level, v, new ItemStack(Items.BREAD, Math.min(64, left)));
+        BlockPos h = vv.centre();
+        com.jrpetty.mcassistant.village.Ledger.built(v, "lighthouse", h.offset(30, 0, 0), net.minecraft.core.Direction.NORTH);
+        com.jrpetty.mcassistant.village.Ledger.built(v, "chapel", h.offset(-30, 0, 0), net.minecraft.core.Direction.NORTH);
+        Villages.noteProject(v, "lighthouse", level.getGameTime());
+        Villages.noteProject(v, "chapel", level.getGameTime());
+        Villages.forgetStock();
+        List<Villages.Need> short1 = Villages.needs(level, v);
+        Kit.log("sc15 Diamond Age short of iron: " + short1);
+        ok.that(Villages.ageOf(v) == Villages.Age.DIAMOND, "still the Diamond Age while short of iron");
+        ok.that(short1.stream().anyMatch(n -> n.task() == Villages.Task.IRON), "the age asks for iron: " + short1);
+        com.jrpetty.mcassistant.entity.MineDemand.reshare(v);
+        java.util.Map<com.jrpetty.mcassistant.entity.MineDemand.Ore, com.jrpetty.mcassistant.entity.MineDemand.Want> w =
+            com.jrpetty.mcassistant.entity.MineDemand.wants(level, v);
+        com.jrpetty.mcassistant.entity.MineDemand.Want wi = w.get(com.jrpetty.mcassistant.entity.MineDemand.Ore.IRON);
+        Kit.log("sc15 the works' iron want: " + wi + "; the age's ores " + com.jrpetty.mcassistant.entity.AgeOres.of(v));
+        ok.that(wi.need() >= iron, "the works want the age's whole iron (" + iron + "): " + wi);
+        ok.that(com.jrpetty.mcassistant.entity.AgeOres.of(v).contains(com.jrpetty.mcassistant.entity.MineDemand.Ore.IRON), "iron is the age's ore");
+        // The iron in: the age is done, and the next one's list.
+        Market.intoStoresForTests(level, v, new ItemStack(Items.IRON_INGOT, 64));
+        Market.intoStoresForTests(level, v, new ItemStack(Items.IRON_INGOT, Math.max(1, iron - 74 + 4)));
+        Villages.forgetStock();
+        List<Villages.Need> done = Villages.needs(level, v);
+        Kit.log("sc15 with the iron in: age " + Villages.ageOf(v) + "; wants " + done);
+        ok.that(Villages.ageOf(v) == Villages.Age.NETHER, "into the Nether Age: " + Villages.ageOf(v));
+        Villages.forgetStock();
+        List<Villages.Need> nether = Villages.needs(level, v);
+        Kit.log("sc15 the Nether Age asks for " + nether);
+        java.util.Map<Villages.Task, Integer> by = new java.util.EnumMap<>(Villages.Task.class);
+        for (Villages.Need n : nether) by.merge(n.task(), n.amount(), Integer::sum);
+        ok.that(by.getOrDefault(Villages.Task.OBSIDIAN, 0) == com.jrpetty.mcassistant.village.VillageMath.obsidianWanted(6), "ten obsidian: " + by);
+        ok.that(by.getOrDefault(Villages.Task.DIAMOND, 0) == diamonds, "twice the diamonds, the first half in hand: " + by);
+        ok.that(nether.stream().anyMatch(n -> n.task() == Villages.Task.BUILD && n.what().contains("gateway")), "the gateway: " + nether);
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
 }
