@@ -904,6 +904,58 @@ public class SupplyChainGameTests {
         MineWorksGameTests.done(helper);
     }
 
+    /**
+     * [econ32b] The watch's armour comes back: an Iron Age town putting its iron by, a guard with no armour; the smith forges
+     * a piece for it (the town's mark on it), the guard is fitted, and when it leaves the watch for the fields the piece goes
+     * back into the stores with the mark still on it, so the next guard is fitted with it and the smith forges no other. (A
+     * long run's town of fifty had fourteen iron helmets on folk who had left its watch, and forged the new guards'.)
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "sc14_watch_kit_back")
+    public static void sc14_watch_kit_back(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6648000, 40, 6, StationTask.FARM);
+        helper.assertTrue(folk.size() == 6, "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.Village vv = Villages.get(v);
+        VillageFolkEntity smith = folk.get(0), guard = folk.get(1), next = folk.get(2);
+        smith.setJob(StationTask.SMITH);
+        smith.tradeXpForTests(StationTask.SMITH, 20000);
+        guard.setJob(StationTask.GUARD);
+        for (net.minecraft.world.entity.EquipmentSlot sl : new net.minecraft.world.entity.EquipmentSlot[]{ net.minecraft.world.entity.EquipmentSlot.HEAD,
+                net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET }) {
+            guard.setItemSlot(sl, ItemStack.EMPTY);
+            next.setItemSlot(sl, ItemStack.EMPTY);
+        }
+        Villages.ageForTests(v, Villages.Age.IRON);
+        clearStores(level, v);
+        Market.intoStoresForTests(level, v, new ItemStack(Items.IRON_INGOT, 40));
+        Market.intoStoresForTests(level, v, new ItemStack(Items.OAK_PLANKS, 64));
+        Market.intoStoresForTests(level, v, new ItemStack(Items.STICK, 32));
+        Villages.forgetStock();
+        List<String> made = new ArrayList<>();
+        for (int i = 0; i < 6; i++) { String m = Crafts.smithForTests(level, vv, smith); if (m != null) made.add(m); Villages.forgetStock(); }
+        int marked = 0;
+        for (BlockPos p : Villages.storeChests(level, v)) if (level.getBlockEntity(p) instanceof Container c)
+            for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).getItem() instanceof net.minecraft.world.item.ArmorItem && com.jrpetty.mcassistant.entity.WatchKit.issued(c.getItem(i))) marked++;
+        List<ItemStack> fitted = com.jrpetty.mcassistant.entity.WatchKit.fit(level, vv, guard);
+        int ironBefore = Market.stock(level, v, st -> st.is(Items.IRON_INGOT));
+        guard.setJob(StationTask.FARM);                                          // off the watch
+        int worn = 0;
+        for (net.minecraft.world.entity.EquipmentSlot sl : net.minecraft.world.entity.EquipmentSlot.values()) if (guard.getItemBySlot(sl).getItem() instanceof net.minecraft.world.item.ArmorItem) worn++;
+        next.setJob(StationTask.GUARD);
+        List<ItemStack> refit = com.jrpetty.mcassistant.entity.WatchKit.fit(level, vv, next);
+        for (int i = 0; i < 6; i++) { Crafts.smithForTests(level, vv, smith); Villages.forgetStock(); }
+        int ironAfter = Market.stock(level, v, st -> st.is(Items.IRON_INGOT));
+        Kit.log("[VT] sc14 forged " + made + " (" + marked + " marked in the stores); fitted " + fitted.size() + "; the old guard wears " + worn
+            + " pieces after leaving the watch; the next guard fitted " + refit.size() + "; iron " + ironBefore + " -> " + ironAfter);
+        helper.assertTrue(marked >= 1, "the watch's armour carries the town's mark: " + marked);
+        helper.assertTrue(!fitted.isEmpty(), "the guard is fitted");
+        helper.assertTrue(worn == 0, "the old guard hands its armour back: " + worn + " pieces kept");
+        helper.assertTrue(refit.size() >= fitted.size() - 1, "the next guard fitted with it: " + refit.size() + " of " + fitted.size());
+        helper.assertTrue(ironAfter >= ironBefore - 5, "no new suit forged for the next guard: iron " + ironBefore + " -> " + ironAfter);
+        helper.succeed();
+    }
+
     /** A hungry town wants more farmers: its farms short of hands the morning its larder is low. */
     @GameTest(template = "empty", timeoutTicks = 200, batch = "sc04_hungry_farms")
     public static void sc04_hungry_farms(GameTestHelper helper) {

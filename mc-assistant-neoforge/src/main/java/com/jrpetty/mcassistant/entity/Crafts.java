@@ -494,10 +494,12 @@ public final class Crafts {
             if (saving && !diamond && it == Items.IRON_SWORD && bars < w.bars() + IRON_KEPT && !WatchKit.ironForTheWatch(level, v, it)) continue;
             int wood = w.planks() + (w.sticks() + 1) / 2;
             if (wood > 0 && !planks(level, v, wood)) continue;
+            boolean forWatch = WatchKit.ironForTheWatch(level, v, it);           // [econ32b] the watch's: the town's mark on it
             if (!take(level, v, s -> s.is(metal), w.bars())) return null;
             sticks(level, v, w.sticks());
             if (w.planks() > 0) take(level, v, s -> s.is(ItemTags.PLANKS), w.planks());
             ItemStack made = Craftsmanship.finish(level, new ItemStack(it), WatchKit.hand(skill, it), f.displayNameCap());   // [guard-kit]
+            if (forWatch) made = WatchKit.mark(made);                            // [econ32b] handed back by whoever leaves the watch with it
             store(level, v, made.copy());
             if (saving && metal == Items.IRON_INGOT)                                  // [econ32] what the age's iron went on, in the log
                 com.mojang.logging.LogUtils.getLogger().info("[MCA-FORGE] {}: {} forged of {} bars while the age saves its iron ({} left); wanted by {}",
