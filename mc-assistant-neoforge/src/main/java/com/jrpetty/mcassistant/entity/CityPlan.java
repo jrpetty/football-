@@ -153,6 +153,15 @@ public final class CityPlan {
         for (int dx = -R; dx <= R; dx++) for (int dz = -R; dz <= R; dz++) if (walkway(dx, dz)) cells++;
         ArrayDeque<int[]> queue = new ArrayDeque<>();
         int start = floorNear(level, heart.getX(), heart.getZ(), heart.getY() - 1, 3, 4);
+        // [econ32b] The heart's height as it was kept, buried under the square laid since: the floor on top of the ground
+        // there. A river town's heart was kept at seventy-nine with its square paved at eighty-seven; the walk began in the
+        // rock under the square, reached nothing, and every lot off the square was "a street not walked" for good: a Diamond
+        // Age town of fifty never found a lot for its lighthouse or its chapel.
+        if ((start == NONE || start == WET) && level.hasChunk(heart.getX() >> 4, heart.getZ() >> 4)) {
+            int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, heart.getX(), heart.getZ()) - 1;
+            int f = floorNear(level, heart.getX(), heart.getZ(), top, 1, 2);
+            if (f != NONE && f != WET) start = f;
+        }
         if (start == NONE || start == WET) start = heart.getY() - 1;
         floor[R * SIDE + R] = start;
         queue.add(new int[]{ 0, 0 });
@@ -237,6 +246,42 @@ public final class CityPlan {
             if (n.has(x, z)) return true;
         }
         return false;
+    }
+
+    /** [econ32b] The walk in words, for the sitewhy log: cells reached of the streets, by distance out (in twenties), and where
+     *  the walk stopped short on the plan's streets (the first unreached street cell next to a reached one, a few of them, with
+     *  what stands there). */
+    static String walkWords(ServerLevel level, Villages.Village v) {
+        Net n = net(level, v);
+        int bands = n.r() / 20 + 1;
+        int[] have = new int[bands], all = new int[bands];
+        StringBuilder stops = new StringBuilder();
+        int shown = 0;
+        for (int dx = -n.r(); dx <= n.r(); dx++) {
+            for (int dz = -n.r(); dz <= n.r(); dz++) {
+                if (!walkway(dx, dz)) continue;
+                int b = Math.max(Math.abs(dx), Math.abs(dz)) / 20;
+                all[b]++;
+                if (n.has(dx, dz)) { have[b]++; continue; }
+                if (shown >= 6) continue;
+                int[][] steps = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+                for (int[] st : steps) {
+                    int h = n.at(dx + st[0], dz + st[1]);
+                    if (h == NONE) continue;
+                    int x = v.centre().getX() + dx, z = v.centre().getZ() + dz;
+                    int f = floorNear(level, x, z, h, UP, DOWN);
+                    stops.append(" [").append(dx).append(',').append(dz).append(" from h").append(h).append(": ")
+                        .append(f == WET ? "water" : f == NONE ? "no floor (" + level.getBlockState(new BlockPos(x, h + 1, z)).getBlock().getDescriptionId()
+                            .replace("block.minecraft.", "") + "/" + level.getBlockState(new BlockPos(x, h + 2, z)).getBlock().getDescriptionId()
+                            .replace("block.minecraft.", "") + ", ground " + level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) + ")" : "h" + f).append(']');
+                    shown++;
+                    break;
+                }
+            }
+        }
+        StringBuilder sb = new StringBuilder("walk " + n.reached() + " of " + n.cells() + " cells; by twenties out:");
+        for (int b = 0; b < bands; b++) sb.append(' ').append(have[b]).append('/').append(all[b]);
+        return sb.append("; stops:").append(stops).toString();
     }
 
     // ------------------------------------------------------------------ the streets laid as the town comes

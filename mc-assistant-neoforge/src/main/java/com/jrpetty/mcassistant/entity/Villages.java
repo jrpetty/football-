@@ -3076,28 +3076,29 @@ public final class Villages {
             }
             int[] court = courtRect(villageId);
             boolean offWalk = false;                                    // [city9] a lot passed over for its street (CityPlan)
+            SiteWhy.begin();                                            // [econ32b] why each lot is passed over
             for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : places) {
                 if (valid >= 6) break;
-                if (!CityGrowth.laidOut(villageId, lot)) continue;     // [city26] only the rings of the plan laid out so far
+                if (!CityGrowth.laidOut(villageId, lot)) { SiteWhy.count("ring not laid out"); continue; }     // [city26] only the rings of the plan laid out so far
                 index++;
                 boolean spoken = false;
                 for (long cell : lot.cells()) if (taken.contains(cell)) { spoken = true; break; }
-                if (spoken) continue;
+                if (spoken) { SiteWhy.count("spoken for"); continue; }
                 // Nothing on the square where the courtyard goes.
                 if (court != null && lot.kind() == com.jrpetty.mcassistant.village.TownPlan.Kind.SQUARE
-                        && overlaps(court, v.centre().getX() + lot.x(), v.centre().getZ() + lot.z(), lot.halfAcross(), lot.halfDeep())) continue;
+                        && overlaps(court, v.centre().getX() + lot.x(), v.centre().getZ() + lot.z(), lot.halfAcross(), lot.halfDeep())) { SiteWhy.count("courtyard"); continue; }
                 // The farmland and the pastures are kept off: the town grows round them.
-                if (lotKeptOff(villageId, v.centre(), lot)) continue;
-                if (CastleWall.keptOff(villageId, lot)) continue;      // [defence] the town wall's ring
+                if (lotKeptOff(villageId, v.centre(), lot)) { SiteWhy.count("fields or mine kept off"); continue; }
+                if (CastleWall.keptOff(villageId, lot)) { SiteWhy.count("the wall's ring"); continue; }      // [defence] the town wall's ring
                 int x = v.centre().getX() + lot.x();
                 int z = v.centre().getZ() + lot.z();
                 // [emerald] Never on a village of villagers' ground, nor within its margin (VanillaVillages).
                 int lh = Math.max(lot.halfAcross(), lot.halfDeep());
-                if (VanillaVillages.meets(level, x - lh, z - lh, x + lh, z + lh, VanillaVillages.MARGIN)) continue;
-                if (bad.contains(BlockPos.asLong(x, 0, z))) continue;
+                if (VanillaVillages.meets(level, x - lh, z - lh, x + lh, z + lh, VanillaVillages.MARGIN)) { SiteWhy.count("villagers' ground"); continue; }
+                if (bad.contains(BlockPos.asLong(x, 0, z))) { SiteWhy.count("bad lot"); continue; }
                 // Too big for the lot (a hall on an ordinary lot): not this one.
-                if (half[0] > lot.halfAcross() || half[1] > lot.halfDeep()) continue;
-                if (Footways.crowds(villageId, project, x, z, direction(lot.back()))) continue;   // [paths] never wall to wall with a neighbour
+                if (half[0] > lot.halfAcross() || half[1] > lot.halfDeep()) { SiteWhy.count("too big for it"); continue; }
+                if (Footways.crowds(villageId, project, x, z, direction(lot.back()))) { SiteWhy.count("crowds a neighbour"); continue; }   // [paths] never wall to wall with a neighbour
                 free++;
                 net.minecraft.core.Direction back = direction(lot.back());
                 boolean turned = back.getAxis() == net.minecraft.core.Direction.Axis.X;
@@ -3105,11 +3106,11 @@ public final class Villages {
                 // A lot whose ground has not arrived yet has not been found wanting. The ring
                 // of chunks round a new village comes in over its first minute, and every lot
                 // looked at before that used to be written off for good.
-                if (!lotLoaded(level, x, z, hx, hz)) { waiting = true; continue; }
+                if (!lotLoaded(level, x, z, hx, hz)) { waiting = true; SiteWhy.count("not loaded"); continue; }
                 // [city9] Only where the street before its door is walked from the heart (CityPlan): never a lot over the
                 // water or up a cliff from the town, until a few looks have found nothing else (an island town).
                 // [fixes14] And never over the water, however hungry: a lot there waits for its street's crossing (CityCrossings).
-                if (!CityPlan.reaches(level, v, lot) && !(CityPlan.hungry(villageId) && CityPlan.reachesDry(level, v, lot))) { offWalk = true; continue; }
+                if (!CityPlan.reaches(level, v, lot) && !(CityPlan.hungry(villageId) && CityPlan.reachesDry(level, v, lot))) { offWalk = true; SiteWhy.count("street not walked"); continue; }
                 // The great buildings (the hall above all: no Iron Age without one) want the most
                 // ground of anything, and on a mountainside found none flat to six blocks across
                 // twenty: a town of fifty-eight sat in the Stone Age for want of one. Missed on
@@ -3119,9 +3120,9 @@ public final class Villages {
                 boolean walked = CityPlan.reaches(level, v, lot);
                 BlockPos ground = groundFor(level, x, z, hx, hz, true, walked ? Integer.MIN_VALUE : heartGround, laps,
                     great ? 4 : 2, whyNot(villageId));
-                if (ground == null) continue;
-                if (Floods.lowGround(villageId, ground)) continue;     // [disasters] not on the low ground the river came over
-                if (PlayerGap.crowds(level, villageId, ground, hx, hz)) continue;   // [join21] never on or against a player's building
+                if (ground == null) { SiteWhy.count("ground (wet, cliff, height, built)"); continue; }
+                if (Floods.lowGround(villageId, ground)) { SiteWhy.count("flood ground"); continue; }     // [disasters] not on the low ground the river came over
+                if (PlayerGap.crowds(level, villageId, ground, hx, hz)) { SiteWhy.count("a player's building"); continue; }   // [join21] never on or against a player's building
                 // [districts] A park's lawn at the middle height of its lot, cut and filled to it (ParkGround).
                 ground = ParkGround.floorFor(level, project, ground);
                 valid++;
@@ -3134,6 +3135,7 @@ public final class Villages {
                     site = new Site(ground, back, 0);
                 }
             }
+            SiteWhy.end(villageId, project, site != null, places.size());     // [econ32b]
             CityPlan.looked(villageId, site != null, offWalk && !waiting);     // [city9]
             CityGrowth.looked(level, v, project, site != null, waiting);       // [city26] full: the next ring laid out
             if (site != null) {
@@ -3147,7 +3149,11 @@ public final class Villages {
             int[] fh = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(project);
             int fr = Math.max(fh[0], fh[1]) + 1;
             BlockPos a = site.anchor();
-            if (MineGround.anyMeets(a.getX() - fr, a.getZ() - fr, a.getX() + fr, a.getZ() + fr)) site = null;
+            if (MineGround.anyMeets(a.getX() - fr, a.getZ() - fr, a.getX() + fr, a.getZ() + fr)) {
+                site = null;
+                SiteWhy.count("the chosen lot on a mine's ground");                   // [econ32b]
+                SiteWhy.end(villageId, project, false, 1);
+            }
         }
         if (site != null) pending.put(project, site);
         return site;
