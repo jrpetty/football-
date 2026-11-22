@@ -99,12 +99,13 @@ public final class TownLife {
                 // Out of the village's stores, all of it (and none of it when they can't pay).
                 chimney(level, b, v, false);
                 addressSign(level, id, v.centre(), b, v, false);
-                BizFronts.board(level, id, v.centre(), b, v, false);   // [biz30] a business's name where the door's sign had no wall
+                BizFronts.round(level, id, v.centre(), b, v);           // [biz30] a business's name where the door's sign had no wall
                 BizFronts.display(level, id, b);                       // [biz30] its trade's wares out on its casks
                 if (b.structure().equals("house")) washingLine(level, b, v, false);
                 if (b.structure().equals("tavern")) Tavern.board(level, v, b, false);
             }
         }
+        BizFronts.tick(level, v);                   // [biz30] a name board waiting on its hand
         HouseSigns.round(level, v);                 // [paths] the signs of homes whose household changed, first
         // A street corner.
         if (all.size() >= 2) {

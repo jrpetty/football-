@@ -243,6 +243,37 @@ public final class BizFronts {
         return Crafts.sign(level, v);
     }
 
+    /** A board whose hand has been sent for it, per town: seen to at every visit till it is up (the round comes back to a
+     *  building only once in many minutes, and the hand sent had long been called off by then). */
+    private static final java.util.Map<UUID, Ledger.Building> PENDING = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void resetForTests() {
+        PENDING.clear();
+        TRIES.clear();
+    }
+
+    /** From the town's life (TownLife.tick, each visit): the board waiting on its hand. */
+    public static void tick(ServerLevel level, Villages.Village v) {
+        Ledger.Building b = PENDING.get(v.id());
+        if (b == null) return;
+        if (!level.isLoaded(b.anchor()) || !Ledger.buildings(v.id()).contains(b)) { PENDING.remove(v.id()); return; }
+        int tries = TRIES.merge(v.id(), 1, Integer::sum);
+        if (board(level, v.id(), v.centre(), b, v, false) || tries > 90) {       // (up; or a quarter of an hour on it: the round's again)
+            PENDING.remove(v.id());
+            TRIES.remove(v.id());
+        }
+    }
+
+    private static final java.util.Map<UUID, Integer> TRIES = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** As {@link #board}, from the round: a board that waits on its hand is kept and seen to at each visit. */
+    public static boolean round(ServerLevel level, UUID village, BlockPos heart, Ledger.Building b, Villages.Village v) {
+        if (PENDING.containsKey(village)) return false;                      // one at a time: the one waiting first
+        boolean up = board(level, village, heart, b, v, false);
+        if (!up && BuildingAudit.BUSINESSES.contains(b.structure())) PENDING.put(village, b);
+        return up;
+    }
+
     private static void write(ServerLevel level, BlockPos at, String[] lines) {
         if (level.getBlockEntity(at) instanceof SignBlockEntity sign) TownLife.write(sign, lines);
     }
