@@ -1098,7 +1098,8 @@ public final class Founding extends SavedData {
             if (y == Integer.MIN_VALUE) continue;
             // [city26] A terraced column is measured against its terrace (its wall's coping is its top).
             int want = g.terrace != null && g.terrace[i] != com.jrpetty.mcassistant.village.Terraces.NONE && g.target != null ? g.target[i] : s.level;
-            if (want != s.level && y < want && TerraceWalls.isWall(level.getBlockState(new BlockPos(x, want, z)))) y = want;
+            if (want != s.level && y < want && (TerraceWalls.isWall(level.getBlockState(new BlockPos(x, want, z)))
+                    || TerraceWalls.isStep(level.getBlockState(new BlockPos(x, want, z))))) y = want;   // a wall's coping, a street's step
             worked++;
             if (y == want) at++;
             else {
