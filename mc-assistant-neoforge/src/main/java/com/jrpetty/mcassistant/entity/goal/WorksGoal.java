@@ -162,20 +162,21 @@ public class WorksGoal extends Goal {
             }
             case CUT -> cut(level);
             case OUT -> {
-                if (follow()) finish(bye);
-                else if (++outTicks > 3000) {
+                long began = CLIMBING.getOrDefault(a.getUUID(), level.getGameTime());
+                if (follow()) {
+                    // At the end of its way up and still below (the way cut off, a step gone): after a while of trying, at the top.
+                    if (MineWorks.below(a) && level.getGameTime() - began > 600) putAtTheTop(level);
+                    if (!MineWorks.below(a)) CLIMBING.remove(a.getUUID());
+                    finish(bye);
+                }
+                else if (++outTicks > 3000 || level.getGameTime() - began > 3000) {
+                    CLIMBING.remove(a.getUUID());
                     // [econ32b] The climb out of a long drift and up the stair ran out of time on the way (stuck at a lip, a
                     // turn of the stair): it is put at the top, as the hops along the way would have got it there. Left
                     // below, its leash walked it for the pithead a hundred blocks through the rock, "lost underground" a
                     // quarter of a minute later, and the climb began again: thirty-seven to a hundred and nineteen climbs a
                     // day in a town of ten miners.
-                    BlockPos top = a.level() instanceof ServerLevel sl && MineWorks.below(a) ? MineWorks.topFor(sl, a) : null;
-                    if (top != null && open(top)) {
-                        a.getNavigation().stop();
-                        a.teleportTo(top.getX() + 0.5, top.getY(), top.getZ() + 0.5);
-                        teleports++;
-                        TELEPORTS++;
-                    }
+                    putAtTheTop(level);
                     finish(bye);
                 }
             }
@@ -225,8 +226,25 @@ public class WorksGoal extends Goal {
         return n;
     }
 
+    /** [econ32b] A climb that got nowhere: put at the top of the works (the way in), if it is below and the top is open. */
+    private void putAtTheTop(ServerLevel level) {
+        BlockPos top = MineWorks.below(a) ? MineWorks.topFor(level, a) : null;
+        if (top != null && open(top)) {
+            a.getNavigation().stop();
+            a.teleportTo(top.getX() + 0.5, top.getY(), top.getZ() + 0.5);
+            teleports++;
+            TELEPORTS++;
+        }
+    }
+
+    /** [econ32b] When each folk's climb out of the works began (a rescue's fresh way up does not start the clock again). */
+    private static final java.util.Map<java.util.UUID, Long> CLIMBING = new java.util.concurrent.ConcurrentHashMap<>();
+
     private void beginOut(String why) {
         bye = why;
+        long now = a.level().getGameTime();
+        Long since = CLIMBING.get(a.getUUID());
+        if (since == null || now - since > 6000 || now < since) CLIMBING.put(a.getUUID(), now);   // [econ32b]
         if (task != null) { report(why.isEmpty() ? "" : "stopped"); }
         List<BlockPos> up = a.level() instanceof ServerLevel sl ? MineWorks.wayUp(sl, a) : null;
         route = up == null ? List.of() : up;
