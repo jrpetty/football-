@@ -806,6 +806,69 @@ public class SupplyChainGameTests {
         MineWorksGameTests.done(helper);
     }
 
+    /**
+     * [econ32b] Every building an age asks for finds a lot in a town of a dozen, on its ground of three kinds: flat ground
+     * raised four blocks over the heart's kept height after the founding (a square paved over it: the walk of the town's
+     * streets used to begin in the earth under it and reach nothing), a hillside, and a shore (the lighthouse by the water).
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc10_age_lots_flat")
+    public static void sc10_age_lots_flat(GameTestHelper helper) {
+        ageLots(helper, 6632000, "flat");
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc11_age_lots_hill")
+    public static void sc11_age_lots_hill(GameTestHelper helper) {
+        ageLots(helper, 6636000, "hill");
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc12_age_lots_shore")
+    public static void sc12_age_lots_shore(GameTestHelper helper) {
+        ageLots(helper, 6640000, "shore");
+    }
+
+    private static void ageLots(GameTestHelper helper, int x, String ground) {
+        ServerLevel level = helper.getLevel();
+        com.jrpetty.mcassistant.entity.SiteWhy.resetForTests();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, x, 150, 12, StationTask.FARM);
+        helper.assertTrue(!folk.isEmpty(), "the town");
+        UUID v = folk.get(0).ownerId();
+        BlockPos heart = folk.get(0).villageCentre();
+        int R = 110;
+        net.minecraft.world.level.block.state.BlockState dirt = Blocks.DIRT.defaultBlockState(), grass = Blocks.GRASS_BLOCK.defaultBlockState();
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        if (ground.equals("flat")) {
+            // Four blocks of ground laid over the town after its founding: the heart's kept height lies under them.
+            for (int dx = -R; dx <= R; dx++) for (int dz = -R; dz <= R; dz++) {
+                for (int y = 0; y < 4; y++) level.setBlock(p.set(heart.getX() + dx, heart.getY() + y, heart.getZ() + dz), y == 3 ? grass : dirt, 2);
+            }
+            for (VillageFolkEntity f : folk) f.teleportTo(f.getX(), heart.getY() + 4, f.getZ());
+        } else if (ground.equals("hill")) {
+            Kit.hill(level, heart.getX() + 70, heart.getZ(), 55, 12, 3241L);
+        } else {
+            // The sea along the east of the town: from forty blocks out, two deep.
+            for (int dx = 40; dx <= R; dx++) for (int dz = -R; dz <= R; dz++) {
+                for (int y = -2; y < 0; y++) level.setBlock(p.set(heart.getX() + dx, heart.getY() + y, heart.getZ() + dz), Blocks.WATER.defaultBlockState(), 2);
+            }
+        }
+        com.jrpetty.mcassistant.entity.CityPlan.forget(v);
+        Villages.forgetStock();
+        List<String> missing = new ArrayList<>();
+        StringBuilder found = new StringBuilder();
+        for (String b : com.jrpetty.mcassistant.entity.AgeSites.ASKED) {
+            Villages.Site site = Villages.siteFor(level, v, b);
+            if (site == null) missing.add(b + " (" + com.jrpetty.mcassistant.entity.SiteWhy.last(v, b) + ")");
+            else found.append(' ').append(b).append('@').append(site.anchor().getX() - heart.getX()).append(',').append(site.anchor().getZ() - heart.getZ());
+        }
+        Kit.log("[VT] " + ground + " ground: lots" + found + "; none for " + missing);
+        helper.assertTrue(missing.isEmpty(), "every building an age asks for has a lot on " + ground + " ground; none for " + missing);
+        if (ground.equals("shore")) {
+            Villages.Site light = Villages.sitesOf(v).get("lighthouse");
+            helper.assertTrue(light != null && light.anchor().getX() - heart.getX() >= 20, "the lighthouse by the water: "
+                + (light == null ? "none" : (light.anchor().getX() - heart.getX()) + " east"));
+        }
+        helper.succeed();
+    }
+
     /** A hungry town wants more farmers: its farms short of hands the morning its larder is low. */
     @GameTest(template = "empty", timeoutTicks = 200, batch = "sc04_hungry_farms")
     public static void sc04_hungry_farms(GameTestHelper helper) {

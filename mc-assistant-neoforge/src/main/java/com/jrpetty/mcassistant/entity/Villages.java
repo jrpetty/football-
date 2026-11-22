@@ -3128,7 +3128,8 @@ public final class Villages {
                 valid++;
                 int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground, back, half[0], half[1]).size()
                     + 6 * index + Quarters.misfit(villageId, project, lot)      // out of its own quarter: the worse
-                    + ParkGround.roughness(level, project, ground);             // [districts] a park: earth to cut, a drop's edge
+                    + ParkGround.roughness(level, project, ground)              // [districts] a park: earth to cut, a drop's edge
+                    - AgeSites.shore(level, project, x, z);                     // [econ32b] the lighthouse by the water where there is any
                 if (score < bestScore) {
                     bestScore = score;
                     best = lot;
