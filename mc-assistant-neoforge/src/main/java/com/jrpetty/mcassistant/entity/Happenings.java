@@ -23,7 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * from), so whatever it finds is really happening and really looks it: builders at a building going up, a football
  * match (a ball on the ground with players round it), dancing and music at a festival, a sale at a counter, children at
  * play, the smith at the anvil. Folk at the same kind of thing near each other are counted together, and the busiest
- * gathering wins; a gathering already shown to the same player lately counts for less, so asking again shows another.
+ * gathering wins, the nearer the better (what is going on round here, and a camera that need not fly far); a gathering
+ * already shown to the same player lately counts for less, so asking again shows another.
  */
 public final class Happenings {
 
@@ -151,6 +152,8 @@ public final class Happenings {
             if ("match".equals(kind[i]) && k < 2) continue;              // a ball lying by one folk is no match
             Vec3 at = new Vec3(sx / k, sy / k, sz / k);
             double score = weightOf(kind[i]) * (1.0 + 0.35 * (k - 1));
+            double far = Math.sqrt((at.x - from.getX()) * (at.x - from.getX()) + (at.z - from.getZ()) * (at.z - from.getZ()));
+            score /= 1.0 + far / 80.0;                                   // nearer first: what is going on round here
             for (double[] s : shown) {
                 if (now - (long) s[2] < FORGET && Math.abs(s[0] - at.x) < 16 && Math.abs(s[1] - at.z) < 16) score *= 0.25;
             }
