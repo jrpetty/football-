@@ -80,6 +80,9 @@ public class Growth24GameTests {
         final int[] spentAt = { -1 };
         MineSiteGameTests.each(helper, () -> {
             tick[0]++;
+            // The morning kept: the noon put-away (PutAway) sent the miner to the heart's chest on the flat far under the
+            // test's tower of rock, a walk it could never make, over and over.
+            if (level.getDayTime() % 24000L > 5000L) level.setDayTime(1000);
             MineWorksGameTests.keepAtIt(r, m);
             // A while on the iron level, then the rest of it as its miners would leave it, cut to its ends (a real level
             // takes weeks: drifts to the edges of the ground, the caves and the water, every branch cut); the miner finds

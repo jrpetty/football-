@@ -15063,3 +15063,11 @@ the server's cost a tick followed them up from 6 ms to between 20 and 40 of its 
 whose it is (SleepClaims): the sleeping town's own (its heart's ring, or one of its folk) is let go wherever it lies; an awake
 town's folk's is kept; one nobody can be put to (a trip's own) goes with the town whose heart is nearest of those covering
 the chunk. The same rule parks a request made while a town sleeps for its waking.
+
+### Tests
+Growth24GameTests (x 5,400,000 to 5,500,000, z 90,000): gw24_01 an Iron Age town short of iron, its iron level cut to its
+ends: the miner marks it worked out, the second iron level is planned six blocks over it, its landing cut and a drift
+driven, and raw iron comes in from it; the news tells of it. gw24_02 coal under the floor and two smelters' draws is kept
+from the town's works, and taken when there is plenty. gw24_03 an awake town of fourteen held, a town of six asleep a
+hundred and fifty blocks off inside its ground: the sleeper's heart chunk is let go and its folk saved with it (on the old
+rule its own ring and its folk's tickets kept it loaded, all six folk working), the awake town's folk all stay.
