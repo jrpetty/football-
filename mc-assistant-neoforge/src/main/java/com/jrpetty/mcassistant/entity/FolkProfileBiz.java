@@ -94,6 +94,7 @@ public final class FolkProfileBiz {
             : week.net() < 0 ? "struggling" : "steady";
         c.putString("trend", trend);
         c.putBoolean("books", viewer != null && Businesses.mayRead(level, village, b, viewer));
+        c.putBoolean("data", viewer != null && BizData.full(b, viewer));     // [biz30] its dashboard: an owner's, an operator's
         return c;
     }
 

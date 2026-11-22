@@ -159,6 +159,8 @@ public final class Business {
     /** One line of a day's sales: units, revenue, cost of goods (pennies). */
     public static final class Line {
         public long units, revenue, cogs, used, made;
+        /** [biz30] Units into its stock (bought in or made) and sales missed for want of it on the shelf. */
+        public long in, missed;
     }
 
     /** A day's books (pennies). */
@@ -170,6 +172,12 @@ public final class Business {
         public final Map<UUID, String> staffNames = new HashMap<>();
         public final Map<UUID, Long> staffPay = new HashMap<>();
         public long cashEnd;
+        /** [biz30] Its trade: sales made (transactions), the customers among them (distinct buyers, players apart),
+         *  those who had bought before, the sales by the clock hour, and the minutes it was open and kept. */
+        public long trans, customers, players, repeats, openMin, keptMin;
+        public final int[] hours = new int[24];
+        /** [biz30] Today's buyers (a hash of each name), to count each once and know a returning one. */
+        public final java.util.Set<Integer> buyers = new java.util.HashSet<>();
 
         /** What is left when every cost is met. */
         public long net() {
@@ -180,9 +188,16 @@ public final class Business {
             return lines.computeIfAbsent(key, k -> new Line());
         }
 
-        void addAll(Day d) {
+        /** [biz30] Tests: a ware's line, opened if need be. */
+        public Line lineForTests(String key) {
+            return line(key);
+        }
+
+        public void addAll(Day d) {
             revenue += d.revenue; cogs += d.cogs; wages += d.wages; rent += d.rent; other += d.other; taxes += d.taxes;
             losses += d.losses; interest += d.interest; drawings += d.drawings; capital += d.capital; bought += d.bought; toTown += d.toTown;
+            trans += d.trans; customers += d.customers; players += d.players; repeats += d.repeats; openMin += d.openMin; keptMin += d.keptMin;
+            for (int i = 0; i < 24; i++) hours[i] += d.hours[i];
             for (Map.Entry<String, Line> e : d.lines.entrySet()) {
                 Line l = line(e.getKey());
                 l.units += e.getValue().units;
@@ -190,6 +205,8 @@ public final class Business {
                 l.cogs += e.getValue().cogs;
                 l.used += e.getValue().used;
                 l.made += e.getValue().made;
+                l.in += e.getValue().in;
+                l.missed += e.getValue().missed;
             }
         }
 
@@ -198,9 +215,18 @@ public final class Business {
             t.putLong("day", day);
             t.putLongArray("m", new long[]{ revenue, cogs, wages, rent, other, taxes, losses, interest, drawings, capital, bought, toTown, cashEnd });
             CompoundTag ls = new CompoundTag();
-            for (Map.Entry<String, Line> e : lines.entrySet()) ls.putLongArray(e.getKey(), new long[]{ e.getValue().units, e.getValue().revenue, e.getValue().cogs,
-                e.getValue().used, e.getValue().made });
+            for (Map.Entry<String, Line> e : lines.entrySet()) {
+                Line l = e.getValue();
+                ls.putLongArray(e.getKey(), l.in == 0 && l.missed == 0 ? new long[]{ l.units, l.revenue, l.cogs, l.used, l.made }
+                    : new long[]{ l.units, l.revenue, l.cogs, l.used, l.made, l.in, l.missed });
+            }
             t.put("l", ls);
+            // [biz30] its trade, only when it had any (a quiet day costs nothing to keep)
+            if (trans != 0 || openMin != 0 || keptMin != 0) t.putLongArray("t", new long[]{ trans, customers, players, repeats, openMin, keptMin });
+            boolean anyHour = false;
+            for (int h : hours) if (h != 0) { anyHour = true; break; }
+            if (anyHour) t.putIntArray("h", hours);
+            if (!buyers.isEmpty()) t.putIntArray("b", buyers.stream().mapToInt(Integer::intValue).toArray());
             ListTag st = new ListTag();
             for (Map.Entry<UUID, Long> e : staffPay.entrySet()) {
                 CompoundTag s = new CompoundTag();
@@ -221,10 +247,15 @@ public final class Business {
             d.interest = m[7]; d.drawings = m[8]; d.capital = m[9]; d.bought = m[10]; d.toTown = m[11]; d.cashEnd = m[12];
             CompoundTag ls = t.getCompound("l");
             for (String k : ls.getAllKeys()) {
-                long[] a = java.util.Arrays.copyOf(ls.getLongArray(k), 5);
+                long[] a = java.util.Arrays.copyOf(ls.getLongArray(k), 7);
                 Line l = d.line(k);
-                l.units = a[0]; l.revenue = a[1]; l.cogs = a[2]; l.used = a[3]; l.made = a[4];
+                l.units = a[0]; l.revenue = a[1]; l.cogs = a[2]; l.used = a[3]; l.made = a[4]; l.in = a[5]; l.missed = a[6];
             }
+            long[] tr = java.util.Arrays.copyOf(t.getLongArray("t"), 6);
+            d.trans = tr[0]; d.customers = tr[1]; d.players = tr[2]; d.repeats = tr[3]; d.openMin = tr[4]; d.keptMin = tr[5];
+            int[] hs = t.getIntArray("h");
+            for (int i = 0; i < Math.min(24, hs.length); i++) d.hours[i] = hs[i];
+            for (int b : t.getIntArray("b")) d.buyers.add(b);
             for (Tag e : t.getList("s", Tag.TAG_COMPOUND)) {
                 CompoundTag s = (CompoundTag) e;
                 if (!s.hasUUID("w")) continue;
@@ -278,6 +309,10 @@ public final class Business {
     public final Map<String, Lot> stock = new LinkedHashMap<>();
     /** The last twenty-eight days, oldest first; and every day since it opened. */
     public final List<Day> days = new ArrayList<>();
+    /** [biz30] Days past the last {@link #DAYS_KEPT}, folded into weekly totals (each keyed by its week's first day), a
+     *  year and more of them; past that only {@link #allTime} holds them. */
+    public final List<Day> weeks = new ArrayList<>();
+    public static final int DAYS_KEPT = 56, WEEKS_KEPT = 60;
     public final Day allTime = new Day();
     public final List<Order> orders = new ArrayList<>();
     /** What happened: its price changes and why, new owners, losses, a hand put on short time ("day|words"). */
@@ -307,14 +342,46 @@ public final class Business {
         return type.keeping == Keeping.MIRROR;
     }
 
-    /** The day's book, opened if need be (a month kept). */
+    /** The day's book, opened if need be ([biz30] eight weeks kept day by day, older days folded into their week). */
     public Day today(long day) {
         if (!days.isEmpty() && days.get(days.size() - 1).day == day) return days.get(days.size() - 1);
+        // [biz30] an earlier day's book is that day's, not a second one after today's (which hid the first from its data)
+        for (int i = days.size() - 1; i >= 0; i--) if (days.get(i).day == day) return days.get(i);
         Day d = new Day();
         d.day = day;
-        days.add(d);
-        while (days.size() > 28) days.remove(0);
+        int at = days.size();
+        while (at > 0 && days.get(at - 1).day > day) at--;
+        days.add(at, d);
+        while (days.size() > DAYS_KEPT) fold(days.remove(0));
         return d;
+    }
+
+    /** [biz30] An old day into its week's total (its buyers' names let go: a week keeps counts only). */
+    void fold(Day old) {
+        long wk = Math.floorDiv(old.day, 7) * 7;
+        Day found = weeks.isEmpty() || weeks.get(weeks.size() - 1).day != wk ? null : weeks.get(weeks.size() - 1);
+        if (found == null) {
+            found = new Day();
+            found.day = wk;
+            weeks.add(found);
+            while (weeks.size() > WEEKS_KEPT) weeks.remove(0);
+        }
+        final Day w = found;
+        w.addAll(old);
+        w.cashEnd = old.cashEnd;
+        w.staffNames.putAll(old.staffNames);
+        old.staffPay.forEach((k, v) -> w.staffPay.merge(k, v, Long::sum));
+    }
+
+    /** [biz30] Its buyer of this sale noted on today's book: a new customer of the day, a player, one who had bought before. */
+    public void buyer(Day d, @Nullable String who, boolean player) {
+        d.trans++;
+        if (who == null || who.isEmpty()) return;
+        int h = who.hashCode();
+        if (!d.buyers.add(h)) return;
+        d.customers++;
+        if (player) d.players++;
+        for (Day e : days) if (e != d && e.buyers.contains(h)) { d.repeats++; break; }
     }
 
     /** The last {@code n} days' books added together (today among them). */
@@ -387,6 +454,11 @@ public final class Business {
         ListTag ds = new ListTag();
         for (Day d : days) ds.add(d.save());
         t.put("days", ds);
+        if (!weeks.isEmpty()) {
+            ListTag ws = new ListTag();
+            for (Day w : weeks) ws.add(w.save());
+            t.put("weeks", ws);
+        }
         t.put("all", allTime.save());
         ListTag os = new ListTag();
         for (Order o : orders) os.add(o.save());
@@ -436,6 +508,7 @@ public final class Business {
             b.stock.put(k, l);
         }
         for (Tag e : t.getList("days", Tag.TAG_COMPOUND)) b.days.add(Day.load((CompoundTag) e));
+        for (Tag e : t.getList("weeks", Tag.TAG_COMPOUND)) b.weeks.add(Day.load((CompoundTag) e));
         Day all = Day.load(t.getCompound("all"));
         b.allTime.addAll(all);
         for (Tag e : t.getList("orders", Tag.TAG_COMPOUND)) b.orders.add(Order.load((CompoundTag) e));

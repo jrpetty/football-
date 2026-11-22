@@ -92,6 +92,7 @@ public final class ShopPage implements PlayerLife.Page {
         }
         page.tab("shop", "Shop", c.tab.equals("shop")).tab("setup", "Setup", c.tab.equals("setup")).tab("stock", "Stock & prices", c.tab.equals("stock"))
             .tab("books", "Books", c.tab.equals("books")).tab("keeper", "Keeper", c.tab.equals("keeper"));
+        if (s.setUp && (c.tab.equals("shop") || c.tab.equals("books"))) page.buttons().button("Its data: sales, costs, charts", "data", null);   // [biz30]
         switch (c.tab) {
             case "setup" -> setup(level, p, s, page);
             case "stock" -> stock(level, s, page);
@@ -339,6 +340,7 @@ public final class ShopPage implements PlayerLife.Page {
         PlayerShops.Shop s = PlayerShops.mine(p);
         if (s == null) return "!You keep no shop.";
         if (action.startsWith("tab:")) { c.tab = action.substring(4); return ""; }
+        if (action.equals("data")) { BizData.send(p, s.village, Businesses.shopBook(level, s), 28); return "#open:"; }   // [biz30] its dashboard
         CompoundTag f = args.getCompound("f");
         switch (action) {
             case "recheck" -> {

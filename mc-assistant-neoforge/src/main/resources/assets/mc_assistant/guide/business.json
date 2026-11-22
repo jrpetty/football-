@@ -214,8 +214,84 @@
       "more": ["A business's books show its owner and hands and their pay; today, this week and all time (takings, costs, wages, rent, taxes, net profit, drawings); a fourteen-day chart; what it sold item by item and how each is made; its stock; what it bought; and why its prices moved.", "The Businesses page lists every firm in town, a click to its books."],
       "controls": ["Town's books → Economy → Businesses", "[Right-click] an owner → Trade → Money → The books", "[U] → The town's businesses"],
       "tips": ["A business's books have a Buy button to make an offer for it.", "Click any row of the Businesses page to open that business's books; Buy, Invest, Draw and Order work from there. Close (top right) or Esc leaves."],
-      "related": ["biz_run", "property_land_shares"],
+      "related": ["biz_run", "property_land_shares", "biz_data"],
       "covers": ["screen:BusinessScreen"]
+    },
+    {
+      "id": "biz_data",
+      "title": "Your business's data: sales, costs and charts",
+      "icon": "minecraft:map",
+      "kind": "howto",
+      "q": [
+        "how do i see what my shop sold",
+        "where are my business stats",
+        "how much profit am i making",
+        "what sold the most today",
+        "business data",
+        "sales chart",
+        "how many did i sell per day",
+        "my business dashboard",
+        "what are my costs",
+        "what are my shop's costs",
+        "which of my businesses makes the most money",
+        "compare my businesses",
+        "which of my businesses makes the most",
+        "how do i read my books",
+        "what does days of cover mean",
+        "sales missed",
+        "busiest hour of my shop"
+      ],
+      "kw": [
+        "data",
+        "stats",
+        "statistics",
+        "dashboard",
+        "chart",
+        "sold",
+        "sales",
+        "per day",
+        "costs",
+        "margin",
+        "customers"
+      ],
+      "answer": "Every business you own keeps its data: what it sold a day at a time, what that cost, its stock, its staff and its customers, in charts with a word of advice.",
+      "more": [
+        "Overview: today, this week and all time: sales, costs, profit and margin, each with an arrow against last week; customers and sales a day; your best seller; your till; and a chart of takings a day with the profit line over it.",
+        "Sales: units and takings a day over 7, 28 or 56 days (the buttons at the top); hover a bar for that day's numbers. Under it every ware: how many a day, how many in all, the takings, the average price and its share. Click a column to sort by it.",
+        "Costs: each day's costs stacked: the stock you sold (what it cost you), wages, rent and tax, and the rest, with the day's profit as a line. Beside it, each as a part of your takings.",
+        "Stock: what is on your shelves, how many a day sell, the days of cover (how long the stock lasts at that rate: red under two), sales missed because a ware ran out, and how many to order for a week.",
+        "Staff: the hours it was open, the hours a keeper was behind the counter, each hand's days and wages, and your takings for each hour kept.",
+        "Customers: how many came, folk and players, how many came back, and the busiest hours of the day.",
+        "All businesses: with two or more, side by side: this week's takings, profit, margin, which way they are going and the till. Click one to open its data.",
+        "At the foot is advice from the numbers: a ware that keeps selling out, wages that eat the takings, stock that does not sell."
+      ],
+      "steps": [
+        "Press U, then Your businesses.",
+        "Press Data beside a business (or beside your shop).",
+        "Pick a tab, or a range at the top: 7, 28 or 56 days.",
+        "Hover a bar or a row for its numbers; click a column to sort."
+      ],
+      "controls": [
+        "[U] → Your businesses → Data",
+        "Your shop's page → Its data",
+        "A folk's profile → Business → Data › (a business you have a stake in)",
+        "Keys 1 to 7 switch tabs"
+      ],
+      "tips": [
+        "Margin is profit over takings. A margin under nought means the business lost money.",
+        "Days of cover tells you when to order: under two days is red.",
+        "The data is read off the same books the till is kept in, so its numbers and the till agree.",
+        "Others see only a business's week's takings and profit; the rest is the owner's."
+      ],
+      "related": [
+        "biz_books",
+        "biz_run",
+        "biz_open_shop",
+        "biz_folk_firms"
+      ],
+      "covers": [
+        "screen:BusinessDataScreen"
+      ]
     },
     {
       "id": "biz_folk_firms",

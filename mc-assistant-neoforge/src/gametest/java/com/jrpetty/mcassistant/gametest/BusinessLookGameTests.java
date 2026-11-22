@@ -1170,6 +1170,297 @@ public class BusinessLookGameTests {
         return com.jrpetty.mcassistant.entity.PlayerLife.messageForTests(p);
     }
 
+    // ------------------------------------------------------------------ [biz30] the business data (item 8)
+
+    /** A player's firm (a greengrocer selling carrots) chartered, hired, stocked and priced to sell, in a busy town. */
+    static com.jrpetty.mcassistant.entity.Business dataFirm(GameTestHelper helper, ServerLevel level, net.minecraft.server.level.ServerPlayer p, UUID id, Kit.Expect ok) {
+        com.jrpetty.mcassistant.entity.PlayerLife.open(p, "start", argsOf("kind", "greengrocer"));
+        com.jrpetty.mcassistant.entity.PlayerLife.act(p, "start", "hello", new net.minecraft.nbt.CompoundTag());
+        String said = com.jrpetty.mcassistant.entity.StartBusiness.startForTests(p, "greengrocer", "town");
+        com.jrpetty.mcassistant.entity.Business b = com.jrpetty.mcassistant.entity.Businesses.of(id, com.jrpetty.mcassistant.entity.PlayerLife.ctx(p).str("firm"));
+        ok.that(b != null && b.ownedBy(p.getUUID()), "a greengrocer chartered: " + said);
+        if (b == null) return null;
+        com.jrpetty.mcassistant.entity.PlayerLife.open(p, "firm", argsOf("firm", b.id));
+        com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "pick", argsOf("firm", b.id));
+        com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "hire", new net.minecraft.nbt.CompoundTag());
+        com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "invest", argsOf("f", argsOf("coins", "40")));
+        for (int k = 0; k < 6; k++) com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "markup", argsOf("d", -5));
+        return b;
+    }
+
+    /** Stock bought in for a firm (out of its till), and the town's own counter emptied of it but the firm's. */
+    static void dataStock(ServerLevel level, net.minecraft.server.level.ServerPlayer p, UUID id, com.jrpetty.mcassistant.entity.Business b, String ware, int qty) {
+        ItemStack sample = com.jrpetty.mcassistant.entity.Stockroom.sampleForTests(ware);
+        com.jrpetty.mcassistant.entity.Market.intoStoresForTests(level, id, sample.copyWithCount(Math.min(64, qty + 8)));
+        com.jrpetty.mcassistant.entity.Businesses.spareAllForTests(true);
+        try {
+            com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "order", argsOf("k", ware, "f", argsOf("qty", String.valueOf(qty))));
+        } finally {
+            com.jrpetty.mcassistant.entity.Businesses.spareAllForTests(false);
+        }
+        java.util.function.Predicate<ItemStack> is = com.jrpetty.mcassistant.entity.Stockroom.matcherForTests(ware);
+        long spare = com.jrpetty.mcassistant.entity.Market.stock(level, id, is) - (b.stock.containsKey(ware) ? b.stock.get(ware).qty : 0);
+        for (BlockPos sp : Villages.storeChests(level, id)) {
+            if (!(level.getBlockEntity(sp) instanceof net.minecraft.world.Container c)) continue;
+            for (int j = 0; j < c.getContainerSize() && spare > 0; j++) {
+                ItemStack it = c.getItem(j);
+                if (!is.test(it)) continue;
+                int kk = (int) Math.min(spare, it.getCount());
+                it.shrink(kk);
+                spare -= kk;
+            }
+            c.setChanged();
+        }
+        Villages.forgetStores(id);
+    }
+
+    static long cash(com.jrpetty.mcassistant.entity.Business b) {
+        return b.till + b.account - b.loan;
+    }
+
+    /** What the books say moved the firm's cash: in (takings, its owners' capital), out (stock, wages, rent, running costs, taxes, interest, drawings). */
+    static long booked(com.jrpetty.mcassistant.entity.Business.Day d) {
+        return d.revenue + d.capital - d.bought - d.wages - d.rent - d.other - d.taxes - d.interest - d.drawings;
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "bl33_the_ledger_reconciles")
+    public static void bl33_the_ledger_reconciles(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 6582000;
+        List<VillageFolkEntity> folk = busyTown(helper, level, x, 24);
+        UUID id = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(id);
+        int y = Kit.surface(level, x, Z).getY();
+        @SuppressWarnings("removal")
+        net.minecraft.server.level.ServerPlayer p = helper.makeMockServerPlayerInLevel();
+        p.moveTo(folk.get(0).getX() + 1, y, folk.get(0).getZ());
+        p.getInventory().clearContent();
+        for (int k = 0; k < 3; k++) p.getInventory().setItem(k, new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), 64));
+        helper.runAtTickTime(10, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            com.jrpetty.mcassistant.entity.Business b = dataFirm(helper, level, p, id, ok);
+            if (b == null) { helper.fail(ok.summary()); return; }
+            String ware = "minecraft:carrot";
+            java.util.function.Predicate<ItemStack> is = com.jrpetty.mcassistant.entity.Stockroom.matcherForTests(ware);
+            com.jrpetty.mcassistant.entity.Purchases.openForTests(id, true);
+            long firstDay = com.jrpetty.mcassistant.entity.Businesses.todayForTests(level);
+            long unitsAll = 0, salesAll = 0;
+            java.util.Set<String> seenBefore = new java.util.HashSet<>();
+            for (int day = 0; day < 4; day++) {
+                long today = com.jrpetty.mcassistant.entity.Businesses.todayForTests(level);
+                long cash0 = cash(b);
+                com.jrpetty.mcassistant.entity.Business.Day d0 = copy(b.today(today));
+                dataStock(level, p, id, b, ware, 10);
+                // the day's buyers: three, two of them yesterday's too
+                long units = 0, sales = 0, repeats = 0;
+                java.util.Set<String> buyers = new java.util.LinkedHashSet<>();
+                for (int k = 6 + day; k < folk.size() && sales < 3; k++) {
+                    VillageFolkEntity buyer = folk.get(k);
+                    if (com.jrpetty.mcassistant.entity.Enterprise.hands(id, b).contains(buyer)) continue;
+                    long before = b.today(today).revenue;
+                    int got = com.jrpetty.mcassistant.entity.Purchases.get(level, buyer, is, 1, com.jrpetty.mcassistant.entity.Purchases.Need.FOOD);
+                    if (got > 0 && b.today(today).revenue > before) {
+                        units += got;
+                        sales++;
+                        if (buyers.add(buyer.displayNameCap()) && seenBefore.contains(buyer.displayNameCap())) repeats++;
+                    }
+                }
+                seenBefore.addAll(buyers);
+                com.jrpetty.mcassistant.entity.Business.Day d1 = b.today(today);
+                long lineUnits = d1.lineForTests(ware).units - d0.lineForTests(ware).units;
+                ok.that(lineUnits == units, "day " + day + ": the books' carrots sold (" + lineUnits + ") are the carrots the folk bought (" + units + ")");
+                ok.that(d1.trans - d0.trans == sales, "day " + day + ": its sales counted (" + (d1.trans - d0.trans) + " of " + sales + ")");
+                ok.that(d1.customers - d0.customers == buyers.size(), "day " + day + ": its customers (" + (d1.customers - d0.customers) + " of " + buyers.size() + ")");
+                ok.that(d1.repeats - d0.repeats == repeats, "day " + day + ": those who came back (" + (d1.repeats - d0.repeats) + " of " + repeats + ")");
+                ok.that(d1.lineForTests(ware).in - d0.lineForTests(ware).in >= 10, "day " + day + ": its stock in (" + (d1.lineForTests(ware).in - d0.lineForTests(ware).in) + ")");
+                long moved = cash(b) - cash0, says = booked(d1) - booked(d0);
+                ok.that(moved == says, "day " + day + ": its till moved " + moved + " and its books say " + says
+                    + " (takings " + (d1.revenue - d0.revenue) + ", stock " + (d1.bought - d0.bought) + ", taxes " + (d1.taxes - d0.taxes) + ", capital " + (d1.capital - d0.capital) + ")");
+                ok.that(d1.net() == d1.revenue - d1.cogs - d1.wages - d1.rent - d1.other - d1.taxes - d1.losses - d1.interest, "day " + day + ": profit is takings less costs");
+                unitsAll += units;
+                salesAll += sales;
+                // the morning: wages, rent, running costs, out of its till, onto tomorrow's book
+                long cashM = cash(b);
+                level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 7000L);
+                long tomorrow = com.jrpetty.mcassistant.entity.Businesses.todayForTests(level);
+                com.jrpetty.mcassistant.entity.Business.Day dm0 = copy(b.today(tomorrow));
+                com.jrpetty.mcassistant.entity.Business.Day dy0 = copy(b.today(today));
+                com.jrpetty.mcassistant.entity.Businesses.morningForTests(level, v);
+                com.jrpetty.mcassistant.entity.Market.payWages(level, v);
+                long movedM = cash(b) - cashM, saysM = booked(b.today(tomorrow)) - booked(dm0) + booked(b.today(today)) - booked(dy0);
+                ok.that(movedM == saysM, "morning " + (day + 1) + ": its till moved " + movedM + " and its books say " + saysM
+                    + " (wages " + (b.today(tomorrow).wages - dm0.wages + b.today(today).wages - dy0.wages) + ", rent " + (b.today(tomorrow).rent - dm0.rent + b.today(today).rent - dy0.rent) + ")");
+            }
+            com.jrpetty.mcassistant.entity.Purchases.openForTests(id, null);
+            long lastDay = com.jrpetty.mcassistant.entity.Businesses.todayForTests(level);
+            // the data the screen gets: its days and its wares, off the same books
+            net.minecraft.nbt.CompoundTag t = com.jrpetty.mcassistant.entity.BizData.build(level, id, b, p, 7);
+            ok.that(t.getBoolean("full"), "its owner sees it all");
+            long dataUnits = 0, dataSales = 0, dataRev = 0, booksRev = 0;
+            for (net.minecraft.nbt.Tag e : t.getList("days", net.minecraft.nbt.Tag.TAG_LONG_ARRAY)) {
+                long[] r = ((net.minecraft.nbt.LongArrayTag) e).getAsLongArray();
+                dataUnits += r[7];
+                dataSales += r[8];
+                dataRev += r[1];
+                ok.that(r[6] == r[1] - r[2] - r[3] - r[4] - r[5], "day " + r[0] + ": the chart's profit is its takings less its costs");
+            }
+            for (long dd = lastDay - 6; dd <= lastDay; dd++) booksRev += b.last(dd, 1).revenue;
+            ok.that(dataUnits == unitsAll, "the chart's units (" + dataUnits + ") are the units sold (" + unitsAll + ")");
+            ok.that(dataSales == salesAll, "the chart's sales (" + dataSales + ") are the sales made (" + salesAll + ")");
+            ok.that(dataRev == booksRev, "the chart's takings are the books' (" + dataRev + " / " + booksRev + ")");
+            boolean carrots = false;
+            for (net.minecraft.nbt.Tag e : t.getList("items", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+                net.minecraft.nbt.CompoundTag c = (net.minecraft.nbt.CompoundTag) e;
+                if (c.getString("k").equals(ware)) carrots = c.getLongArray("v")[0] == unitsAll;
+            }
+            ok.that(carrots, "its wares table has the carrots, " + unitsAll + " sold");
+            ok.that(!t.getString("advice").isEmpty(), "a word of advice: " + t.getString("advice"));
+            Kit.log("[VT] bl33 " + (lastDay - firstDay) + " days, " + unitsAll + " carrots in " + salesAll + " sales; till " + b.till + "; advice: " + t.getString("advice"));
+            if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
+        });
+    }
+
+    static com.jrpetty.mcassistant.entity.Business.Day copy(com.jrpetty.mcassistant.entity.Business.Day d) {
+        com.jrpetty.mcassistant.entity.Business.Day c = new com.jrpetty.mcassistant.entity.Business.Day();
+        c.day = d.day;
+        c.addAll(d);
+        return c;
+    }
+
+    /** A busy day's trade written on a book: six wares sold and bought in, two hands paid, a few dozen buyers. */
+    static void tradeFor(com.jrpetty.mcassistant.entity.Business b, long day, java.util.Random r, UUID[] hands) {
+        com.jrpetty.mcassistant.entity.Business.Day d = b.today(day);
+        String[] wares = { "minecraft:bread", "minecraft:cake", "minecraft:cookie", "minecraft:pumpkin_pie", "minecraft:wheat", "minecraft:sugar" };
+        for (String k : wares) {
+            com.jrpetty.mcassistant.entity.Business.Line l = d.lineForTests(k), a = b.allTime.lineForTests(k);
+            long n = r.nextInt(30), rev = n * (150 + r.nextInt(100));
+            l.units += n; l.revenue += rev; l.cogs += n * 90; l.in += r.nextInt(40); l.missed += r.nextInt(3);
+            a.units += n; a.revenue += rev; a.cogs += n * 90;
+            d.revenue += rev; d.cogs += n * 90;
+            b.allTime.revenue += rev; b.allTime.cogs += n * 90;
+        }
+        for (UUID h : hands) {
+            d.staffPay.merge(h, 400L, Long::sum);
+            d.staffNames.put(h, "Wren");
+            d.wages += 400;
+            b.allTime.wages += 400;
+        }
+        int buyers = 20 + r.nextInt(20);
+        for (int i = 0; i < buyers; i++) {
+            b.buyer(d, "Folk" + r.nextInt(60), r.nextInt(10) == 0);
+            d.hours[6 + r.nextInt(12)]++;
+        }
+        d.openMin += 720;
+        d.keptMin += 600;
+    }
+
+    static int nbtBytes(net.minecraft.nbt.CompoundTag t, boolean compressed) {
+        try {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            if (compressed) net.minecraft.nbt.NbtIo.writeCompressed(t, out);
+            else net.minecraft.nbt.NbtIo.write(t, new java.io.DataOutputStream(out));
+            return out.size();
+        } catch (java.io.IOException e) {
+            return -1;
+        }
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "bl34_the_ledger_keeps_small")
+    public static void bl34_the_ledger_keeps_small(GameTestHelper helper) {
+        Kit.Expect ok = new Kit.Expect();
+        // eight weeks day by day, older days folded into weeks, nothing lost from the totals
+        com.jrpetty.mcassistant.entity.Business b = new com.jrpetty.mcassistant.entity.Business("f1", com.jrpetty.mcassistant.entity.Business.Type.ENTERPRISE, "Wren's Bakery");
+        java.util.Random r = new java.util.Random(7);
+        UUID[] hands = { UUID.randomUUID() };
+        for (long day = 0; day < 200; day++) tradeFor(b, day, r, hands);
+        ok.that(b.days.size() == com.jrpetty.mcassistant.entity.Business.DAYS_KEPT, "eight weeks day by day (" + b.days.size() + ")");
+        ok.that(!b.weeks.isEmpty() && b.weeks.size() <= com.jrpetty.mcassistant.entity.Business.WEEKS_KEPT, "the older days in weeks (" + b.weeks.size() + ")");
+        com.jrpetty.mcassistant.entity.Business.Day sum = new com.jrpetty.mcassistant.entity.Business.Day();
+        for (com.jrpetty.mcassistant.entity.Business.Day d : b.days) sum.addAll(d);
+        for (com.jrpetty.mcassistant.entity.Business.Day w : b.weeks) sum.addAll(w);
+        ok.that(sum.revenue == b.allTime.revenue, "takings: the days and the weeks add up to all time (" + sum.revenue + " / " + b.allTime.revenue + ")");
+        ok.that(sum.wages == b.allTime.wages && sum.cogs == b.allTime.cogs, "wages and cost of goods add up");
+        boolean noNames = true;
+        for (com.jrpetty.mcassistant.entity.Business.Day w : b.weeks) noNames &= w.buyers.isEmpty();
+        ok.that(noNames, "a week keeps counts, no buyers' names");
+        com.jrpetty.mcassistant.entity.Business back = com.jrpetty.mcassistant.entity.Business.loadForTests(b.saveForTests());
+        com.jrpetty.mcassistant.entity.Business.Day last = b.days.get(b.days.size() - 1), lb = back.days.get(back.days.size() - 1);
+        ok.that(back.weeks.size() == b.weeks.size() && last.trans == lb.trans && last.customers == lb.customers && last.repeats == lb.repeats
+            && last.keptMin == lb.keptMin && last.hours[10] == lb.hours[10] && last.lineForTests("minecraft:bread").missed == lb.lineForTests("minecraft:bread").missed
+            && last.lineForTests("minecraft:bread").in == lb.lineForTests("minecraft:bread").in, "saved and loaded back the same");
+        // a hundred and twenty busy businesses over four hundred days
+        net.minecraft.nbt.ListTag town = new net.minecraft.nbt.ListTag();
+        int one = 0;
+        java.util.Random r2 = new java.util.Random(11);
+        for (int i = 0; i < 120; i++) {
+            com.jrpetty.mcassistant.entity.Business f = new com.jrpetty.mcassistant.entity.Business("f" + i, com.jrpetty.mcassistant.entity.Business.Type.ENTERPRISE, "Firm " + i);
+            UUID[] hs = { UUID.randomUUID(), UUID.randomUUID() };
+            for (long day = 0; day < 400; day++) tradeFor(f, day, r2, hs);
+            net.minecraft.nbt.CompoundTag t = f.saveForTests();
+            if (i == 0) one = nbtBytes(t, false);
+            town.add(t);
+        }
+        net.minecraft.nbt.CompoundTag all = new net.minecraft.nbt.CompoundTag();
+        all.put("biz", town);
+        int raw = nbtBytes(all, false), packed = nbtBytes(all, true);
+        Kit.log("[VT] bl34 LEDGER SIZE: one busy business over 400 days " + one + " bytes; 120 of them " + raw + " bytes raw, " + packed + " compressed");
+        ok.that(one > 0 && one < 120_000, "one business over 400 days under 120 kB (" + one + ")");
+        ok.that(packed > 0 && packed < 8_000_000, "the town's 120 under 8 MB compressed (" + packed + ")");
+        if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "bl35_the_data_packet")
+    public static void bl35_the_data_packet(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 6586000;
+        List<VillageFolkEntity> folk = busyTown(helper, level, x, 12);
+        UUID id = folk.get(0).ownerId();
+        int y = Kit.surface(level, x, Z).getY();
+        @SuppressWarnings("removal")
+        net.minecraft.server.level.ServerPlayer p = helper.makeMockServerPlayerInLevel();
+        p.moveTo(folk.get(0).getX() + 1, y, folk.get(0).getZ());
+        p.getInventory().clearContent();
+        for (int k = 0; k < 3; k++) p.getInventory().setItem(k, new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), 64));
+        helper.runAtTickTime(10, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            com.jrpetty.mcassistant.entity.Business b = dataFirm(helper, level, p, id, ok);
+            if (b == null) { helper.fail(ok.summary()); return; }
+            long today = com.jrpetty.mcassistant.entity.Businesses.todayForTests(level);
+            java.util.Random r = new java.util.Random(3);
+            for (long d = today - 55; d <= today; d++) tradeFor(b, d, r, new UUID[]{ UUID.randomUUID() });
+            for (int range : new int[]{ 7, 28, 56 }) {
+                net.minecraft.nbt.CompoundTag t = com.jrpetty.mcassistant.entity.BizData.build(level, id, b, p, range);
+                io.netty.buffer.ByteBuf raw = io.netty.buffer.Unpooled.buffer();
+                net.minecraft.network.RegistryFriendlyByteBuf buf = new net.minecraft.network.RegistryFriendlyByteBuf(raw, level.registryAccess());
+                com.jrpetty.mcassistant.net.BizDataPayload.STREAM_CODEC.encode(buf, new com.jrpetty.mcassistant.net.BizDataPayload(t));
+                int size = buf.readableBytes();
+                com.jrpetty.mcassistant.net.BizDataPayload back = com.jrpetty.mcassistant.net.BizDataPayload.STREAM_CODEC.decode(buf);
+                ok.that(back.data().equals(t), range + " days: the packet comes back the same");
+                ok.that(back.data().getList("days", net.minecraft.nbt.Tag.TAG_LONG_ARRAY).size() == range, range + " days: a row a day ("
+                    + back.data().getList("days", net.minecraft.nbt.Tag.TAG_LONG_ARRAY).size() + ")");
+                ok.that(size < 64_000, range + " days: under 64 kB (" + size + " bytes)");
+                Kit.log("[VT] bl35 " + range + " days: " + size + " bytes, " + back.data().getList("items", 10).size() + " wares");
+            }
+            // the ask, both ways
+            io.netty.buffer.ByteBuf raw = io.netty.buffer.Unpooled.buffer();
+            net.minecraft.network.RegistryFriendlyByteBuf buf = new net.minecraft.network.RegistryFriendlyByteBuf(raw, level.registryAccess());
+            com.jrpetty.mcassistant.net.BizDataAskPayload.STREAM_CODEC.encode(buf, new com.jrpetty.mcassistant.net.BizDataAskPayload(b.id, 28));
+            com.jrpetty.mcassistant.net.BizDataAskPayload ask = com.jrpetty.mcassistant.net.BizDataAskPayload.STREAM_CODEC.decode(buf);
+            ok.that(ask.id().equals(b.id) && ask.range() == 28, "the ask comes back the same");
+            // a stranger: the public summary only
+            @SuppressWarnings("removal")
+            net.minecraft.server.level.ServerPlayer other = helper.makeMockServerPlayerInLevel();
+            net.minecraft.nbt.CompoundTag pub = com.jrpetty.mcassistant.entity.BizData.build(level, id, b, other, 28);
+            ok.that(!pub.getBoolean("full") && !pub.contains("days") && !pub.contains("items") && pub.contains("p_week"),
+                "a stranger gets the week's summary, not its days or wares");
+            // two businesses: the roll-up
+            com.jrpetty.mcassistant.entity.Business b2 = dataFirm(helper, level, p, id, ok);
+            net.minecraft.nbt.CompoundTag t2 = com.jrpetty.mcassistant.entity.BizData.build(level, id, b, p, 28);
+            ok.that(t2.getList("firms", 10).size() >= 2, "an owner of two gets them side by side (" + t2.getList("firms", 10).size() + ")");
+            if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
+        });
+    }
+
     static net.minecraft.nbt.CompoundTag argsOf(Object... kv) {
         net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
         for (int i = 0; i + 1 < kv.length; i += 2) {

@@ -107,6 +107,7 @@ public final class TownLife {
             }
         }
         BizFronts.tick(level, v);                   // [biz30] a name board waiting on its hand
+        BizData.tick(level, v);                     // [biz30] open hours and kept hours onto the businesses' books
         HouseSigns.round(level, v);                 // [paths] the signs of homes whose household changed, first
         // A street corner.
         if (all.size() >= 2) {

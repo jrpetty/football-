@@ -140,7 +140,10 @@ public final class Sellers {
             if (t == null || !t.wares().contains(key)) continue;
             Business.Lot lot = b.stock.get(key);
             if (lot == null || lot.qty < n) {
-                if (!looking && (lot != null || b.allTime.lines.containsKey(key))) Enterprise.stockOut(id, b);   // [econ-1d] (looking)
+                if (!looking && (lot != null || b.allTime.lines.containsKey(key))) {
+                    Enterprise.stockOut(id, b);                                  // [econ-1d] (looking)
+                    Businesses.missed(level, b, key, n - (lot == null ? 0 : lot.qty));   // [biz30] a sale missed, for its data
+                }
                 continue;
             }
             if (b.ownedBy(buyer == null ? null : buyer.getUUID()) && buyer != null) continue;   // not of itself

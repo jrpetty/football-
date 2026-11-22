@@ -661,7 +661,8 @@ public final class PlayerShops {
         wares(level, s, left, false);
         if (left.getOrDefault(key, 0) <= 0) s.soldOut.put(key, day);
         save(s);
-        Businesses.stallSold(level, s.village, s.owner, s.name, got, got.getCount(), price, toll);
+        // [biz30] onto the shop's own book (each shop its own, not the owner's stall's), its buyer noted
+        Businesses.shopSold(level, s, got, got.getCount(), price, toll, who, level.getServer() != null && level.getServer().getPlayerList().getPlayerByName(who) != null);
         if (s.tell) {
             tellOwner(level, s.owner, who + " bought " + got.getCount() + " " + PlayerStalls.nameOf(got).toLowerCase(Locale.ROOT) + " for "
                 + PlayerLife.coins(price) + " at " + s.name + ". Till: " + s.till + ".");
@@ -757,6 +758,7 @@ public final class PlayerShops {
             Ledger.addCoins(s.village, paid);
             TownBudget.in(s.village, "rates", paid * 100L);
             PlayerFinance.internal(s.owner, s.village, -paid * 100L, PlayerFinance.Cat.TAXES, "rates for " + s.name + ", out of its till");   // [join21]
+            Businesses.shopCost(level, s, "rates", paid);                    // [biz30] onto the shop's own book
         }
         save(s);
         if (s.tell) tellOwner(level, s.owner, s.name + " paid " + PlayerLife.coins(paid) + " in rates" + (s.ratesOwed > 0 ? "; " + s.ratesOwed + " still owed" : "") + ".");

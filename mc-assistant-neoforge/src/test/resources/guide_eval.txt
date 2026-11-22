@@ -423,3 +423,13 @@ what are the buttons => keys_all
 what is a raid => defence_raids
 are there parties => festivals_feasts
 whats the town meeting in the morning => civic_meetings
+
+# [biz30] the business data
+how do i see what my shop sold => biz_data
+where are my business stats => biz_data
+how much profit am i making => biz_data
+what sold the most today => biz_data
+how many bread did i sell per day => biz_data
+show me a chart of my sales => biz_data
+what are my shop's costs => biz_data
+which of my businesses makes most money => biz_data

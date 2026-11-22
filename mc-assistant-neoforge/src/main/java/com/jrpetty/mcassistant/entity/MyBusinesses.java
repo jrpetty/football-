@@ -58,7 +58,8 @@ public final class MyBusinesses implements PlayerLife.Page {
             for (PlayerShops.Shop sh : PlayerShops.ofAll(v.id(), p.getUUID())) {   // [biz30] its shops, though
                 page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), sh.name + " (your shop)",
                         "till " + PlayerLife.coins(sh.till) + " · " + PlayerShops.stateWords(p.serverLevel(), sh), "")
-                    .button("Open it", "shopof", LifePage.args("key", sh.key()));
+                    .button("Open it", "shopof", LifePage.args("key", sh.key()))
+                    .button("Data", "shopdata", LifePage.args("key", sh.key()));       // [biz30]
             }
             // [ui29] what one is and how it starts, not just a button
             page.text("A shop of your own is the easiest: a room with a Shop Counter, stock in a chest, and folk come to buy. "
@@ -77,12 +78,14 @@ public final class MyBusinesses implements PlayerLife.Page {
                 BusinessTypes.BusinessType xt = Enterprise.kindOf(v.id(), x);
                 page.row(xt == null ? null : StartBusiness.icon(xt), (x == b ? "✔ " : "") + x.name,
                         "till " + Businesses.pence(x.till) + " · this week " + Businesses.pence(x.last(day, 7).net()) + " · " + Enterprise.hands(v.id(), x).size() + " hands", "")
-                    .button("Run it", "pick", LifePage.args("firm", x.id), x != b, "Shown below").button("Books", "bookof", LifePage.args("firm", x.id));
+                    .button("Run it", "pick", LifePage.args("firm", x.id), x != b, "Shown below").button("Books", "bookof", LifePage.args("firm", x.id))
+                    .button("Data", "dataof", LifePage.args("firm", x.id));            // [biz30] its sales and costs dashboard
             }
             for (PlayerShops.Shop sh : shops) {
                 page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), sh.name + " (your shop)",
                         "till " + PlayerLife.coins(sh.till) + " · " + PlayerShops.stateWords(level, sh) + (sh.keeper != null ? " · keeper " + sh.keeperName : " · no keeper"), "")
-                    .button("Open it", "shopof", LifePage.args("key", sh.key()));
+                    .button("Open it", "shopof", LifePage.args("key", sh.key()))
+                    .button("Data", "shopdata", LifePage.args("key", sh.key()));       // [biz30]
             }
         }
         page.buttons().button("Start another business", "start", null);
@@ -195,6 +198,18 @@ public final class MyBusinesses implements PlayerLife.Page {
             Business x = Businesses.of(v.id(), args.getString("firm"));
             if (x == null || !x.ownedBy(p.getUUID())) return "!No such business of yours.";
             BusinessBooks.show(p, v.id(), x);
+            return "#open:";
+        }
+        if (action.equals("dataof")) {                                      // [biz30] a firm's sales and costs dashboard
+            Business x = Businesses.of(v.id(), args.getString("firm"));
+            if (x == null || !x.ownedBy(p.getUUID())) return "!No such business of yours.";
+            BizData.send(p, v.id(), x, 28);
+            return "#open:";
+        }
+        if (action.equals("shopdata")) {                                    // [biz30] a shop's
+            PlayerShops.Shop sh = PlayerShops.byKey(v.id(), args.getString("key"));
+            if (sh == null || !sh.owner.equals(p.getUUID())) return "!No such shop of yours.";
+            BizData.send(p, v.id(), Businesses.shopBook(level, sh), 28);
             return "#open:";
         }
         if (action.equals("shopof")) {                                      // [biz30] one of its shops' screen

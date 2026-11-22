@@ -1019,7 +1019,7 @@ public class FolkProfileScreen extends Screen {
      *  how long it has run and how it is doing; a click for its books where the town lets you see them. */
     private static final class Firm extends Block {
         final String id, name, role, line1, line2, trend;
-        final boolean books;
+        final boolean books, data;
         final List<FormattedCharSequence> l1, l2;
 
         Firm(Font font, CompoundTag c, int w) {
@@ -1028,6 +1028,7 @@ public class FolkProfileScreen extends Screen {
             role = c.getString("role");
             trend = c.getString("trend");
             books = c.getBoolean("books") && !id.isEmpty();
+            data = c.getBoolean("data") && !id.isEmpty();                    // [biz30] its dashboard: the viewer owns a stake in it
             line1 = c.getString("trade") + (c.getString("where").isEmpty() ? "" : " · " + c.getString("where")) + " · " + role;
             line2 = "This week: takings " + coins(c.getLong("takings")) + (c.contains("profit") ? ", profit " + coins(c.getLong("profit")) : "")
                 + " · till " + coins(c.getLong("till")) + " · " + c.getInt("staff") + (c.getInt("staff") == 1 ? " hand" : " hands")
@@ -1046,21 +1047,37 @@ public class FolkProfileScreen extends Screen {
             UiStyle.card(g, x, y, w, h, over ? UiStyle.ACCENT_FILL : 0);
             String tr = trend.isEmpty() ? "" : trend;
             int trw = tr.isEmpty() ? 0 : font.width(tr) + 10;
-            UiStyle.text(g, font, name, x + 5, y + 4, w - 10 - trw - (books ? 40 : 0), UiStyle.TEXT);
-            if (!tr.isEmpty()) UiStyle.badge(g, font, tr, x + w - 5 - trw - (books ? 40 : 0), y + 3,
+            int links = (books ? 40 : 0) + (data ? font.width("Data ›") + 8 : 0);
+            UiStyle.text(g, font, name, x + 5, y + 4, w - 10 - trw - links, UiStyle.TEXT);
+            if (!tr.isEmpty()) UiStyle.badge(g, font, tr, x + w - 5 - trw - links, y + 3,
                 tr.equals("growing") ? UiStyle.SUCCESS_FILL : tr.equals("struggling") ? UiStyle.DANGER_FILL : UiStyle.ACCENT_FILL);
             if (books) g.drawString(font, "Books ›", x + w - 5 - font.width("Books ›"), y + 4, UiStyle.ACCENT, false);
+            if (data) {
+                int dx = dataX(font, x, w);
+                boolean onData = mx >= dx && mx < dx + font.width("Data ›") && my >= y && my < y + 14;
+                g.drawString(font, "Data ›", dx, y + 4, onData ? UiStyle.INFO_FILL : UiStyle.INFO, false);
+            }
             int ly = y + 4 + UiStyle.LINE;
             for (FormattedCharSequence l : l1) { g.drawString(font, l, x + 5, ly, UiStyle.TEXT_MUTED, false); ly += UiStyle.LINE; }
             for (FormattedCharSequence l : l2) { g.drawString(font, l, x + 5, ly, UiStyle.TEXT_FAINT, false); ly += UiStyle.LINE; }
         }
 
+        int dataX(Font font, int x, int w) {
+            return x + w - 5 - (books ? font.width("Books ›") + 8 : 0) - font.width("Data ›");
+        }
+
         @Nullable
         String tip(Font font, int x, int y, int w, int mx, int my) {
+            if (data && mx >= dataX(font, x, w) && mx < dataX(font, x, w) + font.width("Data ›") && my < y + 14) return name + "\nIts data: what it sold, a day at a time, and what it cost.";
             return books ? name + "\nClick to open its books." : name + "\nIts books are its owners' and the town's to see.";
         }
 
         boolean click(Font font, int x, int y, int w, double mx, double my, FolkProfileScreen screen) {
+            if (data && mx >= dataX(font, x, w) && mx < dataX(font, x, w) + font.width("Data ›") && my < y + 14) {   // [biz30]
+                UiStyle.click();
+                BusinessDataScreen.ask(id, 28);
+                return true;
+            }
             if (!books) return false;
             UiStyle.click();
             com.jrpetty.mcassistant.net.LifeNetwork.command("village business books " + BusinessScreen.quoted(id));

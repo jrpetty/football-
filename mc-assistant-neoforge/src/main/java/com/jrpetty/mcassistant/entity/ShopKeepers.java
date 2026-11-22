@@ -125,6 +125,7 @@ public final class ShopKeepers {
             s.till -= paid;
             f.earn(paid);
             PlayerFinance.internal(s.owner, s.village, -paid * 100L, PlayerFinance.Cat.HANDS, s.keeperName + " keeping " + s.name + ", out of its till");   // [join21]
+            Businesses.shopCost(level, s, "wage", paid);                     // [biz30] onto the shop's own book
             s.owed = due - paid;
         } else if (f != null) {
             s.owed = due;

@@ -94,6 +94,10 @@ public final class FirmBranches {
             month += b.last(day, 28).net();
         }
         if (month <= 0) return "its businesses have not paid their way this month";
+        // [biz30] its books' trade (BizData's): fewer buyers this week than last by a third, it waits to see why
+        long now = 0, then = 0;
+        for (Business b : mine) { now += b.last(day, 7).customers; then += b.last(day - 7, 7).customers; }
+        if (then >= 6 && now * 3 < then * 2) return "its trade fell off this week (" + now + " customers against " + then + ")";
         return null;
     }
 
