@@ -156,6 +156,27 @@ public final class MineLevels {
             countOn(w, l.id()), next != null ? "; next " + next.name() + " at Y" + next.y() : "; no further level of its ore");
     }
 
+    /** Tests: the depths (Y) the further levels of this first level would be opened at, in order. */
+    public static List<Integer> placesForTests(ServerLevel level, java.util.UUID village, int first) {
+        List<Integer> out = new ArrayList<>();
+        MineWorks.Works w = MineWorks.works(level, village);
+        if (w == null) return out;
+        int spent = w.spent;
+        w.spent = 0;
+        List<MineWorks.Lvl> firsts = MineWorks.plan(level, w);
+        w.spent = spent;
+        MineWorks.Lvl f = MineWorks.lvl(firsts, first);
+        if (f == null) return out;
+        for (int s : places(w, firsts, f, level.getMinBuildHeight() + 14, MineWorks.mountain(level, w), MineWorks.badlands(level, w))) out.add(w.top - 3 * s);
+        return out;
+    }
+
+    /** Tests: is this level marked worked out? */
+    public static boolean spentForTests(ServerLevel level, java.util.UUID village, int id) {
+        MineWorks.Works w = MineWorks.works(level, village);
+        return w != null && spent(w, id);
+    }
+
     private static int countOn(MineWorks.Works w, int id) {
         int n = 0;
         for (MineWorks.Drift d : w.drifts) if (d.level == id) n++;

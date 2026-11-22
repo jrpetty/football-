@@ -91,6 +91,12 @@ public final class Fuel {
         return inStores(level, village) < floor(Villages.headcount(village)) + SMELT_SPARE;
     }
 
+    /** [growth24] Tests: so much coal (or charcoal) taken out of the stores for the town's works (TownWork.take). */
+    public static boolean takeCoalForTests(ServerLevel level, UUID village, int n) {
+        Villages.Village v = Villages.get(village);
+        return v != null && TownWork.take(level, v, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), n);
+    }
+
     /** Does this draw on the stores take coal or charcoal? */
     public static boolean drawsCoal(java.util.function.Predicate<net.minecraft.world.item.ItemStack> what) {
         return what.test(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL))
