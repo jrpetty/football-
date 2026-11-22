@@ -50,8 +50,8 @@ public final class MarketPage {
         cy += 10;
         List<Component> tip = null;
         ListTag rows = t.getList("rows", Tag.TAG_COMPOUND);
-        int bottom = y + h - 40;
-        for (int i = Math.max(0, scroll); i < rows.size() && cy < bottom; i++) {
+        int bottom = y + h - 46 - 9;                                         // [ui29] the rows stop above the notes under them
+        for (int i = Math.max(0, scroll); i < rows.size() && cy <= bottom; i++) {
             CompoundTag r = rows.getCompound(i);
             if (mx >= x && mx < x + w && my >= cy - 1 && my < cy + 9) {
                 g.fill(x, cy - 1, x + w, cy + 8, UiStyle.TILE_HOVER);

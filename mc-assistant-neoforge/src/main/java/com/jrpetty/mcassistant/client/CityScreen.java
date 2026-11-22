@@ -143,8 +143,15 @@ public class CityScreen extends Screen {
         mc.setScreen(next);
     }
 
+    /** [ui29] The developer client's screen audit: turn to a page by its name. */
+    void devPage(String name) {
+        int n = pageNumber(name);
+        if (n >= 0) { tab = n; scroll = 0; }
+    }
+
     /** Ask the server for the books of the village you stand in (the journal's button). */
     public static void request() {
+        Waiting.start("Opening the town's books");                        // [ui29] at once, not a blank wait for the answer
         net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.VillageAskPayload(4));
     }
 
@@ -468,9 +475,19 @@ public class CityScreen extends Screen {
         rx = AdminClient.boardButton(g, font, rx, top + 6, mx, my);      // [admin] the admin panel, for operators
         rx = FavouritesClient.boardButton(g, font, rx, top + 6, mx, my);  // [ui] the folk you follow
         rx = FinanceClient.boardButton(g, font, rx, top + 6, mx, my);     // [purse20] your finances
-        rx = LifeClient.boardButtons(g, font, rx, top + 6, mx, my);        // [player15] you, and starting a business
+        boolean narrow = w < 560;                                          // [ui29] at GUI 3 on 720p the range ran off the screen
+        rx = LifeClient.boardButtons(g, font, rx, top + 6, mx, my, narrow);  // [player15] you, and starting a business
         rx -= UiStyle.S2;
-        for (int i = RANGE_NAMES.length - 1; i >= 0; i--) {
+        if (narrow) {                                                      // [ui29] one button that steps through the ranges
+            int bw = font.width("100d") + 12;
+            rx -= bw;
+            boolean over = in(mx, my, rx, top + 8, bw - 1, 14);
+            UiStyle.tile(g, rx, top + 8, bw - 1, 14, UiStyle.State.of(true, false, over));
+            g.drawString(font, RANGE_NAMES[range], rx + (bw - font.width(RANGE_NAMES[range])) / 2, top + 11, UiStyle.ACCENT, false);
+            if (over) tip("The charts show " + (RANGES[range] == 0 ? "every day of the books" : "the last " + RANGES[range] + " days")
+                + ". Click for the next range.", mx, my);
+        }
+        for (int i = RANGE_NAMES.length - 1; i >= 0 && !narrow; i--) {
             int bw = font.width(RANGE_NAMES[i]) + 8;
             rx -= bw;
             boolean on = i == range, over = in(mx, my, rx, top + 8, bw - 1, 14);
@@ -736,8 +753,9 @@ public class CityScreen extends Screen {
     private void kpiCard(GuiGraphics g, Kpi k, int x, int y, int w, int h, int mx, int my) {
         UiStyle.card(g, x, y, w, h, k.colour());
         g.drawString(font, UiStyle.clip(font, k.label().toUpperCase(Locale.ROOT), w - 8), x + 6, y + 4, UiStyle.TEXT_FAINT, false);
-        UiStyle.title(g, font, UiStyle.clip(font, k.value(), w - 10), x + 6, y + 15);
         int sw = Math.min(40, w / 3), sx = x + w - sw - 4;
+        // [ui29] the value clipped short of the gauge or the trend beside it (they were drawn over its last digits)
+        UiStyle.title(g, font, UiStyle.clip(font, k.value(), h < 36 ? sx - x - 18 : sx - x - 9), x + 6, y + 15);
         if (h < 36) {                                           // the short card: no note, the trend beside the value
             if (k.gauge() < 0) UiStyle.trend(g, font, k.delta(), k.upIsGood(), sx - 10, y + 15);
             if (in(mx, my, x, y, w, h)) tip(k.label() + ": " + k.value() + " (" + k.note() + ")\n" + k.tip(), mx, my);
@@ -1333,6 +1351,7 @@ public class CityScreen extends Screen {
         for (CompoundTag t : sellers) {
             String label = capital(t.getString("name")) + (t.getBoolean("built") || tight ? "" : " (none yet)");
             int kw = (int) (font.width(label) * 0.75) + 10;
+            if (kx > x && kx + kw > x + cw) { kx = x; y += 13; ch -= 13; }   // [ui29] a second row, not off the page
             boolean on = t == pick && !workshop;
             g.fill(kx, y, kx + kw, y + 11, on ? Ui.ROW_PICK : Ui.ROW);
             g.renderOutline(kx, y, kw, 11, Ui.EDGE_SOFT);
@@ -1346,6 +1365,7 @@ public class CityScreen extends Screen {
         if (!ws.isEmpty()) {
             String label = (tight ? "Workshop" : "The shop's workshop") + (ws.getBoolean("built") || tight ? "" : " (no shop yet)");
             int kw = (int) (font.width(label) * 0.75) + 10;
+            if (kx > x && kx + kw > x + cw) { kx = x; y += 13; ch -= 13; }   // [ui29]
             g.fill(kx, y, kx + kw, y + 11, workshop ? Ui.ROW_PICK : Ui.ROW);
             g.renderOutline(kx, y, kw, 11, Ui.EDGE_SOFT);
             small(g, label, kx + 5, y + 2, workshop ? Ui.GOOD : ws.getBoolean("built") ? Ui.INK : Ui.FAINT);
@@ -2210,6 +2230,11 @@ public class CityScreen extends Screen {
         int hy = housingMarket(g, hm.getCompound("market"), x, by + 11, cw, mx, my) + 2;
         // Every household.
         int[] cols = { 0, cw * 26 / 100, cw * 42 / 100, cw * 55 / 100, cw * 61 / 100, cw * 80 / 100 };
+        if (hy + 20 > y + ch - 10) {                                       // [ui29] no room for the table: say so, not draw it over the note
+            small(g, Ui.clip(font, hm.getList("rows", Tag.TAG_COMPOUND).size() + " households: a bigger window (or a smaller GUI scale) lists them",
+                (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+            return;
+        }
         for (int i = 0; i < HOME_HEADS.length; i++) {                   // [ui] each head kept to its column
             int room = (i + 1 < cols.length ? cols[i + 1] : cw) - cols[i] - 2;
             String head = cw < 520 && i == 4 ? "Put by" : HOME_HEADS[i];
@@ -3633,6 +3658,7 @@ public class CityScreen extends Screen {
                 for (int t = 0; t < tiers.size(); t++) {
                     List<CompoundTag> here = tiers.get(t);
                     int top = top0 + t * (nodeH + nodeGap);
+                    if (top + nodeH > by + bandH) break;                    // [ui29] a short window: the tiers that fit, not over the next band
                     if (t > 0) {
                         // The step up from the tier before: dark where the way is walked, faint where it is not yet.
                         boolean walked = here.stream().anyMatch(c -> !c.getString("state").equals("locked"));
@@ -4045,7 +4071,9 @@ public class CityScreen extends Screen {
         // Close, and the range buttons (where the header last drew them).
         if (in(mx, my, closeX, top + 6, font.width("Close") + 10, 18)) { UiStyle.click(); onClose(); return true; }
         int rx = rangeX;
-        for (int i = 0; i < RANGE_NAMES.length; i++) {
+        if (w < 560) {                                                     // [ui29] the narrow header's one range button
+            if (in(mx, my, rx, top + 8, font.width("100d") + 11, 14)) { UiStyle.click(); range = (range + 1) % RANGE_NAMES.length; return true; }
+        } else for (int i = 0; i < RANGE_NAMES.length; i++) {
             int bw = font.width(RANGE_NAMES[i]) + 8;
             if (in(mx, my, rx, top + 8, bw - 1, 14)) { UiStyle.click(); range = i; return true; }
             rx += bw;

@@ -102,8 +102,10 @@ public class BusinessScreen extends Screen {
             String title = data.getString("name") + (data.getBoolean("open") ? "" : " (closed)");
             UiStyle.title(g, font, title, x, top + 6);
             small(g, data.getString("type") + " of " + data.getString("town") + " · owned by " + data.getString("ownersWords") + " · since day "
-                + data.getLong("opened"), x, top + 18, UiStyle.TEXT_MUTED, inner - 40);
-            button(g, "List", left + w - PAD - 30, top + 6, 30, mx, my, () -> command("village business"));
+                + data.getLong("opened"), x, top + 18, UiStyle.TEXT_MUTED, inner - 78);
+            // [ui29] a way out besides Esc, as the list has; the list beside it, named for what it is
+            button(g, "Close", left + w - PAD - 40, top + 6, 40, mx, my, this::onClose);
+            button(g, "All", left + w - PAD - 40 - 4 - 30, top + 6, 30, mx, my, () -> command("village business"));
             int tx = x;
             for (int i = 0; i < TABS.length; i++) {
                 int tw = font.width(TABS[i]) + 10;
@@ -149,7 +151,7 @@ public class BusinessScreen extends Screen {
             small(g, p(net), x + cols[4], y, net >= 0 ? UiStyle.SUCCESS : UiStyle.DANGER, 50);
             small(g, r.getBoolean("mirror") ? "own books" : p(r.getLong("till")), x + cols[5], y, UiStyle.TEXT_MUTED, 60);
             String id = r.getString("id");
-            zone(x, y - 1, inner, 10, () -> command("village business books " + id));
+            zone(x, y - 1, inner, 10, () -> command("village business books " + quoted(id)));
             y += 11;
             shown++;
         }
@@ -225,12 +227,16 @@ public class BusinessScreen extends Screen {
         // The chart: fourteen days, takings and the day's net.
         if (full) chart(g, rx, top + h - 56, rw, 40, mx, my);
         // The owner's buttons.
-        int by = top + h - 16;
+        int by = top + h - 20;                                             // [ui29] off the edge, each button as wide as its words
         if (data.getBoolean("mine") && data.getLong("due") >= 100) {
-            button(g, "Take drawings " + p(data.getLong("due")), x, by, 110, mx, my, () -> command("village business draw " + data.getString("id")));
+            String l = "Take drawings " + p(data.getLong("due"));
+            button(g, l, x, by, font.width(l) + 12, mx, my, () -> command("village business draw " + quoted(data.getString("id"))));
         } else if (!data.getBoolean("public") && !data.getBoolean("mine")) {
-            button(g, "Buy it (" + p(data.getLong("worth")) + "+)", x, by, 110, mx, my, () -> command("village business buy " + data.getString("id")));
-            button(g, "Invest 20c", x + 114, by, 60, mx, my, () -> command("village business invest " + data.getString("id") + " 20"));
+            String l = "Buy it (" + p(data.getLong("worth")) + "+)";
+            int bw = font.width(l) + 12;
+            button(g, l, x, by, bw, mx, my, () -> command("village business buy " + quoted(data.getString("id"))));
+            button(g, "Invest 20 coins", x + bw + 4, by, font.width("Invest 20 coins") + 12, mx, my,
+                () -> command("village business invest " + quoted(data.getString("id")) + " 20"));
         }
     }
 
@@ -364,7 +370,7 @@ public class BusinessScreen extends Screen {
             button(g, "Order", left + PAD + 208, top + h - 22, 40, mx, my, () -> {
                 String it = item.getValue().trim().toLowerCase(Locale.ROOT).replace(' ', '_');
                 String n = qty.getValue().trim();
-                if (!it.isEmpty() && !n.isEmpty()) command("village business order " + data.getString("id") + " " + it + " " + n);
+                if (!it.isEmpty() && !n.isEmpty()) command("village business order " + quoted(data.getString("id")) + " " + it + " " + n);
             });
             small(g, "3% off 64+, 6% off 256+, 10% off 1024+", left + PAD + 252, top + h - 19, UiStyle.TEXT_FAINT, 140);
         }
@@ -402,6 +408,11 @@ public class BusinessScreen extends Screen {
     private void zone(int x, int y, int zw, int zh, Runnable act) {
         boxes.add(new int[]{ x, y, x + zw, y + zh });
         acts.add(act);
+    }
+
+    /** [ui29] A business's id as one quoted argument (a producer's has a colon in it). */
+    static String quoted(String id) {
+        return "\"" + id.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
     private void command(String c) {

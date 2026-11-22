@@ -313,7 +313,8 @@ public final class PropertyOffice {
         boolean kept = Accounts.sub(BuildOrders.book(id), "kept").contains(p.getUUID().toString());
         if (due >= 100 || kept) rows.add(row(List.of("Waiting for you at the hall: " + due / 100 + " coins" + (kept ? ", and things from a building you sold" : "")), "Collect", "collect", ""));
         List<String> mine = BuildOrders.ordersOf(id, p.getUUID());
-        if (mine.isEmpty()) rows.add(row(List.of("No building orders yet. The Commission tab gets you a quote for any building, on the ground in front of you.")));
+        if (mine.isEmpty()) rows.add(row(List.of("No building orders yet. The Commission tab gets you a quote for any building, on the ground in front of you."),
+            "Get a quote", "tab", "commission"));   // [ui29] the next step a click away
         for (String oid : mine) {
             BuildOrders.Status s = BuildOrders.status(level, oid);
             if (s == null) continue;

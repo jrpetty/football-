@@ -65,10 +65,10 @@ public class BlockBookScreen extends Screen {
         int x = left + PAD;
         this.addRenderableWidget(Button.builder(Component.literal("‹ Back"),
                 b -> { this.onClose(); PlotsClient.requestOpen(); })
-            .bounds(x, y, w4, 18).build());
+            .bounds(x, y, w4, 18).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("More ›"),
                 b -> pageBlocks())
-            .bounds(x + w4 + gap, y, w4, 18).build());
+            .bounds(x + w4 + gap, y, w4, 18).build(UiButton::new));
         // The classification is rules read over the whole registry, and rules
         // over a thousand blocks are wrong somewhere. This writes down every
         // verdict so it can be checked against the game rather than believed.
@@ -78,9 +78,9 @@ public class BlockBookScreen extends Screen {
             .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
                 "Write every block and what this build thinks it is for to "
                 + "mcassistant-blocklore.txt in your game folder")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 3 * (w4 + gap), y, inner - 3 * (w4 + gap), 18).build());
+            .bounds(x + 3 * (w4 + gap), y, inner - 3 * (w4 + gap), 18).build(UiButton::new));
     }
 
     /** The picked category's blocks, in registry order. */
@@ -103,13 +103,14 @@ public class BlockBookScreen extends Screen {
         Ui.panel(g, left, top, W, H, 26);
 
         int x = left + PAD;
-        g.drawString(this.font, "Block book", x, top + 8, Ui.INK, false);
+        // [ui29] the line under the title sits in the header band: below it, it ran into "Used for"
+        g.drawString(this.font, "Block book", x, top + 3, Ui.INK, false);
         Ui.right(g, this.font, BuiltInRegistries.BLOCK.size() + " blocks known",
-            left + W - PAD, top + 8, Ui.MUTED);
-        g.drawString(this.font, exported.isEmpty()
+            left + W - PAD, top + 3, Ui.MUTED);
+        g.drawString(this.font, Ui.clip(this.font, exported.isEmpty()
                 ? "What it does, why you'd build it, and when."
-                : exported,
-            x, top + 30, exported.isEmpty() ? Ui.FAINT : Ui.GOOD, false);
+                : exported, W - PAD * 2),
+            x, top + 14, exported.isEmpty() ? Ui.FAINT : Ui.GOOD, false);
 
         renderUses(g, mouseX, mouseY);
         renderDetail(g, mouseX, mouseY);

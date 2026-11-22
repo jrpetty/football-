@@ -370,16 +370,18 @@ public final class BusinessBooks {
 
     /** /village business: the town's businesses; books, order, buy, invest, draw; and the coin audit. */
     public static LiteralArgumentBuilder<CommandSourceStack> command() {
+        // [ui29] the id a string, quoted by the screens: a producer's ("farm:<its hand>") has a colon, which a word refused, so
+        // a click on most rows of the Businesses page answered "Expected whitespace" and opened nothing
         return Commands.literal("business")
             .executes(c -> listCmd(c))
-            .then(Commands.literal("books").then(Commands.argument("id", StringArgumentType.word()).executes(c -> booksCmd(c, false))))
-            .then(Commands.literal("text").then(Commands.argument("id", StringArgumentType.word()).executes(c -> booksCmd(c, true))))
+            .then(Commands.literal("books").then(Commands.argument("id", StringArgumentType.string()).executes(c -> booksCmd(c, false))))
+            .then(Commands.literal("text").then(Commands.argument("id", StringArgumentType.string()).executes(c -> booksCmd(c, true))))
             .then(Commands.literal("audit").requires(s -> s.hasPermission(2)).executes(BusinessBooks::auditCmd))
-            .then(Commands.literal("buy").then(Commands.argument("id", StringArgumentType.word()).executes(c -> deal(c, "buy", 0))))
-            .then(Commands.literal("invest").then(Commands.argument("id", StringArgumentType.word())
+            .then(Commands.literal("buy").then(Commands.argument("id", StringArgumentType.string()).executes(c -> deal(c, "buy", 0))))
+            .then(Commands.literal("invest").then(Commands.argument("id", StringArgumentType.string())
                 .then(Commands.argument("coins", IntegerArgumentType.integer(1, 100000)).executes(c -> deal(c, "invest", IntegerArgumentType.getInteger(c, "coins"))))))
-            .then(Commands.literal("draw").then(Commands.argument("id", StringArgumentType.word()).executes(c -> deal(c, "draw", 0))))
-            .then(Commands.literal("order").then(Commands.argument("id", StringArgumentType.word()).then(Commands.argument("item", StringArgumentType.word())
+            .then(Commands.literal("draw").then(Commands.argument("id", StringArgumentType.string()).executes(c -> deal(c, "draw", 0))))
+            .then(Commands.literal("order").then(Commands.argument("id", StringArgumentType.string()).then(Commands.argument("item", StringArgumentType.word())
                 .then(Commands.argument("qty", IntegerArgumentType.integer(1, 100000)).executes(BusinessBooks::orderCmd)))))
             .then(Commands.literal("page").executes(BusinessBooks::pageCmd))
             .then(Commands.literal("stage").requires(s -> s.hasPermission(2)).executes(BusinessBooks::stageCmd))

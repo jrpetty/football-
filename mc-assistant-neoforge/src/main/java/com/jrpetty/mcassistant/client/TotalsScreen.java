@@ -36,7 +36,7 @@ public class TotalsScreen extends Screen {
             crew.addAll(this.minecraft.player.level().getEntitiesOfClass(
                 AssistantEntity.class,
                 this.minecraft.player.getBoundingBox().inflate(256.0),
-                AssistantEntity::isAlive));
+                AssistantTargeting::isCrew));
         }
 
         int gap = 4;
@@ -44,12 +44,12 @@ public class TotalsScreen extends Screen {
         int y = top + H - PAD - 18;
         this.addRenderableWidget(Button.builder(Component.literal("Crew"),
                 b -> this.minecraft.setScreen(new CrewScreen()))
-            .bounds(left + PAD, y, w3, 18).build());
+            .bounds(left + PAD, y, w3, 18).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Map"),
                 b -> this.minecraft.setScreen(new MapScreen()))
-            .bounds(left + PAD + w3 + gap, y, w3, 18).build());
+            .bounds(left + PAD + w3 + gap, y, w3, 18).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build());
+            .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build(UiButton::new));
     }
 
     @Override
@@ -92,7 +92,7 @@ public class TotalsScreen extends Screen {
             crew.size() + (crew.size() == 1 ? " assistant" : " assistants")
             + "  ·  day " + days,
             left + W - PAD, top + 8, Ui.MUTED);
-        g.drawString(this.font, "Everything the crew has ever produced, and the daily rate.",
+        g.drawString(this.font, Ui.clip(this.font, "All the crew has made, and a day's rate.", inner),   // [ui29] it ran off the panel
             x, top + 20, Ui.FAINT, false);
 
         Ui.section(g, this.font, "All-time production", x, top + 36, inner);

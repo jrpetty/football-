@@ -96,6 +96,7 @@ public final class FinanceClient {
         if (Minecraft.getInstance().getConnection() == null) return;
         openParent = parent;
         wantOpen = true;
+        Waiting.start("Opening your finances");                           // [ui29]
         CompoundTag args = new CompoundTag();
         args.putBoolean("open", true);
         ask("page", args);

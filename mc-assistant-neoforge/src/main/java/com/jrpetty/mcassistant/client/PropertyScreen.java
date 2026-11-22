@@ -78,7 +78,12 @@ public class PropertyScreen extends Screen {
         panel(g, px, py, pw, ph);
         title(g, font, "Property office - " + data.getString("town"), px + S2, py + S2);
         String coins = data.getInt("coins") + " coins on you";
-        g.drawString(font, coins, px + pw - S2 - font.width(coins), py + S2, TEXT_MUTED, false);
+        // [ui29] a way out besides Esc, top right as on the other screens; the coins beside it
+        int cbx = px + pw - S2 - 40;
+        boolean overClose = mouseX >= cbx && mouseX < cbx + 40 && mouseY >= py + 4 && mouseY < py + 18;
+        button(g, font, "Close", cbx, py + 4, 40, 14, State.of(true, false, overClose));
+        hits.add(new Hit(cbx, py + 4, 40, 14, "#close", ""));
+        g.drawString(font, coins, cbx - S2 - font.width(coins), py + S2, TEXT_MUTED, false);
         // The tabs.
         int tx = px + S2, ty = py + 22;
         String tab = data.getString("tab");
@@ -128,6 +133,7 @@ public class PropertyScreen extends Screen {
                 boolean over = mouseX >= bx && mouseX < bx + bw && mouseY >= y && mouseY < y + 14 && mouseY >= top && mouseY < bottom;
                 if (y + 14 > top && y < bottom) {
                     button(g, font, label, bx, y, bw, 14, State.of(true, false, over));
+                    if (over) hover = tipFor(b.getString("op"), b.getString("arg"));   // [ui29] what each button does
                     hits.add(new Hit(bx, Math.max(y, top), bw, Math.min(y + 14, bottom) - Math.max(y, top), b.getString("op"), b.getString("arg")));
                 }
                 bx += bw + 3;
@@ -142,6 +148,47 @@ public class PropertyScreen extends Screen {
         contentH = y + scroll - top;
         scrollBar(g, px + pw - S2 - 4, top, bottom - top, scroll, Math.max(0, contentH - (bottom - top)), bottom - top);
         for (var r : renderables) r.render(g, mouseX, mouseY, partialTick);   // [join21] not super.render: it blurred the page drawn above
+        if (hover != null && !hover.isEmpty()) {
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 400);
+            tooltip(g, font, hover, mouseX, mouseY, 200);
+            g.pose().popPose();
+        }
+    }
+
+    /** [ui29] A button's hover words, by what it does (the clerk's buttons are words alone, some of them one word). */
+    @Nullable
+    private static String tipFor(String op, String arg) {
+        return switch (op) {
+            case "drawing" -> "Another building: the drawings, one after another.";
+            case "style" -> "Another look for it: the woods and stones it is built in.";
+            case "turn" -> "Turn it a quarter, so its door faces another way.";
+            case "toggle" -> switch (arg) {
+                case "priority" -> "Priority: the town's crews put it before the other orders, for a premium of a quarter of the labour.";
+                case "lease" -> "Lease the ground instead of buying it: less to pay now, a ground rent every week after.";
+                case "bring" -> "Bring the materials yourself: what you carry comes off the price.";
+                default -> null;
+            };
+            case "quote" -> "Work out what it costs, all told, and how long it takes.";
+            case "place" -> "Order it at this price: the deposit is paid now, the rest as it goes up.";
+            case "pay" -> "Pay what is due on it now.";
+            case "cancel" -> "Call the order off.";
+            case "priority" -> "Move it to the front of the crews' work, for a premium.";
+            case "sell" -> "Put it up for sale on the market.";
+            case "let" -> "Let it out for a rent each week.";
+            case "withdraw" -> "Take it off the market.";
+            case "price" -> "Change the asking price.";
+            case "accept" -> "Take this offer.";
+            case "decline" -> "Turn this offer down.";
+            case "buy", "title" -> "Buy it at the price asked.";
+            case "bid" -> "Make an offer for it.";
+            case "collect" -> "Collect the rent it has earned.";
+            case "refitq", "extendq" -> "What the work would cost, before you order it.";
+            case "refit" -> "Refit it for another use, at the price quoted.";
+            case "extend" -> "Build on to it, at the price quoted.";
+            case "use" -> "Choose what the building is used for.";
+            default -> null;
+        };
     }
 
     private List<String> wrap(String s, int w) {
@@ -160,6 +207,7 @@ public class PropertyScreen extends Screen {
         for (Hit h : hits) {
             if (h.in(mx, my)) {
                 click();
+                if (h.op().equals("#close")) { onClose(); return true; }
                 ask(h.op(), h.arg());
                 return true;
             }

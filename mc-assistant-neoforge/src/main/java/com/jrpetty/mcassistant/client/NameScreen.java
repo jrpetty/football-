@@ -64,7 +64,7 @@ public class NameScreen extends Screen {
             this.addRenderableWidget(Button.builder(Component.literal(name), b -> {
                 OrdersScreen.sendOrder(bot, AssistantActions.NAME_BASE + poolIndex);
                 this.onClose();
-            }).bounds(x, y, bw, bh).build());
+            }).bounds(x, y, bw, bh).build(UiButton::new));
         }
 
         int fy = top + H - PAD - bh;
@@ -73,14 +73,14 @@ public class NameScreen extends Screen {
         Button more = Button.builder(Component.literal("More names"), b -> {
             page = (page + 1) % pageCount;
             this.rebuildWidgets();
-        }).bounds(left + PAD, fy, fw, bh).build();
+        }).bounds(left + PAD, fy, fw, bh).build(UiButton::new);
         more.active = pageCount > 1;
         this.addRenderableWidget(more);
         this.addRenderableWidget(Button.builder(Component.literal("Orders"),
                 b -> this.minecraft.setScreen(new OrdersScreen(bot)))
-            .bounds(left + PAD + fw + gap, fy, fw, bh).build());
+            .bounds(left + PAD + fw + gap, fy, fw, bh).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + PAD + 2 * (fw + gap), fy, fw, bh).build());
+            .bounds(left + PAD + 2 * (fw + gap), fy, fw, bh).build(UiButton::new));
     }
 
     private List<String> crewNames() {
@@ -89,7 +89,7 @@ public class NameScreen extends Screen {
         for (AssistantEntity a : this.minecraft.player.level().getEntitiesOfClass(
                 AssistantEntity.class,
                 this.minecraft.player.getBoundingBox().inflate(256.0),
-                AssistantEntity::isAlive)) {
+                AssistantTargeting::isCrew)) {
             out.add(a.clientName());
         }
         return out;

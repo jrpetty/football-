@@ -58,12 +58,12 @@ public class RecordScreen extends Screen {
             .bounds(left + PAD, y, w3, 18)
             .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
                 "At level 20 a specialist can pick a branch to deepen its trade")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Orders"),
                 b -> this.minecraft.setScreen(new OrdersScreen(bot)))
-            .bounds(left + PAD + w3 + gap, y, w3, 18).build());
+            .bounds(left + PAD + w3 + gap, y, w3, 18).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build());
+            .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build(UiButton::new));
     }
 
     private void perk(int y, int x, int w, String label, int action, String tip) {
@@ -73,7 +73,7 @@ public class RecordScreen extends Screen {
             })
             .bounds(x, y, w, 18)
             .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(tip)))
-            .build());
+            .build(UiButton::new));
     }
 
     @Override
