@@ -3488,6 +3488,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level() instanceof net.minecraft.server.level.ServerLevel rack) {
             Picks.smith(this, rack);                   // [fixes14] the smith makes the miners' picks first while the rack is short
             Toolrack.tend(this, rack);
+            ToolTrade.forge(this, rack);               // [econ32] and, with iron to spare, a few for the other towns
         }
 
         // A storekeeper works the chests directly and has nothing to haul: its

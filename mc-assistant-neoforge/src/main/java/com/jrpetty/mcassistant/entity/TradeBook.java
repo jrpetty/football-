@@ -57,7 +57,8 @@ public final class TradeBook {
         IRON("ore and iron", Villages.Task.IRON, StationTask.MINE, Items.IRON_INGOT, 4),
         COAL("coal", Villages.Task.COAL, StationTask.MINE, Items.COAL, 8),
         WOOL("wool", Villages.Task.NONE, StationTask.RANCH, Items.WHITE_WOOL, 8),
-        CRAFTS("crafts", Villages.Task.NONE, StationTask.SMITH, Items.IRON_PICKAXE, 1);
+        CRAFTS("crafts", Villages.Task.NONE, StationTask.SMITH, Items.IRON_PICKAXE, 1),
+        TOOLS("tools", Villages.Task.NONE, StationTask.SMITH, Items.IRON_PICKAXE, 1);    // [econ32] picks, axes and hoes (ToolTrade)
 
         public final String word;
         final Villages.Task task;
@@ -86,7 +87,8 @@ public final class TradeBook {
                 case IRON -> s.is(Items.IRON_INGOT) || s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE);
                 case COAL -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
                 case WOOL -> s.is(ItemTags.WOOL);
-                case CRAFTS -> Economy.kindOf(s) == Economy.Kind.CRAFT;
+                case CRAFTS -> Economy.kindOf(s) == Economy.Kind.CRAFT && !ToolTrade.isTool(s);   // [econ32] the tools a ware of their own
+                case TOOLS -> ToolTrade.isTool(s);
             };
         }
 
@@ -105,6 +107,7 @@ public final class TradeBook {
                 case IRON -> s.is(Items.IRON_INGOT) || s.is(Items.RAW_IRON);
                 case COAL, WOOL -> true;
                 case CRAFTS -> false;
+                case TOOLS -> ToolTrade.carried(s);
             };
         }
 
@@ -246,6 +249,7 @@ public final class TradeBook {
             int ageWant = w.task == Villages.Task.NONE ? 0 : ageWants.getOrDefault(w.task, 0);
             int want = Math.max(Math.max(0, keep - have), ageWant);
             if (w == Ware.CRAFTS) want = toolsShort(village);
+            if (w == Ware.TOOLS) want = ToolTrade.want(level, village, toolsShort(village));   // [econ32]
             Item item = best != null ? best : most != null ? most : w.usual;
             double made = rates[w.ordinal()][0], used = rates[w.ordinal()][1];
             if (w == Ware.FOOD) {
@@ -277,6 +281,7 @@ public final class TradeBook {
             case COAL -> 64 + 4 * head;
             case WOOL -> 32 + 3 * Math.max(0, Market.bedsShort(village));
             case CRAFTS -> 0;
+            case TOOLS -> ToolTrade.keep(village);                 // [econ32] the rack's spares
         };
     }
 

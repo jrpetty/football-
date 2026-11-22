@@ -248,6 +248,7 @@ public final class Budget {
      */
     public static int spare(ServerLevel level, UUID village, ItemStack sample) {
         if (sample.isEmpty() || Prices.each(sample.getItem()) <= 0) return 0;
+        if (ToolTrade.carried(sample)) return ToolTrade.spare(level, village, sample);   // [econ32] past the rack's spares
         // What the crafts make to sell — the café's drinks, the brewer's potions, the enchanter's
         // work, the tailor's banners and rugs — is the village's to sell whenever it has it: nobody
         // here needs an enchanted pick to eat.

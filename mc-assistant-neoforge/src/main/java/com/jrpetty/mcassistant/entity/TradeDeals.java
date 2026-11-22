@@ -426,7 +426,8 @@ public final class TradeDeals {
         carrier.clearQueue();
         if (item != null && agreed > 0) {
             int can = Math.min(agreed, Math.max(0, Budget.spare(level, from, new ItemStack(item))));
-            for (ItemStack s : Caravans.takeOut(level, fv, st -> st.is(item) && !st.isEnchanted(), can)) {
+            for (ItemStack s : Caravans.takeOut(level, fv, st -> st.is(item) && !st.isEnchanted()
+                    && (!ToolTrade.isTool(st) || ToolTrade.carried(st)), can)) {        // [econ32] a good tool, never a worn one
                 ItemStack left = carrier.insertGiven(s);
                 loaded += s.getCount() - left.getCount();
                 if (!left.isEmpty()) Market.intoStores(level, from, left);
@@ -495,7 +496,8 @@ public final class TradeDeals {
         int can = item == null ? 0 : Math.min(agreed, Math.max(0, Budget.spare(level, from, new ItemStack(item))));
         boolean sellerLeg = from.equals(d.seller);
         int coinDue = sellerLeg && agreed > 0 ? (int) Math.round(d.coin * Math.min(1.0, can / (double) agreed)) : 0;
-        Shipments.Shipment s = can <= 0 ? null : Shipments.dispatch(level, from, to, contract(d), stacks(item, can), coinDue);
+        List<ItemStack> lots = item != null && ToolTrade.isTool(new ItemStack(item)) ? ToolTrade.samples(level, from, item, can) : stacks(item, can);   // [econ32] tools as they are
+        Shipments.Shipment s = can <= 0 || lots.isEmpty() ? null : Shipments.dispatch(level, from, to, contract(d), lots, coinDue);
         d.due++;
         d.next = Math.max(d.next + d.every, day + 1);
         d.sellerSends = !d.sellerSends;
