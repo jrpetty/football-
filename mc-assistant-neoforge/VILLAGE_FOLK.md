@@ -15463,5 +15463,12 @@ works' round, instead of only when a load will not go in (then the load went on 
 - **The age's ore first.** The works share the miners out by what the stores are short of; an ore the age itself waits on
   counts what the age still wants of it (the Diamond Age's twice the Iron Age's iron, not the Iron Age's want) and the first
   miner goes to the level richest in it, the rest a mix as before.
+- **The climb home is kept.** Down the works a folk's way home is its climb: bedtime does not put it down as work left for
+  the morning (a shift still under way down there is put down for a climb instead), and the town's bell calls a folk to an
+  assembly only once it is up. A folk deep under the rock is below in the works however far out from the shaft it has
+  wandered, so its way up is always the works' to give it.
+- **The diamonds the next age asks for are kept.** From the Diamond Age until the gateway stands, the market and the auction
+  keep twice the Diamond Age's diamonds (what the Nether Age asks for) instead of selling all past the age's own count.
+- **The picks for the diamonds are made in measure:** no more iron picks for the diamonds in a day than the rack keeps.
 - **After the Diamond Age** comes the Nether Age, which asks for the gateway: ten obsidian (cut by a diamond pick out of the
   town's diamonds, from lava with a bucket of water), twice the Diamond Age's diamonds, the gateway itself and food.
