@@ -1380,6 +1380,7 @@ public final class Villages {
                              Village v, String what, Task task, int amount) {
         int have = stock(level, v.centre(), task, storesRadius(v.id()));
         if (task == Task.IRON) have += WatchKit.ironCredit(level, v.id());   // [guard-kit] the watch's armour is iron the age asked for
+        if (task == Task.IRON) have += IronInHand.held(level, v.id());       // [growth24] and the ore at its smelters
         if (have < amount) wants.add(new Need(what, task, amount - have));
     }
 
