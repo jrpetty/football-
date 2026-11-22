@@ -514,12 +514,9 @@ public class BusinessLookGameTests {
                 String key = null;
                 for (Map.Entry<String, com.jrpetty.mcassistant.entity.Business.Lot> e : b.stock.entrySet()) if (e.getValue().qty > 0) { key = e.getKey(); break; }
                 java.util.function.Predicate<ItemStack> is = com.jrpetty.mcassistant.entity.Stockroom.matcherForTests(key);
-                // (The town's own counter out of it, so the firm is the one to sell it: who wins a sale is ent03's question.)
-                for (net.minecraft.world.Container c : new net.minecraft.world.Container[]{ box, box2 }) {
-                    for (int i = 0; i < c.getContainerSize(); i++) if (is.test(c.getItem(i))) c.setItem(i, ItemStack.EMPTY);
-                    c.setChanged();
-                }
-                Villages.forgetStores(id);
+                // Priced to sell from its Prices tab (the town's own counter has the better name and the shorter walk).
+                for (int i = 0; i < 6; i++) com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "markup", argsOf("d", -5));
+                said.add("markup: " + msg(p));
                 for (int i = 2; i < folk.size() && sold == null; i++) {
                     VillageFolkEntity buyer = folk.get(i);
                     if (hands.contains(buyer)) continue;
@@ -547,14 +544,14 @@ public class BusinessLookGameTests {
             // 7. The next morning and payday: its rent, and its hand paid out of its till.
             level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 6000L);
             long tillM = b.till;
-            int purse0 = hands.isEmpty() ? 0 : hands.get(0).purse();
+            long payday = level.getDayTime() / 24000L;
             com.jrpetty.mcassistant.entity.Businesses.morningForTests(level, v);
             long rent = b.allTime.rent;
             com.jrpetty.mcassistant.entity.Market.payWages(level, v);
             long wages = b.allTime.wages;
-            int purse1 = hands.isEmpty() ? 0 : hands.get(0).purse();
+            int paid = hands.isEmpty() ? 0 : com.jrpetty.mcassistant.entity.Market.paidOn(hands.get(0).getUUID(), payday);
             ok.that(rent > 0, "7a. its rent paid in the morning: " + rent);
-            ok.that(hands.isEmpty() || wages > 0 && purse1 > purse0, "7b. payday: its hand paid out of its till (wages " + wages + ", purse " + purse0 + " -> " + purse1
+            ok.that(hands.isEmpty() || wages > 0 && paid > 0, "7b. payday: its hand paid out of its till (wages " + wages + ", paid " + paid
                 + ", till " + tillM + " -> " + b.till + ")");
             // 8. Wound up from its last tab: its till to its owner.
             int coins0 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
