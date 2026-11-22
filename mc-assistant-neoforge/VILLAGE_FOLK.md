@@ -15084,3 +15084,61 @@ hundred and fifty blocks off inside its ground: the sleeper's heart chunk is let
 rule its own ring and its folk's tickets kept it loaded, all six folk working), the awake town's folk all stay. gw24_04 an
 Iron Age town short of iron sends a farmer to the levelling, never one of its miners; in the Wood Age the mine is
 asked nothing, and a miner goes.
+## Making a business, from "I want a shop" to the first sale (biz-25)
+
+Played through in a real client as a newcomer to a town (thirty coins, a stranger, survival, no commands), the way to a
+business of one's own had dead ends and guesswork in it. It is now one way in, with the next step always named.
+
+### One way in: a shop of your own
+**U** (Your life in town) has **Open a shop** under *Your shop*; the first time a player comes into a town a line in chat
+says U is their life there (work, a shop, a business). It opens **Start a business** on its new first kind, **A shop of
+your own (the easiest)**: you fill its shelves, folk come in and buy at its counter; no charter, no hands to pay, a licence
+when it is registered. The chartered kinds follow it (hands of its own make and sell its wares), what the town is short of
+first ("the town is short of candles: it wants 3 a week and has 0", marked *wanted*).
+* **Premises** for a shop: your shop if you keep one; **a building of your own** (any room with walls, a roof and a door onto
+  a street, a Shop Counter set in it); **have the town build it** (the builders' gallery, quote, time and plot, a drawing a
+  plot fits chosen for you, not the biggest that fits nowhere); or **buy a building that's for sale** (the property office's
+  market, with how many there are).
+* **Confirm** says what is paid **now** (the counter, or the building's deposit; the building's total "all told, as it goes
+  up" beside it) and the licence to come. A Shop Counter is made to order by the town's carpenters at the market's price of
+  its makings and a fifth for the work (into the treasury, booked as goods bought) where no shop of the town's sells one, or
+  crafted. Short of the deposit, the bank lends the rest in the same click.
+* Then **what next**, step by step: set the counter down (its screen opens), name and register it, stock it, and folk come.
+
+### The first steps, ticked (BizGuide)
+The shop's screen (its *Shop* tab, under **Getting started**) and Your life in town list a shop's first steps with a tick
+or a cross, the next one first with a button to where it is done: premises with a counter; named and registered;
+everything a shop needs; **wares on its shelves that folk here want** ("1 of its 6 wares has buyers in town", or "nobody
+here has a use for what's on its shelves (bread, torches) just now. Folk here want: candles (3 folk, up to 1 coin each)...");
+open (or when it opens); its first sale. When it has sold they are gone. The Stock tab starts with the same line; the
+Keeper tab sets a keeper's wage against what the till takes a day ("so it pays for itself", or "more than it takes, so stock
+what sells first").
+
+### A charter for those the town knows
+The town charters a business for anybody it knows and has nothing against: a citizen, a friend, or a visitor who has passed
+the time of day with its folk. A stranger nobody has spoken to is told so on the first step, not the last, with **Say hello
+to the nearest folk**; an unwelcome player mends fences first. (A shop of your own wants no standing.)
+
+### Smaller things put right
+* A shop's building sold (PropertyMarket.accept) closes the seller's shop in it: its till to the seller, its keeper let go,
+  its sign down; what was in its chests went with the building or came back, as the listing said; the new owner makes it a
+  shop of its own at the counter. Before, the seller kept a shop in a building that was no longer theirs.
+* A firm chartered on its owner's own shop pays the town no rent for it (step 2 said "No rent: it is yours", and the books
+  charged a room's rent each day all the same); the shop's row on Your finances' Businesses tab sets this week's takings
+  against this week's costs (the rates if they fell due, the keeper's days), not a whole week's wage for a keeper taken on
+  yesterday.
+* A shop's morning (its keeper's wage, its day's counts) is seen to once a day and remembered over a restart: a restart no
+  longer paid the keeper a second time, nor let it go as "gone from the town" because the town's folk were not loaded yet.
+* The quote's "Paid 51c down" reads "51c down now"; the firm's last button is "Open it (10 coins)".
+* The sign over a shop's counter follows the counter when it moves (it was left where the first counter stood).
+* "No path from the door to a street" says which door and asks whether its way out is blocked or the door sits below the
+  floor; the setup no longer says "the business rates, 0 coins a week"; the shop's *Make it a registered business* is
+  *Charter a firm for it (hands, orders)*; a room the town lets a firm says its rent a week.
+
+### Tests
+BusinessFlowGameTests bf01-bf05 (x 5,600,000 to 5,620,000, z 90,000), through the screens' own buttons (PlayerLife.act):
+bf01 a newcomer from Your life in town to a folk's first purchase (the counter bought and booked, the steps ticking off,
+the takings in the player's books); bf02 the rates out of the till as taxes, a keeper taken on and paid once a morning (twice run), three slow days and it goes,
+a ware sold out and the steps asking for stock; bf03 a ware nobody uses, too little coin, a sign with no counter, a stranger
+saying hello and chartered; bf04 a shop of your own the town builds, to the moment it is the player's; bf05 the building sold
+with its stock to another player (the shop the seller's no longer) and quoted for a bakery.

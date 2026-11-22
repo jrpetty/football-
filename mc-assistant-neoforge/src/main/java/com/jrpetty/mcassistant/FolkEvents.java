@@ -88,6 +88,7 @@ public final class FolkEvents {
         player.displayClientMessage(banner, true);
         welcomeBack((ServerLevel) player.level(), player, now);
         com.jrpetty.mcassistant.entity.Identity.entered((ServerLevel) player.level(), player, now);   // [identity] its character, its laws, its welcome
+        com.jrpetty.mcassistant.entity.BizGuide.firstVisit(player, now);    // [biz25] the U key: work, a shop, a business
     }
 
     /** Back after a while away: somebody who knows you catches you up on the news. */

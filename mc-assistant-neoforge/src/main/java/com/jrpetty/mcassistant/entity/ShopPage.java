@@ -65,7 +65,20 @@ public final class ShopPage implements PlayerLife.Page {
             page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), "Shop Counter",
                     "Three wooden slabs over a chest between two planks, a gold nugget under the chest", "")
                 .button("Where to buy one", "where", null);
-            page.buttons().button("Start a business instead", "start", null).button("Back to your life in town", "life", null);
+            // [biz25] the other ways to premises, and a counter to be had here and now
+            Villages.Village here = PlayerLife.here(p);
+            if (here != null) {
+                int price = BizGuide.counterPrice(level, here.id());
+                page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), "Buy a counter of the town's carpenters",
+                        BizGuide.carriesCounter(p) ? "You carry one already: set it down inside your building" : "Made to order; you have " + PlayerLife.coins(Market.coinsHeld(p)), PlayerLife.coins(price))
+                    .button("Buy one", "buycounter", null, Market.coinsHeld(p) >= price, "You have " + Market.coinsHeld(p) + " coins");
+                page.heading("No building of your own?");
+                page.row(new ItemStack(Items.BRICKS), "Have the town build you a shop", "Choose a drawing (a picture of each), its plot, the builders' quote and how long", "")
+                    .button("Choose a building", "getbuild", null).primary();
+                page.row(new ItemStack(Items.OAK_DOOR), "Buy a building that's for sale", PropertyMarket.listed(here.id()).size() + " for sale in " + Villages.name(here.id()) + " now", "")
+                    .button("Buildings for sale", "market", null);
+            }
+            page.buttons().button("Start a chartered business instead (hands, orders)", "start", null).button("Back to your life in town", "life", null);
             return page;
         }
         if (c.tab.isEmpty()) c.tab = s.setUp ? "shop" : "setup";
@@ -106,13 +119,18 @@ public final class ShopPage implements PlayerLife.Page {
         page.choice("tell", "Tell me of sales", new String[]{ "yes", "no" }, new String[]{ "Yes, in chat", "No" }, s.tell ? "yes" : "no");
         int fee = PlayerShops.licence(s.village);
         if (!s.licensed) page.text("Registering it with " + Villages.name(s.village) + " costs a licence of " + PlayerLife.coins(fee)
-            + " (you have " + Market.coinsHeld(p) + "); then the business rates, " + PlayerLife.coins(TaxBook.ratesCoins(s.village))
-            + " a week, out of its till.", Market.coinsHeld(p) >= fee ? 0 : 2);
+            + " (you have " + Market.coinsHeld(p) + "); then " + (TaxBook.ratesCoins(s.village) > 0 ? "the business rates, " + PlayerLife.coins(TaxBook.ratesCoins(s.village))
+            + " a week, out of its till." : "no business rates while the town charges none."), Market.coinsHeld(p) >= fee ? 0 : 2);   // [biz25] no "0 coins a week"
         page.buttons().button(s.licensed ? "Save" : "Register the shop (" + PlayerLife.coins(fee) + ")", "setup", null).primary();
+        if (s.licensed) {                                                    // [biz25] registered: what next, here too
+            BizGuide.Step next = BizGuide.next(BizGuide.steps(level, Villages.get(s.village), s));
+            if (next != null) page.row(null, "Next: " + next.label(), next.hint(), "").button(next.button(), next.action(), next.args());
+        }
         checklist(level, s, page);
     }
 
     private void overview(ServerLevel level, ServerPlayer p, PlayerShops.Shop s, LifePage page, PlayerLife.Ctx c) {
+        firstSteps(level, s, page);                                          // [biz25]
         boolean ready = ShopNeeds.ready(PlayerShops.needs(level, s));
         page.heading("How it stands");
         page.text(PlayerShops.stateWords(level, s) + ". Hours: " + PlayerShops.clock(s.opens) + " till " + PlayerShops.clock(s.closes) + ".",
@@ -132,10 +150,25 @@ public final class ShopPage implements PlayerLife.Page {
         if (ready && w.isEmpty()) page.text("Its shelves are bare: put what you'd sell in a chest inside (not one marked back stock).", 2);
         page.heading("More");
         page.buttons().button("Stock & prices", "tab:stock", null).button("Take on a keeper", "tab:keeper", null)
-            .button("Make it a registered business", "business", null);
+            .button("Charter a firm for it (hands, orders)", "business", null);   // [biz25] not "registered" twice
         page.buttons().button("Sell", "property", LifePage.args("what", "sell")).button("Let", "property", LifePage.args("what", "let"))
             .button("Repurpose", "property", LifePage.args("what", "repurpose"))
             .button(c.args.getBoolean("confirmClose") ? "Yes, close it for good" : "Close the shop", "close", LifePage.args("sure", c.args.getBoolean("confirmClose")));
+    }
+
+    /** [biz25] The shop's first steps, ticked, the next one with its button, until its first sale. */
+    static void firstSteps(ServerLevel level, PlayerShops.Shop s, LifePage page) {
+        List<BizGuide.Step> steps = BizGuide.steps(level, Villages.get(s.village), s);
+        BizGuide.Step next = BizGuide.next(steps);
+        if (next == null) return;
+        page.heading(s.soldAll > 0 ? "Keep it selling" : "Getting started");
+        for (BizGuide.Step st : steps) {
+            if (st == next) {
+                page.row(null, "Next: " + st.label(), st.hint(), "").button(st.button(), st.action(), st.args()).primary();
+            } else {
+                page.text(st.line(), st.done() ? 1 : 4);
+            }
+        }
     }
 
     static String words(double rep) {
@@ -146,6 +179,11 @@ public final class ShopPage implements PlayerLife.Page {
         Map<String, Integer> counts = new LinkedHashMap<>();
         Map<String, ItemStack> w = PlayerShops.wares(level, s, counts, true);
         for (String k : s.prices.keySet()) if (!w.containsKey(k)) { ItemStack x = PlayerStalls.sampleOf(k); if (!x.isEmpty()) { w.put(k, x); counts.put(k, 0); } }
+        // [biz25] how many of its wares have buyers here, and what the town's folk want now
+        BizGuide.Step stockStep = null;
+        for (BizGuide.Step st : BizGuide.steps(level, Villages.get(s.village), s)) if (st.id().equals("stock")) stockStep = st;
+        if (stockStep != null && !stockStep.hint().isEmpty()) page.text(stockStep.hint(), stockStep.done() ? 1 : 2);
+        else { String want = BizGuide.wantedWords(level, s.village, 5); if (!want.isEmpty()) page.text(want, 4); }
         page.heading("Prices (a lot each; shift-click for ten)");
         if (w.isEmpty()) page.text("Nothing in its chests yet. Put what you'd sell in a chest, barrel or shelf inside the shop.", 2);
         for (Map.Entry<String, ItemStack> e : w.entrySet()) {
@@ -254,6 +292,7 @@ public final class ShopPage implements PlayerLife.Page {
             page.row(null, s.keeperName + (f == null ? "" : ", " + (f.hobbyNow() == null ? "about the town" : f.hobbyNow())),
                     PlayerLife.coins(s.wage) + " a day out of the till" + (s.owed > 0 ? "; owed " + s.owed : "") + ", since day " + s.keeperSince, "")
                 .button("Let it go", "letgo", null);
+            page.text(BizGuide.keeperSums(s, s.wage), 4);                   // [biz25]
             page.choice("khours", "Its hours", new String[]{ "shop", "morning", "afternoon" },
                 new String[]{ "The shop's hours", "Mornings (till noon)", "Afternoons (from noon)" },
                 s.kOpens == s.opens && s.kCloses == s.closes ? "shop" : s.kCloses == tick(12) ? "morning" : "afternoon");
@@ -264,6 +303,7 @@ public final class ShopPage implements PlayerLife.Page {
         page.heading("Take on a keeper");
         page.text("A keeper minds the counter while you are away, greets customers and restocks the shelves from the back stock, for its day's wage out of the till each morning.", 4);
         List<ShopKeepers.Candidate> cs = ShopKeepers.candidates(level, s.village, 8);
+        if (!cs.isEmpty()) page.text(BizGuide.keeperSums(s, cs.get(0).wage()), 2);   // [biz25] its wage against its takings
         if (cs.isEmpty()) page.text("Nobody in " + Villages.name(s.village) + " can be spared just now: every hand is at its trade. Try again tomorrow.", 2);
         for (ShopKeepers.Candidate cand : cs) {
             page.row(null, cand.folk().displayNameCap(), cand.why() + "; asks " + PlayerLife.coins(cand.wage()) + " a day", "")
@@ -277,6 +317,10 @@ public final class ShopPage implements PlayerLife.Page {
         if (action.equals("life")) { PlayerLife.open(p, "life", null); return "#open:"; }
         if (action.equals("start")) { PlayerLife.open(p, "start", null); return "#open:"; }
         if (action.equals("where")) return whereToBuy(level, p);
+        if (action.equals("buycounter")) return BizGuide.buyCounter(p);       // [biz25] the other ways to premises
+        if (action.equals("getbuild")) { PlayerLife.open(p, "start", LifePage.args("kind", "shop", "prem", "build", "step", 2)); return "#open:"; }
+        if (action.equals("market")) { PropertyOffice.openOn(p, "market", null, "buy"); return "#open:"; }
+        if (action.equals("start") && args.contains("kind")) { PlayerLife.open(p, "start", args); return "#open:"; }
         PlayerShops.Shop s = PlayerShops.mine(p);
         if (s == null) return "!You keep no shop.";
         if (action.startsWith("tab:")) { c.tab = action.substring(4); return ""; }

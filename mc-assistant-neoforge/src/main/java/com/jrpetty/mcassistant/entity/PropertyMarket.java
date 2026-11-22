@@ -620,7 +620,8 @@ public final class PropertyMarket {
         t.putLong("cost", price * 100L);
         Accounts.dirty();
         Villages.tell(village, day, p.getName().getString() + " sold " + t.getString("name") + " to " + offer.getString("name") + " for " + price + Homes.coins(price));
-        return "Sold to " + offer.getString("name") + " for " + price + Homes.coins(price) + (things > 0 ? "; its contents (" + things + ") are back with you" : "") + ".";
+        String shut = BizGuide.buildingSold(level, village, t, p);          // [biz25] the shop in it is no longer the seller's
+        return "Sold to " + offer.getString("name") + " for " + price + Homes.coins(price) + (things > 0 ? "; its contents (" + things + ") are back with you" : "") + "." + shut;
     }
 
     public static String decline(ServerLevel level, ServerPlayer p, UUID village, String key, int no) {

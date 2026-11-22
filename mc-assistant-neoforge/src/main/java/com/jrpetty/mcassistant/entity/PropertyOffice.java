@@ -75,6 +75,11 @@ public final class PropertyOffice {
         Form f = form(p);
         f.tab = tab;
         f.focus = key == null ? "" : key;
+        if (what.equals("buy")) {                                            // [biz25] buying premises for a shop
+            f.msg = "Buildings for sale in town are here: buy one, then set a Shop Counter in it and it is your shop.";
+            send(p);
+            return;
+        }
         f.msg = key == null ? "You hold no building on the register here yet: a shop goes on it when it is set up, a building you commission when it stands."
             : switch (what) {
                 case "sell" -> "Your shop's building is first: set its price and put it up for sale (with its contents, or without).";
