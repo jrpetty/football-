@@ -15055,7 +15055,9 @@ A smelter draws coal only while the stores hold more than their floor (Fuel). Th
 upward a lump at a time: a street light's torch, a campfire, the fish smoked, the lighthouse lit, a festival's bonfire.
 Those uses now take none, from the Stone Age on, while the stores are under the floor and two smelters' draws more (sixteen); they wait, or burn
 wood where they can (Fuel.keptForSmelting). The mine's books (`/village mine`) count coal and charcoal in and out by whom,
-with the iron and the diamonds.
+with the iron and the diamonds, and a draw by one of the folk's own doings is named by it (VillageFolkEntity.something), not
+by the folk's class alone: the local run's Iron Age town drew 13 to 25 iron a day "by VillageFolkEntity" against 15 to 26
+mined, and its iron stood between 5 and 24 instead of climbing to the 64 its age asks.
 
 ### A lot made small enough to pay for the road
 Envoys came home "no deal: the buyer cannot pay what the seller must have" where the lot was cut down to what the buyer could
