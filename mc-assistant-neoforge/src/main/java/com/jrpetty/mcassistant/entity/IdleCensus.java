@@ -76,7 +76,7 @@ public final class IdleCensus {
                 String w = f.offWorkWhy();
                 why.merge(w.isEmpty() ? "at work" : w, 1, Integer::sum);
                 trade.merge(f.stationTask().name(), 1, Integer::sum);
-                String d = f.debugLine();
+                String d = "{" + Busywork.why(f) + "} " + f.debugLine();
                 lines.add(d.length() > 400 ? d.substring(0, 400) : d);
                 continue;
             }
