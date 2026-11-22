@@ -1736,6 +1736,7 @@ public final class CastleWall {
      */
     public static void keep(ServerLevel level, Villages.Village v) {
         if (!live()) return;
+        if (Founding.shaping(level, v.centre(), 16)) return;   // [city26] not while the founding is still making the ground it stands on
         com.jrpetty.mcassistant.Guard.run("castle wall", () -> keepNow(level, v));
     }
 

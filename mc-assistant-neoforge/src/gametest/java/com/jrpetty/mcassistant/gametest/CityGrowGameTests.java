@@ -236,9 +236,26 @@ public class CityGrowGameTests {
             expect.that(g.terrace != null && g.terraced > 2000, "the hillside is terraced: " + g.terraced + " columns");
             expect.that(c.get("terraced") > 1000, "terraces off the heart's level: " + c.get("terraced"));
             expect.that(c.get("walls") > 40, "retaining walls between them: " + c.get("walls"));
-            for (String key : TerraformGameTests.MUST_BE_NOUGHT) {
-                if (c.getOrDefault(key, 0) != 0) expect.that(false, key + "=" + c.get(key));
+            // The streets' steps: every riser a stair of dressed stone; no raw face of earth on a terrace or its street.
+            int risers = 0, stairs = 0;
+            for (int i = 0; i < g.side * g.side; i++) {
+                if (Terraces.riser(g, i) < 0 || com.jrpetty.mcassistant.entity.TerraceWalls.wantedForTests(g, i)) continue;
+                risers++;
+                BlockPos p = new BlockPos(heart.getX() + g.dx(i), g.target[i], heart.getZ() + g.dz(i));
+                if (com.jrpetty.mcassistant.entity.TerraceWalls.isStep(level.getBlockState(p))) stairs++;
             }
+            Kit.log("[VT] cg02 street risers " + risers + ", laid as stairs " + stairs + "; audit steps " + c.get("steps") + ", pillars "
+                + c.get("pillars") + ", raw faces " + c.get("rawFaces"));
+            expect.that(risers > 20 && stairs * 100 >= risers * 95, "the streets' risers laid as stairs: " + stairs + " of " + risers);
+            expect.that(c.get("rawFaces") <= c.get("square") / 500, "no raw face of earth on a terrace or its street: " + c.get("rawFaces"));
+            // Every fault of the levelling nought, but for a handful of columns of the town's own early works: a founding of
+            // forty on a hillside takes minutes, the town lives and builds on it meanwhile (at most two in a thousand).
+            int square = Math.max(1, c.get("square"));
+            for (String key : TerraformGameTests.MUST_BE_NOUGHT) {
+                int most = key.equals("offLevel") || key.equals("sheer") || key.equals("pillars") ? square / 500 : 0;
+                if (c.getOrDefault(key, 0) > most) expect.that(false, key + "=" + c.get(key) + " (at most " + most + ")");
+            }
+            expect.that(c.get("streetPillars") == 0, "no pillar or stub on a street: " + c.get("streetPillars"));
             // Each lot wholly on the terraces flat, at its street's height at the door; how many heights.
             int lots = 0, flat = 0, door = 0;
             java.util.Set<Integer> heights = new java.util.TreeSet<>();

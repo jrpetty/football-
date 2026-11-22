@@ -73,7 +73,7 @@ public final class Terraces {
     }
 
     /** What a column is in the terraces: the level heart, a street or the square, or a lot (its own level). */
-    static final byte HEART = 1, WAY = 2, PLOT = 3;
+    static final byte HEART = 1, WAY = 2, PLOT = 3, LONE = 4;
 
     /**
      * The terraces for this ground: for every column of the levelled square (FoundingPlan.levelled), the height it is to
@@ -156,9 +156,52 @@ public final class Terraces {
             double reach = w * d0[i];
             surface[i] = Math.max(level - reach, Math.min(level + reach, mid));
         }
-        // ---- the heights: the heart level, the ways on the surface, each lot at the height of the street at its door
+        // ---- the streets: each the same height right across (each lane at the height of its middle lane; a junction at
+        // the height of its middle), so its steps run straight across it; then the heart level, and each lot at the
+        // height of the street at its door
         int[] out = new int[n];
         Arrays.fill(out, NONE);
+        g.street = new boolean[n];
+        for (int i = 0; i < n; i++) {
+            if (!in[i] || what[i] != WAY) continue;
+            g.street[i] = true;
+            int dx = g.dx(i), dz = g.dz(i);
+            int mx = middle(dx), mz = middle(dz);
+            int sx = mz != NONE && mx == NONE ? dx : mx == NONE ? dx : mx;
+            int sz = mx != NONE && mz == NONE ? dz : mz == NONE ? dz : mz;
+            int j = Math.abs(sx) <= g.outer && Math.abs(sz) <= g.outer ? g.index(sx, sz) : i;
+            double v = in[j] && !Double.isNaN(surface[j]) ? surface[j] : surface[i];
+            out[i] = (int) Math.round(v);
+        }
+        // no lone column of a lot left standing out into the edge (a lot's corner where the levelled ground ends): a column
+        // of a lot with three or four of its neighbours not of its own lot on the terraces is left to the edge
+        for (int pass = 0; pass < 3; pass++) {
+            for (int i = 0; i < n; i++) {
+                if (!in[i] || (what[i] != PLOT && what[i] != WAY)) continue;
+                int c = neighbours(i, side, nb), off = 0;
+                // (a street's tip: a street column with three or four neighbours not of the street)
+                for (int k = 0; k < c; k++) {
+                    int j = nb[k];
+                    if (!in[j] || what[j] != what[i] || (what[i] == PLOT && unit[j] != unit[i])) off++;
+                }
+                off += 4 - c;
+                if (off >= 3) { what[i] = LONE; unit[i] = -1; g.street[i] = false; }
+            }
+        }
+        // never more than a block from one street cell to the next (where a junction meets a lane): the higher brought down
+        java.util.ArrayDeque<Integer> fix = new java.util.ArrayDeque<>();
+        for (int i = 0; i < n; i++) if (g.street[i]) fix.add(i);
+        int[] nb2 = new int[4];
+        while (!fix.isEmpty()) {
+            int i = fix.poll();
+            int c = neighbours(i, side, nb2);
+            for (int k = 0; k < c; k++) {
+                int j = nb2[k];
+                if (!g.street[j] || out[j] <= out[i] + 1) continue;
+                out[j] = out[i] + 1;
+                fix.add(j);
+            }
+        }
         int[] unitH = new int[fronts.size()];
         for (int u = 0; u < unitH.length; u++) {
             int[] f = fronts.get(u);
@@ -166,15 +209,57 @@ public final class Terraces {
             if (f == null || Math.abs(f[0]) > g.outer || Math.abs(f[1]) > g.outer) continue;
             int fi = g.index(f[0], f[1]);
             if (!in[fi] || Double.isNaN(surface[fi])) continue;
-            unitH[u] = (int) Math.round(surface[fi]);
+            unitH[u] = what[fi] == HEART ? level : out[fi] != NONE ? out[fi] : (int) Math.round(surface[fi]);
         }
         for (int i = 0; i < n; i++) {
             if (!in[i]) continue;
             if (what[i] == HEART) out[i] = level;
             else if (what[i] == PLOT && unit[i] >= 0 && unitH[unit[i]] != NONE) out[i] = unitH[unit[i]];
-            else out[i] = (int) Math.round(surface[i]);
+            else if (out[i] == NONE && what[i] != LONE) out[i] = (int) Math.round(surface[i]);
+        }
+        // a lone column of a lot: at the lowest of the terraces beside it, never standing up out of them
+        for (int i = 0; i < n; i++) {
+            if (!in[i] || what[i] != LONE) continue;
+            int c = neighbours(i, side, nb), low = Integer.MAX_VALUE;
+            for (int k = 0; k < c; k++) if (in[nb[k]] && what[nb[k]] != LONE && out[nb[k]] != NONE) low = Math.min(low, out[nb[k]]);
+            out[i] = low == Integer.MAX_VALUE ? (int) Math.round(surface[i]) : low;
         }
         return out;
+    }
+
+    /** The middle lane of the street or avenue this far across (in x or in z) lies on, or NONE if none. */
+    static int middle(int u) {
+        int a = Math.abs(u);
+        if (a <= TownPlan.AVENUE) return 0;
+        if (a < TownPlan.RING || (a - TownPlan.RING) % TownPlan.PERIOD >= TownPlan.STREET) return NONE;
+        return Integer.signum(u) * (TownPlan.RING + (a - TownPlan.RING) / TownPlan.PERIOD * TownPlan.PERIOD + 1);
+    }
+
+    /**
+     * Where a street climbs a block from the street beside it: the riser, faced up the climb. The way up from the lower
+     * street ({@code -1} if this column is no riser: not a street, or level with its neighbours, or a peak or a corner).
+     * As {0 north, 1 east, 2 south, 3 west}: the way the stair faces, its high side.
+     */
+    public static int riser(FoundingPlan.Ground g, int i) {
+        if (g.street == null || g.terrace == null || g.target == null || !g.street[i] || g.terrace[i] == NONE) return -1;
+        int side = g.side, x = i % side, z = i / side, t = g.target[i];
+        int[][] ways = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+        int from = -1, lower = 0;
+        for (int w = 0; w < 4; w++) {
+            int xx = x + ways[w][0], zz = z + ways[w][1];
+            if (xx < 0 || zz < 0 || xx >= side || zz >= side) continue;
+            int j = zz * side + xx;
+            if (g.terrace[j] == NONE || !g.street[j]) continue;
+            if (g.target[j] < t) {
+                lower++;
+                if (g.target[j] == t - 1) from = w;
+            }
+        }
+        if (lower != 1 || from < 0) return -1;
+        int opp = (from + 2) % 4;                                     // the high side is away from the lower street
+        int xx = x + ways[opp][0], zz = z + ways[opp][1];
+        if (xx >= 0 && zz >= 0 && xx < side && zz < side && g.target[zz * side + xx] < t) return -1;
+        return opp;
     }
 
     /** How far round a column the land is looked at for the first fitting of the streets' surface. */

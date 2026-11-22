@@ -329,11 +329,11 @@ public final class Terraform {
         java.util.List<SiteWork.Carried> chests = new java.util.ArrayList<>();      // [build5] the town's work chests, carried
         for (int y = top; y > target; y--) {
             BlockState s0 = chunk.getBlockState(m.set(x, y, z));
-            if (!natural(s0) && !SiteWork.townChest(chunk, m, s0)) return -1;
+            if (!natural(s0) && !SiteWork.townChest(chunk, m, s0) && !s0.is(Blocks.DIRT_PATH)) return -1;   // [city26] a trodden path is ground
         }
         for (int y = ground + 1; y <= target; y++) {
             BlockState s0 = chunk.getBlockState(m.set(x, y, z));
-            if (!natural(s0) && !SiteWork.townChest(chunk, m, s0)) return -1;
+            if (!natural(s0) && !SiteWork.townChest(chunk, m, s0) && !s0.is(Blocks.DIRT_PATH)) return -1;
         }
         if (!levelled && target == ground && top <= ground) return 0;
         // [integrity] Nothing cut or banked under a building, its doorway or the way in to it.

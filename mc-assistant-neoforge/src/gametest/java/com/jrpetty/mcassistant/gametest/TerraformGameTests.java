@@ -54,7 +54,8 @@ public class TerraformGameTests {
 
     /** The counts that must all be nought. */
     static final String[] MUST_BE_NOUGHT = { "offLevel", "holes", "crust", "pits", "oddTop", "growthOnSquare", "floatLeaves",
-        "floatLogs", "stumps", "floatVines", "sheer", "rawEdge", "flowing", "lava", "junk", "falling", "items" };
+        "floatLogs", "stumps", "floatVines", "sheer", "rawEdge", "flowing", "lava", "junk", "falling", "items",
+        "pillars" };   // [city26] no column left standing, no stub in a street
 
     // ============================================================ laying the ground down
 

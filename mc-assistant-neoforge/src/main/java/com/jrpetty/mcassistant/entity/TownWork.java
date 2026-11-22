@@ -45,6 +45,10 @@ public final class TownWork {
         UUID id = v.id();
         if (now - LAST.getOrDefault(id, -100000L) < EVERY) return;
         LAST.put(id, now);
+        // [city26] The town's works on its ground (the ways in at its doors, its digs, its streets, its trees) wait for the
+        // founding to finish making that ground: a big founding on a hillside takes minutes, and work done on a column
+        // before the levelling reached it was cut away or buried, or left the column off its terrace.
+        if (Founding.shaping(level, v.centre(), 16)) return;
         golem(level, v);
         Weather.rods(level, v);                     // [wf] a lightning rod on each tall roof, of the stores' copper
         DoorWays.tick(level, v);                    // a way in a folk can walk at every door
@@ -74,6 +78,7 @@ public final class TownWork {
     private static void streets(ServerLevel level, Villages.Village v, long now) {
         UUID id = v.id();
         PAVED.put(id, now);
+        if (Founding.shaping(level, v.centre(), 16)) return;   // [city26] the streets are laid once the founding has made the ground
         int reach = Villages.townReach(id);
         List<int[]> cells = cellsWithin(reach);
         if (cells.isEmpty()) return;

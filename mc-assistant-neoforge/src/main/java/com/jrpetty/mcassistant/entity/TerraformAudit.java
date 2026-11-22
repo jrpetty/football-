@@ -81,7 +81,7 @@ public final class TerraformAudit {
         Map<String, Integer> c = new LinkedHashMap<>();
         for (String k : new String[]{ "square", "heldOff", "offLevel", "holes", "crust", "pits", "oddTop", "oddTopDirt", "oddTopRock",
                 "oddTopOre", "oddTopGravel", "growthOnSquare", "floatLeaves", "floatLogs", "stumps", "floatVines", "sheer",
-                "steps2", "rawEdge", "flowing", "lava", "junk", "falling", "items", "terraced", "walls" }) c.put(k, 0);
+                "steps2", "rawEdge", "flowing", "lava", "junk", "falling", "items", "terraced", "walls", "steps", "pillars", "streetPillars", "rawFaces" }) c.put(k, 0);
         FoundingPlan.Ground g = d.ground;
         int hx = d.heart.getX(), hz = d.heart.getZ();
         int side = g.side;
@@ -97,7 +97,8 @@ public final class TerraformAudit {
             top[i] = Terraform.groundY(level, x, z);
             // [city26] A terrace's wall is the ground's top there (the earth's top reads through what is set on it).
             if (g.terrace != null && g.target != null
-                    && top[i] != Integer.MIN_VALUE && top[i] < g.target[i] && TerraceWalls.isWall(level.getBlockState(m.set(x, g.target[i], z)))) top[i] = g.target[i];
+                    && top[i] != Integer.MIN_VALUE && top[i] < g.target[i] && (TerraceWalls.isWall(level.getBlockState(m.set(x, g.target[i], z)))
+                    || TerraceWalls.isStep(level.getBlockState(m.set(x, g.target[i], z))))) top[i] = g.target[i];
             byte k = g.kind[i];
             boolean ours = k == FoundingPlan.LAND || k == FoundingPlan.FILL;
             boolean square = FoundingPlan.levelled(dx, dz, d.radius, d.seed);
@@ -136,6 +137,7 @@ public final class TerraformAudit {
             String odd = null;
             if (sq[i]) {
                 if (TerraceWalls.isWall(t) && TerraceWalls.wanted(g, i)) c.merge("walls", 1, Integer::sum);   // [city26] a terrace's wall
+                else if (TerraceWalls.isStep(t)) c.merge("steps", 1, Integer::sum);                        // [city26] a street's step
                 else if (!t.is(d.surface)) odd = kindOf(t);
             } else if (t.is(Blocks.DIRT) || t.is(Blocks.COBBLESTONE) || Terraform.topOf(t) == Terraform.ROCK || t.is(Blocks.GRAVEL)) {
                 odd = kindOf(t);
@@ -168,7 +170,7 @@ public final class TerraformAudit {
         for (int i = 0; i < side * side; i++) {
             if (top[i] == Integer.MIN_VALUE || !counted[i]) continue;
             int x = i % side, z = i / side;
-            int lowerThanAll = Integer.MAX_VALUE, wasLower = Integer.MAX_VALUE;
+            int lowerThanAll = Integer.MAX_VALUE, wasLower = Integer.MAX_VALUE, under = 0, wasUnder = 0;
             for (int[] n : new int[][]{ {1, 0}, {0, 1}, {-1, 0}, {0, -1} }) {
                 int xx = x + n[0], zz = z + n[1];
                 if (xx < 0 || zz < 0 || xx >= side || zz >= side) { lowerThanAll = Integer.MIN_VALUE; continue; }
@@ -176,9 +178,15 @@ public final class TerraformAudit {
                 if (top[j] == Integer.MIN_VALUE || !counted[j]) { lowerThanAll = Integer.MIN_VALUE; continue; }
                 lowerThanAll = Math.min(lowerThanAll, top[j] - top[i]);
                 wasLower = Math.min(wasLower, g.ground[j] - g.ground[i]);
+                if (top[i] - top[j] >= 2) under++;                       // [city26] standing two or more over it
+                if (g.ground[i] - g.ground[j] >= 2) wasUnder++;
                 if (n[0] < 0 || n[1] < 0) continue;                    // each pair once
                 if (!worked[i] && !worked[j]) continue;
                 int step = Math.abs(top[j] - top[i]);
+                // [city26] A terrace or its street standing two or more over the ground beside it with its face not walled.
+                int hiR = top[i] >= top[j] ? i : j, loR = hiR == i ? j : i;
+                if (step >= 2 && g.terrace != null && g.terrace[hiR] != com.jrpetty.mcassistant.village.Terraces.NONE
+                        && !walled(level, d, hiR, top[hiR], top[loR])) at(c, "rawFaces", d.heart().getX() + g.dx(hiR), top[hiR], d.heart().getZ() + g.dz(hiR), null);
                 if (step <= Math.abs(g.ground[j] - g.ground[i])) continue;   // no worse than the land had it
                 // [city26] A terrace's drop faced with its wall, the wall standing the whole height of it: built, not sheer.
                 int hiI = top[i] >= top[j] ? i : j, loJ = hiI == i ? j : i;
@@ -189,6 +197,24 @@ public final class TerraformAudit {
                         + " target " + g.target[i] + "/" + g.target[j] + " now " + top[i] + "/" + top[j]);
                 }
                 else if (step == 2) c.merge("steps2", 1, Integer::sum);
+            }
+            // [city26] A pillar or a stub: a column two or more over three or four of its neighbours (a column the levelling
+            // left standing, a block in a street), worse than the land had it.
+            if (under >= 3 && wasUnder < 3 && (worked[i] || near(worked, side, i))) {
+                at(c, "pillars", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
+                int sx = d.heart().getX() + g.dx(i), sz = d.heart().getZ() + g.dz(i);
+                if ((g.street != null && g.street[i]) || com.jrpetty.mcassistant.village.TownPlan.isStreet(g.dx(i), g.dz(i)))
+                    at(c, "streetPillars", sx, top[i], sz, null);                // on a street or the square's ways
+                StringBuilder w = new StringBuilder("kind " + g.kind[i] + " target " + (g.target == null ? "-" : g.target[i]) + " ground " + g.ground[i]
+                    + " terrace " + (g.terrace == null ? "-" : g.terrace[i]) + " top " + top[i] + " block "
+                    + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(m.set(d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i))).getBlock()).getPath() + "; round:");
+                for (int[] n : new int[][]{ {1, 0}, {0, 1}, {-1, 0}, {0, -1} }) {
+                    int xx = x + n[0], zz = z + n[1];
+                    if (xx < 0 || zz < 0 || xx >= side || zz >= side) continue;
+                    int j = zz * side + xx;
+                    w.append(' ').append(top[j]).append('/').append(g.target == null ? 0 : g.target[j]).append('/').append(g.ground[j]);
+                }
+                FIRST.putIfAbsent("pillarsWhy", w.toString());
             }
             if (worked[i] && lowerThanAll != Integer.MIN_VALUE && lowerThanAll >= 2 && lowerThanAll > wasLower) at(c, "pits", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
         }
