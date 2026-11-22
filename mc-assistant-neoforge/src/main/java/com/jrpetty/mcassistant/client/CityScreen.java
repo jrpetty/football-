@@ -1350,6 +1350,7 @@ public class CityScreen extends Screen {
         for (CompoundTag t : sellers) {
             String label = capital(t.getString("name")) + (t.getBoolean("built") || tight ? "" : " (none yet)");
             int kw = (int) (font.width(label) * 0.75) + 10;
+            if (kx > x && kx + kw > x + cw) { kx = x; y += 13; ch -= 13; }   // [ui29] a second row, not off the page
             boolean on = t == pick && !workshop;
             g.fill(kx, y, kx + kw, y + 11, on ? Ui.ROW_PICK : Ui.ROW);
             g.renderOutline(kx, y, kw, 11, Ui.EDGE_SOFT);
@@ -1363,6 +1364,7 @@ public class CityScreen extends Screen {
         if (!ws.isEmpty()) {
             String label = (tight ? "Workshop" : "The shop's workshop") + (ws.getBoolean("built") || tight ? "" : " (no shop yet)");
             int kw = (int) (font.width(label) * 0.75) + 10;
+            if (kx > x && kx + kw > x + cw) { kx = x; y += 13; ch -= 13; }   // [ui29]
             g.fill(kx, y, kx + kw, y + 11, workshop ? Ui.ROW_PICK : Ui.ROW);
             g.renderOutline(kx, y, kw, 11, Ui.EDGE_SOFT);
             small(g, label, kx + 5, y + 2, workshop ? Ui.GOOD : ws.getBoolean("built") ? Ui.INK : Ui.FAINT);

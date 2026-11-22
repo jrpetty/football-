@@ -50,7 +50,10 @@ public final class MyBusinesses implements PlayerLife.Page {
         Business b = chosen(p, v, c);
         if (b == null) {
             page.text("You hold no business in " + Villages.name(v.id()) + " yet.", 4);
-            page.buttons().button("Start a business", "start", null).primary();
+            // [ui29] what one is and how it starts, not just a button
+            page.text("A shop of your own is the easiest: a room with a Shop Counter, stock in a chest, and folk come to buy. "
+                + "Or charter a firm: it hires hands of its own to make and sell what the town is short of. Either starts here, in three steps.", 0);
+            page.buttons().button("Start a business", "start", null).primary().button("Open a shop", "shop", null);
             return page;
         }
         c.args.putString("firm", b.id);
@@ -161,6 +164,7 @@ public final class MyBusinesses implements PlayerLife.Page {
         Villages.Village v = PlayerLife.here(p);
         if (v == null) return "!No town here.";
         if (action.equals("start")) { PlayerLife.open(p, "start", null); return "#open:"; }
+        if (action.equals("shop")) { PlayerLife.open(p, "shop", null); return "#open:"; }   // [ui29] the empty page's second way
         if (action.startsWith("tab:")) { c.tab = action.substring(4); return ""; }
         if (action.equals("pick")) { c.args.putString("firm", args.getString("firm")); return ""; }
         Business b = chosen(p, v, c);

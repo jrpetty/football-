@@ -80,7 +80,10 @@ public final class EmoteWheelScreen extends Screen {
         g.fill(cx - w / 2 - 1, cy - 11, cx + w / 2 + 1, cy + 11, RIM);
         g.fill(cx - w / 2, cy - 10, cx + w / 2, cy + 10, PANEL);
         g.drawCenteredString(font, mid, cx, cy - 4, hovered >= 0 ? LIT : INK);
-        g.drawCenteredString(font, "Click one, or press its number", cx, cy + 16, 0xE0F4EEDC);   // [ui29] inside the ring, off the hotbar
+        // [ui29] the hint inside the ring, or under the columns, never on a box or the hotbar
+        int hintY = cy + 16;
+        if (ScreenFit.isColumns(laid, width)) for (int[] b : laid) hintY = Math.max(hintY, b[1] + BOX_H / 2 + 4);
+        g.drawCenteredString(font, "Click one, or press its number", cx, hintY, 0xE0F4EEDC);
     }
 
     @Override
