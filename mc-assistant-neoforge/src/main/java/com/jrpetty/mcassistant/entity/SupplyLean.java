@@ -54,8 +54,8 @@ public final class SupplyLean {
         return WHY.get(village);
     }
 
-    /** Weigh the town's chains afresh (Villages.weighGluts, once a minute). */
-    public static void weigh(ServerLevel level, UUID village) {
+    /** Weigh the town's chains afresh (Villages.weighGluts, once a minute, with the age's wants just read: is it short of iron). */
+    public static void weigh(ServerLevel level, UUID village, boolean ironShort) {
         Villages.Village v = Villages.get(village);
         if (v == null) return;
         int folk = Math.max(1, Villages.headcount(village));
@@ -69,7 +69,7 @@ public final class SupplyLean {
             m.put(AssistantEntity.StationTask.WOOD, w);
             why.append("timber ").append(logs).append(" of ").append(keep).append(fuelLow ? ", fuel low" : "").append(": woodcutters x").append(w);
         }
-        if (MineHands.kept(level, village)) {
+        if (ironShort) {
             int ore = Market.stock(level, village, SmelterFuel.IRON_ORE);
             if (ore >= 64) {
                 m.put(AssistantEntity.StationTask.SMELT, 1.01);

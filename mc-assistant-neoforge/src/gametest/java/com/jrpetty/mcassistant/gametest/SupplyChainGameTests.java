@@ -91,7 +91,7 @@ public class SupplyChainGameTests {
         smelter.enqueue(Job.smelt("iron", 4));
         // The shares: fuel low (no coal) and timber under the builders' keep once the logs are gone.
         clearStores(level, v);
-        SupplyLean.weigh(level, v);
+        SupplyLean.weigh(level, v, true);
         double lean = SupplyLean.lean(v, StationTask.WOOD);
         Kit.log("[VT] sc01 the woodcutters' lean with no logs and no coal: " + lean + " (" + SupplyLean.why(v) + ")");
         helper.assertTrue(lean >= 2.0, "twice the woodcutters with no logs and the fuel low: " + lean);

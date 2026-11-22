@@ -1241,7 +1241,9 @@ public final class Villages {
         int stoneMark = Math.max(384, com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk));
         cut.put(AssistantEntity.StationTask.MINE, deepShort || TownWonders.underWay(villageId) ? 1.0 : stone > 4 * stoneMark ? 0.6 : 1.0);   // [culture-wonders] the wonder's stone
         GLUT.put(villageId, cut);
-        SupplyLean.weigh(level, villageId);                                // [econ32] fuel and timber lean the shares
+        boolean ironShort = false;
+        for (Need n : wants) if (n.task() == Task.IRON) ironShort = true;
+        SupplyLean.weigh(level, villageId, ironShort);                     // [econ32] fuel and timber lean the shares
     }
 
     /** The cut a trade's share takes for a glut (Villages.weighGluts). */
