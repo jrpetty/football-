@@ -3472,6 +3472,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (seekTheSeam()) return;                     // dig where the village's metal is
         growTheField();                                // a full field breaks new ground
         if (turnedToTheFields()) return;               // a hungry village needs farmers (busy or not)
+        if (movedOnFromDeadField()) return;            // [biz30c] a field that never took is given up (busy or not)
         PutAway.look(this);                            // [economy] midday (and the watch at dusk): the work put away, busy or not
         if (peekJob() != null) return;                 // already busy
         if (onShift() && Strays.tend(this)) return;    // [economy] the builders' stock it carries, back to the stores
@@ -5356,6 +5357,7 @@ public class VillageFolkEntity extends AssistantEntity {
         WorkZone mine = WorkZone.around(pos, plotRadius + 2, WorkZone.DEFAULT_DEPTH);
         // Ground we are deliberately leaving counts as somebody else's.
         if (avoidHere != null && mine.overlaps(avoidHere)) return true;
+        if (stationTask() == StationTask.FARM && onDeadField(mine)) return true;   // [biz30c] a field the town gave up as dead
         // [emerald] And a village of the game's villagers, and its margin, is theirs: no field, wood, pen or mine on it.
         if (VanillaVillages.within(level(), pos.getX(), pos.getZ(), plotRadius + VanillaVillages.MARGIN)) return true;
         java.util.List<AssistantEntity> crew =
@@ -6748,6 +6750,66 @@ public class VillageFolkEntity extends AssistantEntity {
      * <p>Only for the trades whose ground genuinely runs out. A field does not
      * run out; it comes round again.
      */
+    /** [biz30c] A farmer's field, when it got it, and when it was last looked over for any tilled ground. */
+    @Nullable private BlockPos deadFieldCentre;
+    private long deadFieldSince = -1;
+    private int deadFieldLook = -100000;
+    /** [biz30c] Fields given up as dead, by town: the field's centre and the game time it may be tried again. */
+    private static final java.util.Map<UUID, java.util.Map<Long, Long>> DEAD_FIELDS = new java.util.concurrent.ConcurrentHashMap<>();
+    /** [biz30c] A dead field is let be for five days. */
+    static final long DEAD_FIELD_REST = 5 * 24000L;
+
+    /**
+     * [biz30c] A field that never took: a farmer's ground with not one block of farmland and not one crop on it a day and a
+     * quarter after it was given it (ent15: three farmers on one 9x9 by the town that was never tilled, its farms with
+     * nothing to sell for days). It is given up (and kept off for five days by every farmer of the town) and the farmer
+     * looks for ground elsewhere, as a miner leaves a worked-out face. Looked at once a minute.
+     */
+    private boolean movedOnFromDeadField() {
+        if (stationTask() != StationTask.FARM || ownerId() == null) return false;
+        WorkZone z = workZone();
+        if (z == null) return false;
+        long now = level().getGameTime();
+        if (deadFieldCentre == null || !deadFieldCentre.equals(z.center())) {
+            deadFieldCentre = z.center();
+            deadFieldSince = now;
+            return false;
+        }
+        if (now - deadFieldSince < 30000L || tickCount - deadFieldLook < 1200) return false;
+        deadFieldLook = tickCount;
+        BlockPos c = z.center();
+        for (int x = z.min().getX(); x <= z.max().getX(); x++) {
+            for (int zz = z.min().getZ(); zz <= z.max().getZ(); zz++) {
+                for (int dy = -3; dy <= 3; dy++) {
+                    BlockState bs = level().getBlockState(new BlockPos(x, c.getY() + dy, zz));
+                    if (bs.is(Blocks.FARMLAND) || bs.getBlock() instanceof net.minecraft.world.level.block.CropBlock) return false;
+                }
+            }
+        }
+        DEAD_FIELDS.computeIfAbsent(ownerId(), k -> new java.util.concurrent.ConcurrentHashMap<>()).put(c.asLong(), now + DEAD_FIELD_REST);
+        avoidHere = z;
+        searchBearing++;
+        BlockPos site = findSite(StationTask.FARM, radiusFor(StationTask.FARM));
+        avoidHere = null;
+        deadFieldCentre = null;
+        if (site == null) return false;
+        setStation(site, StationTask.FARM);
+        assignPlot(WorkZone.around(site, radiusFor(StationTask.FARM), depthFor(StationTask.FARM, site)), patchNameFor(StationTask.FARM));
+        setAutonomous(true);
+        brain("gave up a field that never took at " + c.toShortString() + " for " + site.toShortString());
+        return true;
+    }
+
+    /** [biz30c] Is this ground on a field the town gave up as dead (and not yet rested)? */
+    private boolean onDeadField(WorkZone mine) {
+        java.util.Map<Long, Long> dead = ownerId() == null ? null : DEAD_FIELDS.get(ownerId());
+        if (dead == null || dead.isEmpty()) return false;
+        long now = level().getGameTime();
+        dead.values().removeIf(t -> t < now);
+        for (long l : dead.keySet()) if (mine.overlaps(WorkZone.around(BlockPos.of(l), FIELD_FIRST, WorkZone.DEFAULT_DEPTH))) return true;
+        return false;
+    }
+
     private boolean movedOnFromSpentGround() {
         StationTask trade = stationTask();
         if (trade != StationTask.MINE && trade != StationTask.WOOD) return false;

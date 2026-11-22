@@ -736,6 +736,14 @@ public final class Businesses {
         dirty();
     }
 
+    /** [biz30c] A sale the town's own counter missed (Stockroom.missed): onto the books of the business behind it. */
+    public static void missedAtCounter(ServerLevel level, UUID village, Stockroom.Seller seller, String key) {
+        if (village == null || TownLod.away(village)) return;
+        Business b = behind(village, seller);
+        if (b == null) b = of(village, "storehouse");
+        missed(level, b, key, 1);
+    }
+
     /** [biz30] Minutes it was open, and of them the minutes a keeper was in, onto today's book. */
     public static void kept(ServerLevel level, Business b, int open, int kept) {
         if (b == null || open <= 0 && kept <= 0) return;

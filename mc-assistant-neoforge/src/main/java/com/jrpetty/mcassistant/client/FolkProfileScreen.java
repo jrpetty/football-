@@ -361,10 +361,10 @@ public class FolkProfileScreen extends Screen {
 
     private static final String[] NEED_NAMES = { "Food", "Rest", "Company", "Comfort" };
     private static final String[] NEED_TIPS = {
-        "Food: its meals today, and how long since it last ate. Hungry, it goes to the stores.",
-        "Rest: a night in its own bed, and how long it has been up. Worn out, it goes to bed an hour early.",
-        "Company: its partner, its friends, and when it last had somebody to talk to. Lonely, it looks for company of an evening.",
-        "Comfort: a bed and a house of its own, the comforts in it, its health and the weather. Low, it spends its savings on its home first." };
+        "Food: their meals today, and how long since they last ate. Hungry, they go to the stores.",
+        "Rest: a night in their own bed, and how long they have been up. Worn out, they go to bed an hour early.",
+        "Company: their partner, their friends, and when they last had somebody to talk to. Lonely, they look for company of an evening.",
+        "Comfort: a bed and a house of their own, the comforts in it, their health and the weather. Low, they spend their savings on their home first." };
 
     @Nullable
     private String tabs(GuiGraphics g, int mx, int my) {
@@ -415,7 +415,7 @@ public class FolkProfileScreen extends Screen {
         String tip = null;
         x -= bw + UiStyle.S1;
         UiStyle.button(g, font, "Pack", x, y, bw, bh, UiStyle.State.of(near, false, inside(mx, my, x, y, bw, bh)));
-        if (inside(mx, my, x, y, bw, bh)) tip = near ? "See what it carries (the pack screen)." : "Walk up to it to see its pack.";
+        if (inside(mx, my, x, y, bw, bh)) tip = near ? "See what " + nm() + " carries (the pack screen)." : "Walk up to " + nm() + " to see their pack.";
         x -= bw + UiStyle.S1;
         UiStyle.button(g, font, "Talk", x, y, bw, bh, UiStyle.State.of(near, false, inside(mx, my, x, y, bw, bh)));
         if (inside(mx, my, x, y, bw, bh)) tip = near ? "Talk to it." : "Walk up to it to talk.";
@@ -523,7 +523,7 @@ public class FolkProfileScreen extends Screen {
         // Everything else its card says that belongs on this tab.
         ListTag card = data.getCompound("card").getList(TAB_IDS[tab], Tag.TAG_COMPOUND);
         if (!card.isEmpty()) {
-            p.heading(TAB_IDS[tab].equals("work") ? "At its work" : TAB_IDS[tab].equals("things") ? "Money and things" : "More");
+            p.heading(TAB_IDS[tab].equals("work") ? "At work" : TAB_IDS[tab].equals("things") ? "Money and things" : "More");
             for (int i = 0; i < card.size(); i++) {
                 String k = card.getCompound(i).getString("k");
                 if (TAB_IDS[tab].equals("about") && OWN.contains(k) && !data.getCompound("self").isEmpty()) continue;   // [ui] shown above
@@ -538,7 +538,7 @@ public class FolkProfileScreen extends Screen {
         CompoundTag a = data.getCompound("about");
         // [ui] Its traits and ways as chips, first: two folk side by side read differently at a glance.
         if (!chipTexts.isEmpty()) p.add(new Chips(font, chipTexts, chipTints, p.w));
-        p.heading("Who it is");
+        p.heading("Who " + nm() + " is");
         p.fact("Kind", capital(a.getString("kind")));
         p.fact("Nature", a.getString("traits"));
         p.fact("Quirk", a.getString("quirk"));
@@ -548,8 +548,8 @@ public class FolkProfileScreen extends Screen {
             a.getString("hates").isEmpty() ? "" : "can't stand " + a.getString("hates"));
         p.fact("Likes", capital(likes));
         ListTag goals = a.getList("goals", Tag.TAG_COMPOUND);
-        p.heading("What it is working towards");
-        if (goals.isEmpty()) p.note("Nothing in hand just now: it is content as it is.");
+        p.heading("What " + nm() + " is working towards");
+        if (goals.isEmpty()) p.note("Nothing in hand just now: " + nm() + " is content as things are.");
         for (int i = 0; i < goals.size(); i++) {
             CompoundTag gl = goals.getCompound(i);
             p.add(new Goal(font, capital(gl.getString("what")), gl.getInt("done"), gl.getString("words"), p.w));
@@ -557,7 +557,7 @@ public class FolkProfileScreen extends Screen {
         // [ui] Its own life: its dream, fears, habits, favourite place, keepsake, reading and favourites, each with its mark.
         ListTag own = data.getCompound("self").getList("own", Tag.TAG_COMPOUND);
         if (!own.isEmpty()) {
-            p.heading("Its own life");
+            p.heading(nm() + "'s own life");
             for (int i = 0; i < own.size(); i++) {
                 String k = own.getCompound(i).getString("k");
                 p.add(new IconFact(font, ownIcon(k), k, capital(own.getCompound(i).getString("v")), p.w));
@@ -571,7 +571,7 @@ public class FolkProfileScreen extends Screen {
             }
         }
         if (!a.getString("story").isEmpty()) {
-            p.heading("Its story");
+            p.heading(nm() + "'s story");
             p.text(a.getString("story"), UiStyle.TEXT);
         }
     }
@@ -617,7 +617,7 @@ public class FolkProfileScreen extends Screen {
         tree = new ArrayList<>();
         ListTag parents = l.getList("parent_list", Tag.TAG_COMPOUND);
         for (int i = 0; i < parents.size(); i++) tree.add(person(parents.getCompound(i), "Parent", l));
-        p.add(new People(font, "Parents", tree, p.w, "A founder of the town: its parents never lived here."));
+        p.add(new People(font, "Parents", tree, p.w, "A founder of the town: their parents never lived here."));
         tree = new ArrayList<>();
         if (l.contains("partner")) tree.add(person(l.getCompound("partner"), "Partner", l));
         ListTag sibs = l.getList("siblings", Tag.TAG_COMPOUND);
@@ -631,8 +631,8 @@ public class FolkProfileScreen extends Screen {
         CompoundTag home = l.getCompound("home");
         p.heading("Home");
         if (home.getString("address").isEmpty()) {
-            p.note(home.getString("lodging").isEmpty() ? "No home of its own yet: it is waiting for one."
-                : "No house of its own yet: a spare bed at " + home.getString("lodging") + ".");
+            p.note(home.getString("lodging").isEmpty() ? "No home of their own yet: waiting for one."
+                : "No house of their own yet: a spare bed at " + home.getString("lodging") + ".");
         } else {
             ListTag sign = home.getList("sign", Tag.TAG_STRING);
             String[] lines = new String[4];
@@ -657,7 +657,7 @@ public class FolkProfileScreen extends Screen {
         p.add(new People(font, "Does not get on with", tree, p.w, "Nobody it can't abide."));
         if (l.contains("you")) {
             CompoundTag you = l.getCompound("you");
-            p.heading("What it thinks of you");
+            p.heading("What " + nm() + " thinks of you");
             int aff = you.getInt("affinity");
             p.add(new Goal(font, capital(you.getString("standing")), (aff + 100) * 5, (aff > 0 ? "+" : "") + aff
                 + (you.getBoolean("knows") ? "" : you.getString("heard_from").isEmpty() ? " · you have never spoken"
@@ -670,16 +670,22 @@ public class FolkProfileScreen extends Screen {
     private void business(Page p) {
         CompoundTag bz = data.getCompound("biz");
         ListTag firms = bz.getList("firms", Tag.TAG_COMPOUND);
-        p.heading(firms.isEmpty() ? "Its businesses" : "Its businesses (" + firms.size() + ")");
-        if (firms.isEmpty()) p.note("It owns no business and works in none of the town's: its work is the town's own.");
+        p.heading(firms.isEmpty() ? nm() + "'s businesses" : nm() + "'s businesses (" + firms.size() + ")");
+        if (firms.isEmpty()) p.note(nm() + " owns no business and works in none of the town's: their work is the town's own.");
         for (int i = 0; i < firms.size(); i++) p.add(new Firm(font, firms.getCompound(i), p.w));
         if (!bz.getString("plans").isEmpty()) {
-            p.heading("Its plans");
+            p.heading(nm() + "'s plans");
             p.text(bz.getString("plans"), UiStyle.TEXT);
         }
     }
 
     /** [biz30] Its place in the town: its standing, offices, what it thinks of you and how to raise it, its recent life. */
+    /** [biz30c] The folk's name, for a sentence about them ("Chestnut's plans"), in place of "its". */
+    private String nm() {
+        String n = data.getCompound("head").getString("name");
+        return n.isEmpty() ? "This folk" : n;
+    }
+
     private void town(Page p) {
         CompoundTag t = data.getCompound("town");
         p.heading("In " + (t.getString("town").isEmpty() ? "the town" : t.getString("town")));
@@ -691,11 +697,11 @@ public class FolkProfileScreen extends Screen {
         if (t.contains("you")) {
             p.heading("You and it");
             int aff = t.getInt("you");
-            p.add(new Goal(font, capital(t.getString("you_word")), (aff + 100) * 5, "Feeling " + (aff > 0 ? "+" : "") + aff + " (of -100 to +100)", p.w));
+            p.add(new Goal(font, capital(t.getString("you_word")), (aff + 100) * 5, nm() + "'s feeling for you: " + (aff > 0 ? "+" : "") + aff, p.w));
             p.text(t.getString("raise"), UiStyle.TEXT_MUTED);
         }
         ListTag hist = t.getList("history", Tag.TAG_STRING);
-        p.heading("Its recent life");
+        p.heading(nm() + "'s recent life");
         if (hist.isEmpty()) p.note("Nothing much has happened to it lately.");
         for (int i = 0; i < hist.size(); i++) p.text("• " + hist.getString(i), UiStyle.TEXT);
     }
@@ -708,7 +714,7 @@ public class FolkProfileScreen extends Screen {
         String tip = c.getString("name") + " — " + role.toLowerCase(Locale.ROOT)
             + (c.getBoolean("gone") ? "; not in the town now" : "; " + c.getString("trade").toLowerCase(Locale.ROOT))
             + (warmth.isEmpty() ? "" : "\nFeeling: " + warmth + " (friends from " + life.getInt("friend_at") + ", close from " + life.getInt("close_at") + ")")
-            + (c.hasUUID("uuid") && !c.getBoolean("gone") ? "\nClick for its profile." : "");
+            + (c.hasUUID("uuid") && !c.getBoolean("gone") ? "\nClick for their profile." : "");
         return new Person(c.getString("name"), sub, c.hasUUID("uuid") && !c.getBoolean("gone") ? c.getUUID("uuid") : null,
             c.getBoolean("gone") ? UiStyle.EDGE_SOFT : Ui.job(c.getInt("ordinal")), tip,
             role.equals("Rival") ? UiStyle.DANGER_FILL : aff >= life.getInt("close_at") ? UiStyle.SUCCESS_FILL : 0);
@@ -716,7 +722,7 @@ public class FolkProfileScreen extends Screen {
 
     private void work(Page p) {
         CompoundTag wk = data.getCompound("work");
-        p.heading("Its trade");
+        p.heading(nm() + "'s trade");
         p.fact("Trade", wk.getString("trade") + (wk.getString("shift").isEmpty() ? "" : " · works " + wk.getString("shift")));
         int here = wk.getInt("xp_here"), next = wk.getInt("xp_next"), xp = wk.getInt("xp");
         if (next > here) p.add(new Goal(font, "Level " + wk.getInt("level"), (int) ((xp - here) * 1000L / (next - here)),
@@ -737,8 +743,8 @@ public class FolkProfileScreen extends Screen {
         }
         if (!wk.getString("tool").isEmpty()) p.add(new Items(font, "In hand", List.of(stack(wk.getString("tool"), 1)), List.of(""), p.w));
         ListTag record = wk.getList("record", Tag.TAG_STRING);
-        p.heading("Its record");
-        if (record.isEmpty()) p.note("Nothing to its name yet.");
+        p.heading(nm() + "'s record");
+        if (record.isEmpty()) p.note("Nothing to their name yet.");
         for (int i = 0; i < record.size(); i++) p.text("• " + record.getString(i), UiStyle.TEXT);
     }
 
@@ -749,7 +755,7 @@ public class FolkProfileScreen extends Screen {
         String now = d.getString("now_label"), plan = d.getString("plan_label");
         boolean matches = d.getString("now").equals(d.getString("plan"));
         p.fact("Now", now + " — " + d.getString("doing"));
-        p.fact("By its plan", matches ? plan + ", as it is" : plan + " (it is " + now.toLowerCase(Locale.ROOT)
+        p.fact("By plan", matches ? plan + ", as planned" : plan + " (" + nm() + " is " + now.toLowerCase(Locale.ROOT)
             + (d.getString("off_why").isEmpty() ? "" : ": " + d.getString("off_why")) + ")", matches ? UiStyle.TEXT : UiStyle.WARNING);
         p.fact("Bed", "about " + clock(d.getInt("bedtime")) + (d.getBoolean("bell") ? "; the town keeps the bell" : ""));
         ListTag meals = d.getList("meals", Tag.TAG_COMPOUND);
@@ -775,9 +781,9 @@ public class FolkProfileScreen extends Screen {
             int[] parts = { t.getInt("purse"), t.getInt("house_fund"), t.getInt("house_owned"), t.getInt("goods"),
                 t.getInt("comforts_worth"), Math.max(0, t.getInt("bank")) };
             p.add(new Worth(font, parts, t.getInt("worth"), capital(t.getString("tier")), p.w));
-            if (t.getInt("bank") < 0) p.fact("Owes", -t.getInt("bank") + "c on its house, at the bank", UiStyle.DANGER);
+            if (t.getInt("bank") < 0) p.fact("Owes", -t.getInt("bank") + "c on their house, at the bank", UiStyle.DANGER);
         } else {
-            p.note("A child: its family keeps it. " + t.getInt("purse") + "c of its own.");
+            p.note("A child: their family keeps them. " + t.getInt("purse") + "c of their own.");
         }
         p.heading("What it wears");
         CompoundTag worn = t.getCompound("worn");
@@ -789,7 +795,7 @@ public class FolkProfileScreen extends Screen {
             wornStacks.add(stack(c.getString("id"), c.getInt("n")));
             wornTips.add(c.getString("name") + " — " + SLOT_WORDS.getOrDefault(slot, slot) + " · worth " + c.getInt("worth") + "c");
         }
-        if (wornStacks.isEmpty()) p.note("Its everyday clothes, nothing more.");
+        if (wornStacks.isEmpty()) p.note("Everyday clothes, nothing more.");
         else p.add(new Items(font, "", wornStacks, wornTips, p.w));
         p.heading("What it carries");
         ListTag items = t.getList("items", Tag.TAG_COMPOUND);
@@ -801,9 +807,9 @@ public class FolkProfileScreen extends Screen {
             tips.add(c.getString("name") + " ×" + c.getInt("n") + " · worth " + c.getInt("worth") + "c"
                 + (c.getBoolean("keepsake") ? "\nA keepsake: it will not part with it." : ""));
         }
-        if (stacks.isEmpty()) p.note("Its pack is empty.");
+        if (stacks.isEmpty()) p.note(nm() + "'s pack is empty.");
         else p.add(new Items(font, "", stacks, tips, p.w));
-        p.heading("In its home");
+        p.heading("At home");
         ListTag home = t.getList("home", Tag.TAG_COMPOUND);
         if (!home.isEmpty()) {
             List<ItemStack> homeStacks = new ArrayList<>();
@@ -817,11 +823,11 @@ public class FolkProfileScreen extends Screen {
         }
         if (t.getInt("comforts") > 0) p.fact("Comforts", t.getInt("comforts") + " (worth " + t.getInt("comforts_worth") + "c)");
         p.fact("Furnished", capital(t.getString("home_words")));
-        if (home.isEmpty() && t.getInt("comforts") == 0 && t.getString("home_words").isEmpty()) p.note("Nothing of its own at home yet.");
+        if (home.isEmpty() && t.getInt("comforts") == 0 && t.getString("home_words").isEmpty()) p.note("Nothing of their own at home yet.");
     }
 
-    private static final java.util.Map<String, String> SLOT_WORDS = java.util.Map.of("head", "on its head", "chest", "on its back",
-        "legs", "its legs", "feet", "its feet", "mainhand", "in its hand", "offhand", "in its other hand");
+    private static final java.util.Map<String, String> SLOT_WORDS = java.util.Map.of("head", "on their head", "chest", "on their back",
+        "legs", "their legs", "feet", "their feet", "mainhand", "in their hand", "offhand", "in their other hand");
 
     private static ItemStack stack(String id, int n) {
         ResourceLocation rl = ResourceLocation.tryParse(id);
@@ -1227,7 +1233,7 @@ public class FolkProfileScreen extends Screen {
 
     /** Its net worth as one bar in parts (purse, put by, its house, things, comforts, the bank) with a key. */
     private static final class Worth extends Block {
-        static final String[] NAMES = { "Purse", "Put by for a house", "Its house", "Things it carries", "Comforts", "At the bank" };
+        static final String[] NAMES = { "Purse", "Put by for a house", "Their house", "Things they carry", "Comforts", "At the bank" };
         static final int[] FILLS = { 0xFFD9B23A, 0xFF7FA35A, 0xFF4F7A3A, 0xFF6F8FB8, 0xFFB57BA6, 0xFF4A6FA0 };
         final int[] parts;
         final int total;
@@ -1263,8 +1269,8 @@ public class FolkProfileScreen extends Screen {
 
         @Nullable
         String tip(Font font, int x, int y, int w, int mx, int my) {
-            return "Net worth: its purse, its share of what its household has put by toward a house and of a house it owns, "
-                + "what it carries, the comforts of home, and its savings at the bank (less what it owes).";
+            return "Net worth: their purse, their share of what their household has put by toward a house and of a house they own, "
+                + "what they carry, the comforts of home, and their savings at the bank (less what they owe).";
         }
     }
 

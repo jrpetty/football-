@@ -88,15 +88,42 @@ public final class CoinCensus {
     public static void probe(String where) {
         UUID id = PROBE;
         if (id == null) return;
-        long c = count(id), n = netFlowPence(id);
+        Map<String, Long> hold = holders(id);
+        Map<UUID, Integer> purses = new java.util.HashMap<>();
+        Map<UUID, String> names = new java.util.HashMap<>();
+        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f) { purses.put(f.getUUID(), f.purse()); names.put(f.getUUID(), f.getName().getString()); }
+        long c = 0;
+        for (long v : hold.values()) c += v;
+        long n = netFlowPence(id);
         if (probed && c - probeCount != n - probeNet) {
-            LOG.info("[econ-1a] coin drift {} in {} at {}: count {} -> {}, flows {} -> {}", Businesses.pence((c - probeCount) - (n - probeNet)),
-                Villages.name(id), where, probeCount, c, probeNet, n);
+            // [biz30c] which holder moved, and whose purse
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<String, Long> e : hold.entrySet()) {
+                long was = probeHold.getOrDefault(e.getKey(), 0L);
+                if (was != e.getValue()) sb.append(" | ").append(e.getKey()).append(' ').append(was).append("->").append(e.getValue());
+            }
+            for (Map.Entry<UUID, Integer> e : purses.entrySet()) {
+                Integer was = probePurses.get(e.getKey());
+                if (was == null) sb.append(" | new in the town's folk: ").append(names.get(e.getKey())).append(" purse ").append(e.getValue());
+                else if (!was.equals(e.getValue())) sb.append(" | ").append(names.get(e.getKey())).append(" purse ").append(was).append("->").append(e.getValue());
+            }
+            for (Map.Entry<UUID, Integer> e : probePurses.entrySet()) {
+                if (!purses.containsKey(e.getKey())) sb.append(" | gone from the town's folk: ").append(probeNames.get(e.getKey())).append(" purse ").append(e.getValue());
+            }
+            LOG.info("[econ-1a] coin drift {} in {} at {}: count {} -> {}, flows {} -> {}{}", Businesses.pence((c - probeCount) - (n - probeNet)),
+                Villages.name(id), where, probeCount, c, probeNet, n, sb);
         }
         probeCount = c;
         probeNet = n;
+        probeHold = hold;
+        probePurses = purses;
+        probeNames = names;
         probed = true;
     }
+
+    private static Map<String, Long> probeHold = new java.util.HashMap<>();
+    private static Map<UUID, Integer> probePurses = new java.util.HashMap<>();
+    private static Map<UUID, String> probeNames = new java.util.HashMap<>();
 
     /**
      * A quick look round a folk's own tick (the probe's cheap half): its purse, the treasury, the businesses' tills, the
@@ -306,7 +333,7 @@ public final class CoinCensus {
         out.put("change held for folk at the market", Accounts.changeHeld(village));   // [econ-1a] their odd pennies
         long visitors = 0;                                                               // [econ-1a] visitors in town, their purses
         net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (server != null) for (VillageFolkEntity f : Visitors.inTown(server.overworld(), village, null)) visitors += f.purse() * 100L;
+        if (server != null) visitors = Visitors.pursesPence(server.overworld(), village);   // [biz30c] an unloaded one's too (as last seen)
         out.put("visitors' purses", visitors);
         out.put("the wonder fund", TownWonders.heldFor(village) * 100L);
         out.put("the statue fund", PublicFund.held(village) * 100L);

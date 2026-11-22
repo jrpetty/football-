@@ -295,6 +295,97 @@ public final class BizData {
         return out;
     }
 
+    // ------------------------------------------------------------------ [biz30c] a shop's weeks, for the camera (operators)
+
+    /** What the staged shop sells, and how many of each it is filled to of a morning. */
+    private static final Object[][] STAGE_WARES = {
+        { net.minecraft.world.item.Items.BREAD, 24 }, { net.minecraft.world.item.Items.BAKED_POTATO, 16 }, { net.minecraft.world.item.Items.APPLE, 16 },
+        { net.minecraft.world.item.Items.COOKIE, 12 }, { net.minecraft.world.item.Items.TORCH, 32 }, { net.minecraft.world.item.Items.STONE_HOE, 2 },
+        { net.minecraft.world.item.Items.STONE_PICKAXE, 2 }, { net.minecraft.world.item.Items.WHITE_CANDLE, 6 }, { net.minecraft.world.item.Items.LEATHER_BOOTS, 2 } };
+
+    /**
+     * [biz30c] For the camera: the player's chosen shop run so many days forward through the game's own ways, so its data
+     * has weeks to show. Each day the world's clock goes on a day; the shops' morning (its keeper's wage, the rates when due)
+     * and the town's payday run; the owner fills its shelves of a morning (the cookies only every fourth day, so they sell
+     * out); then hour by hour through its open day a few of the town's folk come to its counter and buy what they want
+     * (ShopCustomers.buy: their own wants and purses, its prices against the going price), and its keeper's hours are
+     * booked. Named for what it is: staged, by an operator, on a world kept for filming. Says what it did.
+     */
+    public static String stageShop(ServerPlayer p, int days) {
+        ServerLevel level = p.serverLevel();
+        PlayerShops.Shop s = PlayerShops.mine(p);
+        if (s == null) {                                                    // a counter set down by command: taken up as a counter set by hand
+            for (BlockPos q : BlockPos.betweenClosed(p.blockPosition().offset(-10, -3, -10), p.blockPosition().offset(10, 3, 10))) {
+                if (level.getBlockState(q).is(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER.get())) {
+                    PlayerShops.placed(level, q.immutable(), p, true);
+                    s = PlayerShops.mine(p);
+                    break;
+                }
+            }
+        }
+        if (s == null) return "!Set a Shop Counter in a room of your own first (with a chest beside it).";
+        Villages.Village v = Villages.get(s.village);
+        if (v == null) return "!Its town is gone.";
+        if (!s.setUp) PlayerShops.setUp(level, p, s, p.getGameProfile().getName() + "'s Corner Shop", "general", 0, 14000);
+        if (s.keeper == null) {
+            for (ShopKeepers.Candidate c : ShopKeepers.candidates(level, v.id(), 3)) {
+                ShopKeepers.hireForTests(level, s, c.folk());
+                if (s.keeper != null) break;
+            }
+        }
+        Business book = Businesses.shopBook(level, s);
+        java.util.Random r = new java.util.Random(s.key().hashCode());
+        long first = Businesses.today(level);
+        int sales0 = (int) book.allTime.trans;
+        for (int d = 1; d <= days; d++) {
+            long day = first + d;
+            level.setDayTime(day * 24000L + 500L);
+            PlayerShops.morning(level, v, day);
+            if (s.ratesDay + PlayerShops.WEEK <= day && s.licensed) PlayerShops.rates(level, s, day);
+            Market.payWages(level, v);
+            fill(level, s, d);
+            // the day's customers, more about midday and of an evening
+            List<VillageFolkEntity> folk = new ArrayList<>();
+            for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f && !f.isBaby() && f.isAlive() && !f.getUUID().equals(s.keeper)) folk.add(f);
+            int[] weight = { 1, 2, 2, 3, 4, 3, 2, 2, 3, 4, 3, 1, 1 };       // 7 in the morning to 7 at night
+            for (int h = 0; h < weight.length && !folk.isEmpty(); h++) {
+                level.setDayTime(day * 24000L + (h + 1) * 1000L + r.nextInt(900));
+                int n = r.nextInt(weight[h] + 1) + (d % 7 == 6 ? 1 : 0);       // market day busier
+                for (int k = 0; k < n; k++) ShopCustomers.buy(level, folk.get(r.nextInt(folk.size())), s, false, false);
+            }
+            int open = 14 * 60, kept = s.keeper == null ? 0 : open - r.nextInt(90);
+            Businesses.kept(level, book, open, kept);
+            level.setDayTime(day * 24000L + 13500L);
+        }
+        level.setDayTime((first + days) * 24000L + 6000L);
+        PlayerShops.save(s);
+        return "Staged " + days + " days of " + s.name + ": " + (book.allTime.trans - sales0) + " sales, till " + s.till + "c, keeper "
+            + (s.keeper == null ? "none" : s.keeperName) + ". Open its data: village business data";
+    }
+
+    /** The owner's morning: its shelves filled up to their marks (cookies every fourth day, the boots once a week). */
+    private static void fill(ServerLevel level, PlayerShops.Shop s, int d) {
+        List<net.minecraft.world.Container> shelves = PlayerShops.shelves(level, s);
+        if (shelves.isEmpty()) return;
+        for (Object[] w : STAGE_WARES) {
+            net.minecraft.world.item.Item it = (net.minecraft.world.item.Item) w[0];
+            if (it == net.minecraft.world.item.Items.COOKIE && d % 4 != 1) continue;
+            if (it == net.minecraft.world.item.Items.LEATHER_BOOTS && d % 7 != 1) continue;
+            int want = (Integer) w[1], have = 0;
+            for (net.minecraft.world.Container c : shelves) for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(it)) have += c.getItem(i).getCount();
+            int add = want - have;
+            for (net.minecraft.world.Container c : shelves) {
+                for (int i = 0; i < c.getContainerSize() && add > 0; i++) {
+                    if (!c.getItem(i).isEmpty()) continue;
+                    int k = Math.min(add, it.getDefaultMaxStackSize());
+                    c.setItem(i, new net.minecraft.world.item.ItemStack(it, k));
+                    add -= k;
+                }
+                c.setChanged();
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ the wire
 
     /** Send it to a player (the screen opens, or takes the new range). */

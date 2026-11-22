@@ -4,6 +4,7 @@ import com.jrpetty.mcassistant.entity.goal.BuildGoal;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -309,7 +310,79 @@ public final class BizFronts {
             done++;
             n++;
         }
+        done += awning(level, v, b, door, front, side, planned, free);             // [biz30c] a cue that reads from down the street
+        done += chimney(level, v, b, box, planned, free);
         return done;
+    }
+
+    /**
+     * [biz30c] An awning over the way in: three blocks of its trade's colour striped with white, one out from the front wall
+     * at the height over the door's head (a walker passes under it), never in a cell its drawing uses or one not empty, and
+     * only where the wall above the door stands to hold it. How many went up (0 or 3).
+     */
+    static int awning(ServerLevel level, @Nullable Villages.Village v, Ledger.Building b, BlockPos door, Direction front, Direction side, Set<Long> planned, boolean free) {
+        if (!AWNINGS.contains(b.structure())) return 0;
+        net.minecraft.world.item.DyeColor col = colourOf(b.structure());
+        net.minecraft.world.item.DyeColor stripe = col == net.minecraft.world.item.DyeColor.WHITE ? net.minecraft.world.item.DyeColor.LIGHT_GRAY : net.minecraft.world.item.DyeColor.WHITE;
+        List<BlockPos> cells = new ArrayList<>();
+        for (int k = -1; k <= 1; k++) {
+            BlockPos wall = door.above(2).relative(side, k), at = wall.relative(front);
+            BlockState here = level.getBlockState(at);
+            boolean ours = here.is(net.minecraft.tags.BlockTags.WOOL);
+            if (ours) continue;
+            if (planned.contains(at.asLong()) || !here.isAir() || !level.getBlockState(wall).isSolid()) return 0;
+            if (!level.getBlockState(at.below()).isAir() && !level.getBlockState(at.below()).is(net.minecraft.tags.BlockTags.WALL_SIGNS)) return 0;
+            if (v != null && !TownBlocks.mayPlace(level, v, at, TownBlocks.Why.DECOR)) return 0;
+            cells.add(at.immutable());
+        }
+        if (cells.isEmpty()) return 0;
+        if (!free && !Crafts.take(level, v, x -> x.is(net.minecraft.tags.ItemTags.WOOL), cells.size())) return 0;
+        for (BlockPos at : cells) {
+            int k = Math.abs((at.getX() - door.getX()) + (at.getZ() - door.getZ())) % 2;
+            net.minecraft.world.item.DyeColor c = k == 0 ? col : stripe;
+            level.setBlock(at, BuiltInRegistries.BLOCK.get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(c.getName() + "_wool")).defaultBlockState(), 3);
+        }
+        return cells.size();
+    }
+
+    /** [biz30c] The trades with an awning over their door. */
+    static final Set<String> AWNINGS = Set.of("shop", "store", "market", "cafe", "restaurant", "tavern", "inn", "guesthouse", "bakery", "brewery",
+        "smithy", "smeltery", "foundry", "stable", "tailor", "apothecary", "fletcher", "bank");
+
+    /** [biz30c] The trades whose fire shows: smoke off the roof. */
+    static final Set<String> CHIMNEYS = Set.of("smithy", "smeltery", "foundry", "bakery", "brewery");
+
+    /**
+     * [biz30c] The forge's or the oven's smoke: a lit campfire on the top of its roof (the highest block of its drawing in the
+     * back half of the building), where nobody walks and its smoke shows over the street. One at most; 1 if it went up.
+     */
+    static int chimney(ServerLevel level, @Nullable Villages.Village v, Ledger.Building b, int[] box, Set<Long> planned, boolean free) {
+        if (!CHIMNEYS.contains(b.structure())) return 0;
+        List<BlockPos> roof = new ArrayList<>();
+        int top = Integer.MIN_VALUE;
+        for (long l : planned) {
+            BlockPos q = BlockPos.of(l);
+            if (q.getX() < box[0] || q.getX() > box[1] || q.getZ() < box[2] || q.getZ() > box[3]) continue;
+            roof.add(q);
+            top = Math.max(top, q.getY());
+        }
+        if (roof.isEmpty()) return 0;
+        // already smoking (a campfire on its roof)?
+        for (BlockPos q : BlockPos.betweenClosed(box[0], top - 4, box[2], box[1], top + 2, box[3])) {
+            if (level.getBlockState(q).getBlock() instanceof net.minecraft.world.level.block.CampfireBlock) return 0;
+        }
+        // the highest sturdy block of its roof, open to the sky (a ridge of stairs or slabs passed over for the chimney stack under it)
+        roof.sort((p1, p2) -> Integer.compare(p2.getY(), p1.getY()));
+        BlockPos at = null;
+        for (BlockPos q : roof) {
+            if (q.getY() < top - 4) break;
+            if (level.getBlockState(q).isFaceSturdy(level, q, Direction.UP) && level.getBlockState(q.above()).isAir() && level.canSeeSky(q.above())) { at = q.above(); break; }
+        }
+        if (at == null) return 0;
+        if (v != null && !TownBlocks.mayPlace(level, v, at, TownBlocks.Why.DECOR)) return 0;
+        if (!free && !Crafts.take(level, v, x -> x.is(Items.CAMPFIRE) || x.is(net.minecraft.tags.ItemTags.LOGS), 1)) return 0;
+        level.setBlock(at, Blocks.CAMPFIRE.defaultBlockState(), 3);
+        return 1;
     }
 
     // ------------------------------------------------------------------ its wares on show

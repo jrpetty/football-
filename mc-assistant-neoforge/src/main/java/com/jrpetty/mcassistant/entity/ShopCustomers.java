@@ -400,6 +400,7 @@ public final class ShopCustomers {
             }
         }
         String who = f.displayNameCap();
+        if (best == null) missedHere(level, f, s, looked);                  // [biz30c] a ware it sells, gone from its shelves, this buyer wanted
         if (best == null) {
             if (dearest != null) {
                 int going = (int) Math.max(1, Math.round(dearest.going()));
@@ -560,6 +561,18 @@ public final class ShopCustomers {
 
     /** Tests: a purchase at the counter now, as if this folk had walked in. */
     @Nullable
+    /** [biz30c] A sale missed: a ware the shop has sold (on its books) not on its shelves now, that this buyer would have had. */
+    static void missedHere(ServerLevel level, VillageFolkEntity f, PlayerShops.Shop s, List<String> looked) {
+        Business book = Businesses.shopBook(level, s);
+        for (String key : book.allTime.lines.keySet()) {
+            if (looked.contains(key)) continue;
+            ItemStack sample = Stockroom.sampleOf(key);
+            if (sample.isEmpty() || !ItemUses.want(f, sample).yes()) continue;
+            Businesses.missed(level, book, key, 1);
+            return;
+        }
+    }
+
     public static String buyForTests(ServerLevel level, VillageFolkEntity f, PlayerShops.Shop s) {
         return buy(level, f, s, false, true);
     }
