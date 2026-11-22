@@ -83,8 +83,18 @@ public final class CameraNetwork {
                 t.putBoolean("ok", no == null);
                 t.putString("msg", no == null ? "Time-lapse: " + TimeSpeed.factor(player.server) + "× for " + TimeLapse.secondsLeft() + " seconds." : no);
                 if (no == null) {
-                    // The camera goes to a building going up, if there is one near.
-                    for (Happenings.Happening h : Happenings.around(level, player.blockPosition(), Happenings.RANGE, null)) {
+                    // The camera goes to a building going up, if there is one near: [life28] the one the time-lapse raises first.
+                    net.minecraft.core.BlockPos lapse = com.jrpetty.mcassistant.entity.LapseBuild.site();
+                    if (lapse != null) {
+                        CompoundTag at = new CompoundTag();
+                        at.putDouble("x", lapse.getX() + 0.5);
+                        at.putDouble("y", lapse.getY());
+                        at.putDouble("z", lapse.getZ() + 0.5);
+                        at.putInt("focus", -1);
+                        at.putString("label", com.jrpetty.mcassistant.entity.LapseBuild.label());
+                        t.put("site", at);
+                    }
+                    if (lapse == null) for (Happenings.Happening h : Happenings.around(level, player.blockPosition(), Happenings.RANGE, null)) {
                         if (h.kind().equals("build")) { CompoundTag at = new CompoundTag(); put(at, h); t.put("site", at); break; }
                     }
                 }
