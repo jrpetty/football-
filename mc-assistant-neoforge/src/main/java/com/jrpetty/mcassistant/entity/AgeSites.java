@@ -35,7 +35,7 @@ public final class AgeSites {
                 int cx = x + dx, cz = z + dz;
                 if (!level.hasChunk(cx >> 4, cz >> 4)) continue;
                 BlockPos top = level.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, new BlockPos(cx, 0, cz)).below();
-                if (!level.getFluidState(top).isEmpty() && level.getFluidState(top).is(net.minecraft.tags.FluidTags.WATER)) return 40;
+                if (!level.getFluidState(top).isEmpty() && level.getFluidState(top).is(net.minecraft.tags.FluidTags.WATER)) return 400;
             }
         }
         return 0;

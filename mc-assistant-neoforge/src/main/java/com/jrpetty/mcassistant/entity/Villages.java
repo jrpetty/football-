@@ -3077,8 +3077,9 @@ public final class Villages {
             int[] court = courtRect(villageId);
             boolean offWalk = false;                                    // [city9] a lot passed over for its street (CityPlan)
             SiteWhy.begin();                                            // [econ32b] why each lot is passed over
+            int enough = project.equals("lighthouse") ? 24 : 6;         // [econ32b] the lighthouse looks further for the water's edge
             for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : places) {
-                if (valid >= 6) break;
+                if (valid >= enough) break;
                 if (!CityGrowth.laidOut(villageId, lot)) { SiteWhy.count("ring not laid out"); continue; }     // [city26] only the rings of the plan laid out so far
                 index++;
                 boolean spoken = false;
