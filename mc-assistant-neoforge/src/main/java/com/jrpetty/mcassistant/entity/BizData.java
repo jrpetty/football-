@@ -137,7 +137,9 @@ public final class BizData {
         for (Business.Day d : b.days) byDay.put(d.day, d);
         ListTag days = new ListTag();
         Business.Day span = new Business.Day();
-        for (long d = today - range + 1; d <= today; d++) {
+        long from = Math.max(today - range + 1, Math.min(b.opened, today - 6));    // not the days before it opened (a week at least)
+        t.putLong("from", from);
+        for (long d = from; d <= today; d++) {
             Business.Day bd = byDay.get(d);
             if (bd == null) { bd = new Business.Day(); bd.day = d; }
             days.add(new LongArrayTag(row(bd)));
@@ -152,9 +154,9 @@ public final class BizData {
             Business.Line l = span.lines.getOrDefault(k, new Business.Line());
             Business.Lot lot = b.stock.get(k);
             Business.Line td = day.lines.get(k);
-            long[] perDay = new long[range];
+            long[] perDay = new long[(int) (today - from + 1)];
             int i = 0;
-            for (long d = today - range + 1; d <= today; d++, i++) {
+            for (long d = from; d <= today; d++, i++) {
                 Business.Day bd = byDay.get(d);
                 Business.Line x = bd == null ? null : bd.lines.get(k);
                 perDay[i] = x == null ? 0 : x.units;
@@ -275,7 +277,7 @@ public final class BizData {
         long quiet = 0;
         for (long d = today; d > today - 3; d--) {
             Business.Day bd = byDay.get(d);
-            if (bd == null || bd.trans == 0) quiet++;
+            if (bd == null || bd.trans == 0 && bd.revenue == 0) quiet++;
         }
         if (quiet == 3 && today - b.opened >= 3) out.add("Nobody has bought in three days. Is it open, kept and stocked, and are its prices fair?");
         if (week.openMin > 120 && week.keptMin * 2 < week.openMin) out.add("Its counter stood unkept for " + (100 - week.keptMin * 100 / week.openMin)

@@ -1767,17 +1767,23 @@ public final class Enterprise {
             if (one.isEmpty()) continue;
             if (MarketMaker.live(village)) {
                 long before = b.till;
-                MarketMaker.buy(level, village, Accounts.Account.firm(b), one, n, "a bankrupt's stock");
+                MarketMaker.buy(level, village, Accounts.Account.firm(b), one, n, "a bankrupt's stock");   // its takings booked there
                 got += b.till - before;
+                Business.Day d = b.today(day);
+                d.cogs += cost;
+                b.allTime.cogs += cost;
             } else {
                 Businesses.storesIn(village, one, n, cost);
                 long p = MarketMaker.outOrTreasury(village, cost);
                 b.till += p;
                 got += p;
+                // [biz30] the takings booked with their cost (the till had the coin and the books only the cost: they parted)
+                Business.Day d = b.today(day);
+                d.cogs += cost;
+                b.allTime.cogs += cost;
+                d.revenue += p;
+                b.allTime.revenue += p;
             }
-            Business.Day d = b.today(day);
-            d.cogs += cost;
-            b.allTime.cogs += cost;
         }
         b.stock.clear();
         Businesses.dirty();

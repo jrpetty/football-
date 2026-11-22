@@ -388,9 +388,10 @@ public final class StoreFloor {
         buyer.spend(price);
         Ledger.addCoins(id, price);
         Economy.spentInTown(id, price);
-        if (seller.firm() != null) Businesses.buyer(buyer.displayNameCap(), false);   // [biz30] who bought, for the firm's data
+        Businesses.buyer(buyer.displayNameCap(), false);                   // [biz30] who bought, for the seller's data
         if (seller.firm() != null) Sellers.sold(level, id, seller.firm(), got.get(0), n, price * 100L);   // [econ-1b] the firm's sale
         else Stockroom.sold(level, id, Stockroom.Seller.SHOP, got.get(0), n, price);
+        Businesses.buyer(null, false);
         for (ItemStack s : got) {
             ItemStack left = buyer.insertGiven(s.copy());
             if (!left.isEmpty()) Crafts.store(level, v, left);

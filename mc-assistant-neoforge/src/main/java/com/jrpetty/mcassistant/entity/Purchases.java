@@ -456,8 +456,10 @@ public final class Purchases {
             Businesses.buyer(f.displayNameCap(), false);                     // [biz30] who bought, for the firm's data
             Sellers.sold(level, village, seller.firm(), pick, got, Math.round(each * got * 100));   // [econ-1b] the firm's sale, into its till
         } else {
+            Businesses.buyer(f.displayNameCap(), false);                     // [biz30] the counter's buyer too
             Stockroom.sold(level, village, Stockroom.Seller.SHOP, pick, got, coins);
         }
+        Businesses.buyer(null, false);
         PriceIndex.bought(village, pick, got);
         if (need == Need.FOOD) FoodBasket.bought(f.getUUID(), pick);         // [econ-1d] remembered, for variety
         lastGot = pick.copyWithCount(got);

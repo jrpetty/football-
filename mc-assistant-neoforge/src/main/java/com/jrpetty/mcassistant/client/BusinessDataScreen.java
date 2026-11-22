@@ -226,8 +226,8 @@ public class BusinessDataScreen extends Screen {
         long[] span = data.getLongArray("span");
         int range = data.getInt("range");
         long cust = span.length > 9 ? span[9] : 0, trans = span.length > 8 ? span[8] : 0;
-        fy = fact(g, "Customers a day", fmt1(cust / (double) range), fx, fy, fw);
-        fy = fact(g, "Sales a day", fmt1(trans / (double) range), fx, fy, fw);
+        fy = fact(g, "Customers a day", fmt1(cust / (double) nDays()), fx, fy, fw);
+        fy = fact(g, "Sales a day", fmt1(trans / (double) nDays()), fx, fy, fw);
         fy = fact(g, "Sales today", td[4] + " (" + td[5] + " items)", fx, fy, fw);
         Item best = null;
         for (Item it : items()) if (best == null || it.rev > best.rev) best = it;
@@ -271,7 +271,7 @@ public class BusinessDataScreen extends Screen {
         int rows = Math.max(1, (top + h - FOOT - 4 - y) / 11);
         scroll = Math.max(0, Math.min(scroll, Math.max(0, items.size() - rows)));
         if (items.isEmpty()) {
-            UiStyle.empty(g, font, "Nothing sold in these " + range + " days", "Stock its shelves and open its doors.", x, y, inner, top + h - FOOT - 4 - y);
+            UiStyle.empty(g, font, "Nothing sold in these " + nDays() + " days", "Stock its shelves and open its doors.", x, y, inner, top + h - FOOT - 4 - y);
         }
         for (int i = scroll; i < items.size() && i < scroll + rows; i++) {
             Item it = items.get(i);
@@ -279,7 +279,7 @@ public class BusinessDataScreen extends Screen {
             boolean over = mx >= x && mx < x + inner && my >= y - 1 && my < y + 10;
             if (over) g.fill(x - 2, y - 1, x + inner + 2, y + 10, UiStyle.TILE_HOVER);
             cell(g, it.name, x + cols[0], y, cols[1] - 4, UiStyle.TEXT);
-            cell(g, fmt1(it.units / (double) range), x + cols[1], y, cols[2] - cols[1] - 4, UiStyle.TEXT_MUTED);
+            cell(g, fmt1(it.units / (double) nDays()), x + cols[1], y, cols[2] - cols[1] - 4, UiStyle.TEXT_MUTED);
             cell(g, Long.toString(it.units), x + cols[2], y, cols[3] - cols[2] - 4, UiStyle.TEXT);
             cell(g, c(it.rev), x + cols[3], y, cols[4] - cols[3] - 4, UiStyle.TEXT);
             cell(g, it.units == 0 ? "–" : c(it.rev / Math.max(1, it.units)), x + cols[4], y, cols[5] - cols[4] - 4, UiStyle.TEXT_MUTED);
@@ -287,7 +287,7 @@ public class BusinessDataScreen extends Screen {
             int sw = inner - cols[5] - 2;
             g.fill(x + cols[5], y + 1, x + cols[5] + sw * share / 100, y + 8, Ui.lighten(REV, 0.25F));
             cell(g, share + "%", x + cols[5] + 1, y, sw, UiStyle.TEXT);
-            if (over) setTip(List.of(Component.literal(it.name + ": " + it.units + " sold for " + c(it.rev) + " in " + range + " days, " + it.today + " today; cost "
+            if (over) setTip(List.of(Component.literal(it.name + ": " + it.units + " sold for " + c(it.rev) + " in " + nDays() + " days, " + it.today + " today; cost "
                 + c(it.cogs) + (it.missed > 0 ? "; " + it.missed + " sales missed (sold out)" : ""))));
             y += 11;
         }
@@ -303,7 +303,7 @@ public class BusinessDataScreen extends Screen {
         if (span.length < 7) return;
         int lx = x + cw + 8, ly = y;
         long rev = span[1], total = span[2] + span[3] + span[4] + span[5];
-        UiStyle.heading(g, font, "In " + data.getInt("range") + " days", lx, ly, lw);
+        UiStyle.heading(g, font, "In " + nDays() + " days", lx, ly, lw);
         ly += 13;
         String[] names = { "Stock (goods sold)", "Wages", "Rent and tax", "Other" };
         int[] colours = { STOCK, WAGES, RENT, OTHER };
@@ -344,7 +344,7 @@ public class BusinessDataScreen extends Screen {
         for (int i = scroll; i < items.size() && i < scroll + rows; i++) {
             Item it = items.get(i);
             if ((i - scroll) % 2 == 0) g.fill(x - 2, y - 1, x + inner + 2, y + 10, 0x10000000);
-            double perDay = it.units / (double) range;
+            double perDay = it.units / (double) nDays();
             double cover = perDay <= 0 ? -1 : it.onHand / perDay;
             long order = perDay <= 0 ? 0 : Math.max(0, Math.round(perDay * 7 - it.onHand));
             cell(g, it.name, x + cols[0], y, cols[1] - 4, UiStyle.TEXT);
@@ -362,12 +362,12 @@ public class BusinessDataScreen extends Screen {
             cell(g, order == 0 ? "–" : Long.toString(order), x + cols[5], y, inner - cols[5], order > 0 ? UiStyle.ACCENT : UiStyle.TEXT_FAINT);
             boolean over = mx >= x && mx < x + inner && my >= y - 1 && my < y + 10;
             if (over) setTip(List.of(Component.literal(it.name + ": " + it.onHand + " on hand at cost " + c(it.stockCost) + "; " + it.in + " bought in and " + it.made
-                + " made in " + range + " days; sells " + fmt1(perDay) + " a day" + (order > 0 ? "; a week's stock wants " + order + " more" : "")
+                + " made in " + nDays() + " days; sells " + fmt1(perDay) + " a day" + (order > 0 ? "; a week's stock wants " + order + " more" : "")
                 + (it.missed > 0 ? "; " + it.missed + " buyers went without" : ""))));
             y += 11;
         }
         int fy = top + h - FOOT - 13;
-        small(g, "Stock at cost " + c(atCost) + " · days of cover at the rate it sold over " + range + " days · Order: enough for a week", x, fy, UiStyle.TEXT_FAINT, inner);
+        small(g, "Stock at cost " + c(atCost) + " · days of cover at the rate it sold over " + nDays() + " days · Order: enough for a week", x, fy, UiStyle.TEXT_FAINT, inner);
     }
 
     private void staff(GuiGraphics g, int x, int y, int inner, int bh, int mx, int my) {
@@ -384,7 +384,7 @@ public class BusinessDataScreen extends Screen {
         for (int i = 0; i < 4; i++) {
             int tx = x + i * (tw + gap);
             UiStyle.tile(g, tx, y, tw, 28, UiStyle.State.of(true, false, false));
-            small(g, tiles[i][0] + " · " + range + " days", tx + 4, y + 3, UiStyle.TEXT_FAINT, tw - 8);
+            small(g, tiles[i][0] + " · " + nDays() + " days", tx + 4, y + 3, UiStyle.TEXT_FAINT, tw - 8);
             g.drawString(font, UiStyle.clip(font, tiles[i][1], tw - 8), tx + 4, y + 14, UiStyle.TEXT, false);
         }
         y += 34;
@@ -423,14 +423,14 @@ public class BusinessDataScreen extends Screen {
         long trans = span[8], cust = span[9], players = span[10], repeats = span[11];
         int gap = 4, tw = (inner - gap * 3) / 4;
         String[][] tiles = {
-            { "Customers", cust + " (" + fmt1(cust / (double) range) + " a day)" },
+            { "Customers", cust + " (" + fmt1(cust / (double) nDays()) + " a day)" },
             { "Sales", trans + (cust > 0 ? " (" + fmt1(trans / (double) cust) + " each)" : "") },
             { "Came back", cust == 0 ? "–" : repeats * 100 / cust + "% of days' buyers" },
             { "Players", cust == 0 ? "–" : players + " of " + cust } };
         for (int i = 0; i < 4; i++) {
             int tx = x + i * (tw + gap);
             UiStyle.tile(g, tx, y, tw, 28, UiStyle.State.of(true, false, false));
-            small(g, tiles[i][0] + " · " + range + " days", tx + 4, y + 3, UiStyle.TEXT_FAINT, tw - 8);
+            small(g, tiles[i][0] + " · " + nDays() + " days", tx + 4, y + 3, UiStyle.TEXT_FAINT, tw - 8);
             g.drawString(font, UiStyle.clip(font, tiles[i][1], tw - 8), tx + 4, y + 14, UiStyle.TEXT, false);
         }
         y += 34;
@@ -449,7 +449,7 @@ public class BusinessDataScreen extends Screen {
         int[] hours = data.getIntArray("hours");
         if (hours.length < 24) return;
         int ch = top + h - FOOT - 4 - y - 10;
-        small(g, "Sales by the hour (" + range + " days)", x, y, UiStyle.TEXT_FAINT, inner);
+        small(g, "Sales by the hour (" + nDays() + " days)", x, y, UiStyle.TEXT_FAINT, inner);
         y += 9;
         UiStyle.well(g, x, y, inner, ch, UiStyle.PAGE);
         int hi = 1;
@@ -526,17 +526,7 @@ public class BusinessDataScreen extends Screen {
         if (n == 0) return;
         int baseY = y + 2 + (int) ((ch - 4) * hi / (double) (hi - lo));
         // grid: the head, the middle, nought
-        for (int k = 0; k <= 2; k++) {
-            long v = hi - (hi - lo) * k / 2;
-            int gy = y + 2 + (int) ((ch - 4) * (hi - v) / (double) (hi - lo));
-            g.fill(px + 1, gy, px + pw - 1, gy + 1, GRID);
-            String lab = money ? cShort(v) : Long.toString(v);
-            small(g, lab, px - 2 - (int) (font.width(lab) * 0.75F), gy - 3, UiStyle.TEXT_FAINT, axis);
-        }
-        if (lo < 0) {
-            g.fill(px + 1, baseY, px + pw - 1, baseY + 1, 0x55000000);
-            small(g, "0", px - 2 - (int) (font.width("0") * 0.75F), baseY - 3, UiStyle.TEXT_FAINT, axis);
-        }
+        axis(g, px, y, pw, ch, hi, lo, baseY, axis, money);
         double colW = (pw - 4) / (double) n;
         int hover = -1;
         for (int i = 0; i < n; i++) {
@@ -596,14 +586,7 @@ public class BusinessDataScreen extends Screen {
         }
         hi = nice(hi);
         int baseY = y + 2 + (int) ((ch - 4) * hi / (double) (hi - lo));
-        for (int k = 0; k <= 2; k++) {
-            long v = hi - (hi - lo) * k / 2;
-            int gy = y + 2 + (int) ((ch - 4) * (hi - v) / (double) (hi - lo));
-            g.fill(px + 1, gy, px + pw - 1, gy + 1, GRID);
-            String lab = cShort(v);
-            small(g, lab, px - 2 - (int) (font.width(lab) * 0.75F), gy - 3, UiStyle.TEXT_FAINT, axis);
-        }
-        if (lo < 0) g.fill(px + 1, baseY, px + pw - 1, baseY + 1, 0x55000000);
+        axis(g, px, y, pw, ch, hi, lo, baseY, axis, true);
         double colW = (pw - 4) / (double) days.length;
         int[] colours = { STOCK, WAGES, RENT, OTHER };
         int hover = -1;
@@ -623,6 +606,22 @@ public class BusinessDataScreen extends Screen {
         small(g, "day " + (days[0][0] + 1), px, y + ch + 1, UiStyle.TEXT_FAINT, pw / 2);
         small(g, "today", px + pw - (int) (font.width("today") * 0.75F), y + ch + 1, UiStyle.TEXT_FAINT, 40);
         if (hover >= 0) dayTip(days[hover]);
+    }
+
+    /** The scale beside a chart: its head, nought, its foot when under nought, and the middle when clear of them; a rule at each. */
+    private void axis(GuiGraphics g, int px, int y, int pw, int ch, long hi, long lo, int baseY, int axis, boolean money) {
+        List<Integer> used = new ArrayList<>();
+        long[] marks = lo < 0 ? new long[]{ hi, 0, lo, hi / 2 } : new long[]{ hi, 0, hi / 2 };
+        for (long v : marks) {
+            int gy = y + 2 + (int) ((ch - 4) * (hi - v) / (double) (hi - lo));
+            boolean clear = true;
+            for (int u : used) if (Math.abs(u - gy) < 8) clear = false;
+            if (!clear) continue;
+            used.add(gy);
+            g.fill(px + 1, gy, px + pw - 1, gy + 1, v == 0 && lo < 0 ? 0x55000000 : GRID);
+            String lab = money ? cShort(v) : Long.toString(v);
+            small(g, lab, px - 2 - (int) (font.width(lab) * 0.75F), gy - 3, UiStyle.TEXT_FAINT, axis);
+        }
     }
 
     /** A line through the days' values (profit: dark above nought, red under). */
@@ -674,6 +673,11 @@ public class BusinessDataScreen extends Screen {
         return out;
     }
 
+    /** The days shown (from its opening, at most the range). */
+    private int nDays() {
+        return Math.max(1, data.getList("days", Tag.TAG_LONG_ARRAY).size());
+    }
+
     private long[][] days() {
         ListTag l = data.getList("days", Tag.TAG_LONG_ARRAY);
         long[][] out = new long[l.size()][];
@@ -701,7 +705,7 @@ public class BusinessDataScreen extends Screen {
     }
 
     private static String c(long pence) {
-        return String.format(Locale.ROOT, "%,.2fc", pence / 100.0);
+        return Math.abs(pence) >= 100_000 ? String.format(Locale.ROOT, "%,.0fc", pence / 100.0) : String.format(Locale.ROOT, "%,.2fc", pence / 100.0);
     }
 
     /** Coin for an axis: "12c", "1.5kc". */

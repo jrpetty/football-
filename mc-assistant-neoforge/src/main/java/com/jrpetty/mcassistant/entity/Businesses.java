@@ -1159,6 +1159,8 @@ public final class Businesses {
         all.units += k;
         all.revenue += price;
         all.cogs += cost;
+        buyer("the town's market", false);                              // [biz30] a sale to the market: its buyer the market
+        trade(level, b, d);
         storesIn(village, one, k, price);
         Business s = of(village, "storehouse");
         if (s != null) {

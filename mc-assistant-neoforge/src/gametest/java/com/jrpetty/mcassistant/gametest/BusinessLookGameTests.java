@@ -1427,6 +1427,7 @@ public class BusinessLookGameTests {
             if (b == null) { helper.fail(ok.summary()); return; }
             long today = com.jrpetty.mcassistant.entity.Businesses.todayForTests(level);
             java.util.Random r = new java.util.Random(3);
+            b.opened = today - 55;                                           // eight weeks of trade behind it
             for (long d = today - 55; d <= today; d++) tradeFor(b, d, r, new UUID[]{ UUID.randomUUID() });
             for (int range : new int[]{ 7, 28, 56 }) {
                 net.minecraft.nbt.CompoundTag t = com.jrpetty.mcassistant.entity.BizData.build(level, id, b, p, range);
