@@ -77,8 +77,9 @@ public class BusinessDataScreen extends Screen {
 
     @Override
     protected void init() {
-        w = ScreenFit.side(480, width, 8);
-        h = ScreenFit.side(300, height, 8);
+        // as big as the GUI allows it to be read: 480x300 at least where there is room, two thirds of a big screen
+        w = ScreenFit.side(Math.max(480, Math.min(640, width * 2 / 3)), width, 8);
+        h = ScreenFit.side(Math.max(300, Math.min(400, height * 2 / 3)), height, 8);
         left = (width - w) / 2;
         top = (height - h) / 2;
     }
@@ -436,12 +437,12 @@ public class BusinessDataScreen extends Screen {
         y += 34;
         // folk against players
         if (cust > 0) {
-            small(g, "Folk and players", x, y, UiStyle.TEXT_FAINT, inner);
+            small(g, "Folk (and the market) against players", x, y, UiStyle.TEXT_FAINT, inner);
             y += 9;
             int pw = (int) (inner * players / Math.max(1, cust));
             g.fill(x, y, x + inner - pw, y + 7, FOLK);
             g.fill(x + inner - pw, y, x + inner, y + 7, PLAYER);
-            small(g, (cust - players) + " folk", x + 2, y, UiStyle.TEXT_ON_DARK, inner / 2);
+            small(g, (cust - players) + (cust - players == 1 ? " buyer" : " buyers") + " of the town", x + 2, y, UiStyle.TEXT_ON_DARK, inner / 2);
             if (players > 0) small(g, players + " players", x + inner - pw + 2, y, UiStyle.TEXT_ON_DARK, Math.max(10, pw - 4));
             y += 13;
         }

@@ -1458,6 +1458,12 @@ public class BusinessLookGameTests {
             com.jrpetty.mcassistant.entity.Business b2 = dataFirm(helper, level, p, id, ok);
             net.minecraft.nbt.CompoundTag t2 = com.jrpetty.mcassistant.entity.BizData.build(level, id, b, p, 28);
             ok.that(t2.getList("firms", 10).size() >= 2, "an owner of two gets them side by side (" + t2.getList("firms", 10).size() + ")");
+            // by clicks: Your businesses has a Data button for each, and it opens the dashboard
+            com.jrpetty.mcassistant.entity.PlayerLife.open(p, "firm", argsOf("tab", "summary"));
+            String page = com.jrpetty.mcassistant.entity.PlayerLife.pageForTests(p).toString();
+            ok.that(page.contains("dataof"), "Your businesses offers Data for its firms");
+            String said = com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "dataof", argsOf("firm", b.id));
+            ok.that(said == null || !said.startsWith("!"), "Data opens it: " + said);
             if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
         });
     }
