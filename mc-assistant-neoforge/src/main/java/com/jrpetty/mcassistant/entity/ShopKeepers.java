@@ -102,13 +102,23 @@ public final class ShopKeepers {
     }
 
     /** Every morning: the wage out of the till; unpaid two days and more, it goes. */
+    /** [biz25] Paydays running at which a shop's keeper was nowhere to be found (by its owner). */
+    private static final Map<UUID, Integer> UNSEEN = new java.util.concurrent.ConcurrentHashMap<>();
+
     static void payday(ServerLevel level, Villages.Village v, PlayerShops.Shop s, long day) {
         if (s.keeper == null) return;
         VillageFolkEntity f = Homes.loaded(s.village, s.keeper);
-        if (f == null && !Villages.folkOf(s.village).isEmpty() && Villages.folkOf(s.village).stream().noneMatch(a -> a.getUUID().equals(s.keeper))) {   // [biz25] not while the town is still loading
-            letGo(level, s, "it is gone from the town");
+        // [biz25] A keeper not about at payday may only be unloaded (a restart, the town still loading): not paid, not let go.
+        // Gone from the town only when it is missed at two paydays running with the town's folk about.
+        if (f == null) {
+            int missed = UNSEEN.merge(s.owner, 1, Integer::sum);
+            if (missed >= 2 && !Villages.folkOf(s.village).isEmpty() && Villages.folkOf(s.village).stream().noneMatch(a -> a.getUUID().equals(s.keeper))) {
+                UNSEEN.remove(s.owner);
+                letGo(level, s, "it is gone from the town");
+            }
             return;
         }
+        UNSEEN.remove(s.owner);
         int due = s.wage + s.owed;
         int paid = Math.min(due, s.till);
         if (paid > 0 && f != null) {

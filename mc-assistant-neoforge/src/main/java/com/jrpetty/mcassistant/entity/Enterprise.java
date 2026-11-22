@@ -1317,7 +1317,9 @@ public final class Enterprise {
         boolean broke = b.till < 100 && b.account <= -Businesses.creditLimit(b, day);
         r.putInt("broke", broke ? r.getInt("broke") + 1 : 0);
         r.putInt("under", eq < 0 ? r.getInt("under") + 1 : 0);
-        if (day - b.opened >= 3 && (r.getInt("broke") >= BROKE_DAYS || r.getInt("under") >= UNDER_DAYS)) {
+        boolean player = BizGuide.playerOwned(b);                           // [biz25] a player's new firm: a grace, and a warning first
+        if (player) BizGuide.firmWarning(level, id, b, r, day);
+        if (day - b.opened >= (player ? BizGuide.FIRM_GRACE : 3) && (r.getInt("broke") >= BROKE_DAYS || r.getInt("under") >= UNDER_DAYS)) {
             // [econ-1c] Its creditors take it to the court, which hears it at its next sitting (hear).
             petition(level, id, b, r, day, r.getInt("broke") >= BROKE_DAYS ? "its cash and its credit gone" : "it owed more than it was worth");
             return true;

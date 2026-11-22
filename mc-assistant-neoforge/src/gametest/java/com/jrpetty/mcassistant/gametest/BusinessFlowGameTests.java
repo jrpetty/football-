@@ -526,4 +526,117 @@ public class BusinessFlowGameTests {
             helper.succeed();
         });
     }
+
+    // ============================================================ round 2: a restart, goodwill, a firm in trouble
+
+    /**
+     * A restart: a player's firm (chartered on a visitor's hello, its till empty) and a shop with a keeper, the business
+     * books written out and read back as a server stop and start does, the shops' cache forgotten: the firm is still there,
+     * open and the player's (on Your businesses), the shop still has its keeper. A keeper not about at one payday (unloaded)
+     * is kept; only one missed at two paydays running, with the town's folk about, has gone.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "bf06_restart_keeps_firm_and_keeper")
+    public static void bf06_restart_keeps_firm_and_keeper(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 5625000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 10);
+        level.setDayTime(1000);
+        helper.runAtTickTime(10, () -> {
+            UUID village = folk.get(0).ownerId();
+            Villages.ageForTests(village, Villages.Age.STONE);
+            BlockPos heart = Kit.surface(level, x, Z);
+            ServerPlayer p = player(helper, folk.get(2).blockPosition(), 40);
+            PlayerLife.open(p, "start", null);
+            PlayerLife.act(p, "start", "hello", new CompoundTag());
+            String ok = StartBusiness.startForTests(p, "baker", "town");
+            String firmId = PlayerLife.ctx(p).str("firm");
+            Kit.log("[VT] bf06 chartered: " + ok + " (" + firmId + ")");
+            helper.assertTrue(!firmId.isEmpty() && Businesses.of(village, firmId) != null, "chartered: " + ok);
+            room(level, heart);
+            chest(level, chestAt(heart), new ItemStack(Items.STONE_HOE, 2));
+            level.setBlockAndUpdate(counterAt(heart), McAssistantMod.SHOP_COUNTER.get().defaultBlockState()
+                .setValue(com.jrpetty.mcassistant.block.ShopCounterBlock.FACING, Direction.WEST));
+            p.moveTo(heart.getX() + 7.5, heart.getY(), heart.getZ() + 0.5);
+            PlayerShops.Shop s = PlayerShops.registerForTests(level, counterAt(heart), p, "general");
+            VillageFolkEntity k = folk.get(5);
+            k.setJob(AssistantEntity.StationTask.NONE);
+            ShopKeepers.hireForTests(level, s, k);
+            helper.assertTrue(s.keeper != null, "a keeper");
+            // The restart.
+            Businesses.reloadForTests(level.registryAccess());
+            PlayerShops.forgetCacheForTests();
+            Business back = Businesses.of(village, firmId);
+            Kit.log("[VT] bf06 after the restart: firm " + (back == null ? null : back.name + " open " + back.open + " owners " + back.ownersWords()));
+            helper.assertTrue(back != null && back.open && back.ownedBy(p.getUUID()), "the firm survives a restart, open and the player's");
+            PlayerLife.open(p, "firm", null);
+            helper.assertTrue(page(p).contains(back.name), "on Your businesses after the restart");
+            PlayerShops.Shop s2 = PlayerShops.of(village, p.getUUID());
+            helper.assertTrue(s2 != null && k.getUUID().equals(s2.keeper), "the shop keeps its keeper over the restart");
+            // A keeper not about (unloaded): kept at the first payday, gone after the second.
+            UUID away = UUID.randomUUID();
+            s2.keeper = away;
+            ShopKeepers.paydayForTests(level, s2);
+            helper.assertTrue(away.equals(s2.keeper), "not about at one payday: kept");
+            ShopKeepers.paydayForTests(level, s2);
+            Kit.log("[VT] bf06 after two paydays unseen: keeper " + s2.keeper);
+            helper.assertTrue(s2.keeper == null, "missed at two paydays running, with the town about: gone");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Goodwill: a shop that has not sold adds none to its building's value; once it has sold at a profit, a fortnight of its
+     * recent profit is added, chartered or not. A player's firm owing more than it is worth: in its first week it is warned
+     * (on Your businesses, how long it has) and not taken to court; after its grace, it is.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "bf07_goodwill_and_firm_grace")
+    public static void bf07_goodwill_and_firm_grace(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 5630000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 10);
+        PropertyMarket.resetForTests();
+        level.setDayTime(1000);
+        helper.runAtTickTime(10, () -> {
+            UUID village = folk.get(0).ownerId();
+            Villages.Village v = Villages.get(village);
+            Villages.ageForTests(village, Villages.Age.STONE);
+            BlockPos heart = Kit.surface(level, x, Z);
+            ServerPlayer p = player(helper, heart.offset(7, 0, 0), 40);
+            room(level, heart);
+            chest(level, chestAt(heart), new ItemStack(Items.STONE_HOE), new ItemStack(Items.STONE_HOE), new ItemStack(Items.STONE_HOE));
+            level.setBlockAndUpdate(counterAt(heart), McAssistantMod.SHOP_COUNTER.get().defaultBlockState()
+                .setValue(com.jrpetty.mcassistant.block.ShopCounterBlock.FACING, Direction.WEST));
+            PlayerShops.Shop s = PlayerShops.registerForTests(level, counterAt(heart), p, "general");
+            String key = PropertyDesk.register(level, s);
+            int before = PropertyMarket.value(level, village, key).goodwill();
+            helper.assertTrue(before == 0, "no sales, no goodwill: " + before);
+            VillageFolkEntity farmer = farmerWithoutHoe(folk.get(1));
+            String bought = ShopCustomers.buyForTests(level, farmer, s);
+            PropertyMarket.Valuation val = PropertyMarket.value(level, village, key);
+            Kit.log("[VT] bf07 sold " + bought + " (week " + PlayerShops.week(s.weekCoin) + "); value " + val.words());
+            helper.assertTrue(bought != null && val.goodwill() > 0 && val.goodwill() <= PlayerShops.week(s.weekCoin) * 14, "a selling shop's goodwill, modest: " + val.goodwill());
+            // A firm owing more than it is worth, four days old: warned, not taken to court.
+            ServerPlayer founder = player(helper, folk.get(2).blockPosition(), 40);
+            PlayerLife.open(founder, "start", null);
+            PlayerLife.act(founder, "start", "hello", new CompoundTag());
+            StartBusiness.startForTests(founder, "baker", "town");
+            Business b = Businesses.of(village, PlayerLife.ctx(founder).str("firm"));
+            helper.assertTrue(b != null, "chartered");
+            long today = b.opened;                                           // chartered today
+            b.opened = today - 4;
+            b.loan = 100000;
+            boolean closed = false;
+            for (int i = 0; i < 4; i++) closed |= com.jrpetty.mcassistant.entity.Enterprise.fortunesForTests(level, v, b);
+            PlayerLife.open(founder, "firm", null);
+            String firmPage = page(founder);
+            Kit.log("[VT] bf07 warned: closed " + closed + "; " + com.jrpetty.mcassistant.entity.Enterprise.recordForTests(village, b).getString("warning"));
+            helper.assertTrue(!closed && b.open, "in its first week it is not taken to court");
+            helper.assertTrue(firmPage.contains("owes more than it is worth") && firmPage.contains("court in"), "the player is told what is wrong and how long it has");
+            b.opened = today - 8;
+            boolean nowClosed = com.jrpetty.mcassistant.entity.Enterprise.fortunesForTests(level, v, b);
+            Kit.log("[VT] bf07 after its grace: petition " + nowClosed);
+            helper.assertTrue(nowClosed, "after its grace, its creditors may take it to court");
+            helper.succeed();
+        });
+    }
 }

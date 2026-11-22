@@ -650,7 +650,7 @@ public final class PlayerShops {
         s.weekDay = today;
     }
 
-    static int week(int[] a) {
+    public static int week(int[] a) {   // [biz25] public for the tests
         int n = 0;
         for (int x : a) n += x;
         return n;

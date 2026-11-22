@@ -196,6 +196,15 @@ public final class Businesses {
         return store().towns.computeIfAbsent(village, k -> new Town());
     }
 
+    /** [biz25] Tests: the books written out and read back, as a server stop and start does (throws if they can't be written). */
+    public static void reloadForTests(net.minecraft.core.HolderLookup.Provider p) {
+        Store s = store();
+        CompoundTag t = s.save(new CompoundTag(), p);
+        Store back = Store.load(t, p);
+        s.towns.clear();
+        s.towns.putAll(back.towns);
+    }
+
     static void dirty() {
         store().setDirty();
     }

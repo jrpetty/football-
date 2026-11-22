@@ -289,7 +289,7 @@ public final class PropertyMarket {
         double wear = plot ? 0 : b * Math.min(WEAR_MOST / 100.0, age / 7.0 * WEAR_WEEK / 1000.0);
         boolean home = BuildOrders.home(drawing) && !plot;
         double idx = home ? HousingMarket.index(village) : 1.0;
-        int goodwill = goodwill(village, t);
+        int goodwill = Math.max(goodwill(village, t), BizGuide.shopGoodwill(level, village, t));   // [biz25] a running shop's custom, chartered or not
         int contents = t.getBoolean("withContents") ? contentsValue(level, village, t) : 0;
         int total = (int) Math.round((land + b - wear) * idx) + goodwill + contents;
         String basis = plot ? "the plot's value" : (home ? "replacement less wear, as the housing market stands (x" + String.format(Locale.ROOT, "%.2f", idx) + ")"

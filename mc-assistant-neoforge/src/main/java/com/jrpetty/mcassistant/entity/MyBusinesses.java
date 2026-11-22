@@ -77,6 +77,10 @@ public final class MyBusinesses implements PlayerLife.Page {
     private void summary(ServerLevel level, ServerPlayer p, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page) {
         page.heading(b.name);
         page.text(Enterprise.line(level, v.id(), b));
+        String warn = BizGuide.firmWarning(v.id(), b);                      // [biz25] what is wrong, and how long it has
+        if (!warn.isEmpty()) page.text(warn, 3);
+        else if (b.till < 100 && Businesses.today(level) - b.opened < BizGuide.FIRM_GRACE) page.text("Its till is empty: put coin in it (Money) to pay for its stock and wages. A new firm has "
+            + BizGuide.FIRM_GRACE + " days before its creditors can take it to court.", 2);
         page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get()), "Its till: " + Businesses.pence(b.till), "Owned by " + b.ownersWords(), "")
             .button("Open its books", "books", null);
         page.heading("Its premises");
