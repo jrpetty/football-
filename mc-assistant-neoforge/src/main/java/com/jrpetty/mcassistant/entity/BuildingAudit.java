@@ -309,7 +309,9 @@ public final class BuildingAudit {
                 r.add(name, "door_blocked", 1, "door " + door.toShortString() + " " + id(level.getBlockState(step)));
             } else if (v != null && !reachesStreet(level, v, step, x0, x1, z0, z1)) {
                 noStreet++;
-                r.add(name, "door_no_street", 1, "door " + door.toShortString());
+                int drop = 0;
+                while (drop < 16 && !holds(level.getBlockState(step.below(drop + 1)))) drop++;
+                r.add(name, "door_no_street", 1, "door " + door.toShortString() + " ground " + drop + " under its step");
             }
         }
         int extra = 0;

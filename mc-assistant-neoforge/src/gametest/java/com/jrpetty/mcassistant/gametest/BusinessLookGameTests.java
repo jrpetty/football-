@@ -439,7 +439,15 @@ public class BusinessLookGameTests {
         UUID id = hand.ownerId();
         Villages.Village v = Villages.get(id);
         Ledger.note(id, com.jrpetty.mcassistant.entity.BuildingMend.DONE, "mended long ago");
-        Kit.stockForGrowth(level, v);
+        BlockPos storeAt = heart.east(3);                                    // the town's stores: what the hands mend with
+        level.setBlockAndUpdate(storeAt, Blocks.CHEST.defaultBlockState());
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, storeAt);
+        net.minecraft.world.Container stores = (net.minecraft.world.Container) level.getBlockEntity(storeAt);
+        stores.setItem(0, new ItemStack(Items.STONE_BRICKS, 64));
+        stores.setItem(1, new ItemStack(Items.COBBLESTONE, 64));
+        stores.setItem(2, new ItemStack(Items.OAK_PLANKS, 64));
+        stores.setChanged();
+        Villages.forgetStores(id);
         int base = Kit.surface(level, x0, Z).getY();
         // The fountain, stamped whole, and the work table set into a block of its basin after.
         BlockPos lotF = new BlockPos(x0, 0, Z);
@@ -469,7 +477,10 @@ public class BusinessLookGameTests {
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
         int mended = 0;
         try {
-            com.jrpetty.mcassistant.entity.Restore.surveyAll(level, v);
+            int looked = com.jrpetty.mcassistant.entity.Restore.surveyAll(level, v);
+            final BlockPos tcell = table;
+            Kit.log("[VT] bl06 surveyed " + looked + "; the table's fix: " + com.jrpetty.mcassistant.entity.Restore.diff(level, id, new Ledger.Building("fountain", fa, Direction.NORTH))
+                .stream().filter(f -> f.pos().equals(tcell)).toList() + "; jobs " + com.jrpetty.mcassistant.entity.Restore.queue(id).size());
             for (int i = 0; i < 40; i++) mended += com.jrpetty.mcassistant.entity.Restore.work(level, v, 64);
         } finally {
             com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);

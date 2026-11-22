@@ -256,6 +256,7 @@ public final class Restore {
      */
     public static boolean serves(BlockState st, BuildGoal.Placement p) {
         Block b = st.getBlock();
+        if (p.part() == BuildGoal.Part.BLOCK && !st.hasBlockEntity() && BuildingAudit.fixture(st)) return false;   // [biz30] (judge)
         return switch (p.part()) {
             case BLOCK -> switch (p.style()) {
                 case ROOF_STAIR, ROOF_STAIR_TOP, STONE_STAIR -> b instanceof net.minecraft.world.level.block.StairBlock;
