@@ -445,4 +445,41 @@ public class Growth24GameTests {
         helper.assertTrue(k.deal() && k.table().x() == Items.COBBLESTONE && k.table().buyer().equals(b), "the stone sold it on account: " + k.end() + " " + k.why());
         helper.succeed();
     }
+    /**
+     * The iron at the smelters is the town's: an Iron Age town short of its age's iron, its stores empty; forty raw iron in
+     * its smelter's pack (taken out to be smelted) comes off what the age still asks for.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "gw24_08_iron_at_smelter")
+    public static void gw24_08_iron_at_smelter(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.IronInHand.forgetForTests();
+        final int x = 5430000;
+        Kit.hold(level, x, Z, 40);
+        Kit.prepare(level, x, Z, 40);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        helper.runAtTickTime(5, () -> {
+            List<VillageFolkEntity> all = new ArrayList<>();
+            for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f && !f.isBaby()) all.add(f);
+            VillageFolkEntity smelter = all.get(0);
+            smelter.setJob(StationTask.SMELT);
+            Villages.ageForTests(v.id(), Villages.Age.IRON);
+            int before = ironAsked(level, v.id());
+            smelter.insertItem(new ItemStack(Items.RAW_IRON, 40));
+            com.jrpetty.mcassistant.entity.IronInHand.forgetForTests();
+            int after = ironAsked(level, v.id());
+            Kit.log("[VT] gw24_08 the age asks for " + before + " iron; forty raw iron at the smelter: " + after);
+            helper.assertTrue(before > 0 && after == Math.max(0, before - 40), "the smelter's forty come off the age's ask: " + before + " -> " + after);
+            helper.succeed();
+        });
+    }
+
+    private static int ironAsked(ServerLevel level, UUID village) {
+        Villages.forgetStock();
+        for (Villages.Need n : Villages.needs(level, village)) if (n.task() == Villages.Task.IRON) return n.amount();
+        return 0;
+    }
 }
