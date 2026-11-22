@@ -15084,3 +15084,41 @@ hundred and fifty blocks off inside its ground: the sleeper's heart chunk is let
 rule its own ring and its folk's tickets kept it loaded, all six folk working), the awake town's folk all stay. gw24_04 an
 Iron Age town short of iron sends a farmer to the levelling, never one of its miners; in the Wood Age the mine is
 asked nothing, and a miner goes.
+
+### The iron drain found (round two)
+The mine's books now name the doing that took the metal ("Crafts.forge", not the folk's whole tick). The local run's
+Iron Age town's 13 to 25 iron a day went to the smith's forge: while the age put its iron by, the forge still made an iron
+pick for the stores whenever they held seven bars (the miners' picks keep it safe and win more iron, it reasoned), the
+miners took them off the rack as theirs wore out, and the forge made more. A stone pick cuts iron ore, and the rack already
+kept stone picks till the iron was past its mark (Picks.ironFor: three dozen and more while the age saves). Now the forge
+waits for the same mark before an iron pick, and a blade past the smith's sixteen bars, while the age's iron is put by.
+
+### The mine's ground widened
+When the last level of an ore is worked out (its first and all five further levels), the mine's ground takes in the next ring
+of faces out (MineReach): each face of the ring that touches the ground already set aside and lies, as the first did, clear
+of the town's ground (its whole plan, its fields, buildings and roads, with a margin), of the borders and of any other town's
+mine; never under the town. The drifts of that ore's levels stopped at the old edge are driven on into it, and those levels
+are worked again; the levels opened stay planned. Out to the eighth ring (the mine some hundred and forty blocks each way).
+
+### The economy's loose ends
+- Coin squared between two towns on a deal (debts, penalties) and the deal caravans' coin paid in person at the other town
+  were moved between treasuries and purses without the census hearing of it; both towns' morning counts now book it (out of
+  the payer's town, into the payee's, as the shipments' coin is).
+- Young towns' prices ran up twelve to eighteen in the hundred a week: a town short of what its age asks it to hold (the food
+  in its stores above all, whose mark grows with every child) counted a third of the whole shortfall as wanted every day on
+  top of what its folk ate, so every food on the board went to three times its usual worth at fifteen in the hundred a day.
+  The age's want of a good now counts at most as much again as the good is wanted or made in a day (AgeWant): a good the age
+  asks for is dearer by about four tenths, and made and bought in, without running away.
+- 89 of some 115 envoys' trade missions came home "the buyer cannot pay": a working town that pays its hands every day had
+  no coin past two days' wages to spare. A friend (relations friendly or better) that owes nothing on any deal may now have
+  a delivery's coin on account, a quarter of what it made yesterday and sixty-four coin at most (TradeCredit); what it cannot
+  pay stays owed on the deal and is squared out of its treasury at the next delivery, and while it owes it has no more.
+  Tools are still not traded between towns (no town counts its tools as spare).
+
+### Tests (round two)
+gw24_05 an Iron Age town short of iron with thirty bars and an empty pick rack: its smith forges no iron pick (on the old
+forge, two, six bars), keeps 26 of its 30 bars, and with sixty forges one; the books name Crafts.forge. gw24_06 the iron's
+levels all worked out: the ground widens from 54 faces to 75 (ring 4 to 5), none on the town's, the edge drifts opened and
+the levels worked again. gw24_07 a town with no coin to spare buys a stone town's stone on credit once it has takings to its
+name. AgeWantTest (unit): a young town's food (forty in store, ten made and eaten a day, six hundred short of its mark) up 155% in a week before, 4% now.
+

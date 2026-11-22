@@ -398,4 +398,51 @@ public class Growth24GameTests {
         helper.assertTrue(told, "the news tells of it");
         helper.succeed();
     }
+    /**
+     * A friend's delivery on account: a stone town and a town short of stone with nothing the stone town wants and no coin to
+     * spare (it pays its hands every day). With no takings to its name the envoy comes home "the buyer cannot pay"; once it
+     * made a hundred and twenty coin's worth yesterday, the stone is sold it on credit (a quarter of that).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "gw24_07_trade_on_credit")
+    public static void gw24_07_trade_on_credit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.TradeDeals.resetForTests();
+        level.setDayTime(24000L * 6 + 3000);
+        Villages.Village[] t = new Villages.Village[2];
+        for (int i = 0; i < 2; i++) {
+            int cx = 5426000 + i * 300;
+            Kit.hold(level, cx, Z, 40);
+            Kit.prepare(level, cx, Z, 40);
+            BlockPos heart = Kit.surface(level, cx, Z);
+            VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 5);
+            t[i] = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+            helper.assertTrue(t[i] != null, "a town at " + cx);
+            for (AssistantEntity a : Villages.folkOf(t[i].id())) if (a instanceof VillageFolkEntity f) f.ensurePersona();
+            for (BlockPos p : Villages.storeChests(level, t[i].id())) {
+                if (level.getBlockEntity(p) instanceof net.minecraft.world.Container c) { c.clearContent(); c.setChanged(); }
+            }
+            Villages.chooseElder(t[i].id(), level.getDayTime() / 24000L);
+            com.jrpetty.mcassistant.entity.TradeTalks.temperForTests(t[i].id(), com.jrpetty.mcassistant.entity.Envoys.Temper.STEADY);
+        }
+        UUID a = t[0].id(), b = t[1].id();
+        helper.assertTrue(!a.equals(b), "two towns");
+        com.jrpetty.mcassistant.village.Ledger.relate(a, b, 25);
+        for (int i = 0; i < 40; i++) Market.intoStoresForTests(level, a, new ItemStack(Items.COBBLESTONE, 64));
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(b, com.jrpetty.mcassistant.village.Ledger.coins(b));   // nothing to spare
+        Villages.forgetStock();
+        com.jrpetty.mcassistant.entity.TradeBook.forget(a);
+        com.jrpetty.mcassistant.entity.TradeBook.forget(b);
+        com.jrpetty.mcassistant.village.Ledger.note(b, "output.week", "");
+        com.jrpetty.mcassistant.entity.TradeTalks.Talk none = com.jrpetty.mcassistant.entity.TradeTalks.negotiate(level, a, b);
+        com.jrpetty.mcassistant.village.Ledger.note(b, "output.week", "120,110,100");
+        int line = com.jrpetty.mcassistant.entity.TradeCredit.line(b, a);
+        com.jrpetty.mcassistant.entity.TradeTalks.Talk k = com.jrpetty.mcassistant.entity.TradeTalks.negotiate(level, a, b);
+        Kit.log("[VT] gw24_07 no takings: " + none.end() + " (" + none.why() + "); takings 120 a day, credit " + line + ": " + k.end() + " — "
+            + (k.deal() ? com.jrpetty.mcassistant.entity.TradeTalks.terms(k) : k.why()));
+        helper.assertTrue(!none.deal() && none.why().contains("cannot pay"), "with nothing to its name, the buyer cannot pay: " + none.why());
+        helper.assertTrue(line == 30, "a quarter of yesterday's takings on credit: " + line);
+        helper.assertTrue(k.deal() && k.table().x() == Items.COBBLESTONE && k.table().buyer().equals(b), "the stone sold it on account: " + k.end() + " " + k.why());
+        helper.succeed();
+    }
 }
