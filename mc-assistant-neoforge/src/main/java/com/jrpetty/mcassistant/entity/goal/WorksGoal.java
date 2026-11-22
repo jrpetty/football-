@@ -57,8 +57,12 @@ public class WorksGoal extends Goal {
     private String bye = "";
     private boolean saidSealed;
 
-    /** Ticks a shift may run, and the pieces of work it may take on. */
-    private static final int SHIFT_TICKS = 12000, SHIFT_TASKS = 10;
+    /** Ticks a shift may run, and the pieces of work it may take on. [econ32] Thirty pieces, not ten: a piece is a few
+     *  blocks of a drift, and a local run's Iron Age town's miners cut twenty-three to twenty-seven blocks a shift of three to
+     *  four minutes, then walked the whole stair up (a hundred and forty blocks down to the deep level) and down again for
+     *  the next; its iron level brought in one to twenty-eight iron a day with ten miners. The half day and a full pack
+     *  still end a shift. */
+    private static final int SHIFT_TICKS = 12000, SHIFT_TASKS = 30;
     /** How far it reaches from where it stands. */
     private static final double REACH = 4.6;
     /** How many blocks of one vein it follows. */
