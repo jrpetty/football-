@@ -328,8 +328,15 @@ public class Growth24GameTests {
             int iron = Market.stock(level, v.id(), st -> st.is(Items.IRON_INGOT));
             int picks = Market.stock(level, v.id(), ironPick);
             boolean saving = com.jrpetty.mcassistant.entity.MineHands.kept(level, v.id());
-            // Past the mark: the forge makes the iron pick again.
+            // [econ32] Sixty bars, the age still short: no iron pick yet (the pick's mark lay under the age's ask, and the
+            // forge took the stores back down to thirteen day after day); the age's iron in hand: the forge makes it again.
             Market.intoStoresForTests(level, v.id(), new ItemStack(Items.IRON_INGOT, 30));
+            Villages.forgetStock();
+            for (int i = 0; i < 6; i++) { com.jrpetty.mcassistant.entity.Crafts.smithForTests(level, v, smith); Villages.forgetStock(); }
+            int picksSixty = Market.stock(level, v.id(), ironPick);
+            helper.assertTrue(picksSixty == 0, "no iron pick at sixty bars while the age is short: " + picksSixty);
+            for (int i = 0; i < 5; i++) Market.intoStoresForTests(level, v.id(), new ItemStack(Items.IRON_INGOT, 64));
+            com.jrpetty.mcassistant.entity.MineHands.forgetForTests();
             Villages.forgetStock();
             List<String> then = new ArrayList<>();
             for (int i = 0; i < 12 && Market.stock(level, v.id(), ironPick) == 0; i++) {
@@ -343,7 +350,7 @@ public class Growth24GameTests {
             helper.assertTrue(saving, "the Iron Age short of its iron is saving it");
             helper.assertTrue(picks == 0, "no iron pick forged for the stores while the age saves its iron: " + picks);
             helper.assertTrue(iron >= 24, "the town keeps its bars: " + iron + " of 30");
-            helper.assertTrue(picksThen >= 1, "past the rack's mark an iron pick is forged again: " + picksThen);
+            helper.assertTrue(picksThen >= 1, "the age's iron in hand: an iron pick is forged again: " + picksThen);
             helper.assertTrue(books.stream().anyMatch(l -> l.contains("Crafts.forge")), "the books name the forge: " + books);
             helper.succeed();
         });

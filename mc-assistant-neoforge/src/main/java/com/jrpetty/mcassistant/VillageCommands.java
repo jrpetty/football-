@@ -1743,7 +1743,8 @@ public final class VillageCommands {
         sb.append(". Short of:");
         java.util.List<Villages.Need> needs = Villages.needs(level, v.id());
         if (needs.isEmpty()) sb.append(" nothing — about to come of age.");
-        for (Villages.Need n : needs) sb.append(' ').append(n.what()).append(';');
+        for (Villages.Need n : needs) sb.append(' ').append(n.what())
+            .append(n.task() != Villages.Task.BUILD && n.amount() > 1 ? " (" + n.amount() + " more)" : "").append(';');   // [econ32] how far short
         return sb.toString();
     }
 

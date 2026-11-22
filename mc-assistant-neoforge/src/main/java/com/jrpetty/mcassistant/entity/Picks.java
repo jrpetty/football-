@@ -107,7 +107,11 @@ public final class Picks {
 
     /** Iron for a pick: past the smith's bars and eight besides, or (the town putting iron by) past three dozen. */
     static boolean ironFor(int iron, boolean ironFree, int head) {
-        return ironFree ? iron >= head + Crafts.IRON_KEPT + 8 : iron >= head + Crafts.IRON_KEPT + 24;
+        // [econ32] Not at all while the town puts iron by for its age. The mark (three dozen and more) lay under the age's own
+        // ask (sixty-four and up): the local run's Iron Age town climbed to forty-nine bars, its smith made nine iron picks in a
+        // day (twenty-seven bars), and the stores fell back to thirteen, day after day, never reaching the age's sixty-eight.
+        // A stone pick cuts iron ore; the diamonds' iron picks are kept apart (DeepPicks).
+        return ironFree && iron >= head + Crafts.IRON_KEPT + 8;
     }
 
     /**
