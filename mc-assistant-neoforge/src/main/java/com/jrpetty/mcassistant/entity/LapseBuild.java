@@ -65,7 +65,18 @@ public final class LapseBuild {
             double d = s.anchor().distSqr(p.blockPosition());
             if (d < bd && com.jrpetty.mcassistant.entity.goal.Blueprints.has(e.getKey())) { bd = d; best = new Ledger.Building(e.getKey(), s.anchor(), s.facing()); }
         }
-        if (best == null) return;
+        if (best == null) {
+            // None under way near: the town's next building (a house, if it wants one) on the lot its plan gives it,
+            // put on its register now and raised in the time-lapse from the bare plot.
+            String next = Villages.projectsWanted(v.id()).contains("house") ? "house" : AdminTools.nextProject(v.id());
+            Villages.Site s = next == null ? null : Villages.siteFor(level, v.id(), next);
+            if (s == null || s.anchor().distSqr(p.blockPosition()) > (double) REACH * REACH * 4) return;
+            AdminTools.fellTheLot(level, v, next, s.anchor(), s.facing());
+            com.jrpetty.mcassistant.entity.goal.BuildGoal.clearWildPlants(level, next, s.anchor(), s.facing(), 8);
+            Ledger.built(v.id(), next, s.anchor(), s.facing());
+            Villages.noteProject(v.id(), next, level.getGameTime());
+            best = new Ledger.Building(next, s.anchor(), s.facing());
+        }
         int total = 0;
         for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement pl : com.jrpetty.mcassistant.entity.goal.BuildGoal.plan(best.structure(), best.anchor(), best.facing(), 13)) {
             if (pl.part() != com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.CLEAR) total++;
@@ -115,8 +126,18 @@ public final class LapseBuild {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isSleeping() || f.level() != level) continue;
             Job j = f.peekJob();
             boolean builder = j != null && j.type() == Job.Type.BUILD && j.arg() != null && j.arg().startsWith(t.b().structure());
-            if (builder || f.blockPosition().distSqr(at) < 24 * 24 && TownJobs.busy(f)) crew.add(f);
+            if (builder) crew.add(f);
             if (crew.size() >= 6) break;
+        }
+        // Short of builders: the nearest grown hands not at the watch or a fight make up the crew (it is the film's crew).
+        if (crew.size() < 4) {
+            List<VillageFolkEntity> near = new ArrayList<>();
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                if (a instanceof VillageFolkEntity f && !f.isBaby() && !f.isSleeping() && f.level() == level && !crew.contains(f)
+                    && f.getTarget() == null && f.stationTask() != AssistantEntity.StationTask.GUARD && f.blockPosition().distSqr(at) < 48 * 48) near.add(f);
+            }
+            near.sort(java.util.Comparator.comparingDouble(f -> f.blockPosition().distSqr(at)));
+            for (int i = 0; i < near.size() && crew.size() < 4; i++) crew.add(near.get(i));
         }
         for (int i = 0; i < crew.size(); i++) {
             VillageFolkEntity f = crew.get(i);
