@@ -353,6 +353,13 @@ public final class MineWorks {
     }
 
     /** The way in from the surface: beside the first landing, to the west. */
+    /** [econ32b] The way in at the top of the works for this town (WorksGoal: a climb that ran out of time ends there), or null. */
+    @Nullable
+    public static BlockPos topFor(ServerLevel level, AssistantEntity a) {
+        Works w = works(level, villageOf(a));
+        return w == null ? null : approach(w);
+    }
+
     static BlockPos approach(Works w) {
         return new BlockPos(w.sx - 4, Math.max(w.top, w.approachY), w.sz - 2);
     }
@@ -1039,7 +1046,11 @@ public final class MineWorks {
         Works w = v == null ? null : works(level, v);
         if (w == null) return false;
         BlockPos p = a.blockPosition();
-        return p.getY() < w.top - 2 && (TownMine.inMine(v, p) || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 80);
+        // [econ32b] Off the mine's ground, only deep under the rock: a smelter at its furnaces eight blocks under the pithead's
+        // height, seventy-six off, was "below in the works", sent up by a way out of the works it was never in ("Can't find
+        // my way to the pithead").
+        return p.getY() < w.top - 2 && (TownMine.inMine(v, p) || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 80
+            && p.getY() < w.top - 12 && !level.canSeeSky(p));
     }
 
     /** [mine8] Is this column in the ground of a town's mine whose works are laid out (no hand cuts stone or earth there)? */

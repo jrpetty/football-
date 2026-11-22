@@ -236,6 +236,26 @@ public final class WatchKit {
         return worse - have;
     }
 
+    /** [econ32b] Who wants a better piece of this kind than they wear, in words (the forge's log): name, trade, what it wears. */
+    static String wantingWho(ServerLevel level, Villages.Village v, Item item) {
+        ItemStack one = new ItemStack(item);
+        Kind kind = null;
+        for (Kind k : SUIT) if (fits(k, one)) kind = k;
+        if (kind == null) return "";
+        int want = worth(kind, one);
+        List<String> out = new ArrayList<>();
+        List<VillageFolkEntity> all = new ArrayList<>(watch(v.id()));
+        all.addAll(CaveDwellers.dwellers(v.id()));
+        all.addAll(NetherRunners.runners(v.id()));
+        for (VillageFolkEntity g : all) {
+            if (wears(g, kind) >= want) continue;
+            ItemStack w = g.getItemBySlot(kind.slot);
+            out.add(g.displayNameCap() + " (" + g.stationTask().name().toLowerCase(java.util.Locale.ROOT) + ", " + (w.isEmpty() ? "nothing" : w.getItem().toString())
+                + ", age " + g.tickCount / 20 + "s)");
+        }
+        return String.join(", ", out);
+    }
+
     // ------------------------------------------------------------------ the makers
 
     /** What the town's makers have made for the watch today (by village): who, and what of what. */

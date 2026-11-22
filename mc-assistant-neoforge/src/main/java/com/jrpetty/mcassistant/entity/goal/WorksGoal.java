@@ -163,7 +163,21 @@ public class WorksGoal extends Goal {
             case CUT -> cut(level);
             case OUT -> {
                 if (follow()) finish(bye);
-                else if (++outTicks > 3000) finish(bye);    // no way up it can walk: the town's rescues see to it
+                else if (++outTicks > 3000) {
+                    // [econ32b] The climb out of a long drift and up the stair ran out of time on the way (stuck at a lip, a
+                    // turn of the stair): it is put at the top, as the hops along the way would have got it there. Left
+                    // below, its leash walked it for the pithead a hundred blocks through the rock, "lost underground" a
+                    // quarter of a minute later, and the climb began again: thirty-seven to a hundred and nineteen climbs a
+                    // day in a town of ten miners.
+                    BlockPos top = a.level() instanceof ServerLevel sl && MineWorks.below(a) ? MineWorks.topFor(sl, a) : null;
+                    if (top != null && open(top)) {
+                        a.getNavigation().stop();
+                        a.teleportTo(top.getX() + 0.5, top.getY(), top.getZ() + 0.5);
+                        teleports++;
+                        TELEPORTS++;
+                    }
+                    finish(bye);
+                }
             }
         }
     }

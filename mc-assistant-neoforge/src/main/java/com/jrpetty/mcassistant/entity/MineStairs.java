@@ -373,6 +373,13 @@ public final class MineStairs extends SavedData {
             return;
         }
         if (CaveDwellers.caving(f)) { BELOW.remove(id); return; }       // [caves] down there on purpose: its own marks see it home
+        // [econ32b] Indoors in one of the town's buildings (a smelter at its furnaces under the smeltery's roof) is not lost
+        // underground: the long run's smelters were sent "up" out of the smeltery every few minutes.
+        if (f.ownerId() != null && f.villageCentre() != null && f.stationTask() != AssistantEntity.StationTask.MINE
+                && TownMine.underTheTown(TownMine.builtGround(f.ownerId(), f.villageCentre(), level.getGameTime()), f.blockPosition(), 0)) {
+            BELOW.remove(id);
+            return;
+        }
         if (!f.isAlive() || f.isPassenger() || f.isSleeping()) return;
         BlockPos feet = f.blockPosition();
         // [mine-safety] Or deep in the town's mine with the sky over it (the open top of a pit, a gallery out

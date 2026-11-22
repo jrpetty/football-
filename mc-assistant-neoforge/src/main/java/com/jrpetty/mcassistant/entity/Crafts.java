@@ -500,8 +500,8 @@ public final class Crafts {
             ItemStack made = Craftsmanship.finish(level, new ItemStack(it), WatchKit.hand(skill, it), f.displayNameCap());   // [guard-kit]
             store(level, v, made.copy());
             if (saving && metal == Items.IRON_INGOT)                                  // [econ32] what the age's iron went on, in the log
-                com.mojang.logging.LogUtils.getLogger().info("[MCA-FORGE] {}: {} forged of {} bars while the age saves its iron ({} left)",
-                    Villages.name(v.id()), name(made), w.bars(), bars - w.bars());
+                com.mojang.logging.LogUtils.getLogger().info("[MCA-FORGE] {}: {} forged of {} bars while the age saves its iron ({} left); wanted by {}",
+                    Villages.name(v.id()), name(made), w.bars(), bars - w.bars(), WatchKit.wantingWho(level, v, it));
             return name(made);
         }
         return null;
