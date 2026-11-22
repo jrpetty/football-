@@ -108,7 +108,7 @@ public class CityGrowGameTests {
         MineGround.forgetCache();
         // A town of fair size: houses put up on its own lots, the rest of its three rings spoken for (as if built on).
         int built = 0;
-        for (int k = 0; k < 44 && built < 44; k++) {
+        for (int k = 0; k < 50 && built < 46; k++) {
             if (AdminTools.buildProject(level, v, "house", false).ok()) built++;
         }
         int held = 0;

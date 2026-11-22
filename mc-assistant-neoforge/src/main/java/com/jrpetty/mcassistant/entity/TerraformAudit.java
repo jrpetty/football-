@@ -95,6 +95,9 @@ public final class TerraformAudit {
             if (FoundingPlan.reach(dx, dz) > g.outer) { top[i] = Integer.MIN_VALUE; continue; }
             int x = hx + dx, z = hz + dz;
             top[i] = Terraform.groundY(level, x, z);
+            // [city26] A terrace's wall is the ground's top there (the earth's top reads through what is set on it).
+            if (g.terrace != null && g.target != null
+                    && top[i] != Integer.MIN_VALUE && top[i] < g.target[i] && TerraceWalls.isWall(level.getBlockState(m.set(x, g.target[i], z)))) top[i] = g.target[i];
             byte k = g.kind[i];
             boolean ours = k == FoundingPlan.LAND || k == FoundingPlan.FILL;
             boolean square = FoundingPlan.levelled(dx, dz, d.radius, d.seed);
@@ -121,7 +124,12 @@ public final class TerraformAudit {
             if (!over.isAir() && !Terraform.natural(over)) continue;   // the town's own work on it since (a field, a path)
             if (sq[i]) {
                 c.merge("square", 1, Integer::sum);
-                if (y != g.target[i]) at(c, "offLevel", x, y, z, null);          // [city26] its terrace's height (the heart's, unterraced)
+                if (y != g.target[i]) {                                          // [city26] its terrace's height (the heart's, unterraced)
+                    at(c, "offLevel", x, y, z, null);
+                    FIRST.putIfAbsent("offLevelWhy", "target " + g.target[i] + " ground " + g.ground[i] + " terrace " + (g.terrace == null ? "-" : g.terrace[i])
+                        + " top " + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(m.set(x, y, z)).getBlock()).getPath()
+                        + " at target " + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(m.set(x, g.target[i], z)).getBlock()).getPath());
+                }
             }
             BlockState t = level.getBlockState(m.set(x, y, z));
             String odd = null;
@@ -231,7 +239,7 @@ public final class TerraformAudit {
     /** [city26] Is this column faced with a terrace's wall from its top down to over the lower top beside it? */
     private static boolean walled(ServerLevel level, Done d, int i, int hi, int lo) {
         FoundingPlan.Ground g = d.ground;
-        if (g.terrace == null || g.terrace[i] == com.jrpetty.mcassistant.village.Terraces.NONE) return false;
+        if (g.terrace == null) return false;
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         int x = d.heart().getX() + g.dx(i), z = d.heart().getZ() + g.dz(i);
         for (int y = lo + 1; y <= hi; y++) if (!TerraceWalls.isWall(level.getBlockState(m.set(x, y, z)))) return false;

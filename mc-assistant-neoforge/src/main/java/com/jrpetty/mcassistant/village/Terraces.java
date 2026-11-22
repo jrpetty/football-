@@ -273,14 +273,19 @@ public final class Terraces {
      * the plan's terraced heights (FoundingPlan.Ground.terrace).
      */
     public static int wallFoot(FoundingPlan.Ground g, int i) {
-        if (g.terrace == null || g.target == null || g.terrace[i] == NONE) return NONE;
+        if (g.terrace == null || g.target == null) return NONE;
+        byte ki = g.kind[i];
+        if (ki != FoundingPlan.LAND && ki != FoundingPlan.FILL) return NONE;
+        boolean mine = g.terrace[i] != NONE;
         int side = g.side, low = Integer.MAX_VALUE;
         int[] nb = new int[4];
         int c = neighbours(i, side, nb);
         for (int k = 0; k < c; k++) {
             int j = nb[k];
             byte kj = g.kind[j];
-            if (g.terrace[j] == NONE || (kj != FoundingPlan.LAND && kj != FoundingPlan.FILL)) continue;
+            // A drop on the terraces, or between a terrace and the edge's bank beside it (either way up); never one on
+            // the edge alone, which is a walkable bank.
+            if ((!mine && g.terrace[j] == NONE) || (kj != FoundingPlan.LAND && kj != FoundingPlan.FILL)) continue;
             low = Math.min(low, g.target[j]);
         }
         if (low == Integer.MAX_VALUE || g.target[i] - low < WALL_FROM) return NONE;

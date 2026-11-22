@@ -804,6 +804,11 @@ public final class Founding extends SavedData {
                         s.blockedFirst = Terraform.inTheWay(chunk, x, z, g.ground[i], g.target[i]) + " at " + x + "," + z;
                     }
                     moved += Math.max(1, c);
+                } else if (g.terrace != null && TerraceWalls.wanted(g, i)) {
+                    // [city26] The land left as it was beside a terrace, two or more over it: walled down to it.
+                    int x = s.heart.getX() + dx, z = s.heart.getZ() + dz;
+                    if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) return;
+                    moved += Math.max(1, TerraceWalls.build(level, g, i, x, z, s.surface));
                 }
             }
             s.cursor++;
@@ -858,13 +863,15 @@ public final class Founding extends SavedData {
                 if (chunk == null) return false;                   // held, but not back yet: next tick
                 s.goodCursor++;
                 int y = Terraform.groundY(level, x, z), want = g.target[i];
+                // [city26] A terrace's wall standing to the terrace's height: done (the earth's top reads through it).
+                if (g.terrace != null && TerraceWalls.wanted(g, i) && TerraceWalls.isWall(level.getBlockState(new BlockPos(x, want, z)))) continue;
                 // (A shaft to nowhere is not filled from the bottom of the world.)
                 if (y == Integer.MIN_VALUE || Math.abs(y - want) > 48) continue;
                 // The edge in whatever each column was, as the levelling dressed it; the square in the town's soil.
                 Block top = !square && s.tops != null && s.tops[i] > 0 ? Terraform.edgeTop(Terraform.top(s.tops[i]), s.surface) : s.surface;
                 if (!Terraform.wantsWork(level, chunk, x, z, y, want, top, square)) continue;
                 if (Terraform.shape(level, chunk, x, z, y, want, square, top, s.felling) > 0) s.goodMended++;
-                if (terraced) TerraceWalls.build(level, g, i, x, z, s.surface);                    // [city26] its wall again
+                if (g.terrace != null) TerraceWalls.build(level, g, i, x, z, s.surface);           // [city26] its wall again
             }
             s.goodMendedAll += s.goodMended;
             LOG.info("[MCA-FOUND] looked the square over again ({} of {}): {} columns mended", s.goodPass + 1, GOOD_PASSES, s.goodMended);
