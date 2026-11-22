@@ -14,7 +14,7 @@ import java.util.UUID;
  * second (a branch of its trade, or a trade next to it: the baker's café), then a third, as far as its success carries it:
  * one more for every four weeks its firms have shown a profit, four at most. Never more than a fair share of the town's
  * firms in one pair of hands (its others must have room to start their own: a second needs two firms of other folk in
- * the town, a third five, and so on), never while any of its firms lost money over the fortnight, and never without the
+ * the town, a third four, and so on), never while any of its firms lost money over the fortnight, and never without the
  * means (Enterprise's own reckoning of a founder's coin). The owner works in one: a branch has a hand of its own taken on
  * to keep it (Enterprise.found). And a branch that loses money is shut: of an owner's two or more firms, the weakest that
  * has lost over its last fortnight is wound up by its owner (Enterprise.morning).
@@ -35,18 +35,34 @@ public final class FirmBranches {
         return out;
     }
 
-    /** Weeks its firms showed a profit, over the last eight weeks of each. */
+    /** Weeks its firms showed a profit: each firm's tally of good weeks (kept as its weeks close, its day books going back
+     *  only four), or what its day books show, whichever is more. */
     public static int profitableWeeks(ServerLevel level, UUID village, UUID folk) {
         long day = Businesses.today(level);
         int n = 0;
         for (Business b : owned(village, folk)) {
-            for (int w = 0; w < 8; w++) {
+            int books = 0;
+            for (int w = 0; w < 4; w++) {
                 long end = day - 7L * w;
                 if (end - 6 < b.opened) break;
-                if (b.last(end, 7).net() > 0) n++;
+                if (b.last(end, 7).net() > 0) books++;
             }
+            net.minecraft.nbt.CompoundTag r = Enterprise.rec(village, b.id);
+            n += Math.max(books, r == null ? 0 : r.getInt("goodWeeks"));
         }
         return n;
+    }
+
+    /** The morning: a firm whose week closes today notes whether it was a good one. */
+    public static void weekly(UUID village, long day) {
+        for (Business b : Enterprise.open(village)) {
+            if (day <= b.opened || (day - b.opened) % 7 != 0) continue;
+            net.minecraft.nbt.CompoundTag r = Enterprise.rec(village, b.id);
+            if (r == null || r.getLong("weekNoted") == day) continue;
+            r.putLong("weekNoted", day);
+            if (b.last(day - 1, 7).net() > 0) r.putInt("goodWeeks", r.getInt("goodWeeks") + 1);
+            Accounts.dirty();
+        }
     }
 
     /** How many firms this owner's success carries: one, and one more for every four profitable weeks, four at most. */

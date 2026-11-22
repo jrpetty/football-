@@ -588,6 +588,320 @@ public class BusinessLookGameTests {
         firmEndToEnd(helper, "stationer", 6562500);
     }
 
+    // ================================================================== more than one business
+
+    /** A town for the several-businesses tests: so many folk (two at each trade asked for, the rest farmers), the Iron Age,
+     *  its market open, its stores full, a flat square. */
+    static List<VillageFolkEntity> busyTown(GameTestHelper helper, ServerLevel level, int x, int n) {
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.MarketMaker.liveForTests(true);
+        com.jrpetty.mcassistant.entity.Enterprise.resetForTests();
+        com.jrpetty.mcassistant.entity.Enterprise.autoForTests(false);
+        com.jrpetty.mcassistant.entity.PlayerShops.resetForTests();
+        level.setDayTime(8 * 24000L + 7000L);
+        Kit.hold(level, x, Z, 48);
+        Kit.prepare(level, x, Z, 48);
+        int y = Kit.surface(level, x, Z).getY();
+        for (int dx = -30; dx <= 30; dx++) for (int dz = -30; dz <= 30; dz++) {
+            level.setBlock(new BlockPos(x + dx, y - 1, Z + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+            for (int h = 0; h <= 8; h++) level.setBlock(new BlockPos(x + dx, y + h, Z + dz), Blocks.AIR.defaultBlockState(), 2);
+        }
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, new BlockPos(x - 12 + (i % 10) * 2, y, Z - 12 + (i / 10) * 2), 0.0F, 200);
+            helper.assertTrue(f != null, "folk " + i);
+            f.ensurePersona();
+            f.setJob(i < 4 ? com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.SHOP : i < 6 ? com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.COOK
+                : com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM);
+            f.spend(f.purse());
+            f.earn(200);
+            folk.add(f);
+        }
+        UUID id = folk.get(0).ownerId();
+        Villages.ageForTests(id, Villages.Age.IRON);
+        Ledger.addCoins(id, 500);
+        com.jrpetty.mcassistant.entity.MarketMaker.openForTests(level, Villages.get(id));
+        for (int k = 0; k < 4; k++) {
+            BlockPos c = new BlockPos(x + 14 + 2 * k, y, Z + 14);
+            level.setBlockAndUpdate(c, Blocks.CHEST.defaultBlockState());
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, c);
+        }
+        Villages.forgetStores(id);
+        return folk;
+    }
+
+    /** A room of the player's own at this spot (planks, a door to the west), a counter in it and a chest of these. */
+    static com.jrpetty.mcassistant.entity.PlayerShops.Shop shopRoom(ServerLevel level, net.minecraft.server.level.ServerPlayer p, BlockPos at, ItemStack... goods) {
+        int y = at.getY();
+        for (int dx = 0; dx <= 6; dx++) for (int dz = -3; dz <= 3; dz++) {
+            level.setBlock(new BlockPos(at.getX() + dx, y - 1, at.getZ() + dz), Blocks.OAK_PLANKS.defaultBlockState(), 2);
+            level.setBlock(new BlockPos(at.getX() + dx, y + 3, at.getZ() + dz), Blocks.OAK_PLANKS.defaultBlockState(), 2);
+            boolean wall = dx == 0 || dx == 6 || dz == -3 || dz == 3;
+            for (int h = 0; h < 3; h++) level.setBlock(new BlockPos(at.getX() + dx, y + h, at.getZ() + dz), wall ? Blocks.OAK_PLANKS.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
+        }
+        BlockPos door = new BlockPos(at.getX(), y, at.getZ());
+        level.setBlock(door, Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.EAST)
+            .setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER), 2);
+        level.setBlock(door.above(), Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.EAST)
+            .setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 2);
+        BlockPos counter = at.offset(3, 0, 0), chest = at.offset(5, 0, 2);
+        level.setBlockAndUpdate(counter, com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER.get().defaultBlockState()
+            .setValue(com.jrpetty.mcassistant.block.ShopCounterBlock.FACING, Direction.WEST));
+        level.setBlockAndUpdate(chest, Blocks.CHEST.defaultBlockState());
+        net.minecraft.world.Container c = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        for (int i = 0; i < goods.length; i++) c.setItem(i, goods[i].copy());
+        com.jrpetty.mcassistant.entity.PlayerShops.placed(level, counter, p, true);
+        return com.jrpetty.mcassistant.entity.PlayerShops.at(level, counter);
+    }
+
+    /**
+     * A player runs five businesses in one town: three chartered firms of different kinds (a greengrocer's, a general store,
+     * a bakery) and two shops of its own in two rooms. All five on Your businesses, each with a button to its books or its
+     * screen; each takes a sale of a folk of the town; each firm's hand is paid out of its till at payday; and the second
+     * shop's counter opens the second shop, not the first.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 500, batch = "bl30_a_player_runs_five")
+    public static void bl30_a_player_runs_five(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 6570000;
+        List<VillageFolkEntity> folk = busyTown(helper, level, x, 24);
+        UUID id = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(id);
+        int y = Kit.surface(level, x, Z).getY();
+        @SuppressWarnings("removal")
+        net.minecraft.server.level.ServerPlayer p = helper.makeMockServerPlayerInLevel();
+        p.moveTo(folk.get(0).getX() + 1, y, folk.get(0).getZ());
+        p.getInventory().clearContent();
+        p.getInventory().setItem(0, new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), 64));
+        p.getInventory().setItem(1, new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), 64));
+        p.getInventory().setItem(2, new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), 64));
+        helper.runAtTickTime(10, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            com.jrpetty.mcassistant.entity.PlayerLife.open(p, "start", argsOf("kind", "greengrocer"));
+            com.jrpetty.mcassistant.entity.PlayerLife.act(p, "start", "hello", new net.minecraft.nbt.CompoundTag());
+            String[] kinds = { "greengrocer", "generalstore", "baker" };
+            List<com.jrpetty.mcassistant.entity.Business> firms = new ArrayList<>();
+            for (String k : kinds) {
+                String said = com.jrpetty.mcassistant.entity.StartBusiness.startForTests(p, k, "town");
+                com.jrpetty.mcassistant.entity.Business b = com.jrpetty.mcassistant.entity.Businesses.of(id, com.jrpetty.mcassistant.entity.PlayerLife.ctx(p).str("firm"));
+                ok.that(b != null && !said.startsWith("!") && b.ownedBy(p.getUUID()), k + " chartered: " + said);
+                if (b != null) firms.add(b);
+            }
+            // Two shops of its own, in two rooms.
+            p.moveTo(x - 20, y, Z + 20);
+            com.jrpetty.mcassistant.entity.PlayerShops.Shop s1 = shopRoom(level, p, new BlockPos(x - 24, y, Z + 20), new ItemStack(Items.STONE_HOE, 4));
+            com.jrpetty.mcassistant.entity.PlayerShops.Shop s2 = shopRoom(level, p, new BlockPos(x - 24, y, Z - 20), new ItemStack(Items.STONE_HOE, 4));
+            ok.that(s1 != null && s2 != null && s1 != s2, "two shops of its own: " + (s1 == null ? null : s1.key()) + ", " + (s2 == null ? null : s2.key()));
+            ok.that(com.jrpetty.mcassistant.entity.PlayerShops.ofAll(id, p.getUUID()).size() == 2, "both in the register");
+            for (com.jrpetty.mcassistant.entity.PlayerShops.Shop s : new com.jrpetty.mcassistant.entity.PlayerShops.Shop[]{ s1, s2 }) {
+                if (s == null) continue;
+                com.jrpetty.mcassistant.entity.PlayerShops.choose(p.getUUID(), s);
+                com.jrpetty.mcassistant.entity.PlayerLife.open(p, "shop", null);
+                com.jrpetty.mcassistant.entity.PlayerLife.act(p, "shop", "setup", argsOf("f", argsOf("name", s == s1 ? "Hoes East" : "Hoes West", "kind", "tools", "opens", "0", "closes", "23999", "tell", "no")));
+                com.jrpetty.mcassistant.entity.PlayerShops.resurvey(level, s);
+            }
+            // The second counter opens the second shop.
+            if (s2 != null) {
+                com.jrpetty.mcassistant.entity.PlayerShops.openAt(p, s2.anchor);
+                ok.that(com.jrpetty.mcassistant.entity.PlayerShops.mine(p) == s2, "the second counter opens the second shop");
+            }
+            // Each firm: a hand, coin, stock, priced to sell.
+            com.jrpetty.mcassistant.entity.Purchases.openForTests(id, true);
+            String[] wares = { "minecraft:carrot", "minecraft:torch", "minecraft:bread" };
+            for (int i = 0; i < firms.size(); i++) {
+                com.jrpetty.mcassistant.entity.Business b = firms.get(i);
+                com.jrpetty.mcassistant.entity.PlayerLife.open(p, "firm", argsOf("firm", b.id));
+                com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "pick", argsOf("firm", b.id));
+                com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "hire", new net.minecraft.nbt.CompoundTag());
+                com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "invest", argsOf("f", argsOf("coins", "30")));
+                ItemStack sample = com.jrpetty.mcassistant.entity.Stockroom.sampleForTests(wares[i]);
+                com.jrpetty.mcassistant.entity.Market.intoStoresForTests(level, id, sample.copyWithCount(64));
+                com.jrpetty.mcassistant.entity.Businesses.spareAllForTests(true);
+                try {
+                    com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "order", argsOf("k", wares[i], "f", argsOf("qty", "8")));
+                } finally {
+                    com.jrpetty.mcassistant.entity.Businesses.spareAllForTests(false);
+                }
+                for (int k = 0; k < 6; k++) com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "markup", argsOf("d", -5));
+                // The town's own counter out of it but the firm's.
+                java.util.function.Predicate<ItemStack> is = com.jrpetty.mcassistant.entity.Stockroom.matcherForTests(wares[i]);
+                long spare = com.jrpetty.mcassistant.entity.Market.stock(level, id, is) - (b.stock.containsKey(wares[i]) ? b.stock.get(wares[i]).qty : 0);
+                for (BlockPos sp : Villages.storeChests(level, id)) {
+                    if (!(level.getBlockEntity(sp) instanceof net.minecraft.world.Container c)) continue;
+                    for (int j = 0; j < c.getContainerSize() && spare > 0; j++) {
+                        ItemStack it = c.getItem(j);
+                        if (!is.test(it)) continue;
+                        int kk = (int) Math.min(spare, it.getCount());
+                        it.shrink(kk);
+                        spare -= kk;
+                    }
+                    c.setChanged();
+                }
+                Villages.forgetStores(id);
+                long units0 = 0;
+                for (com.jrpetty.mcassistant.entity.Business.Line l : b.allTime.lines.values()) units0 += l.units;
+                boolean sold = false;
+                for (int k = 6; k < folk.size() && !sold; k++) {
+                    VillageFolkEntity buyer = folk.get(k);
+                    if (com.jrpetty.mcassistant.entity.Enterprise.hands(id, b).contains(buyer)) continue;
+                    sold = com.jrpetty.mcassistant.entity.Purchases.get(level, buyer, is, 1, i == 1 ? com.jrpetty.mcassistant.entity.Purchases.Need.TOOL
+                        : com.jrpetty.mcassistant.entity.Purchases.Need.FOOD) > 0;
+                }
+                long units1 = 0;
+                for (com.jrpetty.mcassistant.entity.Business.Line l : b.allTime.lines.values()) units1 += l.units;
+                ok.that(units1 > units0, b.name + " took a sale (" + units0 + " -> " + units1 + "; stock " + b.stock.keySet() + ")");
+            }
+            com.jrpetty.mcassistant.entity.Purchases.openForTests(id, null);
+            // Each shop: a farmer without a hoe buys one.
+            int shopSales = 0;
+            for (com.jrpetty.mcassistant.entity.PlayerShops.Shop s : new com.jrpetty.mcassistant.entity.PlayerShops.Shop[]{ s1, s2 }) {
+                if (s == null) continue;
+                for (int k = 8; k < folk.size(); k++) {
+                    VillageFolkEntity f = folk.get(k);
+                    f.removeMatching(it -> it.is(net.minecraft.tags.ItemTags.HOES), 64);
+                    f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+                    if (com.jrpetty.mcassistant.entity.ShopCustomers.buyForTests(level, f, s) != null) { shopSales++; break; }
+                }
+            }
+            ok.that(shopSales == 2, "each shop sold a hoe (" + shopSales + ")");
+            // All five on Your businesses.
+            com.jrpetty.mcassistant.entity.PlayerLife.open(p, "firm", argsOf("tab", "summary"));
+            String page = com.jrpetty.mcassistant.entity.PlayerLife.pageForTests(p).toString();
+            for (com.jrpetty.mcassistant.entity.Business b : firms) ok.that(page.contains(b.name), "Your businesses lists " + b.name);
+            ok.that(page.contains("Hoes East") && page.contains("Hoes West"), "and both shops");
+            ok.that(page.contains("Start another business"), "and Start another business");
+            // Payday: each firm's hand paid out of its till.
+            level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 6000L);
+            com.jrpetty.mcassistant.entity.Businesses.morningForTests(level, v);
+            com.jrpetty.mcassistant.entity.Market.payWages(level, v);
+            for (com.jrpetty.mcassistant.entity.Business b : firms) ok.that(b.allTime.wages > 0, b.name + " paid its hand (" + b.allTime.wages + ")");
+            if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
+        });
+    }
+
+    /** A firm's books written as if it had run so many weeks at this daily profit (pennies) to today. */
+    static void history(UUID village, com.jrpetty.mcassistant.entity.Business b, long today, int days, long dailyNet) {
+        b.opened = today - days;
+        b.days.clear();
+        net.minecraft.nbt.CompoundTag r = com.jrpetty.mcassistant.entity.Enterprise.recordForTests(village, b);
+        if (r != null) r.putInt("goodWeeks", dailyNet > 0 ? days / 7 : 0);   // its good weeks, as its mornings tallied them
+        for (long d = today - Math.min(days, 27); d <= today; d++) {
+            com.jrpetty.mcassistant.entity.Business.Day day = b.today(d);
+            if (dailyNet >= 0) day.revenue += dailyNet; else day.other += -dailyNet;
+        }
+    }
+
+    /**
+     * A folk's bakery has paid its way for eight weeks: it may open another, and the second it opens is its own (a branch:
+     * "No. 2"), kept by a hand taken on for it while its owner stays at its first; it says so. A town where it would hold
+     * more than its fair share: refused. And a branch that loses money is shut by its owner the next morning.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "bl31_a_folk_opens_a_branch")
+    public static void bl31_a_folk_opens_a_branch(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 6574000;
+        List<VillageFolkEntity> folk = busyTown(helper, level, x, 30);
+        UUID id = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(id);
+        helper.runAtTickTime(10, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            long day = level.getDayTime() / 24000L;
+            VillageFolkEntity wren = folk.get(4);                            // a cook
+            wren.tradeXpForTests(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.COOK, 20000);
+            com.jrpetty.mcassistant.entity.Business first = com.jrpetty.mcassistant.entity.Enterprise.foundForTests(level, v, "baker", wren);
+            ok.that(first != null, "its first bakery");
+            if (first == null) { helper.fail(ok.summary()); return; }
+            history(id, first, day, 56, 400);
+            // Others' firms in the town: room for its second within a fair share.
+            com.jrpetty.mcassistant.entity.Business other1 = com.jrpetty.mcassistant.entity.Enterprise.foundForTests(level, v, "greengrocer", folk.get(10));
+            com.jrpetty.mcassistant.entity.Business other2 = com.jrpetty.mcassistant.entity.Enterprise.foundForTests(level, v, "carpenter", folk.get(11));
+            ok.that(other1 != null && other2 != null, "two firms of other folk");
+            int cap = com.jrpetty.mcassistant.entity.FirmBranches.cap(level, id, wren.getUUID());
+            String why = com.jrpetty.mcassistant.entity.FirmBranches.whyNot(level, id, wren);
+            Kit.log("[VT] bl31 cap " + cap + " weeks " + com.jrpetty.mcassistant.entity.FirmBranches.profitableWeeks(level, id, wren.getUUID()) + " why " + why);
+            ok.that(cap >= 2 && why == null, "eight good weeks: it may open another (cap " + cap + ", " + why + ")");
+            List<VillageFolkEntity> handsBefore = com.jrpetty.mcassistant.entity.Enterprise.hands(id, first);
+            com.jrpetty.mcassistant.entity.Business second = com.jrpetty.mcassistant.entity.Enterprise.foundForTests(level, v, "baker", wren);
+            ok.that(second != null && second.ownedBy(wren.getUUID()), "its second bakery opened");
+            if (second != null) {
+                List<VillageFolkEntity> keepers = com.jrpetty.mcassistant.entity.Enterprise.hands(id, second);
+                ok.that(second.name.contains("No. 2"), "a branch's name: " + second.name);
+                ok.that(!keepers.isEmpty() && !keepers.contains(wren), "kept by a hand of its own, not its owner: " + keepers.size());
+                ok.that(com.jrpetty.mcassistant.entity.Enterprise.hands(id, first).contains(wren), "its owner still at its first");
+                CompoundTagHolder.last = com.jrpetty.mcassistant.entity.FolkProfile.build(wren, null);
+                net.minecraft.nbt.ListTag firms = CompoundTagHolder.last.getCompound("biz").getList("firms", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                ok.that(firms.size() == 2, "its profile lists both (" + firms.size() + ")");
+            }
+            // The fair share: a third would put three of five firms in its hands.
+            history(id, second == null ? first : second, day, 56, 400);
+            String third = com.jrpetty.mcassistant.entity.FirmBranches.whyNot(level, id, wren);
+            ok.that(third != null && third.contains("fair share"), "a third refused: its fair share (" + third + ")");
+            // A losing branch shut.
+            if (second != null) {
+                com.jrpetty.mcassistant.entity.Business.Day bad = second.today(day);
+                bad.other += 5000;
+                int closed = com.jrpetty.mcassistant.entity.FirmBranches.closeLosers(level, id, day);
+                ok.that(closed == 1 && !second.open && first.open, "the losing branch shut, the first kept (" + closed + ")");
+            }
+            if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
+        });
+    }
+
+    /** (The last profile built, for the log.) */
+    static final class CompoundTagHolder {
+        static net.minecraft.nbt.CompoundTag last;
+    }
+
+    /**
+     * A busy folk's profile, as the screen gets it in one packet: the businesses it owns and the one it works in, each with
+     * its role, its week, its till, its hands, its age and how it is doing, and whether the viewer may open its books; its
+     * plans; its standing in the town, offices, what it thinks of the viewer and how to raise it; and the rest it always had
+     * (its head, family, work, day, things).
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "bl32_the_profile_carries_it_all")
+    public static void bl32_the_profile_carries_it_all(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 6578000;
+        List<VillageFolkEntity> folk = busyTown(helper, level, x, 24);
+        UUID id = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(id);
+        @SuppressWarnings("removal")
+        net.minecraft.server.level.ServerPlayer p = helper.makeMockServerPlayerInLevel();
+        helper.runAtTickTime(10, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            long day = level.getDayTime() / 24000L;
+            VillageFolkEntity wren = folk.get(4);
+            wren.tradeXpForTests(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.COOK, 20000);
+            com.jrpetty.mcassistant.entity.Business a = com.jrpetty.mcassistant.entity.Enterprise.foundForTests(level, v, "baker", wren);
+            if (a != null) history(id, a, day, 30, 300);
+            com.jrpetty.mcassistant.entity.Business o1 = com.jrpetty.mcassistant.entity.Enterprise.foundForTests(level, v, "greengrocer", folk.get(10));
+            com.jrpetty.mcassistant.entity.Business o2 = com.jrpetty.mcassistant.entity.Enterprise.foundForTests(level, v, "carpenter", folk.get(11));
+            com.jrpetty.mcassistant.entity.Business b = com.jrpetty.mcassistant.entity.Enterprise.foundForTests(level, v, "cafe", wren);
+            ok.that(a != null && b != null, "two businesses of its own");
+            net.minecraft.nbt.CompoundTag prof = com.jrpetty.mcassistant.entity.FolkProfile.build(wren, p);
+            net.minecraft.nbt.ListTag firms = prof.getCompound("biz").getList("firms", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            Kit.log("[VT] bl32 biz " + prof.getCompound("biz") + " town " + prof.getCompound("town"));
+            ok.that(firms.size() == 2, "both businesses in its profile (" + firms.size() + ")");
+            for (int i = 0; i < firms.size(); i++) {
+                net.minecraft.nbt.CompoundTag f = firms.getCompound(i);
+                for (String k : new String[]{ "id", "name", "trade", "role", "where", "takings", "profit", "till", "staff", "days", "trend", "books" }) {
+                    ok.that(f.contains(k), "a business row carries " + k + ": " + f);
+                }
+            }
+            ok.that(prof.getCompound("biz").contains("plans"), "its plans");
+            net.minecraft.nbt.CompoundTag town = prof.getCompound("town");
+            for (String k : new String[]{ "town", "status", "offices", "you", "you_word", "raise", "history" }) ok.that(town.contains(k), "its town page carries " + k);
+            for (String k : new String[]{ "head", "about", "life", "work", "day", "things", "card", "self" }) ok.that(prof.contains(k), "and its " + k);
+            // A hand of another's firm: its profile has the firm it works in, as a hand.
+            VillageFolkEntity hand = o1 == null ? null : com.jrpetty.mcassistant.entity.Enterprise.hireForTests(level, v, o1);
+            if (hand != null) {
+                net.minecraft.nbt.ListTag hf = com.jrpetty.mcassistant.entity.FolkProfile.build(hand, p).getCompound("biz").getList("firms", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                ok.that(hf.size() == 1 && hf.getCompound(0).getString("role").equals("a hand"), "a hand's profile: the firm it works in (" + hf + ")");
+            }
+            if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
+        });
+    }
+
     /** What a town's stores hold for its firms to make their wares of. */
     static final net.minecraft.world.item.Item[] MAKINGS = { Items.COBBLESTONE, Items.COBBLESTONE, Items.COBBLESTONE, Items.COBBLESTONE, Items.COBBLESTONE, Items.OAK_PLANKS, Items.OAK_PLANKS, Items.OAK_PLANKS, Items.OAK_PLANKS, Items.STICK, Items.IRON_INGOT, Items.LEATHER,
         Items.WHITE_WOOL, Items.STRING, Items.HONEYCOMB, Items.CLAY_BALL, Items.CLAY, Items.SAND, Items.GLASS, Items.WHEAT, Items.SUGAR, Items.EGG,

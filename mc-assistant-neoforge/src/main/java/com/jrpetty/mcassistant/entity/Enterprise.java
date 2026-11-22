@@ -878,6 +878,7 @@ public final class Enterprise {
             restock(level, id, b, r);                     // [econ-1c] a shop's stock bought in at the market
             signs(level, v, b, r);
         }
+        FirmBranches.weekly(id, day);                                       // [biz30] its good weeks tallied
         FirmBranches.closeLosers(level, id, day);                           // [biz30] an owner's losing branch shut
         CompoundTag d = data(id);
         if (d.contains("intent", Tag.TAG_COMPOUND)) {
