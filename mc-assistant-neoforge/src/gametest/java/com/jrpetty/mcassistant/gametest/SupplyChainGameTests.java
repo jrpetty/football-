@@ -1088,4 +1088,49 @@ public class SupplyChainGameTests {
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
+
+    // ============================================================ sc16 [econ32b] the climb home kept
+
+    /**
+     * [econ32b] A miner deep in a cave a hundred and thirty blocks off the shaft is still below in the works (its way up is
+     * the works' to give it); and at bedtime its climb out is not put down as "work left for the morning", while a shift it
+     * is still on down there is put down for a climb. (The long run's miners, their climbs cleared at bedtime, spent the night
+     * in the drifts, sent up and put down again a dozen times a night: 307 "lost underground" in two days.)
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc16_climb_kept")
+    public static void sc16_climb_kept(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6656000, 2);
+        ServerLevel level = r.level();
+        VillageFolkEntity f = r.miners().get(0);
+        Kit.Expect ok = new Kit.Expect();
+        // A pocket in the rock, roofed, far out from the shaft and forty under the pithead.
+        BlockPos spot = new BlockPos(r.sx() + 130, MineWorksGameTests.TOP - 40, r.sz());
+        MineWorksGameTests.stone(level, spot.getX() - 3, spot.getY() - 1, spot.getZ() - 3, spot.getX() + 3, spot.getY() + 5, spot.getZ() + 3);
+        for (int dx = -1; dx <= 1; dx++) for (int dy = 0; dy <= 1; dy++) level.setBlock(spot.offset(dx, dy, 0), Blocks.AIR.defaultBlockState(), 2);
+        f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+        boolean below = MineWorks.below(f);
+        Kit.log("[VT] sc16 a hundred and thirty out, forty down: below in the works " + below);
+        ok.that(below, "deep under the rock it is below in the works, however far out");
+        try {
+            java.lang.reflect.Method leave = VillageFolkEntity.class.getDeclaredMethod("leaveWorkForTheMorning");
+            leave.setAccessible(true);
+            level.setDayTime(8 * 24000L + 22000L);
+            f.clearQueue();
+            f.interject(Job.mine(spot.getY(), com.jrpetty.mcassistant.entity.MineStairs.OUT));
+            leave.invoke(f);
+            Job j = f.peekJob();
+            Kit.log("[VT] sc16 at bedtime, climbing: job " + (j == null ? "-" : j.type() + ":" + j.arg()));
+            ok.that(j != null && j.type() == Job.Type.MINE && com.jrpetty.mcassistant.entity.MineStairs.OUT.equals(j.arg()), "the climb is kept at bedtime");
+            f.clearQueue();
+            f.interject(Job.mine(spot.getY(), MineWorks.ARG));
+            leave.invoke(f);
+            j = f.peekJob();
+            Kit.log("[VT] sc16 at bedtime, on a shift below: job " + (j == null ? "-" : j.type() + ":" + j.arg()));
+            ok.that(j != null && j.type() == Job.Type.MINE && com.jrpetty.mcassistant.entity.MineStairs.OUT.equals(j.arg()), "a shift below is put down for a climb");
+        } catch (ReflectiveOperationException e) {
+            helper.fail("leaveWorkForTheMorning: " + e);
+        }
+        helper.assertTrue(ok.clean(), ok.summary());
+        MineWorksGameTests.done(helper);
+    }
 }
