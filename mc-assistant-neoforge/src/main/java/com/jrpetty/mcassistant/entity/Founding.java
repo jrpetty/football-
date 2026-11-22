@@ -1078,7 +1078,7 @@ public final class Founding extends SavedData {
     private static void finish(ServerLevel level, Founding f, Site s) {
         if (s.camp != null) {                                               // [life28] never left taken up; its torches stood again
             if (!s.camp.getBoolean("Pitched")) FoundingCamp.pitch(level, s.village, s.heart, s.camp);
-            FoundingCamp.relight(level, s.camp);
+            FoundingCamp.relight(level, s.village, s.camp);
             s.camp = null;
         }
         release(level, s);

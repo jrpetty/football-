@@ -177,13 +177,14 @@ public final class FoundingCamp {
                 if (!left.isEmpty()) net.minecraft.world.Containers.dropItemStack(level, heart.getX() + 0.5, heart.getY() + 0.5, heart.getZ() + 0.5, left);
             }
         }
-        if (camp.getBoolean("Board") && village != null && Villages.get(village) != null) VillageBoards.raiseFor(level, Villages.get(village));
         LOG.info("[MCA-FOUND] [life28] {}'s camp pitched again on the level ground at {}: {} of {} beds, {} stores chests",
             village == null ? "the town" : Villages.name(village), heart.toShortString(), laid, beds.size(), set);
     }
 
     /** The camp's torches stood again where they were, on the level ground, the levelling done. */
-    static void relight(ServerLevel level, CompoundTag camp) {
+    static void relight(ServerLevel level, @Nullable java.util.UUID village, CompoundTag camp) {
+        // The board up again on the square's edge, now all of it is level (on posts of no height, not over a hollow).
+        if (camp.getBoolean("Board") && village != null && Villages.get(village) != null) VillageBoards.raiseFor(level, Villages.get(village));
         int stood = 0;
         for (long c : camp.getLongArray("Torches")) {
             BlockPos col = BlockPos.of(c);
