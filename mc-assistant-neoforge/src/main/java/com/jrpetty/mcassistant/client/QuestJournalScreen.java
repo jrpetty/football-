@@ -125,8 +125,8 @@ public class QuestJournalScreen extends Screen {
         h = Math.min(300, height - 8);
         left = (width - w) / 2;
         top = (height - h) / 2;
-        addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(left + w - PAD - 56, top + h - PAD - 18, 56, 18).build());
-        giveUp = Button.builder(Component.literal("Give up"), b -> giveUp()).bounds(left + w - PAD - 56 - 4 - 90, top + h - PAD - 18, 90, 18).build();
+        addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(left + w - PAD - 56, top + h - PAD - 18, 56, 18).build(UiButton::new));
+        giveUp = Button.builder(Component.literal("Give up"), b -> giveUp()).bounds(left + w - PAD - 56 - 4 - 90, top + h - PAD - 18, 90, 18).build(UiButton::new);
         addRenderableWidget(giveUp);
         refreshGiveUp();
     }

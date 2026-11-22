@@ -58,6 +58,7 @@ public class VillageScreen extends Screen {
     /** 0 the village, 2 its wages (who is paid what, best paid first), 3 its economy (what it makes, earns and is worth). */
     public static void request(int page) {
         if (page != 4) asked = page;
+        Waiting.start(page == 4 ? "Opening the town's books" : "Opening the journal");   // [ui29]
         net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.VillageAskPayload(page));
     }
 

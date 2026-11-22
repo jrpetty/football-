@@ -105,15 +105,16 @@ public final class WatchPage {
             if (r.getBoolean("both")) small(g, font, "✔", x + 60 + 7 * cell + 2, ly + 1, Ui.GOOD);
             ly += 10;
         }
-        small(g, font, "W walls · B beat · D desk · I cases · E escort · V events · R rest", x + 2, Math.min(ly + 2, y + h - 8), Ui.FAINT);
+        small(g, font, Ui.clip(font, "W walls · B beat · D desk · I cases · E escort · V events · R rest", (int) ((lw - 4) / 0.75F)),   // [ui29] kept to its column
+            x + 2, Math.min(ly + 2, y + h - 8), Ui.FAINT);
         // ------------------------------------------------ the chart and the figures
         section(g, font, "Eight weeks of trouble", rx, cy, rw);
         int chartH = 44;
         List<Component> ct = chart(g, font, m, rx, cy + 12, rw, chartH, mx, my);
         if (ct != null) tip = ct;
         int ry = cy + 12 + chartH + 4;
-        small(g, font, "This week: " + m.getInt("arrestsWeek") + " arrests, " + m.getInt("fightsWeek") + " fights broken up, " + m.getInt("helpedWeek")
-            + " folk helped, " + m.getInt("finesWeek") + " coins in fines.", rx, ry, Ui.MUTED);
+        small(g, font, Ui.clip(font, "This week: " + m.getInt("arrestsWeek") + " arrests, " + m.getInt("fightsWeek") + " fights broken up, " + m.getInt("helpedWeek")
+            + " folk helped, " + m.getInt("finesWeek") + " coins in fines.", (int) (rw / 0.75F)), rx, ry, Ui.MUTED);
         ry += 9;
         small(g, font, "This month: " + m.getInt("arrestsMonth") + " arrests, " + m.getInt("finesMonth") + " coins in fines.", rx, ry, Ui.MUTED);
         ry += 12;
@@ -132,7 +133,7 @@ public final class WatchPage {
             List<FormattedCharSequence> parts = b[0].equals("H") ? List.of() : TextCache.splitPlain(font, (b[0].equals("L") ? "· " : "") + b[1], max);
             if (b[0].equals("H")) {
                 if (line++ < skip) continue;
-                if (ry > y + h - 10) break;
+                if (ry + 2 + 9 + 8 > y + h) break;                          // [ui29] a heading only with room for a line under it
                 ry += 2;
                 small(g, font, b[1], rx, ry, Ui.ACCENT);
                 ry += 9;
@@ -140,7 +141,7 @@ public final class WatchPage {
             }
             for (FormattedCharSequence p : parts) {
                 if (line++ < skip) continue;
-                if (ry > y + h - 8) break;
+                if (ry + 8 > y + h) break;
                 small(g, font, p, rx + 2, ry, b[0].equals("M") ? Ui.FAINT : Ui.MUTED);
                 ry += 8;
             }

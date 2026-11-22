@@ -229,6 +229,10 @@ public class FinanceScreen extends Screen {
         else if (FinanceClient.OPEN.isUnbound()) msg = "Tip: bind a key to open this anywhere (Controls, \"Your finances\"; we suggest " + FinanceClient.SUGGESTED_KEY + "). Also the coin in your inventory (E).";
         else msg = "Open with " + FinanceClient.OPEN.getTranslatedKeyMessage().getString() + ", the coin in your inventory (E), the journal (J), the city books or the bank counter.";
         int keys = keyCap(g, font, "Esc", left + w - S2 - font.width("Esc") - 4, fy);
+        if (!(fresh && !said.isEmpty()) && font.width(msg) > w - 2 * S2 - keys - S2) {   // [ui29] a tip that fits, not one cut off
+            msg = FinanceClient.OPEN.isUnbound() ? "Tip: give this a key in Controls (\"Your finances\")."
+                : "Open with " + FinanceClient.OPEN.getTranslatedKeyMessage().getString() + " or the coin in your inventory.";
+        }
         boolean clipped = text(g, font, msg, left + S2, fy + 1, w - 2 * S2 - keys - S2, ink);
         if (clipped && in(mx, my, left + S2, fy, w - 2 * S2 - keys, 10)) tip = msg;
     }

@@ -59,7 +59,7 @@ public class MapScreen extends Screen {
             crew.addAll(this.minecraft.player.level().getEntitiesOfClass(
                 AssistantEntity.class,
                 this.minecraft.player.getBoundingBox().inflate(256.0),
-                AssistantEntity::isAlive));
+                AssistantTargeting::isCrew));
             crew.sort((a, b) -> a.clientName().compareToIgnoreCase(b.clientName()));
         }
         PlotsClient.refresh();   // staked-but-empty ground shows too
