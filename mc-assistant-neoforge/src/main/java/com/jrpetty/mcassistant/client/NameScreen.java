@@ -89,7 +89,7 @@ public class NameScreen extends Screen {
         for (AssistantEntity a : this.minecraft.player.level().getEntitiesOfClass(
                 AssistantEntity.class,
                 this.minecraft.player.getBoundingBox().inflate(256.0),
-                AssistantEntity::isAlive)) {
+                AssistantTargeting::isCrew)) {
             out.add(a.clientName());
         }
         return out;

@@ -65,7 +65,7 @@ public class CrewScreen extends Screen {
             crew.addAll(this.minecraft.player.level().getEntitiesOfClass(
                 AssistantEntity.class,
                 this.minecraft.player.getBoundingBox().inflate(256.0),
-                AssistantEntity::isAlive));
+                AssistantTargeting::isCrew));
             sortCrew();
         }
         if (picked >= crew.size()) picked = crew.isEmpty() ? -1 : 0;

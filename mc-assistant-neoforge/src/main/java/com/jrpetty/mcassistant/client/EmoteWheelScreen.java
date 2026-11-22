@@ -36,7 +36,7 @@ public final class EmoteWheelScreen extends Screen {
         double dx = mx - width / 2.0, dy = my - height / 2.0;
         if (dx * dx + dy * dy < 22 * 22) return -1;
         int n = emotes().length;
-        double ang = Math.atan2(dx / RING_X, -dy / RING_Y);           // round the ellipse, as the boxes are
+        double ang = Math.atan2(dx / Math.min(RING_X, width / 2 - 50), -dy / Math.min(RING_Y, height / 2 - 24));           // round the ellipse, as the boxes are
         if (ang < 0) ang += Math.PI * 2;
         return (int) Math.round(ang / (Math.PI * 2 / n)) % n;
     }
@@ -47,14 +47,32 @@ public final class EmoteWheelScreen extends Screen {
         hovered = under(mx, my);
         int cx = width / 2, cy = height / 2;
         Act[] e = emotes();
+        // [ui29] each box as wide as its words, the ring kept on the screen, and a box that would land on one already
+        // drawn pushed out along its spoke until it is clear (the long names at the bottom overlapped at every scale)
+        int rx = Math.min(RING_X, width / 2 - 50), ry = Math.min(RING_Y, height / 2 - 24);
+        java.util.List<int[]> placed = new java.util.ArrayList<>();
         for (int i = 0; i < e.length; i++) {
             double ang = i * Math.PI * 2 / e.length;
-            int x = cx + (int) Math.round(Mth.sin((float) ang) * RING_X), y = cy - (int) Math.round(Mth.cos((float) ang) * RING_Y);
-            boolean lit = i == hovered;
-            int x0 = x - BOX_W / 2, y0 = y - BOX_H / 2;
-            g.fill(x0 - 1, y0 - 1, x0 + BOX_W + 1, y0 + BOX_H + 1, RIM);
-            g.fill(x0, y0, x0 + BOX_W, y0 + BOX_H, lit ? LIT : PANEL);
             String words = (i < 9 ? (i + 1) + " " : "") + PlayerEmotesClient.words(e[i]);
+            int bw = Math.max(BOX_W, font.width(words) + 10);
+            float sx = Mth.sin((float) ang), sy = -Mth.cos((float) ang);
+            int x = cx, y = cy;
+            for (int push = 0; push <= 60; push += 2) {
+                x = cx + Math.round(sx * (rx + push));
+                y = cy + Math.round(sy * (ry + push * 0.6F));
+                x = Math.max(bw / 2 + 2, Math.min(width - bw / 2 - 2, x));
+                y = Math.max(BOX_H / 2 + 2, Math.min(height - BOX_H / 2 - 2, y));
+                boolean clear = true;
+                for (int[] o : placed) {
+                    if (Math.abs(o[0] - x) * 2 < o[2] + bw + 4 && Math.abs(o[1] - y) < BOX_H + 3) { clear = false; break; }
+                }
+                if (clear) break;
+            }
+            placed.add(new int[] { x, y, bw });
+            boolean lit = i == hovered;
+            int x0 = x - bw / 2, y0 = y - BOX_H / 2;
+            g.fill(x0 - 1, y0 - 1, x0 + bw + 1, y0 + BOX_H + 1, RIM);
+            g.fill(x0, y0, x0 + bw, y0 + BOX_H, lit ? LIT : PANEL);
             g.drawString(font, words, x - font.width(words) / 2, y - 4, lit ? DARK_INK : INK, false);
         }
         String mid = hovered >= 0 ? PlayerEmotesClient.words(e[hovered]) : "Emotes";
@@ -62,7 +80,7 @@ public final class EmoteWheelScreen extends Screen {
         g.fill(cx - w / 2 - 1, cy - 11, cx + w / 2 + 1, cy + 11, RIM);
         g.fill(cx - w / 2, cy - 10, cx + w / 2, cy + 10, PANEL);
         g.drawCenteredString(font, mid, cx, cy - 4, hovered >= 0 ? LIT : INK);
-        g.drawCenteredString(font, "Point and click, or let go of the key. Esc: none.", cx, cy + RING_Y + 18, 0xC0F4EEDC);
+        g.drawCenteredString(font, "Click one, or press its number", cx, cy + 16, 0xE0F4EEDC);   // [ui29] inside the ring, off the hotbar
     }
 
     @Override

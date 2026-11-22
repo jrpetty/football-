@@ -423,7 +423,9 @@ public class FolkProfileScreen extends Screen {
         UiStyle.button(g, font, (star() ? "\u2605 " : "") + "Favourites", x, y, fw, bh, UiStyle.State.of(true, false, inside(mx, my, x, y, fw, bh)));
         if (inside(mx, my, x, y, fw, bh)) tip = "The folk you follow, and how each is getting on.";
         String said = FavouritesClient.starSaid();
-        UiStyle.text(g, font, said.isEmpty() ? "Esc back · 1-5 tabs · wheel scrolls" : said, left + UiStyle.S2, y + 5, x - left - 2 * UiStyle.S2,
+        int room = x - left - 2 * UiStyle.S2;                               // [ui29] the short hint where the whole one would be cut
+        String hint = font.width("Esc back · 1-5 tabs · wheel scrolls") <= room ? "Esc back · 1-5 tabs · wheel scrolls" : "Esc: back";
+        UiStyle.text(g, font, said.isEmpty() ? hint : said, left + UiStyle.S2, y + 5, room,
             said.isEmpty() ? UiStyle.TEXT_FAINT : UiStyle.ACCENT);
         return tip;
     }

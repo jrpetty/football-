@@ -103,13 +103,14 @@ public class BlockBookScreen extends Screen {
         Ui.panel(g, left, top, W, H, 26);
 
         int x = left + PAD;
-        g.drawString(this.font, "Block book", x, top + 8, Ui.INK, false);
+        // [ui29] the line under the title sits in the header band: below it, it ran into "Used for"
+        g.drawString(this.font, "Block book", x, top + 3, Ui.INK, false);
         Ui.right(g, this.font, BuiltInRegistries.BLOCK.size() + " blocks known",
-            left + W - PAD, top + 8, Ui.MUTED);
-        g.drawString(this.font, exported.isEmpty()
+            left + W - PAD, top + 3, Ui.MUTED);
+        g.drawString(this.font, Ui.clip(this.font, exported.isEmpty()
                 ? "What it does, why you'd build it, and when."
-                : exported,
-            x, top + 30, exported.isEmpty() ? Ui.FAINT : Ui.GOOD, false);
+                : exported, W - PAD * 2),
+            x, top + 14, exported.isEmpty() ? Ui.FAINT : Ui.GOOD, false);
 
         renderUses(g, mouseX, mouseY);
         renderDetail(g, mouseX, mouseY);

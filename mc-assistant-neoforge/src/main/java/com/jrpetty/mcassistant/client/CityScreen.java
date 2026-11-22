@@ -143,6 +143,12 @@ public class CityScreen extends Screen {
         mc.setScreen(next);
     }
 
+    /** [ui29] The developer client's screen audit: turn to a page by its name. */
+    void devPage(String name) {
+        int n = pageNumber(name);
+        if (n >= 0) { tab = n; scroll = 0; }
+    }
+
     /** Ask the server for the books of the village you stand in (the journal's button). */
     public static void request() {
         net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.VillageAskPayload(4));
@@ -736,8 +742,9 @@ public class CityScreen extends Screen {
     private void kpiCard(GuiGraphics g, Kpi k, int x, int y, int w, int h, int mx, int my) {
         UiStyle.card(g, x, y, w, h, k.colour());
         g.drawString(font, UiStyle.clip(font, k.label().toUpperCase(Locale.ROOT), w - 8), x + 6, y + 4, UiStyle.TEXT_FAINT, false);
-        UiStyle.title(g, font, UiStyle.clip(font, k.value(), w - 10), x + 6, y + 15);
         int sw = Math.min(40, w / 3), sx = x + w - sw - 4;
+        // [ui29] the value clipped short of the gauge or the trend beside it (they were drawn over its last digits)
+        UiStyle.title(g, font, UiStyle.clip(font, k.value(), h < 36 ? sx - x - 18 : sx - x - 9), x + 6, y + 15);
         if (h < 36) {                                           // the short card: no note, the trend beside the value
             if (k.gauge() < 0) UiStyle.trend(g, font, k.delta(), k.upIsGood(), sx - 10, y + 15);
             if (in(mx, my, x, y, w, h)) tip(k.label() + ": " + k.value() + " (" + k.note() + ")\n" + k.tip(), mx, my);

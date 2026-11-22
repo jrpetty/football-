@@ -100,10 +100,16 @@ public final class AssistantTargeting {
         AABB sweep = player.getBoundingBox().expandTowards(look.scale(PICK_RANGE)).inflate(1.0D);
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(
             player, eye, end, sweep,
-            e -> e instanceof AssistantEntity,
+            e -> e instanceof AssistantEntity a && isCrew(a),
             PICK_RANGE * PICK_RANGE);
         if (hit != null && hit.getEntity() instanceof AssistantEntity looked) return looked;
         return nearestOwned(player, NEAREST_RANGE);
+    }
+
+    /** [ui29] One of a player's crew: an assistant, not a town's folk (folk are assistants underneath, and every
+     *  crew list showed the whole town as "your crew, unpaid"). */
+    public static boolean isCrew(AssistantEntity a) {
+        return a.isAlive() && !(a instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity);
     }
 
     @Nullable
@@ -114,7 +120,7 @@ public final class AssistantTargeting {
         // server re-checks ownership before acting on any order.
         List<AssistantEntity> near = player.level().getEntitiesOfClass(
             AssistantEntity.class, player.getBoundingBox().inflate(range),
-            a -> a.isAlive());
+            AssistantTargeting::isCrew);
         AssistantEntity best = null;
         double bestDist = Double.MAX_VALUE;
         for (AssistantEntity a : near) {

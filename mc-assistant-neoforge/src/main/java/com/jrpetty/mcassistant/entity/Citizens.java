@@ -64,7 +64,7 @@ public final class Citizens {
         }
         Standing.Title title = Standing.of(village, p.getUUID(), f.level().getGameTime()).title();
         if (!title.atLeast(Standing.Title.FRIEND)) {
-            return "Live here? We hardly know you yet. Be a friend to " + Villages.name(village) + " first.";
+            return "Live here? We hardly know you yet. Be a friend to " + Villages.name(village) + " first: talk with us each day, bring a gift now and then.";   // [ui29] how
         }
         if (Laws.owes(village, p.getUUID()) > 0 || Laws.banished(village, p.getUUID(), f.level().getDayTime() / 24000L)) {
             return "Not while you owe the village a fine.";
