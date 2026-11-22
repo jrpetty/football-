@@ -99,7 +99,6 @@ public class GuideScreen extends Screen {
         box.setBordered(false);
         box.setMaxLength(160);
         box.setTextColor(0xFF1A1A1A);
-        box.setHint(Component.literal("Ask anything — e.g. how do I start a business?").withStyle(s -> s.withColor(0x6E6E6E)));
         box.setValue(typed);
         box.setResponder(this::typed);
         addRenderableWidget(box);
@@ -232,7 +231,7 @@ public class GuideScreen extends Screen {
             if (!op && e.op()) continue;
             String eid = e.id();
             rows.rows.add(new Row(e.title() + (e.op() ? "  (operators)" : ""), item(e.icon()),
-                GuideReply.fill(GuideReply.firstSentence(e.answer()), GuideClient.facts()), () -> openArticle(eid, true)));
+                GuideReply.fill(e.answer(), GuideClient.facts()), () -> openArticle(eid, true)));
         }
         add(rows);
     }
@@ -241,8 +240,7 @@ public class GuideScreen extends Screen {
         GuideSearch.Answer a = s.answer(question, GuideClient.operator());
         add(new Block(Kind.YOU_ASKED, question));
         if (a.mode() == GuideSearch.Mode.NONE) {
-            add(new Block(Kind.GUIDE_HEAD, ""));
-            para("I'm not sure about that one. It may not be part of this mod, or I may not know it by those words.", UiStyle.TEXT, 0);
+            add(new Block(Kind.GUIDE_HEAD, "I'm not sure about that one. It may not be part of this mod, or I may not know it by those words."));
             String fixed = GuideReply.corrected(a.corrected());
             if (!fixed.isEmpty()) note(fixed);
             if (!a.also().isEmpty()) {
@@ -267,9 +265,9 @@ public class GuideScreen extends Screen {
         PlayerFacts f = GuideClient.facts();
         GuideBook.Category c = s.book().category(e.category());
         if (!view.kind().equals("answer")) add(new Block(Kind.CRUMB, "Browse › " + (c == null ? e.category() : c.title())));
-        add(new Block(Kind.GUIDE_HEAD, ""));
         Block title = new Block(Kind.TITLE, e.title() + (e.op() ? "  (operators)" : ""));
         title.icon = item(e.icon());
+        title.bar = 1;                                                     // the Guide's own mark before it: its reply
         add(title);
         if (!fixed.isEmpty()) note(fixed);
         String lead = GuideReply.lead(e, f);
@@ -447,7 +445,7 @@ public class GuideScreen extends Screen {
                 }
                 case CRUMB -> b.h = 12;
                 case TITLE -> {
-                    b.wrapped.addAll(wrap(b.text, iw - 24));
+                    b.wrapped.addAll(wrap(b.text, iw - (b.bar == 1 ? 44 : 24)));
                     b.h = Math.max(18, b.wrapped.size() * 11 + 4) + 2;
                     b.chars = b.text.length();
                 }
@@ -517,7 +515,10 @@ public class GuideScreen extends Screen {
                     int yy = 0;
                     for (int i = 0; i < b.rows.size(); i++) {
                         List<String> wl = wrap(b.rows.get(i).sub(), iw - 30);
-                        if (wl.size() > 2) wl = new ArrayList<>(wl.subList(0, 2));
+                        if (wl.size() > 2) {
+                            wl = new ArrayList<>(wl.subList(0, 2));
+                            wl.set(1, UiStyle.clip(font, wl.get(1) + "\u2026\u2026", iw - 30));
+                        }
                         b.wrappedItems.add(wl);
                         int rh = 15 + wl.size() * 10 + 3;
                         b.boxes.add(new int[]{ 0, yy, iw, rh });
@@ -615,6 +616,9 @@ public class GuideScreen extends Screen {
         box.setX(left + PAD + 6);
         box.setY(ay + 6);
         box.setWidth(askW - 12);
+        if (box.getValue().isEmpty()) {                                   // the placeholder, shown while the box waits focused too
+            UiStyle.text(g, font, "Ask anything \u2014 e.g. how do I start a business?", left + PAD + 6 + (box.isFocused() ? 6 : 0), ay + 6, askW - 18, 0xFF7A7A7A);
+        }
         boolean canAsk = !box.getValue().isBlank();
         boolean overAsk = in(mx, my, left + w - PAD - 56, ay, 56, ASK_H);
         UiStyle.button(g, font, "Ask", left + w - PAD - 56, ay, 56, ASK_H, UiStyle.State.of(canAsk, true, overAsk));
@@ -756,9 +760,7 @@ public class GuideScreen extends Screen {
         boolean inBody = my >= y0 && my < y1;
         switch (b.kind) {
             case GUIDE_HEAD -> {
-                g.fill(x, y + 1, x + 16, y + 15, UiStyle.ACCENT_FILL);
-                g.fill(x + 1, y + 2, x + 15, y + 14, 0xFF6FB043);
-                g.drawString(font, "?", x + 6, y + 4, 0xFFFFFFFF, false);
+                avatar(g, x, y);
                 if (b.wrapped.isEmpty()) {
                     g.drawString(font, Component.literal("Guide").withStyle(s -> s.withBold(true)), x + 22, y + 4, UiStyle.ACCENT, false);
                 } else {
@@ -780,8 +782,12 @@ public class GuideScreen extends Screen {
             case CRUMB -> UiStyle.text(g, font, b.text, x, y + 2, iw, UiStyle.TEXT_FAINT);
             case TITLE -> {
                 int tx = x;
+                if (b.bar == 1) {
+                    avatar(g, x, y);
+                    tx += 20;
+                }
                 if (!b.icon.isEmpty()) {
-                    g.renderItem(b.icon, x, y);
+                    g.renderItem(b.icon, tx, y);
                     tx += 20;
                 }
                 int left = budget;
@@ -910,6 +916,13 @@ public class GuideScreen extends Screen {
                 }
             }
         }
+    }
+
+    /** The Guide's mark: a green square with a question mark, before what it says. */
+    private void avatar(GuiGraphics g, int x, int y) {
+        g.fill(x, y + 1, x + 16, y + 15, UiStyle.ACCENT_FILL);
+        g.fill(x + 1, y + 2, x + 15, y + 14, 0xFF6FB043);
+        g.drawString(font, "?", x + 6, y + 4, 0xFFFFFFFF, false);
     }
 
     /** A line of text with its key-caps drawn as caps; at most {@code most} characters. Returns how many it drew. */
