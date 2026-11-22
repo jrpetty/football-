@@ -589,7 +589,10 @@ public class BusinessLookGameTests {
                     long have = 0;
                     for (com.jrpetty.mcassistant.entity.Business.Lot l : b.stock.values()) have += l.qty;
                     if (have == 0) {
-                        // What its bench cannot make (a catch, a brew, a furnace's work, out of a hand's reach): ordered in from Stock.
+                        // What its bench cannot make (a catch, a brew, a furnace's work, out of a hand's reach): ordered in from Stock,
+                        // out of a market that has plenty of it to spare.
+                        ItemStack sample = com.jrpetty.mcassistant.entity.Stockroom.sampleForTests(ware);
+                        for (int i = 0; i < 6; i++) com.jrpetty.mcassistant.entity.Market.intoStoresForTests(level, id, sample.copyWithCount(sample.getMaxStackSize()));
                         com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "order", argsOf("k", ware, "f", argsOf("qty", "16")));
                         said.add("order: " + msg(p));
                     }
@@ -607,9 +610,25 @@ public class BusinessLookGameTests {
                 String key = null;
                 for (Map.Entry<String, com.jrpetty.mcassistant.entity.Business.Lot> e : b.stock.entrySet()) if (e.getValue().qty > 0) { key = e.getKey(); break; }
                 java.util.function.Predicate<ItemStack> is = com.jrpetty.mcassistant.entity.Stockroom.matcherForTests(key);
-                // Priced to sell from its Prices tab (the town's own counter has the better name and the shorter walk).
+                // Priced to sell from its Prices tab.
                 for (int i = 0; i < 6; i++) com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "markup", argsOf("d", -5));
                 said.add("markup: " + msg(p));
+                // The town's own counter out of it but for the firm's (who wins a sale when both have it is ent03's question): what
+                // the stores hold past the firm's own taken away.
+                long spare = com.jrpetty.mcassistant.entity.Market.stock(level, id, is) - b.stock.get(key).qty;
+                for (BlockPos sp : Villages.storeChests(level, id)) {
+                    if (!(level.getBlockEntity(sp) instanceof net.minecraft.world.Container c)) continue;
+                    for (int i = 0; i < c.getContainerSize() && spare > 0; i++) {
+                        ItemStack it = c.getItem(i);
+                        if (!is.test(it)) continue;
+                        int k = (int) Math.min(spare, it.getCount());
+                        it.shrink(k);
+                        spare -= k;
+                    }
+                    c.setChanged();
+                }
+                Villages.forgetStores(id);
+                said.add("the town's own besides the firm's: " + spare + " left over");
                 for (int i = 2; i < folk.size() && sold == null; i++) {
                     VillageFolkEntity buyer = folk.get(i);
                     if (hands.contains(buyer)) continue;
