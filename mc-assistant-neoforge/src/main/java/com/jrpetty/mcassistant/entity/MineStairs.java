@@ -373,6 +373,13 @@ public final class MineStairs extends SavedData {
             return;
         }
         if (CaveDwellers.caving(f)) { BELOW.remove(id); return; }       // [caves] down there on purpose: its own marks see it home
+        // [econ32b] Indoors in one of the town's buildings (a smelter at its furnaces under the smeltery's roof) is not lost
+        // underground: the long run's smelters were sent "up" out of the smeltery every few minutes.
+        if (f.ownerId() != null && f.villageCentre() != null && f.stationTask() != AssistantEntity.StationTask.MINE
+                && indoors(level, f.ownerId(), f.villageCentre(), f.blockPosition())) {
+            BELOW.remove(id);
+            return;
+        }
         if (!f.isAlive() || f.isPassenger() || f.isSleeping()) return;
         BlockPos feet = f.blockPosition();
         // [mine-safety] Or deep in the town's mine with the sky over it (the open top of a pit, a gallery out
@@ -395,8 +402,22 @@ public final class MineStairs extends SavedData {
         }
         int sent = SENT.merge(id, 1, Integer::sum);
         if (sent > 4 && sent % 12 != 0) return;           // tried and failed: once a minute after that
+        MineWhy.note(f, "lost underground (sent " + sent + ")");   // [econ32b]
         f.interject(Job.mine(feet.getY(), OUT));         // [mine-safety] now: not behind whatever goal has its legs
         f.brain("lost underground: making for the surface");
+    }
+
+    /**
+     * [econ32b] In one of the town's buildings (its footprint), or on the square with no rock over its head: not lost. A
+     * pocket in the rock under the square is still a hole to be got out of.
+     */
+    static boolean indoors(ServerLevel level, UUID village, BlockPos heart, BlockPos feet) {
+        int[][] g = TownMine.builtGround(village, heart, level.getGameTime());
+        for (int i = 0; i < g.length; i++) {
+            if (!TownMine.underTheTown(new int[][]{ g[i] }, feet, 0)) continue;
+            if (i > 0 || !underground(level, feet)) return true;      // the first is the square round the heart
+        }
+        return false;
     }
 
     /** The mine job's word for "get out from down here". */

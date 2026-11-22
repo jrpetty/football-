@@ -196,7 +196,11 @@ public final class Budget {
 
     /** How many of this the village keeps for itself, whatever it has. */
     public static int keep(ServerLevel level, UUID village, ItemStack sample) {
-        return keep(books(level, village), sample);
+        int k = keep(books(level, village), sample);
+        // [econ32b] The diamonds the next age will ask for are kept from the Diamond Age on (the market sold five of nine in
+        // a morning, and the age was short of them again the next).
+        if (sample.is(net.minecraft.world.item.Items.DIAMOND)) k = Math.max(k, AgeOres.diamondsKept(village));
+        return k;
     }
 
     private static int keep(Books b, ItemStack s) {
@@ -257,6 +261,7 @@ public final class Budget {
         Books b = books(level, village);
         int held = b.held.getOrDefault(sample.getItem(), 0);
         int keep = keep(b, sample);
+        if (sample.is(net.minecraft.world.item.Items.DIAMOND) && keep != Integer.MAX_VALUE) keep = Math.max(keep, AgeOres.diamondsKept(village));   // [econ32b]
         if (keep == Integer.MAX_VALUE || held <= keep) return 0;
         if (b.wants.isEmpty()) return held - keep;
         // Short of something itself: no arms, armour or tools leave the village, however many it has.

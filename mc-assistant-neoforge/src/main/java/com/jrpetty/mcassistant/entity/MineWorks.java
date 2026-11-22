@@ -155,6 +155,7 @@ public final class MineWorks {
         long week = -1;
         final int[] oreWeek = new int[MineLevels.BASES * (MineLevels.MOST + 1)], oreAll = new int[MineLevels.BASES * (MineLevels.MOST + 1)];   // [growth24] a count a level, further levels too
         int spent;                  // [growth24] a bit a level worked out (MineLevels)
+        final int[] sinceOre = new int[MineLevels.BASES * (MineLevels.MOST + 1)];   // [econ32b] blocks of drift since each level's last ore (MineLevels.barren)
         int dug, heap;
         boolean head;
         final List<Drift> drifts = new ArrayList<>();
@@ -236,6 +237,9 @@ public final class MineWorks {
             }
             sb.append(':').append(d.parent).append('/').append(d.pAnchor).append('/').append(d.pSide);
         }
+        // [econ32b] The barren count, kept with the works (an older note has none: every count starts at nothing).
+        sb.append('|');
+        for (int i = 0; i < w.sinceOre.length; i++) sb.append(i == 0 ? "" : ",").append(w.sinceOre[i]);
         w.raw = sb.toString();
         Ledger.note(w.village, NOTE, w.raw);
         CACHE.put(w.village, w);
@@ -294,6 +298,18 @@ public final class MineWorks {
                     w.drifts.add(d);
                 }
             }
+            // [econ32b] A level marked worked out with not a block of drift dug on it (marked so the moment it opened, its
+            // landing walls refused) is opened again: it was never worked.
+            for (int id = 0; id < 32; id++) {
+                if ((w.spent & (1 << id)) == 0) continue;
+                int dug = 0;
+                for (Drift d : w.drifts) if (d.level == id) dug += d.path.length();
+                if (dug == 0 && (w.rooms & (1 << id)) != 0) w.spent &= ~(1 << id);
+            }
+            if (parts.length > 2 && !parts[2].isEmpty()) {                               // [econ32b] the barren count
+                String[] c = parts[2].split(",");
+                for (int i = 0; i < Math.min(c.length, w.sinceOre.length); i++) w.sinceOre[i] = Integer.parseInt(c[i].trim());
+            }
             w.raw = raw;
             return w;
         } catch (RuntimeException e) {
@@ -345,6 +361,13 @@ public final class MineWorks {
     }
 
     /** The way in from the surface: beside the first landing, to the west. */
+    /** [econ32b] The way in at the top of the works for this town (WorksGoal: a climb that ran out of time ends there), or null. */
+    @Nullable
+    public static BlockPos topFor(ServerLevel level, AssistantEntity a) {
+        Works w = works(level, villageOf(a));
+        return w == null ? null : approach(w);
+    }
+
     static BlockPos approach(Works w) {
         return new BlockPos(w.sx - 4, Math.max(w.top, w.approachY), w.sz - 2);
     }
@@ -420,7 +443,10 @@ public final class MineWorks {
         }
         if (MineGround.otherMeets(w.village, x - 2, z - 2, x + 2, z + 2)) return false;
         Villages.Village v = Villages.get(w.village);
-        return v == null || !TownDigs.inTownGroundRaw(level, w.village, v.centre(), new BlockPos(x, 0, z), 2);
+        // [econ32b] The mine's ground is set aside for good: only what the town has built over it keeps a drift off, not the
+        // plan's reach. A town that laid out its fourth and fifth rings (CityGrowth) had its plan run out over its mine, every
+        // landing wall of a new level "in the town's ground", and its new levels were called worked out with no drift on them.
+        return v == null || !TownMine.underTheTown(TownMine.builtGround(w.village, v.centre(), level.getGameTime()), new BlockPos(x, 0, z), 2);
     }
 
     /** May a drift or a branch be cut at this column: in the mine's ground and clear of the shaft. */
@@ -967,7 +993,11 @@ public final class MineWorks {
         double bestD = Double.MAX_VALUE;
         Task last = LAST.get(a.getUUID());
         for (Lvl l : plan) {
-            if (Math.abs(p.getY() - l.y()) > 2) continue;
+            // [econ32b] A level's tunnels within six blocks up or down, not two: a miner who followed a vein down into a cave
+            // three blocks under its drift found no tunnel of the works near it and was sent for the shaft's nearest step,
+            // a hundred blocks off through the rock ("Can't find my way to the pithead"). The nearest cell is still the
+            // nearest, up and down counted.
+            if (Math.abs(p.getY() - l.y()) > 6) continue;
             if ((w.rooms & (1 << l.id())) != 0) {
                 BlockPos r = roomMiddle(w, l);
                 if (Math.max(Math.abs(p.getX() - r.getX()), Math.abs(p.getZ() - r.getZ())) <= ROOM_HALF + 1) {
@@ -1028,7 +1058,15 @@ public final class MineWorks {
         Works w = v == null ? null : works(level, v);
         if (w == null) return false;
         BlockPos p = a.blockPosition();
-        return p.getY() < w.top - 2 && (TownMine.inMine(v, p) || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 80);
+        // [econ32b] Off the mine's ground, only deep under the rock: a smelter at its furnaces eight blocks under the pithead's
+        // height, seventy-six off, was "below in the works", sent up by a way out of the works it was never in ("Can't find
+        // my way to the pithead").
+        boolean ground = MineGround.has(v) ? MineGround.reserved(v, p.getX(), p.getZ()) : TownMine.inMine(v, p);   // the faces set aside, not the whole grid round the first
+        // Deep under the rock it is below however far out (a vein followed into a cave a hundred and thirty blocks off
+        // the shaft is still the works' to get it out of: at eighty, such a miner's way up was refused, and it was sent
+        // up forty-eight times where it stood).
+        return p.getY() < w.top - 2 && (ground || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 256
+            && p.getY() < w.top - 12 && !level.canSeeSky(p));
     }
 
     /** [mine8] Is this column in the ground of a town's mine whose works are laid out (no hand cuts stone or earth there)? */

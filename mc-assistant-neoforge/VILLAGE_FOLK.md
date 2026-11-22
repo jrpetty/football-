@@ -15434,3 +15434,41 @@ works' round, instead of only when a load will not go in (then the load went on 
 - The age's own buildings find room: a town with no lot for a building its age asks for (the lighthouse, the chapel, the
   gateway) on its first three rings lays out a fourth after three looks, whatever its count of buildings (the
   forty-five a new ring waits on held a Diamond Age town of fifty with twenty-nine buildings and no lot for either).
+
+### The Diamond Age's stalls (econ-32, round two)
+- **The lots for the age's buildings.** The town's walk of its streets (CityPlan) started from the floor at the height the
+  heart was founded at. A town that had paved its square eight blocks higher started its walk in the rock under the paving,
+  reached one cell of thirty thousand, and every lot was "a street not walked": the lighthouse and the chapel never got a
+  lot. The walk now starts on the ground at the top of the heart's column when the kept height is in the rock or the water.
+  An age's building that misses look after look for want of a walked street keeps its own count of the misses (a busy town
+  that sets out a library or a tavern no longer starts the count again for it) and, past the town's patience, takes a lot
+  whose street is walked dry, as an island town does. The lighthouse looks over more lots and counts water within twenty
+  blocks as worth forty blocks' building work, so it goes by the water where there is any; with no water near it goes on its
+  edge lot all the same. With `-Dmcassistant.sitewhy=true` every look that finds no lot is logged with the count of lots
+  passed over for each reason ("[MCA-SITEWHY]").
+- **A new level of the works is laid out before it is worked out.** A level whose drifts have not a block dug is not
+  worked out (one was marked so the moment it opened, the town's plan having grown over the mine and turned away every
+  landing wall). Only what the town has built over the mine's ground keeps a drift off it, not its plan.
+- **The barren count is kept with the works** (blocks of drift since each level's last ore), so it survives a restart.
+- **The climbs out of the works.** Folk in one of the town's buildings, or on the square with no rock over them, are not
+  lost underground or down a hole in the mine (a smelter at its furnaces, a hauler on the academy's ground floor were sent
+  "up" out of the mine they were never in). Only the mine's set-aside ground counts as the works, or rock well under the
+  pithead's height with no sky. A folk off its level (a vein followed down into a cave) finds the tunnels within six blocks
+  up or down; a climb that runs out of time or ends below with its way cut off ends at the top, and a walk to a face that
+  cannot be reached from below climbs out instead of leaving the miner standing there. With `-Dmcassistant.minewhy=true`
+  each folk sent climbing is logged with why ("[MCA-MINEWHY]").
+- **The watch's armour comes back.** The forge marks the watch's iron as the town's when it makes it; the mark stays on it
+  when it goes back into the stores, so whoever leaves the watch hands it back and the next guard is fitted with it. The
+  hunter does not buy the town's marked armour.
+- **The age's ore first.** The works share the miners out by what the stores are short of; an ore the age itself waits on
+  counts what the age still wants of it (the Diamond Age's twice the Iron Age's iron, not the Iron Age's want) and the first
+  miner goes to the level richest in it, the rest a mix as before.
+- **The climb home is kept.** Down the works a folk's way home is its climb: bedtime does not put it down as work left for
+  the morning (a shift still under way down there is put down for a climb instead), and the town's bell calls a folk to an
+  assembly only once it is up. A folk deep under the rock is below in the works however far out from the shaft it has
+  wandered, so its way up is always the works' to give it.
+- **The diamonds the next age asks for are kept.** From the Diamond Age until the gateway stands, the market and the auction
+  keep twice the Diamond Age's diamonds (what the Nether Age asks for) instead of selling all past the age's own count.
+- **The picks for the diamonds are made in measure:** no more iron picks for the diamonds in a day than the rack keeps.
+- **After the Diamond Age** comes the Nether Age, which asks for the gateway: ten obsidian (cut by a diamond pick out of the
+  town's diamonds, from lava with a bucket of water), twice the Diamond Age's diamonds, the gateway itself and food.

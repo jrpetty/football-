@@ -740,6 +740,223 @@ public class SupplyChainGameTests {
         helper.succeed();
     }
 
+    /**
+     * [econ32b] A further level is laid out before it is ever worked out: the deep level marked worked out, the second deep
+     * level planned over it, the town's plan laid out to its last ring over the mine; its landing cut, its miner's next look
+     * starts a drift on it all the same (the mine's ground is set aside for good), and it is not called worked out
+     * with no drift on it (the long run's second and third deep levels and third and fourth copper levels were "worked out
+     * (0 drifts)" the moment they opened).
+     */
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "sc08_new_level_laid_out")
+    public static void sc08_new_level_laid_out(GameTestHelper helper) {
+        MineLevels.forgetCutForTests();
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6624000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0);
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        java.util.Map<com.jrpetty.mcassistant.entity.MineDemand.Ore, Integer> stock = MineWorksGameTests.plenty();
+        stock.put(com.jrpetty.mcassistant.entity.MineDemand.Ore.DIAMOND, 0);
+        com.jrpetty.mcassistant.entity.MineDemand.stockForTests(v, stock);
+        MineWorksGameTests.kit(m, Items.IRON_PICKAXE);
+        MineWorksGameTests.zone(r, m, -50);
+        int second = MineWorks.DEEP + 5;
+        List<Integer> further = MineLevels.placesForTests(level, v, MineWorks.DEEP);
+        helper.assertTrue(!further.isEmpty(), "further deep levels planned: " + further);
+        int y2 = further.get(0);
+        int y1 = MineWorks.levelY(level, v, MineWorks.DEEP);
+        MineWorksGameTests.tower(r, Math.min(y1, y2) - 3);
+        MineWorksGameTests.bed(r, y2, 30, Blocks.DEEPSLATE, 0, 3233L);
+        MineLevels.spendForTests(level, v, MineWorks.DEEP);
+        MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - Math.min(y1, y2)) / 3) + 1, m);
+        MineWorks.roomForTests(level, v, second);
+        // The town's plan laid out to its last ring, out over the mine's ground (as a grown town's is: CityGrowth).
+        int rings = com.jrpetty.mcassistant.entity.CityGrowth.rings(v);
+        com.jrpetty.mcassistant.entity.CityGrowth.setRings(v, com.jrpetty.mcassistant.village.TownPlan.MAX_RINGS);
+        com.jrpetty.mcassistant.entity.MineWorks.Task t = MineWorks.next(level, m);
+        com.jrpetty.mcassistant.entity.CityGrowth.setRings(v, rings);
+        if (t != null) MineWorks.release(v, t, m.getUUID());
+        int drifts = 0;
+        for (int[] d : MineWorks.driftsForTests(level, v)) if (d[1] == second) drifts++;
+        boolean spent = MineLevels.spentForTests(level, v, second);
+        Kit.log("[VT] sc08 the second deep level at Y" + y2 + ": next task " + (t == null ? "-" : t.words()) + "; drifts on it " + drifts
+            + "; worked out " + spent + "; plan " + MineWorks.planForTests(level, v));
+        helper.assertTrue(!spent, "a level just opened is not worked out");
+        helper.assertTrue(drifts >= 1, "a drift started on it: " + drifts);
+        com.jrpetty.mcassistant.entity.MineDemand.stockForTests(v, null);
+        MineWorksGameTests.done(helper);
+    }
+
+    /**
+     * [econ32b] The barren count survives a restart: three hundred bare blocks cut on the iron level, the works forgotten and
+     * read again from the town's notes (as after a restart), the count still three hundred; with ore out of the level, it
+     * starts again.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "sc09_barren_kept")
+    public static void sc09_barren_kept(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6628000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        MineLevels.cutForTests(level, v, MineWorks.IRON, 300);
+        int before = MineLevels.sinceOreForTests(level, v, MineWorks.IRON);
+        MineWorks.forgetCache();
+        int after = MineLevels.sinceOreForTests(level, v, MineWorks.IRON);
+        Kit.log("[VT] sc09 the iron level's bare blocks: " + before + " before, " + after + " after the works were read again");
+        helper.assertTrue(before == 300 && after == 300, "the count kept with the works: " + before + " -> " + after);
+        MineWorksGameTests.done(helper);
+    }
+
+    /**
+     * [econ32b] Every building an age asks for finds a lot in a town of a dozen, on its ground of three kinds: flat ground
+     * raised four blocks over the heart's kept height after the founding (a square paved over it: the walk of the town's
+     * streets used to begin in the earth under it and reach nothing), a hillside, and a shore (the lighthouse by the water).
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc10_age_lots_flat")
+    public static void sc10_age_lots_flat(GameTestHelper helper) {
+        ageLots(helper, 6632000, "flat");
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc11_age_lots_hill")
+    public static void sc11_age_lots_hill(GameTestHelper helper) {
+        ageLots(helper, 6636000, "hill");
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc12_age_lots_shore")
+    public static void sc12_age_lots_shore(GameTestHelper helper) {
+        ageLots(helper, 6640000, "shore");
+    }
+
+    private static void ageLots(GameTestHelper helper, int x, String ground) {
+        ServerLevel level = helper.getLevel();
+        com.jrpetty.mcassistant.entity.SiteWhy.resetForTests();
+        com.jrpetty.mcassistant.entity.AgeSites.resetForTests();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, x, 150, 12, StationTask.FARM);
+        helper.assertTrue(!folk.isEmpty(), "the town");
+        UUID v = folk.get(0).ownerId();
+        BlockPos heart = folk.get(0).villageCentre();
+        int R = 110;
+        net.minecraft.world.level.block.state.BlockState dirt = Blocks.DIRT.defaultBlockState(), grass = Blocks.GRASS_BLOCK.defaultBlockState();
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        if (ground.equals("flat")) {
+            // Four blocks of ground laid over the town after its founding: the heart's kept height lies under them.
+            for (int dx = -R; dx <= R; dx++) for (int dz = -R; dz <= R; dz++) {
+                for (int y = 0; y < 4; y++) level.setBlock(p.set(heart.getX() + dx, heart.getY() + y, heart.getZ() + dz), y == 3 ? grass : dirt, 2);
+            }
+            for (VillageFolkEntity f : folk) f.teleportTo(f.getX(), heart.getY() + 4, f.getZ());
+        } else if (ground.equals("hill")) {
+            Kit.hill(level, heart.getX() + 70, heart.getZ(), 55, 12, 3241L);
+        } else {
+            // The sea along the east of the town: from forty blocks out, two deep.
+            for (int dx = 40; dx <= R; dx++) for (int dz = -R; dz <= R; dz++) {
+                for (int y = -2; y < 0; y++) level.setBlock(p.set(heart.getX() + dx, heart.getY() + y, heart.getZ() + dz), Blocks.WATER.defaultBlockState(), 2);
+            }
+        }
+        com.jrpetty.mcassistant.entity.CityPlan.forget(v);
+        Villages.forgetStock();
+        List<String> missing = new ArrayList<>();
+        StringBuilder found = new StringBuilder();
+        for (String b : com.jrpetty.mcassistant.entity.AgeSites.ASKED) {
+            Villages.Site site = Villages.siteFor(level, v, b);
+            if (site == null) missing.add(b + " (" + com.jrpetty.mcassistant.entity.SiteWhy.last(v, b) + ")");
+            else found.append(' ').append(b).append('@').append(site.anchor().getX() - heart.getX()).append(',').append(site.anchor().getZ() - heart.getZ());
+        }
+        Kit.log("[VT] " + ground + " ground: lots" + found + "; none for " + missing);
+        helper.assertTrue(missing.isEmpty(), "every building an age asks for has a lot on " + ground + " ground; none for " + missing);
+        if (ground.equals("shore")) {
+            Villages.Site light = Villages.sitesOf(v).get("lighthouse");
+            helper.assertTrue(light != null && light.anchor().getX() - heart.getX() >= 20, "the lighthouse by the water: "
+                + (light == null ? "none" : (light.anchor().getX() - heart.getX()) + " east"));
+        }
+        helper.succeed();
+    }
+
+    /**
+     * [econ32b] A smelter at its furnaces indoors (a smeltery of the town's, walled and roofed round it) is not "lost
+     * underground", nor "below in the works" though it stands under the pithead's height: no way up is sent for it. (The
+     * long run's smelters were sent up out of the smeltery twenty-two times a day.)
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc13_indoors_not_lost")
+    public static void sc13_indoors_not_lost(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6644000, 2);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity f = r.miners().get(1);
+        f.setJob(StationTask.SMELT);
+        // Seventy-six from the shaft, off the mine's ground, eight under the pithead's height (on a stone floor raised there).
+        BlockPos spot = new BlockPos(r.heart().getX() + 60, MineWorksGameTests.TOP - 8, r.heart().getZ());
+        for (int dx = -6; dx <= 6; dx++) for (int dz = -6; dz <= 6; dz++) level.setBlock(spot.offset(dx, -1, dz), Blocks.STONE.defaultBlockState(), 2);
+        com.jrpetty.mcassistant.village.Ledger.built(v, "smeltery", spot, net.minecraft.core.Direction.NORTH);
+        TownMine.redraw(v);
+        // A shut room of stone round it, roofed.
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) for (int dy = 0; dy <= 4; dy++) {
+            boolean wall = Math.abs(dx) == 3 || Math.abs(dz) == 3 || dy == 4;
+            level.setBlock(spot.offset(dx, dy, dz), wall ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
+        }
+        for (int dx = -6; dx <= 6; dx++) for (int dz = -6; dz <= 6; dz++) if (Math.abs(dx) > 3 || Math.abs(dz) > 3)
+            for (int dy = 0; dy <= 8; dy++) level.setBlock(spot.offset(dx, dy, dz), Blocks.STONE.defaultBlockState(), 2);
+        f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+        f.clearQueue();
+        boolean below = MineWorks.below(f);
+        for (int i = 0; i < 6; i++) com.jrpetty.mcassistant.entity.MineStairs.lookForAWayUp(f, level);
+        Job j = f.peekJob();
+        Kit.log("[VT] sc13 the smelter indoors: below in the works " + below + "; job after six looks " + (j == null ? "-" : j.type() + ":" + j.arg()));
+        helper.assertTrue(!below, "not below in the works");
+        helper.assertTrue(j == null || j.type() != Job.Type.MINE, "no way up sent for it: " + (j == null ? "-" : j.type() + ":" + j.arg()));
+        MineWorksGameTests.done(helper);
+    }
+
+    /**
+     * [econ32b] The watch's armour comes back: an Iron Age town putting its iron by, a guard with no armour; the smith forges
+     * a piece for it (the town's mark on it), the guard is fitted, and when it leaves the watch for the fields the piece goes
+     * back into the stores with the mark still on it, so the next guard is fitted with it and the smith forges no other. (A
+     * long run's town of fifty had fourteen iron helmets on folk who had left its watch, and forged the new guards'.)
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "sc14_watch_kit_back")
+    public static void sc14_watch_kit_back(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6648000, 40, 6, StationTask.FARM);
+        helper.assertTrue(folk.size() == 6, "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.Village vv = Villages.get(v);
+        VillageFolkEntity smith = folk.get(0), guard = folk.get(1), next = folk.get(2);
+        smith.setJob(StationTask.SMITH);
+        smith.tradeXpForTests(StationTask.SMITH, 20000);
+        guard.setJob(StationTask.GUARD);
+        for (net.minecraft.world.entity.EquipmentSlot sl : new net.minecraft.world.entity.EquipmentSlot[]{ net.minecraft.world.entity.EquipmentSlot.HEAD,
+                net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET }) {
+            guard.setItemSlot(sl, ItemStack.EMPTY);
+            next.setItemSlot(sl, ItemStack.EMPTY);
+        }
+        Villages.ageForTests(v, Villages.Age.IRON);
+        clearStores(level, v);
+        Market.intoStoresForTests(level, v, new ItemStack(Items.IRON_INGOT, 40));
+        Market.intoStoresForTests(level, v, new ItemStack(Items.OAK_PLANKS, 64));
+        Market.intoStoresForTests(level, v, new ItemStack(Items.STICK, 32));
+        Villages.forgetStock();
+        List<String> made = new ArrayList<>();
+        for (int i = 0; i < 6; i++) { String m = Crafts.smithForTests(level, vv, smith); if (m != null) made.add(m); Villages.forgetStock(); }
+        int marked = 0;
+        for (BlockPos p : Villages.storeChests(level, v)) if (level.getBlockEntity(p) instanceof Container c)
+            for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).getItem() instanceof net.minecraft.world.item.ArmorItem && com.jrpetty.mcassistant.entity.WatchKit.issued(c.getItem(i))) marked++;
+        List<ItemStack> fitted = com.jrpetty.mcassistant.entity.WatchKit.fit(level, vv, guard);
+        int ironBefore = Market.stock(level, v, st -> st.is(Items.IRON_INGOT));
+        guard.setJob(StationTask.FARM);                                          // off the watch
+        int worn = 0;
+        for (net.minecraft.world.entity.EquipmentSlot sl : net.minecraft.world.entity.EquipmentSlot.values()) if (guard.getItemBySlot(sl).getItem() instanceof net.minecraft.world.item.ArmorItem) worn++;
+        next.setJob(StationTask.GUARD);
+        List<ItemStack> refit = com.jrpetty.mcassistant.entity.WatchKit.fit(level, vv, next);
+        for (int i = 0; i < 6; i++) { Crafts.smithForTests(level, vv, smith); Villages.forgetStock(); }
+        int ironAfter = Market.stock(level, v, st -> st.is(Items.IRON_INGOT));
+        Kit.log("[VT] sc14 forged " + made + " (" + marked + " marked in the stores); fitted " + fitted.size() + "; the old guard wears " + worn
+            + " pieces after leaving the watch; the next guard fitted " + refit.size() + "; iron " + ironBefore + " -> " + ironAfter);
+        helper.assertTrue(marked >= 1, "the watch's armour carries the town's mark: " + marked);
+        helper.assertTrue(!fitted.isEmpty(), "the guard is fitted");
+        helper.assertTrue(worn == 0, "the old guard hands its armour back: " + worn + " pieces kept");
+        helper.assertTrue(refit.size() >= fitted.size() - 1, "the next guard fitted with it: " + refit.size() + " of " + fitted.size());
+        helper.assertTrue(ironAfter >= ironBefore - 5, "no new suit forged for the next guard: iron " + ironBefore + " -> " + ironAfter);
+        helper.succeed();
+    }
+
     /** A hungry town wants more farmers: its farms short of hands the morning its larder is low. */
     @GameTest(template = "empty", timeoutTicks = 200, batch = "sc04_hungry_farms")
     public static void sc04_hungry_farms(GameTestHelper helper) {
@@ -809,5 +1026,119 @@ public class SupplyChainGameTests {
             TownJobs.instantForTests(false);
         }
         helper.succeed();
+    }
+
+    // ============================================================ sc15 [econ32b] past the Diamond Age
+
+    /**
+     * [econ32b] The age after the Diamond Age: a Diamond Age town with the diamonds, twice the Iron Age's iron, food put by
+     * and its lighthouse and chapel built comes into the Nether Age, which asks for the gateway: ten obsidian, twice the
+     * Diamond Age's diamonds (the pick that cuts the obsidian comes out of them), the gateway itself and food. The works
+     * share their miners out to the age's ore first (AgeOres): in the Diamond Age short of iron, the iron goes first.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "sc15_past_diamond")
+    public static void sc15_past_diamond(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6652000, 40, 6, StationTask.FARM);
+        helper.assertTrue(folk.size() == 6, "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.Village vv = Villages.get(v);
+        Kit.Expect ok = new Kit.Expect();
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        clearStores(level, v);
+        int iron = 2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(6);
+        int diamonds = com.jrpetty.mcassistant.village.VillageMath.diamondsWanted(6);
+        int food = com.jrpetty.mcassistant.village.VillageMath.foodWanted(6);
+        // Short of iron: the age asks for it, and the works count what the age still wants.
+        Market.intoStoresForTests(level, v, new ItemStack(Items.DIAMOND, diamonds));
+        Market.intoStoresForTests(level, v, new ItemStack(Items.IRON_INGOT, 10));
+        for (int left = food + 64; left > 0; left -= 64) Market.intoStoresForTests(level, v, new ItemStack(Items.BREAD, Math.min(64, left)));
+        BlockPos h = vv.centre();
+        com.jrpetty.mcassistant.village.Ledger.built(v, "lighthouse", h.offset(30, 0, 0), net.minecraft.core.Direction.NORTH);
+        com.jrpetty.mcassistant.village.Ledger.built(v, "chapel", h.offset(-30, 0, 0), net.minecraft.core.Direction.NORTH);
+        Villages.noteProject(v, "lighthouse", level.getGameTime());
+        Villages.noteProject(v, "chapel", level.getGameTime());
+        Villages.forgetStock();
+        List<Villages.Need> short1 = Villages.needs(level, v);
+        Kit.log("sc15 Diamond Age short of iron: " + short1);
+        ok.that(Villages.ageOf(v) == Villages.Age.DIAMOND, "still the Diamond Age while short of iron");
+        ok.that(short1.stream().anyMatch(n -> n.task() == Villages.Task.IRON), "the age asks for iron: " + short1);
+        com.jrpetty.mcassistant.entity.MineDemand.reshare(v);
+        java.util.Map<com.jrpetty.mcassistant.entity.MineDemand.Ore, com.jrpetty.mcassistant.entity.MineDemand.Want> w =
+            com.jrpetty.mcassistant.entity.MineDemand.wants(level, v);
+        com.jrpetty.mcassistant.entity.MineDemand.Want wi = w.get(com.jrpetty.mcassistant.entity.MineDemand.Ore.IRON);
+        Kit.log("sc15 the works' iron want: " + wi + "; the age's ores " + com.jrpetty.mcassistant.entity.AgeOres.of(v));
+        ok.that(wi.need() >= iron, "the works want the age's whole iron (" + iron + "): " + wi);
+        ok.that(com.jrpetty.mcassistant.entity.AgeOres.of(v).contains(com.jrpetty.mcassistant.entity.MineDemand.Ore.IRON), "iron is the age's ore");
+        // The iron in: the age is done, and the next one's list.
+        Market.intoStoresForTests(level, v, new ItemStack(Items.IRON_INGOT, 64));
+        Market.intoStoresForTests(level, v, new ItemStack(Items.IRON_INGOT, Math.max(1, iron - 74 + 4)));
+        Villages.forgetStock();
+        List<Villages.Need> done = Villages.needs(level, v);
+        Kit.log("sc15 with the iron in: age " + Villages.ageOf(v) + "; wants " + done);
+        ok.that(Villages.ageOf(v) == Villages.Age.NETHER, "into the Nether Age: " + Villages.ageOf(v));
+        Villages.forgetStock();
+        List<Villages.Need> nether = Villages.needs(level, v);
+        Kit.log("sc15 the Nether Age asks for " + nether);
+        java.util.Map<Villages.Task, Integer> by = new java.util.EnumMap<>(Villages.Task.class);
+        for (Villages.Need n : nether) by.merge(n.task(), n.amount(), Integer::sum);
+        ok.that(by.getOrDefault(Villages.Task.OBSIDIAN, 0) == com.jrpetty.mcassistant.village.VillageMath.obsidianWanted(6), "ten obsidian: " + by);
+        ok.that(by.getOrDefault(Villages.Task.DIAMOND, 0) == diamonds, "twice the diamonds, the first half in hand: " + by);
+        ok.that(nether.stream().anyMatch(n -> n.task() == Villages.Task.BUILD && n.what().contains("gateway")), "the gateway: " + nether);
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
+    // ============================================================ sc16 [econ32b] the climb home kept
+
+    /**
+     * [econ32b] A miner deep in a cave a hundred and thirty blocks off the shaft is still below in the works (its way up is
+     * the works' to give it); and at bedtime its climb out is not put down as "work left for the morning", while a shift it
+     * is still on down there is put down for a climb. (The long run's miners, their climbs cleared at bedtime, spent the night
+     * in the drifts, sent up and put down again a dozen times a night: 307 "lost underground" in two days.)
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc16_climb_kept")
+    public static void sc16_climb_kept(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6656000, 2);
+        ServerLevel level = r.level();
+        VillageFolkEntity f = r.miners().get(0);
+        // A pocket in the rock, roofed, far out from the shaft and forty under the pithead.
+        BlockPos spot = new BlockPos(r.sx() + 130, MineWorksGameTests.TOP - 40, r.sz());
+        Kit.hold(level, spot.getX(), spot.getZ(), 16);
+        helper.runAtTickTime(20, () -> {
+        level.getChunk(spot.getX() >> 4, spot.getZ() >> 4);
+        MineWorksGameTests.stone(level, spot.getX() - 3, spot.getY() - 1, spot.getZ() - 3, spot.getX() + 3, spot.getY() + 5, spot.getZ() + 3);
+        for (int dx = -1; dx <= 1; dx++) for (int dy = 0; dy <= 1; dy++) level.setBlock(spot.offset(dx, dy, 0), Blocks.AIR.defaultBlockState(), 2);
+        f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+        });
+        helper.runAtTickTime(120, () -> {                       // the sky's light gone from the pocket (the light is worked out over a few ticks)
+        Kit.Expect ok = new Kit.Expect();
+        f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+        boolean below = MineWorks.below(f);
+        Kit.log("[VT] sc16 a hundred and thirty out, forty down: below in the works " + below + " at " + f.blockPosition().toShortString()
+            + ", sky " + level.canSeeSky(f.blockPosition()) + ", shaft " + r.sx() + "," + r.sz());
+        ok.that(below, "deep under the rock it is below in the works, however far out");
+        try {
+            java.lang.reflect.Method leave = VillageFolkEntity.class.getDeclaredMethod("leaveWorkForTheMorning");
+            leave.setAccessible(true);
+            level.setDayTime(8 * 24000L + 22000L);
+            f.clearQueue();
+            f.interject(Job.mine(spot.getY(), com.jrpetty.mcassistant.entity.MineStairs.OUT));
+            leave.invoke(f);
+            Job j = f.peekJob();
+            Kit.log("[VT] sc16 at bedtime, climbing: job " + (j == null ? "-" : j.type() + ":" + j.arg()));
+            ok.that(j != null && j.type() == Job.Type.MINE && com.jrpetty.mcassistant.entity.MineStairs.OUT.equals(j.arg()), "the climb is kept at bedtime");
+            f.clearQueue();
+            f.interject(Job.mine(spot.getY(), MineWorks.ARG));
+            leave.invoke(f);
+            j = f.peekJob();
+            Kit.log("[VT] sc16 at bedtime, on a shift below: job " + (j == null ? "-" : j.type() + ":" + j.arg()));
+            ok.that(j != null && j.type() == Job.Type.MINE && com.jrpetty.mcassistant.entity.MineStairs.OUT.equals(j.arg()), "a shift below is put down for a climb");
+        } catch (ReflectiveOperationException e) {
+            helper.fail("leaveWorkForTheMorning: " + e);
+        }
+        helper.assertTrue(ok.clean(), ok.summary());
+        MineWorksGameTests.done(helper);
+        });
     }
 }

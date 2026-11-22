@@ -136,27 +136,21 @@ public final class MineLevels {
 
     // ------------------------------------------------------------------ [econ32] a level gone barren
 
-    /** Blocks of drift cut on each level since its last ore, by town. Kept in memory (a restart starts the count again). */
-    private static final java.util.Map<java.util.UUID, long[]> CUT = new java.util.concurrent.ConcurrentHashMap<>();
     /** Blocks of drift cut on a level since the last ore came out of it before it is given up as barren (the deep level more:
      *  its ore is scarce). The iron level of a local run gave an ore in seven blocks of tunnel on the whole. */
     static final int BARREN_BLOCKS = 400, BARREN_DEEP = 800;
 
-    /** So many blocks of drift cut on this level, with so much ore out of them (MineWorks.done): ore starts the count again. */
+    /** So many blocks of drift cut on this level, with so much ore out of them (MineWorks.done, which saves the works): ore
+     *  starts the count again. [econ32b] Kept with the works, so a restart does not start it again. */
     static void cut(MineWorks.Works w, int id, int blocks, int ore) {
-        if (id < 0 || id >= BASES * (MOST + 1)) return;
-        long[] c = CUT.computeIfAbsent(w.village, k -> new long[BASES * (MOST + 1)]);
-        synchronized (c) {
-            if (ore > 0) c[id] = 0;
-            else c[id] += Math.max(0, blocks);
-        }
+        if (id < 0 || id >= w.sinceOre.length) return;
+        if (ore > 0) w.sinceOre[id] = 0;
+        else w.sinceOre[id] += Math.max(0, blocks);
     }
 
     /** Blocks of drift cut on this level since its last ore. */
     static int sinceOre(MineWorks.Works w, int id) {
-        long[] c = CUT.get(w.village);
-        if (c == null || id < 0 || id >= BASES * (MOST + 1)) return 0;
-        return (int) c[id];
+        return id < 0 || id >= w.sinceOre.length ? 0 : w.sinceOre[id];
     }
 
     /**
@@ -171,24 +165,35 @@ public final class MineLevels {
         return sinceOre(w, l.id()) >= (base(l.id()) == MineWorks.DEEP ? BARREN_DEEP : BARREN_BLOCKS);
     }
 
-    /** The week's count for this level started again (it was found barren and marked worked out). */
+    /** The count for this level started again (it was found barren and marked worked out). */
     static void clearCut(MineWorks.Works w, int id) {
-        long[] c = CUT.get(w.village);
-        if (c != null && id >= 0 && id < BASES * (MOST + 1)) synchronized (c) { c[id] = 0; }
+        if (id >= 0 && id < w.sinceOre.length) w.sinceOre[id] = 0;
     }
 
     /** Tests: so many blocks cut on this level this week. */
     public static void cutForTests(net.minecraft.server.level.ServerLevel level, java.util.UUID village, int id, int blocks) {
         MineWorks.Works w = MineWorks.works(level, village);
-        if (w != null) cut(w, id, blocks, 0);
+        if (w != null) { cut(w, id, blocks, 0); MineWorks.save(w); }
+    }
+
+    /** Tests: blocks of drift since this level's last ore, as the works hold it. */
+    public static int sinceOreForTests(net.minecraft.server.level.ServerLevel level, java.util.UUID village, int id) {
+        MineWorks.Works w = MineWorks.works(level, village);
+        return w == null ? -1 : sinceOre(w, id);
     }
 
     public static void forgetCutForTests() {
-        CUT.clear();
+        // [econ32b] kept with each town's works now (MineWorks.forgetForTests starts them afresh)
     }
 
     /** Is this level worked out: every drift on it closed and every branch off them cut? (Its landing is cut.) */
     static boolean workedOut(ServerLevel level, MineWorks.Works w, MineWorks.Lvl l, List<MineWorks.Drift> here) {
+        // [econ32b] Never before it has been dug: a level with no drift on it, or none cut a block, is laid out first. Four
+        // levels of a long run were "worked out (0 drifts)" the moment they opened, their landing walls refused (the plan's
+        // reach run out over the mine: MineWorks.inGround), and the next of their ore opened on top of them.
+        int dug = 0;
+        for (MineWorks.Drift d : here) dug += d.path.length();
+        if (dug == 0) return false;
         for (MineWorks.Drift d : here) {
             if (d.closed == '-') return false;
             if (MineWorks.pendingBranches(level, w, d, l) > 0) return false;

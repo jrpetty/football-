@@ -2817,7 +2817,13 @@ public class VillageFolkEntity extends AssistantEntity {
         boolean errand = j.type() == Job.Type.WITHDRAW || j.type() == Job.Type.CRAFT || j.type() == Job.Type.GO_HOME;
         long cutoff = bedtimeTick() + (errand ? 1000L : 0L);
         if (t < cutoff) return;
+        // [econ32b] Down the works its way home is the climb: never put down (the climb, put down at bedtime, left a miner
+        // in the drifts all night, sent climbing again and put down again, a dozen times a night), and a shift is put down
+        // for a climb.
+        if (j.type() == Job.Type.MINE && MineStairs.OUT.equals(j.arg())) return;
+        boolean down = MineWorks.below(this);
         clearQueue();
+        if (down) interject(Job.mine(blockPosition().getY(), MineStairs.OUT));
         brain("work left for the morning: " + j.label());
     }
 
