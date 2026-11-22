@@ -15041,6 +15041,14 @@ out over the levels not worked out (MineDemand.share) and nobody is sent back ov
 fresh grid of drifts in the same ground, with its own landing cut and furnished at its corner of the shaft. The mine's
 report names them ("the second iron level"), counts each one's ore, and marks a level "worked out".
 
+### The miners kept at the mine
+With the levels no longer running out, a local run's town of fifty-nine came into the Iron Age on day 26 with six to ten
+miners and held 0 to 8 iron for a week: the works booked three shifts in five days. The miners' days went to the town's
+works (levelling and filling the next lots, a fifth of a day), to lending a hand at the logs (nearly half of one miner's
+day) and to the walk; a tenth of their day or less was spent down the works. While the age asks for iron, diamonds or coal,
+a miner is no longer called to the town's works and, with nothing in its own line for a moment, waits for its next shift
+instead of being lent out (MineHands).
+
 ### Coal kept back for the smelters
 A smelter draws coal only while the stores hold more than their floor (Fuel). The town's other uses drew it from nought
 upward a lump at a time: a street light's torch, a campfire, the fish smoked, the lighthouse lit, a festival's bonfire.
@@ -15070,4 +15078,6 @@ ends: the miner marks it worked out, the second iron level is planned six blocks
 driven, and raw iron comes in from it; the news tells of it. gw24_02 coal under the floor and two smelters' draws is kept
 from the town's works, and taken when there is plenty. gw24_03 an awake town of fourteen held, a town of six asleep a
 hundred and fifty blocks off inside its ground: the sleeper's heart chunk is let go and its folk saved with it (on the old
-rule its own ring and its folk's tickets kept it loaded, all six folk working), the awake town's folk all stay.
+rule its own ring and its folk's tickets kept it loaded, all six folk working), the awake town's folk all stay. gw24_04 an
+Iron Age town short of iron sends a farmer to the levelling, never one of its miners; in the Wood Age the mine is
+asked nothing, and a miner goes.

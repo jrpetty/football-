@@ -229,4 +229,53 @@ public class Growth24GameTests {
             return true;
         });
     }
+    /**
+     * Miners kept at the mine while the age waits on it: an Iron Age town (two farmers, the rest miners) short of its
+     * iron calls a hand to the levelling, and a farmer goes, never a miner; the same town in the Wood Age (nothing asked of
+     * the mine) may send a miner.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "gw24_04_miners_kept")
+    public static void gw24_04_miners_kept(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        com.jrpetty.mcassistant.entity.MineHands.forgetForTests();
+        final int x = 5414000;
+        Kit.hold(level, x, Z, 40);
+        Kit.prepare(level, x, Z, 40);
+        level.setDayTime(24000L * 4 + 2000);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 10);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        List<VillageFolkEntity> all = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f && !f.isBaby()) all.add(f);
+        helper.assertTrue(all.size() >= 6, "a town of six and more: " + all.size());
+        Villages.ageForTests(v.id(), Villages.Age.IRON);
+        helper.runAtTickTime(10, () -> {
+            level.setDayTime(24000L * 4 + 2000);
+            for (int i = 0; i < all.size(); i++) all.get(i).setJob(i < all.size() - 2 ? StationTask.MINE : StationTask.FARM);
+            boolean kept = com.jrpetty.mcassistant.entity.MineHands.kept(level, v.id());
+            com.jrpetty.mcassistant.entity.TownJobs.atWork(level, v, "levelling", heart.offset(12, 0, 0), "levelling the ground");
+            VillageFolkEntity hand = com.jrpetty.mcassistant.entity.TownJobs.handAt(level, v.id(), "levelling");
+            StationTask ironAge = hand == null ? null : hand.stationTask();
+            com.jrpetty.mcassistant.entity.TownJobs.resetForTests();
+            com.jrpetty.mcassistant.entity.MineHands.forgetForTests();
+            Villages.ageForTests(v.id(), Villages.Age.WOOD);
+            boolean keptWood = com.jrpetty.mcassistant.entity.MineHands.kept(level, v.id());
+            com.jrpetty.mcassistant.entity.TownJobs.atWork(level, v, "levelling", heart.offset(12, 0, 0), "levelling the ground");
+            VillageFolkEntity woodHand = com.jrpetty.mcassistant.entity.TownJobs.handAt(level, v.id(), "levelling");
+            com.jrpetty.mcassistant.entity.TownJobs.resetForTests();
+            List<String> trades = new ArrayList<>();
+            for (VillageFolkEntity f : all) trades.add(f.stationTask() + (f.isSleeping() ? " asleep" : ""));
+            Kit.log("[VT] gw24_04 the folk " + trades + "; the Wood Age's hand " + (woodHand == null ? "none" : woodHand.stationTask()));
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            Kit.log("[VT] gw24_04 " + all.size() + " folk, two farmers; Iron Age, short of iron: the age waits on the mine " + kept + ", the levelling's hand a "
+                + ironAge + "; the Wood Age: waits " + keptWood);
+            helper.assertTrue(kept, "the Iron Age short of iron waits on the mine");
+            helper.assertTrue(ironAge != null && ironAge != StationTask.MINE, "a hand to the levelling, and not a miner: " + ironAge);
+            helper.assertTrue(!keptWood, "the Wood Age asks nothing of the mine");
+            helper.succeed();
+        });
+    }
 }
