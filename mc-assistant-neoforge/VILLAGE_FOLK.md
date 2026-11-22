@@ -15093,6 +15093,11 @@ miners took them off the rack as theirs wore out, and the forge made more. A sto
 kept stone picks till the iron was past its mark (Picks.ironFor: three dozen and more while the age saves). Now the forge
 waits for the same mark before an iron pick, and a blade past the smith's sixteen bars, while the age's iron is put by.
 
+With the forge mended the local run's town still held four iron in its stores: one of its smelters carried forty-four to
+forty-nine raw iron in its pack, taken out of the stores to be smelted and waiting on fuel, and the age counted the stores
+only. The raw iron and bars in the smelters' hands now count with the stores for what the age asks, as the watch's armour
+does (IronInHand); they are never spent from.
+
 ### The mine's ground widened
 When the last level of an ore is worked out (its first and all five further levels), the mine's ground takes in the next ring
 of faces out (MineReach): each face of the ring that touches the ground already set aside and lies, as the first did, clear
@@ -15120,5 +15125,5 @@ gw24_05 an Iron Age town short of iron with thirty bars and an empty pick rack: 
 forge, two, six bars), keeps 26 of its 30 bars, and with sixty forges one; the books name Crafts.forge. gw24_06 the iron's
 levels all worked out: the ground widens from 54 faces to 75 (ring 4 to 5), none on the town's, the edge drifts opened and
 the levels worked again. gw24_07 a town with no coin to spare buys a stone town's stone on credit once it has takings to its
-name. AgeWantTest (unit): a young town's food (forty in store, ten made and eaten a day, six hundred short of its mark) up 155% in a week before, 4% now.
+name. gw24_08 forty raw iron in an Iron Age town's smelter's pack takes its age's ask from 64 to 24. AgeWantTest (unit): a young town's food (forty in store, ten made and eaten a day, six hundred short of its mark) up 155% in a week before, 4% now.
 
