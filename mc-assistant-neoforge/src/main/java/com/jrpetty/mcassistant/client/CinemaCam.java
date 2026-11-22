@@ -288,7 +288,9 @@ public final class CinemaCam {
         double a = Math.toRadians(angle);
         Vec3 base = centre.add(Math.sin(a) * radius, height, Math.cos(a) * radius);
         Vec3 aim = centre.add(0.0, t instanceof LivingEntity ? 1.1 : 0.8, 0.0);
-        boolean close = radius <= 24.0F;
+        // Close round a folk (or tight in), it comes in short of a wall; round a building or a spot farther out it rises over
+        // what is in the way instead (a house going up is watched from outside it, not from its floor).
+        boolean close = radius <= 14.0F || t instanceof LivingEntity && radius <= 24.0F;
         lift = lift + (clearance(level, base, aim, !close) - lift) * (1.0 - Math.exp(-dt * 0.9));
         Vec3 want = base.add(0.0, lift, 0.0);
         // Close in: a wall, a roof or a tree between the camera and what it watches pulls it in short of it (quickly in,
