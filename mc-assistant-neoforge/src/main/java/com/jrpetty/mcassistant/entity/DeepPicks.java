@@ -80,7 +80,12 @@ public final class DeepPicks {
         SMITH.put(id, now);
         if (!wanted(level, id) || ironOnRack(level, id) >= keep(id)) return null;
         if (Market.stock(level, id, Toolrack.IRON) < Toolrack.Tool.PICKAXE.head + Crafts.IRON_KEPT) return null;
+        // [econ32b] No more in a day than the rack keeps: picks carried off as spares, sent to a partner town or worn past
+        // half went out as fast as they were made (72 bars on picks in a day, the Diamond Age 176 iron short).
+        long day = level.getDayTime() / 24000L;
+        if (!AgeOres.pickToday(id, day, keep(id))) return null;
         String made = Toolrack.make(level, v, f, Toolrack.Tool.PICKAXE, Items.IRON_PICKAXE);
+        if (made != null) AgeOres.pickMade(id, day);                   // [econ32b]
         if (made != null) f.brain("made " + made + " for the diamonds");
         return made;
     }

@@ -42,5 +42,33 @@ public final class AgeOres {
 
     public static void forgetForTests(UUID village) {
         AGE.remove(village);
+        PICKS.remove(village);
+    }
+
+    /**
+     * Diamonds the town keeps off the auction block and the like from the Diamond Age until its gateway stands: what the
+     * Nether Age will ask for, twice the Diamond Age's. With the Diamond Age's count in hand the auction put the rest under
+     * the hammer, and the next morning's stores were short of the age's own again: 10, 5, 4, 7, 5 diamonds day by day.
+     */
+    public static int diamondsKept(UUID village) {
+        Villages.Age age = Villages.ageOf(village);
+        if (age.ordinal() < Villages.Age.DIAMOND.ordinal() || Villages.hasBuilt(village, "gateway")) return 0;
+        return 2 * com.jrpetty.mcassistant.village.VillageMath.diamondsWanted(Math.max(1, Villages.headcount(village)));
+    }
+
+    /** Picks made for the diamonds today, by town (DeepPicks: a day's at most). */
+    private static final Map<UUID, long[]> PICKS = new ConcurrentHashMap<>();
+
+    /** May the smith make another iron pick for the diamonds today: no more than the rack keeps, a day. */
+    static boolean pickToday(UUID village, long day, int most) {
+        long[] k = PICKS.computeIfAbsent(village, x -> new long[]{ day, 0 });
+        if (k[0] != day) { k[0] = day; k[1] = 0; }
+        return k[1] < most;
+    }
+
+    static void pickMade(UUID village, long day) {
+        long[] k = PICKS.computeIfAbsent(village, x -> new long[]{ day, 0 });
+        if (k[0] != day) { k[0] = day; k[1] = 0; }
+        k[1]++;
     }
 }
