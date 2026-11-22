@@ -737,7 +737,7 @@ public final class TownLife {
         Collections.shuffle(places, r);
         Map<Long, String> out = new HashMap<>();
         int i = 0;
-        for (int k = 0; k <= TownPlan.RINGS; k++) {
+        for (int k = 0; k <= TownPlan.MAX_RINGS; k++) {                 // [city26] the rings laid out as it grows (names kept)
             int line = TownPlan.RING + 1 + k * TownPlan.PERIOD;
             for (int sign : new int[]{ 1, -1 }) {
                 for (boolean alongX : new boolean[]{ true, false }) {
@@ -767,7 +767,7 @@ public final class TownLife {
     private static int[] alongs() {
         List<Integer> out = new ArrayList<>();
         out.add(TownPlan.AVENUE + 1 + TownPlan.LOT / 2);
-        for (int k = 0; k < TownPlan.RINGS + 1; k++) {
+        for (int k = 0; k < TownPlan.MAX_RINGS + 1; k++) {              // [city26] numbers on the new rings' streets too
             int street = TownPlan.RING + k * TownPlan.PERIOD;
             out.add(street + TownPlan.STREET + TownPlan.LOT / 2);
             out.add(street + TownPlan.STREET + TownPlan.LOT + TownPlan.LOT / 2);
@@ -912,7 +912,7 @@ public final class TownLife {
     static List<int[]> corners(int reach) {
         List<Integer> lines = new ArrayList<>();
         lines.add(0);
-        for (int k = 0; k < TownPlan.RINGS; k++) {
+        for (int k = 0; k < TownPlan.MAX_RINGS; k++) {                  // [city26] (only those within the reach given)
             int l = TownPlan.RING + 1 + k * TownPlan.PERIOD;
             lines.add(l);
             lines.add(-l);

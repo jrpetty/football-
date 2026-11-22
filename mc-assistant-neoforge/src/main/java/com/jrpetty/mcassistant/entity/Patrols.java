@@ -185,7 +185,7 @@ public final class Patrols {
         List<int[]> offsets = new ArrayList<>();
         int sq = TownPlan.PLAZA - 3;
         for (int[] s : new int[][]{ { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, 1 } }) offsets.add(new int[]{ s[0] * sq, s[1] * sq });
-        for (int k = 0; k < TownPlan.RINGS; k++) {
+        for (int k = 0; k < TownPlan.MAX_RINGS; k++) {                  // [city26] out over the rings laid out (reach)
             int r = TownPlan.RING + 1 + k * TownPlan.PERIOD;
             if (r > reach) break;
             for (int dx = -1; dx <= 1; dx++) {

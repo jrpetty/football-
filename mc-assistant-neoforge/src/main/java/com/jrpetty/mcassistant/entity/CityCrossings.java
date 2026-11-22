@@ -90,7 +90,7 @@ public final class CityCrossings {
      */
     static List<Crossing> find(ServerLevel level, Villages.Village v) {
         CityPlan.Net n = CityPlan.net(level, v);
-        int r = CityPlan.R, side = 2 * r + 1;
+        int r = n.r(), side = 2 * r + 1;                                      // [city26] as far as the town's walk goes
         BlockPos heart = v.centre();
         List<Crossing> out = new ArrayList<>();
         Set<Long> used = new HashSet<>();

@@ -122,7 +122,8 @@ public final class TownWork {
         BlockState ground = level.getBlockState(top);
         BlockState above = level.getBlockState(top.above());
         // Not up a hill or down a hole from the heart: those are somebody's to sort out by hand.
-        if (Math.abs(top.getY() + 1 - v.centre().getY()) > 10) return 0;
+        // [city26] Unless the town walks there along its streets (a hill town's terraces, a street up from the square).
+        if (Math.abs(top.getY() + 1 - v.centre().getY()) > 10 && !CityPlan.net(level, v).has(dx, dz)) return 0;
         boolean square = TownPlan.isSquare(dx, dz);
         if (square && CityGreen.bed(dx, dz)) return 0;                     // [city9] the square's greens are turf, not paving
         boolean avenue = !square && (Math.abs(dx) <= TownPlan.AVENUE || Math.abs(dz) <= TownPlan.AVENUE

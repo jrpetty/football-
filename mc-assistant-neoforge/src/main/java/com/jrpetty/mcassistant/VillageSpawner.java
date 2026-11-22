@@ -266,7 +266,7 @@ public final class VillageSpawner {
      * in a lake is not a village.
      */
     static boolean liveable(ServerLevel level, BlockPos ground) {
-        if (ground.getY() < level.getSeaLevel()) return false;
+        if (ground.getY() < com.jrpetty.mcassistant.entity.SiteFinder.seaLevel(level)) return false;   // [city26] the world's own sea level
         if (level.getBlockState(ground.below()).is(Blocks.WATER)) return false;
         if (level.getBlockState(ground.below()).isAir()) return false;
         int lowest = Integer.MAX_VALUE, highest = Integer.MIN_VALUE;

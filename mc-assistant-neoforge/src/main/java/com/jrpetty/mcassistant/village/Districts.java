@@ -103,7 +103,7 @@ public final class Districts {
         if (TownPlan.isSquare(dx, dz)) return District.SQUARE;
         int d = Math.max(Math.abs(dx), Math.abs(dz));
         if (d <= ROUND_THE_SQUARE) return District.MARKET;
-        if (d > TownPlan.reach() + TownPlan.STREET) return District.OUTSKIRTS;
+        if (d > TownPlan.reach(TownPlan.MAX_RINGS) + TownPlan.STREET) return District.OUTSKIRTS;   // [city26] the plan as far as it grows
         int[] other = { -1 };
         int side = sideOf(dx, dz, other);
         boolean crafts = craftSide >= 0 && (side == craftSide || other[0] == craftSide);

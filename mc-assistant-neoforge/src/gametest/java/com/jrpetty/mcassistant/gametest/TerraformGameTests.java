@@ -278,6 +278,7 @@ public class TerraformGameTests {
         Founding.resetForTests(level.getServer());
         level.setDayTime(1000);
         int radius = FoundingPlan.coreRadius(FOLK), outer = radius + FoundingPlan.BAND_MAX, half = outer + 14;
+        com.jrpetty.mcassistant.entity.TownBlocks.traceForTests(true);      // [city26] who set a column off its level, if any
         Map<String, BlockPos> hearts = new LinkedHashMap<>();
         Map<String, BlockPos> huts = new HashMap<>();
         for (String k : kinds) {
@@ -314,6 +315,13 @@ public class TerraformGameTests {
                 Kit.log("[VT] " + label + " AUDIT " + e.getKey() + " y=" + d.level() + " " + TerraformAudit.line(c)
                     + (TerraformAudit.FIRST.isEmpty() ? "" : " | first: " + TerraformAudit.FIRST));
                 c.forEach((key, v) -> total.merge(key, v, Integer::sum));
+                if (TerraformAudit.FIRST.containsKey("offLevel")) {                // [city26]
+                    String[] q = TerraformAudit.FIRST.get("offLevel").split("[, ]");
+                    BlockPos at = new BlockPos(Integer.parseInt(q[0]), Integer.parseInt(q[1]), Integer.parseInt(q[2]));
+                    StringBuilder tr = new StringBuilder();
+                    for (int dy = -2; dy <= 2; dy++) tr.append(' ').append(dy).append(':').append(com.jrpetty.mcassistant.entity.TownBlocks.setBy(at.above(dy)));
+                    Kit.log("[VT] " + label + " " + e.getKey() + " who set the first column off its level:" + tr);
+                }
                 if (STRICT) {
                     for (String key : MUST_BE_NOUGHT) {
                         if (c.getOrDefault(key, 0) != 0) expect.that(false, e.getKey() + " " + key + "=" + c.get(key));

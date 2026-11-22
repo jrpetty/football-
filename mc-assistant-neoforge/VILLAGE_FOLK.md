@@ -15142,3 +15142,63 @@ the takings in the player's books); bf02 the rates out of the till as taxes, a k
 a ware sold out and the steps asking for stock; bf03 a ware nobody uses, too little coin, a sign with no counter, a stranger
 saying hello and chartered; bf04 a shop of your own the town builds, to the moment it is the player's; bf05 the building sold
 with its stock to another player (the shop the seller's no longer) and quoted for a bakery.
+## Big towns keep growing, hill towns on terraces, and the founding's loose ends (city26)
+
+### The plan grows ring by ring
+The town plan stopped at three rings of blocks, ninety-one blocks from the square. A town of a hundred filled them (or found
+the rest wet or up a cliff) and stood still: on the 400-day run the home town sat at fifty-seven buildings for two hundred
+days with seventeen households waiting for a home ("no lot: 212 lots ... wet, cliff"). The plan now runs to six rings
+(TownPlan.MAX_RINGS), but a town builds only on the rings it has laid out (CityGrowth): three at its founding, and the next
+one each time those are full, that is, once the town has a fair size (forty-five buildings, its third ring in reach) and three
+looks in a row for a building's lot found nothing free on the rings it has. At most one new ring a day. The new ring is the
+old grid run on, so its streets join the old ones; the walk from the heart (CityPlan), the street works and their lamps
+(TownWork), the street names and house numbers (TownLife), the patrols, the signposts, the town's ground kept clear of digs
+(TownDigs) and the town's own ground (TownBlocks) all go out with it, and the town wall moves out a ring on any side a
+building goes up past it (CastleWall, WallPlan.furthest). Its lots go round the farmland and the mine's ground as the old
+ones do (Villages.lotKeptOff). The town's news says so ("the town has filled its streets, so the next ring of them is laid
+out, 113 blocks from the square"), and the lot report on the status line ends with "4 of 6 rings laid out". Kept in the
+town's notes (plan.rings).
+
+### Hill towns on terraces
+A founding levels its ground to one height. On a mountainside that was a flat a hundred blocks across cut thirty into the
+hill on one side and built thirty up on the other, with the houses beyond it on their own fill. Now, where the land under
+the levelled ground spreads twelve blocks or more from its low tenth to its high tenth, it is terraced (village/Terraces):
+- the heart (the square, its ring street, the lots round it and the great lots beside it) is level, at the middle height
+  of the land round the heart;
+- the streets follow the land as closely as a street may climb, a block in every two: a surface fitted once over the
+  whole ground (the land smoothed, held within that climb of itself, first locally and then over the whole, and within
+  that climb of the heart), so every street is a walkable slope or a run of shallow steps (StepKit lays them as stairs
+  when the street is paved);
+- each lot is flat at the height of the street before its door (a long lot as one), so a house opens level onto its street;
+- where a lot or a street stands two or more over the terrace beside it, its face is a retaining wall of dressed stone,
+  its coping level with the terrace (TerraceWalls: stone bricks with now and then a mossy or cracked one; smooth sandstone
+  on sand; deepslate bricks where the land is deepslate), built as the ground is worked and looked over again with it;
+- the edge of the worked ground meets the land from the terrace beside it, not from the heart's height, in the same
+  walkable slope as before.
+On made-up ground a slope of three in five is terraced on five or more heights and moves less than four fifths the earth of
+one level. The ground audit (TerraformAudit, `/village groundcheck`) counts terraced columns and walls, and a drop faced
+with its wall the whole height is not a sheer edge. A lot whose street the town walks to is not "too high or low" however
+far above the heart it stands, and such a street is paved and lit.
+
+### The founding's loose ends
+- The sea: the game's own Level.getSeaLevel is 63 in every world, a flat world's included (whose sea, if it had one, is
+  at -63). The site finder used it and called every flat-world meadow "below the sea". It now takes the world's own sea
+  level (SiteFinder.seaLevel), and only counts a spot below the sea where there is sea water near it at that height; a
+  flat meadow scores as a flat meadow (73, "flat meadow, no wood near"). The founding's level and the natural villages'
+  "above the tide" use the same.
+- The ghost outline of a town being chosen rode over the canopy of a wood (the client keeps only the heightmap that counts
+  leaves); it follows the ground under the trees now.
+- The waiting board: every cell of a spawner's board, clicked the way the game hands a click on (bare-handed, with food,
+  with a block), opens the founding screen (tested), and in the real client a right-click on it opens "Found a village
+  ... at the board". (The earlier attempt to photograph it moved the pointer before clicking, which in the game turns the
+  player's head: the click landed on the ground.)
+- Folk do not fill a street up to a terrace wall's coping, nor cut a step into a terrace (StuckSpots: a drop built on
+  purpose), and the ground audit passes over a building's ground the new town began while its levelling went on.
+
+### Tests
+CityGrowGameTests cg01-cg04 (x 5,800,000 to 5,900,000, z 90,000): cg01 a town of forty-five buildings with its three rings
+full lays out a fourth, builds on it on its walked streets, never on its farmland or its mine's ground, its wall's line out a
+ring; full again, a fifth; cg02 a town of forty founded on a hillside is terraced (flat lots at their streets' height on
+several terraces, walls between) and its ground passes the founding audit with every fault nought; cg03 a flat world's
+meadow is not below the sea and scores as flat; cg04 every cell of the waiting board, clicked with or without something in
+hand, opens the founding screen. Unit tests: TerracesTest.

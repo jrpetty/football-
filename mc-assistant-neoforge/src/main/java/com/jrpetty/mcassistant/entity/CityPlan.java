@@ -30,9 +30,14 @@ public final class CityPlan {
 
     private CityPlan() {}
 
-    /** How far out the walk goes: the plan's last street. */
+    /** How far out the walk goes: the plan's last street (of its first three rings; [city26] a grown town's walk runs out
+     *  over the rings it has laid out since, {@link #radius}). */
     static final int R = TownPlan.reach() + TownPlan.STREET + 1;
-    private static final int SIDE = 2 * R + 1;
+
+    /** [city26] How far out this town's walk goes: the last street of the rings its plan has laid out. */
+    static int radius(UUID village) {
+        return Math.max(R, CityGrowth.reach(village) + TownPlan.STREET + 1);
+    }
     /** Worked out again at most this often (ticks). */
     private static final long EVERY = 2400L;
     /** A step a folk takes: a block up (a jump; two where the folk cut a step into a bank, StuckSpots), three down. */
@@ -40,11 +45,17 @@ public final class CityPlan {
     /** No height known yet (a cell not walked), or ground not loaded (taken as walkable: nothing is known against it). */
     static final int NONE = Integer.MIN_VALUE;
 
-    /** A town's walked streets: the floor height of each reached cell, NONE where not reached. */
-    record Net(long at, int[] floor, int reached, int cells) {
+    /** A town's walked streets: the floor height of each reached cell, NONE where not reached; {@code r} how far out. */
+    record Net(long at, int[] floor, int reached, int cells, int r) {
         boolean has(int dx, int dz) {
-            if (Math.abs(dx) > R || Math.abs(dz) > R) return false;
-            return floor[(dx + R) * SIDE + (dz + R)] != NONE;
+            if (Math.abs(dx) > r || Math.abs(dz) > r) return false;
+            return floor[(dx + r) * (2 * r + 1) + (dz + r)] != NONE;
+        }
+
+        /** The floor at this offset (NONE if not reached or out of the walk). */
+        int at(int dx, int dz) {
+            if (Math.abs(dx) > r || Math.abs(dz) > r) return NONE;
+            return floor[(dx + r) * (2 * r + 1) + (dz + r)];
         }
     }
 
@@ -88,8 +99,8 @@ public final class CityPlan {
     static Net net(ServerLevel level, Villages.Village v) {
         long now = level.getGameTime();
         Net n = NETS.get(v.id());
-        if (n != null && now - n.at() < EVERY && now >= n.at()) return n;
-        n = walk(level, v.centre(), now);
+        if (n != null && now - n.at() < EVERY && now >= n.at() && n.r() == radius(v.id())) return n;
+        n = walk(level, v.centre(), now, UP, DOWN, radius(v.id()));
         NETS.put(v.id(), n);
         return n;
     }
@@ -100,8 +111,8 @@ public final class CityPlan {
     static Net dryNet(ServerLevel level, Villages.Village v) {
         long now = level.getGameTime();
         Net n = DRY.get(v.id());
-        if (n != null && now - n.at() < EVERY && now >= n.at()) return n;
-        n = walk(level, v.centre(), now, 4, 6);
+        if (n != null && now - n.at() < EVERY && now >= n.at() && n.r() == radius(v.id())) return n;
+        n = walk(level, v.centre(), now, 4, 6, radius(v.id()));
         DRY.put(v.id(), n);
         return n;
     }
@@ -131,10 +142,11 @@ public final class CityPlan {
      * reached from (an arch over a gate or a lamp's post is not a floor; water is never one).
      */
     static Net walk(ServerLevel level, BlockPos heart, long now) {
-        return walk(level, heart, now, UP, DOWN);
+        return walk(level, heart, now, UP, DOWN, R);
     }
 
-    static Net walk(ServerLevel level, BlockPos heart, long now, int up, int down) {
+    static Net walk(ServerLevel level, BlockPos heart, long now, int up, int down, int R) {
+        final int SIDE = 2 * R + 1;
         int[] floor = new int[SIDE * SIDE];
         java.util.Arrays.fill(floor, NONE);
         int cells = 0;
@@ -161,7 +173,7 @@ public final class CityPlan {
                 queue.add(new int[]{ nx, nz });
             }
         }
-        return new Net(now, floor, reached, cells);
+        return new Net(now, floor, reached, cells, R);
     }
 
     static final int WET = Integer.MIN_VALUE + 1;
