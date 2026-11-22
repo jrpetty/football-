@@ -881,7 +881,9 @@ public class SupplyChainGameTests {
         UUID v = r.v();
         VillageFolkEntity f = r.miners().get(1);
         f.setJob(StationTask.SMELT);
-        BlockPos spot = Kit.surface(level, r.heart().getX() + 60, r.heart().getZ());          // seventy-six from the shaft, off the mine's ground
+        // Seventy-six from the shaft, off the mine's ground, eight under the pithead's height (on a stone floor raised there).
+        BlockPos spot = new BlockPos(r.heart().getX() + 60, MineWorksGameTests.TOP - 8, r.heart().getZ());
+        for (int dx = -6; dx <= 6; dx++) for (int dz = -6; dz <= 6; dz++) level.setBlock(spot.offset(dx, -1, dz), Blocks.STONE.defaultBlockState(), 2);
         com.jrpetty.mcassistant.village.Ledger.built(v, "smeltery", spot, net.minecraft.core.Direction.NORTH);
         TownMine.redraw(v);
         // A shut room of stone round it, roofed.
