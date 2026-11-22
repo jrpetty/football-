@@ -161,7 +161,7 @@ public final class ShopPage implements PlayerLife.Page {
         List<BizGuide.Step> steps = BizGuide.steps(level, Villages.get(s.village), s);
         BizGuide.Step next = BizGuide.next(steps);
         if (next == null) return;
-        page.heading("Getting started");
+        page.heading(s.soldAll > 0 ? "Keep it selling" : "Getting started");
         for (BizGuide.Step st : steps) {
             if (st == next) {
                 page.row(null, "Next: " + st.label(), st.hint(), "").button(st.button(), st.action(), st.args()).primary();

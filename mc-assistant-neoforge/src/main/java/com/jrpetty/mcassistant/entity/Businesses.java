@@ -1179,6 +1179,7 @@ public final class Businesses {
 
     /** A day's rent, in pennies: its size, at what the place is (a village half as much again as a hamlet...). */
     static long rent(UUID village, Business b) {
+        if (BizGuide.ownPremises(village, b)) return 0;                    // [biz25] trading from its owner's own shop: no rent to the town
         if (Enterprise.isFirm(b)) return Enterprise.rentPence(village, b);  // [econ-1b] a stall, a room, larger premises
         return (long) b.type.size.rentPence * Wealth.standing(village) / 10;
     }

@@ -122,7 +122,7 @@ public final class BuildDesk {
         }
         out.add(String.format(Locale.ROOT, "Materials %.0fc (%s%s), labour %.0fc (%.0f hours), overheads %.0fc, land %.0fc (%s), fees %.0fc, builders' margin %.0fc: %dc all told.",
             q.materialsCost, m, mats.size() > 3 ? "..." : "", q.labourCost, q.labourHours, q.overheads, q.landCost, q.landTerms, q.fees, q.margin, q.total));
-        out.add("Paid " + q.deposit + "c down, " + q.stage + "c at half built, " + q.balance + "c when it stands."
+        out.add(q.deposit + "c down now, " + q.stage + "c at half built, " + q.balance + "c when it stands."   // [biz25] "down now", not "paid"
             + (q.eta == null ? "" : " Ready in " + q.eta.words() + ": " + q.eta.reason() + "."));
         return out;
     }

@@ -54,7 +54,7 @@ public final class BizGuide {
             "Setup", "tab:setup", null));
         boolean ready = has && ShopNeeds.ready(PlayerShops.needs(level, s));
         out.add(new Step("needs", ready, "Everything a shop needs",
-            has && !ready ? "It still " + ShopNeeds.missing(s.needs) + ": the Setup tab says where each thing is to be had." : "",
+            has && !ready ? "It still " + ShopNeeds.missing(s.needs) + ": its list of what it needs (on the Setup tab) says where each thing is to be had." : "",
             "What it needs", "tab:setup", null));
         int wares = 0, wanted = 0;
         List<String> idle = new ArrayList<>();
@@ -188,6 +188,13 @@ public final class BizGuide {
         boolean turned = f.getAxis() == net.minecraft.core.Direction.Axis.X;
         int bx = turned ? t.getInt("hd") : t.getInt("hw"), bz = turned ? t.getInt("hw") : t.getInt("hd");
         return Math.abs(at.getX() - a.getX()) <= bx && Math.abs(at.getZ() - a.getZ()) <= bz && Math.abs(at.getY() - a.getY()) <= 12;
+    }
+
+    /** Does this firm trade from its owner's own shop (a player's shop marked as its premises)? Then it pays the town no rent. */
+    static boolean ownPremises(UUID village, Business b) {
+        if (b == null || b.id == null) return false;
+        for (PlayerShops.Shop s : PlayerShops.all(village)) if (b.id.equals(s.firm)) return true;
+        return false;
     }
 
     // ------------------------------------------------------------------ the keeper's sums

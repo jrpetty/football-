@@ -64,7 +64,10 @@ public final class FinanceJoin {
         if (rates > 0) FinanceSheet.bill(s, "Business rates: " + shop.name, town, rates * 100L, shop.ratesDay + PlayerShops.WEEK, false,
             "Out of its till each week.");
         long week = PlayerShops.week(shop.weekCoin) * 100L;
-        long costs = rates * 100L + (shop.keeper != null ? shop.wage * 700L : 0);
+        // [biz25] this week's costs, as its takings are this week's: the rates if they fell due in it, its keeper's days in it
+        long today = PlayerShops.today(level);
+        int keptDays = shop.keeper == null ? 0 : (int) Math.max(0, Math.min(PlayerShops.WEEK, today - shop.keeperSince));
+        long costs = (shop.ratesDay > today - PlayerShops.WEEK && shop.ratesDay > shop.since ? rates * 100L : 0) + (long) shop.wage * keptDays * 100L;
         CompoundTag t = new CompoundTag();
         t.putString("name", shop.name);
         t.putString("town", town);
@@ -73,7 +76,7 @@ public final class FinanceJoin {
         t.putBoolean("open", PlayerShops.state(level, shop) == PlayerShops.State.OPEN);
         t.putLong("takings", week);
         t.putLong("costs", costs);
-        t.putLong("wages", shop.keeper != null ? shop.wage * 700L : 0);
+        t.putLong("wages", (long) shop.wage * keptDays * 100L);
         t.putLong("profit", week - costs);
         t.putLong("lastProfit", Long.MIN_VALUE);
         t.putInt("hands", shop.keeper != null ? 1 : 0);

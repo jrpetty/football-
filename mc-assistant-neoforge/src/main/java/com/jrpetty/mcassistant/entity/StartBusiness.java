@@ -301,7 +301,7 @@ public final class StartBusiness implements PlayerLife.Page {
             return;
         }
         if (have >= total) {
-            page.buttons().button("Back", "step", LifePage.args("s", 2)).button("Confirm and open it (" + PlayerLife.coins(total) + ")", "confirm", null).primary();
+            page.buttons().button("Back", "step", LifePage.args("s", 2)).button("Open it (" + PlayerLife.coins(total) + ")", "confirm", null).primary();   // [biz25] a label that fits
         } else {
             int short_ = total - have;
             page.text("You need " + PlayerLife.coins(total) + " and have " + have + ": borrow the other " + short_ + " from the bank?", 2);
