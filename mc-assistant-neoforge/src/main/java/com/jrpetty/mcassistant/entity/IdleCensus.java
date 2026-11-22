@@ -89,7 +89,7 @@ public final class IdleCensus {
             if (!Busywork.doing(f).isEmpty()) row[2]++;
             else if (idle(f)) row[3]++;
             else if (act.work() || f.peekJob() != null || TownJobs.busy(f)) row[1]++;
-            if (Busywork.spare(f) && f.offWorkWhy().isEmpty()) spareIdle++;
+            if (Busywork.spare(f) && f.offWorkWhy().isEmpty() && TownJobs.callable(level, f)) spareIdle++;
             if (idle(f)) {
                 idle++;
                 long since = STILL_SINCE.computeIfAbsent(f.getUUID(), k -> now);
