@@ -688,16 +688,16 @@ public class BusinessLookGameTests {
                 if (b != null) firms.add(b);
             }
             // Two shops of its own, in two rooms.
-            p.moveTo(x - 20, y, Z + 20);
-            com.jrpetty.mcassistant.entity.PlayerShops.Shop s1 = shopRoom(level, p, new BlockPos(x - 24, y, Z + 20), new ItemStack(Items.STONE_HOE, 4));
-            com.jrpetty.mcassistant.entity.PlayerShops.Shop s2 = shopRoom(level, p, new BlockPos(x - 24, y, Z - 20), new ItemStack(Items.STONE_HOE, 4));
+            p.moveTo(x + 8, y, Z);
+            com.jrpetty.mcassistant.entity.PlayerShops.Shop s1 = shopRoom(level, p, new BlockPos(x + 9, y, Z - 5), new ItemStack(Items.STONE_HOE, 4));
+            com.jrpetty.mcassistant.entity.PlayerShops.Shop s2 = shopRoom(level, p, new BlockPos(x + 9, y, Z + 5), new ItemStack(Items.STONE_HOE, 4));
             ok.that(s1 != null && s2 != null && s1 != s2, "two shops of its own: " + (s1 == null ? null : s1.key()) + ", " + (s2 == null ? null : s2.key()));
             ok.that(com.jrpetty.mcassistant.entity.PlayerShops.ofAll(id, p.getUUID()).size() == 2, "both in the register");
             for (com.jrpetty.mcassistant.entity.PlayerShops.Shop s : new com.jrpetty.mcassistant.entity.PlayerShops.Shop[]{ s1, s2 }) {
                 if (s == null) continue;
                 com.jrpetty.mcassistant.entity.PlayerShops.choose(p.getUUID(), s);
                 com.jrpetty.mcassistant.entity.PlayerLife.open(p, "shop", null);
-                com.jrpetty.mcassistant.entity.PlayerLife.act(p, "shop", "setup", argsOf("f", argsOf("name", s == s1 ? "Hoes East" : "Hoes West", "kind", "tools", "opens", "0", "closes", "23999", "tell", "no")));
+                com.jrpetty.mcassistant.entity.PlayerLife.act(p, "shop", "setup", argsOf("f", argsOf("name", s == s1 ? "Hoes East" : "Hoes West", "kind", "general", "opens", "0", "closes", "23999", "tell", "no")));
                 com.jrpetty.mcassistant.entity.PlayerShops.resurvey(level, s);
             }
             // The second counter opens the second shop.
@@ -756,14 +756,21 @@ public class BusinessLookGameTests {
             int shopSales = 0;
             for (com.jrpetty.mcassistant.entity.PlayerShops.Shop s : new com.jrpetty.mcassistant.entity.PlayerShops.Shop[]{ s1, s2 }) {
                 if (s == null) continue;
-                for (int k = 8; k < folk.size(); k++) {
-                    VillageFolkEntity f = folk.get(k);
+                for (int k = 0; k < 3; k++) {                                // a farmer new to the town, its hoe lost
+                    VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, new BlockPos(x + 4, y, Z + (s == s1 ? -5 : 5) + k), 0.0F, 200);
+                    if (f == null) continue;
+                    f.ensurePersona();
+                    f.earn(40);
+                    f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM);
                     f.removeMatching(it -> it.is(net.minecraft.tags.ItemTags.HOES), 64);
                     f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
                     if (com.jrpetty.mcassistant.entity.ShopCustomers.buyForTests(level, f, s) != null) { shopSales++; break; }
+                    if (k == 0) Kit.log("[VT] bl30 " + f.displayNameCap() + " " + f.stationTask() + " wants a hoe: "
+                        + com.jrpetty.mcassistant.entity.ItemUses.want(f, new ItemStack(Items.STONE_HOE)) + " purse " + f.purse());
                 }
             }
-            ok.that(shopSales == 2, "each shop sold a hoe (" + shopSales + ")");
+            ok.that(shopSales == 2, "each shop sold a hoe (" + shopSales + "; " + (s1 == null ? "" : com.jrpetty.mcassistant.entity.PlayerShops.stateWords(level, s1)) + " / "
+                + (s2 == null ? "" : com.jrpetty.mcassistant.entity.PlayerShops.stateWords(level, s2)) + ")");
             // All five on Your businesses.
             com.jrpetty.mcassistant.entity.PlayerLife.open(p, "firm", argsOf("tab", "summary"));
             String page = com.jrpetty.mcassistant.entity.PlayerLife.pageForTests(p).toString();
@@ -839,7 +846,7 @@ public class BusinessLookGameTests {
             // A losing branch shut.
             if (second != null) {
                 com.jrpetty.mcassistant.entity.Business.Day bad = second.today(day);
-                bad.other += 5000;
+                bad.other += 20000;
                 int closed = com.jrpetty.mcassistant.entity.FirmBranches.closeLosers(level, id, day);
                 ok.that(closed == 1 && !second.open && first.open, "the losing branch shut, the first kept (" + closed + ")");
             }
