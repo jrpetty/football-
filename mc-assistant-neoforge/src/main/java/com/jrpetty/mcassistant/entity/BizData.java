@@ -50,10 +50,10 @@ public final class BizData {
         int minutes = (int) Math.min(240, (now - last) * 60 / 1000);
         if (minutes <= 0) { LAST.put(v.id(), last); return; }
         boolean day = level.getDayTime() % 24000L < 12000L;
-        for (Business b : Enterprise.open(v.id())) {
-            if (!day || b.at == null) continue;
+        for (Business b : Businesses.all(v.id())) {
+            if (!day || !b.open || b.at == null || b.town() || b.mirror()) continue;
             boolean kept = false;
-            for (VillageFolkEntity f : Enterprise.hands(v.id(), b)) {
+            for (VillageFolkEntity f : handsOf(v.id(), b)) {
                 if (f.isAlive() && !f.isSleeping() && f.blockPosition().closerThan(b.at, 16)) { kept = true; break; }
             }
             Businesses.kept(level, b, minutes, kept ? minutes : 0);
@@ -64,6 +64,11 @@ public final class BizData {
             if (s.keeper != null && level.getEntity(s.keeper) instanceof VillageFolkEntity k && k.isAlive()) kept = k.blockPosition().closerThan(s.anchor, 12);
             Businesses.kept(level, Businesses.shopBook(level, s), minutes, kept ? minutes : 0);
         }
+    }
+
+    /** Who works a business: a firm's hands, else the staff its trade posts there (the smithy's smith). */
+    static List<VillageFolkEntity> handsOf(UUID village, Business b) {
+        return Enterprise.isFirm(b) ? Enterprise.hands(village, b) : Businesses.staff(village, b);
     }
 
     // ------------------------------------------------------------------ who sees what
@@ -185,7 +190,7 @@ public final class BizData {
                 names.put(e.getKey(), bd.staffNames.getOrDefault(e.getKey(), "?"));
             }
         }
-        List<VillageFolkEntity> hands = Enterprise.isFirm(b) ? Enterprise.hands(village, b) : List.of();
+        List<VillageFolkEntity> hands = b.id.startsWith("shop:") ? List.of() : handsOf(village, b);
         for (VillageFolkEntity f : hands) if (!pay.containsKey(f.getUUID())) { pay.put(f.getUUID(), new long[2]); names.put(f.getUUID(), f.displayNameCap()); }
         if (b.id.startsWith("shop:")) {
             for (PlayerShops.Shop s : PlayerShops.all(village)) {

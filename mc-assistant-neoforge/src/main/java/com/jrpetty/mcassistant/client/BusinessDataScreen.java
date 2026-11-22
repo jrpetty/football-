@@ -448,9 +448,9 @@ public class BusinessDataScreen extends Screen {
         // the hours: from six in the morning round the clock
         int[] hours = data.getIntArray("hours");
         if (hours.length < 24) return;
-        int ch = top + h - FOOT - 4 - y - 10;
         small(g, "Sales by the hour (" + nDays() + " days)", x, y, UiStyle.TEXT_FAINT, inner);
         y += 9;
+        int ch = top + h - FOOT - 4 - y - 10;
         UiStyle.well(g, x, y, inner, ch, UiStyle.PAGE);
         int hi = 1;
         for (int v : hours) hi = Math.max(hi, v);
