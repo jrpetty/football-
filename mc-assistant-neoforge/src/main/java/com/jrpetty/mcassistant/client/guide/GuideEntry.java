@@ -9,12 +9,13 @@ import java.util.List;
  *
  * <p>{@code covers} names what in the mod the article explains ("item:shop_counter", "key:life", "screen:LifeScreen",
  * "business:baker", "talk:GIFT"), so the coverage test can hold the Guide to the whole mod. {@code op}: an operator's
- * article (settings, the admin panel), said to be so. {@code notown}: a line said first to a player who has no town of
+ * article (settings, the admin panel), said to be so. {@code answer} is the short answer, a sentence or two (what it is,
+ * the quickest way in); {@code more} is the rest of the detail, shown under "More detail". {@code notown}: a line said first to a player who has no town of
  * their own yet. Plain Java: the unit tests read it exactly as the game does.
  */
 public record GuideEntry(String id, String title, String category, String icon, String kind,
                          List<String> questions, List<String> keywords,
-                         String answer, List<String> steps, List<String> controls, List<String> items,
+                         String answer, List<String> more, List<String> steps, List<String> controls, List<String> items,
                          List<String> tips, List<String> warnings, List<String> related, List<String> covers,
                          boolean op, String notown) {
 

@@ -63,6 +63,7 @@ public final class GuideSearch {
             }
             ps.add(GuideText.terms(e.title()));
             add(f, e.answer(), W_ANSWER);
+            for (String t : e.more()) add(f, t, W_ANSWER);
             for (String t : e.steps()) add(f, t, W_REST);
             for (String t : e.tips()) add(f, t, W_REST);
             for (String t : e.warnings()) add(f, t, W_REST);
@@ -77,6 +78,7 @@ public final class GuideSearch {
             for (String k : e.keywords()) remember(k);
             for (String q : e.questions()) remember(q);
             remember(e.answer());
+            for (String t : e.more()) remember(t);
             for (String t : e.steps()) remember(t);
             for (String t : e.tips()) remember(t);
         }

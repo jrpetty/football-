@@ -310,6 +310,10 @@ public class GuideScreen extends Screen {
             for (String t : e.warnings()) warn.lines.add(GuideReply.fill(t, f));
             add(warn);
         }
+        if (!e.more().isEmpty()) {
+            add(new Block(Kind.SECTION, "More detail"));
+            for (String t : e.more()) para(GuideReply.fill(t, f), UiStyle.TEXT_MUTED, 0);
+        }
         if (also != null && !also.isEmpty()) {
             add(new Block(Kind.SECTION, "You might also mean…"));
             Block chips = new Block(Kind.CHIPS, "");

@@ -109,6 +109,25 @@ public final class GuideClient {
     }
 
     /** Open the Guide straight at an article (the welcome card's own, say). */
+    /** The Guide's key as the player sees it ("H"), or null when it has been unbound. */
+    @Nullable
+    public static String keyName() {
+        return OPEN.isUnbound() ? null : OPEN.getTranslatedKeyMessage().getString();
+    }
+
+    /** A button's label naming the key: "Guide (H)". */
+    public static String label() {
+        String k = keyName();
+        return k == null || k.length() > 3 ? "Guide" : "Guide (" + k + ")";
+    }
+
+    /** The welcome card's tooltip for its Guide button: how to open the Guide again later. */
+    public static String welcomeTip() {
+        String k = keyName();
+        return "The Guide: ask anything about your new town and the folk. Open it any time with "
+            + (k == null ? "" : "the " + k + " key or ") + "the book button in your inventory (E).";
+    }
+
     public static void openAt(@Nullable Screen parent, String article) {
         Minecraft mc = Minecraft.getInstance();
         askFacts();

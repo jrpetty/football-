@@ -102,7 +102,7 @@ public final class GuideBook {
         String cat = str(m, "category");
         String kind = str(m, "kind");
         return new GuideEntry(id, title, cat.isEmpty() ? fileCategory : cat, str(m, "icon"), kind.isEmpty() ? GuideEntry.WHAT : kind,
-            strs(m.get("q")), strs(m.get("kw")), answer, strs(m.get("steps")), strs(m.get("controls")), strs(m.get("items")),
+            strs(m.get("q")), strs(m.get("kw")), answer, strs(m.get("more")), strs(m.get("steps")), strs(m.get("controls")), strs(m.get("items")),
             strs(m.get("tips")), strs(m.get("warn")), strs(m.get("related")), strs(m.get("covers")),
             Boolean.TRUE.equals(m.get("op")), str(m, "notown"));
     }
