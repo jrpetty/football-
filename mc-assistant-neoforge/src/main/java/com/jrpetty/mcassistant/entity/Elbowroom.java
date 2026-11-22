@@ -17,8 +17,8 @@ import java.util.List;
  * person does in a crowd: once a second at most, and only the one of the two with the later number, so they never
  * both step into the same new place.
  *
- * <p>Not while it sleeps, sits, rides, works a station it was sent to stand at (that is its spot), is talking with a
- * player, or is out of everybody's sight (FolkLod: nobody to see it, nothing to fix).
+ * <p>Not while it sleeps, sits or rides, or is on its way somewhere (only a folk come to a stop), nor out of everybody's
+ * sight (FolkLod: nobody to see it, nothing to fix), nor on the game-test server, whose towns are laid out by hand.
  */
 public final class Elbowroom {
 
@@ -32,6 +32,7 @@ public final class Elbowroom {
     public static void tick(VillageFolkEntity f) {
         if ((f.tickCount + f.getId()) % EVERY != 0) return;
         if (!(f.level() instanceof ServerLevel level)) return;
+        if (!FolkLod.scaling(level) || FolkLod.unseen(f)) return;   // somebody there to see it (and not the tests' bare towns)
         if (f.isSleeping() || f.isPassenger() || f.isNoAi() || f.getPose() == Pose.SITTING || f.getPose() == Pose.CROUCHING) return;
         if (!f.getNavigation().isDone() || f.getDeltaMovement().horizontalDistanceSqr() > 0.0025) return;
         if (!f.onGround() || f.isInWater()) return;
