@@ -164,6 +164,7 @@ public final class MineLevels {
             : "; there is no more of its " + ore(base(l.id())).word + " within the shaft's reach"));
         com.mojang.logging.LogUtils.getLogger().info("[MCA-WORKS] {}: {} worked out ({} drifts){}", Villages.name(w.village), l.name(),
             countOn(w, l.id()), next != null ? "; next " + next.name() + " at Y" + next.y() : "; no further level of its ore");
+        if (next == null) MineSites.exhausted(level, w, base(l.id()));   // [econ32] the ground widened no more: a new mine for the iron or the diamonds
     }
 
     /** Tests: the depths (Y) the further levels of this first level would be opened at, in order. */

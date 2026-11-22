@@ -72,6 +72,7 @@ public final class MineGround {
                 if (TownDigs.inTownGroundRaw(level, village, heart, c, r + MARGIN)) continue;
                 if (Bonds.overBorder(village, heart, c, r)) continue;
                 if (otherMeets(village, c.getX() - r - MARGIN, c.getZ() - r - MARGIN, c.getX() + r + MARGIN, c.getZ() + r + MARGIN)) continue;
+                if (MineSites.meetsOld(village, c.getX() - r - MARGIN, c.getZ() - r - MARGIN, c.getX() + r + MARGIN, c.getZ() + r + MARGIN)) continue;   // [econ32]
                 faces.add(key(i, j));
             }
         }
@@ -214,6 +215,8 @@ public final class MineGround {
         if (g != null) return g;
         List<int[]> out = new ArrayList<>();
         String s = Ledger.note(village, "mine.ground");
+        String old = MineSites.oldRects(village);                          // [econ32] the old mines' ground set aside for good too
+        if (!old.isEmpty()) s = s == null || s.isEmpty() ? old : s + ";" + old;
         if (s != null && !s.isEmpty()) {
             int[] b = { Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE };
             out.add(b);

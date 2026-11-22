@@ -4462,6 +4462,16 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
+    /** [econ32] To the pithead of the town's new mine (MineSites): its plot moved there, at the depth it was working. */
+    public boolean toNewPithead(BlockPos head) {
+        WorkZone zone = workZone();
+        if (stationTask() != StationTask.MINE || zone == null) return false;
+        assignPlot(WorkZone.around(head, radiusFor(StationTask.MINE), zone.depth()), patchNameFor(StationTask.MINE));
+        setAutonomous(true);
+        brain("out to the pithead of the town's new mine");
+        return true;
+    }
+
     /** [wf] Tests: the miner's look at where its mine should be, now, whatever the clock says. */
     public boolean seekTheSeamForTests() {
         seamCheckTick = -100000;

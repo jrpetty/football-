@@ -1355,6 +1355,7 @@ public final class MineWorks {
 
     /** Every half minute (TownDigs.tick): the headframe over the shaft, the railings round its open top, the spoil heap. */
     public static void tick(ServerLevel level, Villages.Village v) {
+        MineSites.tick(level, v);                            // [econ32] a new mine, when the old is worked out to the edge of its ground
         Works w = works(level, v.id());
         if (w == null) return;
         if (!Land.areaLoaded(level, new BlockPos(w.sx, w.top, w.sz), 12)) {
@@ -1588,6 +1589,9 @@ public final class MineWorks {
         for (Lvl l : plan) if (w.sunk > l.corner()) open++;
         out.add("The works: the main shaft at " + w.sx + ", " + w.sz + ", sunk " + (w.top - deepest) + " blocks to Y" + deepest + " (" + w.sunk
             + " steps); " + open + " of " + plan.size() + " levels open" + (w.head ? "; the headframe over it" : "") + ".");
+        if (MineSites.oldMines(village) > 0 || MineSites.pending(village) != null)                     // [econ32]
+            out.add("Old mines worked out and left: " + MineSites.oldMines(village)
+                + (MineSites.pending(village) != null ? "; a new mine wanted for the " + MineSites.pending(village) : "") + ".");
         Map<String, Claim> claims = CLAIMS.getOrDefault(village, Map.of());
         long now = level.getGameTime();
         for (Lvl l : plan) {
