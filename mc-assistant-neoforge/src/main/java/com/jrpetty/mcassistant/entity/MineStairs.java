@@ -395,6 +395,7 @@ public final class MineStairs extends SavedData {
         }
         int sent = SENT.merge(id, 1, Integer::sum);
         if (sent > 4 && sent % 12 != 0) return;           // tried and failed: once a minute after that
+        MineWhy.note(f, "lost underground (sent " + sent + ")");   // [econ32b]
         f.interject(Job.mine(feet.getY(), OUT));         // [mine-safety] now: not behind whatever goal has its legs
         f.brain("lost underground: making for the surface");
     }

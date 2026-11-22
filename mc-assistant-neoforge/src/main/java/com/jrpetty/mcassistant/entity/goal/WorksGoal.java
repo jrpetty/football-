@@ -303,6 +303,7 @@ public class WorksGoal extends Goal {
                 walking = null;
                 if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
                 task = null;
+                com.jrpetty.mcassistant.entity.MineWhy.note(a, "no way to " + dest.toShortString() + " (" + (int) Math.sqrt(d) + " off)");   // [econ32b]
                 finish("Can't find my way to the pithead.");
             }
             return false;

@@ -141,6 +141,7 @@ public final class MineSafety {
             if (!climbing) f.interject(null);
             return true;
         }
+        MineWhy.note(f, "climbing out instead of a rescue");     // [econ32b]
         f.interject(Job.mine(feet.getY(), MineStairs.OUT));
         f.brain("below ground in the mine: climbing out");
         return true;
