@@ -1102,14 +1102,21 @@ public class SupplyChainGameTests {
         MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6656000, 2);
         ServerLevel level = r.level();
         VillageFolkEntity f = r.miners().get(0);
-        Kit.Expect ok = new Kit.Expect();
         // A pocket in the rock, roofed, far out from the shaft and forty under the pithead.
         BlockPos spot = new BlockPos(r.sx() + 130, MineWorksGameTests.TOP - 40, r.sz());
+        Kit.hold(level, spot.getX(), spot.getZ(), 16);
+        helper.runAtTickTime(20, () -> {
+        level.getChunk(spot.getX() >> 4, spot.getZ() >> 4);
         MineWorksGameTests.stone(level, spot.getX() - 3, spot.getY() - 1, spot.getZ() - 3, spot.getX() + 3, spot.getY() + 5, spot.getZ() + 3);
         for (int dx = -1; dx <= 1; dx++) for (int dy = 0; dy <= 1; dy++) level.setBlock(spot.offset(dx, dy, 0), Blocks.AIR.defaultBlockState(), 2);
         f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+        });
+        helper.runAtTickTime(120, () -> {                       // the sky's light gone from the pocket (the light is worked out over a few ticks)
+        Kit.Expect ok = new Kit.Expect();
+        f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
         boolean below = MineWorks.below(f);
-        Kit.log("[VT] sc16 a hundred and thirty out, forty down: below in the works " + below);
+        Kit.log("[VT] sc16 a hundred and thirty out, forty down: below in the works " + below + " at " + f.blockPosition().toShortString()
+            + ", sky " + level.canSeeSky(f.blockPosition()) + ", shaft " + r.sx() + "," + r.sz());
         ok.that(below, "deep under the rock it is below in the works, however far out");
         try {
             java.lang.reflect.Method leave = VillageFolkEntity.class.getDeclaredMethod("leaveWorkForTheMorning");
@@ -1132,5 +1139,6 @@ public class SupplyChainGameTests {
         }
         helper.assertTrue(ok.clean(), ok.summary());
         MineWorksGameTests.done(helper);
+        });
     }
 }
