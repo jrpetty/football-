@@ -65,6 +65,8 @@ public final class TownJobs {
         /** [vision27] When it was sent to this spot (the walk there timed: a spot it cannot reach is worked from as near
          *  as it can get). */
         long sentAt;
+        /** [vision27] Its way to the spot itself found not to get there (a bank, a wall): make for the near side. */
+        boolean unreach;
 
         @Nullable BlockPos window;
 
@@ -145,7 +147,7 @@ public final class TownJobs {
         }
         boolean sameArea = c.at != null && c.at.distSqr(at) <= (double) (REACH * 2) * (REACH * 2);
         if (c.at != null && !sameArea && now - c.spotCalledAt < STICKY) return false;   // busy at another spot: this waits its turn
-        if (c.at == null || !sameArea) c.sentAt = now;                 // [vision27]
+        if (c.at == null || !sameArea) { c.sentAt = now; c.unreach = false; }   // [vision27]
         c.at = at.immutable();
         c.spotCalledAt = now;
         c.what = what;
@@ -154,7 +156,7 @@ public final class TownJobs {
         // [vision27] A spot it cannot get right up to (a plot raised over the street on its own bank, a wall's top): after
         // half a minute's trying, worked from the nearest it got, if that is near enough to reach up to. A villa paid for
         // and ordered sat all day at "waiting for a hand": its hands walked to the foot of its bank and stood there.
-        boolean stuckNear = now - c.sentAt > 600L && f.getNavigation().isDone() && near(f, at, REACH * 2 + 2)
+        boolean stuckNear = (c.unreach || now - c.sentAt > 600L) && f.getNavigation().isDone() && near(f, at, REACH * 2 + 2)
             && Math.abs(f.getY() - at.getY()) <= 8;
         if (near(f, at, REACH) || stuckNear) {
             f.getLookControl().setLookAt(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
@@ -167,6 +169,7 @@ public final class TownJobs {
         }
         if (f.getNavigation().isDone() || f.tickCount - c.walkTick > 60) {
             f.walkTo(approach(f, c, at, now), 1.0D);
+            noteWay(f, c, at);
             c.walkTick = f.tickCount;
         }
         return false;
@@ -248,7 +251,8 @@ public final class TownJobs {
         keepAwake(level, f, c);
         if (!near(f, c.at, REACH - 1)) {
             if (f.getNavigation().isDone() || f.tickCount - c.walkTick > 60) {
-                f.walkTo(approach(f, c, c.at, level.getGameTime()), 1.0D);   // [vision27] the near side, after a minute
+                f.walkTo(approach(f, c, c.at, level.getGameTime()), 1.0D);   // [vision27] the near side, if the spot cannot be reached
+                noteWay(f, c, c.at);
                 c.walkTick = f.tickCount;
             }
         } else {
@@ -483,10 +487,22 @@ public final class TownJobs {
     /** [vision27] Where to walk for a spot: the spot; after a minute not there, its near side (the foot of its bank, the
      *  nearer end of a wall), from where it can reach. */
     private static BlockPos approach(VillageFolkEntity f, Crew c, BlockPos at, long now) {
-        if (now - c.sentAt <= 1200L) return at;
+        if (!c.unreach && now - c.sentAt <= 1200L) return at;
         double dx = f.getX() - at.getX(), dz = f.getZ() - at.getZ(), d = Math.sqrt(dx * dx + dz * dz);
         if (d <= REACH * 2) return at;
         return at.offset((int) Math.round(dx / d * REACH * 1.5), 0, (int) Math.round(dz / d * REACH * 1.5));
+    }
+
+    /** [vision27] Its way laid straight for the spot does not get there (no way at all, or one that stops short). */
+    private static void noteWay(VillageFolkEntity f, Crew c, BlockPos at) {
+        if (c.unreach) return;
+        net.minecraft.world.level.pathfinder.Path way = f.getNavigation().getPath();
+        if (way == null) {
+            if (f.getNavigation().isDone() && !near(f, at, REACH)) c.unreach = true;
+            return;
+        }
+        net.minecraft.core.BlockPos end = way.getTarget();
+        if (!way.canReach() && end != null && end.distSqr(at) < 4.0) c.unreach = true;   // its own straight way, not a road's leg
     }
 
     private static boolean near(VillageFolkEntity f, BlockPos at, int reach) {
