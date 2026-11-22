@@ -82,7 +82,7 @@ public class CityGrowGameTests {
         final UUID[] id = { null };
         helper.onEachTick(() -> {
             if (stage[0] != 0) return;
-            if (Founding.near(level, heart, 8)) return;
+            if (Founding.near(level, heart, 8) || Founding.settling(level, heart, 16)) return;   // founded, and the folk settled in
             stage[0] = 1;
             Villages.Village v = Villages.nearest(level, heart, 96);
             if (v == null) { helper.fail("no village"); return; }

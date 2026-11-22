@@ -204,6 +204,7 @@ public final class Founding extends SavedData {
 
     /** Forget every founding (the tests, each on ground of its own). */
     public static void resetForTests(MinecraftServer server) {
+        SETTLING.clear();                                                  // [city26]
         Founding f = of(server);
         if (f == null) return;
         for (Site s : new ArrayList<>(f.sites)) {
@@ -272,11 +273,30 @@ public final class Founding extends SavedData {
         return siteNear(level, pos, range) != null;
     }
 
+    /**
+     * [city26] Is a founding under way with its heart within range ({@link #shaping}), or one finished there in the last {@link #SETTLE} ticks (the folk settle in, and the ground is looked over, before the town's
+     * works and its builders start on it)?
+     */
+    public static boolean settling(ServerLevel level, BlockPos pos, int range) {
+        if (shaping(level, pos, range)) return true;
+        long now = level.getGameTime();
+        for (java.util.Map.Entry<Long, Long> e : SETTLING.entrySet()) {
+            BlockPos h = BlockPos.of(e.getKey());
+            if (now - e.getValue() < 0 || now - e.getValue() > SETTLE) continue;
+            if (Math.abs(h.getX() - pos.getX()) <= range && Math.abs(h.getZ() - pos.getZ()) <= range) return true;
+        }
+        return false;
+    }
+
     /** [city26] Is a founding under way (its ground being worked, not a board waiting) with its heart within range? */
     public static boolean shaping(ServerLevel level, BlockPos pos, int range) {
         Site s = siteNear(level, pos, range);
         return s != null && s.state == UNDER_WAY;
     }
+
+    /** [city26] How long after a founding finishes its town's works wait (ticks). */
+    static final long SETTLE = 400L;
+    private static final java.util.Map<Long, Long> SETTLING = new java.util.concurrent.ConcurrentHashMap<>();
 
     /** Where the board of the founding nearest here stands, if there is one within range. */
     @Nullable
@@ -1045,6 +1065,7 @@ public final class Founding extends SavedData {
     /** All done: the ground let go, the village told, and the founding forgotten. */
     private static void finish(ServerLevel level, Founding f, Site s) {
         release(level, s);
+        SETTLING.put(s.heart.asLong(), level.getGameTime());                // [city26] the folk settle in before the works begin
         if (s.village != null && s.level != UNSET) {                        // [terra10] nothing left lying about
             int swept = GroundWork.sweep(level, s.village, s.heart, s.outer, s.level);
             if (swept > 0) LOG.info("[MCA-FOUND] {} things left lying on the ground swept into the stores", swept);
