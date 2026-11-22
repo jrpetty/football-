@@ -329,6 +329,7 @@ public final class TownJobs {
             if (streetsWork(works) && (f == Wheelwrights.holder(v.id()) || f == TownPlanner.holder(v.id()))) continue;
             if (over != null && !spare(f, over)) continue;               // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();
+            if (trade == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id())) continue;   // [growth24] the age waits on the mine
             // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a
             // folk with no ground for it yet is just the hand to spare: see below.)
             if (trade == AssistantEntity.StationTask.NONE && f.workZone() == null) continue;
