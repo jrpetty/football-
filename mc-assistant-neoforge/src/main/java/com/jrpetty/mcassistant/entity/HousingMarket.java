@@ -104,6 +104,9 @@ public final class HousingMarket {
     static final int FROM_FOLK = 16;
     /** How much a work visit lays: so many blocks, a course at a time. */
     static final int BUDGET = 24;
+    /** [vision27] The blocks laid a visit, and how often a visit comes (ticks): BUDGET a quarter of a minute, as before (the land's clock calls every 100 ticks). */
+    static final int LAY = 8;
+    static final long LAY_EVERY = 100L;
     /** The town's work the builders of a folk's house are called to (TownJobs). */
     static final String WORKS = "homebuild";
     /** How many days of the index are kept for its trend. */
@@ -1230,14 +1233,16 @@ public final class HousingMarket {
         UUID id = v.id();
         long now = level.getGameTime(), day = level.getDayTime() / 24000L;
         Long last = TICKED.get(id);
-        if (last != null && now - last < 300L && now >= last) return;
+        // [vision27] Eight blocks every five seconds rather than two dozen at once every fifteen (the same pace): the house
+        // is seen going up block by block under its builder's hands, not a course popping in whole.
+        if (last != null && now - last < LAY_EVERY && now >= last) return;
         TICKED.put(id, now);
-        costCouncilHouses(level, id, day);
+        if (now / 300L != (now - LAY_EVERY) / 300L || last == null) costCouncilHouses(level, id, day);
         Commission c = load(id);
         if (c != null && !Villages.sitesOf(id).containsKey(c.design.siteKey())) {
             Villages.holdPrivateSite(id, c.design.siteKey(), new Villages.Site(c.anchor, c.facing, 0));   // the town forgot it over a restart
         }
-        if (c != null) work(level, v, c, BUDGET, false);
+        if (c != null) work(level, v, c, LAY, false);
     }
 
     /**
@@ -1407,12 +1412,20 @@ public final class HousingMarket {
         UUID id = v.id();
         long day = level.getDayTime() / 24000L;
         if (!force) {
-            if (!Villages.thriving(id) && !Villages.crewsReport(id, level.getGameTime()).isEmpty()) {
-                return note(id, c, "the builders are on the town's own building first");
+            // [vision27] The town's own building first, but a house paid for is not stopped for it: it goes on at a third of
+            // its pace while the crews are at the town's (a villa paid for sat a whole day behind the town's buildings).
+            if (!Villages.thriving(id) && !Villages.crewsReport(id, level.getGameTime()).isEmpty()
+                    && (level.getGameTime() / LAY_EVERY) % 3 != 0) {
+                return note(id, c, "the builders are on the town's own building first (it goes on, a little at a time)");
             }
             if (!storesToSpare(level, v)) return note(id, c, "the stores' stone and timber kept for the town's own next building");
             if (!Land.areaLoaded(level, c.anchor, 9)) return "not loaded";
-            if (!TownJobs.atWork(level, v, WORKS, c.anchor, doing(c))) return note(id, c, "waiting for a hand the town can spare");
+            if (!TownJobs.atWork(level, v, WORKS, c.anchor, doing(c))) {
+                VillageFolkEntity h = TownJobs.handAt(level, id, WORKS);          // [vision27] who, and how far off, in the log
+                if (level.getGameTime() % 1200L < LAY_EVERY) com.mojang.logging.LogUtils.getLogger().info("[MCA-HOMEBUILD] {}: {}", c.address,
+                    h == null ? "no hand called" : h.displayNameCap() + " on its way, " + (int) Math.sqrt(h.blockPosition().distSqr(c.anchor)) + " blocks off");
+                return note(id, c, h == null ? "waiting for a hand the town can spare" : "a hand on its way to the site");
+            }
         }
         // The bank took it back (three weeks behind): the council has the build now, and finishes it as one of its own.
         if (c.loan > 0 && !c.foreclosed && !Bank.state(id).loans.containsKey(c.anchor.asLong()) && c.laidCount < c.cells) {
@@ -1531,6 +1544,8 @@ public final class HousingMarket {
             }
         }
         BuildGoal.stampOnly(level, c.design.drawing, c.anchor, c.facing, 13, p -> lay.get(p.pos()), p -> lay.containsKey(p.pos()));
+        boolean heard = false;
+        for (BlockPos p : lay.keySet()) { BuildFx.laid(level, p, !heard); heard = true; }   // [vision27] heard and seen going in
         for (int i : done) c.laid.set(i);
         c.laidCount = c.laid.cardinality();
         pay(level, v, c, hand, false);

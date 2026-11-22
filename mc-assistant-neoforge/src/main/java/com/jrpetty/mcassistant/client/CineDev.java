@@ -110,6 +110,35 @@ public final class CineDev {
                     if (w.length > 3) CinemaCam.followHeight = f(w[3]);
                     CinemaCam.follow(id, "");
                 }
+                case "near" -> {
+                    // near ACT R H SPEED [follow]: round (or behind) the nearest folk at this act ("walking": on the move;
+                    // "any": anything but standing about), for the close-up review.
+                    VillageFolkEntity f = nearestAt(mc, w[1]);
+                    if (f == null) {
+                        com.mojang.logging.LogUtils.getLogger().info("[vision27] cinedev: nobody at {}", w[1]);
+                        continue;
+                    }
+                    com.mojang.logging.LogUtils.getLogger().info("[vision27] cinedev: near {} -> {} #{} at {}", w[1], f.clientName(), f.getId(),
+                        com.jrpetty.mcassistant.entity.FolkAction.Act.of(f.animSeen().act));
+                    if (w.length > 5 && w[5].equals("follow")) {
+                        CinemaCam.followDist = f(w[2]);
+                        CinemaCam.followHeight = f(w[3]);
+                        CinemaCam.follow(f.getId(), "");
+                    } else {
+                        CinemaCam.radius = f(w[2]);
+                        CinemaCam.height = f(w[3]);
+                        CinemaCam.speed = f(w[4]);
+                        CinemaCam.orbit(f.position(), f.getId(), "");
+                    }
+                }
+                case "acts" -> {
+                    java.util.Map<String, Integer> n = new java.util.TreeMap<>();
+                    if (mc.level != null) for (Entity e : mc.level.entitiesForRendering()) {
+                        if (e instanceof VillageFolkEntity f) n.merge(com.jrpetty.mcassistant.entity.FolkAction.Act.of(f.animSeen().act).name()
+                            + (f.animSeen().gaitSpeed > 1.2F ? "+walk" : ""), 1, Integer::sum);
+                    }
+                    com.mojang.logging.LogUtils.getLogger().info("[vision27] cinedev: acts {}", n);
+                }
                 case "point" -> CinemaCam.POINTS.add(new CinemaCam.Point(new Vec3(d(w[1]), d(w[2]), d(w[3])), f(w[4]), f(w[5])));
                 case "clear" -> CinemaCam.POINTS.clear();
                 case "path" -> {
@@ -134,6 +163,7 @@ public final class CineDev {
                 }
                 case "hud" -> mc.options.hideGui = w[1].equals("off");
                 case "hint" -> CinemaCam.hints(w[1].equals("on"));
+                case "side" -> CinemaCam.followSide = w[1].equals("on");
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
         }
@@ -141,6 +171,30 @@ public final class CineDev {
     }
 
     private static float f(String s) { return Float.parseFloat(s); }
+
+    @Nullable
+    private static VillageFolkEntity nearestAt(Minecraft mc, String what) {
+        if (mc.level == null || mc.player == null) return null;
+        String want = what.toUpperCase(Locale.ROOT);
+        Vec3 from = mc.gameRenderer.getMainCamera().getPosition();
+        VillageFolkEntity best = null;
+        double bestD = 96.0 * 96.0;
+        for (Entity e : mc.level.entitiesForRendering()) {
+            if (!(e instanceof VillageFolkEntity f) || !f.isAlive()) continue;
+            com.jrpetty.mcassistant.entity.FolkAction.Act a = com.jrpetty.mcassistant.entity.FolkAction.Act.of(f.animSeen().act);
+            boolean ok = switch (want) {
+                case "WALKING" -> f.animSeen().gaitSpeed > 1.2F && !f.isBaby();
+                case "RUNNING" -> f.animSeen().gaitSpeed > 3.8F;
+                case "CHILD" -> f.isBaby() && a != com.jrpetty.mcassistant.entity.FolkAction.Act.SLEEP;
+                case "ANY" -> a != com.jrpetty.mcassistant.entity.FolkAction.Act.NONE && a != com.jrpetty.mcassistant.entity.FolkAction.Act.SLEEP;
+                default -> a.name().equals(want);
+            };
+            if (!ok) continue;
+            double d = f.distanceToSqr(from);
+            if (d < bestD) { bestD = d; best = f; }
+        }
+        return best;
+    }
 
     private static double d(String s) { return Double.parseDouble(s); }
 

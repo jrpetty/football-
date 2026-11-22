@@ -15290,10 +15290,33 @@ little pictures over heads, speech bubbles, trade icons, quest marks, the foundi
 - Birds sing in the trees by day and crickets chirp at night, out of doors in a town (TownAmbience; "ambience" in the
   client config turns it off).
 
+### How the folk walk and stand (FolkGait)
+
+- A folk's legs keep pace with the ground: its speed is measured each frame where it is drawn, its stride grows with
+  its speed (and is shorter for the old and the tired, longer for the proud and a skipping child), and the legs swing
+  just as far as the stride needs, so the foot on the ground does not slide. The body dips as the legs open and rises as
+  they pass, the arms swing against the legs, the shoulders turn a little, and at a run the arms swing wider and the
+  trunk leans in. Starting and stopping is eased.
+- Sitting down and getting up (a bench, a hiding place) is eased over a third of a second, not snapped.
+- A folk stood about with nothing to do is never dead still: its eyes go slowly round and down, and its weight shifts
+  from one foot to the other every several seconds, each folk on its own clock.
+
+### Paid buildings start (TownJobs, HousingMarket)
+
+- A paid order (a player's commission, a household's own house) is not held to the town's one hand in eight for its
+  works: it gets a hand while fewer than half the town's grown folk are at its works (TownJobs.allowance).
+- A hand whose way cannot reach the spot (a plot raised on its own bank, a wall's top) makes for its near side and
+  works from as near as it gets (within fourteen blocks).
+- While the town's crews are at its own buildings, a household's house goes on at a third of its pace instead of
+  stopping; it is laid eight blocks every five seconds (the same pace as before, two dozen every fifteen), each heard and
+  seen going in. A build short of materials still waits for the stores.
+
 ### For a developer filming the mod (CineDev)
 
 Started with `-Dmcassistant.cinedev=FILE`, the client carries out the lines of FILE each time it changes: orbit,
 follow, fly-through points, the happening button, the lens, clean shot, the clock (the world's, for recording), and
+`near ACT R H SPEED [follow]` (round or behind the nearest folk at an act, "walking", "child" or "any"), `acts` (what the
+folk in sight are doing, in the log), `side on` (follow from beside), and
 `record DIR`, every frame drawn written as a numbered picture with the world's time of each, to make a steady clip of
 at any frame rate (the scratch tool mkclip.py does it with ffmpeg).
 
@@ -15301,7 +15324,8 @@ at any frame rate (the scratch tool mkclip.py does it with ffmpeg).
 
 VisionGameTests (x 6,000,000 to 6,100,000): vi01 the busiest happening first and another the next time, through the
 wire too; vi02 a quiet town says so; vi03 a time-lapse refused to a player who may not, started for an operator, held to
-its limits, the old pace put back; vi04 the tidy name tag; vi05 the screen's info (the heart, a favourite first).
+its limits, the old pace put back; vi04 the tidy name tag; vi05 the screen's info (the heart, a favourite first); vi06 a
+paid order's hand allowance against the town's own works'.
 
 ### The iron drain found (round two)
 The mine's books now name the doing that took the metal ("Crafts.forge", not the folk's whole tick). The local run's

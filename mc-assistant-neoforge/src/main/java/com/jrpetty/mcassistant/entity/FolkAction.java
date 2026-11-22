@@ -155,6 +155,13 @@ public final class FolkAction {
         public float fxSec = -1.0F;
         /** The game's own clock for a keyframe animation, started at each new act (as the warden's and the camel's are). */
         public final net.minecraft.world.entity.AnimationState state = new net.minecraft.world.entity.AnimationState();
+        /** [vision27] Its walk (client/FolkGait): where in its stride, how far the legs swing, how much it walks and runs,
+         *  its smoothed speed (blocks a second), and where and when it was last drawn. */
+        public float gaitPhase, gaitAmp, gaitWeight, gaitRun, gaitSpeed, gaitAge = -1.0F;
+        public double gaitX, gaitZ;
+        /** [vision27] Its pose's change (0 standing, 1 sat, 2 crouched): from what, to what, and when (client/FolkGait.settle). */
+        public int poseKind, poseFrom;
+        public float poseAt = -1000.0F;
 
         /** A player's emote begun (or 0: over), on its own clock (client/PlayerEmotesClient). */
         public void begin(int a, int tick) {

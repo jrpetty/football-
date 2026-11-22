@@ -387,9 +387,19 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             sat = true;
             pose.pushPose();
             pose.translate(0.0F, -mounted * (folk.isBaby() ? 0.55F : 1.0F), 0.0F);
-        } else if (sat) {
-            pose.pushPose();
-            pose.translate(0.0F, crouched ? (folk.isBaby() ? -0.14F : -0.25F) : folk.isBaby() ? -0.32F : -0.6F, 0.0F);
+        } else {
+            // [vision27] Lowered onto the seat (and up off it) over a third of a second, in step with its legs (FolkGait.settle).
+            float settle = FolkGait.settle(folk, folk.tickCount + partialTick);
+            int kind = folk.animSeen().poseKind, from = folk.animSeen().poseFrom;
+            float k = kind != 0 ? settle : from != 0 ? 1.0F - settle : 0.0F;
+            boolean low = kind == 2 || kind == 0 && from == 2;
+            if (k > 0.0F) {
+                sat = true;
+                pose.pushPose();
+                pose.translate(0.0F, k * (low ? (folk.isBaby() ? -0.14F : -0.25F) : folk.isBaby() ? -0.32F : -0.6F), 0.0F);
+            } else {
+                sat = false;
+            }
         }
         FolkBatch.folk();
         super.render(folk, entityYaw, partialTick, pose, FolkBatch.around(buffer), packedLight);   // [anim] its passes batched

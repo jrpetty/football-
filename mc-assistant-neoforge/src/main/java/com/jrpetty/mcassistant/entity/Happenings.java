@@ -154,6 +154,7 @@ public final class Happenings {
             double score = weightOf(kind[i]) * (1.0 + 0.35 * (k - 1));
             double far = Math.sqrt((at.x - from.getX()) * (at.x - from.getX()) + (at.z - from.getZ()) * (at.z - from.getZ()));
             score /= 1.0 + far / 80.0;                                   // nearer first: what is going on round here
+            if (underLeaves(level, at)) score *= 0.35;                  // in under a wood's canopy: little a camera can see
             for (double[] s : shown) {
                 if (now - (long) s[2] < FORGET && Math.abs(s[0] - at.x) < 16 && Math.abs(s[1] - at.z) < 16) score *= 0.25;
             }
@@ -171,6 +172,15 @@ public final class Happenings {
         }
         out.sort(Comparator.comparingDouble(Happening::score).reversed());
         return out;
+    }
+
+    /** Leaves overhead, within a few blocks: the spot is in under trees. */
+    static boolean underLeaves(ServerLevel level, Vec3 at) {
+        BlockPos p = BlockPos.containing(at);
+        for (int up = 2; up <= 8; up++) {
+            if (level.getBlockState(p.above(up)).is(net.minecraft.tags.BlockTags.LEAVES)) return true;
+        }
+        return false;
     }
 
     /** The one to show this player now (remembered, so the next ask shows another), or null for a quiet town. */

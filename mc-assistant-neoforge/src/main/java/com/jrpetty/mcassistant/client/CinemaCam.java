@@ -15,6 +15,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Marker;
+import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
@@ -80,6 +81,8 @@ public final class CinemaCam {
     public static float followDist = 5.5F, followHeight = 2.2F;
     public static float pathSeconds = 20.0F;
     public static boolean loop, clean = true;
+    /** Follow from beside the folk (its right), not behind it: a walk seen side on (CineDev "side"). */
+    public static boolean followSide;
     /** [dev] Time the shot by the world's clock, not the wall's: for frame-by-frame recording (CinemaRecorder). */
     public static boolean worldClock;
 
@@ -285,7 +288,9 @@ public final class CinemaCam {
         double a = Math.toRadians(angle);
         Vec3 base = centre.add(Math.sin(a) * radius, height, Math.cos(a) * radius);
         Vec3 aim = centre.add(0.0, t instanceof LivingEntity ? 1.1 : 0.8, 0.0);
-        boolean close = radius <= 24.0F;
+        // Close round a folk (or tight in), it comes in short of a wall; round a building or a spot farther out it rises over
+        // what is in the way instead (a house going up is watched from outside it, not from its floor).
+        boolean close = radius <= 14.0F || t instanceof LivingEntity && radius <= 24.0F;
         lift = lift + (clearance(level, base, aim, !close) - lift) * (1.0 - Math.exp(-dt * 0.9));
         Vec3 want = base.add(0.0, lift, 0.0);
         // Close in: a wall, a roof or a tree between the camera and what it watches pulls it in short of it (quickly in,
@@ -326,12 +331,13 @@ public final class CinemaCam {
         Vec3 head = feet.add(0.0, t.getEyeHeight(), 0.0);
         // Asleep, sat down or at its work in one spot, its body turns about: hold the view rather than swing with it.
         boolean still = t instanceof LivingEntity le && (le.isSleeping() || t.getPose() == net.minecraft.world.entity.Pose.SITTING)
-            || t.getDeltaMovement().horizontalDistanceSqr() < 1.0E-4;
+            || (t instanceof VillageFolkEntity vf ? vf.animSeen().gaitSpeed < 0.5F : t.getDeltaMovement().horizontalDistanceSqr() < 1.0E-4);
         if (!still) followYaw = easeAngle(followYaw, yawOf(t), dt, 1.1);
         double y = Math.toRadians(followYaw);
         Vec3 forward = new Vec3(-Math.sin(y), 0.0, Math.cos(y));
         Vec3 right = new Vec3(-Math.cos(y), 0.0, -Math.sin(y));
-        Vec3 want = head.add(forward.scale(-followDist)).add(right.scale(0.7)).add(0.0, followHeight - 1.0, 0.0);
+        Vec3 want = followSide ? head.add(right.scale(-followDist)).add(forward.scale(0.4)).add(0.0, followHeight - 1.0, 0.0)
+            : head.add(forward.scale(-followDist)).add(right.scale(0.7)).add(0.0, followHeight - 1.0, 0.0);
         // A wall behind it pulls the camera in (quickly), and lets it back out slowly: never a jump to and fro as the
         // folk passes a door post.
         HitResult hit = level.clip(new ClipContext(head, want, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
@@ -339,7 +345,7 @@ public final class CinemaCam {
         if (hit.getType() != HitResult.Type.MISS && len > 0.01) reach = Mth.clamp((hit.getLocation().distanceTo(head) - 0.35) / len, 0.12, 1.0);
         pull = pull + (reach - pull) * (1.0 - Math.exp(-dt * (reach < pull ? 7.0 : 0.8)));
         want = head.add(want.subtract(head).scale(Math.min(pull, reach + 0.08)));
-        Vec3 aim = head.add(forward.scale(1.2)).add(0.0, -0.25, 0.0);
+        Vec3 aim = followSide ? head.add(0.0, -0.7, 0.0) : head.add(forward.scale(1.2)).add(0.0, -0.25, 0.0);
         eye = ease(eye, want, dt, started ? 3.2 : 1.6);
         look = ease(look, aim, dt, 6.0);
         if (eye.distanceToSqr(want) < 0.5) started = true;

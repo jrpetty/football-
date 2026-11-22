@@ -8,6 +8,7 @@ import com.jrpetty.mcassistant.entity.Favourites;
 import com.jrpetty.mcassistant.entity.FolkAction;
 import com.jrpetty.mcassistant.entity.FolkAction.Act;
 import com.jrpetty.mcassistant.entity.Happenings;
+import com.jrpetty.mcassistant.entity.TownJobs;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
 import com.jrpetty.mcassistant.net.CameraAskPayload;
@@ -228,6 +229,27 @@ public class VisionGameTests {
             helper.assertTrue(who.getCompound(1).getInt("id") == f.get(0).getId(), "then the nearest");
             Kit.log("[VT] vi05 " + t.getString("town") + " heart " + h[0] + "," + h[2] + " folk " + who.size());
             p.discard();
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ vi06: a paid order gets a hand though the town's are all out
+
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "vi06_paid_hand")
+    public static void vi06_paid_hand(GameTestHelper helper) {
+        helper.runAtTickTime(1, () -> {
+            // A town of sixty grown folk: one hand in eight (seven) for its own works, idle hands up to one in four.
+            helper.assertTrue(TownJobs.allowance(60, 3, "gardens") == TownJobs.ANY, "its own works, under the eighth: any hand");
+            helper.assertTrue(TownJobs.allowance(60, 7, "gardens") == TownJobs.IDLE_ONLY, "at the eighth: only a hand standing idle");
+            helper.assertTrue(TownJobs.allowance(60, 15, "gardens") == TownJobs.NONE_TO_SPARE, "at the quarter: nobody");
+            // A paid order is not held to the eighth (nor the quarter): it was quoted a time and paid for.
+            helper.assertTrue(TownJobs.allowance(60, 7, "commission3") == TownJobs.ANY, "a player's commission at the eighth: any hand");
+            helper.assertTrue(TownJobs.allowance(60, 15, "commission3") == TownJobs.ANY, "and at the quarter");
+            helper.assertTrue(TownJobs.allowance(60, 15, "homebuild") == TownJobs.ANY, "a household's paid house too");
+            helper.assertTrue(TownJobs.allowance(60, 30, "homebuild") != TownJobs.ANY, "but never past half the town");
+            helper.assertTrue(TownJobs.allowance(4, 0, "commission1") == TownJobs.ANY, "nor kept waiting by a young village's trades");
+            helper.assertTrue(TownJobs.allowance(4, 0, "gardens") == TownJobs.NONE_TO_SPARE, "where its own gardens wait");
+            Kit.log("[VT] vi06 paid orders: any hand at the eighth and the quarter; the town's own works held to them");
             helper.succeed();
         });
     }

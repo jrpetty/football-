@@ -561,29 +561,33 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             for (int i = 0; i < worn.length; i++) if (!look[i]) worn[i].visible = false;   // [individual] its own hair stays
         }
 
-        // Walking: legs and arms in step, as a player walks.
-        float step = limbSwing * 0.6662F;
-        rightLeg.xRot = Mth.cos(step) * 1.4F * limbSwingAmount;
-        leftLeg.xRot = Mth.cos(step + Mth.PI) * 1.4F * limbSwingAmount;
-        rightArm.xRot = Mth.cos(step + Mth.PI) * limbSwingAmount;
-        leftArm.xRot = Mth.cos(step) * limbSwingAmount;
-        // Sat down (on a park bench: entity/Park): legs out in front, hands in the lap.
-        if (folk.getPose() == net.minecraft.world.entity.Pose.SITTING) {
-            rightLeg.xRot = -1.4137167F;
-            rightLeg.yRot = Mth.PI / 10.0F;
-            rightLeg.zRot = 0.07853982F;
-            leftLeg.xRot = -1.4137167F;
-            leftLeg.yRot = -Mth.PI / 10.0F;
-            leftLeg.zRot = -0.07853982F;
-            rightArm.xRot = -Mth.PI / 5.0F;
-            leftArm.xRot = -Mth.PI / 5.0F;
-        }
-        // Crouched out of sight (hide-and-seek: entity/Families): knees up, hands on them, the whole of it lower.
-        if (folk.getPose() == net.minecraft.world.entity.Pose.CROUCHING) {
-            rightLeg.xRot = -0.9F;
-            leftLeg.xRot = -0.9F;
-            rightArm.xRot = -0.7F;
-            leftArm.xRot = -0.7F;
+        // Walking and running: [vision27] the legs keeping pace with the ground, the body dipping and turning (FolkGait).
+        FolkGait.apply(folk, head, body, rightArm, leftArm, rightLeg, leftLeg, limbSwing, limbSwingAmount, ageInTicks, young, attackTime > 0.0F);
+        // Sat down (on a park bench: entity/Park): legs out in front, hands in the lap. Crouched out of sight
+        // (hide-and-seek: entity/Families): knees up, hands on them. [vision27] Lowered into it and got up out of it over a
+        // third of a second, not snapped.
+        float settle = FolkGait.settle(folk, ageInTicks);
+        int poseKind = folk.animSeen().poseKind;
+        if (poseKind != 0 || settle < 1.0F) {
+            int from = folk.animSeen().poseFrom;
+            float into = poseKind != 0 ? settle : 0.0F, outOf = from != 0 && poseKind != from ? 1.0F - settle : 0.0F;
+            int kind = poseKind != 0 ? poseKind : from;
+            float k = Math.max(into, outOf);
+            if (kind == 1) {
+                rightLeg.xRot = Mth.lerp(k, rightLeg.xRot, -1.4137167F);
+                rightLeg.yRot = Mth.lerp(k, rightLeg.yRot, Mth.PI / 10.0F);
+                rightLeg.zRot = Mth.lerp(k, rightLeg.zRot, 0.07853982F);
+                leftLeg.xRot = Mth.lerp(k, leftLeg.xRot, -1.4137167F);
+                leftLeg.yRot = Mth.lerp(k, leftLeg.yRot, -Mth.PI / 10.0F);
+                leftLeg.zRot = Mth.lerp(k, leftLeg.zRot, -0.07853982F);
+                rightArm.xRot = Mth.lerp(k, rightArm.xRot, -Mth.PI / 5.0F);
+                leftArm.xRot = Mth.lerp(k, leftArm.xRot, -Mth.PI / 5.0F);
+            } else if (kind == 2) {
+                rightLeg.xRot = Mth.lerp(k, rightLeg.xRot, -0.9F);
+                leftLeg.xRot = Mth.lerp(k, leftLeg.xRot, -0.9F);
+                rightArm.xRot = Mth.lerp(k, rightArm.xRot, -0.7F);
+                leftArm.xRot = Mth.lerp(k, leftArm.xRot, -0.7F);
+            }
         }
 
         // A hand with something in it is carried a little forward.
@@ -619,6 +623,10 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
 
         swingTool(folk, rightMain ? HumanoidArm.RIGHT : HumanoidArm.LEFT);
         FolkPoses.apply(this, folk, limbSwing, limbSwingAmount, ageInTicks, young);   // [individual] its gait and its moments
+        if (folk.animSeen().act == 0 && poseKind == 0 && attackTime <= 0.0F && !folk.isSleeping()
+            && com.jrpetty.mcassistant.entity.Manner.idleOf(folk.clientManner()) == com.jrpetty.mcassistant.entity.Manner.NO_IDLE) {
+            FolkGait.idle(folk, head, body, rightArm, leftArm, rightLeg, leftLeg, ageInTicks, folk.animSeen().gaitWeight);   // [vision27] never dead still
+        }
         FolkAnimations.apply(rig, folk, ageInTicks, rightMain, young, attackTime);    // [anim] what it is doing: its work, its life
         missilePose(folk, rightMain);                                  // [war-bows] over the gait: a drawn bow, a crossbow spanned
         int carried = regalia == 0 || young ? RegaliaModel.NO_HAND : RegaliaLayer.holds(folk);   // [regalia19] the sceptre, the staff

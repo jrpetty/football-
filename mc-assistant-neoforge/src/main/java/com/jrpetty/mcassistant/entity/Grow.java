@@ -84,6 +84,7 @@ public final class Grow {
     public static void tick(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         long now = level.getGameTime();
+        HousingMarket.tick(level, v);                                // [vision27] a folk's own house going up: on its own clock (eight blocks every 5 s)
         if (now - LAST.getOrDefault(id, -100000L) < Ethos.growEvery(id, 300L)) return;   // [identity] sooner in a forward-looking town
         LAST.put(id, now);
         Luxuries.candles(level, v);                                  // the households' candles, lit at dusk (Luxuries)
@@ -91,7 +92,6 @@ public final class Grow {
         Dining.round(level, v);                                      // [dining] the staff, the crockery, the tables, the menu boards
         if (!furnish(level, v)) shelve(level, v);
         work(level, v, Ethos.growBudget(id, 24));                    // [identity] and more at a time; less in a traditional one
-        HousingMarket.tick(level, v);                                // [econ-housing] the council's houses costed; a folk's own house going up
         BuildOrders.tick(level, v);                                  // [orders17] the players' commissioned buildings going up
     }
 

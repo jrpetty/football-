@@ -40,7 +40,7 @@ public final class FolkPoses {
         if (!sitting && !working) {
             switch (gait) {
                 case Manner.SKIP -> {
-                    float hop = Math.abs(Mth.sin(limbSwing * 0.6662F)) * swing * 1.6F;
+                    float hop = Math.abs(Mth.sin(folk.animSeen().gaitPhase)) * folk.animSeen().gaitWeight * 1.6F;   // [vision27] in time with its stride
                     head.y -= hop;                       // each in turn, without a new array every frame
                     body.y -= hop;
                     ra.y -= hop;
@@ -53,8 +53,7 @@ public final class FolkPoses {
                     la.zRot -= swing * 0.25F;
                 }
                 case Manner.OLD -> {
-                    rl.xRot *= 0.55F;
-                    ll.xRot *= 0.55F;
+                    // [vision27] Its short steps are its stride's own (FolkGait): the legs keep pace with the ground.
                     ra.xRot *= 0.5F;
                     la.xRot *= 0.5F;
                 }
@@ -74,9 +73,7 @@ public final class FolkPoses {
                 case Manner.TIRED -> {
                     head.xRot += 0.18F;
                     ra.xRot *= 0.35F;
-                    la.xRot *= 0.35F;
-                    rl.xRot *= 0.7F;
-                    ll.xRot *= 0.7F;
+                    la.xRot *= 0.35F;                    // [vision27] its dragging steps are its stride's own (FolkGait)
                 }
                 default -> { }
             }
@@ -97,7 +94,7 @@ public final class FolkPoses {
         }
         // The stick, planted ahead in its other hand.
         if (Individual.stickOf(folk.clientMarks()) && !sitting && folk.getOffhandItem().isEmpty()) {
-            off.xRot = -0.32F + Mth.cos(limbSwing * 0.6662F) * swing * 0.15F;
+            off.xRot = -0.32F + Mth.cos(folk.animSeen().gaitPhase) * folk.animSeen().gaitWeight * 0.15F;   // [vision27] in step
             off.zRot = 0.0F;
         }
         // The mood, in how it holds its head.

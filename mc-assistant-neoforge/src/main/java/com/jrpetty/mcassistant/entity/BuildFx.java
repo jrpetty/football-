@@ -18,6 +18,19 @@ public final class BuildFx {
 
     private BuildFx() {}
 
+    /** A block set by the town's works (a household's house laid a few at a time): its crumbs, and its sound if asked. */
+    public static void laid(ServerLevel level, BlockPos pos, boolean sound) {
+        BlockState st = level.getBlockState(pos);
+        if (st.isAir()) return;
+        if (sound) {
+            SoundType s = st.getSoundType(level, pos, null);
+            level.playSound(null, pos, s.getPlaceSound(), SoundSource.BLOCKS, (s.getVolume() + 1.0F) / 2.0F * 0.8F, s.getPitch() * 0.82F);
+        }
+        if (st.getRenderShape() == net.minecraft.world.level.block.RenderShape.INVISIBLE) return;
+        level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, st), pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+            5, 0.3, 0.3, 0.3, 0.05);
+    }
+
     /** The block just set at this spot by this folk. */
     public static void placed(AssistantEntity builder, BlockPos pos) {
         if (!(builder.level() instanceof ServerLevel level)) return;
