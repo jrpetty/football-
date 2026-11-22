@@ -96,8 +96,22 @@ public final class FoundingGhost {
         }
     }
 
+    /**
+     * The ground at a column: [city26] under any tree (the client keeps only the heightmap that counts leaves, so the
+     * outline rode over the canopy of a wood); down through leaves, logs and whatever grows on the ground to the earth.
+     */
     private static int ground(ClientLevel lv, int gx, int gz) {
         if (!lv.hasChunk(gx >> 4, gz >> 4)) return y;
-        return lv.getHeight(Heightmap.Types.MOTION_BLOCKING, gx, gz);
+        int top = lv.getHeight(Heightmap.Types.MOTION_BLOCKING, gx, gz);
+        net.minecraft.core.BlockPos.MutableBlockPos p = new net.minecraft.core.BlockPos.MutableBlockPos(gx, top - 1, gz);
+        for (int guard = 0; guard < 48 && p.getY() > lv.getMinBuildHeight(); guard++) {
+            net.minecraft.world.level.block.state.BlockState st = lv.getBlockState(p);
+            boolean over = st.is(net.minecraft.tags.BlockTags.LEAVES) || st.is(net.minecraft.tags.BlockTags.LOGS)
+                || st.isAir() || (st.canBeReplaced() && st.getFluidState().isEmpty())
+                || st.is(net.minecraft.world.level.block.Blocks.VINE) || st.is(net.minecraft.tags.BlockTags.SAPLINGS);
+            if (!over) return p.getY() + 1;
+            p.move(0, -1, 0);
+        }
+        return top;
     }
 }

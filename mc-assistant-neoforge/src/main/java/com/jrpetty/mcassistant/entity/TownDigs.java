@@ -76,7 +76,7 @@ public final class TownDigs {
     /** Within the town's whole plan (and so much more), or on its farmland: the ground it grows over. */
     public static boolean inPlan(@Nullable UUID village, BlockPos heart, BlockPos p, int margin) {
         int d = Math.max(Math.abs(p.getX() - heart.getX()), Math.abs(p.getZ() - heart.getZ()));
-        if (d <= PLAN_REACH + MARGIN + margin) return true;
+        if (d <= Math.max(PLAN_REACH, CityGrowth.reach(village) + 2) + MARGIN + margin) return true;   // [city26] the rings laid out since
         return village != null && Villages.onFarmland(village, heart, p, MARGIN + margin);
     }
 

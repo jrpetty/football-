@@ -88,6 +88,7 @@ class FoundingPlanTest {
     void mountainsStandBack() {
         int folk = 100, radius = FoundingPlan.coreRadius(folk);
         FoundingPlan.Ground g = ground(folk, (dx, dz) -> 64 + (int) Math.max(0, 60 - Math.max(0, Math.hypot(dx - 70, dz) - 10)));
+        g.hill = false;                                   // [city26] levelled to one height (a hillside is terraced: TerracesTest)
         int level = plan(g, folk, 7L);
         assertEquals(64, level);
         assertTrue(steepest(g, radius) <= 2, "no cliff in the cut: " + steepest(g, radius));

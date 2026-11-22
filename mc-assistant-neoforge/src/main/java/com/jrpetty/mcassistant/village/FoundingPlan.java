@@ -181,6 +181,11 @@ public final class FoundingPlan {
      * the next. As the steepness ({@link #steepFor}) of each way.
      */
     static double[] steepness(Ground g, int radius, int level, long seed) {
+        return steepness(g, radius, level, seed, null);
+    }
+
+    /** [city26] The same, each column's height to be met reckoned from {@code base} (a terraced town's edge) where given. */
+    static double[] steepness(Ground g, int radius, int level, long seed, double[] base) {
         double[] raw = new double[BINS];
         for (int i = 0; i < g.side * g.side; i++) {
             byte k = g.kind[i];
@@ -190,7 +195,7 @@ public final class FoundingPlan {
             if (u <= 0 || u >= BAND_MAX || reach(dx, dz) > g.outer) continue;
             double was = k == FILL ? g.fluid[i] : g.ground[i];
             int b = bin(dx, dz);
-            raw[b] = Math.max(raw[b], Math.abs(was - level));
+            raw[b] = Math.max(raw[b], Math.abs(was - (base != null ? base[i] : level)));
         }
         double[] env = new double[BINS], out = new double[BINS];
         for (int b = 0; b < BINS; b++) {
@@ -225,7 +230,7 @@ public final class FoundingPlan {
     }
 
     /** [terra10] The same, met with the bank's steepness given. */
-    public static double target(double was, int level, double u, double steep) {
+    public static double target(double was, double level, double u, double steep) {
         if (u <= 0) return level;
         if (u >= BAND_MAX) return was;
         double a = walkable(u, steep);                                      // [terra10] a walkable bank
@@ -314,6 +319,18 @@ public final class FoundingPlan {
         public int buried, shallows, lava;
         /** [terra10] Columns of holes left as they are for something in them anybody could have made. */
         public int keptHoles;
+        /** [city26] On a hillside, the terrace height of each column of the levelled square (Terraces.NONE elsewhere, and
+         *  null for ground levelled to one height); and how many columns were terraced. */
+        public int[] terrace;
+        public int terraced;
+        /** [city26] Whether this ground is terraced, decided once from the land as read (Terraces.wanted). */
+        public Boolean hill;
+
+        /** [city26] Is this ground terraced under a levelled square this wide (decided the first time it is asked)? */
+        public boolean hill(int radius) {
+            if (hill == null) hill = Terraces.wanted(this, radius);
+            return hill;
+        }
 
         public Ground(int outer) {
             this.outer = outer;
@@ -353,6 +370,11 @@ public final class FoundingPlan {
      * a mound a hundred blocks high.
      */
     public static int level(Ground g, int radius, int seaLevel) {
+        // [city26] A hillside is terraced: its heart is brought to the middle of the land round the heart, not of the whole.
+        if (g.hill(radius)) {
+            int heart = Terraces.heartLevel(g);
+            if (heart != Terraces.NONE) return heart;
+        }
         int[] heights = new int[g.side * g.side];
         int[] tops = new int[g.side * g.side];
         int n = 0, wetIn = 0;
@@ -390,6 +412,7 @@ public final class FoundingPlan {
      */
     public static void make(Ground g, int radius, int level, int camp, long seed) {
         int side = g.side, n = side * side;
+        g.hill(radius);                                                       // [city26] decided on the land as read
         buriedInHoles(g);                                                     // [terra10]
         // ---- the water: a pond inside is filled, anything bigger, deeper or running out of
         // the ground being levelled (a river, a lake, the sea) is left exactly as it is.
@@ -497,11 +520,18 @@ public final class FoundingPlan {
         int[] bank = wet.clone();
         // [terra10] The square itself holds the edge up too, a block a block from it: the beach down to kept water
         // starts from the square's own height and not from the water's, or the quay stood three high over it.
+        // ---- [city26] on a hillside, the terraces: each column of the square its own terrace's height, the edge met from it.
+        double[] surf = null;
+        if (g.hill(radius)) {
+            surf = new double[n];
+            g.terrace = Terraces.plan(g, radius, level, seed, surf);
+            for (int i = 0; i < n; i++) if (g.terrace[i] != Terraces.NONE) g.terraced++;
+        }
         int[] sqLow = new int[n];
         Arrays.fill(sqLow, NONE_LOW);
         for (int i = 0; i < n; i++) {
             byte k = g.kind[i];
-            if ((k == LAND || k == FILL) && reach(g.dx(i), g.dz(i)) - radius + WOBBLE * noise(seed, g.dx(i), g.dz(i)) <= 0) sqLow[i] = level * 10;
+            if ((k == LAND || k == FILL) && reach(g.dx(i), g.dz(i)) - radius + WOBBLE * noise(seed, g.dx(i), g.dz(i)) <= 0) sqLow[i] = (g.terrace != null && g.terrace[i] != Terraces.NONE ? g.terrace[i] : level) * 10;   // [city26] its terrace
         }
         spreadLow(sqLow, side);
         spreadLow(low, side);
@@ -509,7 +539,12 @@ public final class FoundingPlan {
         spreadHigh(high, side);
         spreadHigh(shore, side);
         // ---- and the height of every column to be worked.
-        double[] steep = steepness(g, radius, level, seed);               // [terra10]
+        double[] base = null;                                             // [city26] a terraced town's edge, met from its terraces
+        if (g.terrace != null) {
+            base = new double[n];
+            for (int i = 0; i < n; i++) base[i] = reach(g.dx(i), g.dz(i)) > g.outer ? level : edgeBase(g, surf, g.dx(i), g.dz(i), radius, level);
+        }
+        double[] steep = steepness(g, radius, level, seed, base);         // [terra10]
         g.target = new int[n];
         for (int i = 0; i < n; i++) {
             byte k = g.kind[i];
@@ -525,6 +560,10 @@ public final class FoundingPlan {
             double u = r - radius + WOBBLE * noise(seed, dx, dz);
             boolean square = u <= 0;
             double want = target(was, level, u, steepAt(steep, dx, dz));      // [terra10] as steep as that way wants
+            if (g.terrace != null) {                                          // [city26] the terrace's height; the edge met from it
+                if (square && g.terrace[i] != Terraces.NONE) want = g.terrace[i];
+                else if (!square) want = target(was, base[i], u, steepAt(steep, dx, dz));
+            }
             // What holds it only ever holds it back: a cut no deeper than it allows and a fill no
             // higher, and never a change where the plan made none. In the square, only something
             // built and the bank right beside water hold it; out past it, the slopes to them too,
@@ -536,7 +575,7 @@ public final class FoundingPlan {
             double upper = Math.max(was, holdHigh / 10.0);
             want = Math.max(lower, Math.min(upper, want));
             g.target[i] = (int) Math.round(want);
-            if (square && g.target[i] != level) {
+            if (square && g.target[i] != level && (g.terrace == null || g.target[i] != g.terrace[i])) {
                 String why;
                 if (g.target[i] > level && bank[i] > level * 10 && bank[i] >= low[i]) { g.heldBank++; why = "the bank of water"; }
                 else { g.heldBuilt++; why = "something built"; }
@@ -559,6 +598,26 @@ public final class FoundingPlan {
             g.order[j] = (int) (keys[j] & 0xFFFFFF);
             if (g.campIndex == m && (keys[j] >>> 24) / 1024.0 > camp) g.campIndex = j;
         }
+    }
+
+    /**
+     * [city26] The height a terraced town's edge meets the land from: the streets' surface at the levelled square's edge
+     * straight in from the column (a few blocks inside, clear of the edge's wobble).
+     */
+    static double edgeBase(Ground g, double[] surf, int dx, int dz, int radius, int level) {
+        double r = reach(dx, dz);
+        if (r <= 0 || surf == null) return level;
+        for (int back = 3; back <= 9; back += 3) {
+            double t = Math.max(0, radius - back) / r;
+            double fx = dx * t, fz = dz * t;
+            int x0 = (int) Math.floor(fx), z0 = (int) Math.floor(fz);
+            if (Math.abs(x0) + 1 > g.outer || Math.abs(z0) + 1 > g.outer) continue;
+            double a = surf[g.index(x0, z0)], b = surf[g.index(x0 + 1, z0)], c = surf[g.index(x0, z0 + 1)], d = surf[g.index(x0 + 1, z0 + 1)];
+            if (Double.isNaN(a) || Double.isNaN(b) || Double.isNaN(c) || Double.isNaN(d)) continue;
+            double tx = fx - x0, tz = fz - z0;                            // between the four columns round it, smoothly
+            return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+        }
+        return level;
     }
 
     /** [terra10] How far below the land round it the top of something built must stand to be down a hole, not on the land. */

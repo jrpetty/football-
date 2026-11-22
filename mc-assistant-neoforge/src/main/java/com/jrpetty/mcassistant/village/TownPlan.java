@@ -51,8 +51,13 @@ public final class TownPlan {
     public static final int PERIOD = 2 * LOT + STREET;
     /** The first street out, round the square. */
     public static final int RING = PLAZA + 1;
-    /** How many rings of blocks the plan runs to. */
+    /** How many rings of blocks the plan runs to at first (what a founding lays out and levels for). */
     public static final int RINGS = 3;
+    /**
+     * [city26] How many rings of blocks the plan can grow to: a town that has filled its first three lays out a fourth,
+     * and a fifth, and a sixth, each as it fills the last (entity/CityGrowth), round its farmland and its mine's ground.
+     */
+    public static final int MAX_RINGS = 6;
 
     /** Which way a building's back is, from its door: the door is on the opposite side. */
     public static final int NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3;
@@ -90,7 +95,7 @@ public final class TownPlan {
     private static List<Band> bands() {
         List<Band> out = new ArrayList<>();
         out.add(new Band(AVENUE + 1 + LOT / 2, true, -1));           // beside the avenue: 3..13
-        for (int k = 0; k < RINGS; k++) {
+        for (int k = 0; k < MAX_RINGS; k++) {                       // [city26] every ring the plan can grow to
             int street = RING + k * PERIOD;                          // 14..16, 39..41, ...
             out.add(new Band(street + STREET + LOT / 2, true, k));   // faces that street, inward
             out.add(new Band(street + STREET + LOT + LOT / 2, false, k)); // back to back with it, faces outward
@@ -120,6 +125,48 @@ public final class TownPlan {
     /** How far out the plan reaches. */
     public static int reach() {
         return RING + RINGS * PERIOD - 1;
+    }
+
+    /** [city26] How far out the plan reaches with this many rings of blocks laid out. */
+    public static int reach(int rings) {
+        return RING + rings * PERIOD - 1;
+    }
+
+    /**
+     * [city26] Which ring of blocks a lot is in: 0 the first (the lots round the square and by the avenues near it), 1 the
+     * second, and so on out to MAX_RINGS - 1. A long lot is in the ring of its nearer half.
+     */
+    public static int ringOf(Lot lot) {
+        if (lot.kind() == Kind.SQUARE) return 0;
+        int d = Math.max(Math.abs(lot.x()), Math.abs(lot.z()));
+        if (lot.kind() == Kind.LONG) d -= LOT / 2;
+        return ringAt(d);
+    }
+
+    /** [city26] The plan cell straight out from a lot's door, on its street, as an offset from the heart; null for a spot
+     *  on the square. */
+    public static int[] front(Lot lot) {
+        if (lot.kind() == Kind.SQUARE) return null;
+        int reach = (lot.kind() == Kind.LONG ? lot.halfDeep() : LOT / 2) + 1;
+        return switch (lot.back()) {
+            case NORTH -> new int[]{ lot.x(), lot.z() + reach };
+            case SOUTH -> new int[]{ lot.x(), lot.z() - reach };
+            case EAST -> new int[]{ lot.x() - reach, lot.z() };
+            default -> new int[]{ lot.x() + reach, lot.z() };
+        };
+    }
+
+    /** [city26] The ground a lot covers, as {minX, minZ, maxX, maxZ} offsets from the heart. */
+    public static int[] box(Lot lot) {
+        boolean turned = lot.back() == EAST || lot.back() == WEST;
+        int hx = turned ? lot.halfDeep() : lot.halfAcross(), hz = turned ? lot.halfAcross() : lot.halfDeep();
+        return new int[]{ lot.x() - hx, lot.z() - hz, lot.x() + hx, lot.z() + hz };
+    }
+
+    /** [city26] Which ring of blocks this far out (in the larger of x and z) lies in. */
+    public static int ringAt(int d) {
+        if (d <= RING + STREET - 1) return 0;
+        return Math.max(0, Math.min(MAX_RINGS - 1, (d - RING - STREET) / PERIOD));
     }
 
     // ------------------------------------------------------------------ the lots

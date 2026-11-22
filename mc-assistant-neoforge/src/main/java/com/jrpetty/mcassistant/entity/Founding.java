@@ -727,7 +727,7 @@ public final class Founding extends SavedData {
         }
         if (s.surveyed < n) return;
         if (s.level == UNSET) {
-            s.level = FoundingPlan.level(g, s.radius, level.getSeaLevel());
+            s.level = FoundingPlan.level(g, s.radius, SiteFinder.seaLevel(level));   // [city26] the world's own sea level
             s.soil = Terraform.name(Terraform.dominant(level, g, s.tops, s.radius));
             LOG.info("[MCA-FOUND] the ground at {} is levelled to y={} in {}", s.heart.toShortString(), s.level, s.soil);
         }
@@ -799,6 +799,7 @@ public final class Founding extends SavedData {
                     if (own) top = Terraform.edgeTop(top, s.surface);   // [build5] a cut edge turfed; [terra10] and a built-up one
                     int c = Terraform.shape(level, chunk, x, z, g.ground[i], g.target[i], levelled, top, s.felling);
                     if (c >= 0) c += quayBeside(level, g, i, x, z, top);                // [terra10] a stone quay over kept water
+                    if (c >= 0 && g.terrace != null) c += TerraceWalls.build(level, g, i, x, z, s.surface);   // [city26] a terrace's wall
                     if (c < 0 && levelled && s.blocked++ == 0) {
                         s.blockedFirst = Terraform.inTheWay(chunk, x, z, g.ground[i], g.target[i]) + " at " + x + "," + z;
                     }
@@ -846,7 +847,8 @@ public final class Founding extends SavedData {
                 int dx = g.dx(i), dz = g.dz(i);
                 // The square, and every column of the edge the plan worked (cut or built up).
                 boolean square = FoundingPlan.levelled(dx, dz, s.radius, s.seed);
-                boolean worked = square ? g.target[i] == s.level : g.target[i] != g.ground[i];
+                boolean terraced = g.terrace != null && g.terrace[i] != com.jrpetty.mcassistant.village.Terraces.NONE;   // [city26]
+                boolean worked = square ? g.target[i] == s.level || terraced && g.target[i] == g.terrace[i] : g.target[i] != g.ground[i];
                 if (!worked || (k != FoundingPlan.LAND && k != FoundingPlan.FILL && k != FoundingPlan.OUTSIDE)) {
                     s.goodCursor++;
                     continue;
@@ -862,6 +864,7 @@ public final class Founding extends SavedData {
                 Block top = !square && s.tops != null && s.tops[i] > 0 ? Terraform.edgeTop(Terraform.top(s.tops[i]), s.surface) : s.surface;
                 if (!Terraform.wantsWork(level, chunk, x, z, y, want, top, square)) continue;
                 if (Terraform.shape(level, chunk, x, z, y, want, square, top, s.felling) > 0) s.goodMended++;
+                if (terraced) TerraceWalls.build(level, g, i, x, z, s.surface);                    // [city26] its wall again
             }
             s.goodMendedAll += s.goodMended;
             LOG.info("[MCA-FOUND] looked the square over again ({} of {}): {} columns mended", s.goodPass + 1, GOOD_PASSES, s.goodMended);

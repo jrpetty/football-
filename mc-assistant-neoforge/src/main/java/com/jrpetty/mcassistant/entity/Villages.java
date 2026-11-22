@@ -2803,7 +2803,7 @@ public final class Villages {
     public static int townReach(UUID villageId) {
         int b = 0;
         for (String s : BUILT.getOrDefault(villageId, List.of())) if (!"colony".equals(s)) b++;
-        int rings = b <= 14 ? 1 : b <= 44 ? 2 : 3;
+        int rings = b <= 14 ? 1 : b <= 44 ? 2 : CityGrowth.rings(villageId);   // [city26] and on, as it lays out more
         return com.jrpetty.mcassistant.village.TownPlan.RING + rings * com.jrpetty.mcassistant.village.TownPlan.PERIOD + 2;
     }
 
@@ -3070,6 +3070,7 @@ public final class Villages {
             boolean offWalk = false;                                    // [city9] a lot passed over for its street (CityPlan)
             for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : places) {
                 if (valid >= 6) break;
+                if (!CityGrowth.laidOut(villageId, lot)) continue;     // [city26] only the rings of the plan laid out so far
                 index++;
                 boolean spoken = false;
                 for (long cell : lot.cells()) if (taken.contains(cell)) { spoken = true; break; }
@@ -3123,6 +3124,7 @@ public final class Villages {
                 }
             }
             CityPlan.looked(villageId, site != null, offWalk && !waiting);     // [city9]
+            CityGrowth.looked(level, v, project, site != null, waiting);       // [city26] full: the next ring laid out
             if (site != null) {
                 for (long cell : best.cells()) taken.add(cell);
             } else if (!waiting && free > 0) {
@@ -3310,7 +3312,8 @@ public final class Villages {
             + com.jrpetty.mcassistant.village.TownPlan.lots().size() + " lots spoken for"
             + "; turned down: wet " + w[WET] + ", cliff " + w[CLIFF] + ", too high or low " + w[HEIGHT]
             + ", built on or rocky " + w[BLOCKED] + ", given up " + w[TAKEN]
-            + (why == null || why.lastCliff.isEmpty() ? "" : "; last cliff " + why.lastCliff);
+            + (why == null || why.lastCliff.isEmpty() ? "" : "; last cliff " + why.lastCliff)
+            + "; " + CityGrowth.report(villageId);                                                    // [city26]
     }
 
     /** Is the ground a lot here would stand on all in the world yet? */

@@ -264,7 +264,7 @@ public final class CastleWall {
         }
         for (BlockPos p : at) {
             int dx = p.getX() - v.centre().getX(), dz = p.getZ() - v.centre().getZ();
-            if (Math.max(Math.abs(dx), Math.abs(dz)) > FURTHEST) continue;     // far out past the plan: not the town proper
+            if (Math.max(Math.abs(dx), Math.abs(dz)) > WallPlan.furthest(CityGrowth.rings(id))) continue;     // far out past the plan: not the town proper ([city26] its rings laid out)
             int[] box = null;
             for (TownPlan.Lot l : TownPlan.lots()) {
                 int[] b = box(l);
@@ -277,7 +277,7 @@ public final class CastleWall {
 
     /** How far out a building may stand and still be the town's own, for the wall to take in: as far as its outermost
      *  line keeps inside (past the plan's last ring of lots, for the houses that spill over it). */
-    static final int FURTHEST = WallPlan.line(WallPlan.maxRing()) - TownPlan.STREET - 1;
+    static final int FURTHEST = WallPlan.furthest(TownPlan.RINGS);
 
     /** How many of the town's buildings the wall takes in: {inside, of all} (its fields, pens and the like apart). */
     public static int[] enclosed(UUID id) {

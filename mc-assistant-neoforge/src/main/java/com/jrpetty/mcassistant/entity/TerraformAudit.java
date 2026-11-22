@@ -81,7 +81,7 @@ public final class TerraformAudit {
         Map<String, Integer> c = new LinkedHashMap<>();
         for (String k : new String[]{ "square", "heldOff", "offLevel", "holes", "crust", "pits", "oddTop", "oddTopDirt", "oddTopRock",
                 "oddTopOre", "oddTopGravel", "growthOnSquare", "floatLeaves", "floatLogs", "stumps", "floatVines", "sheer",
-                "steps2", "rawEdge", "flowing", "lava", "junk", "falling", "items" }) c.put(k, 0);
+                "steps2", "rawEdge", "flowing", "lava", "junk", "falling", "items", "terraced", "walls" }) c.put(k, 0);
         FoundingPlan.Ground g = d.ground;
         int hx = d.heart.getX(), hz = d.heart.getZ();
         int side = g.side;
@@ -98,8 +98,12 @@ public final class TerraformAudit {
             byte k = g.kind[i];
             boolean ours = k == FoundingPlan.LAND || k == FoundingPlan.FILL;
             boolean square = FoundingPlan.levelled(dx, dz, d.radius, d.seed);
-            sq[i] = square && ours && g.target != null && g.target[i] == d.level;
-            if (square && ours && g.target != null && g.target[i] != d.level) c.merge("heldOff", 1, Integer::sum);   // the plan kept it off the level
+            // [city26] A terraced column is level at its terrace's height, as the square is at the heart's.
+            boolean terr = g.terrace != null && g.terrace[i] != com.jrpetty.mcassistant.village.Terraces.NONE && g.target != null
+                && g.target[i] == g.terrace[i];
+            sq[i] = square && ours && g.target != null && (g.target[i] == d.level || terr);
+            if (square && ours && terr && g.target[i] != d.level) c.merge("terraced", 1, Integer::sum);
+            if (square && ours && g.target != null && g.target[i] != d.level && !terr) c.merge("heldOff", 1, Integer::sum);   // the plan kept it off the level
             worked[i] = ours && g.target != null && (sq[i] || g.target[i] != g.ground[i]);
             counted[i] = ours;
             if (top[i] != Integer.MIN_VALUE) {
@@ -117,12 +121,13 @@ public final class TerraformAudit {
             if (!over.isAir() && !Terraform.natural(over)) continue;   // the town's own work on it since (a field, a path)
             if (sq[i]) {
                 c.merge("square", 1, Integer::sum);
-                if (y != d.level) at(c, "offLevel", x, y, z, null);
+                if (y != g.target[i]) at(c, "offLevel", x, y, z, null);          // [city26] its terrace's height (the heart's, unterraced)
             }
             BlockState t = level.getBlockState(m.set(x, y, z));
             String odd = null;
             if (sq[i]) {
-                if (!t.is(d.surface)) odd = kindOf(t);
+                if (TerraceWalls.isWall(t) && TerraceWalls.wanted(g, i)) c.merge("walls", 1, Integer::sum);   // [city26] a terrace's wall
+                else if (!t.is(d.surface)) odd = kindOf(t);
             } else if (t.is(Blocks.DIRT) || t.is(Blocks.COBBLESTONE) || Terraform.topOf(t) == Terraform.ROCK || t.is(Blocks.GRAVEL)) {
                 odd = kindOf(t);
             }
@@ -166,6 +171,9 @@ public final class TerraformAudit {
                 if (!worked[i] && !worked[j]) continue;
                 int step = Math.abs(top[j] - top[i]);
                 if (step <= Math.abs(g.ground[j] - g.ground[i])) continue;   // no worse than the land had it
+                // [city26] A terrace's drop faced with its wall, the wall standing the whole height of it: built, not sheer.
+                int hiI = top[i] >= top[j] ? i : j, loJ = hiI == i ? j : i;
+                if (step > 2 && walled(level, d, hiI, top[hiI], top[loJ])) continue;
                 if (step > 2) {
                     at(c, "sheer", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
                     FIRST.putIfAbsent("sheerWhy", "kind " + g.kind[i] + "/" + g.kind[j] + " ground " + g.ground[i] + "/" + g.ground[j]
@@ -218,6 +226,16 @@ public final class TerraformAudit {
         AABB box = new AABB(x0 + 7, y0, z0 + 7, x0 + w - 7, y0 + hgt + 8, z0 + w - 7);
         c.put("items", level.getEntitiesOfClass(ItemEntity.class, box, e -> e.isAlive()).size());
         return c;
+    }
+
+    /** [city26] Is this column faced with a terrace's wall from its top down to over the lower top beside it? */
+    private static boolean walled(ServerLevel level, Done d, int i, int hi, int lo) {
+        FoundingPlan.Ground g = d.ground;
+        if (g.terrace == null || g.terrace[i] == com.jrpetty.mcassistant.village.Terraces.NONE) return false;
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        int x = d.heart().getX() + g.dx(i), z = d.heart().getZ() + g.dz(i);
+        for (int y = lo + 1; y <= hi; y++) if (!TerraceWalls.isWall(level.getBlockState(m.set(x, y, z)))) return false;
+        return true;
     }
 
     /** Is this cell open to the sky, or beside a cell that is (so what is in it shows, and runs)? */

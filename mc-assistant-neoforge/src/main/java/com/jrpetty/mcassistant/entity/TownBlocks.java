@@ -242,9 +242,9 @@ public final class TownBlocks {
     public static Villages.Village townAt(Level level, BlockPos pos) {
         Villages.Village best = null;
         long bestD = Long.MAX_VALUE;
-        int reach = TownPlan.reach() + 8;
         for (Villages.Village v : Villages.every()) {
             if (!v.dim().equals(level.dimension())) continue;
+            int reach = CityGrowth.reach(v.id()) + 8;                     // [city26] the rings its plan has laid out
             long dx = Math.abs(pos.getX() - v.centre().getX()), dz = Math.abs(pos.getZ() - v.centre().getZ());
             if (dx > reach || dz > reach) continue;
             long d = dx * dx + dz * dz;
@@ -418,7 +418,7 @@ public final class TownBlocks {
         BlockState st = level.isLoaded(pos) ? level.getBlockState(pos) : Blocks.AIR.defaultBlockState();
         if (fitting(st)) return new Here(Zone.FITTING, null, false);
         int dx = pos.getX() - v.centre().getX(), dz = pos.getZ() - v.centre().getZ();
-        if (Math.max(Math.abs(dx), Math.abs(dz)) <= TownPlan.reach() && atGround(level, pos, st)) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) <= CityGrowth.reach(v.id()) && atGround(level, pos, st)) {   // [city26]
             // The founders' camp at the very heart is the camp's (its beds, its chests, its fire) until [tidy] takes it up.
             if (TownPlan.isSquare(dx, dz)) return new Here(Math.max(Math.abs(dx), Math.abs(dz)) <= CAMP ? Zone.OPEN : Zone.SQUARE, null, false);
             if (TownPlan.isStreet(dx, dz)) return new Here(Zone.ROAD, null, false);

@@ -82,7 +82,7 @@ public final class SiteFinder {
             towns.add(new Mark(v.centre().getX(), v.centre().getZ(), Villages.name(v.id())));
         }
         VanillaVillages.inTheWayOfFounding(level, centre);                       // looks the villagers' villages up round here
-        int seaLevel = level.getSeaLevel();
+        int seaLevel = seaLevel(level);                                          // [city26] the world's own, not 63 everywhere
 
         List<Pick> all = new ArrayList<>();
         Pick here = judge(level, centre, centre, kinds, ground, logs, size, x0, z0, seaLevel, true, board);
@@ -184,7 +184,9 @@ public final class SiteFinder {
         int k0 = ci >= 0 && cj >= 0 && ci < size && cj < size ? ci * size + cj : -1;
         g.centreWet = k0 >= 0 && (kinds[k0] == WATER || kinds[k0] == LAVA);
         g.centreY = k0 >= 0 && kinds[k0] != UNKNOWN ? ground[k0] : at.getY();
-        g.seaLevel = seaLevel;
+        // [city26] Below the sea only where the sea is: water near, at the world's sea level. A flat world's meadow (or an
+        // inland valley) a few blocks under that height, with no sea anywhere about it, is not below the sea at all.
+        g.seaLevel = seaNear(ground, kinds, size, ci, cj, around, seaLevel) ? seaLevel : Integer.MIN_VALUE / 2;
         Holder<Biome> biome = level.getBiome(at);
         if (biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_DEEP_OCEAN)) g.centreWet |= g.wetColumns * 2 > Math.max(1, known);
         g.land = SiteScore.landWord(biome.unwrapKey().map(r -> r.location().toString()).orElse("plains"));
@@ -241,6 +243,31 @@ public final class SiteFinder {
         int dist = (int) Math.round(Math.sqrt(player.distSqr(new BlockPos(at.getX(), player.getY(), at.getZ()))));
         BlockPos spot = new BlockPos(at.getX(), g.centreY, at.getZ());
         return new Pick(spot, v.score(), v.words(), no, here, dist, here ? "here" : Founding.bearing(player, spot));
+    }
+
+    /**
+     * [city26] The world's sea level as its land was made (Level.getSeaLevel is 63 in every world, a flat one's included,
+     * whose sea, if it had one, would be at -63).
+     */
+    public static int seaLevel(ServerLevel level) {
+        try {
+            return level.getChunkSource().getGenerator().getSeaLevel();
+        } catch (RuntimeException e) {
+            return level.getSeaLevel();
+        }
+    }
+
+    /** [city26] Is there water at the sea's height (its top within a block of it) within this many grid steps of the spot? */
+    static boolean seaNear(int[] ground, byte[] kinds, int size, int ci, int cj, int around, int seaLevel) {
+        for (int di = -around; di <= around; di++) {
+            for (int dj = -around; dj <= around; dj++) {
+                int i = ci + di, j = cj + dj;
+                if (i < 0 || j < 0 || i >= size || j >= size || di * di + dj * dj > around * around) continue;
+                int k = i * size + j;
+                if (kinds[k] == WATER && Math.abs(ground[k] - 1 - (seaLevel - 1)) <= 1) return true;
+            }
+        }
+        return false;
     }
 
     private static int wetAround(byte[] kinds, int size, int i0, int j0) {

@@ -45,9 +45,16 @@ public final class WallPlan {
         return TownPlan.RING + (ring + 1) * TownPlan.PERIOD + TownPlan.STREET;
     }
 
-    /** The furthest ring the wall goes out to: one past the plan's last ring of lots, for the houses that spill over it. */
+    /** The furthest ring the wall goes out to: one past the plan's last ring of lots, for the houses that spill over it.
+     *  [city26] The plan grows to MAX_RINGS rings as a town fills (entity/CityGrowth), and the wall with it. */
     public static int maxRing() {
-        return TownPlan.RINGS;
+        return TownPlan.MAX_RINGS;
+    }
+
+    /** [city26] The furthest a building may stand and still be taken in by the wall of a town with this many rings of its
+     *  plan laid out: as far as the line one past them keeps inside. */
+    public static int furthest(int rings) {
+        return line(Math.min(rings, maxRing())) - TownPlan.STREET - 1;
     }
 
     /** The ring whose wall keeps something reaching this far out inside, with the street before it clear. */
