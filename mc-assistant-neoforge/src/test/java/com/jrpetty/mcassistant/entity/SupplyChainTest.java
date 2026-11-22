@@ -3,12 +3,10 @@ package com.jrpetty.mcassistant.entity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** [econ32] The supply chains' rules that need no world: when the stores ask for room, and what a worked-out mine is worth moving for. */
+/** [econ32] The supply chains' rules that need no world: when the stores ask for room, and the bounds on new mines and tools for sale (the new mine itself: SupplyChainGameTests.sc03). */
 class SupplyChainTest {
 
     @Test
@@ -19,16 +17,6 @@ class SupplyChainTest {
         assertFalse(StoreRoom.tight(54, 30), "two chests, more than a chest free");
         assertTrue(StoreRoom.tight(729 + 270, 90), "a storehouse and ten chests under a tenth free");
         assertFalse(StoreRoom.tight(729 + 270, 120), "a storehouse and ten chests with an eighth free");
-    }
-
-    @Test
-    @DisplayName("a new mine is sunk for the iron and the diamonds, not for coal, copper or gold")
-    void mineWorth() {
-        assertEquals("iron", MineSites.worth(MineWorks.IRON));
-        assertEquals("diamonds", MineSites.worth(MineWorks.DEEP));
-        assertNull(MineSites.worth(MineWorks.COAL));
-        assertNull(MineSites.worth(MineWorks.COPPER));
-        assertNull(MineSites.worth(MineWorks.GOLD));
     }
 
     @Test
