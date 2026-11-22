@@ -236,7 +236,7 @@ public final class StartBusiness implements PlayerLife.Page {
         map.place(p.getBlockX() - centre.getX(), p.getBlockZ() - centre.getZ(), "You", false, 2, null, null);
         for (BuildPlots.Plot pl : plots) {
             boolean sel = pl.at().getX() == at.getX() && pl.at().getZ() == at.getZ();
-            map.place(pl.at().getX() - centre.getX(), pl.at().getZ() - centre.getZ(), pl.label(), sel, 0, "plot",
+            map.place(pl.at().getX() - centre.getX(), pl.at().getZ() - centre.getZ(), pl.label().replace(" of the square", ""), sel, 0, "plot",   // [biz25] fits the legend
                 LifePage.args("x", pl.at().getX(), "y", pl.at().getY(), "z", pl.at().getZ(), "f", pl.facing().get2DDataValue()));
         }
         if (plots.stream().noneMatch(pl -> pl.at().getX() == at.getX() && pl.at().getZ() == at.getZ())) {

@@ -94,7 +94,7 @@ public final class MyBusinesses implements PlayerLife.Page {
             page.text(!going.isEmpty() ? "Its own building, going up (it trades from the square till it stands)."
                 : t.stall() ? "A stall on the square, its own." : "A room the town lets it.");
         }
-        for (BuildDesk.Status s : BuildDesk.mine(level, v.id(), p.getUUID())) page.bar(s.title(), s.percent() / 100.0, s.done() ? "finished" : s.percent() + "%" + (s.waitingOn().isEmpty() ? "" : ", waiting for " + s.waitingOn()));
+        for (BuildDesk.Status s : BuildDesk.mine(level, v.id(), p.getUUID())) page.bar(s.title(), s.percent() / 100.0, s.done() ? "finished" : s.percent() + "%" + (s.waitingOn().isEmpty() ? "" : ", " + s.waitingOn()));   // [biz25] not "waiting for waiting for"
         page.heading("Next");
         page.buttons().button("Hands", "tab:hands", null).button("Stock", "tab:stock", null).button("Prices", "tab:prices", null).button("Money", "tab:money", null);
     }

@@ -84,6 +84,10 @@ public final class BizGuide {
         return out;
     }
 
+    static String capital(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
     /** The first step not done yet, or null when the shop is up and selling. */
     @Nullable
     public static Step next(List<Step> steps) {
