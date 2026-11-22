@@ -156,6 +156,7 @@ public final class Picks {
         UUID id = f.ownerId();
         Villages.Village v = id == null ? null : Villages.get(id);
         if (v == null) return false;
+        if (DeepPicks.beforeShift(level, f)) return true;                 // [econ32] an iron pick for the diamonds
         ItemStack best = ItemStack.EMPTY;
         int picks = 0;
         for (ItemStack s : f.getInventoryItems()) {
@@ -230,7 +231,7 @@ public final class Picks {
         if (last != null && now - last < Toolrack.EVERY && now >= last) return null;
         SMITH.put(id, now);
         int want = Toolrack.wanted(id, Toolrack.Tool.PICKAXE);
-        if (want <= 0 || Toolrack.onRack(level, id, Toolrack.Tool.PICKAXE) >= want) return null;
+        if (want <= 0 || Toolrack.onRack(level, id, Toolrack.Tool.PICKAXE) >= want) return DeepPicks.smith(f, level);   // [econ32] an iron one for the diamonds
         return Toolrack.restockPicks(level, v, f);
     }
 }
