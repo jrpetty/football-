@@ -268,7 +268,12 @@ public final class Assemblies {
         switch (a.phase) {
             case CALL -> {
                 prepare(level, a);
-                if (a.seats.isEmpty() || a.script.isEmpty()) { NOW.remove(a.village); return; }
+                if (a.seats.isEmpty() || a.script.isEmpty()) {
+                    com.mojang.logging.LogUtils.getLogger().info("[MCA-ASSEMBLY] {}: {} called off: {} places, {} lines", Villages.name(a.village),
+                        a.kind, a.seats.size(), a.script.size());      // [life28]
+                    NOW.remove(a.village);
+                    return;
+                }
                 level.playSound(null, a.focus, SoundEvents.BELL_BLOCK, SoundSource.NEUTRAL, 2.0F, a.kind == Kind.VIGIL ? 0.7F : 1.0F);
                 VillageFolkEntity host = host(level, a);
                 if (host != null) FolkTalk.speak(host, a.kind == Kind.VIGIL ? "Come, all of you." : FolkTalk.pick(r, "Gather round, everyone!", "Come along, all!", "Over here, everybody!"));
@@ -277,10 +282,11 @@ public final class Assemblies {
             }
             case GATHER -> {
                 if (now - a.phaseAt == 40) level.playSound(null, a.focus, SoundEvents.BELL_BLOCK, SoundSource.NEUTRAL, 2.0F, 1.0F);
-                long wait = a.kind == Kind.MORNING ? 360 : 600;
+                long wait = a.kind == Kind.MORNING ? 200 : 600;                 // [life28] the morning's: ten seconds, or most there
                 int here = a.seated.size();
                 if (a.expected == 0 && now - a.phaseAt > 200) { NOW.remove(a.village); return; }
-                if (here >= Math.max(1, a.expected * 7 / 10) || now - a.phaseAt > wait) {
+                int enough = a.kind == Kind.MORNING ? a.expected * 6 / 10 : a.expected * 7 / 10;
+                if (here >= Math.max(1, enough) || now - a.phaseAt > wait) {
                     a.phase = Phase.SPEECH;
                     a.phaseAt = now;
                     a.nextLineAt = now + 30;
@@ -313,7 +319,7 @@ public final class Assemblies {
                     if (!speaker.getUUID().equals(a.host)) FolkAction.play(speaker, FolkAction.Act.TALK, 60);   // [anim] a word from the floor
                 }
                 react(level, a, l.react(), speaker);
-                a.nextLineAt = now + Math.max(60, 40 + text.length() * 2);
+                a.nextLineAt = now + (a.kind == Kind.MORNING ? Math.max(40, 20 + text.length()) : Math.max(60, 40 + text.length() * 2));   // [life28]
             }
             case MINGLE -> {
                 if (a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING || a.kind == Kind.KNIGHTING) {   // [civic-land]
@@ -339,14 +345,15 @@ public final class Assemblies {
                     a.closed = true;
                     close(level, a);
                 }
-                if (now - a.phaseAt > 60) {
+                if (now - a.phaseAt > (a.kind == Kind.MORNING ? 20 : 60)) {
                     a.phase = Phase.DISPERSE;
                     a.phaseAt = now;
-                    for (UUID u : a.seated.keySet()) a.lingerUntil.put(u, now + 60 + r.nextInt(240));
+                    // [life28] After the morning's, straight to work: nobody lingers.
+                    if (a.kind != Kind.MORNING) for (UUID u : a.seated.keySet()) a.lingerUntil.put(u, now + 60 + r.nextInt(240));
                 }
             }
             case DISPERSE -> {
-                if (now - a.phaseAt > 320) NOW.remove(a.village);
+                if (now - a.phaseAt > (a.kind == Kind.MORNING ? 20 : 320)) NOW.remove(a.village);
             }
         }
     }
@@ -939,6 +946,10 @@ public final class Assemblies {
         List<Line> s = a.script;
         switch (a.kind) {
             case MORNING -> {
+                // [life28] Short, and back to work: a greeting, the one thing that matters most today, one piece of news,
+                // tonight, and off. (It used to read out every report the town had, a grown town's ten lines and more,
+                // two or three minutes off work each morning.) The rest of the news goes up on the board, not spoken.
+                long dayNow = level.getDayTime() / 24000L;
                 s.add(new Line(null, FolkTalk.pick(r, "Good morning, " + name + "!", "Morning, all!", "Good morning, everyone!"), '*', null));
                 String building = null;
                 for (AssistantEntity x : Villages.folkOf(id)) {
@@ -946,27 +957,29 @@ public final class Assemblies {
                     if (j != null && j.type() == Job.Type.BUILD && j.arg() != null) { building = j.arg().split("\\|", 2)[0]; break; }
                 }
                 String next = Villages.nextProject(id);
-                if (building != null) s.add(new Line(null, "The builders carry on with " + Villages.spoken(building) + " today.", ' ', null));
-                else if (next != null) s.add(new Line(null, "Next to go up is " + Villages.spoken(next) + ".", '?', null));
-                List<String> shorts = new ArrayList<>();
+                String shortOf = null;
                 for (Villages.Need n : Villages.needs(level, id)) {
                     if (n.task() == Villages.Task.BUILD || n.task() == Villages.Task.NONE) continue;
-                    shorts.add(n.what());
-                    if (shorts.size() >= 2) break;
+                    shortOf = n.what();
+                    break;
                 }
-                if (!shorts.isEmpty()) s.add(new Line(null, "We're short of " + String.join(" and ", shorts) + " — put your backs into it!", '?', null));
-                Orders.Order o = Orders.current(id);
-                if (o != null) s.add(new Line(null, "The orders stand: " + o.title.toLowerCase(java.util.Locale.ROOT) + ".", ' ', null));
+                if (shortOf != null) s.add(new Line(null, "We're short of " + shortOf + " — put your backs into it!", '?', null));
+                else if (building != null) s.add(new Line(null, "The builders carry on with " + Villages.spoken(building) + " today.", ' ', null));
+                else if (next != null) s.add(new Line(null, "Next to go up is " + Villages.spoken(next) + ".", '?', null));
+                List<Line> news = new ArrayList<>();
                 for (String[] rep : Envoys.reports(id)) {
                     UUID by = null;
                     try { by = UUID.fromString(rep[0]); } catch (IllegalArgumentException ignored) { }
-                    s.add(new Line(by, rep.length > 1 ? rep[1] : rep[0], '?', null));
+                    news.add(new Line(by, rep.length > 1 ? rep[1] : rep[0], '?', null));
                 }
-                for (String found : Scouts.reports(id)) s.add(new Line(null, found, '?', null));
-                for (String found : CaveDwellers.reports(id)) s.add(new Line(null, found, '?', null));   // [caves]
-                for (String found : NetherRuns.reports(id)) s.add(new Line(null, found, '?', null));     // [nether]
-                for (String money : Market.reports(id)) s.add(new Line(null, money, '!', null));
-                long dayNow = level.getDayTime() / 24000L;
+                for (String found : Scouts.reports(id)) news.add(new Line(null, found, '?', null));
+                for (String found : CaveDwellers.reports(id)) news.add(new Line(null, found, '?', null));   // [caves]
+                for (String found : NetherRuns.reports(id)) news.add(new Line(null, found, '?', null));     // [nether]
+                for (String money : Market.reports(id)) news.add(new Line(null, money, '!', null));
+                Orders.Order o = Orders.current(id);
+                if (o != null) news.add(new Line(null, "The orders stand: " + o.title.toLowerCase(java.util.Locale.ROOT) + ".", ' ', null));
+                if (!news.isEmpty()) s.add(news.get(0));
+                for (int k = 1; k < news.size(); k++) Villages.tell(id, dayNow, news.get(k).text());   // on the board, not read out
                 Gatherings.Kind tonight = Gatherings.tonight(id, dayNow);
                 if (tonight != null) s.add(new Line(null, "Tonight: " + Gatherings.describe(tonight, id) + ". Everyone welcome!", '!', null));
                 else if (Market.daysToMarket(id, dayNow) == 0) s.add(new Line(null, "It's market day! Bring your coins to the square.", '!', null));
@@ -1142,6 +1155,11 @@ public final class Assemblies {
     public static int[] progress(UUID village) {
         Assembly a = NOW.get(village);
         return a == null ? null : new int[]{ a.phase.ordinal(), a.seated.size(), a.expected, a.line, a.script.size(), a.seats.size() };
+    }
+
+    /** [life28] Tests: the morning assembly called now. */
+    public static boolean morningForTests(ServerLevel level, Villages.Village v) {
+        return startNow(level, v, Kind.MORNING);
     }
 
     /** Start one now (the tests, and /village gather). */

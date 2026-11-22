@@ -103,7 +103,18 @@ public class LifeFilmGameTests {
         String[] longWho = { "" };
         long[] nextCount = { -1 };
         Map<String, Integer> idleWhy = new java.util.TreeMap<>();
+        long[] morning = { -1, -1, 0 };                         // its bell, its end, its lines
+        int[] waiting = { 0 };                                  // counts with the town's work waiting on a hand while hands stood idle
         helper.onEachTick(() -> {
+            if (id[0] != null && began[0] >= 0) {
+                String dbg = com.jrpetty.mcassistant.entity.Assemblies.debug(id[0]);
+                if (morning[0] < 0 && dbg.startsWith("MORNING")) morning[0] = level.getGameTime();
+                if (dbg.startsWith("MORNING")) { int[] p = com.jrpetty.mcassistant.entity.Assemblies.progress(id[0]); if (p != null) morning[2] = p[4]; }
+                if (morning[0] >= 0 && morning[1] < 0 && !dbg.startsWith("MORNING")) {
+                    morning[1] = level.getGameTime();
+                    Kit.log("[VT] " + label + " the morning assembly: " + (morning[1] - morning[0]) / 20 + "s from its bell to its end, " + morning[2] + " lines");
+                }
+            }
             if (id[0] == null) {
                 if (Founding.near(level, heart, 8)) return;
                 Villages.Village v = Villages.nearest(level, heart, 96);
@@ -139,6 +150,9 @@ public class LifeFilmGameTests {
                 expect.that(shares.size() >= 20, "counted through the day: " + shares.size());
                 expect.that(mean < 0.15, "under 15% stood idle by day on average: " + Math.round(mean * 1000) / 10.0 + "%");
                 expect.that(longest[0] <= 1200, "nobody stood still over a minute: " + longest[0] / 20 + "s (" + longWho[0] + ")");
+                expect.that(waiting[0] <= 1, "no town work left waiting on a hand while hands stood idle (counts): " + waiting[0]);
+                expect.that(morning[0] < 0 || morning[1] > 0 && morning[1] - morning[0] <= 1200 && morning[2] <= 5,
+                    "the morning assembly short: " + (morning[1] - morning[0]) / 20 + "s, " + morning[2] + " lines");
                 finish(helper, true, expect.clean() ? null : expect.summary());
                 return;
             }
@@ -150,6 +164,8 @@ public class LifeFilmGameTests {
             if (c.longestStill() > longest[0]) { longest[0] = c.longestStill(); longWho[0] = c.longestWho(); }
             for (Map.Entry<String, Integer> e : c.idleWhy().entrySet()) idleWhy.merge(e.getKey(), e.getValue(), Integer::sum);
             Kit.log("[VT] " + label + " " + String.format("%02d:%02d", (t / 1000 + 6) % 24, t % 1000 * 60 / 1000) + " " + c.line());
+            Kit.log("[VT] " + label + "   " + c.table());
+            if (!c.unstaffed().isEmpty() && c.spareIdle() > 0) waiting[0]++;
             for (String l : c.idleLines()) Kit.log("[VT] " + label + "   idle: " + (l.length() > 240 ? l.substring(0, 240) : l));
         });
     }
@@ -159,6 +175,113 @@ public class LifeFilmGameTests {
         TownJobs.instantForTests(true);
         if (failure == null) helper.succeed();
         else helper.fail(failure);
+    }
+
+    // ============================================================ lf06: the town's work never waits on a hand while one stands idle
+
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "lf06_idle_hand_called")
+    public static void lf06_idle_hand_called(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Founding.resetForTests(level.getServer());
+        Busywork.resetForTests();
+        TownJobs.instantForTests(false);
+        level.setDayTime(2000);
+        int cx = X + 24000, cz = Z;
+        BuildAuditGameTests.shape(level, BuildAuditGameTests.Ground.MEADOW, cx, cz, 40, 2806);
+        boolean was = VillageCommands.SPAWNAT_LEVELS;
+        VillageCommands.SPAWNAT_LEVELS = false;
+        Kit.command(level, "village spawnat " + cx + " " + cz + " 16");
+        VillageCommands.SPAWNAT_LEVELS = was;
+        Villages.Village v = Villages.nearest(level, new BlockPos(cx, 0, cz), 96);
+        helper.assertTrue(v != null && Villages.headcount(v.id()) == 16, "a town of sixteen");
+        helper.runAtTickTime(40, () -> {
+            BlockPos spot = Kit.surface(level, cx + 6, cz + 6);
+            // The town's share of hands for its works taken: four works, a hand each (one in four of sixteen).
+            int taken = 0;
+            for (int i = 0; i < 6; i++) {
+                TownJobs.atWork(level, v, "lf06_" + i, spot.offset(i, 0, 0), "testing " + i);
+                if (TownJobs.handAt(level, v.id(), "lf06_" + i) != null) taken++;
+            }
+            Kit.log("[VT] lf06 works given a hand: " + taken + " of 6");
+            // One more folk, with nothing at all to do, and more of the town's work posted.
+            com.jrpetty.mcassistant.entity.VillageFolkEntity idle = null;
+            for (com.jrpetty.mcassistant.entity.AssistantEntity a : Villages.folkOf(v.id())) {
+                if (a instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity f && !TownJobs.busy(f) && f.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.GUARD) { idle = f; break; }
+            }
+            helper.assertTrue(idle != null, "a folk not on the town's work");
+            Busywork.idleForTests(idle);
+            TownJobs.atWork(level, v, "lf06_more", spot.offset(0, 0, 4), "testing more");
+            com.jrpetty.mcassistant.entity.VillageFolkEntity got = TownJobs.handAt(level, v.id(), "lf06_more");
+            Kit.log("[VT] lf06 the work posted past the town's share: " + (got == null ? "no hand" : got.clientName()) + "; the idle one " + idle.clientName()
+                + "; waiting " + TownJobs.unstaffed(v.id(), level.getGameTime()));
+            Kit.Expect expect = new Kit.Expect();
+            expect.that(got != null, "the work given a hand though the town's share was taken");
+            expect.that(got == idle, "the hand stood idle, first: " + (got == null ? "none" : got.clientName()));
+            expect.that(!TownJobs.unstaffed(v.id(), level.getGameTime()).contains("lf06_more"), "not left waiting on a hand");
+            TownJobs.instantForTests(true);
+            if (expect.clean()) helper.succeed();
+            else helper.fail(expect.summary());
+        });
+    }
+
+    // ============================================================ lf05: the morning assembly, bell to back at work
+
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "lf05_morning")
+    public static void lf05_morning(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Founding.resetForTests(level.getServer());
+        level.setDayTime(500);
+        int cx = X + 20000, cz = Z;
+        BuildAuditGameTests.shape(level, BuildAuditGameTests.Ground.MEADOW, cx, cz, TownPlan.reach() + 8, 2805);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        Kit.command(level, "village found " + FOLK + " " + cx + " " + cz);
+        long[] t = { -1, -1, 0 };
+        Villages.Village[] town = { null };
+        helper.onEachTick(() -> {
+            if (town[0] != null || Founding.near(level, heart, 8)) return;
+            Villages.Village v = Villages.nearest(level, heart, 96);
+            if (v == null) { helper.fail("no town"); return; }
+            town[0] = v;
+            Villages.ageForTests(v.id(), Villages.Age.IRON);
+            Kit.stockForGrowth(level, v);
+            for (int i = 0; i < 16; i++) {
+                String p = AdminTools.nextProject(v.id());
+                if (p == null) break;
+                AdminTools.buildProject(level, v, p, false);
+            }
+            level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 300);
+            boolean on = com.jrpetty.mcassistant.entity.Assemblies.morningForTests(level, v);
+            t[0] = level.getGameTime();
+            Kit.log("[VT] lf05 the morning bell in a town of " + Villages.headcount(v.id()) + " with " + Ledger.buildings(v.id()).size()
+                + " buildings: " + on + " " + com.jrpetty.mcassistant.entity.Assemblies.debug(v.id()));
+        });
+        helper.onEachTick(() -> {
+            if (t[0] < 0) return;
+            Villages.Village v = town[0];
+            String dbg = com.jrpetty.mcassistant.entity.Assemblies.debug(v.id());
+            int[] p = com.jrpetty.mcassistant.entity.Assemblies.progress(v.id());
+            if (p != null) t[2] = Math.max(t[2], p[4]);
+            if ((level.getGameTime() - t[0]) % 100 == 0) Kit.log("[VT] lf05 +" + (level.getGameTime() - t[0]) + " " + dbg);
+            if (dbg.startsWith("MORNING")) {
+                if (level.getGameTime() - t[0] > 1400) helper.fail("the morning assembly still going after 70s: " + dbg);
+                return;
+            }
+            long took = level.getGameTime() - t[0];
+            // Back at work: none of them still held by it.
+            int held = 0;
+            for (com.jrpetty.mcassistant.entity.AssistantEntity a : Villages.folkOf(v.id())) {
+                if (a instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity f && com.jrpetty.mcassistant.entity.Assemblies.attending(f)) held++;
+            }
+            Kit.log("[VT] lf05 the morning assembly: " + took / 20 + "s from the bell to its end, " + t[2] + " lines; still held after: " + held);
+            Kit.Expect expect = new Kit.Expect();
+            expect.that(t[2] >= 3 && t[2] <= 5, "a short script, three to five lines: " + t[2]);
+            expect.that(took <= 1200, "over within a minute of its bell: " + took / 20 + "s");
+            expect.that(held == 0, "nobody lingers after it: " + held);
+            if (expect.clean()) helper.succeed();
+            else helper.fail(expect.summary());
+        });
     }
 
     // ============================================================ lf02: spawnat's square, its camp no building

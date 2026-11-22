@@ -89,6 +89,19 @@ public final class Busywork {
         return new java.util.EnumMap<>(BEGUN);
     }
 
+    /** [life28] A hand with nothing at all to do just now: at a pastime, or stood idle a while with its day free (TownJobs). */
+    public static boolean spare(VillageFolkEntity f) {
+        Doing d = DOING.get(f.getUUID());
+        if (d != null) return true;                                    // (seeing to its ground between the real work too)
+        Integer since = IDLE_SINCE.get(f.getUUID());
+        return since != null && f.tickCount - since >= START / 2;
+    }
+
+    /** Tests: this folk stood idle with its day free this long already. */
+    public static void idleForTests(VillageFolkEntity f) {
+        IDLE_SINCE.put(f.getUUID(), f.tickCount - START);
+    }
+
     /** What it is doing to fill its time, in a word (the tests, the census), or "". */
     public static String doing(VillageFolkEntity f) {
         Doing d = DOING.get(f.getUUID());
