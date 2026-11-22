@@ -357,6 +357,11 @@ public final class WatchKit {
     static int watchIron(ServerLevel level, UUID village) {
         int n = 0;
         for (VillageFolkEntity g : watch(village)) for (Kind k : SUIT) n += ironIn(g.getItemBySlot(k.slot));
+        // [econ32] And the cave team's and the Nether runners' (their kit is the watch's: wanting): the smith forged it out of
+        // the age's iron for them as for the watch, and once on their backs it was counted nowhere, so the forge made more. A
+        // local run's Iron Age town's forge took forty-five bars in a day with the age seventy-seven short.
+        for (VillageFolkEntity g : CaveDwellers.dwellers(village)) for (Kind k : SUIT) n += ironIn(g.getItemBySlot(k.slot));
+        for (VillageFolkEntity g : NetherRunners.runners(village)) for (Kind k : SUIT) n += ironIn(g.getItemBySlot(k.slot));
         for (BlockPos p : Villages.storeChests(level, village)) {
             if (!(level.getBlockEntity(p) instanceof Container c)) continue;
             for (int i = 0; i < c.getContainerSize(); i++) n += ironIn(c.getItem(i));
