@@ -50,6 +50,7 @@ public final class LifeClient {
     }
 
     public static void open(String page) {
+        Waiting.start("Opening your page");                               // [ui29]
         LifeNetwork.act(page, "open", new CompoundTag());
     }
 

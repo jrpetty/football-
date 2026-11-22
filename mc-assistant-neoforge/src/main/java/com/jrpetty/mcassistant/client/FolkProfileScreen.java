@@ -90,6 +90,7 @@ public class FolkProfileScreen extends Screen {
         pendingId = folk;
         pendingTab = tab;
         pendingParent = parent;
+        Waiting.start("Opening its profile");                             // [ui29]
         PacketDistributor.sendToServer(new FolkProfileAskPayload(folk, true));
     }
 

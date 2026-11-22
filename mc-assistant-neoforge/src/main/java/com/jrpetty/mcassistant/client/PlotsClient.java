@@ -22,6 +22,7 @@ public final class PlotsClient {
     /** The B key: ask for the book and open the screen when it arrives. */
     public static void requestOpen() {
         openRequested = true;
+        Waiting.start("Opening the plot book");                           // [ui29]
         net.neoforged.neoforge.network.PacketDistributor.sendToServer(
             new com.jrpetty.mcassistant.net.PlotOrderPayload(0, -1, ""));
     }

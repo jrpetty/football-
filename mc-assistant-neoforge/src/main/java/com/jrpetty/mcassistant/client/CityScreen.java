@@ -151,6 +151,7 @@ public class CityScreen extends Screen {
 
     /** Ask the server for the books of the village you stand in (the journal's button). */
     public static void request() {
+        Waiting.start("Opening the town's books");                        // [ui29] at once, not a blank wait for the answer
         net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.VillageAskPayload(4));
     }
 
