@@ -132,7 +132,7 @@ public final class WatchPage {
             List<FormattedCharSequence> parts = b[0].equals("H") ? List.of() : TextCache.splitPlain(font, (b[0].equals("L") ? "· " : "") + b[1], max);
             if (b[0].equals("H")) {
                 if (line++ < skip) continue;
-                if (ry > y + h - 10) break;
+                if (ry + 2 + 9 + 8 > y + h) break;                          // [ui29] a heading only with room for a line under it
                 ry += 2;
                 small(g, font, b[1], rx, ry, Ui.ACCENT);
                 ry += 9;
@@ -140,7 +140,7 @@ public final class WatchPage {
             }
             for (FormattedCharSequence p : parts) {
                 if (line++ < skip) continue;
-                if (ry > y + h - 8) break;
+                if (ry + 8 > y + h) break;
                 small(g, font, p, rx + 2, ry, b[0].equals("M") ? Ui.FAINT : Ui.MUTED);
                 ry += 8;
             }

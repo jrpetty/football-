@@ -65,10 +65,10 @@ public class BlockBookScreen extends Screen {
         int x = left + PAD;
         this.addRenderableWidget(Button.builder(Component.literal("‹ Back"),
                 b -> { this.onClose(); PlotsClient.requestOpen(); })
-            .bounds(x, y, w4, 18).build());
+            .bounds(x, y, w4, 18).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("More ›"),
                 b -> pageBlocks())
-            .bounds(x + w4 + gap, y, w4, 18).build());
+            .bounds(x + w4 + gap, y, w4, 18).build(UiButton::new));
         // The classification is rules read over the whole registry, and rules
         // over a thousand blocks are wrong somewhere. This writes down every
         // verdict so it can be checked against the game rather than believed.
@@ -78,9 +78,9 @@ public class BlockBookScreen extends Screen {
             .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
                 "Write every block and what this build thinks it is for to "
                 + "mcassistant-blocklore.txt in your game folder")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 3 * (w4 + gap), y, inner - 3 * (w4 + gap), 18).build());
+            .bounds(x + 3 * (w4 + gap), y, inner - 3 * (w4 + gap), 18).build(UiButton::new));
     }
 
     /** The picked category's blocks, in registry order. */

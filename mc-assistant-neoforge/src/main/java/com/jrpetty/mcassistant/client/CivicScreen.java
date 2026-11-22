@@ -43,7 +43,12 @@ public class CivicScreen extends Screen {
     }
 
     private int rows() {
-        return (page.buttons().size() + COLS - 1) / COLS;
+        return (page.buttons().size() + cols() - 1) / cols();
+    }
+
+    /** [ui29] As many to a row as there are buttons (up to four), so one or two are wide enough for their words. */
+    private int cols() {
+        return Math.max(1, Math.min(COLS, page.buttons().size()));
     }
 
     @Override
@@ -62,19 +67,19 @@ public class CivicScreen extends Screen {
                 : Component.literal(p);
             lines.addAll(this.font.split(c, W - PAD * 2 - 6));
         }
-        int bw = (W - PAD * 2 - (COLS - 1) * 3) / COLS;
+        int cols = cols(), bw = Math.min(150, (W - PAD * 2 - (cols - 1) * 3) / cols);
         int y0 = top + high - PAD - 18 - 4 - rows() * ROW;
         for (int i = 0; i < page.buttons().size(); i++) {
             String[] b = page.buttons().get(i).split("\t", 3);
             if (b.length < 2) continue;
             String command = b[1];
-            int x = left + PAD + (i % COLS) * (bw + 3), y = y0 + (i / COLS) * ROW;
-            Button btn = Button.builder(Component.literal(Ui.clip(this.font, b[0], bw - 6)), x2 -> run(command)).bounds(x, y, bw, ROW - 2).build();
+            int x = left + PAD + (i % cols) * (bw + 3), y = y0 + (i / cols) * ROW;
+            Button btn = Button.builder(Component.literal(b[0]), x2 -> run(command)).bounds(x, y, bw, ROW - 2).build(UiButton::new);
             btn.setTooltip(Tooltip.create(Component.literal(b.length > 2 ? b[0] + " — " + b[2] : b[0])));
             this.addRenderableWidget(btn);
         }
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + W - PAD - 50, top + high - PAD - 18, 50, 18).build());
+            .bounds(left + W - PAD - 50, top + high - PAD - 18, 50, 18).build(UiButton::new));
     }
 
     private void run(String command) {
@@ -97,7 +102,7 @@ public class CivicScreen extends Screen {
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
         Ui.panel(g, left, top, W, high, 22);
-        g.drawString(this.font, Ui.clip(this.font, this.title.getString(), W - PAD * 2), left + PAD, top + 7, Ui.INK, false);
+        UiStyle.title(g, this.font, Ui.clip(this.font, this.title.getString(), W - PAD * 2 - 8), left + PAD, top + 7);   // [ui29] the house title
         int y = top + 26;
         int shown = visible();
         for (int i = scroll; i < Math.min(lines.size(), scroll + shown); i++) {

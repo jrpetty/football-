@@ -474,9 +474,19 @@ public class CityScreen extends Screen {
         rx = AdminClient.boardButton(g, font, rx, top + 6, mx, my);      // [admin] the admin panel, for operators
         rx = FavouritesClient.boardButton(g, font, rx, top + 6, mx, my);  // [ui] the folk you follow
         rx = FinanceClient.boardButton(g, font, rx, top + 6, mx, my);     // [purse20] your finances
-        rx = LifeClient.boardButtons(g, font, rx, top + 6, mx, my);        // [player15] you, and starting a business
+        boolean narrow = w < 560;                                          // [ui29] at GUI 3 on 720p the range ran off the screen
+        rx = LifeClient.boardButtons(g, font, rx, top + 6, mx, my, narrow);  // [player15] you, and starting a business
         rx -= UiStyle.S2;
-        for (int i = RANGE_NAMES.length - 1; i >= 0; i--) {
+        if (narrow) {                                                      // [ui29] one button that steps through the ranges
+            int bw = font.width("100d") + 12;
+            rx -= bw;
+            boolean over = in(mx, my, rx, top + 8, bw - 1, 14);
+            UiStyle.tile(g, rx, top + 8, bw - 1, 14, UiStyle.State.of(true, false, over));
+            g.drawString(font, RANGE_NAMES[range], rx + (bw - font.width(RANGE_NAMES[range])) / 2, top + 11, UiStyle.ACCENT, false);
+            if (over) tip("The charts show " + (RANGES[range] == 0 ? "every day of the books" : "the last " + RANGES[range] + " days")
+                + ". Click for the next range.", mx, my);
+        }
+        for (int i = RANGE_NAMES.length - 1; i >= 0 && !narrow; i--) {
             int bw = font.width(RANGE_NAMES[i]) + 8;
             rx -= bw;
             boolean on = i == range, over = in(mx, my, rx, top + 8, bw - 1, 14);
@@ -2217,6 +2227,11 @@ public class CityScreen extends Screen {
         int hy = housingMarket(g, hm.getCompound("market"), x, by + 11, cw, mx, my) + 2;
         // Every household.
         int[] cols = { 0, cw * 26 / 100, cw * 42 / 100, cw * 55 / 100, cw * 61 / 100, cw * 80 / 100 };
+        if (hy + 20 > y + ch - 10) {                                       // [ui29] no room for the table: say so, not draw it over the note
+            small(g, Ui.clip(font, hm.getList("rows", Tag.TAG_COMPOUND).size() + " households: a bigger window (or a smaller GUI scale) lists them",
+                (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+            return;
+        }
         for (int i = 0; i < HOME_HEADS.length; i++) {                   // [ui] each head kept to its column
             int room = (i + 1 < cols.length ? cols[i + 1] : cw) - cols[i] - 2;
             String head = cw < 520 && i == 4 ? "Put by" : HOME_HEADS[i];
@@ -3640,6 +3655,7 @@ public class CityScreen extends Screen {
                 for (int t = 0; t < tiers.size(); t++) {
                     List<CompoundTag> here = tiers.get(t);
                     int top = top0 + t * (nodeH + nodeGap);
+                    if (top + nodeH > by + bandH) break;                    // [ui29] a short window: the tiers that fit, not over the next band
                     if (t > 0) {
                         // The step up from the tier before: dark where the way is walked, faint where it is not yet.
                         boolean walked = here.stream().anyMatch(c -> !c.getString("state").equals("locked"));
@@ -4052,7 +4068,9 @@ public class CityScreen extends Screen {
         // Close, and the range buttons (where the header last drew them).
         if (in(mx, my, closeX, top + 6, font.width("Close") + 10, 18)) { UiStyle.click(); onClose(); return true; }
         int rx = rangeX;
-        for (int i = 0; i < RANGE_NAMES.length; i++) {
+        if (w < 560) {                                                     // [ui29] the narrow header's one range button
+            if (in(mx, my, rx, top + 8, font.width("100d") + 11, 14)) { UiStyle.click(); range = (range + 1) % RANGE_NAMES.length; return true; }
+        } else for (int i = 0; i < RANGE_NAMES.length; i++) {
             int bw = font.width(RANGE_NAMES[i]) + 8;
             if (in(mx, my, rx, top + 8, bw - 1, 14)) { UiStyle.click(); range = i; return true; }
             rx += bw;

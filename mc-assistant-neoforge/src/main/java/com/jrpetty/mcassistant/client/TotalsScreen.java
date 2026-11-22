@@ -44,12 +44,12 @@ public class TotalsScreen extends Screen {
         int y = top + H - PAD - 18;
         this.addRenderableWidget(Button.builder(Component.literal("Crew"),
                 b -> this.minecraft.setScreen(new CrewScreen()))
-            .bounds(left + PAD, y, w3, 18).build());
+            .bounds(left + PAD, y, w3, 18).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Map"),
                 b -> this.minecraft.setScreen(new MapScreen()))
-            .bounds(left + PAD + w3 + gap, y, w3, 18).build());
+            .bounds(left + PAD + w3 + gap, y, w3, 18).build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build());
+            .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build(UiButton::new));
     }
 
     @Override

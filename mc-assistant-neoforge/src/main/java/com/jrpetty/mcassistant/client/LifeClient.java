@@ -55,8 +55,13 @@ public final class LifeClient {
 
     /** The books' header buttons, right to left from {@code right}; returns the new right edge. */
     public static int boardButtons(GuiGraphics g, Font font, int right, int y, int mx, int my) {
-        right = one(g, font, "New village", right, y, mx, my, FOUND, "Start a village of your own, somewhere near: the founding screen.");   // [found23]
-        right = one(g, font, "Start a business", right, y, mx, my, START, "Open a business of your own: a kind, its premises, the charter.");
+        return boardButtons(g, font, right, y, mx, my, false);
+    }
+
+    /** [ui29] As above; {@code compact}, the short words (a narrow window, the GUI at 3 or 4), their tooltips saying it all. */
+    public static int boardButtons(GuiGraphics g, Font font, int right, int y, int mx, int my, boolean compact) {
+        right = one(g, font, compact ? "Found" : "New village", right, y, mx, my, FOUND, "Start a village of your own, somewhere near: the founding screen.");   // [found23]
+        right = one(g, font, compact ? "Business" : "Start a business", right, y, mx, my, START, "Open a business of your own: a kind, its premises, the charter.");
         return one(g, font, "You", right, y, mx, my, YOU, "Your life in town: your work, shop, home, standing, and what to do next.");
     }
 

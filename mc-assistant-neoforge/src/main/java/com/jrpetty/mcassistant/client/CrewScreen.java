@@ -82,7 +82,7 @@ public class CrewScreen extends Screen {
             .bounds(left + W - PAD - 44, top + 24, 44, 14)
             .tooltip(Tooltip.create(Component.literal(
                 "Sort the crew: by name, by trade, or problems first")))
-            .build());
+            .build(UiButton::new));
 
         // The book the crew builds out of: what every block in the game is
         // for, why you would place one, and when it starts to matter.
@@ -92,14 +92,14 @@ public class CrewScreen extends Screen {
             .tooltip(Tooltip.create(Component.literal(
                 "The block book: what every block does, why you'd build it, "
                 + "when it matters, and the recipe that makes it")))
-            .build());
+            .build(UiButton::new));
         // [screens13] The crew's map from above (MapScreen): it had no way in since its button gave way to Plots.
         this.addRenderableWidget(Button.builder(Component.literal("Map"),
                 b -> { if (this.minecraft != null) this.minecraft.setScreen(new MapScreen()); })
             .bounds(left + W - PAD - 140, top + 24, 44, 14)
             .tooltip(Tooltip.create(Component.literal(
                 "Every patch and every assistant on it, seen from above; drag out a new patch")))
-            .build());
+            .build(UiButton::new));
 
         // Rows are drawn by hand and clicked through mouseClicked — a stack of
         // vanilla buttons looked like a toolbar, not a list.
@@ -125,7 +125,7 @@ public class CrewScreen extends Screen {
             })
             .bounds(x + 3 * (w4 + gap), by, w4, h)
             .tooltip(Tooltip.create(Component.literal("Everything you can tell this one to do")))
-            .build());
+            .build(UiButton::new));
 
         // Patches you've set up once and can crew up later.
         by += h + gap;
@@ -139,15 +139,15 @@ public class CrewScreen extends Screen {
             .tooltip(Tooltip.create(Component.literal(
                 "The plot book: every piece of ground, its yield and condition, "
                 + "and who's working it — crew a plot with a click")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 3 * (w4 + gap), by, w4, h).build());
+            .bounds(x + 3 * (w4 + gap), by, w4, h).build(UiButton::new));
     }
 
     private void order(int x, int y, int w, int h, String label, int action, String tip) {
         this.addRenderableWidget(Button.builder(Component.literal(label), b -> {
             if (picked >= 0 && picked < crew.size()) OrdersScreen.sendOrder(crew.get(picked), action);
-        }).bounds(x, y, w, h).tooltip(Tooltip.create(Component.literal(tip))).build());
+        }).bounds(x, y, w, h).tooltip(Tooltip.create(Component.literal(tip))).build(UiButton::new));
     }
 
     @Override

@@ -108,28 +108,28 @@ public class PlotsScreen extends Screen {
             .bounds(x, y, w5, 18)
             .tooltip(Tooltip.create(Component.literal(
                 "Stake a new 25×25 plot where you stand — named for you, crewed from this menu")))
-            .build());
+            .build(UiButton::new));
         tradeBtn = this.addRenderableWidget(Button.builder(Component.literal("Trade ›"),
                 b -> { if (picked != null) send(5, -1, picked); })
             .bounds(x + (w5 + gap), y, w5, 18)
             .tooltip(Tooltip.create(Component.literal(
                 "What this ground is FOR. Cycle it and everyone on the plot retrains; "
                 + "workers joining bare ground keep their own trades instead")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Name ›"),
                 b -> { if (picked != null) send(4, -1, picked); })
             .bounds(x + 2 * (w5 + gap), y, w5, 18)
             .tooltip(Tooltip.create(Component.literal(
                 "Cycle the picked plot through the name pool — the crew's status lines follow")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Forget"),
                 b -> { if (picked != null) send(3, -1, picked); })
             .bounds(x + 3 * (w5 + gap), y, w5, 18)
             .tooltip(Tooltip.create(Component.literal(
                 "Strike the picked plot from the book — anyone working it keeps working")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 4 * (w5 + gap), y, inner - 4 * (w5 + gap), 18).build());
+            .bounds(x + 4 * (w5 + gap), y, inner - 4 * (w5 + gap), 18).build(UiButton::new));
 
         // Plot tools, tucked under the plot list: copy the picked ground as a
         // blueprint, stamp the copied one where you stand, and the ground's
@@ -141,19 +141,19 @@ public class PlotsScreen extends Screen {
             .bounds(x, my, mw, 16)
             .tooltip(Tooltip.create(Component.literal(
                 "Copy the picked plot as a blueprint — size, depth, trade, shift and chest layout")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Stamp"),
                 b -> send(7, -1, ""))
             .bounds(x + mw + 4, my, mw, 16)
             .tooltip(Tooltip.create(Component.literal(
                 "Stake the copied blueprint where you stand — sparks mark the outline and chest spots")))
-            .build());
+            .build(UiButton::new));
         shiftBtn = this.addRenderableWidget(Button.builder(Component.literal("Shift ›"),
                 b -> { if (picked != null) send(8, -1, picked); })
             .bounds(x + 2 * (mw + 4), my, PLOT_W - 2 * (mw + 4), 16)
             .tooltip(Tooltip.create(Component.literal(
                 "When this ground works — days, nights or both. Everyone assigned inherits it")))
-            .build());
+            .build(UiButton::new));
 
         // Crew tools, mirrored under the crew list: staff the picked plot
         // with everyone standing idle, and take back the last order given.
@@ -165,14 +165,14 @@ public class PlotsScreen extends Screen {
             .bounds(cx2, my, hw, 16)
             .tooltip(Tooltip.create(Component.literal(
                 "Every free hand nearby goes onto the picked plot in one click")))
-            .build());
+            .build(UiButton::new));
         this.addRenderableWidget(Button.builder(Component.literal("Undo"),
                 b -> send(10, -1, ""))
             .bounds(cx2 + hw + 4, my, cw2 - hw - 4, 16)
             .tooltip(Tooltip.create(Component.literal(
                 "Take back the last order — the bot returns to its previous plot and trade. "
                 + "Press again to swap back")))
-            .build());
+            .build(UiButton::new));
         updateTradeLabel();
     }
 
