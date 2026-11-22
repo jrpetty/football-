@@ -993,7 +993,11 @@ public final class MineWorks {
         double bestD = Double.MAX_VALUE;
         Task last = LAST.get(a.getUUID());
         for (Lvl l : plan) {
-            if (Math.abs(p.getY() - l.y()) > 2) continue;
+            // [econ32b] A level's tunnels within six blocks up or down, not two: a miner who followed a vein down into a cave
+            // three blocks under its drift found no tunnel of the works near it and was sent for the shaft's nearest step,
+            // a hundred blocks off through the rock ("Can't find my way to the pithead"). The nearest cell is still the
+            // nearest, up and down counted.
+            if (Math.abs(p.getY() - l.y()) > 6) continue;
             if ((w.rooms & (1 << l.id())) != 0) {
                 BlockPos r = roomMiddle(w, l);
                 if (Math.max(Math.abs(p.getX() - r.getX()), Math.abs(p.getZ() - r.getZ())) <= ROOM_HALF + 1) {

@@ -5,6 +5,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * [econ32b] Where the buildings the ages ask for go.
@@ -39,5 +42,31 @@ public final class AgeSites {
             }
         }
         return 0;
+    }
+
+    /**
+     * Looks in a row that found nothing but lots off the walked streets, by town and building. The town's own count
+     * (CityPlan.hungry) starts again at every lot found for anything: a busy Diamond Age town set out a library, a tavern
+     * and a cafe while its chapel, too big for every lot on its walked streets, waited a hundred looks for a turn at the
+     * lots up the hill. An age's building that has missed so many looks of its own takes a lot whose street is walked dry
+     * (steps cut into the bank, never across the water) as an island town does.
+     */
+    private static final Map<String, Integer> MISSES = new ConcurrentHashMap<>();
+
+    public static void resetForTests() {
+        MISSES.clear();
+    }
+
+    /** Has this age's building missed so many looks for its street that it may take a lot walked dry? */
+    static boolean hungry(UUID village, String project) {
+        return ASKED.contains(project) && MISSES.getOrDefault(village + "|" + project, 0) >= CityPlan.PATIENCE;
+    }
+
+    /** A look for this building is over (Villages.siteFor). */
+    static void looked(UUID village, String project, boolean found, boolean passedOver) {
+        if (!ASKED.contains(project)) return;
+        String k = village + "|" + project;
+        if (found) MISSES.remove(k);
+        else if (passedOver) MISSES.merge(k, 1, Integer::sum);
     }
 }

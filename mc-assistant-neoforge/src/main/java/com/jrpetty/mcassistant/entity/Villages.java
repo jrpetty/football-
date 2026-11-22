@@ -3111,7 +3111,8 @@ public final class Villages {
                 // [city9] Only where the street before its door is walked from the heart (CityPlan): never a lot over the
                 // water or up a cliff from the town, until a few looks have found nothing else (an island town).
                 // [fixes14] And never over the water, however hungry: a lot there waits for its street's crossing (CityCrossings).
-                if (!CityPlan.reaches(level, v, lot) && !(CityPlan.hungry(villageId) && CityPlan.reachesDry(level, v, lot))) { offWalk = true; SiteWhy.count("street not walked"); continue; }
+                // [econ32b] Or an age's building that has gone hungry on its own (AgeSites.hungry).
+                if (!CityPlan.reaches(level, v, lot) && !((CityPlan.hungry(villageId) || AgeSites.hungry(villageId, project)) && CityPlan.reachesDry(level, v, lot))) { offWalk = true; SiteWhy.count("street not walked"); continue; }
                 // The great buildings (the hall above all: no Iron Age without one) want the most
                 // ground of anything, and on a mountainside found none flat to six blocks across
                 // twenty: a town of fifty-eight sat in the Stone Age for want of one. Missed on
@@ -3139,6 +3140,7 @@ public final class Villages {
             }
             SiteWhy.end(villageId, project, site != null, places.size());     // [econ32b]
             CityPlan.looked(villageId, site != null, offWalk && !waiting);     // [city9]
+            AgeSites.looked(villageId, project, site != null, offWalk && !waiting);   // [econ32b] an age's building keeps its own count
             CityGrowth.looked(level, v, project, site != null, waiting);       // [city26] full: the next ring laid out
             if (site != null) {
                 for (long cell : best.cells()) taken.add(cell);

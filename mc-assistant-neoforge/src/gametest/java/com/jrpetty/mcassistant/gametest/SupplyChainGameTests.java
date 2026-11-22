@@ -829,6 +829,7 @@ public class SupplyChainGameTests {
     private static void ageLots(GameTestHelper helper, int x, String ground) {
         ServerLevel level = helper.getLevel();
         com.jrpetty.mcassistant.entity.SiteWhy.resetForTests();
+        com.jrpetty.mcassistant.entity.AgeSites.resetForTests();
         List<VillageFolkEntity> folk = MineSiteGameTests.town(level, x, 150, 12, StationTask.FARM);
         helper.assertTrue(!folk.isEmpty(), "the town");
         UUID v = folk.get(0).ownerId();

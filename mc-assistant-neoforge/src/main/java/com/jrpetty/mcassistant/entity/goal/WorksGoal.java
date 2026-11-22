@@ -165,7 +165,9 @@ public class WorksGoal extends Goal {
                 long began = CLIMBING.getOrDefault(a.getUUID(), level.getGameTime());
                 if (follow()) {
                     // At the end of its way up and still below (the way cut off, a step gone): after a while of trying, at the top.
-                    if (MineWorks.below(a) && level.getGameTime() - began > 600) putAtTheTop(level);
+                    // [econ32b] Whenever it ends there: a stuck walk hops on along the way whether or not the hop was made, and a
+                    // climb that "ended" short of the top left it below with no job, sent climbing again by the next look.
+                    if (MineWorks.below(a)) putAtTheTop(level);
                     if (!MineWorks.below(a)) CLIMBING.remove(a.getUUID());
                     finish(bye);
                 }
@@ -336,6 +338,10 @@ public class WorksGoal extends Goal {
                 if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
                 task = null;
                 com.jrpetty.mcassistant.entity.MineWhy.note(a, "no way to " + dest.toShortString() + " (" + (int) Math.sqrt(d) + " off)");   // [econ32b]
+                // [econ32b] On its way out, a long walk that got nowhere ends at the top, not where it stood below.
+                if (phase == Phase.OUT && a.level() instanceof ServerLevel sl) { CLIMBING.remove(a.getUUID()); putAtTheTop(sl); finish(bye); return false; }
+                // [econ32b] Down in the works on its way to a face it cannot reach: it climbs out, not left standing below.
+                if (phase != Phase.OUT && MineWorks.below(a)) { beginOut("Can't find my way to my face — out of the works."); return false; }
                 finish("Can't find my way to the pithead.");
             }
             return false;
