@@ -225,8 +225,8 @@
       "q": ["do folk start businesses", "competition between shops", "villager businesses", "will folk compete with my shop", "entrepreneurs"],
       "kw": ["competition", "entrepreneur", "firms", "rival"],
       "answer": "Folk open businesses of their own too, and compete with yours on price and name.",
-      "more": ["Folk open businesses of their own too, of the same kinds, when the town is short of something.", "They compete on price and name: a folk buying its needs goes to whichever seller is the better buy (price, the walk, the shop's name), including your shop.", "A folk whose business pays its way for weeks opens another: a branch of its trade or one beside it (the baker's café), up to four as its success carries it, never more than its fair share of the town's businesses. Each branch has a keeper of its own; a branch that loses money is shut. Its profile lists every business it owns."],
-      "related": ["biz_kinds", "biz_shop_stock", "money_market"],
+      "more": ["Folk open businesses of their own too, of the same kinds, when the town is short of something.", "They compete on price and name: a folk buying its needs goes to whichever seller is the better buy (price, the walk, the shop's name), including your shop.", "A folk whose business pays its way for weeks opens another: a branch of its trade or one beside it (the baker's café), up to four as its success carries it, never more than its fair share of the town's businesses. Each branch has a keeper of its own; a branch that loses money is shut. Its profile's Business tab lists every business it owns or works in, how each is doing, and what it means to open next."],
+      "related": ["biz_kinds", "biz_shop_stock", "money_market", "folk_profile"],
       "covers": []
     },
     {
