@@ -373,7 +373,7 @@ public class SupplyChainGameTests {
             smith.tradeXpForTests(StationTask.SMITH, 20000);
             Predicate<ItemStack> pick = s -> s.is(Items.IRON_PICKAXE);
             Kit.Expect ok = new Kit.Expect();
-            stores(level, id, x, new ItemStack(Items.IRON_INGOT, 48), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.STICK, 32),   // [growth24] past the rack's mark for an iron pick while the age saves (Picks.ironFor)
+            stores(level, id, x, new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.STICK, 32),   // [econ32] the age's iron in hand: no iron pick while it saves (Picks.ironFor)
                 new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW));
             List<String> made = new ArrayList<>();
             for (int i = 0; i < 6 && stock(level, id, pick) == 0; i++) made.add(String.valueOf(Crafts.smithForTests(level, v, smith)));
@@ -381,7 +381,7 @@ public class SupplyChainGameTests {
             Kit.log("sc2_06 no toolshop: the smith " + made + "; iron picks " + picks);
             ok.that(picks >= 1, "with no toolshop, the town's smith forges the iron pick: " + picks);
             // A toolshop of the town's own folk, iron picks on its shelf.
-            stores(level, id, x, new ItemStack(Items.IRON_INGOT, 48), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.STICK, 32),   // [growth24] past the rack's mark for an iron pick while the age saves (Picks.ironFor)
+            stores(level, id, x, new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.STICK, 32),   // [econ32] the age's iron in hand: no iron pick while it saves (Picks.ironFor)
                 new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW));
             int picksBefore = stock(level, id, pick);
             Business shop = Enterprise.foundForTests(level, v, "toolsmith", folk.get(1));
