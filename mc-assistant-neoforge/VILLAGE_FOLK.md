@@ -15373,3 +15373,45 @@ with its stock to another player (the shop the seller's no longer) and quoted fo
 written out and read back and the world opening's resets run, the firm and the keeper still there, a keeper missed at one
 payday kept and at two gone; bf07 a shop's goodwill once it sells, a player's firm in debt warned and spared in its first
 week and taken to court after it.
+
+## The supply chains run without stalling (econ-32)
+
+### Fuel for the smelters (SmelterFuel, SupplyLean)
+A smelter holding its ore and nothing it might burn was "stocked" to the couriers (the storehouse's runs and a carrier with
+no storehouse alike) and left to it; the fuel that went out with ore was eight coal and nothing else, whether or not the
+smelter would burn coal just then, and no logs ever went; the smelter scooped fuel only from the chests within its own reach.
+Now a smelter with ore and no fuel it may burn gets a run of fuel alone; what goes out is what it will burn (the stores' coal
+when the town is not putting coal by and the stores are over their floor, else the logs the builders can spare, and while
+the age waits on iron a few logs out of the builders' stock or the coal under the floor); and a smelter at a cold furnace
+with ore in hand fetches that fuel from the stores itself. While the age asks for iron and there is iron ore to run, the
+smelters are kept at their furnaces (not called to the town's works or lent out), as the miners are kept at the mine.
+The woodcutters' share leans up while the stores are short of logs (a quarter more; half again with the fuel low as well;
+twice with no logs at all and the fuel low), and a smelter more is wanted with sixty-four iron ore waiting.
+
+### Tools between towns (ToolTrade)
+Tools are a ware of their own in the towns' trade books. A town is short of tools by what its rack lacks of the spares its
+miners, woodcutters and farmers wear through, where it cannot make them in iron itself just now, and by every hand without
+the tool of its trade. A town keeps its rack's spares; past them its good iron and diamond tools are for sale, and its
+smith, with iron well past what it keeps and its age asking none, makes up to three iron picks and three axes more than the
+rack wants for the caravans. The envoys deal in them like any other ware; a caravan carries only good ones (half their wear
+left or more, never enchanted), as they are, maker's mark and all.
+
+### Iron picks for the diamonds (DeepPicks)
+A diamond comes only to an iron pick, and the works send only a miner with one to the deep level. The rack counted its
+spares by the pick, whatever the metal, so a rack of stone picks was full and no iron one was made, and a miner changed its
+pick only when two thirds worn. While the age asks for diamonds the smith now keeps an iron pick on the rack for every third
+miner (two at least) out of the iron past the bars it keeps, and a miner setting out with no iron pick takes one off the rack
+and hands its stone one in.
+
+### A new mine when the old one is worked out (MineSites)
+Past the eighth ring, or where no face of the next ring is clear of the town, a level worked out to its edge was the last of
+its ore. Now, when every level of the iron (or of the deep level's diamonds) is worked out and the ground can be widened no
+more, the town wants a new mine; once nobody is down the old works it opens one on the best rock a hundred-odd blocks out,
+clear of its plan, its neighbours and the old mine's ground (by a ring of faces). The old ground stays set aside for good, its
+headframe and railings standing; the new ground is set aside round the new site, the miners walk out to its pithead, and the
+works are begun afresh there (shaft, headframe, railings, levels). Six mines a town at most. The mine's report says how many
+old mines the town has left and whether it wants a new one.
+
+### Room in the stores in good time (StoreRoom)
+Stores with under a tenth of their places free (or under a chest's worth) get another chest set down at once, at the town's
+works' round, instead of only when a load will not go in (then the load went on the ground at the heart, or home again).
