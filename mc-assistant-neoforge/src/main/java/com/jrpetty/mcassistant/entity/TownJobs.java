@@ -81,6 +81,14 @@ public final class TownJobs {
     /** [life28] The town's works that last asked for a hand and found none to spare, and when (the census, the tests). */
     private static final Map<String, Long> UNSTAFFED = new ConcurrentHashMap<>();
 
+    /** [life28] Could the town's works call this folk now (fit, on no other works, not a miner the age keeps at its mine)? */
+    static boolean callable(ServerLevel level, VillageFolkEntity f) {
+        UUID id = f.ownerId();
+        if (id == null || !fit(f, "") || busy(f) || PostStints.busy(f)) return false;
+        if (f.stationTask() == AssistantEntity.StationTask.NONE && f.workZone() == null) return false;
+        return !(f.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, id));
+    }
+
     /** [life28] The works of this town waiting on a hand just now (asked within the last ten seconds and none to spare). */
     public static java.util.List<String> unstaffed(UUID village, long now) {
         java.util.List<String> out = new java.util.ArrayList<>();

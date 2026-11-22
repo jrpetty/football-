@@ -93,6 +93,7 @@ public final class Busywork {
 
     /** [life28] A hand with nothing at all to do just now: at a pastime, or stood idle a while with its day free (TownJobs). */
     public static boolean spare(VillageFolkEntity f) {
+        if (TownJobs.busy(f)) return false;                            // on the town's work already
         Doing d = DOING.get(f.getUUID());
         if (d != null) return true;                                    // (seeing to its ground between the real work too)
         Integer since = IDLE_SINCE.get(f.getUUID());
