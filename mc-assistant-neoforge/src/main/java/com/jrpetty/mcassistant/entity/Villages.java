@@ -1058,6 +1058,7 @@ public final class Villages {
         // reliably from a partner, more miners where stone is promised to one; back at once if the deliveries stop.
         t *= TradeDeals.lean(villageId, slot.trade());
         t *= MarketLean.lean(villageId, slot.trade());     // [market] production follows prices: dear goods want hands
+        t = t * SupplyLean.lean(villageId, slot.trade()) + SupplyLean.extra(villageId, slot.trade());   // [econ32] the supply chains' shortfalls
         // [fleet] A town with a fishing fleet wants a fisher for every one of its boats (Fleet).
         if (slot.trade() == AssistantEntity.StationTask.FISH) t = Math.max(t, Fleet.handsWanted(villageId));
         // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
@@ -1240,6 +1241,7 @@ public final class Villages {
         int stoneMark = Math.max(384, com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk));
         cut.put(AssistantEntity.StationTask.MINE, deepShort || TownWonders.underWay(villageId) ? 1.0 : stone > 4 * stoneMark ? 0.6 : 1.0);   // [culture-wonders] the wonder's stone
         GLUT.put(villageId, cut);
+        SupplyLean.weigh(level, villageId);                                // [econ32] fuel and timber lean the shares
     }
 
     /** The cut a trade's share takes for a glut (Villages.weighGluts). */
