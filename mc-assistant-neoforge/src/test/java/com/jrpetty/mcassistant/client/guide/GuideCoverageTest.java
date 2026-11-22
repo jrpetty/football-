@@ -202,6 +202,41 @@ class GuideCoverageTest {
         assertTrue(bad.isEmpty(), "answers that name a command: " + bad);
     }
 
+    /** The words of four letters or more in a text, lower case. */
+    private static Set<String> words(String text) {
+        Set<String> out = new TreeSet<>();
+        Matcher m = Pattern.compile("[a-z0-9']+").matcher(text.toLowerCase(java.util.Locale.ROOT));
+        while (m.find()) if (m.group().length() >= 4) out.add(m.group());
+        return out;
+    }
+
+    /** The most a short answer may run to: a sentence or two. */
+    static final int SHORT_MOST = 220;
+
+    @Test
+    @DisplayName("Every short answer is a sentence or two, and never repeats a step")
+    void conciseAnswers() {
+        List<String> bad = new ArrayList<>();
+        Pattern end = Pattern.compile("[.!?](\\s+[A-Z\\[]|$)");
+        for (GuideEntry e : book().entries()) {
+            String a = e.answer();
+            if (a.length() > SHORT_MOST) bad.add(e.id() + ": " + a.length() + " characters");
+            Matcher m = end.matcher(a);
+            int sentences = 0;
+            while (m.find()) sentences++;
+            if (sentences > 2) bad.add(e.id() + ": " + sentences + " sentences");
+            Set<String> aw = words(a);
+            for (String step : e.steps()) {
+                Set<String> sw = words(step);
+                int both = 0;
+                for (String w : sw) if (aw.contains(w)) both++;
+                if (sw.size() >= 4 && both * 10 >= sw.size() * 6) bad.add(e.id() + ": the short answer repeats the step \u201c" + step + "\u201d");
+                if (a.contains(step)) bad.add(e.id() + ": the short answer holds the step \u201c" + step + "\u201d");
+            }
+        }
+        assertTrue(bad.isEmpty(), "short answers too long or repeating their steps: " + bad);
+    }
+
     @Test
     @DisplayName("The book is big enough")
     void bigEnough() {

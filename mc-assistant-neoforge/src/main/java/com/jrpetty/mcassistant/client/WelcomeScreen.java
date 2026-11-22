@@ -36,9 +36,9 @@ public class WelcomeScreen extends Screen {
         step("Your life in town", "life", "Your page in the town (the U key): work, a home, citizenship.", left + PAD + bw + 6, y + 22, bw);
         this.addRenderableWidget(UiButton.primary(Button.builder(Component.literal("Off you go"), b -> this.onClose())
             .bounds(left + W - PAD - 100, top + h - PAD - 20, 100, 20)));
-        Button guide = Button.builder(Component.literal("Guide"),   // [guide31] what happens next, and everything else, asked
+        Button guide = Button.builder(Component.literal(com.jrpetty.mcassistant.client.guide.GuideClient.label()),   // [guide31] what happens next, and everything else, asked
             b -> com.jrpetty.mcassistant.client.guide.GuideClient.openAt(this, "found_after")).bounds(left + PAD, top + h - PAD - 20, 70, 20).build(UiButton::new);
-        guide.setTooltip(Tooltip.create(Component.literal("The Guide: ask anything about your new town and the folk.")));
+        guide.setTooltip(Tooltip.create(Component.literal(com.jrpetty.mcassistant.client.guide.GuideClient.welcomeTip())));
         this.addRenderableWidget(guide);
     }
 
