@@ -1194,10 +1194,13 @@ public final class Market {
             if (!TownWork.take(level, v, s -> s.is(it), n)) continue;
             int paid = Purchases.charge(level, f, v.id(), each * n, false, one, n);
             if (seller.firm() != null && Enterprise.held(seller.firm(), Stockroom.key(one)) >= n) {
+                Businesses.buyer(f.displayNameCap(), false);                // [biz30] who bought, for the firm's data
                 Sellers.sold(level, v.id(), seller.firm(), one, n, Math.round(each * n * 100));   // [econ-1e] the firm's sale, into its till
             } else {
+                Businesses.buyer(f.displayNameCap(), false);                // [biz30] the counter's buyer too
                 Stockroom.sold(level, v.id(), Stockroom.Seller.MARKET, one, n, Math.max(0, paid));
             }
+            Businesses.buyer(null, false);
             PriceIndex.bought(v.id(), one, n);
             ItemStack bought = new ItemStack(it, n);
             ItemStack left = f.insertItem(bought);

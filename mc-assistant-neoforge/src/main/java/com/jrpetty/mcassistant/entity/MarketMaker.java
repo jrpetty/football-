@@ -843,6 +843,8 @@ public final class MarketMaker {
                 all.units += n;
                 all.made += n;
                 all.revenue += price;
+                Businesses.buyer("the town's market", false);              // [biz30] a sale to the market, for the firm's data
+                Businesses.trade(level, b, d);
                 Businesses.dirty();
             }
         }

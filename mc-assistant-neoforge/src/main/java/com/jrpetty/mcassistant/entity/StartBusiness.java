@@ -293,7 +293,13 @@ public final class StartBusiness implements PlayerLife.Page {
             for (String line : BuildDesk.quoteLines(q)) page.text(line, 4);
             if (!q.ok) page.text("✘ The builders won't build there: " + q.why + ". Choose another plot.", 3);
         }
+        if (prem.equals("town")) {                                          // [biz30] the premises' cost, said before it is owed
+            long stall = Math.round(Enterprise.STALL_PENCE * MarketMaker.priceLevel(v.id()) / 100.0);
+            if (t.stall()) page.row(null, "Its stall, bought of the town", "Out of the firm's till: it owes the town for it till you put coin in", PlayerLife.coins(stall));
+            else page.row(null, "Its room's rent", "Out of the firm's till, each morning", "~" + PlayerLife.coins(Math.max(1, Math.round(60.0 * Wealth.standing(v.id()) / 10 * 7 / 100))) + " a week");
+        }
         page.row(null, "To pay now", "You have " + PlayerLife.coins(have) + (q == null ? "" : "; " + PlayerLife.coins(fee + q.total) + " all told, as it goes up"), PlayerLife.coins(total));   // [biz25] not "all told"
+        if (!t.resells() || prem.equals("town")) page.text("Its till starts empty: put coin in from Your businesses (Money) for its stock and its hands' wages.", 4);   // [biz30]
         String standing = mayCharter(level, v, p);
         if (!standing.isEmpty()) {
             page.text(standing, 3);

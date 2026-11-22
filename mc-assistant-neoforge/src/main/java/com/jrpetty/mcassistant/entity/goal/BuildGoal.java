@@ -1062,6 +1062,11 @@ public class BuildGoal extends Goal {
             // walk off the end of its plan and report "Done" all the same.
             if (building != null && placed > 0) assistant.noteBuilt(building);
             else if (building != null) assistant.noteBuildAbandoned(building);   // not one block went down: not this ground
+            // [biz30] A town's building just finished: looked over inside as the mend looks (grass, holes, lumps, a table in a wall).
+            if (building != null && placed > 0 && ownAnchor != null && assistant.isSettler()
+                    && assistant.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                com.jrpetty.mcassistant.entity.BuildingMend.afterBuild(sl, assistant.ownerId(), building, ownAnchor, facing);
+            }
             finish(placed > 0 ? "Done — placed " + placed + " parts."
                 : "Could not get at any of it — I'll try again.");
             return;
@@ -1318,6 +1323,9 @@ public class BuildGoal extends Goal {
                 || st.getBlock() instanceof net.minecraft.world.level.block.BedBlock) return false;
         if (com.jrpetty.mcassistant.entity.ParkGround.digging(p)) return false;
         if (com.jrpetty.mcassistant.entity.TownBlocks.fitting(st)) return false;
+        // [biz30] A workstation standing where a wall's, a floor's or a roof's block goes (the square's work table, and a
+        // fountain raised round it on the square of Ironmouth): no building block, however solid. Taken up, as a fence is.
+        if (p.part() == Part.BLOCK && com.jrpetty.mcassistant.entity.BuildingAudit.fixture(st)) return true;
         return com.jrpetty.mcassistant.entity.Restore.judge(st, p) == com.jrpetty.mcassistant.entity.Restore.Kind.WRONG;
     }
 

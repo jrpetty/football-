@@ -95,7 +95,7 @@ public class RecordScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
-        Ui.panel(g, left, top, W, H, 30);
+        Ui.panel(g, left, top, W, H, 50);   // [biz30] the header band holds all four of its lines (it was 30: the wages and the quirk ran over the rule)
 
         int x = left + PAD;
         int inner = W - PAD * 2;
@@ -149,8 +149,8 @@ public class RecordScreen extends Screen {
         int busiest = Math.max(1, info.busiest());
 
         if (!info.hasRecord()) {
-            g.drawString(this.font, "Nothing on the books yet — give it a job.",
-                x, y + 2, Ui.MUTED, false);
+            g.drawString(this.font, "Nothing on the books yet —", x, y + 2, Ui.MUTED, false);   // [biz30] two lines: one ran into the ladder's column
+            g.drawString(this.font, "give it a job.", x, y + 13, Ui.MUTED, false);
         } else {
             java.util.List<AssistantEntity.Deed> done = new java.util.ArrayList<>();
             for (AssistantEntity.Deed d : AssistantEntity.Deed.values()) {

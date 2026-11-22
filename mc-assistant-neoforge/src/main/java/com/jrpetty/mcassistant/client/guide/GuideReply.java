@@ -32,9 +32,9 @@ public final class GuideReply {
             if (e.id().equals("found_how") && f.ownTown()) return "You have a town of your own already; you may found another if the server allows.";
             return STANDING.contains(e.id()) ? "You're out in the wild just now: walk into a town and this applies there." : "";
         }
-        if (e.id().equals("biz_open_shop") && f.shop()) return "You already keep a shop in " + f.town() + ": its screen opens from its counter (or U → Your shop).";
+        if (e.id().equals("biz_open_shop") && f.shop()) return "You keep a shop in " + f.town() + " already (its screen opens from its counter, or U → Your shop). Want another? Set a new counter in another room of yours: each shop has its own counter, licence and keeper.";   // [biz30]
         if (e.id().equals("biz_start") && f.firms() > 0) {
-            return "You run " + (f.firms() == 1 ? "a business" : f.firms() + " businesses") + " in " + f.town() + " already: U → Your businesses.";
+            return "You run " + (f.firms() == 1 ? "a business" : f.firms() + " businesses") + " in " + f.town() + " already (U → Your businesses). You may start as many more as you like: each its own charter fee, premises and hands.";   // [biz30]
         }
         if (e.id().equals("civic_leader") && f.leader()) return "You lead " + f.town() + ": the Leader's page is yours.";
         if (STANDING.contains(e.id()) && !f.title().isEmpty()) {

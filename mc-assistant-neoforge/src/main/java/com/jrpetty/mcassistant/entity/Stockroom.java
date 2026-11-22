@@ -289,6 +289,15 @@ public final class Stockroom {
         };
     }
 
+    /** [biz30] Tests: one of a ware, and what counts as it. */
+    public static ItemStack sampleForTests(String key) {
+        return sampleOf(key);
+    }
+
+    public static Predicate<ItemStack> matcherForTests(String key) {
+        return matcher(key);
+    }
+
     /** What counts as a ware, from its name in the books. */
     static Predicate<ItemStack> matcher(String key) {
         if (key.startsWith("drink/")) {

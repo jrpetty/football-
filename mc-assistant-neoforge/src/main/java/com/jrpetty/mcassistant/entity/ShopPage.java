@@ -84,8 +84,15 @@ public final class ShopPage implements PlayerLife.Page {
         if (c.tab.isEmpty()) c.tab = s.setUp ? "shop" : "setup";
         String state = PlayerShops.stateWords(level, s);
         LifePage page = new LifePage("shop", s.name, ShopNeeds.Kind.of(s.kind).label + " in " + Villages.name(s.village) + " — " + state, p.registryAccess());
+        // [biz30] A player's several shops here: one button each, and another shop to be opened any time.
+        List<PlayerShops.Shop> all = PlayerShops.ofAll(s.village, p.getUUID());
+        if (all.size() > 1) {
+            LifePage.Row r = page.buttons();
+            for (PlayerShops.Shop o : all) r.button((o == s ? "✔ " : "") + o.name, "pickshop", LifePage.args("key", o.key()));
+        }
         page.tab("shop", "Shop", c.tab.equals("shop")).tab("setup", "Setup", c.tab.equals("setup")).tab("stock", "Stock & prices", c.tab.equals("stock"))
             .tab("books", "Books", c.tab.equals("books")).tab("keeper", "Keeper", c.tab.equals("keeper"));
+        if (s.setUp && (c.tab.equals("shop") || c.tab.equals("books"))) page.buttons().button("Its data: sales, costs, charts", "data", null);   // [biz30]
         switch (c.tab) {
             case "setup" -> setup(level, p, s, page);
             case "stock" -> stock(level, s, page);
@@ -321,9 +328,19 @@ public final class ShopPage implements PlayerLife.Page {
         if (action.equals("getbuild")) { PlayerLife.open(p, "start", LifePage.args("kind", "shop", "prem", "build", "step", 2)); return "#open:"; }
         if (action.equals("market")) { PropertyOffice.openOn(p, "market", null, "buy"); return "#open:"; }
         if (action.equals("start") && args.contains("kind")) { PlayerLife.open(p, "start", args); return "#open:"; }
+        if (action.equals("pickshop")) {                                     // [biz30] one of its several
+            Villages.Village here = PlayerLife.here(p);
+            PlayerShops.Shop o = here == null ? null : PlayerShops.byKey(here.id(), args.getString("key"));
+            if (o == null || !o.owner.equals(p.getUUID())) return "!No such shop of yours.";
+            PlayerShops.choose(p.getUUID(), o);
+            c.tab = o.setUp ? "shop" : "setup";
+            return "";
+        }
+        if (action.equals("another")) { PlayerLife.open(p, "start", LifePage.args("kind", "shop")); return "#open:"; }   // [biz30]
         PlayerShops.Shop s = PlayerShops.mine(p);
         if (s == null) return "!You keep no shop.";
         if (action.startsWith("tab:")) { c.tab = action.substring(4); return ""; }
+        if (action.equals("data")) { BizData.send(p, s.village, Businesses.shopBook(level, s), 28); return "#open:"; }   // [biz30] its dashboard
         CompoundTag f = args.getCompound("f");
         switch (action) {
             case "recheck" -> {

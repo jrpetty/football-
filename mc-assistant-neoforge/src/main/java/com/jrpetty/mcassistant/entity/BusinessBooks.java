@@ -376,6 +376,9 @@ public final class BusinessBooks {
             .executes(c -> listCmd(c))
             .then(Commands.literal("books").then(Commands.argument("id", StringArgumentType.string()).executes(c -> booksCmd(c, false))))
             .then(Commands.literal("text").then(Commands.argument("id", StringArgumentType.string()).executes(c -> booksCmd(c, true))))
+            // [biz30] a business's sales and costs dashboard (its owner's, an operator's; the public summary to others), or your first
+            .then(Commands.literal("data").executes(c -> dataCmd(c, ""))
+                .then(Commands.argument("id", StringArgumentType.string()).executes(c -> dataCmd(c, StringArgumentType.getString(c, "id")))))
             .then(Commands.literal("audit").requires(s -> s.hasPermission(2)).executes(BusinessBooks::auditCmd))
             .then(Commands.literal("buy").then(Commands.argument("id", StringArgumentType.string()).executes(c -> deal(c, "buy", 0))))
             .then(Commands.literal("invest").then(Commands.argument("id", StringArgumentType.string())
@@ -392,6 +395,16 @@ public final class BusinessBooks {
                 c.getSource().sendSuccess(() -> Component.literal("The businesses of " + Villages.name(v.id()) + " had their morning."), true);
                 return 1;
             }));
+    }
+
+    /** [biz30] The dashboard opened for the player who asked. */
+    private static int dataCmd(CommandContext<CommandSourceStack> c, String id) {
+        if (!(c.getSource().getEntity() instanceof ServerPlayer p)) {
+            c.getSource().sendFailure(Component.literal("Only a player can be shown a business's data."));
+            return 0;
+        }
+        BizData.ask(p, id, 28);
+        return 1;
     }
 
     @Nullable

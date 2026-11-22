@@ -99,10 +99,15 @@ public final class TownLife {
                 // Out of the village's stores, all of it (and none of it when they can't pay).
                 chimney(level, b, v, false);
                 addressSign(level, id, v.centre(), b, v, false);
+                BizFronts.round(level, id, v.centre(), b, v);           // [biz30] a business's name where the door's sign had no wall
+                BizFronts.display(level, id, b);                       // [biz30] its trade's wares out on its casks
+                BizFronts.frontage(level, id, b, v, false);            // [biz30] its trade's things and colours at its front
                 if (b.structure().equals("house")) washingLine(level, b, v, false);
                 if (b.structure().equals("tavern")) Tavern.board(level, v, b, false);
             }
         }
+        BizFronts.tick(level, v);                   // [biz30] a name board waiting on its hand
+        BizData.tick(level, v);                     // [biz30] open hours and kept hours onto the businesses' books
         HouseSigns.round(level, v);                 // [paths] the signs of homes whose household changed, first
         // A street corner.
         if (all.size() >= 2) {
@@ -147,6 +152,9 @@ public final class TownLife {
         for (Ledger.Building b : all) {
             chimney(level, b, null, true);
             addressSign(level, village, heart, b, null, true);
+            BizFronts.board(level, village, heart, b, null, true);   // [biz30]
+            BizFronts.display(level, village, b);                     // [biz30]
+            BizFronts.frontage(level, village, b, null, true);         // [biz30]
             if (b.structure().equals("house")) washingLine(level, b, null, true);
             if (b.structure().equals("cafe")) Cafe.setOut(level, village, b, Cafe.menuGoods(level, village));
             if (b.structure().equals("tavern")) Tavern.board(level, b);

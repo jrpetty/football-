@@ -405,6 +405,9 @@ public final class Enterprise {
             Bench.Plan plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), batch, hand));   // [econ-1d] a paying firm: the keeps eased
             if (!plan.ok() && batch > 1) plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, hand));
             if (!plan.ok()) {
+                // [biz30] A ware no bench makes (a fish stall's catch, a tavern's cider, an apothecary's draughts): bought in at the
+                // market each morning as a shop buys its stock, or its shelf never held a thing.
+                if ("a way to make it".equals(plan.shortOf)) { Accounts.sub(r, "buyIn").putInt(key, 1); Accounts.dirty(); }
                 r.putString("short", Stockroom.nameOf(key) + ": short of " + plan.shortOf);
                 InputWants.want(v.id(), plan.missing, Math.max(1, plan.missingCount) * batch);   // [supply] the word to its producers
                 continue;
@@ -423,9 +426,11 @@ public final class Enterprise {
     /** A shop that buys in to sell on: what its shelf is short of, bought at the market (on its credit if its till is short). */
     static void restock(ServerLevel level, UUID village, Business b, CompoundTag r) {
         BusinessType t = kindOf(village, b);
-        if (t == null || !t.resells() || !MarketMaker.live(village)) return;
+        CompoundTag buyIn = r.getCompound("buyIn");                         // [biz30] a maker's wares no bench makes
+        if (t == null || !t.resells() && buyIn.isEmpty() || !MarketMaker.live(village)) return;
         CompoundTag tg = r.getCompound("targets");
         for (String key : tg.getAllKeys()) {
+            if (!t.resells() && !buyIn.contains(key)) continue;
             long short_ = tg.getInt(key) - held(b, key);
             if (short_ <= 0) continue;
             ItemStack one = Stockroom.sampleOf(key);
@@ -800,7 +805,10 @@ public final class Enterprise {
         if (f.isBaby() || !f.isAlive() || f.isHired() || f.isShowcase()) return "not one who could";
         VillageFolkEntity elder = Orders.elderOf(village);
         if (elder == f) return "the elder has the town to run";
-        if (ownsAny(village, f.getUUID())) return "already has a business";
+        if (ownsAny(village, f.getUUID())) {                                // [biz30] a second, a third, as its success carries it (FirmBranches)
+            String why = f.level() instanceof ServerLevel sl ? FirmBranches.whyNot(sl, village, f) : "already has a business";
+            if (why != null) return why;
+        }
         // [econ-1c] The skill as the town reckons it; without it, a skilled hand to take on.
         if (!skilled(village, f, t.work()) && skilledHand(village, t, f) == null)
             return "has not the skill (level " + f.tradeLevel(t.work()) + " at " + t.work().label + ") and nobody free who has";
@@ -870,6 +878,8 @@ public final class Enterprise {
             restock(level, id, b, r);                     // [econ-1c] a shop's stock bought in at the market
             signs(level, v, b, r);
         }
+        FirmBranches.weekly(id, day);                                       // [biz30] its good weeks tallied
+        FirmBranches.closeLosers(level, id, day);                           // [biz30] an owner's losing branch shut
         CompoundTag d = data(id);
         if (d.contains("intent", Tag.TAG_COMPOUND)) {
             CompoundTag in = d.getCompound("intent");
@@ -980,6 +990,9 @@ public final class Enterprise {
     public static Business found(ServerLevel level, Villages.Village v, BusinessType t, @Nullable VillageFolkEntity founder,
                                  @Nullable net.minecraft.server.level.ServerPlayer player, long day, @Nullable Opportunity o) {
         UUID id = v.id();
+        // [biz30] An owner opening another: it keeps to its first, and a hand of the branch's own keeps this one.
+        int ownedBefore = founder == null ? 0 : FirmBranches.owned(id, founder.getUUID()).size();
+        boolean branch = ownedBefore > 0;
         double inputs = o != null ? o.inputCost() : makings(level, id, t, Stockroom.sampleOf(t.wares().get(0)));
         long startup = startup(id, t, inputs, founder == null ? null : founder.getUUID(), o != null ? o.gap() * 0.5 / 7 : 1);
         // [econ-1c] A founder without the skill takes on one who has it, and puts up its first days' wages.
@@ -987,7 +1000,7 @@ public final class Enterprise {
         if (founder != null && !skilled(id, founder, t.work()) && skilledHand == null) return null;
         if (skilledHand != null) startup += handStake(id, t);
         // The founder to its work: already at it, or taken up (ground for the trade found), or not at all.
-        if (founder != null && founder.stationTask() != t.work() && !founder.takeUpTrade(t.work())) {
+        if (founder != null && !branch && founder.stationTask() != t.work() && !founder.takeUpTrade(t.work())) {
             founder.brain("could find no ground for a " + t.noun() + ", and let the idea go");
             return null;
         }
@@ -996,10 +1009,10 @@ public final class Enterprise {
         d.putInt("seq", seq);
         String fid = "ent-" + seq;
         String first = founder != null ? firstName(founder.displayNameCap()) : player != null ? player.getGameProfile().getName() : "The Town";
-        Business b = new Business(fid, Business.Type.ENTERPRISE, t.nameFor(first));
+        Business b = new Business(fid, Business.Type.ENTERPRISE, FirmBranches.nameFor(id, t.nameFor(first)));   // [biz30] "No. 2" for a second of the name
         b.opened = day;
         b.markup = 0.30;
-        b.at = founder != null && founder.stationPos() != null ? founder.stationPos() : v.centre();
+        b.at = founder != null && !branch && founder.stationPos() != null ? founder.stationPos() : v.centre();
         Businesses.town(id).biz.put(fid, b);
         CompoundTag r = new CompoundTag();
         r.putString("type", t.key());
@@ -1090,7 +1103,13 @@ public final class Enterprise {
         d.putLong("last", day);
         Accounts.dirty();
         Businesses.dirty();
-        if (founder != null) {
+        if (founder != null && branch) {                                     // [biz30] its owner stays at its first; a keeper for this
+            r.putBoolean("branch", true);
+            founder.brain("opened " + b.name + ", another " + t.noun() + " of its own");
+            founder.persona().remember(day, "I opened " + b.name + ", my business number " + (ownedBefore + 1), 4);
+            FolkTalk.speak(founder, FirmBranches.opened(b, t, ownedBefore + 1, t.stall()));
+            if (skilledHand == null) hire(level, v, b, r, t);
+        } else if (founder != null) {
             addStaff(id, b, r, founder);
             founder.brain("opened " + b.name + ", its own " + t.noun());
             founder.persona().remember(day, "I opened " + b.name, 4);
@@ -1164,6 +1183,7 @@ public final class Enterprise {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || !f.isAlive() || f.isHired() || f.isShowcase()) continue;
             if (STAFF.containsKey(f.getUUID()) || b.ownedBy(f.getUUID()) || ownsAny(id, f.getUUID())) continue;
             if (TownJobs.busy(f)) continue;
+            if (Hospitality.keepsTrade(f)) continue;                        // [biz30] not the barkeep from behind its bar (live Ravenscar: a new bakery took the tavern's only barkeep)
             StationTask now = f.stationTask();
             double s;
             if (now == t.work()) s = 100;
@@ -1747,17 +1767,23 @@ public final class Enterprise {
             if (one.isEmpty()) continue;
             if (MarketMaker.live(village)) {
                 long before = b.till;
-                MarketMaker.buy(level, village, Accounts.Account.firm(b), one, n, "a bankrupt's stock");
+                MarketMaker.buy(level, village, Accounts.Account.firm(b), one, n, "a bankrupt's stock");   // its takings booked there
                 got += b.till - before;
+                Business.Day d = b.today(day);
+                d.cogs += cost;
+                b.allTime.cogs += cost;
             } else {
                 Businesses.storesIn(village, one, n, cost);
                 long p = MarketMaker.outOrTreasury(village, cost);
                 b.till += p;
                 got += p;
+                // [biz30] the takings booked with their cost (the till had the coin and the books only the cost: they parted)
+                Business.Day d = b.today(day);
+                d.cogs += cost;
+                b.allTime.cogs += cost;
+                d.revenue += p;
+                b.allTime.revenue += p;
             }
-            Business.Day d = b.today(day);
-            d.cogs += cost;
-            b.allTime.cogs += cost;
         }
         b.stock.clear();
         Businesses.dirty();

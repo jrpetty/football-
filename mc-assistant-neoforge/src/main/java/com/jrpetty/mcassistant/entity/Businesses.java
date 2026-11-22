@@ -274,6 +274,11 @@ public final class Businesses {
     // ------------------------------------------------------------------ which businesses there are
 
     /** Today's day number. */
+    /** [biz30] Tests: the books' day now. */
+    public static long todayForTests(ServerLevel level) {
+        return today(level);
+    }
+
     static long today(ServerLevel level) {
         return level.getDayTime() / 24000L;
     }
@@ -688,6 +693,103 @@ public final class Businesses {
         all.units += n;
         all.revenue += p;
         all.cogs += cogs;
+        trade(level, b, d);                                              // [biz30] who bought, and when
+        dirty();
+    }
+
+    // ------------------------------------------------------------------ [biz30] its trade, for its data
+
+    @Nullable private static String nextWho;
+    private static boolean nextPlayer;
+
+    /** [biz30] Who is buying in the sale about to be booked (the folk or player at the counter); taken by the next sale. */
+    public static void buyer(@Nullable String who, boolean player) {
+        nextWho = who;
+        nextPlayer = player;
+    }
+
+    /** [biz30] A sale's buyer and hour on today's book and the all-time book; the buyer set for it let go. */
+    static void trade(ServerLevel level, Business b, Day d) {
+        long trans = d.trans, cust = d.customers, pl = d.players, rep = d.repeats;
+        b.buyer(d, nextWho, nextPlayer);
+        b.allTime.trans += d.trans - trans;
+        b.allTime.customers += d.customers - cust;
+        b.allTime.players += d.players - pl;
+        b.allTime.repeats += d.repeats - rep;
+        int hour = clockHour(level);
+        d.hours[hour]++;
+        b.allTime.hours[hour]++;
+        nextWho = null;
+        nextPlayer = false;
+    }
+
+    /** [biz30] The hour on the clock now (the world's day starts at six in the morning). */
+    public static int clockHour(ServerLevel level) {
+        return (int) ((level.getDayTime() % 24000L / 1000L + 6) % 24);
+    }
+
+    /** [biz30] A sale it missed: a buyer came for so many of this and its shelf had too few. */
+    public static void missed(ServerLevel level, Business b, String key, long n) {
+        if (b == null || n <= 0) return;
+        b.today(today(level)).line(key).missed += n;
+        b.allTime.line(key).missed += n;
+        dirty();
+    }
+
+    /** [biz30] Minutes it was open, and of them the minutes a keeper was in, onto today's book. */
+    public static void kept(ServerLevel level, Business b, int open, int kept) {
+        if (b == null || open <= 0 && kept <= 0) return;
+        Day d = b.today(today(level));
+        d.openMin += open;
+        d.keptMin += kept;
+        b.allTime.openMin += open;
+        b.allTime.keptMin += kept;
+        dirty();
+    }
+
+    /**
+     * [biz30] A player's shop sold this (PlayerShops.booked): its own book, one to each shop ("shop:" and the shop's key),
+     * mirrored (the shop keeps its own till: the takings, less the toll, are in it already). Its buyer noted.
+     */
+    public static void shopSold(ServerLevel level, PlayerShops.Shop s, ItemStack what, int n, int coins, int toll, String who, boolean player) {
+        if (s.village == null || what.isEmpty()) return;
+        Business b = shopBook(level, s);
+        buyer(who, player);
+        sale(level, s.village, b, what, Stockroom.key(what), n, coins * 100L, false);
+        if (toll > 0) {
+            Day d = b.today(today(level));
+            d.taxes += toll * 100L;
+            b.allTime.taxes += toll * 100L;
+        }
+        b.till = s.till * 100L;
+        dirty();
+    }
+
+    /** [biz30] A player's shop's own book, opened the first time it is wanted. */
+    public static Business shopBook(ServerLevel level, PlayerShops.Shop s) {
+        String id = "shop:" + s.key();
+        Business b = of(s.village, id);
+        if (b == null) {
+            b = open(level, s.village, Type.STALL, id, s.anchor, today(level));
+            b.owners.add(new Stake(Holder.PLAYER, s.owner, s.ownerName, Business.WHOLE));
+        }
+        b.name = s.name;
+        b.at = s.anchor;
+        return b;
+    }
+
+    /** [biz30] A cost of a player's shop (its keeper's wage, its rates) onto its book, in coin. */
+    public static void shopCost(ServerLevel level, PlayerShops.Shop s, String what, int coins) {
+        if (s.village == null || coins <= 0) return;
+        Business b = shopBook(level, s);
+        Day d = b.today(today(level));
+        long p = coins * 100L;
+        switch (what) {
+            case "wage" -> { d.wages += p; b.allTime.wages += p; if (s.keeper != null) { d.staffPay.merge(s.keeper, p, Long::sum); d.staffNames.put(s.keeper, s.keeperName); } }
+            case "rates" -> { d.taxes += p; b.allTime.taxes += p; }
+            default -> { d.other += p; b.allTime.other += p; }
+        }
+        b.till = s.till * 100L;
         dirty();
     }
 
@@ -708,6 +810,7 @@ public final class Businesses {
             b.allTime.revenue += p;
             b.allTime.line(key).units += n;
             b.allTime.line(key).revenue += p;
+            trade(level, b, d);                                          // [biz30]
             dirty();
             return;
         }
@@ -809,6 +912,8 @@ public final class Businesses {
         Day d = b.today(day);
         d.bought += pence;
         b.allTime.bought += pence;
+        d.line(key).in += n;                                             // [biz30] stock in, for its data
+        b.allTime.line(key).in += n;
         b.orders.add(new Business.Order(day, from, key, n, unitH, off, pence));
         while (b.orders.size() > 40) b.orders.remove(0);
         dirty();
@@ -1054,6 +1159,8 @@ public final class Businesses {
         all.units += k;
         all.revenue += price;
         all.cogs += cost;
+        buyer("the town's market", false);                              // [biz30] a sale to the market: its buyer the market
+        trade(level, b, d);
         storesIn(village, one, k, price);
         Business s = of(village, "storehouse");
         if (s != null) {
@@ -1844,7 +1951,10 @@ public final class Businesses {
      *  player's pack, the goods into the pack (the player carries them to the stall). */
     public static String playerOrder(ServerLevel level, UUID village, net.minecraft.server.level.ServerPlayer p, @Nullable Business b, ItemStack one, int qty) {
         if (one.isEmpty() || qty <= 0) return "Order what? Say the item and how many.";
-        if (!Citizens.is(village, p.getUUID()) && !Standing.of(village, p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.FRIEND)) {
+        // [biz30] A firm the town chartered orders its own stock whoever owns it (a visitor may hold a charter: it could open one
+        // and never stock it); a player's own stall still wants a citizen or a friend.
+        boolean ownFirm = b != null && !b.mirror() && b.ownedBy(p.getUUID());
+        if (!ownFirm && !Citizens.is(village, p.getUUID()) && !Standing.of(village, p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.FRIEND)) {
             return "The stores sell by the order to the town's citizens and friends.";
         }
         if (b != null && !b.mirror()) {

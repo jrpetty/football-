@@ -41,7 +41,7 @@ public final class FolkProfile {
     private FolkProfile() {}
 
     /** The profile's tabs, in order (the client's tab strip uses the same order). */
-    public static final String[] TABS = { "about", "life", "work", "day", "things" };
+    public static final String[] TABS = { "about", "life", "work", "day", "things", "biz", "town" };   // [biz30] biz, town
 
     /** Which tab each of the card's lines belongs on (anything else: Work). */
     private static final Map<String, String> TAB_OF = Map.ofEntries(
@@ -82,6 +82,8 @@ public final class FolkProfile {
         out.put("day", FolkSchedule.report(f));
         out.getCompound("day").put("memories", memories(f));
         out.put("things", things(f));
+        out.put("biz", FolkProfileBiz.business(f, viewer));               // [biz30] its businesses, owned and worked in
+        out.put("town", FolkProfileBiz.civic(f, viewer));                 // [biz30] its standing, offices, history
         out.put("card", card(f));
         out.put("self", FolkIdentity.tag(f));                          // [ui] its colour, saying, chips, own life
         out.putBoolean("fav", viewer != null && Favourites.has(viewer.getUUID(), f.getUUID()));   // [ui] on the viewer's list
