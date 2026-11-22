@@ -66,6 +66,7 @@ public final class SquareMend {
     }
 
     private static final Map<UUID, Job> JOBS = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> SWEEPS = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         JOBS.clear();
@@ -90,8 +91,14 @@ public final class SquareMend {
     /** From the land's round for each town (Land): once, after its founding has settled, its square made good. */
     public static void tick(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
-        if (Ledger.note(id, DONE) != null && !Ledger.note(id, DONE).isEmpty()) return;
-        if (TerraceWalls.terraced(id) || Founding.near(level, v.centre(), 64) || Founding.settling(level, v.centre(), 64)) return;
+        if (Ledger.note(id, DONE) != null && !Ledger.note(id, DONE).isEmpty()) {
+            // Now and then, the loose things set down on its square since taken up into the stores.
+            if (Ledger.note(id, DONE).startsWith("mended") && SWEEPS.merge(id, 1, Integer::sum) % 12 == 0
+                    && Land.areaLoaded(level, v.centre(), WALL)) SquareDress.sweep(level, v, level(v));
+            return;
+        }
+        // (A terraced town's square is level at its heart's terrace like any other: inside the wall it is mended too.)
+        if (Founding.near(level, v.centre(), 64) || Founding.settling(level, v.centre(), 64)) return;
         Job job = JOBS.get(id);
         if (job == null) {
             if (!Land.areaLoaded(level, v.centre(), WALL + 2)) return;
@@ -212,6 +219,7 @@ public final class SquareMend {
         }
         if (job.cursor < all) return;
         JOBS.remove(v.id());
+        SquareDress.dress(level, v, job.level);                                // [life28] the floor paved, the strays up, the wall whole
         Ledger.note(v.id(), DONE, "mended " + job.mended + ", wall relaid " + job.relaid + ", left " + job.left);
         LOG.info("[MCA-FOUND] [life28] {}: its square made good at y={}: {} columns levelled, {} of the wall laid again on the level,"
             + " {} left as they were (something built on them)", Villages.name(v.id()), job.level, job.mended, job.relaid, job.left);

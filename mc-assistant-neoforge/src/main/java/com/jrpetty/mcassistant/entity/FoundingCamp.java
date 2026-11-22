@@ -2,6 +2,7 @@ package com.jrpetty.mcassistant.entity;
 
 import com.jrpetty.mcassistant.VillageSpawner;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -54,7 +55,7 @@ public final class FoundingCamp {
      * building. What was taken (beds by kind, each chest's goods) for {@link #pitch}, or null if it had none.
      */
     @Nullable
-    static CompoundTag strike(ServerLevel level, Villages.Village v, BlockPos heart) {
+    static CompoundTag strike(ServerLevel level, Villages.Village v, BlockPos heart, int radius) {
         int reach = VillageSpawner.CAMP_REACH + 1;
         ListTag beds = new ListTag(), chests = new ListTag();
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
@@ -91,11 +92,48 @@ public final class FoundingCamp {
             }
         }
         if (beds.isEmpty() && chests.isEmpty()) return null;
+        // The torches its folk stood about the camp to light it in the minutes since (TorchAreaGoal): no building either,
+        // taken up (a player's own left where they are) and stood again on the level ground when it is done (relight).
+        List<Long> torches = new ArrayList<>();
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                int x = heart.getX() + dx, z = heart.getZ() + dz;
+                if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) continue;
+                int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+                for (int y = top; y >= top - 3; y--) {
+                    m.set(x, y, z);
+                    BlockState s = level.getBlockState(m);
+                    if (!s.is(Blocks.TORCH) && !s.is(Blocks.WALL_TORCH)) continue;
+                    if (PlayerBlocks.placed(level, m) || TownBlocks.buildingAt(level, v, m) != null) continue;
+                    level.setBlock(m.immutable(), Blocks.AIR.defaultBlockState(), 2 | 16);
+                    torches.add(BlockPos.asLong(x, 0, z));
+                }
+            }
+        }
         CompoundTag camp = new CompoundTag();
+        camp.putLongArray("Torches", torches);
         camp.put("Beds", beds);
         camp.put("Chests", chests);
-        LOG.info("[MCA-FOUND] [life28] {}'s own camp taken up while its ground is levelled: {} beds, {} stores chests",
-            Villages.name(v.id()), beds.size(), chests.size());
+        // A town still at its camp: the founders' board on the square's edge (VillageBoards) comes down with it, and goes
+        // up again on the levelled edge after (it stood on the ground as it was, and was read as a building too).
+        BlockPos board = VillageBoards.boardOf(v.id());
+        if (!beds.isEmpty() && board != null && level.getBlockState(board).getBlock() instanceof com.jrpetty.mcassistant.block.VillageBoardBlock
+                && Math.max(Math.abs(board.getX() - heart.getX()), Math.abs(board.getZ() - heart.getZ())) <= com.jrpetty.mcassistant.village.TownPlan.PLAZA + 4) {
+            Direction facing = level.getBlockState(board).getValue(com.jrpetty.mcassistant.block.VillageBoardBlock.FACING);
+            for (int r = com.jrpetty.mcassistant.block.VillageBoardBlock.HIGH - 1; r >= 0; r--) {
+                for (int c = 0; c < com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE; c++) {
+                    BlockPos p = com.jrpetty.mcassistant.block.VillageBoardBlock.cell(board, facing, c, r);
+                    if (level.getBlockState(p).getBlock() instanceof com.jrpetty.mcassistant.block.VillageBoardBlock) {
+                        level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+                    }
+                }
+            }
+            VillageBoards.gone(level, board);
+            VillageBoards.preferSide(heart, facing.getOpposite());
+            camp.putBoolean("Board", true);
+        }
+        LOG.info("[MCA-FOUND] [life28] {}'s own camp taken up while its ground is levelled: {} beds, {} stores chests, {} torches",
+            Villages.name(v.id()), beds.size(), chests.size(), torches.size());
         return camp;
     }
 
@@ -139,8 +177,23 @@ public final class FoundingCamp {
                 if (!left.isEmpty()) net.minecraft.world.Containers.dropItemStack(level, heart.getX() + 0.5, heart.getY() + 0.5, heart.getZ() + 0.5, left);
             }
         }
+        if (camp.getBoolean("Board") && village != null && Villages.get(village) != null) VillageBoards.raiseFor(level, Villages.get(village));
         LOG.info("[MCA-FOUND] [life28] {}'s camp pitched again on the level ground at {}: {} of {} beds, {} stores chests",
             village == null ? "the town" : Villages.name(village), heart.toShortString(), laid, beds.size(), set);
+    }
+
+    /** The camp's torches stood again where they were, on the level ground, the levelling done. */
+    static void relight(ServerLevel level, CompoundTag camp) {
+        int stood = 0;
+        for (long c : camp.getLongArray("Torches")) {
+            BlockPos col = BlockPos.of(c);
+            BlockPos at = standing(level, col.getX(), col.getZ());
+            if (!level.getBlockState(at).isAir() || !level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) continue;
+            if (!level.getFluidState(at.below()).isEmpty()) continue;
+            level.setBlock(at, Blocks.TORCH.defaultBlockState(), 3);
+            stood++;
+        }
+        if (stood > 0) LOG.info("[MCA-FOUND] [life28] {} of the camp's torches stood again on the level ground", stood);
     }
 
     /** A stores chest at this spot (one put down, named the village's), or the one already there; null if no room. */

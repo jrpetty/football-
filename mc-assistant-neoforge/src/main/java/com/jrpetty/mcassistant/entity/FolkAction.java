@@ -401,7 +401,7 @@ public final class FolkAction {
         if (still && held == com.jrpetty.mcassistant.item.LeisureItems.LUTE.get()) return Act.LUTE;
         if (still && held == Items.NOTE_BLOCK && f.offWorkNow()) return Act.DRUM;
         // [life28] On the town's work, at the spot: at it with its hands between the pieces the town lays (TownJobs).
-        if (still && TownJobs.busy(f)) {
+        if (still && Busywork.ENABLED && TownJobs.busy(f)) {
             Act tw = townWork(TownJobs.doing(f));
             if (tw != Act.NONE) return tw;
         }
@@ -418,14 +418,14 @@ public final class FolkAction {
             Act w = work(f, level, s);
             if (w != Act.NONE) return w;
             // [life28] Down the town's works on its shift, stood at the face between cuts: at it with the pick.
-            if (com.jrpetty.mcassistant.entity.goal.WorksGoal.ours(f, f.peekJob())) return Act.PICK;
+            if (Busywork.ENABLED && com.jrpetty.mcassistant.entity.goal.WorksGoal.ours(f, f.peekJob())) return Act.PICK;
         }
         if (carried != Act.NONE) return carried;
         if (f.stationTask() == StationTask.GUARD && f.onShift() && still) return Act.WATCH;
         if (still && f.clientStatus().startsWith("Needs") && (t / 200 + f.getId()) % 3 == 0) return Act.THINK;
         if (still && f.quarrelledOn() == level.getDayTime() / 24000L && (t / 300 + f.getId()) % 4 == 0) return Act.QUARREL;
         // [life28] Stood by somebody in its own time (keeping company, waiting at the stores): passing the time of day, by turns.
-        if (still && f.offWorkNow() && !f.isBaby()) {
+        if (still && Busywork.ENABLED && f.offWorkNow() && !f.isBaby()) {
             VillageFolkEntity by = company(f, level);
             if (by != null) {
                 f.getLookControl().setLookAt(by, 30.0F, 30.0F);

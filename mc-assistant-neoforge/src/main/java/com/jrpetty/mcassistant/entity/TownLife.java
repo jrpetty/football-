@@ -331,6 +331,11 @@ public final class TownLife {
         }
     }
 
+    /** [life28] Tests: a building's hearth seen to now, as the town's round sees to it (out of its stores). */
+    public static void hearthForTests(ServerLevel level, Ledger.Building b, Villages.Village v) {
+        chimney(level, b, v, false);
+    }
+
     /** A campfire's makings out of the stores: one put by, or three logs and a coal (or charcoal). */
     private static boolean campfire(ServerLevel level, Villages.Village v) {
         if (Crafts.take(level, v, s -> s.is(Items.CAMPFIRE), 1)) return true;

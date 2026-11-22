@@ -41,12 +41,15 @@ public final class Busywork {
 
     private Busywork() {}
 
+    /** On (the tests turn it off to count a town without it, as it was). */
+    public static boolean ENABLED = true;
+
     /** How long a folk stands idle (ticks) before it finds something to do. */
     static final int START = 40;
     /** How far it walks for it at most. */
     static final int REACH = 12;
 
-    enum Kind { TEND, CHAT, CHORE, CARRY, SIT, WELL, STROLL, SNACK }
+    public enum Kind { TEND, CHAT, CHORE, CARRY, SIT, WELL, STROLL, SNACK }
 
     /** What a folk is doing to fill its time: what, where, how far along, and with whom. */
     static final class Doing {
@@ -81,6 +84,11 @@ public final class Busywork {
         BEGUN.clear();
     }
 
+    /** Tests: the pastimes begun, by kind. */
+    public static Map<Kind, Integer> begunForTests() {
+        return new java.util.EnumMap<>(BEGUN);
+    }
+
     /** What it is doing to fill its time, in a word (the tests, the census), or "". */
     public static String doing(VillageFolkEntity f) {
         Doing d = DOING.get(f.getUUID());
@@ -91,6 +99,7 @@ public final class Busywork {
 
     /** The act it shows while at its pastime (FolkAction.derive), or NONE: at the spot and still, or carrying on the way. */
     static Act act(VillageFolkEntity f, boolean still) {
+        if (!ENABLED) return Act.NONE;
         Doing d = DOING.get(f.getUUID());
         if (d == null) return Act.NONE;
         if (d.kind == Kind.CARRY) return Act.CARRY;                // a crate in its arms, there and back
@@ -108,7 +117,7 @@ public final class Busywork {
 
     /** From the folk's tick (VillageFolkEntity), server side. */
     public static void tick(VillageFolkEntity f) {
-        if ((f.tickCount + f.getId()) % 10 != 0 || !(f.level() instanceof ServerLevel level)) return;
+        if (!ENABLED || (f.tickCount + f.getId()) % 10 != 0 || !(f.level() instanceof ServerLevel level)) return;
         UUID id = f.getUUID();
         Doing d = DOING.get(id);
         if (d != null) {

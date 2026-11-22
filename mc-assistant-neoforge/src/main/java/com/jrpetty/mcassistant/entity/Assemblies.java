@@ -463,7 +463,7 @@ public final class Assemblies {
                 : pick == 0 ? FolkAction.Act.CHEER : pick == 1 ? FolkAction.Act.DANCE : FolkAction.Act.CLAP;
             case CLOSE -> a.kind == Kind.VIGIL ? FolkAction.Act.PRAY : FolkAction.Act.CLAP;      // [life28] the close clapped
             // [life28] Waiting for it to begin: the crowd talks among itself, a word and a listen by turns (a vigil keeps its hush).
-            case CALL, GATHER -> a.kind == Kind.VIGIL ? FolkAction.Act.NONE
+            case CALL, GATHER -> a.kind == Kind.VIGIL || !Busywork.ENABLED ? FolkAction.Act.NONE
                 : host ? FolkAction.Act.NONE : ((f.level().getGameTime() / 70L + f.getId()) & 1) == 0 ? FolkAction.Act.TALK : FolkAction.Act.LISTEN;
             default -> FolkAction.Act.NONE;
         };

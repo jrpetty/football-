@@ -459,8 +459,6 @@ public final class Founding extends SavedData {
         s.seed = level.getRandom().nextLong();
         s.phase = LOAD;
         s.radius = FoundingPlan.coreRadius(Math.max(FoundingPlan.MIN_FOLK, Villages.headcount(v.id())));
-        // [life28] Its own camp is no building of anybody's: taken up before its ground is read, pitched again on the level.
-        s.camp = FoundingCamp.strike(level, v, s.heart);
         s.outer = s.radius + FoundingPlan.BAND_MAX;
         for (Villages.Village o : Villages.every()) {
             if (o.id().equals(v.id()) || !o.dim().equals(level.dimension())) continue;
@@ -471,6 +469,8 @@ public final class Founding extends SavedData {
         int theirs = VanillaVillages.roomFrom(level, s.heart);       // [emerald] never into a village of villagers' ground
         if (theirs < s.outer) s.outer = Math.max(FoundingPlan.BARE + 8, theirs);
         if (s.outer < s.radius + 8) s.radius = Math.max(FoundingPlan.BARE, s.outer - 8);
+        // [life28] Its own camp is no building of anybody's: taken up before its ground is read, pitched again on the level.
+        s.camp = FoundingCamp.strike(level, v, s.heart, s.outer);
         f.sites.add(s);
         f.setDirty();
         LOG.info("[MCA-FOUND] the ground of {} at {} to be levelled {} round, worked to {}", Villages.name(v.id()),
@@ -831,9 +831,9 @@ public final class Founding extends SavedData {
             if (!found(level, f, s)) return;
         }
         if (s.founded() && s.spawned < s.count) come(level, s, deadline);
-        if (s.existing && s.camp != null && s.cursor >= g.campIndex) {                 // [life28] the camp's ground level: pitched again
+        if (s.existing && s.camp != null && !s.camp.getBoolean("Pitched") && s.cursor >= g.campIndex) {   // [life28] the camp's ground level
             FoundingCamp.pitch(level, s.village, s.heart, s.camp);
-            s.camp = null;
+            s.camp.putBoolean("Pitched", true);
             f.setDirty();
         }
         int moved = 0;
@@ -1076,8 +1076,9 @@ public final class Founding extends SavedData {
 
     /** All done: the ground let go, the village told, and the founding forgotten. */
     private static void finish(ServerLevel level, Founding f, Site s) {
-        if (s.camp != null) {                                               // [life28] never left taken up
-            FoundingCamp.pitch(level, s.village, s.heart, s.camp);
+        if (s.camp != null) {                                               // [life28] never left taken up; its torches stood again
+            if (!s.camp.getBoolean("Pitched")) FoundingCamp.pitch(level, s.village, s.heart, s.camp);
+            FoundingCamp.relight(level, s.camp);
             s.camp = null;
         }
         release(level, s);

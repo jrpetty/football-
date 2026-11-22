@@ -157,7 +157,10 @@ public class CraftGoal extends Goal {
         }
 
         // Table logistics for recipes that need the 3x3 grid.
-        if (plan.needsTable()) {
+        // [life28] On a town's square or street with no table near: crafted at the stores' bench, no table set down loose.
+        boolean townBench = plan.needsTable() && (tablePos == null || !assistant.level().getBlockState(tablePos).is(Blocks.CRAFTING_TABLE))
+            && assistant.isSettler() && com.jrpetty.mcassistant.entity.TownGround.open(assistant.level(), assistant.feetPos()) && findTable() == null;
+        if (plan.needsTable() && !townBench) {
             if (tablePos == null || !assistant.level().getBlockState(tablePos).is(Blocks.CRAFTING_TABLE)) {
                 tablePos = findTable();
                 stuckTicks = 0;
@@ -295,6 +298,7 @@ public class CraftGoal extends Goal {
                     if (!assistant.level().getFluidState(pos).isEmpty()) continue;
                     if (!assistant.level().getBlockState(pos.below()).isSolid()) continue;
                     if (assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(pos))) continue;
+                    if (com.jrpetty.mcassistant.entity.TownGround.open(assistant.level(), pos)) continue;   // [life28] never on the square or a street
                     double score = pos.distSqr(feet) + Math.abs(dy) * 3.0;
                     if (score < bestScore) { bestScore = score; best = pos; }
                 }
