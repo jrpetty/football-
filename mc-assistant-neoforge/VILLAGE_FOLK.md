@@ -15056,6 +15056,11 @@ to the nearest folk**; an unwelcome player mends fences first. (A shop of your o
 * A shop's building sold (PropertyMarket.accept) closes the seller's shop in it: its till to the seller, its keeper let go,
   its sign down; what was in its chests went with the building or came back, as the listing said; the new owner makes it a
   shop of its own at the counter. Before, the seller kept a shop in a building that was no longer theirs.
+* A firm chartered on its owner's own shop pays the town no rent for it (step 2 said "No rent: it is yours", and the books
+  charged a room's rent each day all the same); the shop's row on Your finances' Businesses tab sets this week's takings
+  against this week's costs (the rates if they fell due, the keeper's days), not a whole week's wage for a keeper taken on
+  yesterday.
+* The quote's "Paid 51c down" reads "51c down now"; the firm's last button is "Open it (10 coins)".
 * The sign over a shop's counter follows the counter when it moves (it was left where the first counter stood).
 * "No path from the door to a street" says which door and asks whether its way out is blocked or the door sits below the
   floor; the setup no longer says "the business rates, 0 coins a week"; the shop's *Make it a registered business* is

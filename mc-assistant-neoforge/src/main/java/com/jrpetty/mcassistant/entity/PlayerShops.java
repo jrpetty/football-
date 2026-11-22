@@ -101,6 +101,7 @@ public final class PlayerShops {
         public String keeperName = "";
         public int wage, owed, kOpens = OPENS, kCloses = CLOSES;
         public long keeperSince;
+        public long morningDay = -1;                                        // [biz25] the last morning seen to, kept over a restart
         @Nullable public String firm;
         @Nullable public UUID display;
         // read off the building, not kept
@@ -154,6 +155,7 @@ public final class PlayerShops {
             t.putInt("wage", wage);
             t.putInt("owed", owed);
             t.putLong("keeperSince", keeperSince);
+            t.putLong("morningDay", morningDay);                             // [biz25]
             t.putInt("kOpens", kOpens);
             t.putInt("kCloses", kCloses);
             if (firm != null) t.putString("firm", firm);
@@ -198,6 +200,7 @@ public final class PlayerShops {
             s.wage = t.getInt("wage");
             s.owed = t.getInt("owed");
             s.keeperSince = t.getLong("keeperSince");
+            s.morningDay = t.contains("morningDay") ? t.getLong("morningDay") : -1;   // [biz25]
             if (t.contains("kOpens")) { s.kOpens = t.getInt("kOpens"); s.kCloses = t.getInt("kCloses"); }
             if (t.contains("firm")) s.firm = t.getString("firm");
             if (t.hasUUID("display")) s.display = t.getUUID("display");
@@ -731,6 +734,8 @@ public final class PlayerShops {
     /** Each morning: the keeper's wage, the day's counts started afresh, its name drifting back toward the middle. */
     public static void morning(ServerLevel level, Villages.Village v, long day) {
         for (Shop s : all(v.id())) {
+            if (s.morningDay >= day) continue;                               // [biz25] seen to already today (the server restarted since)
+            s.morningDay = day;
             roll(s, day);
             s.visitsToday = 0;
             s.servedToday = 0;

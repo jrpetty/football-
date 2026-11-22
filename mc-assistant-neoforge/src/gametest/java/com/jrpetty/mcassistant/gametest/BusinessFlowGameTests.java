@@ -309,6 +309,12 @@ public class BusinessFlowGameTests {
             }
             helper.assertTrue(s.keeper != null, "taken on: " + PlayerLife.messageForTests(p));
             int wage = s.wage;
+            // Its morning: the wage paid once, though the morning runs again (a restart re-runs the town's first tick).
+            s.till = 10;
+            PlayerShops.morning(level, v, day + 1);
+            PlayerShops.morning(level, v, day + 1);
+            Kit.log("[VT] bf02 morning twice: till " + s.till + ", wage " + wage);
+            helper.assertTrue(s.till == 10 - wage && s.keeper != null, "paid once for the day: " + s.till);
             // Slow days: nothing sold, the till empty: its wage owed, then it goes.
             s.till = 0;
             ShopKeepers.paydayForTests(level, s);

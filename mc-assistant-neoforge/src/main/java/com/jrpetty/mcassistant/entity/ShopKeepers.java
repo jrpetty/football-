@@ -105,7 +105,7 @@ public final class ShopKeepers {
     static void payday(ServerLevel level, Villages.Village v, PlayerShops.Shop s, long day) {
         if (s.keeper == null) return;
         VillageFolkEntity f = Homes.loaded(s.village, s.keeper);
-        if (f == null && Villages.folkOf(s.village).stream().noneMatch(a -> a.getUUID().equals(s.keeper))) {
+        if (f == null && !Villages.folkOf(s.village).isEmpty() && Villages.folkOf(s.village).stream().noneMatch(a -> a.getUUID().equals(s.keeper))) {   // [biz25] not while the town is still loading
             letGo(level, s, "it is gone from the town");
             return;
         }
