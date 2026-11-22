@@ -80,14 +80,22 @@ public final class OreFlow {
 
     /** What took it out: the first of the town's own classes on the way to the stores that is not the stores' own. */
     static String taker() {
+        // [growth24] The innermost of the town's own frames that is not the stores' plumbing (the take, the chests), named
+        // with its method: "Crafts.forge", not "VillageFolkEntity" (the folk's tick that the smith's whole day runs under).
         return StackWalker.getInstance().walk(frames -> frames
-            .filter(f -> { String c = f.getClassName(); return c.startsWith("com.jrpetty.mcassistant") && !c.endsWith(".OreFlow") && !c.endsWith(".TownWork")
-                && !c.endsWith(".Crafts") && !c.endsWith(".Market") && !c.endsWith(".ZoneChests"); })
+            .filter(f -> f.getClassName().startsWith("com.jrpetty.mcassistant") && !plumbing(f))
             .findFirst().map(f -> {
                 String c = f.getClassName().substring(f.getClassName().lastIndexOf('.') + 1);
-                // [growth24] The folk's own classes do a hundred things: which of them took it.
-                return c.endsWith("FolkEntity") || c.equals("AssistantEntity") ? c + "." + f.getMethodName() : word(c);
+                String w = word(c);
+                return w.equals(c) ? c + "." + f.getMethodName() : w;
             }).orElse("?"));
+    }
+
+    private static boolean plumbing(StackWalker.StackFrame f) {
+        String c = f.getClassName(), m = f.getMethodName();
+        if (c.endsWith(".OreFlow") || c.endsWith(".ZoneChests") || c.endsWith(".Market")) return true;
+        if (c.endsWith(".TownWork") || c.endsWith(".Crafts")) return m.startsWith("take") || m.equals("lambda$take$0");
+        return false;
     }
 
     /** A taker's class in the town's words (the smelter's raw iron comes back as bars: it is no use of it). */

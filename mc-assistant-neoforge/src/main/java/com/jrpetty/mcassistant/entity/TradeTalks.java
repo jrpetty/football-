@@ -255,6 +255,7 @@ public final class TradeTalks {
         }
         // The coin the buyer can find each delivery: a third of what it has over two days' wages.
         double coinCap = Math.max(0, Ledger.coins(b.town()) - 2 * Market.wageBill(b.town())) / 3.0;
+        coinCap += TradeCredit.line(b.town(), s.town());                    // [growth24] a friend's delivery on account
         Table t = new Table(s.town(), b.town(), x, qx, y, yMax, sx, bx, sy, by, coinCap);
         // A buyer that cannot pay for the whole lot (its own goods run out, and it has no coin to spare) is offered
         // a smaller one, a lot at a time, till what it can pay covers what the seller must have: a poor hamlet still

@@ -589,13 +589,20 @@ public final class TradeDeals {
         int moved = 0;
         if (d.bOwes > 0) {
             int paid = Ledger.takeCoins(d.buyer, d.bOwes);
-            if (paid > 0) { Ledger.addCoins(d.seller, paid); d.bOwes -= paid; d.bGot -= paid; d.sGot += paid; moved += paid; }
+            if (paid > 0) { Ledger.addCoins(d.seller, paid); d.bOwes -= paid; d.bGot -= paid; d.sGot += paid; moved += paid; booked(d.buyer, d.seller, paid); }
         }
         if (d.sOwes > 0) {
             int paid = Ledger.takeCoins(d.seller, d.sOwes);
-            if (paid > 0) { Ledger.addCoins(d.buyer, paid); d.sOwes -= paid; d.sGot -= paid; d.bGot += paid; moved += paid; }
+            if (paid > 0) { Ledger.addCoins(d.buyer, paid); d.sOwes -= paid; d.sGot -= paid; d.bGot += paid; moved += paid; booked(d.seller, d.buyer, paid); }
         }
         return moved;
+    }
+
+    /** [growth24] A debt's coin from one town's treasury to the other's, booked both sides as the deal's other coin is
+     *  (Shipments: out of the payer's town, into the payee's), so neither town's morning count finds coin it cannot explain. */
+    private static void booked(UUID from, UUID to, int coins) {
+        CoinCensus.flow(from, CoinCensus.Flow.IMPORT, coins);
+        CoinCensus.flow(to, CoinCensus.Flow.EXPORT, coins);
     }
 
     /**
@@ -646,11 +653,13 @@ public final class TradeDeals {
                     paid = Ledger.takeCoins(payer, owed);
                     t.purse += paid;
                     t.earned += paid;
+                    booked(payer, payee, paid);                              // [growth24] into the other town's carrier's purse
                 } else {
                     // The carrier's town pays: out of the purse it carried here.
                     paid = Math.min(t.purse, owed);
                     t.purse -= paid;
                     Ledger.addCoins(payee, paid);
+                    booked(payer, payee, paid);                              // [growth24] out of the carrier's town's purse
                     Economy.sold(payee, paid);
                 }
                 Economy.spent(payer, paid);
@@ -1028,6 +1037,7 @@ public final class TradeDeals {
         if (price <= 0) return;
         t.purse -= price;
         Ledger.addCoins(there.id(), price);
+        booked(home.id(), there.id(), price);                                  // [growth24] the caravan's purse to the other town
         Economy.sold(there.id(), price);
         Economy.spent(home.id(), price);
         Villages.tell(there.id(), level.getDayTime() / 24000L, Villages.name(home.id()) + "'s caravan bought " + moved + " "

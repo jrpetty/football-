@@ -486,6 +486,12 @@ public final class Crafts {
             Item metal = w.metal();
             int bars = stock(level, v, s -> s.is(metal));
             if (bars < w.bars() + (diamond ? 2 : 4)) continue;             // a few kept back for the village
+            // [growth24] While the age's iron is put by, an iron pick only past the rack's own mark for it (Picks.ironFor: three
+            // dozen and more), and a blade only past the smith's sixteen: stone picks cut iron ore, and the rack keeps them
+            // (Toolrack). The forge made an iron pick for the stores whenever it held seven bars, the miners wore them out at
+            // two or three a day each, and an Iron Age town mined fifteen to twenty-six iron a day and held five to twenty-four.
+            if (saving && !diamond && it == Items.IRON_PICKAXE && !Picks.ironFor(bars, false, w.bars())) continue;
+            if (saving && !diamond && it == Items.IRON_SWORD && bars < w.bars() + IRON_KEPT && !WatchKit.ironForTheWatch(level, v, it)) continue;
             int wood = w.planks() + (w.sticks() + 1) / 2;
             if (wood > 0 && !planks(level, v, wood)) continue;
             if (!take(level, v, s -> s.is(metal), w.bars())) return null;
