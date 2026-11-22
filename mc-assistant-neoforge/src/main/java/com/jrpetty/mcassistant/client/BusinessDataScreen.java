@@ -234,6 +234,7 @@ public class BusinessDataScreen extends Screen {
         long[] rev = col(days, 1), net = col(days, 6);
         chart(g, x, y, cw, bh - (y - (top + HEAD + 12)) - 2, rev, REV, net, true, mx, my, "Takings a day, and the profit line");
         int fx = x + cw + 8, fy = y;
+        factStep = Math.max(16, Math.min(20, (top + h - FOOT - 4 - y) / 6));   // [biz30c] six facts in the room there is (the last ran into the advice at GUI 3)
         long[] span = data.getLongArray("span");
         int range = data.getInt("range");
         long cust = span.length > 9 ? span[9] : 0, trans = span.length > 8 ? span[8] : 0;
@@ -746,10 +747,12 @@ public class BusinessDataScreen extends Screen {
 
     // ------------------------------------------------------------------ bits
 
+    private int factStep = 20;
+
     private int fact(GuiGraphics g, String label, String value, int x, int y, int w) {
         small(g, label, x, y, UiStyle.TEXT_FAINT, w);
-        g.drawString(font, UiStyle.clip(font, value, w), x, y + 8, UiStyle.TEXT, false);
-        return y + 20;
+        g.drawString(font, UiStyle.clip(font, value, w), x, y + 7, UiStyle.TEXT, false);
+        return y + factStep;
     }
 
     /** A table cell: full-size text where the panel is wide, small where it is not. */

@@ -154,10 +154,11 @@ public final class BizData {
         // its wares over the range: units, revenue, cost, made, bought in, missed; today's units; on hand
         ListTag items = new ListTag();
         java.util.Set<String> keys = new java.util.LinkedHashSet<>(span.lines.keySet());
-        for (Map.Entry<String, Business.Lot> e : b.stock.entrySet()) if (e.getValue().qty > 0) keys.add(e.getKey());
+        Map<String, Business.Lot> stock = stockOf(level, village, b);           // [biz30c] a player's shop: what is on its shelves
+        for (Map.Entry<String, Business.Lot> e : stock.entrySet()) if (e.getValue().qty > 0) keys.add(e.getKey());
         for (String k : keys) {
             Business.Line l = span.lines.getOrDefault(k, new Business.Line());
-            Business.Lot lot = b.stock.get(k);
+            Business.Lot lot = stock.get(k);
             Business.Line td = day.lines.get(k);
             long[] perDay = new long[(int) (today - from + 1)];
             int i = 0;
@@ -217,6 +218,28 @@ public final class BizData {
         t.put("advice_all", advice);
         t.putString("advice", advice.isEmpty() ? "" : advice.getString(0));
         return t;
+    }
+
+    /**
+     * [biz30c] What a business holds: its books' stock, or for a player's shop (whose goods stand in its own chests, not on
+     * its books) what is on its shelves now, at the going price's cost book.
+     */
+    static Map<String, Business.Lot> stockOf(ServerLevel level, UUID village, Business b) {
+        if (!b.id.startsWith("shop:")) return b.stock;
+        Map<String, Business.Lot> out = new LinkedHashMap<>();
+        for (PlayerShops.Shop s : PlayerShops.all(village)) {
+            if (!b.id.equals("shop:" + s.key())) continue;
+            for (net.minecraft.world.Container c : PlayerShops.shelves(level, s)) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    net.minecraft.world.item.ItemStack x = c.getItem(i);
+                    if (x.isEmpty() || Market.isCoin(x)) continue;
+                    Business.Lot l = out.computeIfAbsent(Stockroom.key(x), k -> new Business.Lot());
+                    l.qty += x.getCount();
+                    l.cost += Math.round(CostBook.of(x).total() * 100 * x.getCount());
+                }
+            }
+        }
+        return out;
     }
 
     /** The viewer's businesses side by side: id, name, kind, town, week's takings, profit, last week's profit. */
@@ -313,16 +336,18 @@ public final class BizData {
      */
     public static String stageShop(ServerPlayer p, int days) {
         ServerLevel level = p.serverLevel();
-        PlayerShops.Shop s = PlayerShops.mine(p);
-        if (s == null) {                                                    // a counter set down by command: taken up as a counter set by hand
-            for (BlockPos q : BlockPos.betweenClosed(p.blockPosition().offset(-10, -3, -10), p.blockPosition().offset(10, 3, 10))) {
-                if (level.getBlockState(q).is(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER.get())) {
-                    PlayerShops.placed(level, q.immutable(), p, true);
-                    s = PlayerShops.mine(p);
-                    break;
-                }
+        // the shop of the counter the player stands by (one set down by command taken up as one set by hand), else its chosen one
+        PlayerShops.Shop s = null;
+        for (BlockPos q : BlockPos.betweenClosed(p.blockPosition().offset(-10, -3, -10), p.blockPosition().offset(10, 3, 10))) {
+            if (!level.getBlockState(q).is(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER.get())) continue;
+            s = PlayerShops.at(level, q.immutable());
+            if (s == null) {
+                PlayerShops.placed(level, q.immutable(), p, true);
+                s = PlayerShops.at(level, q.immutable());
             }
+            if (s != null) { PlayerShops.choose(p.getUUID(), s); break; }
         }
+        if (s == null) s = PlayerShops.mine(p);
         if (s == null) return "!Set a Shop Counter in a room of your own first (with a chest beside it).";
         Villages.Village v = Villages.get(s.village);
         if (v == null) return "!Its town is gone.";
@@ -350,7 +375,7 @@ public final class BizData {
             int[] weight = { 1, 2, 2, 3, 4, 3, 2, 2, 3, 4, 3, 1, 1 };       // 7 in the morning to 7 at night
             for (int h = 0; h < weight.length && !folk.isEmpty(); h++) {
                 level.setDayTime(day * 24000L + (h + 1) * 1000L + r.nextInt(900));
-                int n = r.nextInt(weight[h] + 1) + (d % 7 == 6 ? 1 : 0);       // market day busier
+                int n = r.nextInt(weight[h] * 2 + 1) + (d % 7 == 6 ? 2 : 0);   // market day busier
                 for (int k = 0; k < n; k++) ShopCustomers.buy(level, folk.get(r.nextInt(folk.size())), s, false, false);
             }
             int open = 14 * 60, kept = s.keeper == null ? 0 : open - r.nextInt(90);
@@ -358,6 +383,7 @@ public final class BizData {
             level.setDayTime(day * 24000L + 13500L);
         }
         level.setDayTime((first + days) * 24000L + 6000L);
+        fill(level, s, 1);                                                  // its shelves full again for the morning
         PlayerShops.save(s);
         return "Staged " + days + " days of " + s.name + ": " + (book.allTime.trans - sales0) + " sales, till " + s.till + "c, keeper "
             + (s.keeper == null ? "none" : s.keeperName) + ". Open its data: village business data";

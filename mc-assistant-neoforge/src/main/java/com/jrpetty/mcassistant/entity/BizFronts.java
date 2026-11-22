@@ -324,18 +324,26 @@ public final class BizFronts {
         if (!AWNINGS.contains(b.structure())) return 0;
         net.minecraft.world.item.DyeColor col = colourOf(b.structure());
         net.minecraft.world.item.DyeColor stripe = col == net.minecraft.world.item.DyeColor.WHITE ? net.minecraft.world.item.DyeColor.LIGHT_GRAY : net.minecraft.world.item.DyeColor.WHITE;
-        List<BlockPos> cells = new ArrayList<>();
-        for (int k = -1; k <= 1; k++) {
-            BlockPos wall = door.above(2).relative(side, k), at = wall.relative(front);
-            BlockState here = level.getBlockState(at);
-            boolean ours = here.is(net.minecraft.tags.BlockTags.WOOL);
-            if (ours) continue;
-            if (planned.contains(at.asLong()) || !here.isAir() || !level.getBlockState(wall).isSolid()) return 0;
-            if (!level.getBlockState(at.below()).isAir() && !level.getBlockState(at.below()).is(net.minecraft.tags.BlockTags.WALL_SIGNS)) return 0;
-            if (v != null && !TownBlocks.mayPlace(level, v, at, TownBlocks.Why.DECOR)) return 0;
-            cells.add(at.immutable());
+        // over the door's head, or higher where a lamp hangs there or an open front's beam stands higher (the smithy's)
+        List<BlockPos> cells = null;
+        for (int up = 2; up <= 3 && cells == null; up++) {
+            List<BlockPos> row = new ArrayList<>();
+            boolean ok = true;
+            for (int k = -1; k <= 1 && ok; k++) {
+                BlockPos wall = door.above(up).relative(side, k), at = wall.relative(front);
+                BlockState here = level.getBlockState(at);
+                if (here.is(net.minecraft.tags.BlockTags.WOOL)) return 0;      // hung already
+                if (here.is(Blocks.LANTERN)) continue;                          // a lamp over the door: the awning either side of it
+                BlockState behind = level.getBlockState(wall);                 // a wall behind (a window's pane will do), not the roof
+                if (planned.contains(at.asLong()) || !here.isAir() || behind.isAir() || behind.is(net.minecraft.tags.BlockTags.STAIRS)
+                    || behind.is(net.minecraft.tags.BlockTags.SLABS)) { ok = false; break; }
+                if (level.getBlockState(at.below()).getBlock() instanceof net.minecraft.world.level.block.DoorBlock) { ok = false; break; }
+                if (v != null && !TownBlocks.mayPlace(level, v, at, TownBlocks.Why.DECOR)) { ok = false; break; }
+                row.add(at.immutable());
+            }
+            if (ok && row.size() >= 2) cells = row;
         }
-        if (cells.isEmpty()) return 0;
+        if (cells == null || cells.isEmpty()) return 0;
         if (!free && !Crafts.take(level, v, x -> x.is(net.minecraft.tags.ItemTags.WOOL), cells.size())) return 0;
         for (BlockPos at : cells) {
             int k = Math.abs((at.getX() - door.getX()) + (at.getZ() - door.getZ())) % 2;
@@ -379,9 +387,13 @@ public final class BizFronts {
             if (level.getBlockState(q).isFaceSturdy(level, q, Direction.UP) && level.getBlockState(q.above()).isAir() && level.canSeeSky(q.above())) { at = q.above(); break; }
         }
         if (at == null) return 0;
+        for (BlockPos q : BlockPos.betweenClosed(at.offset(-3, -2, -3), at.offset(3, 2, 3))) {   // one fire to a chimney
+            if (level.getBlockState(q).getBlock() instanceof net.minecraft.world.level.block.CampfireBlock) return 0;
+        }
         if (v != null && !TownBlocks.mayPlace(level, v, at, TownBlocks.Why.DECOR)) return 0;
         if (!free && !Crafts.take(level, v, x -> x.is(Items.CAMPFIRE) || x.is(net.minecraft.tags.ItemTags.LOGS), 1)) return 0;
-        level.setBlock(at, Blocks.CAMPFIRE.defaultBlockState(), 3);
+        // a signal fire's tall smoke: it reads over the roofs from down the street
+        level.setBlock(at, Blocks.CAMPFIRE.defaultBlockState().setValue(net.minecraft.world.level.block.CampfireBlock.SIGNAL_FIRE, true), 2);
         return 1;
     }
 
