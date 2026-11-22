@@ -581,7 +581,14 @@ public class BusinessLookGameTests {
             long stocked = 0;
             if (ware != null) {
                 if (t.resells()) {
-                    com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "order", argsOf("k", ware, "f", argsOf("qty", "16")));
+                    ItemStack sample = com.jrpetty.mcassistant.entity.Stockroom.sampleForTests(ware);
+                    for (int i = 0; i < 3; i++) com.jrpetty.mcassistant.entity.Market.intoStoresForTests(level, id, sample.copyWithCount(sample.getMaxStackSize()));
+                    com.jrpetty.mcassistant.entity.Businesses.spareAllForTests(true);
+                    try {
+                        com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "order", argsOf("k", ware, "f", argsOf("qty", "16")));
+                    } finally {
+                        com.jrpetty.mcassistant.entity.Businesses.spareAllForTests(false);
+                    }
                     said.add("order: " + msg(p));
                 } else {
                     // Its hand at its bench, a turn at a time, as its work loop takes them (Crafts.now).
@@ -604,7 +611,13 @@ public class BusinessLookGameTests {
                         // out of a market that has plenty of it to spare.
                         ItemStack sample = com.jrpetty.mcassistant.entity.Stockroom.sampleForTests(ware);
                         for (int i = 0; i < 6; i++) com.jrpetty.mcassistant.entity.Market.intoStoresForTests(level, id, sample.copyWithCount(sample.getMaxStackSize()));
-                        com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "order", argsOf("k", ware, "f", argsOf("qty", "16")));
+                        // (The town's own budget, which sells only a glut while it is short of anything, is Budget's question.)
+                        com.jrpetty.mcassistant.entity.Businesses.spareAllForTests(true);
+                        try {
+                            com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "order", argsOf("k", ware, "f", argsOf("qty", "16")));
+                        } finally {
+                            com.jrpetty.mcassistant.entity.Businesses.spareAllForTests(false);
+                        }
                         said.add("order: " + msg(p));
                     }
                 }

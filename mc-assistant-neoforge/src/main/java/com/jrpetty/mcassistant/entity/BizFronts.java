@@ -110,6 +110,32 @@ public final class BizFronts {
                 return true;
             }
         }
+        // An open front (the smeltery's, the foundry's) or gates: on a post or pier of its front, at head height.
+        java.util.List<BlockPos> faces = new ArrayList<>();
+        for (int x = box[0]; x <= box[1]; x++) {
+            for (int z = box[2]; z <= box[3]; z++) {
+                boolean edge = switch (front) {
+                    case NORTH -> z == box[2];
+                    case SOUTH -> z == box[3];
+                    case WEST -> x == box[0];
+                    default -> x == box[1];
+                };
+                if (!edge) continue;
+                for (int up = 1; up <= 2; up++) faces.add(new BlockPos(x, box[4] - 1 + up, z));
+            }
+        }
+        int fcx = (box[0] + box[1]) / 2, fcz = (box[2] + box[3]) / 2;
+        faces.sort(java.util.Comparator.comparingInt((BlockPos q) -> Math.abs(q.getX() - fcx) + Math.abs(q.getZ() - fcz)).thenComparingInt(BlockPos::getY));
+        for (BlockPos wall : faces) {
+            if (!planned.contains(wall.asLong())) continue;
+            BlockPos spot = wall.relative(front);
+            if (!level.getBlockState(spot).isAir() || !level.getBlockState(wall).isFaceSturdy(level, wall, front)) continue;
+            if (v != null && !TownBlocks.mayPlace(level, v, spot, TownBlocks.Why.SIGN)) continue;
+            if (!pay(level, v, spot, free)) return false;
+            level.setBlock(spot, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
+            write(level, spot, lines);
+            return true;
+        }
         // No wall to hang it on: a sign on a post by the way in (or before the middle of its front).
         List<BlockPos> posts = new ArrayList<>();
         for (BlockPos door : doors) {
