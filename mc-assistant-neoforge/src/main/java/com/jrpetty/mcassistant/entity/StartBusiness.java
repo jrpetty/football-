@@ -63,8 +63,11 @@ public final class StartBusiness implements PlayerLife.Page {
             if (o != null) {
                 score += Math.max(-5, Math.min(10, o.score()));
                 week = (int) Math.max(0, Math.round(o.profit7()));
-                if (o.gap() > 0.5) why.add(String.format(Locale.ROOT, "the town wants %.0f %s a week and has %.0f", o.demand(),
-                    Stockroom.plural(o.good()).toLowerCase(Locale.ROOT), o.supply()));
+                if (o.gap() > 0.5) {                                         // [biz25] what the town is short of, first; and said for one too
+                    score += 4;
+                    why.add(String.format(Locale.ROOT, "the town is short of %s: it wants %.0f a week and has %.0f",
+                        Stockroom.plural(o.good()).toLowerCase(Locale.ROOT), o.demand(), o.supply()));
+                }
                 else why.add("the town has enough " + Stockroom.plural(o.good()).toLowerCase(Locale.ROOT) + " for now");
             }
             ShiftRole role = PlayerJobs.roleFor(t.work());
@@ -98,17 +101,19 @@ public final class StartBusiness implements PlayerLife.Page {
         int step = Math.max(1, c.args.getInt("step"));
         if (c.args.getString("kind").isEmpty()) {
             List<Pick> ps = picks(level, v, p);
-            if (!ps.isEmpty()) c.args.putString("kind", ps.get(0).type().key());
+            if (PlayerShops.of(v.id(), p.getUUID()) == null && MyBusinesses.mine(v.id(), p.getUUID()).isEmpty()) c.args.putString("kind", SHOP);   // [biz25] a newcomer: a shop
+            else if (!ps.isEmpty()) c.args.putString("kind", ps.get(0).type().key());
         }
         if (c.args.getString("prem").isEmpty()) {
             boolean shop = PlayerShops.of(v.id(), p.getUUID()) != null || c.args.getString("premises").equals("shop");
-            c.args.putString("prem", shop ? "shop" : "town");
+            c.args.putString("prem", shop ? "shop" : isShop(c) ? "own" : "town");   // [biz25] a shop of your own: your own building first
         }
+        if (c.args.getString("prem").equals("build") && c.args.getString("bp").isEmpty()) choosePlotted(level, v, c);   // [biz25]
         page.tab("1", "1. A kind", step == 1).tab("2", "2. Premises", step == 2).tab("3", "3. Confirm", step == 3);
         if (step != 2 || !c.args.getString("prem").equals("build")) page.ghost(null);
-        if (step >= 4) welcome(level, p, v, c, page);
-        else if (step == 3) confirm(level, p, v, c, page);
-        else if (step == 2) premises(level, p, v, c, page);
+        if (step >= 4) { if (isShop(c)) BizShop.welcome(level, p, v, c, page); else welcome(level, p, v, c, page); }   // [biz25] a shop of your own
+        else if (step == 3) { if (isShop(c)) BizShop.confirm(level, p, v, c, page); else confirm(level, p, v, c, page); }
+        else if (step == 2) { if (isShop(c)) BizShop.premises(level, p, v, c, page); else premises(level, p, v, c, page); }
         else kinds(level, p, v, c, page);
         return page;
     }
@@ -116,12 +121,18 @@ public final class StartBusiness implements PlayerLife.Page {
     private void kinds(ServerLevel level, ServerPlayer p, Villages.Village v, PlayerLife.Ctx c, LifePage page) {
         page.heading("What kind of business? The best for you first");
         String chosen = c.args.getString("kind");
-        BusinessTypes.BusinessType ct = BusinessTypes.of(chosen);
-        page.buttons().button("Next: premises" + (ct == null ? "" : " for your " + ct.noun()), "step", LifePage.args("s", 2)).primary();
+        page.buttons().button("Next: premises", "step", LifePage.args("s", 2)).primary();   // [biz25] a label that fits
+        BizShop.kindRow(level, p, v, chosen, page);                          // [biz25] a shop of your own, the easiest
+        String standing = mayCharter(level, v, p);
+        if (!standing.isEmpty()) {
+            page.text("For a chartered business: " + standing, 2);
+            page.buttons().button("Say hello to the nearest folk", "hello", null);
+        }
+        page.heading("Or a chartered business: hands of its own make and sell its wares");
         for (Pick k : picks(level, v, p)) {
             boolean on = k.type().key().equals(chosen);
-            page.row(icon(k.type()), (on ? "✔ " : "") + k.type().title() + (k.week() > 0 ? "" : ""), k.why(),
-                    k.week() > 0 ? "~" + k.week() + "c a week" : "")
+            page.row(icon(k.type()), (on ? "✔ " : "") + k.type().title(), k.why(),
+                    k.week() > 0 ? "~" + k.week() + "c a week" : k.why().startsWith("the town is short") ? "wanted" : "")
                 .button(on ? "Chosen" : "Choose", "kind", LifePage.args("k", k.type().key()), k.allowed() && !on, k.allowed() ? "Chosen" : k.why());
         }
         page.buttons().button("Next: premises", "step", LifePage.args("s", 2)).primary();
@@ -281,11 +292,11 @@ public final class StartBusiness implements PlayerLife.Page {
             for (String line : BuildDesk.quoteLines(q)) page.text(line, 4);
             if (!q.ok) page.text("✘ The builders won't build there: " + q.why + ". Choose another plot.", 3);
         }
-        page.row(null, "All told", "You have " + PlayerLife.coins(have), PlayerLife.coins(total));
+        page.row(null, "To pay now", "You have " + PlayerLife.coins(have) + (q == null ? "" : "; " + PlayerLife.coins(fee + q.total) + " all told, as it goes up"), PlayerLife.coins(total));   // [biz25] not "all told"
         String standing = mayCharter(level, v, p);
         if (!standing.isEmpty()) {
             page.text(standing, 3);
-            page.buttons().button("Ask the nearest folk to live here", "citizen", null);
+            page.buttons().button("Say hello to the nearest folk", "hello", null).button("Ask the nearest folk to live here", "citizen", null);   // [biz25]
             return;
         }
         if (have >= total) {
@@ -319,9 +330,14 @@ public final class StartBusiness implements PlayerLife.Page {
 
     /** "" if the player may hold a charter here, else why not. */
     static String mayCharter(ServerLevel level, Villages.Village v, ServerPlayer p) {
-        if (Citizens.is(v.id(), p.getUUID()) || Standing.of(v.id(), p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.FRIEND)) return "";
-        return "Only a citizen or a friend of " + Villages.name(v.id()) + " may hold a charter. Become a citizen (ask any folk \"May I live here?\"), "
-            + "or make friends: gifts, help, trade.";
+        // [biz25] The town charters anybody it knows and has nothing against: a visitor who has passed the time of day with
+        // its folk will do. A stranger nobody has spoken to says hello first; an unwelcome one mends fences.
+        if (Citizens.is(v.id(), p.getUUID())) return "";
+        Standing.Title t = Standing.of(v.id(), p.getUUID(), level.getGameTime()).title();
+        if (t.atLeast(Standing.Title.VISITOR)) return "";
+        if (t == Standing.Title.STRANGER) return "Nobody in " + Villages.name(v.id()) + " knows you yet, and the town charters only those it knows: "
+            + "say hello to one of its folk (the button below, or talk to anyone), then come back.";
+        return "You're " + t.words + " in " + Villages.name(v.id()) + ": the town won't charter you till you've made amends (gifts, help, fair trade).";
     }
 
     private void welcome(ServerLevel level, ServerPlayer p, Villages.Village v, PlayerLife.Ctx c, LifePage page) {
@@ -348,21 +364,25 @@ public final class StartBusiness implements PlayerLife.Page {
         switch (action) {
             case "tab" -> { c.args.putInt("step", Integer.parseInt(c.tab)); return ""; }
             case "step" -> { c.args.putInt("step", args.getInt("s")); return ""; }
+            case "hello" -> {                                               // [biz25] passing the time of day: the town knows you now
+                String said = LifeTown.sayToNearest(p, "Hello!");
+                Standing.stir(v.id(), p.getUUID());
+                return said;
+            }
             case "kind" -> {
+                if (args.getString("k").equals(SHOP)) { c.args.putString("kind", SHOP); c.args.remove("prem"); return ""; }   // [biz25]
                 BusinessTypes.BusinessType t = BusinessTypes.of(args.getString("k"));
                 if (t == null || !BusinessTypes.allowed(v.id()).contains(t)) return "!The town can't have one of those yet.";
                 c.args.putString("kind", t.key());
+                if (!c.args.getString("prem").equals("shop") && !c.args.getString("prem").equals("build")) c.args.putString("prem", "town");   // [biz25]
                 return "";
             }
             case "prem" -> {
                 String pr = args.getString("p");
                 if (pr.equals("shop") && PlayerShops.of(v.id(), p.getUUID()) == null) return "!You keep no shop here.";
                 c.args.putString("prem", pr);
-                if (pr.equals("build") && c.args.getString("bp").isEmpty()) {
-                    BusinessTypes.BusinessType t = BusinessTypes.of(c.args.getString("kind"));
-                    c.args.putString("bp", t == null ? "shop" : BuildDesk.forBusiness(t.key()));
-                    c.args.remove("px");
-                }
+                if (pr.equals("build") && c.args.getString("bp").isEmpty()) choosePlotted(level, v, c);   // [biz25] one with a plot
+                if (pr.equals("buy")) { PropertyOffice.openOn(p, "market", null, "buy"); return "#open:"; }   // [biz25] buildings for sale
                 return "";
             }
             case "bp" -> {
@@ -391,7 +411,11 @@ public final class StartBusiness implements PlayerLife.Page {
                 return "";
             }
             case "citizen" -> { return LifeTown.sayToNearest(p, "May I live here?"); }
-            case "confirm" -> { return confirmed(level, p, v, c, args.getInt("borrow")); }
+            case "confirm" -> { return isShop(c) ? BizShop.confirmed(level, p, v, c, args.getInt("borrow")) : confirmed(level, p, v, c, args.getInt("borrow")); }   // [biz25]
+            case "buycounter" -> { return BizGuide.buyCounter(p); }
+            case "life" -> { PlayerLife.open(p, "life", null); return "#open:"; }
+            case "shophelp" -> { PlayerLife.open(p, "shop", null); return "#open:"; }
+            case "shop" -> { PlayerLife.open(p, "shop", null); return "#open:"; }
             case "next" -> {
                 PlayerLife.open(p, "firm", LifePage.args("firm", c.args.getString("firm"), "tab", args.getString("tab")));
                 return "#open:";
@@ -446,6 +470,26 @@ public final class StartBusiness implements PlayerLife.Page {
         }
         c.args.putInt("step", 4);
         return "Your charter is granted: " + b.name + ", a " + t.noun() + ".";
+    }
+
+    /** [biz25] The kind "a shop of your own": no charter, the player stocks it and folk buy (PlayerShops). */
+    static final String SHOP = "shop";
+
+    static boolean isShop(PlayerLife.Ctx c) {
+        return SHOP.equals(c.args.getString("kind"));
+    }
+
+    /** [biz25] The drawing that suits the kind best, if a plot in town fits it; else the first that has one. */
+    static void choosePlotted(ServerLevel level, Villages.Village v, PlayerLife.Ctx c) {
+        BusinessTypes.BusinessType t = BusinessTypes.of(c.args.getString("kind"));
+        String best = t == null ? "shop" : BuildDesk.forBusiness(t.key());
+        c.args.remove("px");
+        List<String> drawings = BuildOrders.drawings(v.id());
+        if (drawings.contains(best) && BuildPlots.first(level, v, best) != null) { c.args.putString("bp", best); return; }
+        for (BuildDesk.Design d : BuildDesk.PREMISES) {
+            if (drawings.contains(d.blueprint()) && BuildPlots.first(level, v, d.blueprint()) != null) { c.args.putString("bp", d.blueprint()); return; }
+        }
+        c.args.putString("bp", best);
     }
 
     /** Tests: the whole flow at once, with its defaults. */

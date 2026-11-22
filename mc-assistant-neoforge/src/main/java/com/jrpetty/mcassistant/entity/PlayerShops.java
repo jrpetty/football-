@@ -755,6 +755,9 @@ public final class PlayerShops {
             }
         }
         Display.TextDisplay td = e instanceof Display.TextDisplay x ? x : null;
+        if (td != null && td.distanceToSqr(s.anchor.getX() + 0.5, s.anchor.getY() + 1.6, s.anchor.getZ() + 0.5) > 0.25) {
+            td.teleportTo(s.anchor.getX() + 0.5, s.anchor.getY() + 1.6, s.anchor.getZ() + 0.5);   // [biz25] the counter moved: its sign goes with it
+        }
         if (td == null) {
             Display.TextDisplay td2 = EntityType.TEXT_DISPLAY.create(level);
             if (td2 == null) return;

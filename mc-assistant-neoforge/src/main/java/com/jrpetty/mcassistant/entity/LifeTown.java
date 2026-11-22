@@ -54,13 +54,16 @@ public final class LifeTown implements PlayerLife.Page {
         PlayerShops.Shop s = PlayerShops.of(id, p.getUUID());
         if (s == null) {
             page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), "No shop yet",
-                    "Build a room, set a Shop Counter in it, and folk will come to buy", "").button("How to open one", "shop", null);
+                    "A building with a Shop Counter: yours, one the town builds you, or one you buy; you stock it, folk buy", "")
+                .button("Open a shop", "start", LifePage.args("kind", "shop")).primary().button("How it works", "shop", null);   // [biz25] one way in, step by step
         } else {
             PlayerShops.roll(s, day);
             page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), s.name + ": " + PlayerShops.stateWords(level, s),
                     "Till " + PlayerLife.coins(s.till) + "; this week " + PlayerLife.coins(PlayerShops.week(s.weekCoin)) + " for " + PlayerShops.week(s.weekCount)
                         + " sold; " + ShopPage.words(s.rep) + (s.keeper == null ? "" : "; kept by " + s.keeperName), "")
                 .button("Open its screen", "shop", null);
+            BizGuide.Step next = BizGuide.next(BizGuide.steps(level, v, s));   // [biz25] its next step, till its first sale
+            if (next != null) page.row(null, "Next: " + next.label(), next.hint(), "").button(next.button(), "shopstep", LifePage.args("tab", next.action().replace("tab:", "")));
             page.buttons().button("Sell", "property", LifePage.args("what", "sell")).button("Let", "property", LifePage.args("what", "let"))
                 .button("Repurpose", "property", LifePage.args("what", "repurpose"));
         }
@@ -97,7 +100,7 @@ public final class LifeTown implements PlayerLife.Page {
         }
         if (!citizen) page.row(new ItemStack(Items.BLUE_BANNER), "Become a citizen", "A home in the town, a vote, a say: ask any folk \"May I live here?\"", "").button("Ask now", "citizen", null);
         if (job.isEmpty()) page.row(new ItemStack(Items.PAPER), "Find work", "Apply for an opening, or take a shift today", "").button("Jobs board", "jobs", null);
-        if (s == null) page.row(new ItemStack(Items.BARREL), "Open a shop", "Any building of yours with a counter, a door and a chest", "").button("How", "shop", null);
+        if (s == null) page.row(new ItemStack(Items.BARREL), "Open a shop", "A building with a counter, a door and a chest: yours, built for you, or bought", "").button("Open a shop", "start", LifePage.args("kind", "shop"));   // [biz25]
         if (firms.isEmpty()) page.row(new ItemStack(Items.WRITABLE_BOOK), "Start a business", "A charter, premises, hands of your own", "").button("Start", "start", null);
         page.row(new ItemStack(Items.EMERALD), "Sell what you carry", "The town's counters buy their trades' goods: the store, the smithy, the café", "").button("Selling prices", "earnings", null);
         page.buttons().button("Everything you can do (no commands)", "all", null);
@@ -109,7 +112,8 @@ public final class LifeTown implements PlayerLife.Page {
         ServerLevel level = p.serverLevel();
         Villages.Village v = PlayerLife.here(p);
         switch (action) {
-            case "jobs", "shop", "start", "all" -> { PlayerLife.open(p, action, null); return "#open:"; }
+            case "jobs", "shop", "start", "all" -> { PlayerLife.open(p, action, args.contains("kind") ? LifePage.args("kind", args.getString("kind")) : null); return "#open:"; }   // [biz25] the start's kind
+            case "shopstep" -> { PlayerLife.open(p, "shop", LifePage.args("tab", args.getString("tab"))); return "#open:"; }   // [biz25]
             case "found" -> { FoundingEasy.open(p, "life"); return "#open:"; }   // [found23]
             case "firm" -> { PlayerLife.open(p, "firm", LifePage.args("firm", args.getString("firm"))); return "#open:"; }
             case "earnings" -> { books(p, "Earnings"); return "#close"; }

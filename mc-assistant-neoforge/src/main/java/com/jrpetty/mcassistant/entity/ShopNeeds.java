@@ -307,7 +307,8 @@ public final class ShopNeeds {
             "Craft one (three wooden slabs over a chest between two planks, a gold nugget under the chest) or buy one at the town's shop."));
         out.add(new Need("walls", s.closed && s.roofed, "Walls and a roof", s.leak, "Close the room in: walls all round, a roof, and doors in the doorways."));
         out.add(new Need("door", !s.doors.isEmpty(), "A door", s.doors.isEmpty() ? "customers need a way in" : "", "Hang a door in its doorway."));
-        out.add(new Need("street", s.reachable, "Its door reached from a street", s.doors.isEmpty() ? "" : s.reachable ? "" : "no path from the door to a street or the square",
+        out.add(new Need("street", s.reachable, "Its door reached from a street", s.doors.isEmpty() ? "" : s.reachable ? ""
+            : "no path from the door at " + s.doors.get(0).getX() + ", " + s.doors.get(0).getZ() + " to a street or the square: is its way out blocked, or the door below the floor?",   // [biz25] where
             "Clear a way from the door to the nearest street, or lay a path."));
         int shelves = 0;
         for (BlockPos p : s.stock) if (!back.contains(p)) shelves++;
