@@ -48,6 +48,8 @@ public final class SquareMend {
     static final int INSIDE = TownPlan.PLAZA - 1, WALL = TownPlan.PLAZA;
     /** How far off the level a column may be and still be mended (a deep hole or a hill is left as it is). */
     static final int MOST = 14;
+    /** How many buildings a town has before its square is made good (a camp of a few days is left to grow). */
+    static final int GROWN = 8;
     /** Columns a round. */
     static final int PER_ROUND = 32;
     /** How high a wall column's courses may stand. */
@@ -102,6 +104,8 @@ public final class SquareMend {
         Job job = JOBS.get(id);
         if (job == null) {
             if (!Land.areaLoaded(level, v.centre(), WALL + 2)) return;
+            // A town grown up enough to have a square at all (its buildings round it), not a camp of a few days.
+            if (Ledger.buildings(id).size() < GROWN && !Villages.hasBuilt(id, "fortify")) return;
             job = survey(level, v);
             if (job == null) return;
             JOBS.put(id, job);

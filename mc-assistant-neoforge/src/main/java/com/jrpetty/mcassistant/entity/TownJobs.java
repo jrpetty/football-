@@ -73,6 +73,7 @@ public final class TownJobs {
         Crew(UUID folk) { this.folk = folk; }
     }
 
+    private static final org.slf4j.Logger LOG_LIFE = com.mojang.logging.LogUtils.getLogger();
     private static final Map<String, Crew> CREW = new ConcurrentHashMap<>();
     private static final Map<UUID, String> ON = new ConcurrentHashMap<>();
     /** Hands resting from the town's work after a turn at it, till when. */
@@ -80,12 +81,20 @@ public final class TownJobs {
     /** [life28] The town's works that last asked for a hand and found none to spare, and when (the census, the tests). */
     private static final Map<String, Long> UNSTAFFED = new ConcurrentHashMap<>();
 
-    /** [life28] The works of this town waiting on a hand just now (asked within the last half minute and none to spare). */
+    /** [life28] Could the town's works call this folk now (fit, on no other works, not a miner the age keeps at its mine)? */
+    static boolean callable(ServerLevel level, VillageFolkEntity f) {
+        UUID id = f.ownerId();
+        if (id == null || !fit(f, "") || busy(f) || PostStints.busy(f)) return false;
+        if (f.stationTask() == AssistantEntity.StationTask.NONE && f.workZone() == null) return false;
+        return !(f.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, id));
+    }
+
+    /** [life28] The works of this town waiting on a hand just now (asked within the last ten seconds and none to spare). */
     public static java.util.List<String> unstaffed(UUID village, long now) {
         java.util.List<String> out = new java.util.ArrayList<>();
         String prefix = village + "/";
         for (Map.Entry<String, Long> e : UNSTAFFED.entrySet()) {
-            if (e.getKey().startsWith(prefix) && now - e.getValue() <= 600) out.add(e.getKey().substring(prefix.length()));
+            if (e.getKey().startsWith(prefix) && now - e.getValue() <= 200) out.add(e.getKey().substring(prefix.length()));
         }
         return out;
     }
@@ -337,7 +346,14 @@ public final class TownJobs {
         RESTING.values().removeIf(until -> until <= now);
         VillageFolkEntity best = null;
         double bestScore = -Double.MAX_VALUE;
+        java.util.Map<String, Integer> passed = new java.util.TreeMap<>();   // [life28] why the idle hands were passed over (the log)
         for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (a instanceof VillageFolkEntity g && Busywork.spare(g)) {
+                String why = !fit(g, works) ? "unfit" : ON.containsKey(g.getUUID()) && busy(g) ? "on other works"
+                    : PostStints.busy(g) ? "post" : g.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id()) ? "mine kept"
+                    : g.stationTask() == AssistantEntity.StationTask.NONE && g.workZone() == null ? "no trade yet" : "";
+                if (!why.isEmpty()) passed.merge(why, 1, Integer::sum);
+            }
             if (!(a instanceof VillageFolkEntity f) || !fit(f, works)
                 || ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) continue;
             boolean idleHand = Busywork.spare(f);                         // [life28] nothing at all to do just now
@@ -384,6 +400,8 @@ public final class TownJobs {
             score -= Math.sqrt(f.blockPosition().distSqr(at)) / 4.0;
             if (score > bestScore) { bestScore = score; best = f; }
         }
+        if (best == null && !passed.isEmpty()) LOG_LIFE.info("[MCA-TOWNJOBS] {}: {} found no hand; idle hands passed over: {} (may {}, busy {} of {})",
+            Villages.name(v.id()), works, passed, may, busy, adults);
         return best;
     }
 

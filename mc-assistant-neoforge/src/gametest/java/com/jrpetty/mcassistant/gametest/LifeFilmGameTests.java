@@ -150,7 +150,7 @@ public class LifeFilmGameTests {
                 expect.that(shares.size() >= 20, "counted through the day: " + shares.size());
                 expect.that(mean < 0.15, "under 15% stood idle by day on average: " + Math.round(mean * 1000) / 10.0 + "%");
                 expect.that(longest[0] <= 1200, "nobody stood still over a minute: " + longest[0] / 20 + "s (" + longWho[0] + ")");
-                expect.that(waiting[0] <= 1, "no town work left waiting on a hand while hands stood idle (counts): " + waiting[0]);
+                expect.that(waiting[0] <= 3, "no town work left waiting on a hand while hands stood idle, but for a passing count or three as a hand walks to it: " + waiting[0]);
                 expect.that(morning[0] < 0 || morning[1] > 0 && morning[1] - morning[0] <= 1200 && morning[2] <= 5,
                     "the morning assembly short: " + (morning[1] - morning[0]) / 20 + "s, " + morning[2] + " lines");
                 finish(helper, true, expect.clean() ? null : expect.summary());

@@ -74,9 +74,35 @@ public final class SquareDress {
             || b == Blocks.GRINDSTONE || b == Blocks.COMPOSTER;
     }
 
+    /** What grows on it (turf, flowers, saplings, leaves; not a log: see treeLog). */
+    static boolean plant(BlockState s) {
+        return s.is(BlockTags.LEAVES) || !s.is(BlockTags.LOGS) && Terraform.growth(s);
+    }
+
+    /** The town's furniture on the square, kept where it stands (the floor laid under it): a lamp, a bench, a sign... */
+    static boolean furniture(BlockState s) {
+        return s.is(BlockTags.FENCES) || s.is(BlockTags.WALLS) || s.is(BlockTags.FENCE_GATES) || s.is(Blocks.LANTERN)
+            || s.is(Blocks.TORCH) || s.is(Blocks.WALL_TORCH) || s.is(BlockTags.STAIRS) || s.is(BlockTags.SLABS)
+            || s.is(BlockTags.ALL_SIGNS) || s.is(BlockTags.BANNERS) || s.is(BlockTags.CAMPFIRES) || s.is(Blocks.BELL)
+            || s.is(Blocks.CHAIN) || s.is(BlockTags.FLOWER_POTS) || s.is(BlockTags.WOOL_CARPETS) || s.is(BlockTags.BEDS)
+            || s.getBlock() instanceof com.jrpetty.mcassistant.block.VillageBoardBlock;
+    }
+
+    /** A log of a tree that grew there: leaves over it or round its top. */
+    static boolean treeLog(Level level, BlockPos p) {
+        for (int k = 1; k <= 8; k++) {
+            BlockPos q = p.above(k);
+            BlockState s = level.getBlockState(q);
+            if (s.is(BlockTags.LEAVES)) return true;
+            for (Direction d : Direction.Plane.HORIZONTAL) if (level.getBlockState(q.relative(d)).is(BlockTags.LEAVES)) return true;
+            if (!s.is(BlockTags.LOGS)) return false;
+        }
+        return false;
+    }
+
     /** A stray block of building stuff or earth standing on the open ground (a foothold left, a block dropped). */
     static boolean stray(BlockState s) {
-        return Terraform.earth(s) || s.is(BlockTags.PLANKS) || s.is(BlockTags.LOGS) || s.is(Blocks.COBBLESTONE)
+        return Terraform.earth(s) || s.is(Blocks.COBBLESTONE)
             || s.is(Blocks.MOSSY_COBBLESTONE) || s.is(BlockTags.STONE_BRICKS) || s.is(Blocks.BRICKS) || s.is(Blocks.GRAVEL)
             || s.is(Blocks.SAND) || s.is(Blocks.DIRT_PATH) || s.is(Blocks.POLISHED_GRANITE) || s.is(Blocks.GRANITE)
             || s.is(Blocks.SMOOTH_STONE) || s.is(Blocks.COBBLED_DEEPSLATE) || s.is(Blocks.DEEPSLATE_BRICKS);
@@ -115,20 +141,32 @@ public final class SquareDress {
                 if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) continue;
                 BlockPos ground = new BlockPos(x, lv, z);
                 if (TownBlocks.buildingAt(level, v, ground.above()) != null || TownBlocks.buildingAt(level, v, ground) != null) continue;
-                boolean keep = stall(dx, dz);
-                for (int y = lv + 1; y <= lv + 16; y++) {
+                boolean stallHere = stall(dx, dz);                                   // a market stall: left standing, paved under
+                // [life28] Looked over first: anything on the column that is somebody's work (a room's wall, a counter, a
+                // mine's headframe, a player's own block) leaves the whole column as it is. What grows, a tree, the town's
+                // own furniture (a lamp, a bench, a sign), and a loose table, chest or stray block are all it may hold.
+                boolean foreign = false;
+                for (int y = lv + 1; y <= lv + 16 && !foreign && !stallHere; y++) {
                     BlockPos p = new BlockPos(x, y, z);
                     BlockState s = level.getBlockState(p);
-                    if (s.isAir()) continue;
-                    if (Terraform.growth(s) || s.is(BlockTags.LEAVES) || (s.is(BlockTags.LOGS) && !keep)) {
+                    if (s.isAir() || plant(s) || furniture(s)) continue;
+                    if (PlayerBlocks.placed(level, p)) { foreign = true; continue; }
+                    if (s.is(BlockTags.LOGS) && treeLog(level, p)) continue;
+                    if (y <= lv + 6 && lone(level, p) && (fixture(s) && takeable(v, s) || stray(s))) continue;
+                    foreign = true;
+                }
+                if (foreign) { did.merge("left", 1, Integer::sum); continue; }
+                for (int y = lv + 1; y <= lv + 16 && !stallHere; y++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    BlockState s = level.getBlockState(p);
+                    if (s.isAir() || furniture(s)) continue;
+                    if (plant(s) || s.is(BlockTags.LOGS)) {
                         level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
                         did.merge("growth", 1, Integer::sum);
-                    } else if (PlayerBlocks.placed(level, p)) {
-                        // a player's own: left as it is
-                    } else if (!keep && fixture(s) && takeable(v, s)) {
+                    } else if (fixture(s)) {
                         takeUp(level, v, p, s);
                         did.merge("fixtures", 1, Integer::sum);
-                    } else if (!keep && stray(s) && y <= lv + 6 && lone(level, p)) {
+                    } else if (stray(s)) {
                         takeUp(level, v, p, s);
                         did.merge("strays", 1, Integer::sum);
                     }
@@ -150,7 +188,8 @@ public final class SquareDress {
             }
         }
         // The wall: down, and laid again whole.
-        did.put("wall", wall(level, v, lv));
+        // (Only a town that has its wall, or has it going up: the wall is the fortify's, built when the town wants it.)
+        if (Villages.hasBuilt(v.id(), "fortify") || Villages.sitesOf(v.id()).containsKey("fortify")) did.put("wall", wall(level, v, lv));
         if (boardHere) {
             BlockPos up = VillageBoards.raiseFor(level, v);
             did.put("board up", up == null ? 0 : 1);
@@ -311,7 +350,7 @@ public final class SquareDress {
         int n = 0;
         for (int dx = -INSIDE; dx <= INSIDE; dx++) {
             for (int dz = -INSIDE; dz <= INSIDE; dz++) {
-                if (stall(dx, dz)) continue;
+                boolean stallHere = stall(dx, dz);                                   // a market stall: left standing, paved under
                 int x = heart.getX() + dx, z = heart.getZ() + dz;
                 if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) continue;
                 for (int y = lv + 1; y <= lv + 3; y++) {
