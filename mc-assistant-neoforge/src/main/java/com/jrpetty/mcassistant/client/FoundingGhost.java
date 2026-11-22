@@ -50,6 +50,7 @@ public final class FoundingGhost {
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
         if (!on || event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+        if (Minecraft.getInstance().options.hideGui) return;                     // [vision27] F1, a clean camera shot: no outlines
         if (System.currentTimeMillis() > until) { on = false; return; }
         Minecraft mc = Minecraft.getInstance();
         ClientLevel lv = mc.level;

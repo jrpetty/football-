@@ -42,6 +42,7 @@ public final class LifeGhost {
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+        if (net.minecraft.client.Minecraft.getInstance().options.hideGui) return;   // [vision27] F1, a clean camera shot: no outlines
         CompoundTag g = ghost;
         if (g == null) return;
         if (System.currentTimeMillis() > until) { ghost = null; return; }

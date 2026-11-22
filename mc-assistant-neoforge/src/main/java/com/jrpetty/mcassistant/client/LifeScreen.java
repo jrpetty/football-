@@ -122,12 +122,15 @@ public class LifeScreen extends Screen {
         UiStyle.panel(g, left, top, w, h);
         UiStyle.headerBand(g, left, top, w, HEAD);
         UiStyle.title(g, font, data.getString("title"), left + PAD, top + 5);
-        UiStyle.text(g, font, data.getString("sub"), left + PAD, top + 18, w - PAD * 2 - 56, UiStyle.TEXT_MUTED);
+        boolean hasBack = !data.getString("back").isEmpty();                // [vision27] room for the camera's button too
+        UiStyle.text(g, font, data.getString("sub"), left + PAD, top + 18, w - PAD * 2 - (hasBack ? 160 : 112), UiStyle.TEXT_MUTED);
         button(g, "Close", left + w - PAD - 44, top + 7, 44, mx, my, true, false, "", this::onClose);
         if (!data.getString("back").isEmpty()) {
             CompoundTag a = data.getCompound("backArgs");
             button(g, "Back", left + w - PAD - 92, top + 7, 44, mx, my, true, false, "", () -> send(data.getString("back"), "open", a, false));
         }
+        button(g, "Camera", left + w - PAD - (hasBack ? 148 : 100), top + 7, 52, mx, my, true, false,   // [vision27] film the town
+            "Film the town: an orbit, a fly-through, a folk followed through its day, a time-lapse (or press K).", CameraScreen::open);
         // the tabs
         int tx = left + PAD;
         for (Tag e : data.getList("tabs", Tag.TAG_COMPOUND)) {
