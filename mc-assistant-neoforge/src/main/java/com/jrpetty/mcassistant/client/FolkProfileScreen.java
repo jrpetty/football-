@@ -54,10 +54,11 @@ import java.util.UUID;
 public class FolkProfileScreen extends Screen {
 
     /** The tabs, as the server's FolkProfile.TABS names them, and as shown. */
-    private static final String[] TAB_IDS = { "about", "life", "work", "day", "things" };
-    private static final String[] TAB_NAMES = { "About", "Life", "Work", "Day", "Belongings" };
+    // [biz30] Overview, Work, Business, Family, Town, Day, Things: its businesses and its place in the town on tabs of their own.
+    private static final String[] TAB_IDS = { "about", "work", "biz", "life", "town", "day", "things" };
+    private static final String[] TAB_NAMES = { "Overview", "Work", "Business", "Family", "Town", "Day", "Things" };
     /** The same, short, for a narrow window. */
-    private static final String[] TAB_SHORT = { "About", "Life", "Work", "Day", "Owns" };
+    private static final String[] TAB_SHORT = { "About", "Work", "Biz", "Family", "Town", "Day", "Owns" };
     /** How often the open screen asks for a fresh profile, in client ticks (three seconds). */
     private static final int REFRESH_TICKS = 60;
     /** Within this distance the folk can be talked to (the server's talk range). */
@@ -240,7 +241,7 @@ public class FolkProfileScreen extends Screen {
     // ------------------------------------------------------------------ geometry
 
     /** [ui] The left column with the tall portrait, when the window has room for it (0 when not). */
-    private int col() { return w >= 400 && h >= 196 ? COL_W : 0; }
+    private int col() { return w >= 440 && h >= 196 ? COL_W : 0; }   // [biz30] not at GUI 3 on 720p, where it squeezed the header's words
     private int innerX() { return left + UiStyle.S2 + (col() > 0 ? col() + UiStyle.S2 : 0); }
     private int pageX() { return innerX(); }
     private int pageY() { return top + HEADER_H + TABS_H + UiStyle.S1; }
@@ -381,7 +382,7 @@ public class FolkProfileScreen extends Screen {
         return null;
     }
 
-    private static final String[] KEYS = { "1", "2", "3", "4", "5" };
+    private static final String[] KEYS = { "1", "2", "3", "4", "5", "6", "7" };
 
     @Nullable
     private String page(GuiGraphics g, int mx, int my) {
@@ -425,7 +426,7 @@ public class FolkProfileScreen extends Screen {
         if (inside(mx, my, x, y, fw, bh)) tip = "The folk you follow, and how each is getting on.";
         String said = FavouritesClient.starSaid();
         int room = x - left - 2 * UiStyle.S2;                               // [ui29] the short hint where the whole one would be cut
-        String hint = font.width("Esc back · 1-5 tabs · wheel scrolls") <= room ? "Esc back · 1-5 tabs · wheel scrolls" : "Esc: back";
+        String hint = font.width("Esc back · 1-7 tabs · wheel scrolls") <= room ? "Esc back · 1-7 tabs · wheel scrolls" : "Esc: back";   // [biz30]
         UiStyle.text(g, font, said.isEmpty() ? hint : said, left + UiStyle.S2, y + 5, room,
             said.isEmpty() ? UiStyle.TEXT_FAINT : UiStyle.ACCENT);
         return tip;
@@ -484,7 +485,7 @@ public class FolkProfileScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
-        if (key >= GLFW.GLFW_KEY_1 && key <= GLFW.GLFW_KEY_5) { pick(key - GLFW.GLFW_KEY_1); return true; }
+        if (key >= GLFW.GLFW_KEY_1 && key < GLFW.GLFW_KEY_1 + TAB_NAMES.length) { pick(key - GLFW.GLFW_KEY_1); return true; }   // [biz30]
         if (key == GLFW.GLFW_KEY_TAB) { pick((tab + ((mods & GLFW.GLFW_MOD_SHIFT) != 0 ? TAB_NAMES.length - 1 : 1)) % TAB_NAMES.length); return true; }
         if (key == GLFW.GLFW_KEY_PAGE_DOWN) { scroll.wheel(-1, pageH() - UiStyle.LINE); return true; }
         if (key == GLFW.GLFW_KEY_PAGE_UP) { scroll.wheel(1, pageH() - UiStyle.LINE); return true; }
@@ -515,15 +516,17 @@ public class FolkProfileScreen extends Screen {
             case "life" -> life(p);
             case "work" -> work(p);
             case "day" -> day(p);
+            case "biz" -> business(p);                                    // [biz30]
+            case "town" -> town(p);                                       // [biz30]
             default -> things(p);
         }
         // Everything else its card says that belongs on this tab.
         ListTag card = data.getCompound("card").getList(TAB_IDS[tab], Tag.TAG_COMPOUND);
         if (!card.isEmpty()) {
-            p.heading(tab == 2 ? "At its work" : tab == 4 ? "Money and things" : "More");
+            p.heading(TAB_IDS[tab].equals("work") ? "At its work" : TAB_IDS[tab].equals("things") ? "Money and things" : "More");
             for (int i = 0; i < card.size(); i++) {
                 String k = card.getCompound(i).getString("k");
-                if (tab == 0 && OWN.contains(k) && !data.getCompound("self").isEmpty()) continue;   // [ui] shown above
+                if (TAB_IDS[tab].equals("about") && OWN.contains(k) && !data.getCompound("self").isEmpty()) continue;   // [ui] shown above
                 p.fact(k, card.getCompound(i).getString("v"));
             }
         }
@@ -660,6 +663,41 @@ public class FolkProfileScreen extends Screen {
                 + (you.getBoolean("knows") ? "" : you.getString("heard_from").isEmpty() ? " · you have never spoken"
                 : " · only heard of you, from " + you.getString("heard_from")), p.w));
         }
+    }
+
+    /** [biz30] Its businesses: each it owns or works in, a card each (a click opens its books where the town lets you see
+     *  them), then its plans. */
+    private void business(Page p) {
+        CompoundTag bz = data.getCompound("biz");
+        ListTag firms = bz.getList("firms", Tag.TAG_COMPOUND);
+        p.heading(firms.isEmpty() ? "Its businesses" : "Its businesses (" + firms.size() + ")");
+        if (firms.isEmpty()) p.note("It owns no business and works in none of the town's: its work is the town's own.");
+        for (int i = 0; i < firms.size(); i++) p.add(new Firm(font, firms.getCompound(i), p.w));
+        if (!bz.getString("plans").isEmpty()) {
+            p.heading("Its plans");
+            p.text(bz.getString("plans"), UiStyle.TEXT);
+        }
+    }
+
+    /** [biz30] Its place in the town: its standing, offices, what it thinks of you and how to raise it, its recent life. */
+    private void town(Page p) {
+        CompoundTag t = data.getCompound("town");
+        p.heading("In " + (t.getString("town").isEmpty() ? "the town" : t.getString("town")));
+        p.fact("Standing", capital(t.getString("status")));
+        ListTag offices = t.getList("offices", Tag.TAG_STRING);
+        List<String> os = new ArrayList<>();
+        for (int i = 0; i < offices.size(); i++) os.add(offices.getString(i));
+        p.fact("Offices", os.isEmpty() ? "none" : String.join(", ", os));
+        if (t.contains("you")) {
+            p.heading("You and it");
+            int aff = t.getInt("you");
+            p.add(new Goal(font, capital(t.getString("you_word")), (aff + 100) * 5, (aff > 0 ? "+" : "") + aff, p.w));
+            p.text(t.getString("raise"), UiStyle.TEXT_MUTED);
+        }
+        ListTag hist = t.getList("history", Tag.TAG_STRING);
+        p.heading("Its recent life");
+        if (hist.isEmpty()) p.note("Nothing much has happened to it lately.");
+        for (int i = 0; i < hist.size(); i++) p.text("• " + hist.getString(i), UiStyle.TEXT);
     }
 
     private Person person(CompoundTag c, String role, CompoundTag life) {
@@ -974,6 +1012,59 @@ public class FolkProfileScreen extends Screen {
         @Nullable
         String tip(Font font, int x, int y, int w, int mx, int my) {
             return tip;
+        }
+    }
+
+    /** [biz30] One business it owns or works in: its name and its role, its trade and where, its week, its till and hands,
+     *  how long it has run and how it is doing; a click for its books where the town lets you see them. */
+    private static final class Firm extends Block {
+        final String id, name, role, line1, line2, trend;
+        final boolean books;
+        final List<FormattedCharSequence> l1, l2;
+
+        Firm(Font font, CompoundTag c, int w) {
+            id = c.getString("id");
+            name = c.getString("name");
+            role = c.getString("role");
+            trend = c.getString("trend");
+            books = c.getBoolean("books") && !id.isEmpty();
+            line1 = c.getString("trade") + (c.getString("where").isEmpty() ? "" : " · " + c.getString("where")) + " · " + role;
+            line2 = "This week: takings " + coins(c.getLong("takings")) + (c.contains("profit") ? ", profit " + coins(c.getLong("profit")) : "")
+                + " · till " + coins(c.getLong("till")) + " · " + c.getInt("staff") + (c.getInt("staff") == 1 ? " hand" : " hands")
+                + " · " + c.getLong("days") + (c.getLong("days") == 1 ? " day" : " days") + " open";
+            l1 = TextCache.splitPlain(font, line1, w - 10);
+            l2 = TextCache.splitPlain(font, line2, w - 10);
+            h = 4 + UiStyle.LINE + (l1.size() + l2.size()) * UiStyle.LINE + 4;
+        }
+
+        static String coins(long pence) {
+            return String.format(Locale.ROOT, "%.2fc", pence / 100.0);
+        }
+
+        void draw(GuiGraphics g, Font font, int x, int y, int w, int mx, int my) {
+            boolean over = books && mx >= x && mx < x + w && my >= y && my < y + h;
+            UiStyle.card(g, x, y, w, h, over ? UiStyle.ACCENT_FILL : 0);
+            String tr = trend.isEmpty() ? "" : trend;
+            int trw = tr.isEmpty() ? 0 : font.width(tr) + 10;
+            UiStyle.text(g, font, name, x + 5, y + 4, w - 10 - trw - (books ? 40 : 0), UiStyle.TEXT);
+            if (!tr.isEmpty()) UiStyle.badge(g, font, tr, x + w - 5 - trw - (books ? 40 : 0), y + 3,
+                tr.equals("growing") ? UiStyle.SUCCESS_FILL : tr.equals("struggling") ? UiStyle.DANGER_FILL : UiStyle.ACCENT_FILL);
+            if (books) g.drawString(font, "Books ›", x + w - 5 - font.width("Books ›"), y + 4, UiStyle.ACCENT, false);
+            int ly = y + 4 + UiStyle.LINE;
+            for (FormattedCharSequence l : l1) { g.drawString(font, l, x + 5, ly, UiStyle.TEXT_MUTED, false); ly += UiStyle.LINE; }
+            for (FormattedCharSequence l : l2) { g.drawString(font, l, x + 5, ly, UiStyle.TEXT_FAINT, false); ly += UiStyle.LINE; }
+        }
+
+        @Nullable
+        String tip(Font font, int x, int y, int w, int mx, int my) {
+            return books ? name + "\nClick to open its books." : name + "\nIts books are its owners' and the town's to see.";
+        }
+
+        boolean click(Font font, int x, int y, int w, double mx, double my, FolkProfileScreen screen) {
+            if (!books) return false;
+            UiStyle.click();
+            com.jrpetty.mcassistant.net.LifeNetwork.command("village business books " + BusinessScreen.quoted(id));
+            return true;
         }
     }
 
