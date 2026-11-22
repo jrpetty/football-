@@ -340,6 +340,8 @@ public final class StuckSpots {
                     // [city26] Nor the ground rising a block (the ground goes on at that height past it: a street's step on a
                     // hillside, a terrace's edge), which a folk steps up: only a block standing alone.
                     if (c.equals(ahead) && !Footways.passable(level, ahead.relative(d)) && Terraform.earth(st)) return false;
+                    // [city26] Nor a step of a stair (a terraced street's, a door's flight): it is the way up, not in the way.
+                    if (st.getBlock() instanceof net.minecraft.world.level.block.StairBlock) return false;
                     if (!TownBlocks.mayBreak(level, v, c, TownBlocks.Why.TIDY)) return false;
                     dig(level, v, c);
                     return true;
