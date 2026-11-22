@@ -691,7 +691,7 @@ public class FolkProfileScreen extends Screen {
         if (t.contains("you")) {
             p.heading("You and it");
             int aff = t.getInt("you");
-            p.add(new Goal(font, capital(t.getString("you_word")), (aff + 100) * 5, "Its feeling for you: " + (aff > 0 ? "+" : "") + aff + ", on a scale of -100 to +100", p.w));
+            p.add(new Goal(font, capital(t.getString("you_word")), (aff + 100) * 5, "Feeling " + (aff > 0 ? "+" : "") + aff + " (of -100 to +100)", p.w));
             p.text(t.getString("raise"), UiStyle.TEXT_MUTED);
         }
         ListTag hist = t.getList("history", Tag.TAG_STRING);
