@@ -235,33 +235,21 @@ public class VisionGameTests {
 
     // ============================================================ vi06: a paid order gets a hand though the town's are all out
 
-    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "vi06_paid_hand")
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "vi06_paid_hand")
     public static void vi06_paid_hand(GameTestHelper helper) {
-        int x = 6_008_000;
-        int[][] at = new int[16][];
-        for (int i = 0; i < 16; i++) at[i] = new int[] {(i % 4) * 2 - 3, (i / 4) * 2 - 3};
-        List<VillageFolkEntity> f = ground(helper, x, at);
-        BlockPos heart = heart(helper, x);
-        helper.runAtTickTime(5, () -> {
-            ServerLevel level = helper.getLevel();
-            level.setDayTime(30 * 24000L + 3000L);                         // the builders' hours
-            Villages.Village v = Villages.nearest(level, heart, 64);
-            helper.assertTrue(v != null && Villages.folkOf(v.id()).size() == 16, "a town of sixteen");
-            for (VillageFolkEntity a : f) a.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM);
-            // The town's one hand in eight (two of sixteen) both taken by its own works.
-            TownJobs.atWork(level, v, "gardens", heart.east(6), "fencing a garden");
-            TownJobs.atWork(level, v, "signs", heart.west(6), "putting up a sign");
-            helper.assertTrue(TownJobs.handAt(level, v.id(), "gardens") != null && TownJobs.handAt(level, v.id(), "signs") != null,
-                "the town's two hands out at its own works");
-            TownJobs.atWork(level, v, "walls", heart.north(6), "rebuilding a house in brick");
-            boolean wallsHand = TownJobs.handAt(level, v.id(), "walls") != null;
-            // A paid commission: a hand all the same.
-            TownJobs.atWork(level, v, "commission1", heart.south(8), "building a player's house");
-            VillageFolkEntity hand = TownJobs.handAt(level, v.id(), "commission1");
-            helper.assertTrue(hand != null, "the paid order has its hand though the town's own are all out");
-            TownJobs.atWork(level, v, "homebuild", heart.south(14), "a household's own house");
-            helper.assertTrue(TownJobs.handAt(level, v.id(), "homebuild") != null, "and a household's paid house too");
-            Kit.log("[VT] vi06 paid orders handed (" + hand.displayNameCap() + "); an unpaid third work " + (wallsHand ? "also had one" : "waited"));
+        helper.runAtTickTime(1, () -> {
+            // A town of sixty grown folk: one hand in eight (seven) for its own works, idle hands up to one in four.
+            helper.assertTrue(TownJobs.allowance(60, 3, "gardens") == TownJobs.ANY, "its own works, under the eighth: any hand");
+            helper.assertTrue(TownJobs.allowance(60, 7, "gardens") == TownJobs.IDLE_ONLY, "at the eighth: only a hand standing idle");
+            helper.assertTrue(TownJobs.allowance(60, 15, "gardens") == TownJobs.NONE_TO_SPARE, "at the quarter: nobody");
+            // A paid order is not held to the eighth (nor the quarter): it was quoted a time and paid for.
+            helper.assertTrue(TownJobs.allowance(60, 7, "commission3") == TownJobs.ANY, "a player's commission at the eighth: any hand");
+            helper.assertTrue(TownJobs.allowance(60, 15, "commission3") == TownJobs.ANY, "and at the quarter");
+            helper.assertTrue(TownJobs.allowance(60, 15, "homebuild") == TownJobs.ANY, "a household's paid house too");
+            helper.assertTrue(TownJobs.allowance(60, 30, "homebuild") != TownJobs.ANY, "but never past half the town");
+            helper.assertTrue(TownJobs.allowance(4, 0, "commission1") == TownJobs.ANY, "nor kept waiting by a young village's trades");
+            helper.assertTrue(TownJobs.allowance(4, 0, "gardens") == TownJobs.NONE_TO_SPARE, "where its own gardens wait");
+            Kit.log("[VT] vi06 paid orders: any hand at the eighth and the quarter; the town's own works held to them");
             helper.succeed();
         });
     }

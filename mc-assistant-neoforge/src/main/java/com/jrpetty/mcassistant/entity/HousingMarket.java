@@ -1412,8 +1412,11 @@ public final class HousingMarket {
         UUID id = v.id();
         long day = level.getDayTime() / 24000L;
         if (!force) {
-            if (!Villages.thriving(id) && !Villages.crewsReport(id, level.getGameTime()).isEmpty()) {
-                return note(id, c, "the builders are on the town's own building first");
+            // [vision27] The town's own building first, but a house paid for is not stopped for it: it goes on at a third of
+            // its pace while the crews are at the town's (a villa paid for sat a whole day behind the town's buildings).
+            if (!Villages.thriving(id) && !Villages.crewsReport(id, level.getGameTime()).isEmpty()
+                    && (level.getGameTime() / LAY_EVERY) % 3 != 0) {
+                return note(id, c, "the builders are on the town's own building first (it goes on, a little at a time)");
             }
             if (!storesToSpare(level, v)) return note(id, c, "the stores' stone and timber kept for the town's own next building");
             if (!Land.areaLoaded(level, c.anchor, 9)) return "not loaded";

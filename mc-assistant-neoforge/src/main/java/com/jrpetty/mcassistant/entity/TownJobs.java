@@ -304,27 +304,10 @@ public final class TownJobs {
                 busy++;
             }
         }
-        if (adults < SETTLED && !essential(works) && !paid(works)) return null;      // a young village: its trades first
-        // Never more than one hand in eight — unless hands are standing idle in trades with more
-        // hands than they want (or short of their kit): then up to one in four, and the hands past
-        // the eighth only from those. The hundred had sixty standing about while its works waited,
-        // its one hand in eight (ten or eleven) already at them.
+        int may = allowance(adults, busy, works);
+        if (may == NONE_TO_SPARE) return null;
         java.util.Set<AssistantEntity.StationTask> over = null;
-        int cap = Math.max(1, adults / 8);
-        // The beds made up and room in the stores may have one hand past the eighth: a town of eight had
-        // one hand, always at the levelling on its hillside, and five houses stood a week with twelve beds
-        // unmade and no child born for want of one.
-        boolean extra = (essential(works) || works.equals(TIDY)) && busy < cap + 1;   // [tidy] the crew is never starved of its one hand
-        // [city9] Nor the streets: a town of ninety had its hands all at its signs, beds and gardens, and four days on not a
-        // yard of street laid. The paving's hand and the doors' ways' are on top of the eighth (and not counted against the
-        // other works'), so the roads, the beds and the rest keep theirs.
-        if (streetsWork(works) && busy < cap + 2) extra = true;
-        // [vision27] Nor a paid order (a player's commission, a household's own house): it was quoted a time and paid for,
-        // and a villa ordered and paid for in a town of sixty sat all day at "waiting for a hand the town can spare",
-        // its one hand in eight always taken by the town's beds, signs and gardens first.
-        if (paid(works) && busy < Math.max(cap + 2, adults / 2)) extra = true;
-        if (busy >= cap && !extra) {
-            if (busy >= Math.max(1, adults / 4)) return null;
+        if (may == IDLE_ONLY) {
             over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);
             for (AssistantEntity.StationTask t : AssistantEntity.StationTask.values()) {
                 if (Villages.overStaffed(v.id(), t)) over.add(t);
@@ -399,6 +382,33 @@ public final class TownJobs {
     static final String TIDY = "tidy";
 
     /** The works a village has done even while it is young: its beds made up, room in its stores. */
+    /** What a town of so many grown folk, so many already at its works, may call for these works: nobody, a hand
+     *  standing idle in a trade with hands to spare only, or any hand. */
+    static final int NONE_TO_SPARE = 0, IDLE_ONLY = 1, ANY = 2;
+
+    public static int allowance(int adults, int busy, String works) {
+        if (adults < SETTLED && !essential(works) && !paid(works)) return NONE_TO_SPARE;   // a young village: its trades first
+        // Never more than one hand in eight — unless hands are standing idle in trades with more
+        // hands than they want (or short of their kit): then up to one in four, and the hands past
+        // the eighth only from those. The hundred had sixty standing about while its works waited,
+        // its one hand in eight (ten or eleven) already at them.
+        int cap = Math.max(1, adults / 8);
+        // The beds made up and room in the stores may have one hand past the eighth: a town of eight had
+        // one hand, always at the levelling on its hillside, and five houses stood a week with twelve beds
+        // unmade and no child born for want of one.
+        boolean extra = (essential(works) || works.equals(TIDY)) && busy < cap + 1;   // [tidy] the crew is never starved of its one hand
+        // [city9] Nor the streets: a town of ninety had its hands all at its signs, beds and gardens, and four days on not a
+        // yard of street laid. The paving's hand and the doors' ways' are on top of the eighth (and not counted against the
+        // other works'), so the roads, the beds and the rest keep theirs.
+        if (streetsWork(works) && busy < cap + 2) extra = true;
+        // [vision27] Nor a paid order (a player's commission, a household's own house): it was quoted a time and paid for,
+        // and a villa ordered and paid for in a town of sixty sat all day at "waiting for a hand the town can spare",
+        // its one hand in eight always taken by the town's beds, signs and gardens first.
+        if (paid(works) && busy < Math.max(cap + 2, adults / 2)) extra = true;
+        if (busy < cap || extra) return ANY;
+        return busy >= Math.max(1, adults / 4) ? NONE_TO_SPARE : IDLE_ONLY;
+    }
+
     /** [vision27] Works somebody has paid for and been promised a time for: a commission (BuildOrders), a household's house. */
     static boolean paid(String works) {
         return works != null && (works.startsWith("commission") || works.equals("homebuild"));
