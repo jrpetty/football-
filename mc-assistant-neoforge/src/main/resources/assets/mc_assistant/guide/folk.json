@@ -42,7 +42,7 @@
       "q": ["what is my standing", "what does friend of the village mean", "what are the reputation levels", "how do i become an honoured guest",
         "how do i become a hero of the village", "what is an outcast", "standing titles", "why am i a stranger", "how does reputation work",
         "how do i check my reputation", "what does the town think of me"],
-      "kw": ["standing", "reputation", "title", "hero", "honoured", "outcast", "visitor", "stranger"],
+      "kw": ["standing", "reputation", "title", "hero", "honouredguest", "friendofvillage", "outcast", "visitor", "stranger"],
       "answer": "Your standing is the average warmth of the folk who know you: Outcast, Unwelcome, Stranger or Visitor, Friend of the village (average 12+), Honoured guest (30+, known by 3+), Hero (50+, known by 5+). The U page shows it as a bar, and any folk will tell you ('My standing').",
       "steps": ["Press U to see your standing and how many folk know you.", "Or ask a folk: Town → My standing; it names who thinks the world of you and who doesn't trust you."],
       "controls": ["[U] → How the town sees you", "[Right-click] a folk → Town → My standing"],
@@ -164,7 +164,7 @@
       "kind": "howto",
       "q": ["a villager is shouting for help", "folk cried help", "how do i protect villagers", "save a villager from a zombie",
         "do folk thank me for killing monsters", "monster attacking my folk"],
-      "kw": ["protect", "save", "help", "cry", "rescue", "monster"],
+      "kw": ["protect", "save", "help", "cry", "rescue", "monster", "scream", "shout", "yell"],
       "answer": "A folk set on by a monster shouts for the nearest player ('Help! Steve, help!'). Kill the monster and you saved its life: it never forgets, its friends and family think better of you, and the chronicle records the rescue. Any monster you kill near folk wins you thanks from everyone who saw.",
       "related": ["folk_make_friends", "defence_raids", "jobs_shifts"],
       "covers": []

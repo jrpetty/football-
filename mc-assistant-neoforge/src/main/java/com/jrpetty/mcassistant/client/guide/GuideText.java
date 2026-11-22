@@ -22,22 +22,22 @@ public final class GuideText {
     public enum Intent { HOW, WHY, WHAT, WHERE, NONE }
 
     /** Little words that carry nothing of the topic. */
-    static final Set<String> STOP = Set.of("a", "an", "the", "i", "im", "me", "my", "you", "your", "u", "ur", "to", "of", "in",
+    static final Set<String> STOP = Set.copyOf(java.util.Arrays.asList("a", "an", "the", "i", "im", "me", "my", "you", "your", "u", "ur", "to", "of", "in",
         "on", "at", "for", "is", "are", "am", "be", "been", "being", "was", "were", "do", "does", "did", "doing", "done", "can", "could",
         "how", "what", "whats", "why", "where", "wheres", "when", "who", "which", "it", "its", "this", "that", "these", "those",
         "there", "theres", "and", "or", "with", "some", "any", "about", "from", "will", "would", "should", "shall", "have", "has", "had",
-        "please", "pls", "plz", "hey", "hi", "hello", "guide", "mod", "so", "just", "really", "very", "much", "many", "lot",
+        "please", "pls", "plz", "hey", "hi", "hello", "guide", "so", "best", "good", "better", "nice", "cool", "myself", "yourself", "even", "lol", "lmao", "bruh", "pls", "thx", "thanks", "just", "really", "very", "much", "many", "lot",
         "lots", "then", "than", "also", "too", "as", "by", "if", "into", "we", "our", "they", "them", "their", "theyre",
         "he", "she", "him", "her", "his", "one", "ones", "thing", "things", "stuff", "way", "ways", "anyone", "someone", "something",
         "anything", "everything", "all", "need", "needs", "want", "wanna", "gonna", "go", "going", "know", "tell", "explain", "mean",
         "means", "possible", "able", "got", "game", "minecraft", "here", "now", "yet", "still",
         "ever", "even", "only", "us", "kind", "sort", "bit", "actually", "basically", "exactly",
-        "doe", "ok", "okay", "well", "um", "uh", "lol", "idk", "tho", "though", "every", "each", "other", "most");
+        "doe", "ok", "okay", "well", "um", "uh", "lol", "idk", "tho", "though", "every", "each", "other", "most"));
 
     /** Words of trouble: a question with one of these is likely a "why won't it" one. */
-    static final Set<String> NEGATIVE = Set.of("not", "no", "nobody", "none", "never", "wont", "cant", "cannot", "dont", "doesnt",
+    static final Set<String> NEGATIVE = Set.copyOf(java.util.Arrays.asList("not", "no", "nobody", "none", "never", "wont", "cant", "cannot", "dont", "doesnt",
         "didnt", "isnt", "arent", "wasnt", "havent", "hasnt", "stuck", "broken", "broke", "bug", "bugged", "wrong", "problem", "issue",
-        "help", "stopped", "stop", "fail", "failed", "failing", "missing", "gone", "disappeared", "nothing", "empty");
+        "help", "stopped", "stop", "fail", "failed", "failing", "missing", "gone", "disappeared", "nothing", "empty"));
 
     /** Phrases that stand for one idea, joined before the words are split (the left side as normalised). */
     static final String[][] PHRASES = {
@@ -68,6 +68,12 @@ public final class GuideText {
         {"server owner", "admin"}, {"server admin", "admin"}, {"village coin", "coin"}, {"village coins", "coin"},
         {"stone age", "stoneage"}, {"wood age", "woodage"}, {"iron age", "ironage"}, {"diamond age", "diamondage"},
         {"nether age", "netherage"}, {"next age", "nextage"}, {"level up", "nextage"}, {"rank up", "nextage"},
+        {"look at it", "lookatit"}, {"nobody is there", "noarrive"}, {"nobody came", "noarrive"}, {"no one came", "noarrive"},
+        {"nobody arrived", "noarrive"}, {"nobody is in", "noarrive"}, {"nobody in my", "noarrive"}, {"no folk in", "noarrive"}, {"do now", "whatnow"}, {"what now", "whatnow"}, {"what next", "whatnow"},
+        {"which town", "whichtown"}, {"what town", "whichtown"}, {"where am i", "whichtown"}, {"does u do", "lifepage"}, {"friend of the village", "friendofvillage"}, {"friend of the town", "friendofvillage"},
+        {"honoured guest", "honouredguest"}, {"honored guest", "honouredguest"}, {"who lives", "census"},
+        {"other towns", "othertown"}, {"other villages", "othertown"}, {"bell ring", "alarm"}, {"bell rang", "alarm"},
+        {"bell rings", "alarm"}, {"bell ringing", "alarm"}, {"coin button", "coinbutton"}, {"book button", "bookbutton"},
     };
 
     /** Each word to the idea it stands for (both sides as stemmed). Built from {@link #SYNONYMS}. */
@@ -166,8 +172,30 @@ public final class GuideText {
         return sb.toString().trim();
     }
 
+    /** Text-speak to the word it stands for, word by word, before anything else is read. */
+    static final java.util.Map<String, String> SLANG = java.util.Map.ofEntries(
+        java.util.Map.entry("wat", "what"), java.util.Map.entry("wot", "what"), java.util.Map.entry("wut", "what"),
+        java.util.Map.entry("y", "why"), java.util.Map.entry("2", "to"), java.util.Map.entry("4", "for"),
+        java.util.Map.entry("ppl", "people"), java.util.Map.entry("vills", "villagers"), java.util.Map.entry("villies", "villagers"),
+        java.util.Map.entry("coinz", "coins"), java.util.Map.entry("monies", "money"), java.util.Map.entry("bc", "because"),
+        java.util.Map.entry("cuz", "because"), java.util.Map.entry("hav", "have"), java.util.Map.entry("gud", "good"),
+        java.util.Map.entry("tho", "though"), java.util.Map.entry("da", "the"), java.util.Map.entry("dat", "that"),
+        java.util.Map.entry("dis", "this"), java.util.Map.entry("wanna", "want"), java.util.Map.entry("gotta", "must"),
+        java.util.Map.entry("becum", "become"), java.util.Map.entry("becom", "become"), java.util.Map.entry("plz", "please"));
+
     /** The phrases run together, on a normalised line. */
     static String phrases(String norm) {
+        StringBuilder sb = new StringBuilder();
+        for (String w : norm.split(" ")) {
+            if (w.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(SLANG.getOrDefault(w, w));
+        }
+        norm = sb.toString();
+        // "how does the camera work": the work is only the question's, not a job
+        if ((norm.startsWith("how does ") || norm.startsWith("how do ")) && norm.endsWith(" work") && !norm.contains(" folk ")) {
+            norm = norm.substring(0, norm.length() - 5);
+        }
         String s = " " + norm + " ";
         for (String[] p : PHRASES) {
             if (s.contains(" " + p[0] + " ")) s = s.replace(" " + p[0] + " ", " " + p[1] + " ");
@@ -175,9 +203,19 @@ public final class GuideText {
         return s.trim();
     }
 
+    private static String phrasesOnlySlang(String norm) {
+        StringBuilder sb = new StringBuilder();
+        for (String w : norm.split(" ")) {
+            if (w.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(SLANG.getOrDefault(w, w));
+        }
+        return sb.toString();
+    }
+
     /** What kind of question this is, from its words (before they are stemmed or dropped). */
     public static Intent intent(String text) {
-        String n = " " + normalise(text) + " ";
+        String n = " " + phrasesOnlySlang(normalise(text)) + " ";
         for (String neg : NEGATIVE) if (n.contains(" " + neg + " ")) return Intent.WHY;
         if (n.startsWith(" why ") || n.contains(" why ")) return Intent.WHY;
         if (n.startsWith(" how ") || n.contains(" how do ") || n.contains(" how to ") || n.contains(" how can ")

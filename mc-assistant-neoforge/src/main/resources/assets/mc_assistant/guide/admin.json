@@ -1,0 +1,89 @@
+{
+  "category": "admin",
+  "entries": [
+    {
+      "id": "admin_panel",
+      "title": "The admin panel (operators)",
+      "icon": "minecraft:command_block",
+      "kind": "howto",
+      "q": ["admin panel", "how do i open the admin panel", "operator tools", "admin screen", "manage a town as admin", "admin key",
+        "server admin tools for the mod", "op tools without commands"],
+      "kw": ["admin", "adminpanel", "operator", "op", "tools"],
+      "answer": "Operators have an admin panel: a search box over every action, areas (Town, Ages, People, Army & War, Economy, Build, Events, World, Debug) and recent actions down the left; the town it acts on and a live status strip across the top; the area's actions in the middle with their values, Dry run and Run; the town's inspect report and running jobs on the right.",
+      "steps": ["Bind the admin panel key in Options → Controls (it starts unbound).", "Press it, pick a town and an area, choose an action, set its values.", "Dry run to see what it would do, then Run. A destructive action asks to confirm and offers a snapshot first."],
+      "controls": ["Admin panel key (set it in Options → Controls)"],
+      "tips": ["The panel runs each action on the server with your permissions, exactly as the matching command would."],
+      "warn": ["Operators only. The server's admin config can switch the tools off or raise the permission level they need."],
+      "related": ["admin_config", "admin_limits", "admin_server_config"],
+      "covers": ["screen:AdminScreen", "key:admin_panel"],
+      "op": true
+    },
+    {
+      "id": "admin_config",
+      "title": "Server settings: the common config",
+      "icon": "minecraft:comparator",
+      "kind": "what",
+      "q": ["config file for the mod", "mod settings file", "how do i turn off raids", "turn off natural villages", "disable wars",
+        "mc_assistant-common.toml", "server settings for villages", "turn off village growth", "build speed setting"],
+      "kw": ["config", "settings", "toml", "options", "server", "admin"],
+      "answer": "Server owners set the towns in config/mc_assistant-common.toml, section [villages]: naturalVillages, villageRaids, villageWars, villageBreeding and villageGrowthCap, villageWorldCap, villageBuildSpeed (percent), villageReshapeLand (off keeps terrain), villageColonies, villagesShareGoods, villagePhantoms, villageDisasters, replaceVillagers (the old takeover, off), townBorders, battleView and more.",
+      "tips": ["Founding rules live there too: foundingWho, foundingTownsPerPlayer, foundingFreeKit, foundingNeedsItem, foundingTravel, foundingSiteReach, foundingHints, villageFoundingMost, villageCharterFolk."],
+      "warn": ["Restart the server (or reload configs) after editing."],
+      "related": ["admin_limits", "admin_founding_rules", "admin_server_config", "admin_client_config"],
+      "covers": [],
+      "op": true
+    },
+    {
+      "id": "admin_founding_rules",
+      "title": "Founding rules (who may found towns)",
+      "icon": "mc_assistant:founding_kit",
+      "kind": "what",
+      "q": ["limit who can found towns", "only operators can found villages", "towns per player setting", "free founding kit setting",
+        "founding needs item", "admin founding settings"],
+      "kw": ["founding", "rules", "foundingwho", "limit", "admin", "setting"],
+      "answer": "foundingWho (everyone, citizens or operators; operators always may), foundingTownsPerPlayer (3; 0 for no limit), foundingFreeKit (a kit on first join), foundingNeedsItem (founding uses a kit, spawner or charter), foundingTravel and foundingTravelReach (Take me there), foundingSiteReach (160), foundingHints, villageFoundingMost (500) and villageCharterFolk (70).",
+      "related": ["admin_config", "found_how", "trouble_cant_found"],
+      "covers": [],
+      "op": true
+    },
+    {
+      "id": "admin_limits",
+      "title": "Keeping a server light: folk limits and performance",
+      "icon": "minecraft:redstone",
+      "kind": "what",
+      "q": ["the mod is laggy", "too many villagers lag", "performance settings", "world cap for folk", "growth cap", "how to reduce lag from towns",
+        "server tps drops with villages"],
+      "kw": ["lag", "performance", "tps", "cap", "limit", "admin", "setting"],
+      "answer": "Every folk is a ticking creature: hundreds are heavy. Keep towns modest at founding, and use villageGrowthCap (largest a town grows by children, 100), villageWorldCap (the world's folk, 200), villageFoundingMost, the town level-of-detail settings (townLod...) that let far towns sleep, and the tick budgets (townTickBudgetMs, pathBudgetMs).",
+      "tips": ["Clients can turn down how much of the folk's life is drawn in the client animation config."],
+      "related": ["admin_config", "found_size", "trouble_lag"],
+      "covers": [],
+      "op": true
+    },
+    {
+      "id": "admin_server_config",
+      "title": "The admin toolkit's switches",
+      "icon": "minecraft:lever",
+      "kind": "what",
+      "q": ["disable admin tools", "admin permission level", "admin config file", "confirm destructive admin actions"],
+      "kw": ["admintools", "level", "destructive", "confirm", "admin", "setting"],
+      "answer": "The server config's admin section switches the admin toolkit: adminTools on or off, the permission level it needs, the level for destructive actions, how long a confirm stands, and the entity-count warning.",
+      "related": ["admin_panel", "admin_config"],
+      "covers": [],
+      "op": true
+    },
+    {
+      "id": "admin_client_config",
+      "title": "Your own client settings",
+      "icon": "minecraft:spyglass",
+      "kind": "howto",
+      "q": ["client settings", "turn off toasts", "turn off bird sounds", "ambience sounds", "hide the coin button", "favourites tracker setting",
+        "weekly summary toast", "name tag range setting"],
+      "kw": ["client", "toasts", "ambience", "tracker", "inventory button", "settings"],
+      "answer": "Your own settings, on your computer: config/mc_assistant-ui-client.toml (favourites' toasts and tracker, the weekly summary and bill toasts, the inventory coin button) and config/mc_assistant-client.toml (name tags and their range, ambience sounds, effects, marks, faces, the emote camera).",
+      "tips": ["Name tags and the lens are quicker to set in the camera screen (K)."],
+      "related": ["camera_clean", "keys_inventory", "folk_favourites"],
+      "covers": []
+    }
+  ]
+}

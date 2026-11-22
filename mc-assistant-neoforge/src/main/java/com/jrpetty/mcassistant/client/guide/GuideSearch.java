@@ -32,7 +32,7 @@ public final class GuideSearch {
     public record Answer(Mode mode, GuideEntry entry, List<GuideEntry> also, List<Hit> hits, Map<String, String> corrected) {}
 
     private static final double K1 = 1.2, B = 0.55;
-    private static final double W_TITLE = 3.0, W_KEYWORD = 2.2, W_QUESTION = 1.0, W_ANSWER = 0.35;
+    private static final double W_TITLE = 3.0, W_KEYWORD = 2.2, W_QUESTION = 1.0, W_ANSWER = 0.35, W_REST = 0.15;
     /** How much the nearest phrasing counts, against BM25. */
     private static final double W_PHRASE = 5.0, W_PAIR = 1.6;
     /** Below this, nothing fits. */
@@ -63,6 +63,9 @@ public final class GuideSearch {
             }
             ps.add(GuideText.terms(e.title()));
             add(f, e.answer(), W_ANSWER);
+            for (String t : e.steps()) add(f, t, W_REST);
+            for (String t : e.tips()) add(f, t, W_REST);
+            for (String t : e.warnings()) add(f, t, W_REST);
             for (String t : f.keySet()) df.merge(t, 1, Integer::sum);
             double l = 0;
             for (double v : f.values()) l += v;
@@ -73,6 +76,9 @@ public final class GuideSearch {
             remember(e.title());
             for (String k : e.keywords()) remember(k);
             for (String q : e.questions()) remember(q);
+            remember(e.answer());
+            for (String t : e.steps()) remember(t);
+            for (String t : e.tips()) remember(t);
         }
         for (String[] g : GuideText.SYNONYMS) for (String w : g) remember(w);
         this.avgLen = entries.isEmpty() ? 1 : total / entries.size();
@@ -118,14 +124,19 @@ public final class GuideSearch {
         return out;
     }
 
-    /** The known word nearest a misspelt one: one slip in a short word, two in a long one; the commoner on a tie. */
+    /**
+     * The known word nearest a misspelt one: one slip in a word of five to seven letters, two in a longer one; in a
+     * four-letter word only a dropped letter (mony: money), since a same-length change of a short word is more often
+     * another real word (tame is not take). The first letter must match; the commoner wins a tie.
+     */
     private String nearest(String w) {
-        int most = w.length() >= 7 ? 2 : 1;
+        int most = w.length() >= 8 ? 2 : 1;
         String best = null;
         int bd = most + 1, bdf = -1;
         for (Map.Entry<String, String> e : words.entrySet()) {
             String k = e.getKey();
-            if (Math.abs(k.length() - w.length()) > most || k.charAt(0) != w.charAt(0) && most == 1) continue;
+            if (Math.abs(k.length() - w.length()) > most || k.charAt(0) != w.charAt(0)) continue;
+            if (w.length() <= 4 && k.length() != w.length() + 1 && !swapped(w, k)) continue;
             int d = GuideText.distance(w, k, most);
             if (d > most) continue;
             int f = df.getOrDefault(e.getValue(), 0);
@@ -136,6 +147,15 @@ public final class GuideSearch {
             }
         }
         return best;
+    }
+
+    /** Two words the same but for two neighbouring letters swapped (opne, open). */
+    static boolean swapped(String a, String b) {
+        if (a.length() != b.length()) return false;
+        int i = 0;
+        while (i < a.length() && a.charAt(i) == b.charAt(i)) i++;
+        return i + 1 < a.length() && a.charAt(i) == b.charAt(i + 1) && a.charAt(i + 1) == b.charAt(i)
+            && a.substring(i + 2).equals(b.substring(i + 2));
     }
 
     /** Every article's score for the question, best first (only those it touches at all). */
@@ -208,13 +228,36 @@ public final class GuideSearch {
         return n / (double) pairs.size();
     }
 
+    /**
+     * How much of what was asked the article answers, 0 to 1: the weight of the question's words found in it against
+     * all of them, a word the book has never seen counting as a rare one. Low, and the Guide says it is not sure
+     * rather than answering something else ("how do I tame a dragon" is not about taking things).
+     */
+    double coverage(String question, GuideEntry e) {
+        List<String> q = read(question, new LinkedHashMap<>());
+        int i = entries.indexOf(e);
+        if (q.isEmpty() || i < 0) return 0;
+        Map<String, Double> f = tf.get(i);
+        double rare = Math.log(1 + (entries.size() - 0.5) / 1.5) * 0.6;
+        double found = 0, all = 0;
+        for (String t : new java.util.LinkedHashSet<>(q)) {
+            double w = df.containsKey(t) ? idf(t) : rare;
+            all += w;
+            if (f.containsKey(t)) found += w;
+        }
+        return all <= 0 ? 0 : found / all;
+    }
+
+    /** Below this share of the question answered, the Guide is not sure. */
+    static final double COVER = 0.34;
+
     /** What the Guide says to the question (operators' articles kept back from a player who is not one). */
     public Answer answer(String question, boolean operator) {
         Map<String, String> fixed = new LinkedHashMap<>();
         List<Hit> all = rank(question, fixed);
         List<Hit> hits = new ArrayList<>();
         for (Hit h : all) if (operator || !h.entry().op() || mentionsAdmin(question)) hits.add(h);
-        if (hits.isEmpty() || hits.get(0).score() < FLOOR) {
+        if (hits.isEmpty() || hits.get(0).score() < FLOOR || coverage(question, hits.get(0).entry()) < COVER) {
             return new Answer(Mode.NONE, null, nearestTopics(hits, all, operator), hits, fixed);
         }
         Hit top = hits.get(0);
@@ -229,7 +272,7 @@ public final class GuideSearch {
 
     private static boolean mentionsAdmin(String q) {
         List<String> t = GuideText.terms(q);
-        return t.contains("admin") || t.contains("setting");
+        return t.contains("admin") || t.contains("adminpanel") || t.contains("setting");
     }
 
     /** The three nearest topics; with nothing near at all, the first article of each of the first categories. */
