@@ -81,7 +81,7 @@ public final class TerraformAudit {
         Map<String, Integer> c = new LinkedHashMap<>();
         for (String k : new String[]{ "square", "heldOff", "offLevel", "holes", "crust", "pits", "oddTop", "oddTopDirt", "oddTopRock",
                 "oddTopOre", "oddTopGravel", "growthOnSquare", "floatLeaves", "floatLogs", "stumps", "floatVines", "sheer",
-                "steps2", "rawEdge", "flowing", "lava", "junk", "falling", "items", "terraced", "walls", "steps", "pillars", "rawFaces" }) c.put(k, 0);
+                "steps2", "rawEdge", "flowing", "lava", "junk", "falling", "items", "terraced", "walls", "steps", "pillars", "streetPillars", "rawFaces" }) c.put(k, 0);
         FoundingPlan.Ground g = d.ground;
         int hx = d.heart.getX(), hz = d.heart.getZ();
         int side = g.side;
@@ -202,6 +202,9 @@ public final class TerraformAudit {
             // left standing, a block in a street), worse than the land had it.
             if (under >= 3 && wasUnder < 3 && (worked[i] || near(worked, side, i))) {
                 at(c, "pillars", d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i), null);
+                int sx = d.heart().getX() + g.dx(i), sz = d.heart().getZ() + g.dz(i);
+                if ((g.street != null && g.street[i]) || com.jrpetty.mcassistant.village.TownPlan.isStreet(g.dx(i), g.dz(i)))
+                    at(c, "streetPillars", sx, top[i], sz, null);                // on a street or the square's ways
                 StringBuilder w = new StringBuilder("kind " + g.kind[i] + " target " + (g.target == null ? "-" : g.target[i]) + " ground " + g.ground[i]
                     + " terrace " + (g.terrace == null ? "-" : g.terrace[i]) + " top " + top[i] + " block "
                     + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(m.set(d.heart().getX() + g.dx(i), top[i], d.heart().getZ() + g.dz(i))).getBlock()).getPath() + "; round:");

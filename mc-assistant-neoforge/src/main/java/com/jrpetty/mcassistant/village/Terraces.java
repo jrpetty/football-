@@ -73,7 +73,7 @@ public final class Terraces {
     }
 
     /** What a column is in the terraces: the level heart, a street or the square, or a lot (its own level). */
-    static final byte HEART = 1, WAY = 2, PLOT = 3;
+    static final byte HEART = 1, WAY = 2, PLOT = 3, LONE = 4;
 
     /**
      * The terraces for this ground: for every column of the levelled square (FoundingPlan.levelled), the height it is to
@@ -174,14 +174,18 @@ public final class Terraces {
             out[i] = (int) Math.round(v);
         }
         // no lone column of a lot left standing out into the edge (a lot's corner where the levelled ground ends): a column
-        // of a lot with three or four of its neighbours off the terraces is left to the edge
+        // of a lot with three or four of its neighbours not of its own lot on the terraces is left to the edge
         for (int pass = 0; pass < 3; pass++) {
             for (int i = 0; i < n; i++) {
-                if (!in[i] || what[i] != PLOT) continue;
+                if (!in[i] || (what[i] != PLOT && what[i] != WAY)) continue;
                 int c = neighbours(i, side, nb), off = 0;
-                for (int k = 0; k < c; k++) if (!in[nb[k]]) off++;
+                // (a street's tip: a street column with three or four neighbours not of the street)
+                for (int k = 0; k < c; k++) {
+                    int j = nb[k];
+                    if (!in[j] || what[j] != what[i] || (what[i] == PLOT && unit[j] != unit[i])) off++;
+                }
                 off += 4 - c;
-                if (off >= 3) { in[i] = false; g.trimmed = g.trimmed == null ? new boolean[n] : g.trimmed; g.trimmed[i] = true; }
+                if (off >= 3) { what[i] = LONE; unit[i] = -1; g.street[i] = false; }
             }
         }
         // never more than a block from one street cell to the next (where a junction meets a lane): the higher brought down
@@ -211,7 +215,14 @@ public final class Terraces {
             if (!in[i]) continue;
             if (what[i] == HEART) out[i] = level;
             else if (what[i] == PLOT && unit[i] >= 0 && unitH[unit[i]] != NONE) out[i] = unitH[unit[i]];
-            else if (out[i] == NONE) out[i] = (int) Math.round(surface[i]);
+            else if (out[i] == NONE && what[i] != LONE) out[i] = (int) Math.round(surface[i]);
+        }
+        // a lone column of a lot: at the lowest of the terraces beside it, never standing up out of them
+        for (int i = 0; i < n; i++) {
+            if (!in[i] || what[i] != LONE) continue;
+            int c = neighbours(i, side, nb), low = Integer.MAX_VALUE;
+            for (int k = 0; k < c; k++) if (in[nb[k]] && what[nb[k]] != LONE && out[nb[k]] != NONE) low = Math.min(low, out[nb[k]]);
+            out[i] = low == Integer.MAX_VALUE ? (int) Math.round(surface[i]) : low;
         }
         return out;
     }
