@@ -384,7 +384,7 @@ public final class TownJobs {
     /** The works a village has done even while it is young: its beds made up, room in its stores. */
     /** What a town of so many grown folk, so many already at its works, may call for these works: nobody, a hand
      *  standing idle in a trade with hands to spare only, or any hand. */
-    static final int NONE_TO_SPARE = 0, IDLE_ONLY = 1, ANY = 2;
+    public static final int NONE_TO_SPARE = 0, IDLE_ONLY = 1, ANY = 2;
 
     public static int allowance(int adults, int busy, String works) {
         if (adults < SETTLED && !essential(works) && !paid(works)) return NONE_TO_SPARE;   // a young village: its trades first
