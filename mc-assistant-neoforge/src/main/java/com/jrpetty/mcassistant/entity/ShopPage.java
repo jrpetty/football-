@@ -122,6 +122,10 @@ public final class ShopPage implements PlayerLife.Page {
             + " (you have " + Market.coinsHeld(p) + "); then " + (TaxBook.ratesCoins(s.village) > 0 ? "the business rates, " + PlayerLife.coins(TaxBook.ratesCoins(s.village))
             + " a week, out of its till." : "no business rates while the town charges none."), Market.coinsHeld(p) >= fee ? 0 : 2);   // [biz25] no "0 coins a week"
         page.buttons().button(s.licensed ? "Save" : "Register the shop (" + PlayerLife.coins(fee) + ")", "setup", null).primary();
+        if (s.licensed) {                                                    // [biz25] registered: what next, here too
+            BizGuide.Step next = BizGuide.next(BizGuide.steps(level, Villages.get(s.village), s));
+            if (next != null) page.row(null, "Next: " + next.label(), next.hint(), "").button(next.button(), next.action(), next.args());
+        }
         checklist(level, s, page);
     }
 

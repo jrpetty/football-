@@ -952,6 +952,11 @@ public final class PlayerShops {
         return s;
     }
 
+    /** [biz25] Tests: the week's rates taken now, as the town's tick takes them when they fall due. */
+    public static void ratesForTests(ServerLevel level, Shop s) {
+        rates(level, s, today(level));
+    }
+
     public static void priceForTests(Shop s, ItemStack ware, int price) {
         s.prices.put(PlayerStalls.key(ware), price);
         save(s);
