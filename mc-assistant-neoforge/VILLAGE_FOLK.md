@@ -15135,10 +15135,32 @@ to the nearest folk**; an unwelcome player mends fences first. (A shop of your o
   floor; the setup no longer says "the business rates, 0 coins a week"; the shop's *Make it a registered business* is
   *Charter a firm for it (hands, orders)*; a room the town lets a firm says its rent a week.
 
+### After a restart, and a firm in trouble (round 2)
+* **The business books survive a restart.** A world opening runs the tests' resets (SessionReset), and the business
+  books' reset cleared the saved store of every town's businesses there and then: at every server start each town lost
+  its firms, their tills and their books (a player's new firm "vanished"; folk firms too). It now leaves what is kept with
+  the world alone while a world opens or closes, as the accounts already did.
+* **A keeper missed once is kept.** A shop's keeper not about at payday (unloaded, or the town still loading after a
+  restart) is neither paid nor let go; only one missed at two paydays running, with the town's folk about, has gone.
+* **A player's new firm has a week's grace**, and is warned before anything happens to it: owing more than it is worth or
+  out of cash and credit, its owner is told once a day in chat, and Your businesses says what is wrong, what to do (coin in
+  its till on the Money tab, stock, a hand) and how many days are left before its creditors may take it to court. A new
+  firm with an empty till is told it has a week. Never a silent close.
+* **Goodwill for a running shop**, chartered or not: a fortnight of what it has made a day lately over its costs (its
+  keeper's wage, the rates), from its own books, added to its building's value; none for a shop that has not sold or loses
+  money.
+* **Words that fit.** On the player's pages (Your life in town, the shop, Start a business, Your businesses) a row's label
+  and the line under it wrap (two and three lines) instead of being cut short, buttons are as wide as their words, a bar
+  keeps its words whole, and the plot map's legend fits. A shop on order shows on Your life in town ("Your shop is going
+  up: 28% built", with a button to the property office's Orders), and "waiting for waiting for..." reads once.
+
 ### Tests
 BusinessFlowGameTests bf01-bf05 (x 5,600,000 to 5,620,000, z 90,000), through the screens' own buttons (PlayerLife.act):
 bf01 a newcomer from Your life in town to a folk's first purchase (the counter bought and booked, the steps ticking off,
 the takings in the player's books); bf02 the rates out of the till as taxes, a keeper taken on and paid once a morning (twice run), three slow days and it goes,
 a ware sold out and the steps asking for stock; bf03 a ware nobody uses, too little coin, a sign with no counter, a stranger
 saying hello and chartered; bf04 a shop of your own the town builds, to the moment it is the player's; bf05 the building sold
-with its stock to another player (the shop the seller's no longer) and quoted for a bakery.
+with its stock to another player (the shop the seller's no longer) and quoted for a bakery; bf06 the business books
+written out and read back and the world opening's resets run, the firm and the keeper still there, a keeper missed at one
+payday kept and at two gone; bf07 a shop's goodwill once it sells, a player's firm in debt warned and spared in its first
+week and taken to court after it.
