@@ -258,8 +258,7 @@ public final class BuildingMend {
             while (depth <= 12 && level.getBlockState(f.below(depth)).isAir()) depth++;
             if (depth > 12 || !BuildingAudit.holds(level.getBlockState(f.below(depth)))) continue;
             boolean mayAll = true;
-            for (int d = 1; d < depth && mayAll; d++) mayAll = !PlayerBlocks.placed(level, f.below(d))
-                && (TownBlocks.mayBuild(level, v, f.below(d), b.anchor(), TownBlocks.Why.REPAIR) || TownBlocks.mayPlace(level, v, f.below(d), TownBlocks.Why.TERRAFORM));
+            for (int d = 1; d < depth && mayAll; d++) mayAll = !PlayerBlocks.placed(level, f.below(d)) && underpinnable(TownBlocks.zone(level, v, f.below(d)));
             if (!mayAll) continue;
             for (int d = 1; d < depth; d++) level.setBlock(f.below(d), foot.defaultBlockState(), 2 | 16);
             fixed.merge("footing_underpinned", depth - 1, Integer::sum);
@@ -270,6 +269,12 @@ public final class BuildingMend {
             level.setBlock(q.immutable(), Blocks.AIR.defaultBlockState(), 2 | 16);
             fixed.merge("scaffolding", 1, Integer::sum);
         }
+    }
+
+    /** Under a building's footing: its own ground, under its eaves or open ground; never a road, the square, a doorway or the
+     *  way in, a stair's headroom or a fitting. */
+    private static boolean underpinnable(TownBlocks.Zone z) {
+        return z == TownBlocks.Zone.OPEN || z == TownBlocks.Zone.EAVES || z == TownBlocks.Zone.BUILDING;
     }
 
     @Nullable

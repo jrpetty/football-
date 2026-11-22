@@ -169,7 +169,8 @@ public final class BuildingAudit {
             if (p.pos().getY() != minY || p.part() != BuildGoal.Part.BLOCK) continue;
             BlockPos f = p.pos();
             if (!level.isLoaded(f) || !holds(level.getBlockState(f))) continue;
-            if (!holds(level.getBlockState(f.below())) && !holds(level.getBlockState(f.below(2)))) {
+            // On nothing, and seen to be (a cave shut in under the ground is nobody's view): the cell under it open to a side.
+            if (!holds(level.getBlockState(f.below())) && !holds(level.getBlockState(f.below(2))) && openSide(level, f.below())) {
                 floating++;
                 if (fWhere == null) fWhere = f;
             }
@@ -341,6 +342,12 @@ public final class BuildingAudit {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /** Is a cell open to the open air on one of its four sides, under the sky (so what is over it is seen to stand on nothing)? */
+    private static boolean openSide(ServerLevel level, BlockPos c) {
+        for (Direction d : Direction.Plane.HORIZONTAL) if (level.getBlockState(c.relative(d)).isAir() && level.canSeeSky(c.relative(d))) return true;
+        return false;
+    }
 
     private static String at(@Nullable BlockPos p) {
         return p == null ? "" : "first " + p.toShortString();
