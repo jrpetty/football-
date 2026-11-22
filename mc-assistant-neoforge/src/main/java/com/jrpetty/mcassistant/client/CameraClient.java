@@ -104,9 +104,10 @@ public final class CameraClient {
                     at = heart();
                 }
                 if (at != null) {
-                    CinemaCam.radius = 18.0F;
-                    CinemaCam.height = 10.0F;
-                    CinemaCam.speed = 4.0F;
+                    // [life28] Steeper over the site, over the trees round a lot: the building's walls and roof seen rise.
+                    CinemaCam.radius = 15.0F;
+                    CinemaCam.height = 15.0F;
+                    CinemaCam.speed = 3.0F;
                     // The builders come and go: keep to the building, not to one of them.
                     CinemaCam.orbit(at, focus >= 0 && t.contains("site") ? -1 : focus, label);
                 } else {

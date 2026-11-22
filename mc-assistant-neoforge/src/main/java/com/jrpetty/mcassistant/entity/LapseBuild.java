@@ -71,16 +71,24 @@ public final class LapseBuild {
                 all++;
                 if (!level.getBlockState(pl.pos()).isAir()) up++;
             }
-            if (up * 2 > all) continue;
+            if (up * 2 > all || all < 150) continue;                  // (nor a fountain or a well: a building)
             bd = d;
             best = new Ledger.Building(e.getKey(), s.anchor(), s.facing());
         }
         if (best == null) {
-            // None under way near: the town's next building (a house, if it wants one) on the lot its plan gives it,
+            // None under way near: a house for the town on the lot its plan gives the next one,
             // put on its register now and raised in the time-lapse from the bare plot.
-            String next = Villages.projectsWanted(v.id()).contains("house") ? "house" : AdminTools.nextProject(v.id());
-            Villages.Site s = next == null ? null : Villages.siteFor(level, v.id(), next);
-            if (s == null || s.anchor().distSqr(p.blockPosition()) > (double) REACH * REACH * 4) return;
+            String next = null;
+            Villages.Site s = null;
+            for (String want : new String[]{ "house" }) {
+                if (want == null) continue;
+                Villages.Site at = Villages.siteFor(level, v.id(), want);
+                if (at != null && at.anchor().distSqr(p.blockPosition()) <= (double) REACH * REACH * 4) { next = want; s = at; break; }
+            }
+            if (s == null) {
+                LOG.info("[MCA-LAPSE] {}'s time-lapse: nothing going up near, and no lot near for a house", p.getName().getString());
+                return;
+            }
             AdminTools.fellTheLot(level, v, next, s.anchor(), s.facing());
             com.jrpetty.mcassistant.entity.goal.BuildGoal.clearWildPlants(level, next, s.anchor(), s.facing(), 8);
             Ledger.built(v.id(), next, s.anchor(), s.facing());
