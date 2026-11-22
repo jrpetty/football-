@@ -1057,7 +1057,8 @@ public final class MineWorks {
         // [econ32b] Off the mine's ground, only deep under the rock: a smelter at its furnaces eight blocks under the pithead's
         // height, seventy-six off, was "below in the works", sent up by a way out of the works it was never in ("Can't find
         // my way to the pithead").
-        return p.getY() < w.top - 2 && (TownMine.inMine(v, p) || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 80
+        boolean ground = MineGround.has(v) ? MineGround.reserved(v, p.getX(), p.getZ()) : TownMine.inMine(v, p);   // the faces set aside, not the whole grid round the first
+        return p.getY() < w.top - 2 && (ground || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 80
             && p.getY() < w.top - 12 && !level.canSeeSky(p));
     }
 
