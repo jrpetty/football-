@@ -15060,6 +15060,8 @@ to the nearest folk**; an unwelcome player mends fences first. (A shop of your o
   charged a room's rent each day all the same); the shop's row on Your finances' Businesses tab sets this week's takings
   against this week's costs (the rates if they fell due, the keeper's days), not a whole week's wage for a keeper taken on
   yesterday.
+* A shop's morning (its keeper's wage, its day's counts) is seen to once a day and remembered over a restart: a restart no
+  longer paid the keeper a second time, nor let it go as "gone from the town" because the town's folk were not loaded yet.
 * The quote's "Paid 51c down" reads "51c down now"; the firm's last button is "Open it (10 coins)".
 * The sign over a shop's counter follows the counter when it moves (it was left where the first counter stood).
 * "No path from the door to a street" says which door and asks whether its way out is blocked or the door sits below the
@@ -15069,7 +15071,7 @@ to the nearest folk**; an unwelcome player mends fences first. (A shop of your o
 ### Tests
 BusinessFlowGameTests bf01-bf05 (x 5,600,000 to 5,620,000, z 90,000), through the screens' own buttons (PlayerLife.act):
 bf01 a newcomer from Your life in town to a folk's first purchase (the counter bought and booked, the steps ticking off,
-the takings in the player's books); bf02 the rates out of the till as taxes, a keeper taken on, three slow days and it goes,
+the takings in the player's books); bf02 the rates out of the till as taxes, a keeper taken on and paid once a morning (twice run), three slow days and it goes,
 a ware sold out and the steps asking for stock; bf03 a ware nobody uses, too little coin, a sign with no counter, a stranger
 saying hello and chartered; bf04 a shop of your own the town builds, to the moment it is the player's; bf05 the building sold
 with its stock to another player (the shop the seller's no longer) and quoted for a bakery.
