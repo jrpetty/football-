@@ -402,7 +402,7 @@ public class BusinessLookGameTests {
             helper.assertTrue(f != null, "folk " + i + " raised");
             f.ensurePersona();
             f.setJob(i < 2 ? t.work() : com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM);
-            if (i < 2) Kit.log("[VT] " + kind + " set to " + t.work() + ": " + f.stationTask());
+            if (i < 2) f.tradeXpForTests(t.work(), 20000);                // an old hand at it, as a town's own makers are
             f.spend(f.purse());
             f.earn(80);
             folk.add(f);
@@ -480,12 +480,24 @@ public class BusinessLookGameTests {
                 } else {
                     // Its hand at its bench, a turn at a time, as its work loop takes them (Crafts.now).
                     for (int i = 0; i < 8 && !hands.isEmpty(); i++) {
-                        com.jrpetty.mcassistant.entity.Crafts.now(hands.get(0), level, v);
+                        int depth = com.jrpetty.mcassistant.entity.Accounts.enter(hands.get(0));   // (its own tick, as the game runs it)
+                        try {
+                            com.jrpetty.mcassistant.entity.Crafts.now(hands.get(0), level, v);
+                        } finally {
+                            com.jrpetty.mcassistant.entity.Accounts.leave(depth);
+                        }
                         long have = 0;
                         for (com.jrpetty.mcassistant.entity.Business.Lot l : b.stock.values()) have += l.qty;
                         if (have > 0) break;
                     }
                     said.add("made: " + b.stock.keySet());
+                    long have = 0;
+                    for (com.jrpetty.mcassistant.entity.Business.Lot l : b.stock.values()) have += l.qty;
+                    if (have == 0) {
+                        // What its bench cannot make (a catch, a brew, a furnace's work, out of a hand's reach): ordered in from Stock.
+                        com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "order", argsOf("k", ware, "f", argsOf("qty", "16")));
+                        said.add("order: " + msg(p));
+                    }
                 }
                 for (com.jrpetty.mcassistant.entity.Business.Lot l : b.stock.values()) stocked += l.qty;
             }

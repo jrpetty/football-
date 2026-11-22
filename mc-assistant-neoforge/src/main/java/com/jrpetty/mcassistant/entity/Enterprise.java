@@ -405,6 +405,9 @@ public final class Enterprise {
             Bench.Plan plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), batch, hand));   // [econ-1d] a paying firm: the keeps eased
             if (!plan.ok() && batch > 1) plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, hand));
             if (!plan.ok()) {
+                // [biz30] A ware no bench makes (a fish stall's catch, a tavern's cider, an apothecary's draughts): bought in at the
+                // market each morning as a shop buys its stock, or its shelf never held a thing.
+                if ("a way to make it".equals(plan.shortOf)) { Accounts.sub(r, "buyIn").putInt(key, 1); Accounts.dirty(); }
                 r.putString("short", Stockroom.nameOf(key) + ": short of " + plan.shortOf);
                 InputWants.want(v.id(), plan.missing, Math.max(1, plan.missingCount) * batch);   // [supply] the word to its producers
                 continue;
@@ -423,9 +426,11 @@ public final class Enterprise {
     /** A shop that buys in to sell on: what its shelf is short of, bought at the market (on its credit if its till is short). */
     static void restock(ServerLevel level, UUID village, Business b, CompoundTag r) {
         BusinessType t = kindOf(village, b);
-        if (t == null || !t.resells() || !MarketMaker.live(village)) return;
+        CompoundTag buyIn = r.getCompound("buyIn");                         // [biz30] a maker's wares no bench makes
+        if (t == null || !t.resells() && buyIn.isEmpty() || !MarketMaker.live(village)) return;
         CompoundTag tg = r.getCompound("targets");
         for (String key : tg.getAllKeys()) {
+            if (!t.resells() && !buyIn.contains(key)) continue;
             long short_ = tg.getInt(key) - held(b, key);
             if (short_ <= 0) continue;
             ItemStack one = Stockroom.sampleOf(key);
