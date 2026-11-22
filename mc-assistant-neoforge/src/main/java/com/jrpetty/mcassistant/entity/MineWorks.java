@@ -155,6 +155,7 @@ public final class MineWorks {
         long week = -1;
         final int[] oreWeek = new int[MineLevels.BASES * (MineLevels.MOST + 1)], oreAll = new int[MineLevels.BASES * (MineLevels.MOST + 1)];   // [growth24] a count a level, further levels too
         int spent;                  // [growth24] a bit a level worked out (MineLevels)
+        final int[] sinceOre = new int[MineLevels.BASES * (MineLevels.MOST + 1)];   // [econ32b] blocks of drift since each level's last ore (MineLevels.barren)
         int dug, heap;
         boolean head;
         final List<Drift> drifts = new ArrayList<>();
@@ -236,6 +237,9 @@ public final class MineWorks {
             }
             sb.append(':').append(d.parent).append('/').append(d.pAnchor).append('/').append(d.pSide);
         }
+        // [econ32b] The barren count, kept with the works (an older note has none: every count starts at nothing).
+        sb.append('|');
+        for (int i = 0; i < w.sinceOre.length; i++) sb.append(i == 0 ? "" : ",").append(w.sinceOre[i]);
         w.raw = sb.toString();
         Ledger.note(w.village, NOTE, w.raw);
         CACHE.put(w.village, w);
@@ -293,6 +297,10 @@ public final class MineWorks {
                     }
                     w.drifts.add(d);
                 }
+            }
+            if (parts.length > 2 && !parts[2].isEmpty()) {                               // [econ32b] the barren count
+                String[] c = parts[2].split(",");
+                for (int i = 0; i < Math.min(c.length, w.sinceOre.length); i++) w.sinceOre[i] = Integer.parseInt(c[i].trim());
             }
             w.raw = raw;
             return w;

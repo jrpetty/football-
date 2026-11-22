@@ -787,6 +787,25 @@ public class SupplyChainGameTests {
         MineWorksGameTests.done(helper);
     }
 
+    /**
+     * [econ32b] The barren count survives a restart: three hundred bare blocks cut on the iron level, the works forgotten and
+     * read again from the town's notes (as after a restart), the count still three hundred; with ore out of the level, it
+     * starts again.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "sc09_barren_kept")
+    public static void sc09_barren_kept(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6628000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        MineLevels.cutForTests(level, v, MineWorks.IRON, 300);
+        int before = MineLevels.sinceOreForTests(level, v, MineWorks.IRON);
+        MineWorks.forgetCache();
+        int after = MineLevels.sinceOreForTests(level, v, MineWorks.IRON);
+        Kit.log("[VT] sc09 the iron level's bare blocks: " + before + " before, " + after + " after the works were read again");
+        helper.assertTrue(before == 300 && after == 300, "the count kept with the works: " + before + " -> " + after);
+        MineWorksGameTests.done(helper);
+    }
+
     /** A hungry town wants more farmers: its farms short of hands the morning its larder is low. */
     @GameTest(template = "empty", timeoutTicks = 200, batch = "sc04_hungry_farms")
     public static void sc04_hungry_farms(GameTestHelper helper) {
