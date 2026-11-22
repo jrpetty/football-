@@ -133,6 +133,7 @@ public final class CineDev {
                     if (w[1].equals("camera")) CameraScreen.open(); else mc.setScreen(null);
                 }
                 case "hud" -> mc.options.hideGui = w[1].equals("off");
+                case "hint" -> CinemaCam.hints(w[1].equals("on"));
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
         }

@@ -96,7 +96,7 @@ public final class CinemaCam {
     private static Marker cam;
     private static Vec3 centreGoal = Vec3.ZERO, centre = Vec3.ZERO;
     private static int target = -1;
-    private static double angle, travelled, lift, followYaw;
+    private static double angle, travelled, lift, followYaw, pull = 1.0;
     private static boolean paused, started;
     private static long lastNs, lostAt;
     private static double lastWorld = -1.0;
@@ -107,6 +107,8 @@ public final class CinemaCam {
     private static String caption = "";
     private static long captionAt, hintAt;
     private static boolean hint = true;
+    private static long hintFor = 4500L;
+    private static int shots;
     private static Spline spline;
 
     public static boolean active() {
@@ -120,6 +122,11 @@ public final class CinemaCam {
     /** The folk (or ball) the shot keeps in the picture, or -1. */
     public static int target() {
         return target;
+    }
+
+    /** [dev] No keys' reminder at all (CineDev, for recording). */
+    public static void hints(boolean on) {
+        hint = on;
     }
 
     public static boolean paused() {
@@ -143,6 +150,7 @@ public final class CinemaCam {
         Vec3 from = eye.subtract(at);
         angle = Math.toDegrees(Math.atan2(from.x, from.z));
         lift = 0.0;
+        pull = 1.0;
     }
 
     /** Follow this folk over its shoulder. */
@@ -205,6 +213,7 @@ public final class CinemaCam {
         caption = label == null ? "" : label;
         captionAt = System.currentTimeMillis();
         hintAt = captionAt;
+        hintFor = shots++ == 0 ? 4500L : 2000L;                 // the keys told at length the first time, briefly after
         return true;
     }
 
@@ -274,9 +283,21 @@ public final class CinemaCam {
         angle += speed * dt;
         double a = Math.toRadians(angle);
         Vec3 base = centre.add(Math.sin(a) * radius, height, Math.cos(a) * radius);
-        lift = lift + (clearance(level, base, centre.add(0.0, 1.0, 0.0)) - lift) * (1.0 - Math.exp(-dt * 0.9));
-        Vec3 want = base.add(0.0, lift, 0.0);
         Vec3 aim = centre.add(0.0, t instanceof LivingEntity ? 1.1 : 0.8, 0.0);
+        boolean close = radius <= 24.0F;
+        lift = lift + (clearance(level, base, aim, !close) - lift) * (1.0 - Math.exp(-dt * 0.9));
+        Vec3 want = base.add(0.0, lift, 0.0);
+        // Close in: a wall, a roof or a tree between the camera and what it watches pulls it in short of it (quickly in,
+        // slowly back out), rather than lifting it up over the roofs and away from the folk.
+        double reach = 1.0;
+        if (close) {
+            Vec3 out = want.subtract(aim);
+            double len = out.length();
+            HitResult hit = level.clip(new ClipContext(aim, want, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
+            if (hit.getType() != HitResult.Type.MISS && len > 0.01) reach = Mth.clamp((hit.getLocation().distanceTo(aim) - 0.5) / len, 2.5 / len, 1.0);
+        }
+        pull = pull + (reach - pull) * (1.0 - Math.exp(-dt * (reach < pull ? 5.0 : 1.2)));
+        want = aim.add(want.subtract(aim).scale(pull));
         double k = started ? 4.0 : 1.4;                         // a glide into the orbit, then held close to it
         eye = ease(eye, want, dt, k);
         look = ease(look, aim, dt, 5.0);
@@ -368,12 +389,13 @@ public final class CinemaCam {
     }
 
     /** How far up from {@code at} the camera must go to stand in the open and see {@code aim} (blocks, up to 40). */
-    private static double clearance(Level level, Vec3 at, Vec3 aim) {
+    private static double clearance(Level level, Vec3 at, Vec3 aim, boolean sight) {
         for (int up = 0; up <= 40; up += 2) {
             Vec3 p = at.add(0.0, up, 0.0);
             BlockPos b = BlockPos.containing(p);
             if (!level.isLoaded(b)) return up;
             if (!level.getBlockState(b).getCollisionShape(level, b).isEmpty()) continue;
+            if (!sight) return up;
             HitResult hit = level.clip(new ClipContext(p, aim, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
             if (hit.getType() == HitResult.Type.MISS || hit.getLocation().distanceToSqr(aim) < 9.0) return up;
         }
@@ -450,6 +472,7 @@ public final class CinemaCam {
             case GLFW.GLFW_KEY_H -> {
                 hint = !hint;
                 hintAt = System.currentTimeMillis();
+                hintFor = 4500L;
             }
             case GLFW.GLFW_KEY_BACKSPACE -> travelled = 0.0;
             default -> { }
@@ -549,8 +572,8 @@ public final class CinemaCam {
         }
         if (mode == Mode.OFF || mc.screen != null || !hint) return;
         long since = now - hintAt;
-        if (since > 4500L) return;
-        float a = Mth.clamp((4500L - since) / 700.0F, 0.0F, 1.0F);
+        if (since > hintFor) return;
+        float a = Mth.clamp((hintFor - since) / 700.0F, 0.0F, 1.0F);
         String keys = switch (mode) {
             case PATH -> "Esc stop   Space pause / again   ←→ slower/faster   wheel lens   H hide";
             case FOLLOW -> "Esc stop   Space pause   ↑↓ height   wheel distance   H hide";
