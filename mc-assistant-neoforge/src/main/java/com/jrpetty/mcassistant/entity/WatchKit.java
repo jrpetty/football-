@@ -500,6 +500,9 @@ public final class WatchKit {
                 return piece;
             }
             case DIAMOND -> {
+                // [econ32] Not while the age asks for diamonds: a local run's Diamond Age town mined its seven of the eleven the
+                // age asked, and the watch's kit took ten in a day (a sword and a chestplate), back down to two.
+                if (DeepPicks.wanted(level, v.id())) return ItemStack.EMPTY;
                 if (Crafts.stock(level, v, s -> s.is(Items.DIAMOND)) < k.takes + DIAMONDS_KEPT) return ItemStack.EMPTY;
                 if (k == Kind.SWORD && !stick(level, v)) return ItemStack.EMPTY;
                 if (!Crafts.take(level, v, s -> s.is(Items.DIAMOND), k.takes)) return ItemStack.EMPTY;
