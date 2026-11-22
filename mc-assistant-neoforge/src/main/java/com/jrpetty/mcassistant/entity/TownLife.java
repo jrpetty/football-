@@ -287,6 +287,7 @@ public final class TownLife {
         // [life28] A home's hearth is lit only while somebody lives there: an empty house's chimney stands cold, its
         // fire (if it had one) put out and left on the stack as its cap, with no smoke; lit again when a family moves in.
         boolean cold = !free && Homes.isHome(b.structure()) && !Homes.livedIn(v.id(), b.anchor());
+        putOutStrayFires(level, b);                                  // [life28]
         for (BlockPos top : fittings(b).chimneys()) {
             if (!level.getBlockState(top).isSolid()) continue;       // the chimney is not up (or is down)
             BlockPos fire = top.above();
@@ -303,6 +304,30 @@ public final class TownLife {
             if (!free && !TownJobs.atWork(level, v, "hearths", b.anchor(), "laying a hearth fire")) return;
             if (!free && !campfire(level, v)) return;
             level.setBlock(fire, Blocks.CAMPFIRE.defaultBlockState(), 3);
+        }
+    }
+
+    /**
+     * [life28] A fire the town laid on a chimney's top that is no chimney's top now (the stack rebuilt shorter, or moved
+     * into the house when its drawing changed): left hanging in the air by the gable, it is put out and taken away.
+     */
+    static void putOutStrayFires(ServerLevel level, Ledger.Building b) {
+        java.util.Set<BlockPos> fires = new HashSet<>();
+        for (BlockPos top : fittings(b).chimneys()) fires.add(top.above());
+        int[] half = BuildGoal.footprint(b.structure());
+        int r = Math.max(half[0], half[1]) + 2;
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                for (int dy = 4; dy <= 18; dy++) {
+                    m.set(b.anchor().getX() + dx, b.anchor().getY() + dy, b.anchor().getZ() + dz);
+                    if (!level.getBlockState(m).is(Blocks.CAMPFIRE) || fires.contains(m)) continue;
+                    if (level.getBlockState(m.below()).isSolid() && !level.getBlockState(m.below()).is(net.minecraft.tags.BlockTags.STAIRS)
+                        && !level.getBlockState(m.below()).is(net.minecraft.tags.BlockTags.SLABS)
+                        && level.getBlockState(m.below(2)).isSolid()) continue;          // on a stack of its own: somebody's
+                    level.setBlock(m.immutable(), Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
         }
     }
 

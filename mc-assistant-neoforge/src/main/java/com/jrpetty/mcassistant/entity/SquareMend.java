@@ -134,9 +134,11 @@ public final class SquareMend {
         }
         int best = Integer.MIN_VALUE, most = 0;
         for (Map.Entry<Integer, Integer> e : heights.entrySet()) if (e.getValue() > most) { most = e.getValue(); best = e.getKey(); }
-        if (n < 150 || most * 2 < n) {
+        // A levelled square: a third of it or more at one height (Ironmouth's: 224 of 529 at y86, the rest its pit).
+        if (n < 150 || most * 3 < n) {
             Ledger.note(id, DONE, "not a levelled square (" + most + " of " + n + " at one height)");
-            LOG.info("[MCA-FOUND] [life28] {}: its square is not a levelled one ({} of {} at one height): left as it is", Villages.name(id), most, n);
+            LOG.info("[MCA-FOUND] [life28] {}: its square is not a levelled one ({} of {} at one height: {}): left as it is", Villages.name(id),
+                most, n, new java.util.TreeMap<>(heights));
             return null;
         }
         for (int dx = -INSIDE; dx <= INSIDE; dx++) {
@@ -154,10 +156,10 @@ public final class SquareMend {
         for (int dx = -WALL; dx <= WALL; dx++) {
             for (int dz = -WALL; dz <= WALL; dz++) {
                 int y = h[dx + WALL][dz + WALL];
-                if (y == Integer.MIN_VALUE || y == best || Math.abs(y - best) > MOST) continue;
+                // (A block off may be the square's paving, or the wall stood on it: only what is clearly off the level is mended.)
+                if (y == Integer.MIN_VALUE || Math.abs(y - best) < 2 || Math.abs(y - best) > MOST) continue;
                 long[] c = { heart.getX() + dx, heart.getZ() + dz, y };
-                // (A wall a block off may stand on the square's paving: only one clearly on broken ground is laid again.)
-                if (Math.max(Math.abs(dx), Math.abs(dz)) == WALL) { if (Math.abs(y - best) >= 2) job.wall.add(c); }
+                if (Math.max(Math.abs(dx), Math.abs(dz)) == WALL) job.wall.add(c);
                 else job.inside.add(c);
             }
         }
@@ -183,9 +185,29 @@ public final class SquareMend {
                 else job.left++;
             } else {
                 int y = top(level, x, z);
-                if (y == Integer.MIN_VALUE || y == job.level || built(level, v, new BlockPos(x, y + 1, z))) { job.left++; continue; }
-                if (Terraform.shape(level, chunk, x, z, y, job.level, true, job.surface) > 0) job.mended++;
-                else job.left++;
+                if (y == Integer.MIN_VALUE || Math.abs(y - job.level) < 2) { job.left++; continue; }
+                // A torch stood in the hole to light it: taken up, and stood again on the level ground.
+                BlockPos over = new BlockPos(x, y + 1, z);
+                boolean lit = level.getBlockState(over).is(Blocks.TORCH);
+                if (lit) level.setBlock(over, Blocks.AIR.defaultBlockState(), 2 | 16);
+                if (built(level, v, over)) {
+                    if (lit) level.setBlock(over, Blocks.TORCH.defaultBlockState(), 2 | 16);
+                    job.left++;
+                    continue;
+                }
+                // The paving at the bottom of a hole is buried under the fill (a hump of it is left: it is somebody's work).
+                BlockPos at = new BlockPos(x, y, z);
+                if (y < job.level && !Terraform.natural(level.getBlockState(at)) && SiteWork.townPaving(level, at, level.getBlockState(at))) {
+                    level.setBlock(at, Blocks.DIRT.defaultBlockState(), 2 | 16);
+                }
+                if (Terraform.shape(level, chunk, x, z, y, job.level, true, job.surface) > 0) {
+                    job.mended++;
+                    BlockPos up = new BlockPos(x, job.level + 1, z);
+                    if (lit && level.getBlockState(up).isAir()) level.setBlock(up, Blocks.TORCH.defaultBlockState(), 3);
+                } else {
+                    if (lit && level.getBlockState(over).isAir()) level.setBlock(over, Blocks.TORCH.defaultBlockState(), 3);
+                    job.left++;
+                }
             }
         }
         if (job.cursor < all) return;
@@ -198,7 +220,7 @@ public final class SquareMend {
     /** One column of the square's wall: its courses lifted off, its ground made level, and the courses set back on it. */
     private static boolean relay(ServerLevel level, Villages.Village v, LevelChunk chunk, int x, int z, Job job) {
         int f = foot(level, x, z);
-        if (f == Integer.MIN_VALUE || f == job.level) return false;
+        if (f == Integer.MIN_VALUE || Math.abs(f - job.level) < 2) return false;
         // What stands on it: the wall's own courses (and a lantern, a slab, the arch over a gate), as they are.
         List<BlockState> states = new ArrayList<>();
         List<CompoundTag> tags = new ArrayList<>();
@@ -250,7 +272,7 @@ public final class SquareMend {
         for (int i = 0; i < 24; i++, y--) {
             BlockState s = chunk.getBlockState(m.set(x, y, z));
             if (Terraform.earth(s) || s.is(Blocks.DIRT_PATH) || SiteWork.townPaving(level, m, s) && !SiteWork.wallStuff(s)) return y;
-            if (s.isAir() || s.canBeReplaced() || s.is(BlockTags.LEAVES) || s.is(BlockTags.LOGS)) continue;
+            if (s.isAir() || s.canBeReplaced() || s.is(BlockTags.LEAVES) || s.is(BlockTags.LOGS) || s.is(Blocks.TORCH)) continue;
             return y;                                                     // something else: its top
         }
         return y;

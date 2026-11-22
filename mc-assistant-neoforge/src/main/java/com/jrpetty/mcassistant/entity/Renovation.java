@@ -624,7 +624,12 @@ public final class Renovation {
                     if (open) { rest.add(new Work(Kind.BLOCK, p.pos(), p, null)); continue; }
                     if (partOf(s) != null) continue;                    // furniture in the way: moved first (orphans), then laid
                     boolean glazed = Architecture.pane(s) || s.is(Blocks.GLASS) || s.is(BlockTags.IMPERMEABLE);   // a window where a wall goes
-                    if (!structural(id, s) || glazed || Materials.unfit(id, p.style(), s) || themeChanged && !ofTheme(id, p.style(), s)) {
+                    // [life28] A roof's stair or slab place holding a whole block (an old chimney's stone where the new drawing
+                    // carries the roof over): the roof laid there.
+                    boolean wrongShape = (p.style() == Blueprints.Style.ROOF_STAIR || p.style() == Blueprints.Style.ROOF_STAIR_TOP
+                        || p.style() == Blueprints.Style.ROOF_SLAB || p.style() == Blueprints.Style.ROOF_SLAB_TOP)
+                        && !s.is(BlockTags.STAIRS) && !s.is(BlockTags.SLABS);
+                    if (!structural(id, s) || glazed || wrongShape || Materials.unfit(id, p.style(), s) || themeChanged && !ofTheme(id, p.style(), s)) {
                         rest.add(new Work(Kind.BLOCK, p.pos(), p, null));
                     }
                     continue;
