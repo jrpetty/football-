@@ -395,6 +395,7 @@ public class BusinessLookGameTests {
             level.setBlock(new BlockPos(x + dx, y - 1, Z + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
             for (int h = 0; h <= 8; h++) level.setBlock(new BlockPos(x + dx, y + h, Z + dz), Blocks.AIR.defaultBlockState(), 2);
         }
+        Kit.pond(level, x + 14, Z - 14, 3);                               // (water for a fisher's work)
         int n = Math.max(12, t.minFolk() + 3);
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (int i = 0; i < n; i++) {
@@ -403,6 +404,7 @@ public class BusinessLookGameTests {
             f.ensurePersona();
             f.setJob(i < 2 ? t.work() : com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM);
             if (i < 2) f.tradeXpForTests(t.work(), 20000);                // an old hand at it, as a town's own makers are
+            if (i < 2) Kit.log("[VT] " + kind + " " + f.displayNameCap() + " at " + f.stationTask() + " busy " + com.jrpetty.mcassistant.entity.TownJobs.busy(f));
             f.spend(f.purse());
             f.earn(80);
             folk.add(f);
@@ -512,6 +514,12 @@ public class BusinessLookGameTests {
                 String key = null;
                 for (Map.Entry<String, com.jrpetty.mcassistant.entity.Business.Lot> e : b.stock.entrySet()) if (e.getValue().qty > 0) { key = e.getKey(); break; }
                 java.util.function.Predicate<ItemStack> is = com.jrpetty.mcassistant.entity.Stockroom.matcherForTests(key);
+                // (The town's own counter out of it, so the firm is the one to sell it: who wins a sale is ent03's question.)
+                for (net.minecraft.world.Container c : new net.minecraft.world.Container[]{ box, box2 }) {
+                    for (int i = 0; i < c.getContainerSize(); i++) if (is.test(c.getItem(i))) c.setItem(i, ItemStack.EMPTY);
+                    c.setChanged();
+                }
+                Villages.forgetStores(id);
                 for (int i = 2; i < folk.size() && sold == null; i++) {
                     VillageFolkEntity buyer = folk.get(i);
                     if (hands.contains(buyer)) continue;

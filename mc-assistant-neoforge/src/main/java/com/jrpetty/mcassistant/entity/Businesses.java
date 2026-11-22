@@ -1754,10 +1754,7 @@ public final class Businesses {
         long day = today(level);
         if (b.type.keeping != Business.Keeping.OWN) return "The " + b.name.toLowerCase(Locale.ROOT) + " is the town's: it's not for sale.";
         if (b.ownedBy(p.getUUID()) && b.owners.size() == 1) return "It's yours already.";
-        // [biz30] A firm the town chartered orders its own stock whoever owns it (a visitor may hold a charter: it could open one
-        // and never stock it); a player's own stall still wants a citizen or a friend.
-        boolean ownFirm = b != null && !b.mirror() && b.ownedBy(p.getUUID());
-        if (!ownFirm && !Citizens.is(village, p.getUUID()) && !Standing.of(village, p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.FRIEND)) {
+        if (!Citizens.is(village, p.getUUID()) && !Standing.of(village, p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.FRIEND)) {
             return "The town sells its businesses to its citizens and friends.";
         }
         long price = worth(level, village, b);
@@ -1847,7 +1844,10 @@ public final class Businesses {
      *  player's pack, the goods into the pack (the player carries them to the stall). */
     public static String playerOrder(ServerLevel level, UUID village, net.minecraft.server.level.ServerPlayer p, @Nullable Business b, ItemStack one, int qty) {
         if (one.isEmpty() || qty <= 0) return "Order what? Say the item and how many.";
-        if (!Citizens.is(village, p.getUUID()) && !Standing.of(village, p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.FRIEND)) {
+        // [biz30] A firm the town chartered orders its own stock whoever owns it (a visitor may hold a charter: it could open one
+        // and never stock it); a player's own stall still wants a citizen or a friend.
+        boolean ownFirm = b != null && !b.mirror() && b.ownedBy(p.getUUID());
+        if (!ownFirm && !Citizens.is(village, p.getUUID()) && !Standing.of(village, p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.FRIEND)) {
             return "The stores sell by the order to the town's citizens and friends.";
         }
         if (b != null && !b.mirror()) {

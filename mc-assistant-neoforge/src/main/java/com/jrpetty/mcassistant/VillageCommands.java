@@ -729,6 +729,7 @@ public final class VillageCommands {
         String line = "BUILDINGS " + Villages.name(v.id()) + ": " + r.line();
         org.slf4j.Logger log = com.mojang.logging.LogUtils.getLogger();
         log.info("[MCA-BUILDCHECK] {}", line);
+        for (String b : r.seen) log.info("[MCA-BUILDCHECK]   seen {}", b);
         for (java.util.Map.Entry<String, java.util.Map<String, Integer>> e : r.each.entrySet()) log.info("[MCA-BUILDCHECK]   {} {}", e.getKey(), e.getValue());
         for (java.util.Map.Entry<String, java.util.List<String>> e : r.examples.entrySet()) for (String s : e.getValue()) log.info("[MCA-BUILDCHECK]   {}: {}", e.getKey(), s);
         ctx.getSource().sendSuccess(() -> Component.literal(line), false);

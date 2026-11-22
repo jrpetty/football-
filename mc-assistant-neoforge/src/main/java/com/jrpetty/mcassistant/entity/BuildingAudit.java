@@ -81,6 +81,8 @@ public final class BuildingAudit {
         /** Per building: its name and its own counts (only what it has). */
         public final Map<String, Map<String, Integer>> each = new TreeMap<>();
         public int buildings;
+        /** Every building looked at: its name, where, and which way its back faces. */
+        public final List<String> seen = new ArrayList<>();
 
         public Report() {
             for (String k : KINDS) counts.put(k, 0);
@@ -134,6 +136,7 @@ public final class BuildingAudit {
         if (plan.isEmpty() || structure.equals("fortify")) return;
         r.buildings++;
         String name = design + "@" + anchor.toShortString();
+        r.seen.add(name + " " + facing.getName());
         Map<Long, BuildGoal.Placement> mine = new HashMap<>();
         int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
         for (BuildGoal.Placement p : plan) {
