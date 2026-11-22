@@ -42,7 +42,7 @@ public final class Busywork {
     private Busywork() {}
 
     /** How long a folk stands idle (ticks) before it finds something to do. */
-    static final int START = 50;
+    static final int START = 40;
     /** How far it walks for it at most. */
     static final int REACH = 12;
 
@@ -115,7 +115,9 @@ public final class Busywork {
             if (!carryOn(f, level, d)) stop(f, d);
             return;
         }
-        if (!IdleCensus.idle(f) || !free(f, level)) {
+        // (Its legs at rest and nothing on its body: a nudge from the crowd round it (Elbowroom) does not start the count again.)
+        boolean idle = FolkAction.now(f) == Act.NONE && f.getNavigation().isDone() && !f.isBaby() && !f.isSleeping();
+        if (!idle || !free(f, level)) {
             IDLE_SINCE.remove(id);
             return;
         }
