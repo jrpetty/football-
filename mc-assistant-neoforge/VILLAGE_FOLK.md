@@ -15044,7 +15044,7 @@ report names them ("the second iron level"), counts each one's ore, and marks a 
 ### Coal kept back for the smelters
 A smelter draws coal only while the stores hold more than their floor (Fuel). The town's other uses drew it from nought
 upward a lump at a time: a street light's torch, a campfire, the fish smoked, the lighthouse lit, a festival's bonfire.
-Those uses now take none while the stores are under the floor and two smelters' draws more (sixteen); they wait, or burn
+Those uses now take none, from the Stone Age on, while the stores are under the floor and two smelters' draws more (sixteen); they wait, or burn
 wood where they can (Fuel.keptForSmelting). The mine's books (`/village mine`) count coal and charcoal in and out by whom,
 with the iron and the diamonds.
 

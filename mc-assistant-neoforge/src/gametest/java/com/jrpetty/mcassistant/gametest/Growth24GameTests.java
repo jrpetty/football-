@@ -117,8 +117,8 @@ public class Growth24GameTests {
     }
 
     /**
-     * The smelters' coal kept back: with the stores' coal under the floor and two smelters' draws, the town's works (a
-     * street light's torch, a campfire...) take none of it; with plenty, they take what they need.
+     * The smelters' coal kept back: in a Stone Age town with the stores' coal under the floor and two smelters' draws, the
+     * town's works (a street light's torch, a campfire...) take none of it; with plenty, they take what they need.
      */
     @GameTest(template = "empty", timeoutTicks = 200, batch = "gw24_02_coal_kept")
     public static void gw24_02_coal_kept(GameTestHelper helper) {
@@ -126,6 +126,7 @@ public class Growth24GameTests {
         List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 5406000, 40, 3, StationTask.FARM);
         helper.assertTrue(!folk.isEmpty(), "the town");
         UUID v = folk.get(0).ownerId();
+        Villages.ageForTests(v, Villages.Age.STONE);                          // smelting ore from the Stone Age on
         Villages.forgetStock();
         int start = Fuel.inStores(level, v);
         int floor = Fuel.floor(Villages.headcount(v)), keep = floor + Fuel.SMELT_SPARE;

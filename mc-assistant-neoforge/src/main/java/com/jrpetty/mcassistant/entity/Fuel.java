@@ -80,7 +80,7 @@ public final class Fuel {
     public static final int SMELT_SPARE = 16;
 
     /**
-     * [growth24] Is the stores' coal kept back for the smelters now: under the floor and two smelters' draws more? A
+     * [growth24] Is the stores' coal kept back for the smelters now (from the Stone Age): under the floor and two smelters' draws more? A
      * smelter draws coal only while the stores are over the floor (VillageFolkEntity.coalLow); the town's other uses (a
      * street light's torch, a campfire, the fish smoked, the lighthouse lit, a festival's bonfire) drew it from nothing
      * upward, one at a time, and an Iron Age town of sixty-five held 0 to 4 coal from one week to the next with three
@@ -88,6 +88,7 @@ public final class Fuel {
      */
     public static boolean keptForSmelting(ServerLevel level, @Nullable UUID village) {
         if (village == null || Villages.get(village) == null) return false;
+        if (Villages.ageOf(village) == Villages.Age.WOOD) return false;     // the ore is smelted from the Stone Age on
         return inStores(level, village) < floor(Villages.headcount(village)) + SMELT_SPARE;
     }
 
