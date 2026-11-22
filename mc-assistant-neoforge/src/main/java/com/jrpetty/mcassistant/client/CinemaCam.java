@@ -166,6 +166,7 @@ public final class CinemaCam {
         centre = centreGoal;
         followYaw = yawOf(e);
         lostAt = 0L;
+        pull = 1.0;
         begin(Mode.FOLLOW, label);
     }
 
@@ -323,16 +324,21 @@ public final class CinemaCam {
         lostAt = 0L;
         Vec3 feet = t.getPosition(partial);
         Vec3 head = feet.add(0.0, t.getEyeHeight(), 0.0);
-        followYaw = easeAngle(followYaw, yawOf(t), dt, 1.1);
+        // Asleep, sat down or at its work in one spot, its body turns about: hold the view rather than swing with it.
+        boolean still = t instanceof LivingEntity le && (le.isSleeping() || t.getPose() == net.minecraft.world.entity.Pose.SITTING)
+            || t.getDeltaMovement().horizontalDistanceSqr() < 1.0E-4;
+        if (!still) followYaw = easeAngle(followYaw, yawOf(t), dt, 1.1);
         double y = Math.toRadians(followYaw);
         Vec3 forward = new Vec3(-Math.sin(y), 0.0, Math.cos(y));
         Vec3 right = new Vec3(-Math.cos(y), 0.0, -Math.sin(y));
         Vec3 want = head.add(forward.scale(-followDist)).add(right.scale(0.7)).add(0.0, followHeight - 1.0, 0.0);
+        // A wall behind it pulls the camera in (quickly), and lets it back out slowly: never a jump to and fro as the
+        // folk passes a door post.
         HitResult hit = level.clip(new ClipContext(head, want, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
-        if (hit.getType() != HitResult.Type.MISS) {
-            Vec3 dir = want.subtract(head).normalize();
-            want = hit.getLocation().subtract(dir.scale(0.35));
-        }
+        double len = want.distanceTo(head), reach = 1.0;
+        if (hit.getType() != HitResult.Type.MISS && len > 0.01) reach = Mth.clamp((hit.getLocation().distanceTo(head) - 0.35) / len, 0.12, 1.0);
+        pull = pull + (reach - pull) * (1.0 - Math.exp(-dt * (reach < pull ? 7.0 : 0.8)));
+        want = head.add(want.subtract(head).scale(Math.min(pull, reach + 0.08)));
         Vec3 aim = head.add(forward.scale(1.2)).add(0.0, -0.25, 0.0);
         eye = ease(eye, want, dt, started ? 3.2 : 1.6);
         look = ease(look, aim, dt, 6.0);
@@ -563,7 +569,7 @@ public final class CinemaCam {
         long now = System.currentTimeMillis();
         GuiGraphics g = event.getGuiGraphics();
         Font font = mc.font;
-        if (!caption.isEmpty() && now - captionAt < 3500L && mc.screen == null) {
+        if (!caption.isEmpty() && now - captionAt < 3500L && mc.screen == null && (hint || mode == Mode.OFF)) {
             float a = Mth.clamp((3500L - (now - captionAt)) / 600.0F, 0.0F, 1.0F) * Mth.clamp((now - captionAt) / 250.0F, 0.0F, 1.0F);
             int w = font.width(caption);
             int x = (g.guiWidth() - w) / 2, y = g.guiHeight() - 46;

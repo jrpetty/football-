@@ -34,6 +34,8 @@
   "key.mc_assistant.time_normal": "Time: normal pace",
   "key.mc_assistant.admin_panel": "Admin panel (operators)",
   "key.mc_assistant.camera": "Camera (film the town: orbit, fly-through, follow, time-lapse)",
+  "subtitles.mc_assistant.ambient.crickets": "Crickets chirp",
+  "subtitles.mc_assistant.ambient.birds": "Birds sing",
   "block.mc_assistant.storehouse_unit": "Storehouse Unit",
   "container.mc_assistant.storehouse": "Village Storehouse",
   "block.mc_assistant.village_board": "Village Board",

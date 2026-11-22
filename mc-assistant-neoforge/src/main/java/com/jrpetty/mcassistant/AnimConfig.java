@@ -31,6 +31,8 @@ public final class AnimConfig {
     /** [vision27] The name tags over the folk's heads, and how far off they show (fading out towards the edge). */
     public static final ModConfigSpec.EnumValue<Plates> PLATES;
     public static final ModConfigSpec.IntValue PLATE_RANGE;
+    /** [vision27] Birds by day and crickets at night in a town (client/TownAmbience). */
+    public static final ModConfigSpec.BooleanValue AMBIENCE;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -46,12 +48,14 @@ public final class AnimConfig {
         EMOTE_CAMERA = b.comment("In first person, turn the camera round to watch your own emote, and back after.")
             .define("emoteCamera", true);
         b.pop();
-        b.push("labels");                                                                       // [vision27]
+        b.push("town");                                                                         // [vision27] name tags, sounds
         PLATES = b.comment("The folk's name tags: FULL (trade, level, name, badges, health), NAME (the name, a stuck folk's warning,",
                 "a hurt one's health), LOOK (only the folk you look at) or OFF. F1 and the camera's clean shot hide them all.")
             .defineEnum("nameTags", Plates.NAME);
         PLATE_RANGE = b.comment("How far away (blocks) name tags show; they fade out over the last third of it.")
             .defineInRange("nameTagRange", 32, 8, 64);
+        AMBIENCE = b.comment("Birds by day and crickets at night, out of doors in a town.")
+            .define("ambience", true);
         b.pop();
         SPEC = b.build();
     }
@@ -88,5 +92,9 @@ public final class AnimConfig {
 
     public static void setPlates(Plates p) {
         try { PLATES.set(p); SPEC.save(); } catch (RuntimeException ignored) { }
+    }
+
+    public static boolean ambience() {
+        try { return AMBIENCE.get(); } catch (RuntimeException e) { return true; }
     }
 }

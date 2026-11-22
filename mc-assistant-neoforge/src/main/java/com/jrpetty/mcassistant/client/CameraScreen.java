@@ -190,6 +190,7 @@ public class CameraScreen extends Screen {
 
     private void followTab(int x, int y, int w) {
         ListTag who = info().getList("folk", Tag.TAG_COMPOUND);
+        if (followed < 0 && !who.isEmpty()) followed = who.getCompound(0).getInt("id");   // the first (a favourite, or the nearest) ready
         int cols = 2, bw = (w - 4) / cols, shown = 0;
         // The folk looked at, if it is not on the server's list.
         boolean lookedListed = false;

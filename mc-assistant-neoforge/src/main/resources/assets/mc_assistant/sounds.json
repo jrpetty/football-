@@ -1,0 +1,19 @@
+{
+  "ambient.crickets": {
+    "subtitle": "subtitles.mc_assistant.ambient.crickets",
+    "sounds": [
+      {"name": "mc_assistant:ambient/crickets1", "stream": false},
+      {"name": "mc_assistant:ambient/crickets2", "stream": false},
+      {"name": "mc_assistant:ambient/crickets3", "stream": false}
+    ]
+  },
+  "ambient.birds": {
+    "subtitle": "subtitles.mc_assistant.ambient.birds",
+    "sounds": [
+      {"name": "mc_assistant:ambient/birds1", "stream": false},
+      {"name": "mc_assistant:ambient/birds2", "stream": false},
+      {"name": "mc_assistant:ambient/birds3", "stream": false},
+      {"name": "mc_assistant:ambient/birds4", "stream": false}
+    ]
+  }
+}

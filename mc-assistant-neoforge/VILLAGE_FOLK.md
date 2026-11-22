@@ -15016,3 +15016,70 @@ two hundred times once, a look none; gw03 doors three and four up on plinths get
 straight one, all walked by stairs; gw04 hill houses held to the job, no slower a placement than the flat one; gw05 a lead
 back at its begun building waits for no gap; gw06 a careful town with households waiting raises a house a storey; gw07 an
 Iron Age town short of its age's iron builds no golem out of it.
+
+## The camera: filming the town, and how it looks on film (vision-27)
+
+For making videos of a town, with no commands: everything is on a screen, opened by a key or a button.
+
+### The camera screen (CameraScreen, CinemaCam)
+
+Press **K** (rebindable: "Camera" in the controls), or the **Camera** button at the top of the U page (Your life in
+town). Four tabs:
+
+- **Orbit**: round the town's heart, the folk you were looking at when you opened it, or where you stand; radius,
+  height and speed (either way round, or still). The camera glides in from where your eyes were, rises over hills in
+  its way, and on a close orbit comes in short of a wall or a tree rather than through it.
+- **Fly-through**: stand where the shot should pass, look where it should look, press K and "Add point" (two to six
+  points); then play it: a smooth curve through every point, flown at an even pace however far apart they are, easing
+  in and out (or round and round), banking a little into the turns.
+- **Follow**: one folk over its shoulder through its day; your favourites in reach are listed first (starred), then
+  the folk nearest you. It swings round slowly as the folk turns and pulls in short of walls; a folk lost from sight
+  (indoors, out of range) is circled where it was last seen.
+- **Happening**: "Show me something happening" takes the camera to the busiest thing going on near you just now, read
+  off what the folk's bodies are doing (entity/Happenings): a match (a ball in play with players round it), music and
+  dancing at a festival, builders at a building going up, buying and selling, children at play, the smithy, woodcutters,
+  miners, farmers... Press it again for another. For an operator, or the owner of a single-player world, **Time-lapse**
+  runs the world 4 to 32 times faster for 5 to 60 seconds (TimeLapse: the speed keys' tick rate) and goes back to the
+  old pace by itself; the camera circles a building going up, if there is one near.
+
+Underneath every tab: **Clean shot** (on by default: no HUD, name tags or any of the mod's labels, as F1), the **lens**
+(20 to 100 degrees) and the folk's **name tags** for ordinary play.
+
+While a shot runs: **Escape** stops it and gives you your own eyes back (always; any other screen opening stops it
+too); **Space** pauses (or plays a finished fly-through again); the **arrow keys** change speed and height; the
+**mouse wheel** the distance (the lens on a fly-through); **H** hides or shows the reminder of these keys. K opens the
+camera screen over the running shot to change it live. Your own body, hand and crosshair are kept out of the picture;
+your drop, use and swap keys do nothing while you film. The shot is worked out every frame from the clock, not every
+tick, so it is as smooth as the frame rate.
+
+Limits: the camera sees what your client has loaded, so a fly-through or an orbit far from where you stand shows the
+edge of the world beyond your render distance.
+
+### Name tags and labels (FolkPlates, PlateText)
+
+The folk's name tags show, by default, just the name, a stuck folk's red warning and a hurt folk's health (not the
+trade glyph, level, badges and full health over every head); they show out to 32 blocks and fade out over the last
+third of that. In the camera screen (or config/mc_assistant-client.toml, [town]): all of the tag, names, only the
+folk you look at, or none; the range. F1, and a clean camera shot, hide every label of the mod's (name tags, the
+little pictures over heads, speech bubbles, trade icons, quest marks, the founding and building outlines).
+
+### A town that sounds and looks lived in
+
+- A block a builder lays is heard going in (the block's own placing sound) with a few crumbs knocked off it (BuildFx).
+- Folk sent to the same spot no longer stand inside each other: one standing still with another in its elbows takes a
+  short step aside onto open ground (Elbowroom), only where somebody can see it.
+- Birds sing in the trees by day and crickets chirp at night, out of doors in a town (TownAmbience; "ambience" in the
+  client config turns it off).
+
+### For a developer filming the mod (CineDev)
+
+Started with `-Dmcassistant.cinedev=FILE`, the client carries out the lines of FILE each time it changes: orbit,
+follow, fly-through points, the happening button, the lens, clean shot, the clock (the world's, for recording), and
+`record DIR`, every frame drawn written as a numbered picture with the world's time of each, to make a steady clip of
+at any frame rate (the scratch tool mkclip.py does it with ffmpeg).
+
+### Tests
+
+VisionGameTests (x 6,000,000 to 6,100,000): vi01 the busiest happening first and another the next time, through the
+wire too; vi02 a quiet town says so; vi03 a time-lapse refused to a player who may not, started for an operator, held to
+its limits, the old pace put back; vi04 the tidy name tag; vi05 the screen's info (the heart, a favourite first).

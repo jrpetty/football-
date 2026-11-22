@@ -98,7 +98,7 @@ public final class CineDev {
                     if (w[1].equals("nearest") && mc.level != null && mc.player != null) {
                         double best = Double.MAX_VALUE;
                         for (Entity e : mc.level.entitiesForRendering()) {
-                            if (e instanceof VillageFolkEntity f && !f.isBaby() && f.distanceToSqr(mc.player) < best) {
+                            if (e instanceof VillageFolkEntity f && !f.isBaby() && !f.isSleeping() && f.distanceToSqr(mc.player) < best) {
                                 best = f.distanceToSqr(mc.player);
                                 id = f.getId();
                             }
