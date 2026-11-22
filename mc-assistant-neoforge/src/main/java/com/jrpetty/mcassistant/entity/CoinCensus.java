@@ -37,7 +37,9 @@ public final class CoinCensus {
         IMPORT("goods bought from traders", -1),
         PLAYER_OUT("paid out to players", -1),
         VISITOR_OUT("visitors' and ships' coin taken away", -1),
-        KEPT("coin put away as a keepsake (a coin in a folk's pack, not its purse)", -1);   // [econ-1a]
+        KEPT("coin put away as a keepsake (a coin in a folk's pack, not its purse)", -1),   // [econ-1a]
+        MIGRANT_IN("newcomers' purses, brought with them", 1),                              // [biz30c] a folk moved in
+        MIGRANT_OUT("leavers' purses, taken with them", -1);                                // [biz30c] a folk moved away
 
         public final String words;
         public final int sign;

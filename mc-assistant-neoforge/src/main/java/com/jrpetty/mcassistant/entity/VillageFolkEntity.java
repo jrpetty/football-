@@ -155,6 +155,13 @@ public class VillageFolkEntity extends AssistantEntity {
      * settlement on top of the one they were already standing in.
      */
     public void joinVillage(UUID village, BlockPos centre) {
+        // [biz30c] Its purse goes with it: out of the town it leaves, into the one it joins (a household moving for work,
+        // a party taken in, a marriage). The census had seen the coin come and go by no booked way (ent15's drift).
+        UUID was = ownerId();
+        if (!village.equals(was) && purse() > 0) {
+            if (was != null) CoinCensus.flow(was, CoinCensus.Flow.MIGRANT_OUT, purse());
+            CoinCensus.flow(village, CoinCensus.Flow.MIGRANT_IN, purse());
+        }
         // [guard-kit] A guard going to live in another town leaves the watch's kit in its old town's stores.
         if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.GUARD) WatchKit.handBack(this, "leaving the town");
         if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.CAVE) CaveDwellers.handBack(this, "leaving the town");   // [caves]
