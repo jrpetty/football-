@@ -129,6 +129,11 @@ public class WorksGoal extends Goal {
 
     @Override
     public void stop() {
+        if (job != null && phase == Phase.OUT && MineWorks.below(a)) {   // [econ32b] a climb cut short below, and by what
+            com.jrpetty.mcassistant.entity.Job nj = a.peekJob();
+            com.jrpetty.mcassistant.entity.MineWhy.note(a, "climb cut short (" + (a.getTarget() != null ? "a target" : nj == null ? "no job"
+                : nj == job ? "gen " + a.taskGen() + "/" + myGen : nj.type() + ":" + nj.arg()) + ")");
+        }
         if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
         task = null;
         job = null;
@@ -257,6 +262,7 @@ public class WorksGoal extends Goal {
     }
 
     private void finish(String message) {
+        if (MineWorks.below(a)) com.jrpetty.mcassistant.entity.MineWhy.note(a, "shift over below: " + message);   // [econ32b]
         if (!outJob && tasks > 0) SHIFTS++;                      // [fixes14]
         ENDS.merge(message.isEmpty() ? "-" : message, 1, Integer::sum);
         if (!outJob && tasks > 0) { SHIFT_BLOCKS += broke; SHIFT_TICKS_ALL += shiftTicks; }   // [growth22] the books' averages
