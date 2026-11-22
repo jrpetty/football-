@@ -104,6 +104,9 @@ public final class HousingMarket {
     static final int FROM_FOLK = 16;
     /** How much a work visit lays: so many blocks, a course at a time. */
     static final int BUDGET = 24;
+    /** [vision27] The blocks laid a visit, and how often a visit comes (ticks): BUDGET a quarter of a minute, as before. */
+    static final int LAY = 5;
+    static final long LAY_EVERY = 60L;
     /** The town's work the builders of a folk's house are called to (TownJobs). */
     static final String WORKS = "homebuild";
     /** How many days of the index are kept for its trend. */
@@ -1230,14 +1233,16 @@ public final class HousingMarket {
         UUID id = v.id();
         long now = level.getGameTime(), day = level.getDayTime() / 24000L;
         Long last = TICKED.get(id);
-        if (last != null && now - last < 300L && now >= last) return;
+        // [vision27] A few blocks every three seconds rather than two dozen at once every fifteen (the same pace): the house
+        // is seen going up block by block under its builder's hands, not a course popping in whole.
+        if (last != null && now - last < LAY_EVERY && now >= last) return;
         TICKED.put(id, now);
-        costCouncilHouses(level, id, day);
+        if (now / 300L != (now - LAY_EVERY) / 300L || last == null) costCouncilHouses(level, id, day);
         Commission c = load(id);
         if (c != null && !Villages.sitesOf(id).containsKey(c.design.siteKey())) {
             Villages.holdPrivateSite(id, c.design.siteKey(), new Villages.Site(c.anchor, c.facing, 0));   // the town forgot it over a restart
         }
-        if (c != null) work(level, v, c, BUDGET, false);
+        if (c != null) work(level, v, c, LAY, false);
     }
 
     /**
@@ -1531,6 +1536,8 @@ public final class HousingMarket {
             }
         }
         BuildGoal.stampOnly(level, c.design.drawing, c.anchor, c.facing, 13, p -> lay.get(p.pos()), p -> lay.containsKey(p.pos()));
+        boolean heard = false;
+        for (BlockPos p : lay.keySet()) { BuildFx.laid(level, p, !heard); heard = true; }   // [vision27] heard and seen going in
         for (int i : done) c.laid.set(i);
         c.laidCount = c.laid.cardinality();
         pay(level, v, c, hand, false);
