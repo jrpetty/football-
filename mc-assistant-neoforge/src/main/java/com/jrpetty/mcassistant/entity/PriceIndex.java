@@ -375,6 +375,11 @@ public final class PriceIndex {
                 l = new Line(k);
                 t.lines.put(k, l);
             }
+            if (needed > 0) {                                                    // [growth24] a stock wanted is not a meal eaten (AgeWant)
+                Market.Good g = goodNamed(k.substring(2));
+                needed = g == null ? 0 : com.jrpetty.mcassistant.village.AgeWant.counted(shortOf.getOrDefault(g.need(), 0), DAYS_COVER,
+                    c[0] + c[1] + f[DRAWN] + m[1], m[0], bundle);
+            }
             int wanted = c[0] + c[1] + f[DRAWN] + m[1] + needed;
             double was = l.factor;
             move(l, have, bundle, m[0], wanted, f[REFUSED], fresh);
