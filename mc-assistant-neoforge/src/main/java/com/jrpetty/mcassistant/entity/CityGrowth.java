@@ -72,6 +72,11 @@ public final class CityGrowth {
         return TownPlan.ringOf(lot) < rings(village);
     }
 
+    /** Tests: as if a day had gone by since the last ring was laid out. */
+    public static void sinceForTests(UUID village) {
+        LAST.remove(village);
+    }
+
     /** Tests and the admin: lay the plan out to this many rings. */
     public static void setRings(UUID village, int rings) {
         Ledger.note(village, NOTE, Integer.toString(Math.max(TownPlan.RINGS, Math.min(TownPlan.MAX_RINGS, rings))));

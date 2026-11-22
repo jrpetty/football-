@@ -3106,7 +3106,10 @@ public final class Villages {
                 // ground of anything, and on a mountainside found none flat to six blocks across
                 // twenty: a town of fifty-eight sat in the Stone Age for want of one. Missed on
                 // look after look, they are let onto steeper ground, terraced up under the floor.
-                BlockPos ground = groundFor(level, x, z, hx, hz, true, heartGround, laps,
+                // [city26] A lot whose street the town walks to is not too high or low for it, however far above the
+                // heart it stands (a hill town's terraces); the height rule is for a plateau nobody walks to.
+                boolean walked = CityPlan.reaches(level, v, lot);
+                BlockPos ground = groundFor(level, x, z, hx, hz, true, walked ? Integer.MIN_VALUE : heartGround, laps,
                     great ? 4 : 2, whyNot(villageId));
                 if (ground == null) continue;
                 if (Floods.lowGround(villageId, ground)) continue;     // [disasters] not on the low ground the river came over
