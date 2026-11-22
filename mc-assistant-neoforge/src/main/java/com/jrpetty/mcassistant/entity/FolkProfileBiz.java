@@ -54,7 +54,8 @@ public final class FolkProfileBiz {
             BusinessTypes.BusinessType t = Enterprise.kindOf(village, b);
             CompoundTag c = firm(level, village, b, day, viewer);
             c.putString("trade", t != null ? t.title() : b.type.title);
-            c.putString("role", owns && hand ? "owner, and works there" : owns ? (b.owners.size() > 1 ? "part-owner" : "owner") : "a hand");
+            String owner = owns && !leads(b, f.getUUID()) ? "part-owner" : "owner";
+            c.putString("role", owns && hand ? owner + ", and works there" : owns ? owner : "a hand");
             firms.add(c);
         }
         for (PlayerShops.Shop s : PlayerShops.all(village)) {
@@ -96,16 +97,34 @@ public final class FolkProfileBiz {
         return c;
     }
 
+    /** Whether this folk holds the largest stake in it (the owner, not one of its backers). */
+    static boolean leads(Business b, UUID folk) {
+        int mine = 0, most = 0;
+        for (Business.Stake st : b.owners) {
+            most = Math.max(most, st.parts());
+            if (folk.equals(st.who())) mine += st.parts();
+        }
+        return mine >= most;
+    }
+
     /** Where a place is, in the town's words: its street address if it has one, else a bearing from the square. */
     static String where(ServerLevel level, UUID village, BlockPos at) {
         Villages.Village v = Villages.get(village);
+        // the nearest building it stands in (not a wall or a ring round the town, whose anchor is the square's)
+        Ledger.Building in = null;
+        long best = Long.MAX_VALUE;
         for (Ledger.Building b : Ledger.buildings(village)) {
-            int r = com.jrpetty.mcassistant.entity.goal.BuildGoal.halfOf(b.structure()) + 1;
-            if (Math.abs(b.anchor().getX() - at.getX()) <= r && Math.abs(b.anchor().getZ() - at.getZ()) <= r) {
-                String[] a = TownLife.address(village, v == null ? at : v.centre(), b);
-                String name = Villages.spoken(b.structure());
-                return a == null ? "in " + name : "in " + name + ", " + a[0] + " " + a[1];
-            }
+            int half = com.jrpetty.mcassistant.entity.goal.BuildGoal.halfOf(b.structure());
+            if (half > 12 || b.structure().contains("wall") || b.structure().equals("fortify") || b.structure().equals("court")) continue;
+            int dx = Math.abs(b.anchor().getX() - at.getX()), dz = Math.abs(b.anchor().getZ() - at.getZ());
+            if (dx > half + 1 || dz > half + 1) continue;
+            long d = (long) dx * dx + (long) dz * dz;
+            if (d < best) { best = d; in = b; }
+        }
+        if (in != null) {
+            String[] a = TownLife.address(village, v == null ? at : v.centre(), in);
+            String name = Villages.spoken(in.structure()).replace("a new house", "a house");
+            return a == null ? "in " + name : "in " + name + ", " + a[0] + " " + a[1];
         }
         if (v == null) return at.getX() + ", " + at.getZ();
         int dx = at.getX() - v.centre().getX(), dz = at.getZ() - v.centre().getZ();

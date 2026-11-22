@@ -1183,6 +1183,7 @@ public final class Enterprise {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || !f.isAlive() || f.isHired() || f.isShowcase()) continue;
             if (STAFF.containsKey(f.getUUID()) || b.ownedBy(f.getUUID()) || ownsAny(id, f.getUUID())) continue;
             if (TownJobs.busy(f)) continue;
+            if (Hospitality.keepsTrade(f)) continue;                        // [biz30] not the barkeep from behind its bar (live Ravenscar: a new bakery took the tavern's only barkeep)
             StationTask now = f.stationTask();
             double s;
             if (now == t.work()) s = 100;

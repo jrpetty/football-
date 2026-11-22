@@ -739,6 +739,14 @@ public class WarRoomScreen extends Screen {
             { "manor", "a knight's land, its manor" }, { "wonder", "a wonder (hollow: rising)" },
             { "you", "you" } };
         int step = Math.max(8, Math.min(10, (mapH - 34) / rows.length));    // [realm-polish] the longer legend fits a short window
+        // [biz30] still too long for the panel (GUI 3 on 1280x720: its last rows and its note ran off the bottom): drawn smaller to fit
+        String note = data.getBoolean("all") ? "You see the whole world." : "The table shows only what its town knows: its own country, where its scouts have been, and the towns it has met.";
+        int need = 12 + rows.length * step + 4 + font.split(Component.literal(note), sw).size() * 9;
+        float k = Math.min(1F, (mapH - 8F) / need);
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(k, k, 1F);
+        g.pose().translate(-x, -y, 0);
         for (String[] r : rows) {
             int gx = x + 4, gy = cy + 3;
             switch (r[0]) {
@@ -774,8 +782,8 @@ public class WarRoomScreen extends Screen {
             cy += step;
         }
         cy += 4;
-        wrap(g, data.getBoolean("all") ? "You see the whole world." : "The table shows only what its town knows: its own country, where its scouts have been, and the towns it has met.",
-            x, cy, sw, 0xFF6A5E48);
+        wrap(g, note, x, cy, sw, 0xFF6A5E48);
+        g.pose().popPose();
     }
 
     private void news(GuiGraphics g, int x, int y, int sw, int sh) {
