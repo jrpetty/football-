@@ -15180,6 +15180,21 @@ one level. The ground audit (TerraformAudit, `/village groundcheck`) counts terr
 with its wall the whole height is not a sheer edge. A lot whose street the town walks to is not "too high or low" however
 far above the heart it stands, and such a street is paved and lit.
 
+### Terraced streets, round two
+- Each terraced street is one height right across (each lane at its middle lane's height, a junction at its middle), and
+  every block it climbs is a stair of dressed stone (stone brick stairs; smooth sandstone on sand) facing up the climb,
+  laid as the ground is worked (TerraceWalls.step): the streets go up in shallow stone flights between their walls, the
+  paving running on above and below. A lot's lone corner or a street's tip left sticking out where the levelled ground
+  ends is brought down to the terraces beside it.
+- A pillar of earth stood in the middle of a stepped avenue: the town's path to its mine was trodden from the town's edge
+  over ground the founding had not reached yet, and the levelling leaves anything not the world's own. The town's ground
+  works (its digs and paths, the ways in at its doors, its streets, its wall, its folk mending where they got stuck) now
+  wait for the founding to finish, and a trodden path no longer stops a column being levelled.
+- The audit counts pillars (a column standing two or more over three of its neighbours, worse than the land had it), those
+  on a street apart, raw faces (a terrace or its street two or more over the ground beside it, its face not walled) and
+  steps. Folk never dig a stair's step or a block of the ground rising a step; a terrace's wall is told from a stone-brick
+  building or the town wall by its ground (earth behind it, open air before it, no building's or wall's ground).
+
 ### The founding's loose ends
 - The sea: the game's own Level.getSeaLevel is 63 in every world, a flat world's included (whose sea, if it had one, is
   at -63). The site finder used it and called every flat-world meadow "below the sea". It now takes the world's own sea

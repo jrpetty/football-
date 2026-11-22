@@ -272,6 +272,12 @@ public final class Founding extends SavedData {
         return siteNear(level, pos, range) != null;
     }
 
+    /** [city26] Is a founding under way (its ground being worked, not a board waiting) with its heart within range? */
+    public static boolean shaping(ServerLevel level, BlockPos pos, int range) {
+        Site s = siteNear(level, pos, range);
+        return s != null && s.state == UNDER_WAY;
+    }
+
     /** Where the board of the founding nearest here stands, if there is one within range. */
     @Nullable
     public static BlockPos boardNear(ServerLevel level, BlockPos pos, int range) {

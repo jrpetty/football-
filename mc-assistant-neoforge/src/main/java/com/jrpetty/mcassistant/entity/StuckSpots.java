@@ -317,7 +317,7 @@ public final class StuckSpots {
     static boolean mend(ServerLevel level, Villages.Village v, AssistantEntity a, BlockPos here, Direction d, String cause) {
         BlockPos ahead = here.relative(d);
         if (!open(level, v, ahead)) return false;
-        if (Founding.near(level, v.centre(), 16)) return false;   // [city26] the founding is still making the ground: not mended under it
+        if (Founding.shaping(level, v.centre(), 16)) return false;   // [city26] the founding is still making the ground: not mended under it
         // [city26] A terrace's retaining wall is a drop built on purpose: the folk goes round by the street, and neither the
         // street at its foot is filled up to its coping nor a step cut into the terrace beside it.
         if ((cause.equals("a drop") || cause.equals("a missing step")) && TerraceWalls.near(level, here, ahead)) return false;

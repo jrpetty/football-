@@ -171,7 +171,7 @@ public final class TownDigs {
             // [city26] Not while the founding is still working the ground: a path trodden from the town's edge over ground
             // yet to be cut left a column standing (the levelling leaves anything not the world's own), a pillar of earth
             // with the path on top in the middle of a street.
-            if (!Founding.near(level, v.centre(), 16)) {
+            if (!Founding.shaping(level, v.centre(), 16)) {
                 int laid = seal(level, v, FILL_A_LOOK);
                 hollows(level, v, Math.max(16, FILL_A_LOOK * 2 - laid));
                 portals(level, v);
