@@ -15427,3 +15427,5 @@ works' round, instead of only when a load will not go in (then the load went on 
   eight miners on it, while the second iron level waited for every drift to reach the edge of the ground.
 - A shift in the works runs to thirty pieces of work, not ten, before the long walk up the stair.
 - The status's "Short of" says how far short of each thing the age asks for.
+- The watch's diamond kit waits while the age asks for diamonds (a local run's Diamond Age town had seven of the eleven its
+  age asked for, and the watch's sword and chestplate took ten in a day).
