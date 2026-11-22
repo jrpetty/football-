@@ -268,6 +268,99 @@ public class BusinessLookGameTests {
         }
     }
 
+    /**
+     * The one-time mend of a town's buildings as they stand (BuildingMend): a shop, a café, a smithy, a bakery and a house
+     * of a town that built them before its builders laid their floors and cleared their lots as they do now, and lived in
+     * since: grass for a floor, a hole in one, tall grass, a sapling and a wild tree's leaves in the rooms, a lump of earth
+     * hung in the air, the hillside's earth in a corner, water lying in a room, a crafting table laid as a block of a
+     * wall, scaffolding left by a wall, and a block of dirt a player set down in the shop. After the mend the audit finds
+     * nothing in any of them, what came out went into the stores, and the player's block is where it was.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "bl04_mend_existing_buildings")
+    public static void bl04_mend_existing_buildings(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.BuildingMend.resetForTests();
+        int x0 = 6510000;
+        Kit.hold(level, x0 + 60, Z, 100);
+        Kit.prepare(level, x0 + 60, Z, 100);
+        BlockPos heart = Kit.surface(level, x0 - 40, Z);
+        VillageFolkEntity hand = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(hand != null, "a village");
+        UUID id = hand.ownerId();
+        Villages.Village v = Villages.get(id);
+        List<String> names = List.of("shop", "cafe", "smithy", "bakery", "house");
+        List<Ledger.Building> built = new ArrayList<>();
+        int base = Kit.surface(level, x0, Z).getY();
+        for (int i = 0; i < names.size(); i++) {
+            String n = names.get(i);
+            BlockPos lot = new BlockPos(x0 + 30 * i, 0, Z);
+            shape(level, Ground.FLAT, lot, n, base, 900 + i);
+            BlockPos anchor = new BlockPos(lot.getX(), base, lot.getZ());
+            BuildGoal.stamp(level, n, anchor, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            Ledger.built(id, n, anchor, Direction.NORTH);
+            built.add(new Ledger.Building(n, anchor, Direction.NORTH));
+        }
+        // The spoiling: in each, the first open room cells found from its middle.
+        BlockPos playersDirt = null;
+        for (Ledger.Building b : built) {
+            List<BuildGoal.Placement> plan = BuildGoal.plan(b.structure(), b.anchor(), b.facing(), 13);
+            java.util.Set<Long> drawn = new java.util.HashSet<>();
+            int minY = Integer.MAX_VALUE;
+            for (BuildGoal.Placement p : plan) { drawn.add(p.pos().asLong()); minY = Math.min(minY, p.pos().getY()); }
+            List<BlockPos> room = new ArrayList<>();
+            for (int r = 0; r <= 3 && room.size() < 6; r++) for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
+                BlockPos c = new BlockPos(b.anchor().getX() + dx, minY + 1, b.anchor().getZ() + dz);
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != r || drawn.contains(c.asLong()) || drawn.contains(c.above().asLong())) continue;
+                if (!drawn.contains(c.below().asLong()) || !level.getBlockState(c).isAir() || room.contains(c)) continue;
+                room.add(c);
+            }
+            helper.assertTrue(room.size() >= 6, b.structure() + ": room to spoil (" + room.size() + ")");
+            level.setBlock(room.get(0).below(), Blocks.GRASS_BLOCK.defaultBlockState(), 3);               // grass for a floor
+            level.setBlock(room.get(0), Blocks.SHORT_GRASS.defaultBlockState(), 3);
+            level.setBlock(room.get(1).below(), Blocks.AIR.defaultBlockState(), 3);                       // a hole in it
+            DoublePlantBlock.placeAt(level, Blocks.TALL_GRASS.defaultBlockState(), room.get(2), 3);       // tall grass
+            level.setBlock(room.get(3), Blocks.OAK_SAPLING.defaultBlockState(), 3);                       // a sapling
+            level.setBlock(room.get(4), Blocks.DIRT.defaultBlockState(), 3);                              // the hillside's earth
+            level.setBlock(room.get(5).above(), Blocks.OAK_LEAVES.defaultBlockState(), 3);                // leaves hung in the room
+            if (b.structure().equals("cafe")) level.setBlock(room.get(5), Blocks.WATER.defaultBlockState(), 3);
+            if (b.structure().equals("shop")) {
+                playersDirt = room.get(4).east(0).above(0);
+                level.setBlock(playersDirt, Blocks.COARSE_DIRT.defaultBlockState(), 3);
+                com.jrpetty.mcassistant.entity.PlayerBlocks.markForTests(level, playersDirt, true);
+            }
+            // A crafting table laid as a block of its wall.
+            for (BuildGoal.Placement p : plan) {
+                if (p.part() == BuildGoal.Part.BLOCK && p.style() == Blueprints.Style.WALL && p.pos().getY() == minY + 2) {
+                    level.setBlock(p.pos(), Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
+                    break;
+                }
+            }
+            // Scaffolding by its side.
+            int[] f = Blueprints.fullHalf(b.structure());
+            BlockPos sc = new BlockPos(b.anchor().getX() + f[0] + 2, minY + 1, b.anchor().getZ());
+            level.setBlock(sc, Blocks.SCAFFOLDING.defaultBlockState(), 3);
+            // A lump of earth in the air of the room, a block up.
+            if (b.structure().equals("smithy")) level.setBlock(room.get(1).above(2), Blocks.DIRT.defaultBlockState(), 3);
+        }
+        BuildingAudit.Report before = new BuildingAudit.Report();
+        for (Ledger.Building b : built) BuildingAudit.building(level, v, b.structure(), b.structure(), b.anchor(), b.facing(), before);
+        Map<String, Integer> fixed = com.jrpetty.mcassistant.entity.BuildingMend.nowForTests(level, v);
+        BuildingAudit.Report after = new BuildingAudit.Report();
+        for (Ledger.Building b : built) BuildingAudit.building(level, v, b.structure(), b.structure(), b.anchor(), b.facing(), after);
+        Kit.log("[VT] bl04 before " + before.line() + "; mended " + fixed + "; after " + after.line());
+        for (Map.Entry<String, List<String>> e : after.examples.entrySet()) for (String s : e.getValue()) Kit.log("[VT] bl04   after " + e.getKey() + ": " + s);
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(before.faults() > 0, "the buildings were spoilt: " + before.line());
+        for (String k : new String[]{ "grass", "earth_inside", "fluid_inside", "floor_hole", "earth_floor", "stray", "fixture_as_block", "scaffolding" }) {
+            int left = after.count(k);                                                // (the player's own coarse dirt is not counted)
+            ok.that(left <= 0, k + " left after the mend: " + after.count(k) + " " + after.examples.getOrDefault(k, List.of()));
+        }
+        ok.that(playersDirt != null && level.getBlockState(playersDirt).is(Blocks.COARSE_DIRT), "the player's block where the player set it");
+        ok.that(com.jrpetty.mcassistant.village.Ledger.note(id, com.jrpetty.mcassistant.entity.BuildingMend.DONE) != null, "the town's mend noted, so it is done once");
+        if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
+    }
+
     // ================================================================== every kind of business, from its start to its close
 
     @GameTest(template = EMPTY, timeoutTicks = 400, batch = "bl10_toolsmith_start_to_close")

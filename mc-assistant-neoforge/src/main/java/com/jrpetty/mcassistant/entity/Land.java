@@ -161,6 +161,7 @@ public final class Land {
                     if (com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand() && !TerraceWalls.terraced(v.id())
                             && !Founding.settling(level, v.centre(), 16)) level(level, v, LOOK, CHANGES);
                     SquareMend.tick(level, v);              // [life28] once, its square made good after its founding
+                    BuildingMend.tick(level, v);            // [biz30] once, its buildings made good inside
                     long t1 = System.nanoTime();
                     Grow.tick(level, v);
                     long t2 = System.nanoTime();
