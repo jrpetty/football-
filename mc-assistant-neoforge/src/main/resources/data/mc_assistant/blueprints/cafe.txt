@@ -18,7 +18,7 @@ layer -1
 layer 0
 .........
 .LwwwwwL.
-.wM.TCCwS
+.wM.TCCw.
 .w.....w.
 .wQQ.QQw.
 .w.....w.
@@ -28,7 +28,7 @@ layer 0
 layer 1
 .........
 .LWWWWWL.
-.W.....WS
+.WS....W.
 .G.....G.
 .G.....G.
 .G.....G.
@@ -38,7 +38,7 @@ layer 1
 layer 2
 .........
 .LWWWWWL.
-.W.....WS
+.WS....W.
 .W..j..W.
 .W.....W.
 .W.....W.
@@ -48,7 +48,7 @@ layer 2
 layer 3
 vvvvvvvvv
 .L-----L.
-.|fffff|S
+.|Sffff|.
 .|fffff|.
 .|fffff|.
 .|fffff|.
@@ -58,7 +58,7 @@ vvvvvvvvv
 layer 4
 .........
 vvvvvvvvv
-.W.....WS
+.WS....W.
 .W.....W.
 .W.....W.
 .W.....W.
@@ -68,7 +68,7 @@ vvvvvvvvv
 layer 5
 .........
 .........
-vvvvvvvvS
+vvSvvvvvv
 .W.....W.
 .W.....W.
 .W.....W.
@@ -78,7 +78,7 @@ vvvvvvvvS
 layer 6
 .........
 .........
-........S
+..S......
 vvvvvvvvv
 .W.....W.
 ^^^^^^^^^
@@ -88,7 +88,7 @@ vvvvvvvvv
 layer 7
 .........
 .........
-........S
+..S......
 .........
 _________
 .........

@@ -284,10 +284,19 @@ public final class TownLife {
      *  by, or three logs and a lump of coal or charcoal. No makings, no fire. */
     static void chimney(ServerLevel level, Ledger.Building b, @Nullable Villages.Village v, boolean free) {
         if (!free && v == null) return;
+        // [life28] A home's hearth is lit only while somebody lives there: an empty house's chimney stands cold, its
+        // fire (if it had one) put out and left on the stack as its cap, with no smoke; lit again when a family moves in.
+        boolean cold = !free && Homes.isHome(b.structure()) && !Homes.livedIn(v.id(), b.anchor());
         for (BlockPos top : fittings(b).chimneys()) {
             if (!level.getBlockState(top).isSolid()) continue;       // the chimney is not up (or is down)
             BlockPos fire = top.above();
-            if (!level.getBlockState(fire).isAir()) continue;
+            BlockState there = level.getBlockState(fire);
+            if (there.getBlock() instanceof net.minecraft.world.level.block.CampfireBlock
+                    && there.getValue(net.minecraft.world.level.block.CampfireBlock.LIT) == cold) {   // [life28]
+                level.setBlock(fire, there.setValue(net.minecraft.world.level.block.CampfireBlock.LIT, !cold), 3);
+                continue;
+            }
+            if (!there.isAir() || cold) continue;
             if (!free && Crafts.stock(level, v, s -> s.is(Items.CAMPFIRE)) == 0
                 && (Crafts.stock(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) < 1
                     || Crafts.stock(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS)) < 3)) return;

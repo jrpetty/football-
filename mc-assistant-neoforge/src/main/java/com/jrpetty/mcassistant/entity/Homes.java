@@ -151,6 +151,12 @@ public final class Homes {
             || structure.equals("villa");                // [econ-housing] a folk's own villa (HousingMarket)
     }
 
+    /** [life28] Does somebody live in the home that stands at this anchor (its hearth lit: TownLife.chimney)? */
+    public static boolean livedIn(UUID village, BlockPos anchor) {
+        Home h = homes(village).get(anchor.asLong());
+        return h != null && !h.members.isEmpty();
+    }
+
     /** The leader's hall: the home that goes with leading the village, never given, sold or let. */
     static boolean seat(Home h) {
         return h.structure.equals("townhall");
