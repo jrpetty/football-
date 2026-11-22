@@ -14,8 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * day 26 with six to ten miners and sat on 0 to 8 iron for a week: the works booked three shifts in five days. Its miners'
  * days went to the town's work (levelling and filling for the next lots: a fifth of a day), to lending a hand at the logs
  * (nearly half of one miner's day) and to walking; the hours down the works were a tenth of their day or less. While the
- * age asks for iron, diamonds or coal (Villages.needs), a miner is not called to the town's works (TownJobs.choose) and,
- * with nothing in its own line for a moment, waits for its next shift rather than being lent out (lendAHand).
+ * age asks for iron or diamonds (Villages.needs), a miner is not called to the town's works (TownJobs.choose) and, with
+ * nothing in its own line for a moment, waits for its next shift rather than being lent out (lendAHand). Not for the Stone
+ * Age's coal: a Stone Age town short of coal is short of timber for its houses as often as not, and its miners' hands at
+ * the logs were what built them (a local run's town kept them at the mine and stood a week at eleven buildings, no logs).
  */
 public final class MineHands {
 
@@ -25,7 +27,7 @@ public final class MineHands {
     /** Looked at once a minute a town. */
     private static final long EVERY = 1200L;
 
-    /** Is the town's age waiting on the mine now (iron, diamonds or coal on its list)? */
+    /** Is the town's age waiting on the mine now (iron or diamonds on its list)? */
     public static boolean kept(ServerLevel level, @Nullable UUID village) {
         if (village == null || Villages.get(village) == null) return false;
         long now = level.getGameTime();
@@ -34,7 +36,7 @@ public final class MineHands {
         boolean on = false;
         for (Villages.Need n : Villages.needs(level, village)) {
             Villages.Task t = n.task();
-            if (t == Villages.Task.IRON || t == Villages.Task.DIAMOND || t == Villages.Task.COAL) { on = true; break; }
+            if (t == Villages.Task.IRON || t == Villages.Task.DIAMOND) { on = true; break; }
         }
         KEPT.put(village, new long[]{ now, on ? 1 : 0 });
         return on;

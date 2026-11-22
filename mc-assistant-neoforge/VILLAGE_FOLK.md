@@ -15045,9 +15045,10 @@ report names them ("the second iron level"), counts each one's ore, and marks a 
 With the levels no longer running out, a local run's town of fifty-nine came into the Iron Age on day 26 with six to ten
 miners and held 0 to 8 iron for a week: the works booked three shifts in five days. The miners' days went to the town's
 works (levelling and filling the next lots, a fifth of a day), to lending a hand at the logs (nearly half of one miner's
-day) and to the walk; a tenth of their day or less was spent down the works. While the age asks for iron, diamonds or coal,
-a miner is no longer called to the town's works and, with nothing in its own line for a moment, waits for its next shift
-instead of being lent out (MineHands).
+day) and to the walk; a tenth of their day or less was spent down the works. While the age asks for iron or diamonds, a
+miner is no longer called to the town's works and, with nothing in its own line for a moment, waits for its next shift
+instead of being lent out (MineHands). Not for the Stone Age's coal: kept at the mine for it, a Stone Age town's miners no
+longer lent a hand at the logs, and it stood a week at eleven buildings with no timber for its next house.
 
 ### Coal kept back for the smelters
 A smelter draws coal only while the stores hold more than their floor (Fuel). The town's other uses drew it from nought
