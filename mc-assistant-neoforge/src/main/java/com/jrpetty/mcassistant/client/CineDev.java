@@ -196,6 +196,8 @@ public final class CineDev {
             case "totals" -> mc.setScreen(new TotalsScreen());
             case "blockbook" -> mc.setScreen(new BlockBookScreen());
             case "emote" -> mc.setScreen(new EmoteWheelScreen());
+            case "found" -> FoundingClient.ask("open", "board");
+            case "use" -> { if (mc.player != null && mc.gameMode != null) mc.gameMode.useItem(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND); }
             case "profile", "talk" -> {
                 if (mc.player == null || mc.level == null || mc.gameMode == null) return;
                 VillageFolkEntity best = null;
