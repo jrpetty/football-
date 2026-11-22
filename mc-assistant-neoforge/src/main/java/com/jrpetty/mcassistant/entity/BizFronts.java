@@ -230,10 +230,18 @@ public final class BizFronts {
         Direction front = b.facing().getOpposite();
         BlockPos door = null;
         Set<Long> planned = new HashSet<>();
+        List<BlockPos> doors = new java.util.ArrayList<>();
         for (BuildGoal.Placement p : BuildGoal.plan(b.structure(), b.anchor(), b.facing(), 13)) {
             if (p.part() == BuildGoal.Part.CLEAR) continue;
             planned.add(p.pos().asLong());
-            if (p.part() == BuildGoal.Part.DOOR && p.pos().getY() == box[4] && out(p.pos(), box) == front) door = p.pos();
+            if (p.part() == BuildGoal.Part.DOOR && p.pos().getY() == box[4]) doors.add(p.pos().immutable());
+        }
+        // [biz30] its front door: the one that opens onto nothing of its own, furthest to the front (not the box's edge: a
+        // step before the door, laid with the footings, put the edge a cell out and the tavern's door went unfound)
+        for (BlockPos d : doors) {
+            if (planned.contains(d.relative(front).asLong())) continue;
+            if (door == null || front.getAxis().choose(d.getX(), 0, d.getZ()) * front.getAxisDirection().getStep()
+                > front.getAxis().choose(door.getX(), 0, door.getZ()) * front.getAxisDirection().getStep()) door = d;
         }
         if (door == null) {                                                  // an open front: its middle
             int cx = (box[0] + box[1]) / 2, cz = (box[2] + box[3]) / 2;
@@ -252,7 +260,7 @@ public final class BizFronts {
         if (!hung) {
             outer:
             for (int k : new int[]{ -2, 2, -3, 3 }) {
-                for (int up = 2; up >= 1; up--) {
+                for (int up : new int[]{ 2, 1, 3 }) {                       // [biz30] or above its windows
                     BlockPos wall = door.above(up).relative(side, k);
                     BlockPos spot = wall.relative(front);
                     if (!planned.contains(wall.asLong()) || !level.getBlockState(spot).isAir()
