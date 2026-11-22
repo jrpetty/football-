@@ -62,6 +62,9 @@ public final class TownJobs {
         long calledAt, spotCalledAt = -100000L, since;
         int walkTick = -1000;
         int pieces;
+        /** [vision27] When it was sent to this spot (the walk there timed: a spot it cannot reach is worked from as near
+         *  as it can get). */
+        long sentAt;
 
         @Nullable BlockPos window;
 
@@ -142,12 +145,18 @@ public final class TownJobs {
         }
         boolean sameArea = c.at != null && c.at.distSqr(at) <= (double) (REACH * 2) * (REACH * 2);
         if (c.at != null && !sameArea && now - c.spotCalledAt < STICKY) return false;   // busy at another spot: this waits its turn
+        if (c.at == null || !sameArea) c.sentAt = now;                 // [vision27]
         c.at = at.immutable();
         c.spotCalledAt = now;
         c.what = what;
         c.calledAt = now;
         f.hobbyNow = what;
-        if (near(f, at, REACH)) {
+        // [vision27] A spot it cannot get right up to (a plot raised over the street on its own bank, a wall's top): after
+        // half a minute's trying, worked from the nearest it got, if that is near enough to reach up to. A villa paid for
+        // and ordered sat all day at "waiting for a hand": its hands walked to the foot of its bank and stood there.
+        boolean stuckNear = now - c.sentAt > 600L && f.getNavigation().isDone() && near(f, at, REACH * 2 + 2)
+            && Math.abs(f.getY() - at.getY()) <= 8;
+        if (near(f, at, REACH) || stuckNear) {
             f.getLookControl().setLookAt(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
             f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             if (c.pieces++ % 4 == 0) {
@@ -157,7 +166,7 @@ public final class TownJobs {
             return true;
         }
         if (f.getNavigation().isDone() || f.tickCount - c.walkTick > 60) {
-            f.walkTo(at, 1.0D);
+            f.walkTo(approach(f, c, at, now), 1.0D);
             c.walkTick = f.tickCount;
         }
         return false;
@@ -239,7 +248,7 @@ public final class TownJobs {
         keepAwake(level, f, c);
         if (!near(f, c.at, REACH - 1)) {
             if (f.getNavigation().isDone() || f.tickCount - c.walkTick > 60) {
-                f.walkTo(c.at, 1.0D);
+                f.walkTo(approach(f, c, c.at, level.getGameTime()), 1.0D);   // [vision27] the near side, after a minute
                 c.walkTick = f.tickCount;
             }
         } else {
@@ -459,6 +468,15 @@ public final class TownJobs {
     private static void release(ServerLevel level, VillageFolkEntity f, Crew c) {
         if (c.window != null) com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, owner(f), c.window, 1, false);
         c.window = null;
+    }
+
+    /** [vision27] Where to walk for a spot: the spot; after a minute not there, its near side (the foot of its bank, the
+     *  nearer end of a wall), from where it can reach. */
+    private static BlockPos approach(VillageFolkEntity f, Crew c, BlockPos at, long now) {
+        if (now - c.sentAt <= 1200L) return at;
+        double dx = f.getX() - at.getX(), dz = f.getZ() - at.getZ(), d = Math.sqrt(dx * dx + dz * dz);
+        if (d <= REACH * 2) return at;
+        return at.offset((int) Math.round(dx / d * REACH * 1.5), 0, (int) Math.round(dz / d * REACH * 1.5));
     }
 
     private static boolean near(VillageFolkEntity f, BlockPos at, int reach) {
