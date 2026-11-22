@@ -317,6 +317,7 @@ public final class StuckSpots {
     static boolean mend(ServerLevel level, Villages.Village v, AssistantEntity a, BlockPos here, Direction d, String cause) {
         BlockPos ahead = here.relative(d);
         if (!open(level, v, ahead)) return false;
+        if (Founding.near(level, v.centre(), 16)) return false;   // [city26] the founding is still making the ground: not mended under it
         // [city26] A terrace's retaining wall is a drop built on purpose: the folk goes round by the street, and neither the
         // street at its foot is filled up to its coping nor a step cut into the terrace beside it.
         if ((cause.equals("a drop") || cause.equals("a missing step")) && TerraceWalls.near(level, here, ahead)) return false;
@@ -336,6 +337,9 @@ public final class StuckSpots {
                     if (!Footways.stray(level, v, c, st)) return false;
                     // A block standing on the street's own level is a stray one; the ground under a bank is not.
                     if (c.equals(ahead) && !cause.equals("a block in the way")) return false;
+                    // [city26] Nor the ground rising a block (the ground goes on at that height past it: a street's step on a
+                    // hillside, a terrace's edge), which a folk steps up: only a block standing alone.
+                    if (c.equals(ahead) && !Footways.passable(level, ahead.relative(d)) && Terraform.earth(st)) return false;
                     if (!TownBlocks.mayBreak(level, v, c, TownBlocks.Why.TIDY)) return false;
                     dig(level, v, c);
                     return true;

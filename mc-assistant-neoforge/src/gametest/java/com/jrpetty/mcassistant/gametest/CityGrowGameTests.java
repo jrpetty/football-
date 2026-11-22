@@ -236,6 +236,18 @@ public class CityGrowGameTests {
             expect.that(g.terrace != null && g.terraced > 2000, "the hillside is terraced: " + g.terraced + " columns");
             expect.that(c.get("terraced") > 1000, "terraces off the heart's level: " + c.get("terraced"));
             expect.that(c.get("walls") > 40, "retaining walls between them: " + c.get("walls"));
+            // The streets' steps: every riser a stair of dressed stone; no raw face of earth on a terrace or its street.
+            int risers = 0, stairs = 0;
+            for (int i = 0; i < g.side * g.side; i++) {
+                if (Terraces.riser(g, i) < 0 || com.jrpetty.mcassistant.entity.TerraceWalls.wantedForTests(g, i)) continue;
+                risers++;
+                BlockPos p = new BlockPos(heart.getX() + g.dx(i), g.target[i], heart.getZ() + g.dz(i));
+                if (com.jrpetty.mcassistant.entity.TerraceWalls.isStep(level.getBlockState(p))) stairs++;
+            }
+            Kit.log("[VT] cg02 street risers " + risers + ", laid as stairs " + stairs + "; audit steps " + c.get("steps") + ", pillars "
+                + c.get("pillars") + ", raw faces " + c.get("rawFaces"));
+            expect.that(risers > 20 && stairs * 100 >= risers * 95, "the streets' risers laid as stairs: " + stairs + " of " + risers);
+            expect.that(c.get("rawFaces") == 0, "no raw face of earth on a terrace or its street: " + c.get("rawFaces"));
             for (String key : TerraformGameTests.MUST_BE_NOUGHT) {
                 if (c.getOrDefault(key, 0) != 0) expect.that(false, key + "=" + c.get(key));
             }

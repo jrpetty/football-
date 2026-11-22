@@ -817,6 +817,7 @@ public final class Founding extends SavedData {
                     int c = Terraform.shape(level, chunk, x, z, g.ground[i], g.target[i], levelled, top, s.felling);
                     if (c >= 0) c += quayBeside(level, g, i, x, z, top);                // [terra10] a stone quay over kept water
                     if (c >= 0 && g.terrace != null) c += TerraceWalls.build(level, g, i, x, z, s.surface);   // [city26] a terrace's wall
+                    if (c >= 0 && g.terrace != null) c += TerraceWalls.step(level, g, i, x, z, s.surface);    // [city26] a street's step
                     if (c < 0 && levelled && s.blocked++ == 0) {
                         s.blockedFirst = Terraform.inTheWay(chunk, x, z, g.ground[i], g.target[i]) + " at " + x + "," + z;
                     }
@@ -882,6 +883,7 @@ public final class Founding extends SavedData {
                 int y = Terraform.groundY(level, x, z), want = g.target[i];
                 // [city26] A terrace's wall standing to the terrace's height: done (the earth's top reads through it).
                 if (g.terrace != null && TerraceWalls.wanted(g, i) && TerraceWalls.isWall(level.getBlockState(new BlockPos(x, want, z)))) continue;
+                if (g.terrace != null && TerraceWalls.isStep(level.getBlockState(new BlockPos(x, want, z)))) continue;
                 // (A shaft to nowhere is not filled from the bottom of the world.)
                 if (y == Integer.MIN_VALUE || Math.abs(y - want) > 48) continue;
                 // The edge in whatever each column was, as the levelling dressed it; the square in the town's soil.
@@ -889,6 +891,7 @@ public final class Founding extends SavedData {
                 if (!Terraform.wantsWork(level, chunk, x, z, y, want, top, square)) continue;
                 if (Terraform.shape(level, chunk, x, z, y, want, square, top, s.felling) > 0) s.goodMended++;
                 if (g.terrace != null) TerraceWalls.build(level, g, i, x, z, s.surface);           // [city26] its wall again
+                if (g.terrace != null) TerraceWalls.step(level, g, i, x, z, s.surface);            // [city26] its step again
             }
             s.goodMendedAll += s.goodMended;
             LOG.info("[MCA-FOUND] looked the square over again ({} of {}): {} columns mended", s.goodPass + 1, GOOD_PASSES, s.goodMended);

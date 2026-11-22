@@ -74,6 +74,7 @@ public final class TownWork {
     private static void streets(ServerLevel level, Villages.Village v, long now) {
         UUID id = v.id();
         PAVED.put(id, now);
+        if (Founding.near(level, v.centre(), 16)) return;   // [city26] the streets are laid once the founding has made the ground
         int reach = Villages.townReach(id);
         List<int[]> cells = cellsWithin(reach);
         if (cells.isEmpty()) return;

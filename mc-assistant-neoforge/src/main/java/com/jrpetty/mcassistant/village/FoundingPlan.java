@@ -323,6 +323,10 @@ public final class FoundingPlan {
          *  null for ground levelled to one height); and how many columns were terraced. */
         public int[] terrace;
         public int terraced;
+        /** [city26] Columns of the levelled square left off the terraces to the edge (a lot's lone corner), or null. */
+        public boolean[] trimmed;
+        /** [city26] The terraced columns that are a street or the square's (not a lot): where its steps go. */
+        public boolean[] street;
         /** [city26] Whether this ground is terraced, decided once from the land as read (Terraces.wanted). */
         public Boolean hill;
 
@@ -531,7 +535,7 @@ public final class FoundingPlan {
         Arrays.fill(sqLow, NONE_LOW);
         for (int i = 0; i < n; i++) {
             byte k = g.kind[i];
-            if ((k == LAND || k == FILL) && reach(g.dx(i), g.dz(i)) - radius + WOBBLE * noise(seed, g.dx(i), g.dz(i)) <= 0) sqLow[i] = (g.terrace != null && g.terrace[i] != Terraces.NONE ? g.terrace[i] : level) * 10;   // [city26] its terrace
+            if ((k == LAND || k == FILL) && reach(g.dx(i), g.dz(i)) - radius + WOBBLE * noise(seed, g.dx(i), g.dz(i)) <= 0 && (g.trimmed == null || !g.trimmed[i])) sqLow[i] = (g.terrace != null && g.terrace[i] != Terraces.NONE ? g.terrace[i] : level) * 10;   // [city26] its terrace
         }
         spreadLow(sqLow, side);
         spreadLow(low, side);
@@ -562,6 +566,7 @@ public final class FoundingPlan {
             double want = target(was, level, u, steepAt(steep, dx, dz));      // [terra10] as steep as that way wants
             if (g.terrace != null) {                                          // [city26] the terrace's height; the edge met from it
                 if (square && g.terrace[i] != Terraces.NONE) want = g.terrace[i];
+                else if (square && g.trimmed != null && g.trimmed[i]) want = target(was, base[i], 0.5, steepAt(steep, dx, dz));
                 else if (!square) want = target(was, base[i], u, steepAt(steep, dx, dz));
             }
             // What holds it only ever holds it back: a cut no deeper than it allows and a fill no

@@ -38,6 +38,46 @@ public final class TerraceWalls {
         return Blocks.STONE_BRICKS.defaultBlockState();
     }
 
+    /** [city26] The stair a terraced street's step is laid in, for a town dressed in this soil, facing up the climb. */
+    static BlockState stair(Block surface, net.minecraft.core.Direction up) {
+        Block b = surface == Blocks.SAND ? Blocks.SMOOTH_SANDSTONE_STAIRS
+            : surface == Blocks.RED_SAND || surface == Blocks.TERRACOTTA ? Blocks.SMOOTH_RED_SANDSTONE_STAIRS
+            : surface == Blocks.NETHERRACK || surface == Blocks.SOUL_SOIL ? Blocks.NETHER_BRICK_STAIRS
+            : Blocks.STONE_BRICK_STAIRS;
+        return b.defaultBlockState().setValue(net.minecraft.world.level.block.StairBlock.FACING, up);
+    }
+
+    /** [city26] Is this a terraced street's step (for the audit and the makers-good)? */
+    public static boolean isStep(BlockState s) {
+        return s.is(Blocks.STONE_BRICK_STAIRS) || s.is(Blocks.SMOOTH_SANDSTONE_STAIRS) || s.is(Blocks.SMOOTH_RED_SANDSTONE_STAIRS)
+            || s.is(Blocks.NETHER_BRICK_STAIRS);
+    }
+
+    /**
+     * [city26] A terraced street's step: where the street climbs a block from the street beside it, the riser's top is a
+     * stair of dressed stone facing up the climb, right across the street (its lanes are one height: Terraces), so the
+     * street goes up in shallow flights and not in bare blocks of earth to clamber. Returns the blocks set.
+     */
+    public static int step(ServerLevel level, FoundingPlan.Ground g, int i, int x, int z, Block surface) {
+        int up = Terraces.riser(g, i);
+        if (up < 0 || wanted(g, i)) return 0;                         // a wall's coping is no step
+        net.minecraft.core.Direction d = switch (up) {
+            case 0 -> net.minecraft.core.Direction.NORTH;
+            case 1 -> net.minecraft.core.Direction.EAST;
+            case 2 -> net.minecraft.core.Direction.SOUTH;
+            default -> net.minecraft.core.Direction.WEST;
+        };
+        BlockPos p = new BlockPos(x, g.target[i], z);
+        BlockState at = level.getBlockState(p);
+        if (isStep(at)) return 0;
+        if (!Terraform.natural(at) || at.isAir()) return 0;           // only the ground's own top
+        BlockState over = level.getBlockState(p.above());
+        if (!over.isAir() && !Terraform.growth(over)) return 0;
+        if (!over.isAir()) level.setBlock(p.above(), Blocks.AIR.defaultBlockState(), QUIET);
+        level.setBlock(p, stair(surface, d), QUIET);
+        return 1;
+    }
+
     /** Is this a block of a terrace's wall (for the audit and the makers-good)? */
     public static boolean isWall(BlockState s) {
         return s.is(Blocks.STONE_BRICKS) || s.is(Blocks.MOSSY_STONE_BRICKS) || s.is(Blocks.CRACKED_STONE_BRICKS)
@@ -48,16 +88,43 @@ public final class TerraceWalls {
     /** Is a terrace's wall block under or beside either of these spots (the folk's floor and the way ahead), a few up or down? */
     public static boolean near(net.minecraft.world.level.Level level, BlockPos here, BlockPos ahead) {
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        Villages.Village v = TownBlocks.townAt(level, here);
         for (BlockPos c : new BlockPos[]{ here, ahead }) {
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     for (int dy = -4; dy <= 2; dy++) {
-                        if (isWall(level.getBlockState(m.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz)))) return true;
+                        m.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz);
+                        if (isWall(level.getBlockState(m)) && retaining(level, v, m)) return true;
                     }
                 }
             }
         }
         return false;
+    }
+
+    /**
+     * Is this wall block a terrace's retaining wall, not a stone-brick building, the town wall or a bridge: earth or more
+     * wall behind it on one side and open air on the other, and no building's, wall's or fitting's ground?
+     */
+    static boolean retaining(net.minecraft.world.level.Level level, @javax.annotation.Nullable Villages.Village v, BlockPos p) {
+        if (v != null) {
+            TownBlocks.Zone z = TownBlocks.zone(level, v, p);
+            if (z != TownBlocks.Zone.OPEN && z != TownBlocks.Zone.ROAD && z != TownBlocks.Zone.SQUARE) return false;
+            if (CastleWall.onWall(v.id(), v.centre(), p)) return false;
+        }
+        boolean held = false, open = false;
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockState s = level.getBlockState(p.relative(d));
+            if (s.isAir() || !s.getFluidState().isEmpty()) open = true;
+            else if (Terraform.earth(s) || isWall(s)) held = true;
+        }
+        BlockState below = level.getBlockState(p.below());
+        return held && open && (Terraform.earth(below) || isWall(below));
+    }
+
+    /** Tests: the same as wanted. */
+    public static boolean wantedForTests(FoundingPlan.Ground g, int i) {
+        return wanted(g, i);
     }
 
     /** Does this column of the plan want a wall (it stands two or more over a terraced neighbour)? */
