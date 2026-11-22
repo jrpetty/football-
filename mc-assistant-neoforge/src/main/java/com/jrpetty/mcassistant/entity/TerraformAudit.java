@@ -150,6 +150,7 @@ public final class TerraformAudit {
                 for (int up = 1; up <= 12; up++) {
                     BlockState a = level.getBlockState(m.set(x, y + up, z));
                     if (a.isAir()) continue;
+                    if (a.is(Blocks.DARK_OAK_LOG) && boardOver(level, x, y + up, z)) continue;   // [life28] the town board's post
                     if (Terraform.growth(a) || Terraform.wet(a)) at(c, "growthOnSquare", x, y + up, z, a);
                 }
             }
@@ -268,6 +269,16 @@ public final class TerraformAudit {
      * to it)? A founding of forty takes minutes to finish its edge, and the town builds meanwhile: its builders ease the
      * ground at a door, and that is the town's work, not the levelling's.
      */
+    /** [life28] Under the town's notice board (one of its posts: VillageBoards), within a few blocks? */
+    private static boolean boardOver(ServerLevel level, int x, int y, int z) {
+        for (int k = 1; k <= 4; k++) {
+            BlockState s = level.getBlockState(new BlockPos(x, y + k, z));
+            if (s.getBlock() instanceof com.jrpetty.mcassistant.block.VillageBoardBlock) return true;
+            if (!s.is(Blocks.DARK_OAK_LOG)) return false;
+        }
+        return false;
+    }
+
     private static boolean townWork(ServerLevel level, BlockPos p) {
         Villages.Village v = TownBlocks.townAt(level, p);
         if (v == null) return false;

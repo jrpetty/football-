@@ -160,6 +160,7 @@ public final class Land {
                     // height took the terraces' edges and steps down a block at a time), nor while a founding works it.
                     if (com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand() && !TerraceWalls.terraced(v.id())
                             && !Founding.settling(level, v.centre(), 16)) level(level, v, LOOK, CHANGES);
+                    SquareMend.tick(level, v);              // [life28] once, its square made good after its founding
                     long t1 = System.nanoTime();
                     Grow.tick(level, v);
                     long t2 = System.nanoTime();
@@ -191,7 +192,7 @@ public final class Land {
         UUID id = v.id();
         int r = reach(id);
         int side = 2 * r + 1, cells = side * side;
-        int target = v.centre().getY() - 1;                       // the square's ground
+        int target = SquareMend.level(v);                         // the square's ground [life28] as levelled, if it was
         int cursor = CURSOR.getOrDefault(id, 0);
         int done = 0;
         // Fields, mines, pens and fishing grounds are worked as they lie: left alone.

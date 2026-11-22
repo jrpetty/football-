@@ -51,6 +51,7 @@ public final class TimeLapse {
         by = p.getName().getString();
         until = System.nanoTime() + seconds * 1_000_000_000L;
         TimeSpeed.set(p.server, factor, by + "'s time-lapse");
+        com.jrpetty.mcassistant.entity.LapseBuild.begin(p, seconds);       // [life28] the building nearest goes up whole in it
         return null;
     }
 
@@ -58,6 +59,7 @@ public final class TimeLapse {
     public static void stop(MinecraftServer server) {
         if (!running()) return;
         until = 0L;
+        com.jrpetty.mcassistant.entity.LapseBuild.end();                    // [life28]
         TimeSpeed.set(server, Math.max(1, before), by == null ? null : by + "'s time-lapse is over");
         before = 1;
         by = null;
@@ -66,6 +68,7 @@ public final class TimeLapse {
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         if (until != 0L && System.nanoTime() - until >= 0L) stop(event.getServer());
+        if (until != 0L) com.jrpetty.mcassistant.entity.LapseBuild.tick(event.getServer());   // [life28]
     }
 
     /** A server stopped mid time-lapse comes back at its old pace (the tick rate is not saved, but be sure). */

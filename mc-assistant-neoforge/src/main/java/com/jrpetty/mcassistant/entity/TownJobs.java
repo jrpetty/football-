@@ -77,10 +77,23 @@ public final class TownJobs {
     private static final Map<UUID, String> ON = new ConcurrentHashMap<>();
     /** Hands resting from the town's work after a turn at it, till when. */
     private static final Map<UUID, Long> RESTING = new ConcurrentHashMap<>();
+    /** [life28] The town's works that last asked for a hand and found none to spare, and when (the census, the tests). */
+    private static final Map<String, Long> UNSTAFFED = new ConcurrentHashMap<>();
+
+    /** [life28] The works of this town waiting on a hand just now (asked within the last half minute and none to spare). */
+    public static java.util.List<String> unstaffed(UUID village, long now) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        String prefix = village + "/";
+        for (Map.Entry<String, Long> e : UNSTAFFED.entrySet()) {
+            if (e.getKey().startsWith(prefix) && now - e.getValue() <= 600) out.add(e.getKey().substring(prefix.length()));
+        }
+        return out;
+    }
     /** The game tests that check what the works build (not who builds it) have them done at once. */
     private static volatile boolean instant;
 
     public static void resetForTests() {
+        UNSTAFFED.clear();                                             // [life28]
         CREW.clear();
         ON.clear();
         RESTING.clear();
@@ -125,7 +138,8 @@ public final class TownJobs {
         if (f == null || !fit(f, works)) {
             if (c != null) ON.remove(c.folk);
             f = choose(level, v, works, at, prefer, now);
-            if (f == null) return false;
+            if (f == null) { UNSTAFFED.put(key, now); return false; }    // [life28] the town's work waiting on a hand
+            UNSTAFFED.remove(key);
             Crew back = HOMEWARD.remove(f.getUUID());          // called out again on its way home
             if (back != null) release(level, f, back);
             c = new Crew(f.getUUID());
@@ -309,7 +323,10 @@ public final class TownJobs {
             }
         }
         int may = allowance(adults, busy, works);
-        if (may == NONE_TO_SPARE) return null;
+        // [life28] Past the town's share of hands for its works, a hand with nothing at all to do (filling its time:
+        // Busywork) is still a hand to spare, up to half the town: no folk stands idle while the town's work waits on a hand.
+        boolean idleOnly = may == NONE_TO_SPARE;
+        if (idleOnly && busy >= Math.max(1, adults / 2)) return null;
         java.util.Set<AssistantEntity.StationTask> over = null;
         if (may == IDLE_ONLY) {
             over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);
@@ -323,11 +340,13 @@ public final class TownJobs {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!(a instanceof VillageFolkEntity f) || !fit(f, works)
                 || ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) continue;
-            if (RESTING.containsKey(f.getUUID())) continue;              // had its turn: somebody else's now
+            boolean idleHand = Busywork.spare(f);                         // [life28] nothing at all to do just now
+            if (RESTING.containsKey(f.getUUID()) && !idleHand) continue; // had its turn: somebody else's now (unless it stands idle)
             if (PostStints.busy(f)) continue;                            // [roles-e] at its post's work: the wagon, the town's plans
             // [city9] The streets' hands, past the eighth, are never a post's holder (its stints would wait on the streets).
             if (streetsWork(works) && (f == Wheelwrights.holder(v.id()) || f == TownPlanner.holder(v.id()))) continue;
-            if (over != null && !spare(f, over)) continue;               // past the eighth: only a hand standing idle
+            if (idleOnly && !idleHand) continue;
+            if (over != null && !spare(f, over) && !idleHand) continue;  // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();
             if (trade == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id())) continue;   // [growth24] the age waits on the mine
             // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a
@@ -356,6 +375,7 @@ public final class TownJobs {
                 default -> { if (trade.isCraft()) score -= 10; }
             }
             if (f.workedOut()) score += 25;                              // nothing to work at in its own trade
+            if (idleHand) score += 45;                                   // [life28] stood idle: the first to call
             score += Hospitality.townWorkLean(f, works);                 // [dining] the baker to the ovens; the floor kept at its post
             score += Sexton.lean(f, works);                              // [roles-a] the sexton to the graves and the chapel's candles
             score += Lamplighter.lean(f, works);                         // [roles-a] a quarter's warden to the street lamps

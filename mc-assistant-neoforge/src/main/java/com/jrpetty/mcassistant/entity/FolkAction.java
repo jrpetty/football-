@@ -400,6 +400,13 @@ public final class FolkAction {
         Item held = f.getMainHandItem().getItem();
         if (still && held == com.jrpetty.mcassistant.item.LeisureItems.LUTE.get()) return Act.LUTE;
         if (still && held == Items.NOTE_BLOCK && f.offWorkNow()) return Act.DRUM;
+        // [life28] On the town's work, at the spot: at it with its hands between the pieces the town lays (TownJobs).
+        if (still && Busywork.ENABLED && TownJobs.busy(f)) {
+            Act tw = townWork(TownJobs.doing(f));
+            if (tw != Act.NONE) return tw;
+        }
+        Act busy = Busywork.act(f, still);                       // [life28] filling its time (Busywork)
+        if (busy != Act.NONE) return busy;
         // Its own time: what it does for itself (hobbyNow's words).
         Act hob = hobby(f, s);
         if (hob != Act.NONE && (still || hob == Act.TAG || hob == Act.SACK || hob == Act.CARRY || hob == Act.DANCE)) return hob;
@@ -410,12 +417,47 @@ public final class FolkAction {
         if (!f.offWorkNow() && still) {
             Act w = work(f, level, s);
             if (w != Act.NONE) return w;
+            // [life28] Down the town's works on its shift, stood at the face between cuts: at it with the pick.
+            if (Busywork.ENABLED && com.jrpetty.mcassistant.entity.goal.WorksGoal.ours(f, f.peekJob())) return Act.PICK;
         }
         if (carried != Act.NONE) return carried;
         if (f.stationTask() == StationTask.GUARD && f.onShift() && still) return Act.WATCH;
         if (still && f.clientStatus().startsWith("Needs") && (t / 200 + f.getId()) % 3 == 0) return Act.THINK;
         if (still && f.quarrelledOn() == level.getDayTime() / 24000L && (t / 300 + f.getId()) % 4 == 0) return Act.QUARREL;
+        // [life28] Stood by somebody in its own time (keeping company, waiting at the stores): passing the time of day, by turns.
+        if (still && Busywork.ENABLED && f.offWorkNow() && !f.isBaby()) {
+            VillageFolkEntity by = company(f, level);
+            if (by != null) {
+                f.getLookControl().setLookAt(by, 30.0F, 30.0F);
+                return ((t / 70) + (f.getId() < by.getId() ? 0 : 1)) % 2 == 0 ? Act.TALK : Act.LISTEN;
+            }
+        }
         return Act.NONE;
+    }
+
+    /** [life28] The act of a piece of the town's work, by its words ("levelling the ground": DIG). */
+    static Act townWork(@Nullable String what) {
+        if (what == null) return Act.NONE;
+        String w = what.toLowerCase(Locale.ROOT);
+        if (w.contains("level") || w.contains("dig") || w.contains("grave") || w.contains("trench") || w.contains("ditch")) return Act.DIG;
+        if (w.contains("clearing") || w.contains("sweep") || w.contains("spill") || w.contains("tidy")) return Act.SWEEP;
+        if (w.contains("garden") || w.contains("green") || w.contains("plant") || w.contains("hedge") || w.contains("flower")) return Act.PLANT;
+        if (w.contains("making") || w.contains("carv") || w.contains("at the bench")) return Act.SAW;
+        if (w.contains("lamp") || w.contains("light")) return Act.REPAIR;
+        return Act.BUILD;
+    }
+
+    /** [life28] A grown folk of its town stood still within a couple of steps of it, or null. */
+    @Nullable
+    private static VillageFolkEntity company(VillageFolkEntity f, ServerLevel level) {
+        java.util.UUID town = f.ownerId();
+        if (town == null) return null;
+        for (VillageFolkEntity o : level.getEntitiesOfClass(VillageFolkEntity.class, f.getBoundingBox().inflate(2.2, 1.0, 2.2))) {
+            if (o == f || !o.isAlive() || o.isBaby() || o.isSleeping() || !town.equals(o.ownerId())) continue;
+            if (!o.getNavigation().isDone()) continue;
+            return o;
+        }
+        return null;
     }
 
     /** A courier on a run with its goods, a shopper carrying its shopping home: a crate in its arms, a sack on its back. */

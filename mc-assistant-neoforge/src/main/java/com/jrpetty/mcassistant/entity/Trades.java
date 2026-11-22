@@ -716,7 +716,8 @@ public final class Trades {
                         if (Math.max(Math.abs(dx), Math.abs(dz)) != d) continue;
                         BlockPos p = c.offset(dx, dy, dz);
                         if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
-                                && level.getBlockState(p.below()).isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) {
+                                && level.getBlockState(p.below()).isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)
+                                && !TownGround.open(level, p)) {                    // [life28] never loose on the square or a street
                             return p;
                         }
                     }

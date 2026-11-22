@@ -105,6 +105,8 @@ public final class Founding extends SavedData {
         String soil = "";
         /** [found23] The name and look chosen on the founding screen (empty: the town's own). */
         String name = "", theme = "";
+        /** [life28] A town levelled where it stands: its own camp, taken up till its ground is level (FoundingCamp). */
+        @Nullable CompoundTag camp;
         // Not kept: the ground as read, and when it was last held or told about.
         @Nullable FoundingPlan.Ground ground;
         @Nullable byte[] tops;
@@ -145,6 +147,7 @@ public final class Founding extends SavedData {
             t.putString("Soil", soil);
             if (!name.isEmpty()) t.putString("Name", name);                // [found23]
             if (!theme.isEmpty()) t.putString("Theme", theme);
+            if (camp != null) t.put("Camp", camp);                          // [life28]
             return t;
         }
 
@@ -171,6 +174,7 @@ public final class Founding extends SavedData {
             s.soil = t.getString("Soil");
             s.name = t.getString("Name");                                   // [found23]
             s.theme = t.getString("Theme");
+            s.camp = t.contains("Camp", Tag.TAG_COMPOUND) ? t.getCompound("Camp") : null;   // [life28]
             // The ground as read is not kept: after a restart it is waited for and walked again, and
             // the work goes on from the column it had got to (the level and the soil are kept).
             s.phase = LOAD;
@@ -465,6 +469,8 @@ public final class Founding extends SavedData {
         int theirs = VanillaVillages.roomFrom(level, s.heart);       // [emerald] never into a village of villagers' ground
         if (theirs < s.outer) s.outer = Math.max(FoundingPlan.BARE + 8, theirs);
         if (s.outer < s.radius + 8) s.radius = Math.max(FoundingPlan.BARE, s.outer - 8);
+        // [life28] Its own camp is no building of anybody's: taken up before its ground is read, pitched again on the level.
+        s.camp = FoundingCamp.strike(level, v, s.heart, s.outer);
         f.sites.add(s);
         f.setDirty();
         LOG.info("[MCA-FOUND] the ground of {} at {} to be levelled {} round, worked to {}", Villages.name(v.id()),
@@ -825,6 +831,11 @@ public final class Founding extends SavedData {
             if (!found(level, f, s)) return;
         }
         if (s.founded() && s.spawned < s.count) come(level, s, deadline);
+        if (s.existing && s.camp != null && !s.camp.getBoolean("Pitched") && s.cursor >= g.campIndex) {   // [life28] the camp's ground level
+            FoundingCamp.pitch(level, s.village, s.heart, s.camp);
+            s.camp.putBoolean("Pitched", true);
+            f.setDirty();
+        }
         int moved = 0;
         while (s.cursor < g.order.length && moved < BLOCKS_PER_TICK && System.nanoTime() < deadline) {
             int i = g.order[s.cursor];
@@ -1065,6 +1076,11 @@ public final class Founding extends SavedData {
 
     /** All done: the ground let go, the village told, and the founding forgotten. */
     private static void finish(ServerLevel level, Founding f, Site s) {
+        if (s.camp != null) {                                               // [life28] never left taken up; its torches stood again
+            if (!s.camp.getBoolean("Pitched")) FoundingCamp.pitch(level, s.village, s.heart, s.camp);
+            FoundingCamp.relight(level, s.village, s.camp);
+            s.camp = null;
+        }
         release(level, s);
         SETTLING.put(s.heart.asLong(), level.getGameTime());                // [city26] the folk settle in before the works begin
         if (s.village != null && s.ground != null && s.ground.terrace != null) TerraceWalls.markTerraced(s.village);
@@ -1072,6 +1088,7 @@ public final class Founding extends SavedData {
             int swept = GroundWork.sweep(level, s.village, s.heart, s.outer, s.level);
             if (swept > 0) LOG.info("[MCA-FOUND] {} things left lying on the ground swept into the stores", swept);
         }
+        if (s.village != null && s.level != UNSET) SquareMend.levelled(s.village, s.level);   // [life28] the square's level kept
         if (s.ground != null && s.level != UNSET) {                       // [terra10] for the ground's audit
             TerraformAudit.remember(new TerraformAudit.Done(s.heart, s.level, s.radius, s.outer, s.seed, s.surface, s.ground));
         }

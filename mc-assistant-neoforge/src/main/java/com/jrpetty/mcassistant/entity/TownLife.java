@@ -284,10 +284,20 @@ public final class TownLife {
      *  by, or three logs and a lump of coal or charcoal. No makings, no fire. */
     static void chimney(ServerLevel level, Ledger.Building b, @Nullable Villages.Village v, boolean free) {
         if (!free && v == null) return;
+        // [life28] A home's hearth is lit only while somebody lives there: an empty house's chimney stands cold, its
+        // fire (if it had one) put out and left on the stack as its cap, with no smoke; lit again when a family moves in.
+        boolean cold = !free && Homes.isHome(b.structure()) && !Homes.livedIn(v.id(), b.anchor());
+        putOutStrayFires(level, b);                                  // [life28]
         for (BlockPos top : fittings(b).chimneys()) {
             if (!level.getBlockState(top).isSolid()) continue;       // the chimney is not up (or is down)
             BlockPos fire = top.above();
-            if (!level.getBlockState(fire).isAir()) continue;
+            BlockState there = level.getBlockState(fire);
+            if (there.getBlock() instanceof net.minecraft.world.level.block.CampfireBlock
+                    && there.getValue(net.minecraft.world.level.block.CampfireBlock.LIT) == cold) {   // [life28]
+                level.setBlock(fire, there.setValue(net.minecraft.world.level.block.CampfireBlock.LIT, !cold), 3);
+                continue;
+            }
+            if (!there.isAir() || cold) continue;
             if (!free && Crafts.stock(level, v, s -> s.is(Items.CAMPFIRE)) == 0
                 && (Crafts.stock(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) < 1
                     || Crafts.stock(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS)) < 3)) return;
@@ -295,6 +305,35 @@ public final class TownLife {
             if (!free && !campfire(level, v)) return;
             level.setBlock(fire, Blocks.CAMPFIRE.defaultBlockState(), 3);
         }
+    }
+
+    /**
+     * [life28] A fire the town laid on a chimney's top that is no chimney's top now (the stack rebuilt shorter, or moved
+     * into the house when its drawing changed): left hanging in the air by the gable, it is put out and taken away.
+     */
+    static void putOutStrayFires(ServerLevel level, Ledger.Building b) {
+        java.util.Set<BlockPos> fires = new HashSet<>();
+        for (BlockPos top : fittings(b).chimneys()) fires.add(top.above());
+        int[] half = BuildGoal.footprint(b.structure());
+        int r = Math.max(half[0], half[1]) + 2;
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                for (int dy = 4; dy <= 18; dy++) {
+                    m.set(b.anchor().getX() + dx, b.anchor().getY() + dy, b.anchor().getZ() + dz);
+                    if (!level.getBlockState(m).is(Blocks.CAMPFIRE) || fires.contains(m)) continue;
+                    if (level.getBlockState(m.below()).isSolid() && !level.getBlockState(m.below()).is(net.minecraft.tags.BlockTags.STAIRS)
+                        && !level.getBlockState(m.below()).is(net.minecraft.tags.BlockTags.SLABS)
+                        && level.getBlockState(m.below(2)).isSolid()) continue;          // on a stack of its own: somebody's
+                    level.setBlock(m.immutable(), Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+    }
+
+    /** [life28] Tests: a building's hearth seen to now, as the town's round sees to it (out of its stores). */
+    public static void hearthForTests(ServerLevel level, Ledger.Building b, Villages.Village v) {
+        chimney(level, b, v, false);
     }
 
     /** A campfire's makings out of the stores: one put by, or three logs and a coal (or charcoal). */

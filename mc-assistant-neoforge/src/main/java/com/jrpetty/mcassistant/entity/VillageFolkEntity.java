@@ -383,6 +383,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Auctions.tick(quay, ownerId());
         }
         Leisure.tick(this);
+        Busywork.tick(this);                                   // [life28] stood about with nothing to do: something to do (Busywork)
         Individual.tick(this);                                 // [individual] its looks, its manner, its keepsake, its dream
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
         if (tickCount % 20 == 15 && level() instanceof net.minecraft.server.level.ServerLevel kitchen) Kitchen.second(this, kitchen);   // [kitchen] a lunch packed, a wound bound
