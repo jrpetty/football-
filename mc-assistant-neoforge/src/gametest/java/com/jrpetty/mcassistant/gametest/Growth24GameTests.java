@@ -73,16 +73,24 @@ public class Growth24GameTests {
         int side = ((100 - y1) / 3) % 4;
         int ox = side == 0 || side == 3 ? -1 : 1, oz = side < 2 ? -1 : 1;
         m.teleportTo(r.sx() + 6 * ox + 0.5, y1, r.sz() + 6 * oz + 0.5);
-        int before = m.countCarried(s -> s.is(Items.RAW_IRON));
         Kit.log("[VT] gw24_01 the iron level at Y" + y1 + "; further iron levels at " + further + "; plan " + MineWorks.planForTests(level, r.v()));
         MineWorksGameTests.fast(level);
         final int[] tick = { 0 };
         final int[] spentAt = { -1 };
+        final int[] mined = { 0 };
         MineSiteGameTests.each(helper, () -> {
             tick[0]++;
             // The morning kept: the noon put-away (PutAway) sent the miner to the heart's chest on the flat far under the
             // test's tower of rock, a walk it could never make, over and over.
             if (level.getDayTime() % 24000L > 5000L) level.setDayTime(1000);
+            // Its pack kept light, the ore it brings counted as it comes: with goods to spare in its pack the courier's
+            // round (lendAHand) sent it off to the heart's chest on the flat under the test's tower of rock, a walk it could
+            // never make, over and over.
+            int raw = m.countCarried(s -> s.is(Items.RAW_IRON));
+            if (raw > 0) { m.removeMatching(s -> s.is(Items.RAW_IRON), raw); mined[0] += raw; }
+            m.removeMatching(s -> !s.is(net.minecraft.tags.ItemTags.PICKAXES) && !s.is(Items.TORCH) && !s.is(Items.BREAD) && !s.is(Items.COBBLESTONE), 999);
+            int cobble = m.countCarried(s -> s.is(Items.COBBLESTONE));
+            if (cobble > 16) m.removeMatching(s -> s.is(Items.COBBLESTONE), cobble - 16);
             MineWorksGameTests.keepAtIt(r, m);
             // A while on the iron level, then the rest of it as its miners would leave it, cut to its ends (a real level
             // takes weeks: drifts to the edges of the ground, the caves and the water, every branch cut); the miner finds
@@ -94,7 +102,7 @@ public class Growth24GameTests {
             }
             if (tick[0] % 1500 == 0) Kit.log("[VT] gw24_01 @" + tick[0] + " " + WorksGoal.stateForTests(m) + " — " + m.debugLine() + " || "
                 + String.join(" | ", MineWorks.eventsForTests()));
-            int got = m.countCarried(s -> s.is(Items.RAW_IRON)) - before;
+            int got = mined[0];
             int onSecond = 0, cells = MineWorks.cellsForTests(level, r.v(), second).size();
             for (int[] d : MineWorks.driftsForTests(level, r.v())) if (d[1] == second) onSecond++;
             boolean ok = spentAt[0] >= 0 && onSecond >= 1 && cells >= 8 && got >= 4;
@@ -102,7 +110,7 @@ public class Growth24GameTests {
             boolean told = false;
             for (Villages.News n : Villages.news(r.v())) if (n.text().contains("worked out") && n.text().contains("iron level")) told = true;
             Kit.log("[VT] gw24_01 after " + tick[0] + " ticks: iron level worked out at " + spentAt[0] + ", second iron level (Y" + y2 + ") "
-                + onSecond + " drifts, " + cells + " cells; raw iron carried +" + got + "; told " + told + " | "
+                + onSecond + " drifts, " + cells + " cells; raw iron brought +" + got + "; told " + told + " | "
                 + String.join(" | ", MineWorks.report(level, r.v())));
             helper.assertTrue(spentAt[0] >= 0, "the iron level is marked worked out");
             helper.assertTrue(MineWorks.planForTests(level, r.v()).stream().anyMatch(s -> s.startsWith(second + ":the second iron level")),
