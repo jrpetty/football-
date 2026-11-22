@@ -97,13 +97,28 @@ public final class CityGrowth {
         if (have >= TownPlan.MAX_RINGS) return;
         int built = 0;
         for (String s : Villages.builtList(id)) if (!"colony".equals(s)) built++;
-        if (built < LEAST_BUILT) return;
+        if (built < LEAST_BUILT && !forTheAge(level, id, project)) return;   // [econ32] the age's own building waits on no count
         int misses = MISSES.merge(id, 1, Integer::sum);
         if (misses < FULL_AFTER) return;
         long now = level.getGameTime();
         Long last = LAST.get(id);
         if (last != null && now - last < GAP && now >= last) return;
         open(level, v, have + 1, project);
+    }
+
+    /**
+     * [econ32] Is this a building the town's age asks for (Villages.needs: "a lighthouse", "a chapel")? A local run's Diamond
+     * Age town of fifty with twenty-nine buildings found no lot for its lighthouse or its chapel on its three rings (its fields
+     * and its mine's ground round them) and, short of the forty-five buildings a fourth ring waited on, never laid one out:
+     * the age could never come.
+     */
+    static boolean forTheAge(ServerLevel level, UUID village, String project) {
+        if (project == null || project.isEmpty()) return false;
+        String plan = Themes.structure(project);
+        for (Villages.Need n : Villages.needs(level, village)) {
+            if (n.task() == Villages.Task.BUILD && (n.what().endsWith(" " + plan) || n.what().endsWith(" " + Villages.spoken(plan)))) return true;
+        }
+        return false;
     }
 
     /** Lay the plan out to this many rings, and say so. */

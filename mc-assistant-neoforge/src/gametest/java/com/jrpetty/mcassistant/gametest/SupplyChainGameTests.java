@@ -710,6 +710,36 @@ public class SupplyChainGameTests {
         MineWorksGameTests.done(helper);
     }
 
+    /**
+     * The age's own building finds room: a Diamond Age town of a dozen with few buildings, no lot for its lighthouse on the three
+     * rings of its plan (three looks in a row), lays out a fourth; for a building the age does not ask for (an auction house) it
+     * waits for the forty-five buildings a new ring wants.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "sc07_ring_for_the_age")
+    public static void sc07_ring_for_the_age(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        com.jrpetty.mcassistant.entity.CityGrowth.resetForTests();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6620000, 40, 12, StationTask.FARM);
+        helper.assertTrue(!folk.isEmpty(), "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.Village vv = Villages.get(v);
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        Villages.forgetStock();
+        boolean asks = false;
+        for (Villages.Need n : Villages.needs(level, v)) if (n.what().contains("lighthouse")) asks = true;
+        helper.assertTrue(asks, "the Diamond Age asks for a lighthouse");
+        int before = com.jrpetty.mcassistant.entity.CityGrowth.rings(v);
+        for (int i = 0; i < 3; i++) com.jrpetty.mcassistant.entity.CityGrowth.looked(level, vv, "auctionhouse", false, false);
+        int afterOther = com.jrpetty.mcassistant.entity.CityGrowth.rings(v);
+        for (int i = 0; i < 3; i++) com.jrpetty.mcassistant.entity.CityGrowth.looked(level, vv, "lighthouse", false, false);
+        int afterAge = com.jrpetty.mcassistant.entity.CityGrowth.rings(v);
+        Kit.log("[VT] sc07 rings " + before + "; after three misses for an auction house " + afterOther + "; for the lighthouse " + afterAge);
+        helper.assertTrue(afterOther == before, "no new ring for a building the age does not ask for: " + afterOther);
+        helper.assertTrue(afterAge == before + 1, "a new ring for the age's lighthouse: " + afterAge);
+        com.jrpetty.mcassistant.entity.CityGrowth.setRings(v, before);
+        helper.succeed();
+    }
+
     /** A hungry town wants more farmers: its farms short of hands the morning its larder is low. */
     @GameTest(template = "empty", timeoutTicks = 200, batch = "sc04_hungry_farms")
     public static void sc04_hungry_farms(GameTestHelper helper) {
