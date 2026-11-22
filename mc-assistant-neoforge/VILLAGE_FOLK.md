@@ -15419,7 +15419,7 @@ works' round, instead of only when a load will not go in (then the load went on 
 ### The iron kept for the age, and a level gone barren
 - While the age puts its iron by, the forge makes no iron pick at all (the pick's mark, three dozen bars, lay under the age's
   own ask of sixty-four and more: the local run's Iron Age town climbed to forty-nine bars, its smith made nine iron picks in
-  a day, and the stores fell back to thirteen, day after day), and an iron sword only for the watch. Stone picks cut iron ore.
+  a day, and the stores fell back to thirteen, day after day). Stone picks cut iron ore.
 - The cave team's and the Nether runners' armour counts with the watch's toward what the age asks for, as it is forged out of
   the same iron for them.
 - A level with four hundred blocks of drift cut since the last ore came out of it (the deep level eight hundred) is worked out:

@@ -491,7 +491,7 @@ public final class Crafts {
             // (Toolrack). The forge made an iron pick for the stores whenever it held seven bars, the miners wore them out at
             // two or three a day each, and an Iron Age town mined fifteen to twenty-six iron a day and held five to twenty-four.
             if (saving && !diamond && it == Items.IRON_PICKAXE && !Picks.ironFor(bars, false, w.bars())) continue;
-            if (saving && !diamond && it == Items.IRON_SWORD && !WatchKit.ironForTheWatch(level, v, it)) continue;   // [econ32] the watch's own (counted with the age's iron) only
+            if (saving && !diamond && it == Items.IRON_SWORD && bars < w.bars() + IRON_KEPT && !WatchKit.ironForTheWatch(level, v, it)) continue;
             int wood = w.planks() + (w.sticks() + 1) / 2;
             if (wood > 0 && !planks(level, v, wood)) continue;
             if (!take(level, v, s -> s.is(metal), w.bars())) return null;
