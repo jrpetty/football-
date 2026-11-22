@@ -278,16 +278,17 @@ public final class Couriers {
             // them alone. One with its ore and its fuel, or with its ore and no kelp in the stores, is left to it, as before.
             boolean stocked = f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8;
             boolean kelp = !FuelBook.fuelled(f) && FuelBook.kelpInStores(level, village);
-            if (stocked && !kelp) continue;
+            boolean cold = SmelterFuel.cold(f);                                   // [econ32] its ore, and nothing it may burn
+            if (stocked && !kelp && !cold) continue;
             boolean ore = !stocked && Market.stock(level, village, AssistantEntity.SMELTABLE_ORE) >= 8;
             boolean makings = !stocked && !ore && f.countCarried(Masonry.MAKINGS) < 16 && !Masonry.makings(level, v).isEmpty();
-            if (!ore && !makings && !kelp) continue;
+            if (!ore && !makings && !kelp && !cold) continue;
             Run r = new Run(o.nextId++, Kind.SMELTER, key);
             r.folk = f.getUUID();
             r.folkName = f.displayNameCap();
             r.priority = 1;
             r.queued = now;
-            r.what = (ore ? "ore and fuel" : makings ? "stone and clay" : "kelp blocks") + " out to " + f.displayNameCap() + " at the forge";
+            r.what = (ore ? "ore and fuel" : makings ? "stone and clay" : kelp ? "kelp blocks" : "fuel") + " out to " + f.displayNameCap() + " at the forge";   // [econ32] fuel alone
             o.queue.add(r);
         }
 
@@ -644,7 +645,7 @@ public final class Couriers {
                 boolean kelpBurns = FuelBook.kelpInStores(level, v);
                 int kelp = kelpBurns && to.countCarried(FuelBook.KELP_BLOCK) < 2 ? c.drawFrom(heart, FuelBook.KELP_BLOCK, 4, radius) : 0;
                 if (kelp > 0) FuelBook.forget(v);
-                else if (got > 0 && !kelpBurns) c.drawFrom(heart, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, radius);
+                else if ((got > 0 || SmelterFuel.cold(to)) && !kelpBurns) got += SmelterFuel.draw(level, c, to, heart, radius);   // [econ32] what it will burn, ore or no ore
                 got += kelp;
             }
             if (got <= 0) {                                         // the stores had none after all

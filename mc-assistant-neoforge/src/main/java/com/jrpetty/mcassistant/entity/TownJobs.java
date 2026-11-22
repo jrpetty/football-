@@ -86,6 +86,7 @@ public final class TownJobs {
         UUID id = f.ownerId();
         if (id == null || !fit(f, "") || busy(f) || PostStints.busy(f)) return false;
         if (f.stationTask() == AssistantEntity.StationTask.NONE && f.workZone() == null) return false;
+        if (SmelterFuel.kept(level, f)) return false;                 // [econ32] the age's iron raw at its smelters
         return !(f.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, id));
     }
 
@@ -351,6 +352,7 @@ public final class TownJobs {
             if (a instanceof VillageFolkEntity g && Busywork.spare(g)) {
                 String why = !fit(g, works) ? "unfit" : ON.containsKey(g.getUUID()) && busy(g) ? "on other works"
                     : PostStints.busy(g) ? "post" : g.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id()) ? "mine kept"
+                    : SmelterFuel.kept(level, g) ? "furnaces kept"                                        // [econ32]
                     : g.stationTask() == AssistantEntity.StationTask.NONE && g.workZone() == null ? "no trade yet" : "";
                 if (!why.isEmpty()) passed.merge(why, 1, Integer::sum);
             }
@@ -365,6 +367,7 @@ public final class TownJobs {
             if (over != null && !spare(f, over) && !idleHand) continue;  // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();
             if (trade == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id())) continue;   // [growth24] the age waits on the mine
+            if (SmelterFuel.kept(level, f)) continue;                    // [econ32] the age's iron raw at the smelters
             // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a
             // folk with no ground for it yet is just the hand to spare: see below.)
             if (trade == AssistantEntity.StationTask.NONE && f.workZone() == null) continue;

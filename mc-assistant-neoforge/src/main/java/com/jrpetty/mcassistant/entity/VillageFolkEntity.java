@@ -3574,6 +3574,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
         // [growth24] A miner while the age waits on the mine: its next shift, not the logs or the builder's hod (MineHands).
         if (stationTask() == StationTask.MINE && MineHands.kept(server, village)) return false;
+        if (SmelterFuel.kept(server, this)) return false;                // [econ32] the smelter at its furnaces while the age's iron waits
         if (helping != null && helpTheBuilder(server, village)) return true;
         if (tickCount - lastHelpTick < 1200) return false;   // one attempt a minute, at most
         for (Villages.Need need : Villages.needs(server, village)) {
@@ -6167,7 +6168,8 @@ public class VillageFolkEntity extends AssistantEntity {
             // brought kelp blocks on their own; one with ore and fuel is left to it, as before.
             boolean stocked = f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8;
             boolean kelpWanted = FuelBook.kelpInStores(server, village) && f.countCarried(FuelBook.KELP_BLOCK) < 2;
-            if (stocked && (FuelBook.fuelled(f) || !kelpWanted)) continue;
+            boolean cold = SmelterFuel.cold(f);                                   // [econ32] its ore, and nothing it may burn
+            if (stocked && (FuelBook.fuelled(f) || !kelpWanted) && !cold) continue;
             int got = stocked ? 0 : drawFrom(villageCentre, AssistantEntity.SMELTABLE_ORE, 32, buildStoresRadius());
             String what = "ore";
             if (!stocked && got <= 0 && vill != null && f.countCarried(Masonry.MAKINGS) < 16) {
@@ -6183,6 +6185,15 @@ public class VillageFolkEntity extends AssistantEntity {
                 FuelBook.forget(village);
                 if (got <= 0) what = "kelp blocks";
             }
+            // [econ32] A smelter with its ore and nothing it may burn: fuel alone (SmelterFuel).
+            if (got <= 0 && kelp <= 0 && cold) {
+                int fuel = SmelterFuel.draw(server, this, f, villageCentre, buildStoresRadius());
+                if (fuel > 0) {
+                    haulFor = f.getUUID();
+                    brain("taking " + fuel + " fuel out to " + f.displayNameCap());
+                    return true;
+                }
+            }
             if (got <= 0 && kelp <= 0) {
                 if (stocked) continue;
                 break;
@@ -6191,11 +6202,8 @@ public class VillageFolkEntity extends AssistantEntity {
             // (SmeltGoal), and what goes out to it is logs the builders can spare.
             if (kelp > 0) {
                 // [diver] (the kelp blocks are its fuel)
-            } else if (!savingCoal() && !coalLow()) {        // [economy] nor the last of it, under the floor (Fuel)
-                drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, buildStoresRadius());
             } else {
-                int wood = Math.min(8, logsToSpare(server, village));
-                if (wood > 0) drawFrom(villageCentre, s -> s.is(net.minecraft.tags.ItemTags.LOGS), wood, buildStoresRadius());
+                SmelterFuel.draw(server, this, f, villageCentre, buildStoresRadius());   // [econ32] what it will burn (coal, or the logs to spare)
             }
             haulFor = f.getUUID();
             brain("taking " + got + " " + what + " out to " + f.displayNameCap());

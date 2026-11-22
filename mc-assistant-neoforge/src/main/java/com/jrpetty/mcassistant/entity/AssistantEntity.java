@@ -7302,7 +7302,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     return true;
                 }
                 boolean hasFuel = countMatching(smeltFuel()) > 0
-                    || scoopFromChests(smeltFuel(), 16, chestRange()) > 0;
+                    || scoopFromChests(smeltFuel(), 16, chestRange()) > 0
+                    || (this instanceof VillageFolkEntity vf && SmelterFuel.fetch(vf));   // [econ32] fetched from the stores
                 int iron = countMatching(s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE));
                 int gold = countMatching(s -> s.is(Items.RAW_GOLD) || s.is(Items.GOLD_ORE) || s.is(Items.DEEPSLATE_GOLD_ORE));
                 int copper = countMatching(s -> s.is(Items.RAW_COPPER) || s.is(Items.COPPER_ORE) || s.is(Items.DEEPSLATE_COPPER_ORE));
