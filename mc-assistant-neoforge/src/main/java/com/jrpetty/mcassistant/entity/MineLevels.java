@@ -189,6 +189,12 @@ public final class MineLevels {
 
     /** Is this level worked out: every drift on it closed and every branch off them cut? (Its landing is cut.) */
     static boolean workedOut(ServerLevel level, MineWorks.Works w, MineWorks.Lvl l, List<MineWorks.Drift> here) {
+        // [econ32b] Never before it has been dug: a level with no drift on it, or none cut a block, is laid out first. Four
+        // levels of a long run were "worked out (0 drifts)" the moment they opened, their landing walls refused (the plan's
+        // reach run out over the mine: MineWorks.inGround), and the next of their ore opened on top of them.
+        int dug = 0;
+        for (MineWorks.Drift d : here) dug += d.path.length();
+        if (dug == 0) return false;
         for (MineWorks.Drift d : here) {
             if (d.closed == '-') return false;
             if (MineWorks.pendingBranches(level, w, d, l) > 0) return false;

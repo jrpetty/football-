@@ -420,7 +420,10 @@ public final class MineWorks {
         }
         if (MineGround.otherMeets(w.village, x - 2, z - 2, x + 2, z + 2)) return false;
         Villages.Village v = Villages.get(w.village);
-        return v == null || !TownDigs.inTownGroundRaw(level, w.village, v.centre(), new BlockPos(x, 0, z), 2);
+        // [econ32b] The mine's ground is set aside for good: only what the town has built over it keeps a drift off, not the
+        // plan's reach. A town that laid out its fourth and fifth rings (CityGrowth) had its plan run out over its mine, every
+        // landing wall of a new level "in the town's ground", and its new levels were called worked out with no drift on them.
+        return v == null || !TownMine.underTheTown(TownMine.builtGround(w.village, v.centre(), level.getGameTime()), new BlockPos(x, 0, z), 2);
     }
 
     /** May a drift or a branch be cut at this column: in the mine's ground and clear of the shaft. */

@@ -740,6 +740,53 @@ public class SupplyChainGameTests {
         helper.succeed();
     }
 
+    /**
+     * [econ32b] A further level is laid out before it is ever worked out: the deep level marked worked out, the second deep
+     * level planned over it, the town's plan laid out to its last ring over the mine; its landing cut, its miner's next look
+     * starts a drift on it all the same (the mine's ground is set aside for good), and it is not called worked out
+     * with no drift on it (the long run's second and third deep levels and third and fourth copper levels were "worked out
+     * (0 drifts)" the moment they opened).
+     */
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "sc08_new_level_laid_out")
+    public static void sc08_new_level_laid_out(GameTestHelper helper) {
+        MineLevels.forgetCutForTests();
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6624000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0);
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        java.util.Map<com.jrpetty.mcassistant.entity.MineDemand.Ore, Integer> stock = MineWorksGameTests.plenty();
+        stock.put(com.jrpetty.mcassistant.entity.MineDemand.Ore.DIAMOND, 0);
+        com.jrpetty.mcassistant.entity.MineDemand.stockForTests(v, stock);
+        MineWorksGameTests.kit(m, Items.IRON_PICKAXE);
+        MineWorksGameTests.zone(r, m, -50);
+        int second = MineWorks.DEEP + 5;
+        List<Integer> further = MineLevels.placesForTests(level, v, MineWorks.DEEP);
+        helper.assertTrue(!further.isEmpty(), "further deep levels planned: " + further);
+        int y2 = further.get(0);
+        int y1 = MineWorks.levelY(level, v, MineWorks.DEEP);
+        MineWorksGameTests.tower(r, Math.min(y1, y2) - 3);
+        MineWorksGameTests.bed(r, y2, 30, Blocks.DEEPSLATE, 0, 3233L);
+        MineLevels.spendForTests(level, v, MineWorks.DEEP);
+        MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - Math.min(y1, y2)) / 3) + 1, m);
+        MineWorks.roomForTests(level, v, second);
+        // The town's plan laid out to its last ring, out over the mine's ground (as a grown town's is: CityGrowth).
+        int rings = com.jrpetty.mcassistant.entity.CityGrowth.rings(v);
+        com.jrpetty.mcassistant.entity.CityGrowth.setRings(v, com.jrpetty.mcassistant.village.TownPlan.MAX_RINGS);
+        com.jrpetty.mcassistant.entity.MineWorks.Task t = MineWorks.next(level, m);
+        com.jrpetty.mcassistant.entity.CityGrowth.setRings(v, rings);
+        if (t != null) MineWorks.release(v, t, m.getUUID());
+        int drifts = 0;
+        for (int[] d : MineWorks.driftsForTests(level, v)) if (d[1] == second) drifts++;
+        boolean spent = MineLevels.spentForTests(level, v, second);
+        Kit.log("[VT] sc08 the second deep level at Y" + y2 + ": next task " + (t == null ? "-" : t.words()) + "; drifts on it " + drifts
+            + "; worked out " + spent + "; plan " + MineWorks.planForTests(level, v));
+        helper.assertTrue(!spent, "a level just opened is not worked out");
+        helper.assertTrue(drifts >= 1, "a drift started on it: " + drifts);
+        com.jrpetty.mcassistant.entity.MineDemand.stockForTests(v, null);
+        MineWorksGameTests.done(helper);
+    }
+
     /** A hungry town wants more farmers: its farms short of hands the morning its larder is low. */
     @GameTest(template = "empty", timeoutTicks = 200, batch = "sc04_hungry_farms")
     public static void sc04_hungry_farms(GameTestHelper helper) {
