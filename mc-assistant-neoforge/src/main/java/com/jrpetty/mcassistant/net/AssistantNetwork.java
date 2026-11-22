@@ -64,6 +64,10 @@ public final class AssistantNetwork {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer player)
                     || !(player.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+            if (payload.what() == com.jrpetty.mcassistant.entity.GuideFacts.ASK) {   // [guide31] the Guide's few facts, town or none
+                com.jrpetty.mcassistant.entity.GuideFacts.send(player);
+                return;
+            }
             com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.nearest(level,
                 player.blockPosition(), com.jrpetty.mcassistant.entity.Villages.VILLAGE_RANGE * 4);
             if (v == null) {
@@ -133,7 +137,10 @@ public final class AssistantNetwork {
     }
 
     private static void handleVillagePage(VillagePagePayload payload, IPayloadContext context) {
-        context.enqueueWork(() -> com.jrpetty.mcassistant.client.VillageScreen.show(payload.title(), payload.text()));
+        context.enqueueWork(() -> {
+            if (com.jrpetty.mcassistant.client.guide.GuideClient.heard(payload.title(), payload.text())) return;   // [guide31] the Guide's facts
+            com.jrpetty.mcassistant.client.VillageScreen.show(payload.title(), payload.text());
+        });
     }
 
     /** How near a player must stand to talk with a folk. */

@@ -602,6 +602,7 @@
   "block.mc_assistant.shop_counter": "Shop Counter",
   "block.mc_assistant.shop_sign": "Shop Sign",
   "key.mc_assistant.life": "Your life in town",
+  "key.mc_assistant.guide": "Guide (ask anything about the towns and the folk)",
   "talk.mc_assistant.start_business": "Start a business",
   "talk.mc_assistant.start_business.tip": "A charter of your own: pick a kind, premises, confirm. The bank lends what you're short",
   "talk.mc_assistant.my_businesses": "My businesses",
