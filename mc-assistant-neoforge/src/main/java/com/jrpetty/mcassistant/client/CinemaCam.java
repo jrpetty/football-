@@ -295,7 +295,12 @@ public final class CinemaCam {
             Vec3 out = want.subtract(aim);
             double len = out.length();
             HitResult hit = level.clip(new ClipContext(aim, want, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
-            if (hit.getType() != HitResult.Type.MISS && len > 0.01) reach = Mth.clamp((hit.getLocation().distanceTo(aim) - 0.5) / len, 2.5 / len, 1.0);
+            // Leaves are looked through from above, not come in under (a woodcutter under the canopy).
+            if (hit.getType() == HitResult.Type.BLOCK && level.getBlockState(((net.minecraft.world.phys.BlockHitResult) hit).getBlockPos()).is(net.minecraft.tags.BlockTags.LEAVES)) {
+                reach = 1.0;
+            } else if (hit.getType() != HitResult.Type.MISS && len > 0.01) {
+                reach = Mth.clamp((hit.getLocation().distanceTo(aim) - 0.5) / len, 2.5 / len, 1.0);
+            }
         }
         pull = pull + (reach - pull) * (1.0 - Math.exp(-dt * (reach < pull ? 5.0 : 1.2)));
         want = aim.add(want.subtract(aim).scale(pull));

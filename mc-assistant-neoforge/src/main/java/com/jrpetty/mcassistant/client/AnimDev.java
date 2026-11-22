@@ -76,6 +76,7 @@ public final class AnimDev {
         boolean perf = false, cape = false;
         FolkBatch.enabled = true;
         unbaked = false;
+        FolkGait.old = false;                                     // [vision27]
         for (int i = 0; i < lines.size(); i++) {
             String[] w = lines.get(i).trim().split("\\s+");
             if (w.length == 0 || w[0].isEmpty() || w[0].startsWith("#")) continue;
@@ -99,6 +100,7 @@ public final class AnimDev {
                 case "cape" -> cape = true;
                 case "nobatch" -> FolkBatch.enabled = false;
                 case "unbaked" -> unbaked = true;
+                case "oldgait" -> FolkGait.old = true;          // [vision27] the game's own walk, for the before and after
                 case "ride" -> { FolkRenderer.RIDE_DROP[0] = Float.parseFloat(w[1]); FolkRenderer.RIDE_DROP[1] = Float.parseFloat(w[2]); }
                 case "drum" -> { for (int k = 0; k < 3; k++) FolkActionLayer.DRUM_AT[k] = Float.parseFloat(w[1 + k]); }
                 case "sack" -> { for (int k = 0; k < 5; k++) FolkActionLayer.SACK[k] = Float.parseFloat(w[1 + k]); }

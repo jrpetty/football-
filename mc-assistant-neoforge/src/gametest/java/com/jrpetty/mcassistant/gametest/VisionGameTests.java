@@ -8,6 +8,7 @@ import com.jrpetty.mcassistant.entity.Favourites;
 import com.jrpetty.mcassistant.entity.FolkAction;
 import com.jrpetty.mcassistant.entity.FolkAction.Act;
 import com.jrpetty.mcassistant.entity.Happenings;
+import com.jrpetty.mcassistant.entity.TownJobs;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
 import com.jrpetty.mcassistant.net.CameraAskPayload;
@@ -228,6 +229,39 @@ public class VisionGameTests {
             helper.assertTrue(who.getCompound(1).getInt("id") == f.get(0).getId(), "then the nearest");
             Kit.log("[VT] vi05 " + t.getString("town") + " heart " + h[0] + "," + h[2] + " folk " + who.size());
             p.discard();
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ vi06: a paid order gets a hand though the town's are all out
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "vi06_paid_hand")
+    public static void vi06_paid_hand(GameTestHelper helper) {
+        int x = 6_008_000;
+        int[][] at = new int[16][];
+        for (int i = 0; i < 16; i++) at[i] = new int[] {(i % 4) * 2 - 3, (i / 4) * 2 - 3};
+        List<VillageFolkEntity> f = ground(helper, x, at);
+        BlockPos heart = heart(helper, x);
+        helper.runAtTickTime(5, () -> {
+            ServerLevel level = helper.getLevel();
+            level.setDayTime(30 * 24000L + 3000L);                         // the builders' hours
+            Villages.Village v = Villages.nearest(level, heart, 64);
+            helper.assertTrue(v != null && Villages.folkOf(v.id()).size() == 16, "a town of sixteen");
+            for (VillageFolkEntity a : f) a.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM);
+            // The town's one hand in eight (two of sixteen) both taken by its own works.
+            TownJobs.atWork(level, v, "gardens", heart.east(6), "fencing a garden");
+            TownJobs.atWork(level, v, "signs", heart.west(6), "putting up a sign");
+            helper.assertTrue(TownJobs.handAt(level, v.id(), "gardens") != null && TownJobs.handAt(level, v.id(), "signs") != null,
+                "the town's two hands out at its own works");
+            TownJobs.atWork(level, v, "walls", heart.north(6), "rebuilding a house in brick");
+            boolean wallsHand = TownJobs.handAt(level, v.id(), "walls") != null;
+            // A paid commission: a hand all the same.
+            TownJobs.atWork(level, v, "commission1", heart.south(8), "building a player's house");
+            VillageFolkEntity hand = TownJobs.handAt(level, v.id(), "commission1");
+            helper.assertTrue(hand != null, "the paid order has its hand though the town's own are all out");
+            TownJobs.atWork(level, v, "homebuild", heart.south(14), "a household's own house");
+            helper.assertTrue(TownJobs.handAt(level, v.id(), "homebuild") != null, "and a household's paid house too");
+            Kit.log("[VT] vi06 paid orders handed (" + hand.displayNameCap() + "); an unpaid third work " + (wallsHand ? "also had one" : "waited"));
             helper.succeed();
         });
     }

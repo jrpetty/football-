@@ -295,7 +295,7 @@ public final class TownJobs {
                 busy++;
             }
         }
-        if (adults < SETTLED && !essential(works)) return null;      // a young village: its trades first
+        if (adults < SETTLED && !essential(works) && !paid(works)) return null;      // a young village: its trades first
         // Never more than one hand in eight — unless hands are standing idle in trades with more
         // hands than they want (or short of their kit): then up to one in four, and the hands past
         // the eighth only from those. The hundred had sixty standing about while its works waited,
@@ -310,6 +310,10 @@ public final class TownJobs {
         // yard of street laid. The paving's hand and the doors' ways' are on top of the eighth (and not counted against the
         // other works'), so the roads, the beds and the rest keep theirs.
         if (streetsWork(works) && busy < cap + 2) extra = true;
+        // [vision27] Nor a paid order (a player's commission, a household's own house): it was quoted a time and paid for,
+        // and a villa ordered and paid for in a town of sixty sat all day at "waiting for a hand the town can spare",
+        // its one hand in eight always taken by the town's beds, signs and gardens first.
+        if (paid(works) && busy < Math.max(cap + 2, adults / 2)) extra = true;
         if (busy >= cap && !extra) {
             if (busy >= Math.max(1, adults / 4)) return null;
             over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);
@@ -386,6 +390,11 @@ public final class TownJobs {
     static final String TIDY = "tidy";
 
     /** The works a village has done even while it is young: its beds made up, room in its stores. */
+    /** [vision27] Works somebody has paid for and been promised a time for: a commission (BuildOrders), a household's house. */
+    static boolean paid(String works) {
+        return works != null && (works.startsWith("commission") || works.equals("homebuild"));
+    }
+
     static boolean essential(String works) {
         return works.equals("beds") || works.equals("stores")
             || works.equals("rebuild");                                  // [disasters] what a fire burnt put back
