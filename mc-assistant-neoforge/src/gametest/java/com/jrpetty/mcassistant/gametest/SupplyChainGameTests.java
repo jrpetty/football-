@@ -80,11 +80,13 @@ public class SupplyChainGameTests {
         int logs = smelter.countCarried(s -> s.is(net.minecraft.tags.ItemTags.LOGS));
         Kit.log("[VT] sc01 fetched " + fetched + ", logs in hand " + logs + ", tally " + java.util.Arrays.toString(SmelterFuel.tally(v)));
         helper.assertTrue(fetched && logs > 0, "logs fetched from the stores for the furnaces: " + logs);
-        // A furnace beside it, and the smelt.
-        BlockPos at = smelter.blockPosition();
-        BlockPos furnace = at.east(2);
+        // Its forge: a furnace, its plot round it, and the smelt.
+        BlockPos furnace = Kit.surface(level, 6600000 - 6, Z);
+        level.setBlock(furnace, Blocks.AIR.defaultBlockState(), 3);
         level.setBlock(furnace, Blocks.FURNACE.defaultBlockState(), 3);
-        level.setBlock(furnace.below(), Blocks.STONE.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, furnace);
+        smelter.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(furnace, 4, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "The Forge");
+        smelter.moveTo(furnace.getX() + 1.5, furnace.getY(), furnace.getZ() + 0.5, 0.0F, 0.0F);
         smelter.clearQueue();
         smelter.enqueue(Job.smelt("iron", 4));
         // The shares: fuel low (no coal) and timber under the builders' keep once the logs are gone.
@@ -98,6 +100,8 @@ public class SupplyChainGameTests {
             tick[0]++;
             if (level.getDayTime() % 24000L > 9000L) level.setDayTime(1000);
             if (smelter.peekJob() == null && smelter.countCarried(SmelterFuel.IRON_ORE) > 0) smelter.enqueue(Job.smelt("iron", 4));
+            if (smelter.distanceToSqr(furnace.getX() + 0.5, furnace.getY(), furnace.getZ() + 0.5) > 64)
+                smelter.moveTo(furnace.getX() + 1.5, furnace.getY(), furnace.getZ() + 0.5, 0.0F, 0.0F);   // its forge's work, not the town's
             int bars = smelter.countCarried(s -> s.is(Items.IRON_INGOT));
             if (level.getBlockEntity(furnace) instanceof Container c) bars += c.getItem(2).is(Items.IRON_INGOT) ? c.getItem(2).getCount() : 0;
             if (bars < 1 && tick[0] < 3600) return false;

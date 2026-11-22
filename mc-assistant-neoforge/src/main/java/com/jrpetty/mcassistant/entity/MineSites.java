@@ -172,7 +172,8 @@ public final class MineSites {
         List<VillageFolkEntity> miners = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f.stationTask() != AssistantEntity.StationTask.MINE) continue;
-            if (MineWorks.below(f)) return false;                         // somebody still down the old works: later
+            // Somebody still down the old works (under the shaft's top and out of the sky): later.
+            if (MineWorks.below(f) && !level.canSeeSky(f.blockPosition())) return false;
             miners.add(f);
         }
         BlockPos site = find(level, v);
