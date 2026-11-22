@@ -179,7 +179,8 @@ public final class StartBusiness implements PlayerLife.Page {
         }
         long rent = t == null ? 0 : Math.round(t.stall() ? Enterprise.STALL_PENCE * MarketMaker.priceLevel(v.id()) / 100.0 : 0);
         page.row(new ItemStack(Items.OAK_FENCE), (prem.equals("town") ? "✔ " : "") + (t != null && t.stall() ? "A stall on the square" : "A room the town lets"),
-                t != null && t.stall() ? "Bought of the town, its fixtures your firm's own" : "Its rent out of the firm's till each week", t != null && t.stall() ? PlayerLife.coins(rent) : "rent")
+                t != null && t.stall() ? "Bought of the town, its fixtures your firm's own" : "A room in one of the town's buildings; its rent out of the firm's till",
+                t != null && t.stall() ? PlayerLife.coins(rent) : "~" + PlayerLife.coins(Math.max(1, Math.round(60.0 * Wealth.standing(v.id()) / 10 * 7 / 100))) + " a week")   // [biz25] the rent, said
             .button(prem.equals("town") ? "Chosen" : "Choose", "prem", LifePage.args("p", "town"), !prem.equals("town"), "Chosen");
         page.row(new ItemStack(Items.BRICKS), (prem.equals("build") ? "✔ " : "") + "Have the town build it", "Choose from the town's drawings, with a picture of each", "")
             .button(prem.equals("build") ? "Chosen" : "Choose", "prem", LifePage.args("p", "build"), true, "");

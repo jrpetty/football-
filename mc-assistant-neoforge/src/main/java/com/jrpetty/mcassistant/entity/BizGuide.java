@@ -164,6 +164,32 @@ public final class BizGuide {
             + ": find work, open a shop of your own or start a business. The page says what to do next.").withStyle(ChatFormatting.AQUA));
     }
 
+    // ------------------------------------------------------------------ a building sold
+
+    /**
+     * A building on the register sold (PropertyMarket.accept): if the seller's shop stands in it, the shop is the seller's
+     * no longer: its till paid out to the seller, its keeper let go, its sign taken down and its record closed, as Close
+     * the shop does. What is in its chests went with the building or came back to the seller, as the listing said. The
+     * new owner makes it a shop of its own with a click on the counter. Returns a word to add to what the seller is told.
+     */
+    static String buildingSold(ServerLevel level, UUID village, CompoundTag t, ServerPlayer seller) {
+        PlayerShops.Shop s = PlayerShops.of(village, seller.getUUID());
+        if (s == null || !inside(t, s.anchor)) return "";
+        int till = s.till;
+        PlayerShops.close(level, seller, s);
+        return " Your shop there is closed" + (till > 0 ? ", its till (" + PlayerLife.coins(till) + ") into your pack" : "")
+            + "; the new owner makes it a shop of its own at the counter.";
+    }
+
+    /** Is this spot within a register entry's footprint (its anchor, turned by its facing, a storey's height or so)? */
+    static boolean inside(CompoundTag t, net.minecraft.core.BlockPos at) {
+        net.minecraft.core.BlockPos a = net.minecraft.core.BlockPos.of(t.getLong("anchor"));
+        net.minecraft.core.Direction f = net.minecraft.core.Direction.from2DDataValue(t.getInt("facing"));
+        boolean turned = f.getAxis() == net.minecraft.core.Direction.Axis.X;
+        int bx = turned ? t.getInt("hd") : t.getInt("hw"), bz = turned ? t.getInt("hw") : t.getInt("hd");
+        return Math.abs(at.getX() - a.getX()) <= bx && Math.abs(at.getZ() - a.getZ()) <= bz && Math.abs(at.getY() - a.getY()) <= 12;
+    }
+
     // ------------------------------------------------------------------ the keeper's sums
 
     /** "Its till took about 6 coins a day this week; a keeper asks 3": what a keeper costs against what the shop takes. */
