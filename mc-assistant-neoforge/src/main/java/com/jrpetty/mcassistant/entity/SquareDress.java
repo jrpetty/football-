@@ -82,6 +82,16 @@ public final class SquareDress {
             || s.is(Blocks.SMOOTH_STONE) || s.is(Blocks.COBBLED_DEEPSLATE) || s.is(Blocks.DEEPSLATE_BRICKS);
     }
 
+    /** A block standing by itself (a foothold's pillar, a block dropped): not two of its sides against more of the same. */
+    static boolean lone(Level level, BlockPos p) {
+        int by = 0;
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockState n = level.getBlockState(p.relative(d));
+            if (!n.isAir() && !n.canBeReplaced() && !Terraform.growth(n)) by++;
+        }
+        return by <= 1;
+    }
+
     /** By a stall of the square's market (TownLife's), kept as it stands. */
     static boolean stall(int dx, int dz) {
         return Math.abs(Math.abs(dx) - 8) <= 2 && Math.abs(Math.abs(dz) - 8) <= 2;
@@ -113,10 +123,12 @@ public final class SquareDress {
                     if (Terraform.growth(s) || s.is(BlockTags.LEAVES) || (s.is(BlockTags.LOGS) && !keep)) {
                         level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
                         did.merge("growth", 1, Integer::sum);
+                    } else if (PlayerBlocks.placed(level, p)) {
+                        // a player's own: left as it is
                     } else if (!keep && fixture(s) && takeable(v, s)) {
                         takeUp(level, v, p, s);
                         did.merge("fixtures", 1, Integer::sum);
-                    } else if (!keep && stray(s) && y <= lv + 6) {
+                    } else if (!keep && stray(s) && y <= lv + 6 && lone(level, p)) {
                         takeUp(level, v, p, s);
                         did.merge("strays", 1, Integer::sum);
                     }
@@ -299,7 +311,8 @@ public final class SquareDress {
                 for (int y = lv + 1; y <= lv + 3; y++) {
                     BlockPos p = new BlockPos(x, y, z);
                     BlockState s = level.getBlockState(p);
-                    if (s.isAir() || !(fixture(s) && takeable(v, s) || stray(s) && y <= lv + 2)) continue;
+                    if (s.isAir() || !(fixture(s) && takeable(v, s) || stray(s) && y <= lv + 2 && lone(level, p))) continue;
+                    if (PlayerBlocks.placed(level, p)) continue;
                     if (TownBlocks.buildingAt(level, v, p) != null) continue;
                     takeUp(level, v, p, s);
                     n++;
