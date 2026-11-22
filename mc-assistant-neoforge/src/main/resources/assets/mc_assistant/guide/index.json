@@ -1,0 +1,27 @@
+{
+  "categories": [
+    {"id": "start", "title": "Getting started", "icon": "minecraft:compass", "blurb": "Your first hour: what the mod is, the U page, your first town"},
+    {"id": "founding", "title": "Founding a town", "icon": "mc_assistant:founding_kit", "blurb": "The Founding Kit, the spawner, the charter, where and how big"},
+    {"id": "folk", "title": "Folk & friendship", "icon": "minecraft:poppy", "blurb": "Who the folk are, what they think of you, and how to win them over"},
+    {"id": "talk", "title": "Talking to folk", "icon": "minecraft:writable_book", "blurb": "The talk screen, every tab and everything you can say"},
+    {"id": "jobs", "title": "Jobs & work", "icon": "minecraft:clock", "blurb": "Jobs, shifts, quests, apprenticeships and the folk's trades"},
+    {"id": "building", "title": "Building & plots", "icon": "minecraft:bricks", "blurb": "What the town builds, building to order, plots and the town's look"},
+    {"id": "business", "title": "Businesses & shops", "icon": "mc_assistant:shop_counter", "blurb": "Your shop, a chartered business, stalls and every kind of firm"},
+    {"id": "money", "title": "Money, trade & markets", "icon": "mc_assistant:village_coin", "blurb": "Coin, selling, buying, prices, the market and trade between towns"},
+    {"id": "property", "title": "Property & finance", "icon": "minecraft:gold_block", "blurb": "The bank, houses, rent, land, shares, bonds and your finances"},
+    {"id": "civic", "title": "Town government", "icon": "minecraft:bell", "blurb": "Citizens, the council, elections, laws, taxes, knights and referendums"},
+    {"id": "defence", "title": "Defence & war", "icon": "minecraft:iron_sword", "blurb": "The watch, walls, raids, crime, wars between towns and their end"},
+    {"id": "progress", "title": "Ages & progression", "icon": "minecraft:diamond_pickaxe", "blurb": "The ages, mines, caves, the Nether, research and a town's rank"},
+    {"id": "life", "title": "Families, homes & life", "icon": "minecraft:red_bed", "blurb": "Marriage, children, homes, pets, fashion, health and schooling"},
+    {"id": "festivals", "title": "Festivals & gatherings", "icon": "minecraft:firework_rocket", "blurb": "Feasts, weddings, fairs, the theatre, sport and fireworks"},
+    {"id": "camera", "title": "The camera & filming", "icon": "minecraft:spyglass", "blurb": "The K camera: orbits, fly-throughs, following a folk, time-lapses"},
+    {"id": "items", "title": "Items & blocks", "icon": "minecraft:crafting_table", "blurb": "Everything the mod adds: what it is, how to make it, what it does"},
+    {"id": "keys", "title": "Keys & controls", "icon": "minecraft:oak_button", "blurb": "Every key, every button, and the screens they open"},
+    {"id": "companions", "title": "Assistants (companions)", "icon": "mc_assistant:assistant_spawner", "blurb": "Your own helpers: the crew, their orders, plots and markers"},
+    {"id": "admin", "title": "Settings & server admin", "icon": "minecraft:command_block", "blurb": "For operators: config files, the admin panel, time and limits"},
+    {"id": "trouble", "title": "Troubleshooting", "icon": "minecraft:redstone_torch", "blurb": "Idle folk, empty shops, towns that won't grow, and other snags"}
+  ],
+  "files": ["start.json", "founding.json", "folk.json", "talk.json", "jobs.json", "building.json", "business.json", "money.json",
+    "property.json", "civic.json", "defence.json", "progress.json", "life.json", "festivals.json", "camera.json", "items.json",
+    "keys.json", "companions.json", "admin.json", "trouble.json"]
+}
