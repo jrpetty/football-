@@ -156,7 +156,10 @@ public final class Land {
                     if (Math.floorMod(v.id().hashCode(), 5) != phase) continue;
                     if (!v.dim().equals(level.dimension()) || !level.isLoaded(v.centre())) continue;
                     long t0 = System.nanoTime();
-                    if (com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand()) level(level, v, LOOK, CHANGES);
+                    // [city26] Not a terraced town's ground (the founding made it to its terraces: levelling it to the square's
+                    // height took the terraces' edges and steps down a block at a time), nor while a founding works it.
+                    if (com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand() && !TerraceWalls.terraced(v.id())
+                            && !Founding.settling(level, v.centre(), 16)) level(level, v, LOOK, CHANGES);
                     long t1 = System.nanoTime();
                     Grow.tick(level, v);
                     long t2 = System.nanoTime();

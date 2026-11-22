@@ -978,6 +978,7 @@ public final class Founding extends SavedData {
             return false;
         }
         s.village = first.ownerId();
+        if (s.ground != null && s.ground.terrace != null) TerraceWalls.markTerraced(s.village);   // [city26] its ground is its terraces
         s.spawned = 1;
         s.nextSpot = 1;
         Villages.Village v = Villages.get(s.village);
@@ -1066,6 +1067,7 @@ public final class Founding extends SavedData {
     private static void finish(ServerLevel level, Founding f, Site s) {
         release(level, s);
         SETTLING.put(s.heart.asLong(), level.getGameTime());                // [city26] the folk settle in before the works begin
+        if (s.village != null && s.ground != null && s.ground.terrace != null) TerraceWalls.markTerraced(s.village);
         if (s.village != null && s.level != UNSET) {                        // [terra10] nothing left lying about
             int swept = GroundWork.sweep(level, s.village, s.heart, s.outer, s.level);
             if (swept > 0) LOG.info("[MCA-FOUND] {} things left lying on the ground swept into the stores", swept);

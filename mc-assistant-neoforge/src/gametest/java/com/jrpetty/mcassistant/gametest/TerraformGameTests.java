@@ -305,6 +305,7 @@ public class TerraformGameTests {
                 }
             }
             if (start[0] < 0) start[0] = t;
+            watch(level, label, hearts, t - start[0]);                 // [city26] who touches the levelled ground after it is done
             if (t - start[0] < 40) return;                            // a moment for anything let loose to fall or run
             Kit.Expect expect = new Kit.Expect();
             Map<String, Integer> total = new LinkedHashMap<>();
@@ -339,6 +340,34 @@ public class TerraformGameTests {
             if (expect.clean()) helper.succeed();
             else helper.fail(expect.summary());
         });
+    }
+
+    /** [city26] The top of each worked column of each founding just finished, and anything that changes it in the next
+     *  moments logged with whoever was about it and what they were at. */
+    private static final Map<Long, net.minecraft.world.level.block.state.BlockState> WATCHED = new HashMap<>();
+
+    static void watch(ServerLevel level, String label, Map<String, BlockPos> hearts, long since) {
+        for (BlockPos h : hearts.values()) {
+            TerraformAudit.Done d = TerraformAudit.near(h, 40);
+            if (d == null || d.ground().target == null) continue;
+            FoundingPlan.Ground g = d.ground();
+            for (int i = 0; i < g.side * g.side; i++) {
+                if (g.terrace == null || g.terrace[i] == com.jrpetty.mcassistant.village.Terraces.NONE) continue;
+                BlockPos p = new BlockPos(h.getX() + g.dx(i), g.target[i], h.getZ() + g.dz(i));
+                net.minecraft.world.level.block.state.BlockState now = level.getBlockState(p);
+                net.minecraft.world.level.block.state.BlockState was = WATCHED.put(p.asLong(), now);
+                if (since == 0 || was == null || was == now) continue;
+                StringBuilder who = new StringBuilder();
+                for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity) null,
+                        new net.minecraft.world.phys.AABB(p).inflate(6), e -> e instanceof net.minecraft.world.entity.Mob)) {
+                    who.append(' ').append(e.getName().getString()).append('@').append(e.blockPosition().toShortString());
+                    ((net.minecraft.world.entity.Mob) e).goalSelector.getAvailableGoals().stream().filter(net.minecraft.world.entity.ai.goal.WrappedGoal::isRunning)
+                        .forEach(gl -> who.append('[').append(gl.getGoal().getClass().getSimpleName()).append(']'));
+                    if (e instanceof com.jrpetty.mcassistant.entity.AssistantEntity a) who.append('{').append(a.stationTask()).append('}');
+                }
+                Kit.log("[VT] " + label + " WATCH +" + since + " " + p.toShortString() + " " + was.getBlock() + " -> " + now.getBlock() + "; about:" + who);
+            }
+        }
     }
 
     /** tf01: the meadow, strewn with gravel, ore and andesite at the top, pits, a pond, trees on the edge, a player's hut. */

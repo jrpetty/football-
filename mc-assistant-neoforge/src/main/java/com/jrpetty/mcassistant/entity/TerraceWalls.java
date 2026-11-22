@@ -38,6 +38,16 @@ public final class TerraceWalls {
         return Blocks.STONE_BRICKS.defaultBlockState();
     }
 
+    /** [city26] Is this town's ground terraced (noted by its founding)? Its ground is not levelled to the square's height. */
+    public static boolean terraced(java.util.UUID village) {
+        return "1".equals(com.jrpetty.mcassistant.village.Ledger.note(village, "ground.terraced"));
+    }
+
+    /** [city26] Note a town's ground as terraced. */
+    public static void markTerraced(java.util.UUID village) {
+        com.jrpetty.mcassistant.village.Ledger.note(village, "ground.terraced", "1");
+    }
+
     /** [city26] The stair a terraced street's step is laid in, for a town dressed in this soil, facing up the climb. */
     static BlockState stair(Block surface, net.minecraft.core.Direction up) {
         Block b = surface == Blocks.SAND ? Blocks.SMOOTH_SANDSTONE_STAIRS
