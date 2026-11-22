@@ -869,6 +869,39 @@ public class SupplyChainGameTests {
         helper.succeed();
     }
 
+    /**
+     * [econ32b] A smelter at its furnaces indoors (a smeltery of the town's, walled and roofed round it) is not "lost
+     * underground", nor "below in the works" though it stands under the pithead's height: no way up is sent for it. (The
+     * long run's smelters were sent up out of the smeltery twenty-two times a day.)
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc13_indoors_not_lost")
+    public static void sc13_indoors_not_lost(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6644000, 2);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity f = r.miners().get(1);
+        f.setJob(StationTask.SMELT);
+        BlockPos spot = Kit.surface(level, r.heart().getX() + 60, r.heart().getZ());          // seventy-six from the shaft, off the mine's ground
+        com.jrpetty.mcassistant.village.Ledger.built(v, "smeltery", spot, net.minecraft.core.Direction.NORTH);
+        TownMine.redraw(v);
+        // A shut room of stone round it, roofed.
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) for (int dy = 0; dy <= 4; dy++) {
+            boolean wall = Math.abs(dx) == 3 || Math.abs(dz) == 3 || dy == 4;
+            level.setBlock(spot.offset(dx, dy, dz), wall ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
+        }
+        for (int dx = -6; dx <= 6; dx++) for (int dz = -6; dz <= 6; dz++) if (Math.abs(dx) > 3 || Math.abs(dz) > 3)
+            for (int dy = 0; dy <= 8; dy++) level.setBlock(spot.offset(dx, dy, dz), Blocks.STONE.defaultBlockState(), 2);
+        f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+        f.clearQueue();
+        boolean below = MineWorks.below(f);
+        for (int i = 0; i < 6; i++) com.jrpetty.mcassistant.entity.MineStairs.lookForAWayUp(f, level);
+        Job j = f.peekJob();
+        Kit.log("[VT] sc13 the smelter indoors: below in the works " + below + "; job after six looks " + (j == null ? "-" : j.type() + ":" + j.arg()));
+        helper.assertTrue(!below, "not below in the works");
+        helper.assertTrue(j == null || j.type() != Job.Type.MINE, "no way up sent for it: " + (j == null ? "-" : j.type() + ":" + j.arg()));
+        MineWorksGameTests.done(helper);
+    }
+
     /** A hungry town wants more farmers: its farms short of hands the morning its larder is low. */
     @GameTest(template = "empty", timeoutTicks = 200, batch = "sc04_hungry_farms")
     public static void sc04_hungry_farms(GameTestHelper helper) {
