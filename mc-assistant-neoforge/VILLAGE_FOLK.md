@@ -15432,5 +15432,5 @@ works' round, instead of only when a load will not go in (then the load went on 
 - Nor are diamonds put up at the town's auction while the age asks for them (six went under the hammer in a morning, four
   short of the twelve).
 - The age's own buildings find room: a town with no lot for a building its age asks for (the lighthouse, the chapel, the
-  gateway) on the rings it has laid out lays out the next ring after three looks, whatever its count of buildings (the
+  gateway) on its first three rings lays out a fourth after three looks, whatever its count of buildings (the
   forty-five a new ring waits on held a Diamond Age town of fifty with twenty-nine buildings and no lot for either).

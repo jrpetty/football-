@@ -97,7 +97,9 @@ public final class CityGrowth {
         if (have >= TownPlan.MAX_RINGS) return;
         int built = 0;
         for (String s : Villages.builtList(id)) if (!"colony".equals(s)) built++;
-        if (built < LEAST_BUILT && !forTheAge(level, id, project)) return;   // [econ32] the age's own building waits on no count
+        // [econ32] The age's own building waits on no count, for one ring past the first three (what stands in its way past
+        // that is not the room).
+        if (built < LEAST_BUILT && (have > TownPlan.RINGS || !forTheAge(level, id, project))) return;
         int misses = MISSES.merge(id, 1, Integer::sum);
         if (misses < FULL_AFTER) return;
         long now = level.getGameTime();
