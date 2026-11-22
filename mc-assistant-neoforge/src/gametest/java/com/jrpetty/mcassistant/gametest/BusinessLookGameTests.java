@@ -267,7 +267,7 @@ public class BusinessLookGameTests {
             BlockPos c = anchor.relative(front, depth).relative(right, s);
             int y = BuildGoal.groundTop(level, c.getX(), c.getZ());
             BlockPos g = new BlockPos(c.getX(), y - 1, c.getZ());
-            if (Math.abs(y - anchor.getY()) > 6) continue;
+            if (Math.abs(y - anchor.getY()) > 12) continue;                // (the street follows the hill, as the hill's own ground lies)
             level.setBlock(g, Blocks.DIRT_PATH.defaultBlockState(), 2 | 16);
             BlockState over = level.getBlockState(g.above());
             if (over.canBeReplaced()) level.setBlock(g.above(), Blocks.AIR.defaultBlockState(), 2 | 16);
@@ -413,6 +413,75 @@ public class BusinessLookGameTests {
         }
         Kit.log("[VT] bl05 " + r.line() + " " + r.examples.getOrDefault("fixture_as_block", List.of()));
         ok.that(r.count("fixture_as_block") == 0, "no workstation left for a block: " + r.examples.getOrDefault("fixture_as_block", List.of()));
+        if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
+    }
+
+    /**
+     * A town whose one-time mend has already run (its ledger says so), with a fountain that went up round the square's work
+     * table before its builders knew better (the table stamped into a block of its basin, as Ironmouth's was), and a house
+     * its builder now puts up over a crafting table and a loom left on its lot: the day's survey of the town's buildings
+     * finds the fountain's table as a fault and a hand puts the basin's block back (the table into the stores); the house's
+     * builder takes up the table and the loom as it lays its walls and floor. Neither has a workstation for a block after.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "bl06_tables_mended_after_the_mend")
+    public static void bl06_tables_mended_after_the_mend(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Restore.resetForTests();
+        int x0 = 6518000;
+        Kit.hold(level, x0 + 20, Z, 60);
+        Kit.prepare(level, x0 + 20, Z, 60);
+        BlockPos heart = Kit.surface(level, x0 - 220, Z);
+        Kit.hold(level, heart.getX(), heart.getZ(), 24);
+        Kit.prepare(level, heart.getX(), heart.getZ(), 24);
+        VillageFolkEntity hand = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(hand != null, "a village");
+        UUID id = hand.ownerId();
+        Villages.Village v = Villages.get(id);
+        Ledger.note(id, com.jrpetty.mcassistant.entity.BuildingMend.DONE, "mended long ago");
+        Kit.stockForGrowth(level, v);
+        int base = Kit.surface(level, x0, Z).getY();
+        // The fountain, stamped whole, and the work table set into a block of its basin after.
+        BlockPos lotF = new BlockPos(x0, 0, Z);
+        shape(level, Ground.FLAT, lotF, "fountain", base, 960);
+        BlockPos fa = new BlockPos(x0, base, Z);
+        BuildGoal.stamp(level, "fountain", fa, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        Ledger.built(id, "fountain", fa, Direction.NORTH);
+        BlockPos table = null;
+        for (BuildGoal.Placement p : BuildGoal.plan("fountain", fa, Direction.NORTH, 13)) {
+            if (p.part() == BuildGoal.Part.BLOCK && p.pos().getY() == fa.getY() && table == null) table = p.pos();
+        }
+        helper.assertTrue(table != null, "a block of the fountain's basin");
+        level.setBlock(table, Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
+        // The house, put up by its builder over a table and a loom on its lot.
+        BlockPos lotH = new BlockPos(x0 + 40, 0, Z);
+        shape(level, Ground.FLAT, lotH, "house", base, 961);
+        BlockPos ha = new BlockPos(x0 + 40, base, Z);
+        int put = 0;
+        for (BuildGoal.Placement p : BuildGoal.plan("house", ha, Direction.NORTH, 13)) {
+            if (put < 2 && p.part() == BuildGoal.Part.BLOCK && p.pos().getY() <= ha.getY() && (p.pos().getX() + p.pos().getZ()) % 4 == 0) {
+                level.setBlock(p.pos(), (put++ == 0 ? Blocks.CRAFTING_TABLE : Blocks.LOOM).defaultBlockState(), 3);
+            }
+        }
+        String words = BuildGoal.buildNowForTests(hand, "house", ha, Direction.NORTH, BuildWorldGameTests::stock);
+        Ledger.built(id, "house", ha, Direction.NORTH);
+        // The day's survey, and its hands at the list.
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+        int mended = 0;
+        try {
+            com.jrpetty.mcassistant.entity.Restore.surveyAll(level, v);
+            for (int i = 0; i < 40; i++) mended += com.jrpetty.mcassistant.entity.Restore.work(level, v, 64);
+        } finally {
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        }
+        BuildingAudit.Report r = new BuildingAudit.Report();
+        BuildingAudit.building(level, v, "fountain", "fountain", fa, Direction.NORTH, r);
+        BuildingAudit.building(level, v, "house", "house", ha, Direction.NORTH, r);
+        Kit.log("[VT] bl06 house: " + words + "; survey mended " + mended + "; table cell now " + level.getBlockState(table).getBlock() + "; " + r.line());
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(put == 2, "the house's lot had its table and loom (" + put + ")");
+        ok.that(!level.getBlockState(table).is(Blocks.CRAFTING_TABLE), "the fountain's table taken out by the survey's hands: " + level.getBlockState(table).getBlock());
+        ok.that(r.count("fixture_as_block") == 0, "no workstation for a block in either: " + r.examples.getOrDefault("fixture_as_block", List.of()));
         if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
     }
 

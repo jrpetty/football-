@@ -206,6 +206,9 @@ public final class Restore {
     /** Does what is there serve what the drawing wants: null if it does, else what is wrong. */
     @Nullable
     public static Kind judge(BlockState st, BuildGoal.Placement p) {
+        // [biz30] A workstation where a wall's, a floor's or a roof's block goes (a fountain raised round the square's work
+        // table): never a building block, however solid, so a fault for the hands to put right (BuildGoal.wrongInCell).
+        if (p.part() == BuildGoal.Part.BLOCK && !st.hasBlockEntity() && BuildingAudit.fixture(st)) return Kind.WRONG;
         if (serves(st, p)) return null;
         if (empty(st)) return Kind.MISSING;
         if (earthy(st)) return Kind.WRONG;                                  // earth where a wall, a floor or a footing goes

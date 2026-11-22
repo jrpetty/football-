@@ -175,6 +175,135 @@ public final class BizFronts {
         return false;
     }
 
+    // ------------------------------------------------------------------ its front: what it is, from the street
+
+    /** A trade's colour, for the cloth hung by its door. */
+    static net.minecraft.world.item.DyeColor colourOf(String structure) {
+        return switch (structure) {
+            case "bakery" -> net.minecraft.world.item.DyeColor.YELLOW;
+            case "tavern", "restaurant" -> net.minecraft.world.item.DyeColor.RED;
+            case "brewery" -> net.minecraft.world.item.DyeColor.PURPLE;
+            case "inn", "guesthouse" -> net.minecraft.world.item.DyeColor.BLUE;
+            case "cafe" -> net.minecraft.world.item.DyeColor.PINK;
+            case "shop", "store", "market" -> net.minecraft.world.item.DyeColor.GREEN;
+            case "smithy", "smeltery", "foundry", "wheelwright" -> net.minecraft.world.item.DyeColor.BLACK;
+            case "bank", "auction" -> net.minecraft.world.item.DyeColor.ORANGE;
+            case "postoffice", "maproom", "tradingpost", "harbour" -> net.minecraft.world.item.DyeColor.LIGHT_BLUE;
+            case "infirmary" -> net.minecraft.world.item.DyeColor.WHITE;
+            case "apiary" -> net.minecraft.world.item.DyeColor.ORANGE;
+            default -> net.minecraft.world.item.DyeColor.BROWN;
+        };
+    }
+
+    /** One piece set out by the door: the block (and what stands on it), and what the stores give for it. */
+    private record Piece(BlockState block, @Nullable BlockState top, java.util.function.Predicate<ItemStack> pays) {}
+
+    private static Piece piece(net.minecraft.world.level.block.Block b, @Nullable net.minecraft.world.level.block.Block top) {
+        net.minecraft.world.item.Item it = b.asItem();
+        return new Piece(b.defaultBlockState(), top == null ? null : top.defaultBlockState(), x -> x.is(it));
+    }
+
+    /** What a trade sets out by its door, the left side's and the right's. */
+    static java.util.List<Piece> piecesOf(String structure) {
+        return switch (structure) {
+            case "tavern", "brewery", "inn" -> java.util.List.of(piece(Blocks.BARREL, Blocks.LANTERN), piece(Blocks.BARREL, null), piece(Blocks.BARREL, Blocks.LANTERN));
+            case "bakery" -> java.util.List.of(piece(Blocks.BARREL, Blocks.CAKE), piece(Blocks.HAY_BLOCK, null), piece(Blocks.BARREL, Blocks.LANTERN));
+            case "shop", "store", "market" -> java.util.List.of(piece(Blocks.BARREL, Blocks.LANTERN), piece(Blocks.BARREL, null), piece(Blocks.COMPOSTER, null));
+            case "cafe", "restaurant" -> java.util.List.of(piece(Blocks.OAK_FENCE, Blocks.WHITE_CARPET), piece(Blocks.SPRUCE_STAIRS, null), piece(Blocks.OAK_FENCE, Blocks.LANTERN));
+            case "smithy", "smeltery", "foundry" -> java.util.List.of(piece(Blocks.ANVIL, null), piece(Blocks.GRINDSTONE, null), piece(Blocks.COBBLESTONE_WALL, Blocks.LANTERN));
+            default -> java.util.List.of(piece(Blocks.OAK_FENCE, Blocks.LANTERN), piece(Blocks.OAK_FENCE, Blocks.LANTERN));
+        };
+    }
+
+    /**
+     * [biz30] A business's front, so the street can tell a bakery from a tavern: a cloth in its trade's colour hung on its
+     * front wall by the door, and its trade's things set out against the wall either side of the way in (casks and a lamp at
+     * the tavern, a cake on a cask and a bale at the bakery, crates at the store, a table and a chair at the café, the anvil
+     * and the grindstone at the smithy; a pair of lamps on posts elsewhere). Never on the doorstep, the way in or the cell
+     * either side of it, never on a road or a path, never over open ground that is not level with the floor. Out of the
+     * stores (what they lack is left out) unless {@code free}. How many pieces went up.
+     */
+    public static int frontage(ServerLevel level, UUID village, Ledger.Building b, @Nullable Villages.Village v, boolean free) {
+        if (!BuildingAudit.BUSINESSES.contains(b.structure()) || !free && v == null) return 0;
+        int[] box = box(b);
+        if (box == null) return 0;
+        Direction front = b.facing().getOpposite();
+        BlockPos door = null;
+        Set<Long> planned = new HashSet<>();
+        for (BuildGoal.Placement p : BuildGoal.plan(b.structure(), b.anchor(), b.facing(), 13)) {
+            if (p.part() == BuildGoal.Part.CLEAR) continue;
+            planned.add(p.pos().asLong());
+            if (p.part() == BuildGoal.Part.DOOR && p.pos().getY() == box[4] && out(p.pos(), box) == front) door = p.pos();
+        }
+        if (door == null) {                                                  // an open front: its middle
+            int cx = (box[0] + box[1]) / 2, cz = (box[2] + box[3]) / 2;
+            int reach = front.getAxis() == Direction.Axis.X ? (box[1] - box[0]) / 2 : (box[3] - box[2]) / 2;
+            door = new BlockPos(cx, box[4], cz).relative(front, reach);
+        }
+        Direction side = front.getClockWise();
+        int done = 0;
+        // The cloth: on the front wall a step or two from the door, at the door's head.
+        net.minecraft.world.level.block.Block banner = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+            net.minecraft.resources.ResourceLocation.withDefaultNamespace(colourOf(b.structure()).getName() + "_wall_banner"));
+        boolean hung = false;
+        for (BlockPos q : BlockPos.betweenClosed(door.offset(-3, 1, -3), door.offset(3, 3, 3))) {
+            if (level.getBlockState(q).getBlock() instanceof net.minecraft.world.level.block.WallBannerBlock) { hung = true; break; }
+        }
+        if (!hung) {
+            outer:
+            for (int k : new int[]{ -2, 2, -3, 3 }) {
+                for (int up = 2; up >= 1; up--) {
+                    BlockPos wall = door.above(up).relative(side, k);
+                    BlockPos spot = wall.relative(front);
+                    if (!planned.contains(wall.asLong()) || !level.getBlockState(spot).isAir()
+                            || !level.getBlockState(wall).isFaceSturdy(level, wall, front)) continue;
+                    if (v != null && !TownBlocks.mayPlace(level, v, spot, TownBlocks.Why.SIGN)) continue;
+                    if (!free && !Crafts.take(level, v, x -> x.is(net.minecraft.tags.ItemTags.BANNERS) || x.is(net.minecraft.tags.ItemTags.WOOL), 1)) break outer;
+                    level.setBlock(spot, banner.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, front), 3);
+                    done++;
+                    break outer;
+                }
+            }
+        }
+        // Its things against the front wall, either side of the way in (two or more cells from the door's line).
+        java.util.List<Piece> pieces = piecesOf(b.structure());
+        int n = 0;
+        for (int k : new int[]{ -2, 2, -3, 3 }) {
+            if (n >= pieces.size()) break;
+            BlockPos at = door.relative(front).relative(side, k);
+            BlockPos ground = at.below();
+            if (planned.contains(at.asLong())) continue;
+            BlockState here = level.getBlockState(at);
+            boolean ours = !here.isAir() && pieces.stream().anyMatch(pc -> here.is(pc.block().getBlock()));
+            if (ours) { n++; continue; }                                     // set out already
+            if (!here.isAir() || !level.getBlockState(at.above()).isAir()) continue;
+            BlockState g = level.getBlockState(ground);
+            if (!g.isFaceSturdy(level, ground, Direction.UP) || SiteWork.townPaving(level, ground, g) || g.is(Blocks.FARMLAND)) continue;
+            if (!level.getBlockState(at.relative(front.getOpposite())).isSolid()) continue;   // against its wall, not out in the street
+            if (v != null && (!TownBlocks.mayPlace(level, v, at, TownBlocks.Why.DECOR) || TownBlocks.zone(level, v, at) == TownBlocks.Zone.ROAD
+                || TownBlocks.zone(level, v, at) == TownBlocks.Zone.APPROACH)) continue;
+            Piece pc = pieces.get(n);
+            if (!free && !Crafts.take(level, v, pc.pays(), 1)) { n++; continue; }
+            BlockState put = pc.block();
+            if (put.hasProperty(net.minecraft.world.level.block.StairBlock.FACING)) {
+                put = put.setValue(net.minecraft.world.level.block.StairBlock.FACING, k < 0 ? side : side.getOpposite());
+            } else if (put.hasProperty(net.minecraft.world.level.block.AnvilBlock.FACING)) {
+                put = put.setValue(net.minecraft.world.level.block.AnvilBlock.FACING, side);
+            } else if (put.hasProperty(net.minecraft.world.level.block.BarrelBlock.FACING)) {
+                put = put.setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP);
+            }
+            level.setBlock(at, put, 3);
+            BlockState joined = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(put, level, at);
+            if (joined != put) level.setBlock(at, joined, 2 | 16);
+            if (pc.top() != null && level.getBlockState(at.above()).isAir() && (free || Crafts.take(level, v, x -> x.is(pc.top().getBlock().asItem()), 1))) {
+                level.setBlock(at.above(), pc.top(), 3);
+            }
+            done++;
+            n++;
+        }
+        return done;
+    }
+
     // ------------------------------------------------------------------ its wares on show
 
     /** What each trade's building shows on its casks and counters, the first the stores hold first. */

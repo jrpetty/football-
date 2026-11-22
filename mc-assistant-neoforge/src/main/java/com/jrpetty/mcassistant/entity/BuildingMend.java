@@ -48,7 +48,7 @@ public final class BuildingMend {
 
     private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
 
-    public static final String DONE = "buildings.mended";
+    public static final String DONE = "buildings.mended2";   // (2: this round's mend, again for towns the first one saw)
     /** Buildings a round. */
     static final int PER_ROUND = 2;
 
@@ -82,7 +82,7 @@ public final class BuildingMend {
             if (!Land.areaLoaded(level, b.anchor(), 12)) return;             // come back to it when its ground is here
             job.cursor++;
             n++;
-            mend(level, v, b, job.fixed);
+            if (mayMend(v, b)) mend(level, v, b, job.fixed);
         }
         if (job.cursor >= job.todo.size()) {
             String line = "mended " + job.todo.size() + " buildings: " + job.fixed;
@@ -92,18 +92,35 @@ public final class BuildingMend {
         }
     }
 
+    /** A town's building just finished by its builder (BuildGoal): made good inside at once. What it did. */
+    public static Map<String, Integer> afterBuild(ServerLevel level, @Nullable UUID village, String structure, BlockPos anchor, Direction facing) {
+        Map<String, Integer> fixed = new java.util.TreeMap<>();
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (v == null || structure.equals("fortify")) return fixed;
+        Ledger.Building b = new Ledger.Building(structure, anchor, facing);
+        if (!mayMend(v, b, false)) return fixed;
+        mend(level, v, b, fixed);
+        if (!fixed.isEmpty()) LOG.info("[MCA-BUILD] [biz30] {}: the {} at {} made good as it was finished: {}", Villages.name(village), structure,
+            anchor.toShortString(), fixed);
+        return fixed;
+    }
+
     /** Tests: the whole mend now; what it did. */
     public static Map<String, Integer> nowForTests(ServerLevel level, Villages.Village v) {
         Map<String, Integer> fixed = new java.util.TreeMap<>();
-        for (Ledger.Building b : Ledger.buildings(v.id())) mend(level, v, b, fixed);
+        for (Ledger.Building b : Ledger.buildings(v.id())) if (mayMend(v, b)) mend(level, v, b, fixed);
         Ledger.note(v.id(), DONE, "mended for a test: " + fixed);
         return fixed;
     }
 
     /** May the mend touch this building at all. */
     static boolean mayMend(Villages.Village v, Ledger.Building b) {
+        return mayMend(v, b, true);
+    }
+
+    static boolean mayMend(Villages.Village v, Ledger.Building b, boolean notRaising) {
         UUID id = v.id();
-        if (Ledger.raising(id, b.anchor()) || b.structure().equals("fortify")) return false;
+        if (notRaising && Ledger.raising(id, b.anchor()) || b.structure().equals("fortify")) return false;
         if (HousingMarket.isPrivate(id, b.anchor()) || HomeMaking.householdsOwn(id, b.anchor())) return false;   // a folk's own house
         net.minecraft.nbt.CompoundTag prop = PropertyMarket.get(id, PropertyMarket.keyAt(b.anchor()));
         if (prop != null && "player".equals(prop.getString("ownerKind"))) return false;   // a player's own building: its owner's to see to
@@ -125,7 +142,7 @@ public final class BuildingMend {
 
     /** One building made good inside. Adds what it did to {@code fixed}. */
     static void mend(ServerLevel level, Villages.Village v, Ledger.Building b, Map<String, Integer> fixed) {
-        if (!mayMend(v, b)) return;
+        if (!mayMend(v, b, false)) return;
         String design = TownBlocks.designOf(v.id(), b);
         List<BuildGoal.Placement> plan = BuildGoal.plan(design, b.anchor(), b.facing(), 13);
         Map<Long, BuildGoal.Placement> mine = new HashMap<>();

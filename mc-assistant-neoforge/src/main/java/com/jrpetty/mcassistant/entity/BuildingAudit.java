@@ -442,7 +442,7 @@ public final class BuildingAudit {
                         q.add(m);
                         break;
                     }
-                    if (level.getBlockState(m).blocksMotion()) break;
+                    if (!passes(level.getBlockState(m))) break;
                 }
             }
         }
@@ -459,7 +459,13 @@ public final class BuildingAudit {
         BlockState below = level.getBlockState(c.below());
         boolean ground = below.isFaceSturdy(level, c.below(), Direction.UP) || below.is(Blocks.DIRT_PATH) || below.is(Blocks.FARMLAND)
             || below.getBlock() instanceof net.minecraft.world.level.block.SlabBlock || below.getBlock() instanceof net.minecraft.world.level.block.StairBlock;
-        return ground && !level.getBlockState(c).blocksMotion() && !level.getBlockState(c.above()).blocksMotion()
+        return ground && passes(level.getBlockState(c)) && passes(level.getBlockState(c.above()))
             && level.getBlockState(c).getFluidState().isEmpty();
+    }
+
+    /** Walked through: open, or a gate or a door anybody opens (a yard's gate is a way out, not a wall). */
+    private static boolean passes(BlockState st) {
+        return !st.blocksMotion() || st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock
+            || st.getBlock() instanceof DoorBlock;
     }
 }
