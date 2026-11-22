@@ -35,11 +35,24 @@ public final class FolkPlates {
         return camera.distanceToSqr(folk) < (double) range * range;
     }
 
+    /** Each folk's tidied tag, kept while the server's tag is the same one (it is sent anew only when it changes). */
+    private static final java.util.Map<Integer, Component[]> TIDIED = new java.util.HashMap<>();
+
+    private static Component tidied(VillageFolkEntity folk, Component tag) {
+        Component src = folk.getCustomName();
+        Component[] kept = TIDIED.get(folk.getId());
+        if (kept != null && kept[0] == src && src != null) return kept[1];
+        Component out = PlateText.tidy(tag);
+        if (TIDIED.size() > 2048) TIDIED.clear();
+        TIDIED.put(folk.getId(), new Component[] {src, out});
+        return out;
+    }
+
     /** The tag drawn: the game's way, faded with the distance. */
     public static void draw(VillageFolkEntity folk, Component tag, PoseStack pose, MultiBufferSource buffer, int light, float partial,
                             Font font, EntityRenderDispatcher camera) {
         AnimConfig.Plates p = AnimConfig.plates();
-        Component text = p == AnimConfig.Plates.FULL ? tag : PlateText.tidy(tag);
+        Component text = p == AnimConfig.Plates.FULL ? tag : tidied(folk, tag);
         double d = Math.sqrt(camera.distanceToSqr(folk));
         float range = p == AnimConfig.Plates.LOOK ? 64.0F : AnimConfig.plateRange();
         float fade = Mth.clamp((float) ((range - d) / (range / 3.0)), 0.0F, 1.0F);

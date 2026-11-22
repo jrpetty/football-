@@ -82,7 +82,9 @@ public final class CameraClient {
                 CinemaCam.radius = 13.0F;
                 CinemaCam.height = 6.0F;
                 CinemaCam.speed = 6.0F;
-                CinemaCam.orbit(new Vec3(t.getDouble("x"), t.getDouble("y"), t.getDouble("z")), t.getInt("focus"), t.getString("label"));
+                // Kept on the spot where it is going on (a customer walks off, the sale stays), but on the ball at a match.
+                int focus = "match".equals(t.getString("what")) ? t.getInt("focus") : -1;
+                CinemaCam.orbit(new Vec3(t.getDouble("x"), t.getDouble("y"), t.getDouble("z")), focus, t.getString("label"));
             }
             case "timelapse" -> {
                 if (!t.getBoolean("ok")) {
