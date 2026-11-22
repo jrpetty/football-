@@ -190,6 +190,12 @@ public final class SquareDress {
         }
         int laid = BuildGoal.stamp(level, "fortify", new BlockPos(heart.getX(), lv + 1, heart.getZ()), Direction.NORTH, TownPlan.PLAZA, SquareDress::paint);
         laid += terrace(level, heart, lv);
+        // A wall still going up is up now: its builders' plan (laid to the broken ground) put away, the wall the town's built.
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            Job j = a.peekJob();
+            if (j != null && j.type() == Job.Type.BUILD && j.arg() != null && j.arg().startsWith("fortify")) a.clearQueue();
+        }
+        if (!Villages.hasBuilt(v.id(), "fortify") && Villages.sitesOf(v.id()).containsKey("fortify")) Villages.noteProject(v.id(), "fortify", level.getGameTime());
         return laid;
     }
 
