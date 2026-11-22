@@ -230,6 +230,9 @@ public final class Auctions {
     static int keep(ServerLevel level, UUID village, ItemStack s) {
         int keep = 0;
         if (s.is(Items.DIAMOND)) keep = Budget.keep(level, village, s);
+        // [econ32] Every diamond while the age asks for diamonds: a local run's Diamond Age town, four short of the twelve its
+        // age asked, put six under the hammer in a morning.
+        if (s.is(Items.DIAMOND) && DeepPicks.wanted(level, village)) keep = Integer.MAX_VALUE / 4;
         else if (s.is(Items.SADDLE)) keep = 2;
         else if (s.is(Items.GOLDEN_APPLE) || s.is(Items.NAME_TAG)) keep = 1;
         Museum.Kind k = Museum.Kind.inStores(s);

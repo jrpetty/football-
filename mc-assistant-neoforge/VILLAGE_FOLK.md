@@ -15429,3 +15429,5 @@ works' round, instead of only when a load will not go in (then the load went on 
 - The status's "Short of" says how far short of each thing the age asks for.
 - The watch's diamond kit waits while the age asks for diamonds (a local run's Diamond Age town had seven of the eleven its
   age asked for, and the watch's sword and chestplate took ten in a day).
+- Nor are diamonds put up at the town's auction while the age asks for them (six went under the hammer in a morning, four
+  short of the twelve).
