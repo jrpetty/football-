@@ -347,6 +347,7 @@ public class GuideScreen extends Screen {
     }
 
     private static final Map<String, ItemStack> ITEMS = new HashMap<>();
+    private static final ItemStack BOOK = new ItemStack(Items.WRITTEN_BOOK);
 
     /** An item by its id ("mc_assistant:shop_counter"), empty if it is not one. */
     static ItemStack item(String id) {
@@ -600,7 +601,7 @@ public class GuideScreen extends Screen {
         UiStyle.shadow(g, left, top, w, h);
         UiStyle.panel(g, left, top, w, h);
         UiStyle.headerBand(g, left, top, w, HEAD);
-        g.renderItem(new ItemStack(Items.WRITTEN_BOOK), left + PAD, top + 5);
+        g.renderItem(BOOK, left + PAD, top + 5);
         UiStyle.title(g, font, "Guide", left + PAD + 20, top + 6);
         int tx = left + PAD + 20 + UiStyle.titleWidth(font, "Guide") + 8;
         int right = left + w - PAD;
