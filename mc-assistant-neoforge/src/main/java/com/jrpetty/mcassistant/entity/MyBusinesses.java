@@ -48,6 +48,11 @@ public final class MyBusinesses implements PlayerLife.Page {
         LifePage page = new LifePage("firm", "Your businesses", v == null ? "No town near" : "In " + Villages.name(v.id()), p.registryAccess());
         if (v == null) return page;
         Business b = chosen(p, v, c);
+        for (Business x : Enterprise.all(v.id())) {                         // [biz30] a shut firm's coin still owed to you
+            long due = x.open ? 0 : x.ownersDue.getOrDefault(p.getUUID(), 0L);
+            if (due >= 100) page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get()), x.name + " (closed)",
+                Businesses.pence(due) + " of it is yours", "").button("Take it", "drawclosed", LifePage.args("firm", x.id));
+        }
         if (b == null) {
             page.text("You hold no business in " + Villages.name(v.id()) + " yet.", 4);
             page.buttons().button("Start a business", "start", null).primary();
@@ -163,6 +168,10 @@ public final class MyBusinesses implements PlayerLife.Page {
         if (action.equals("start")) { PlayerLife.open(p, "start", null); return "#open:"; }
         if (action.startsWith("tab:")) { c.tab = action.substring(4); return ""; }
         if (action.equals("pick")) { c.args.putString("firm", args.getString("firm")); return ""; }
+        if (action.equals("drawclosed")) {                                  // [biz30]
+            Business x = Businesses.of(v.id(), args.getString("firm"));
+            return x == null ? "!No such business." : Businesses.takeDrawings(v.id(), x, p);
+        }
         Business b = chosen(p, v, c);
         if (b == null) return "!You hold no business here.";
         CompoundTag f = args.getCompound("f");
@@ -201,7 +210,9 @@ public final class MyBusinesses implements PlayerLife.Page {
                 Enterprise.windUp(level, v.id(), b, Businesses.today(level), "wound up by its owner");
                 PlayerShops.Shop s = PlayerShops.of(v.id(), p.getUUID());
                 if (s != null && b.id.equals(s.firm)) { s.firm = null; PlayerShops.save(s); }
-                return b.name + " is wound up.";
+                // [biz30] What was left to its owner paid out now: once shut it is off this page, and its coin was never had.
+                String paid = b.ownersDue.getOrDefault(p.getUUID(), 0L) >= 100 ? " " + Businesses.takeDrawings(v.id(), b, p) : "";
+                return b.name + " is wound up." + paid;
             }
             default -> { return null; }
         }

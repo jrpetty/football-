@@ -5543,6 +5543,12 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** The building a trade works in, once the village has it: the smelter in the smeltery,
      *  the blacksmith in the smithy, the cook in the café... */
+    /** [biz30] Tests: the building a trade works in. */
+    @Nullable
+    public static String buildingForTests(StationTask trade) {
+        return buildingFor(trade);
+    }
+
     @Nullable
     static String buildingFor(StationTask trade) {
         return switch (trade) {

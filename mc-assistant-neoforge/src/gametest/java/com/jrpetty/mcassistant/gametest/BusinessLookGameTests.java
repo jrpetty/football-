@@ -361,7 +361,7 @@ public class BusinessLookGameTests {
     }
 
     /** What a town's stores hold for its firms to make their wares of. */
-    static final net.minecraft.world.item.Item[] MAKINGS = { Items.COBBLESTONE, Items.OAK_PLANKS, Items.STICK, Items.IRON_INGOT, Items.LEATHER,
+    static final net.minecraft.world.item.Item[] MAKINGS = { Items.COBBLESTONE, Items.COBBLESTONE, Items.COBBLESTONE, Items.COBBLESTONE, Items.COBBLESTONE, Items.OAK_PLANKS, Items.OAK_PLANKS, Items.OAK_PLANKS, Items.OAK_PLANKS, Items.STICK, Items.IRON_INGOT, Items.LEATHER,
         Items.WHITE_WOOL, Items.STRING, Items.HONEYCOMB, Items.CLAY_BALL, Items.CLAY, Items.SAND, Items.GLASS, Items.WHEAT, Items.SUGAR, Items.EGG,
         Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.MUTTON, Items.COD, Items.SALMON, Items.POTATO, Items.BROWN_MUSHROOM, Items.RED_MUSHROOM,
         Items.BEETROOT, Items.COCOA_BEANS, Items.PAPER, Items.SUGAR_CANE, Items.FEATHER, Items.INK_SAC, Items.GLASS_BOTTLE, Items.NETHER_WART,
@@ -402,6 +402,7 @@ public class BusinessLookGameTests {
             helper.assertTrue(f != null, "folk " + i + " raised");
             f.ensurePersona();
             f.setJob(i < 2 ? t.work() : com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM);
+            if (i < 2) Kit.log("[VT] " + kind + " set to " + t.work() + ": " + f.stationTask());
             f.spend(f.purse());
             f.earn(80);
             folk.add(f);
@@ -423,6 +424,13 @@ public class BusinessLookGameTests {
         net.minecraft.world.Container box2 = (net.minecraft.world.Container) level.getBlockEntity(chest2);
         for (int i = 27; i < MAKINGS.length && i - 27 < box2.getContainerSize(); i++) box2.setItem(i - 27, new ItemStack(MAKINGS[i], MAKINGS[i].getDefaultMaxStackSize()));
         box2.setChanged();
+        // The trade's own building, as the town has one by the time a business of it opens: its bench, its furnace, its anvil.
+        String works = VillageFolkEntity.buildingForTests(t.work());
+        if (works != null && Blueprints.has(works)) {
+            BlockPos wa = new BlockPos(x - 14, y, Z + 14);
+            BuildGoal.stamp(level, works, wa, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            Ledger.built(id, works, wa, Direction.NORTH);
+        }
         Villages.forgetStores(id);
         @SuppressWarnings("removal")
         net.minecraft.server.level.ServerPlayer p = helper.makeMockServerPlayerInLevel();
@@ -470,11 +478,14 @@ public class BusinessLookGameTests {
                     com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "order", argsOf("k", ware, "f", argsOf("qty", "16")));
                     said.add("order: " + msg(p));
                 } else {
-                    for (int i = 0; i < 6; i++) {
-                        String made = hands.isEmpty() ? null : com.jrpetty.mcassistant.entity.Enterprise.make(level, v, hands.get(0), b);
-                        said.add("make: " + made);
-                        if (made == null) break;
+                    // Its hand at its bench, a turn at a time, as its work loop takes them (Crafts.now).
+                    for (int i = 0; i < 8 && !hands.isEmpty(); i++) {
+                        com.jrpetty.mcassistant.entity.Crafts.now(hands.get(0), level, v);
+                        long have = 0;
+                        for (com.jrpetty.mcassistant.entity.Business.Lot l : b.stock.values()) have += l.qty;
+                        if (have > 0) break;
                     }
+                    said.add("made: " + b.stock.keySet());
                 }
                 for (com.jrpetty.mcassistant.entity.Business.Lot l : b.stock.values()) stocked += l.qty;
             }
@@ -506,6 +517,8 @@ public class BusinessLookGameTests {
             try {
                 com.jrpetty.mcassistant.entity.BusinessBooks.show(p, id, b);
                 booksPage = "shown";
+            } catch (UnsupportedOperationException e) {
+                booksPage = e.getMessage() != null && e.getMessage().contains("may not be sent") ? "shown" : "threw " + e;   // (the test's player has no client)
             } catch (RuntimeException e) {
                 booksPage = "threw " + e;
             }
@@ -529,10 +542,8 @@ public class BusinessLookGameTests {
             com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "windup", argsOf("sure", false));
             com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "windup", argsOf("sure", true));
             said.add("windup: " + msg(p));
-            com.jrpetty.mcassistant.entity.PlayerLife.act(p, "firm", "draw", new net.minecraft.nbt.CompoundTag());
-            said.add("draw: " + msg(p));
             int coins1 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
-            ok.that(!b.open, "8a. wound up: " + msg(p));
+            ok.that(!b.open && msg(p).contains("wound up"), "8a. wound up: " + msg(p));
             ok.that(coins1 > coins0, "8b. what was left in its till to its owner: " + coins0 + " -> " + coins1);
             Kit.log("[VT] " + kind + " " + String.join(" | ", said));
             Kit.log("[VT] " + kind + " books: revenue " + b.allTime.revenue + " cogs " + b.allTime.cogs + " wages " + b.allTime.wages + " rent " + b.allTime.rent
