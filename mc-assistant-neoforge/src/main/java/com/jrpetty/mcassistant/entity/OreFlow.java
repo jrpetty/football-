@@ -22,7 +22,7 @@ public final class OreFlow {
 
     private OreFlow() {}
 
-    public enum Metal { IRON, DIAMOND }
+    public enum Metal { IRON, DIAMOND, COAL }   // [growth24] coal and charcoal too: the smelters' fuel
 
     /** One day's tally: per metal, per who, in (positive) and out (negative). */
     private static final class Day {
@@ -38,11 +38,12 @@ public final class OreFlow {
         if (s.is(Items.IRON_INGOT) || s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE)
             || s.is(Items.IRON_BLOCK) || s.is(Items.RAW_IRON_BLOCK)) return Metal.IRON;
         if (s.is(Items.DIAMOND) || s.is(Items.DIAMOND_ORE) || s.is(Items.DEEPSLATE_DIAMOND_ORE) || s.is(Items.DIAMOND_BLOCK)) return Metal.DIAMOND;
+        if (s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.COAL_ORE) || s.is(Items.DEEPSLATE_COAL_ORE) || s.is(Items.COAL_BLOCK)) return Metal.COAL;   // [growth24]
         return null;
     }
 
     static int units(ItemStack s, int n) {
-        return s.is(Items.IRON_BLOCK) || s.is(Items.RAW_IRON_BLOCK) || s.is(Items.DIAMOND_BLOCK) ? 9 * n : n;
+        return s.is(Items.IRON_BLOCK) || s.is(Items.RAW_IRON_BLOCK) || s.is(Items.DIAMOND_BLOCK) || s.is(Items.COAL_BLOCK) ? 9 * n : n;
     }
 
     private static Day today(UUID village, long day) {

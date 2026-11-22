@@ -260,7 +260,7 @@ public final class TradeTalks {
         // a smaller one, a lot at a time, till what it can pay covers what the seller must have: a poor hamlet still
         // gets its forty loaves, where it could never find the coin for eighty.
         int lot = Math.max(1, xw == null ? 1 : xw.lot);
-        while (t.qx() > lot && t.sellerFloor(margin(t.qx() * t.sx())) > t.canPay() - 0.25) {
+        while (t.qx() > lot && t.sellerFloor(margin(t.qx() * t.sx())) + haul(t) > t.canPay() - 0.25) {   // [growth24] the haul counted, as the bargain counts it
             t = new Table(t.seller(), t.buyer(), x, t.qx() - lot, y, yMax, sx, bx, sy, by, coinCap);
         }
         return t;
