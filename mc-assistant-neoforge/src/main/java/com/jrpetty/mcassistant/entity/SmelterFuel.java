@@ -60,7 +60,7 @@ public final class SmelterFuel {
 
     static final Predicate<ItemStack> COAL = s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
     static final Predicate<ItemStack> LOGS = s -> s.is(ItemTags.LOGS);
-    static final Predicate<ItemStack> IRON_ORE = s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE);
+    public static final Predicate<ItemStack> IRON_ORE = s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE);
 
     /** Does this smelter hold ore to run and nothing it may burn on its furnaces just now? */
     public static boolean cold(VillageFolkEntity f) {
