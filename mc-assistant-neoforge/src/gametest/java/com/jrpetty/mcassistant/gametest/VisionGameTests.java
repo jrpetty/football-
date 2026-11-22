@@ -144,7 +144,8 @@ public class VisionGameTests {
                 helper.assertTrue(t != null && !t.getBoolean("ok") && t.getString("msg").contains("operator"), "the wire refuses too: " + t);
                 CompoundTag info = CameraNetwork.answer(p, new CameraAskPayload("info", 0, 0));
                 helper.assertTrue(info != null && !info.getBoolean("mayLapse"), "the screen told it may not");
-                server.getPlayerList().op(p.getGameProfile());
+                // An operator of the top level (the test server's own "op" gives level 0).
+                server.getPlayerList().getOps().add(new net.minecraft.server.players.ServerOpListEntry(p.getGameProfile(), 4, false));
                 helper.assertTrue(TimeSpeed.mayChange(p), "an operator may");
                 // Started and stopped in the one tick: the other tests share this server's clock.
                 helper.assertTrue(TimeLapse.start(p, 16, 20) == null, "started for an operator");
@@ -164,7 +165,7 @@ public class VisionGameTests {
                 Kit.log("[VT] vi03 refused, then 16x, held to " + TimeLapse.MOST_FACTOR + "x, pace back to " + pace);
             } finally {
                 if (TimeLapse.running()) TimeLapse.stop(server);
-                server.getPlayerList().deop(p.getGameProfile());
+                server.getPlayerList().getOps().remove(p.getGameProfile());
                 p.discard();
             }
             helper.succeed();
