@@ -689,7 +689,7 @@ public class SupplyChainGameTests {
         MineWorksGameTests.bed(r, y1, 30, Blocks.STONE, 0, 3232L);              // room for its drifts: bare rock
         MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - y1) / 3) + 1, m);
         MineWorks.roomForTests(level, v, MineWorks.IRON);
-        // A first look (the works' week begun), then a while's work: a few hundred blocks of drift, no ore.
+        // A first look, then a while's work: a few hundred blocks of drift, no ore.
         com.jrpetty.mcassistant.entity.MineWorks.Task first = MineWorks.next(level, m);
         if (first != null) MineWorks.release(v, first, m.getUUID());
         MineLevels.cutForTests(level, v, MineWorks.IRON, 300);

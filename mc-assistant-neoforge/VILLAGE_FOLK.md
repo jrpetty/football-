@@ -15415,3 +15415,15 @@ old mines the town has left and whether it wants a new one.
 ### Room in the stores in good time (StoreRoom)
 Stores with under a tenth of their places free (or under a chest's worth) get another chest set down at once, at the town's
 works' round, instead of only when a load will not go in (then the load went on the ground at the heart, or home again).
+
+### The iron kept for the age, and a level gone barren
+- While the age puts its iron by, the forge makes no iron pick at all (the pick's mark, three dozen bars, lay under the age's
+  own ask of sixty-four and more: the local run's Iron Age town climbed to forty-nine bars, its smith made nine iron picks in
+  a day, and the stores fell back to thirteen, day after day), and an iron sword only for the watch. Stone picks cut iron ore.
+- The cave team's and the Nether runners' armour counts with the watch's toward what the age asks for, as it is forged out of
+  the same iron for them.
+- A level with four hundred blocks of drift cut since the last ore came out of it (the deep level eight hundred) is worked out:
+  the next level of its ore is opened. The local run's iron level had 2,775 blocks of tunnel and gave no ore for days with
+  eight miners on it, while the second iron level waited for every drift to reach the edge of the ground.
+- A shift in the works runs to thirty pieces of work, not ten, before the long walk up the stair.
+- The status's "Short of" says how far short of each thing the age asks for.
