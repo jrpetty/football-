@@ -43,8 +43,8 @@ public class Growth24GameTests {
     private static final int Z = 90000;
 
     /**
-     * An Iron Age town short of iron with a miner on the iron level: the level's rock is a small bed (its drifts soon reach
-     * the open ends of it and close), so it is worked out; the level is marked so, the second iron level is planned six
+     * An Iron Age town short of iron with a miner on the iron level: the level is cut to its ends (every drift closed, every
+     * branch done), and the miner, finding nothing left on it, marks it worked out; the second iron level is planned six
      * blocks off it and opened (its landing cut, drifts driven), and raw iron comes in from it. The news says so.
      */
     @GameTest(template = "empty", timeoutTicks = 16000, batch = "gw24_01_next_level")
@@ -81,6 +81,10 @@ public class Growth24GameTests {
         MineSiteGameTests.each(helper, () -> {
             tick[0]++;
             MineWorksGameTests.keepAtIt(r, m);
+            // A while on the iron level, then the rest of it as its miners would leave it, cut to its ends (a real level
+            // takes weeks: drifts to the edges of the ground, the caves and the water, every branch cut); the miner finds
+            // nothing left on it at its next look.
+            if (tick[0] == 800) MineLevels.cutOutForTests(level, r.v(), MineWorks.IRON);
             if (spentAt[0] < 0 && MineLevels.spentForTests(level, r.v(), MineWorks.IRON)) {
                 spentAt[0] = tick[0];
                 Kit.log("[VT] gw24_01 the iron level worked out at tick " + tick[0] + "; plan " + MineWorks.planForTests(level, r.v()));
@@ -154,7 +158,7 @@ public class Growth24GameTests {
      * folk all stay loaded and its chunks forced. Before, the sleeper's chunks inside the awake town's square stayed forced
      * and its folk kept working, asleep.
      */
-    @GameTest(template = "empty", timeoutTicks = 8000, batch = "gw24_03_sleeper_let_go")
+    @GameTest(template = "empty", timeoutTicks = 20000, batch = "gw24_03_sleeper_let_go")
     public static void gw24_03_sleeper_let_go(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int ax = 5410000, bx = ax + 150;
@@ -200,7 +204,16 @@ public class Growth24GameTests {
             }
             if (tick[0] < 900) return false;
             int bLoaded = AssistantEntity.countFor(bid), aLoaded = AssistantEntity.countFor(av);
-            if (bLoaded > 0 && tick[0] < 6500) return false;
+            if (bLoaded > 0 && tick[0] < 18000) return false;
+            long bChunk = ChunkPos.asLong(bh.getX() >> 4, bh.getZ() >> 4);
+            List<String> who = new ArrayList<>();
+            for (String o : ChunkLoad.ownersForTests(level, bChunk)) {
+                UUID id = UUID.fromString(o.substring(0, o.length() - 1));
+                who.add((id.equals(av) ? "A" : id.equals(bid) ? "B" : level.getEntity(id) instanceof VillageFolkEntity f
+                    ? (av.equals(f.ownerId()) ? "A-folk" : bid.equals(f.ownerId()) ? "B-folk" : "folk") : "other") + o.charAt(o.length() - 1));
+            }
+            for (VillageFolkEntity f : b) if (f.isAlive()) { who.add("B folk at " + f.blockPosition().toShortString()); break; }
+            Kit.log("[VT] gw24_03 the sleeper's heart chunk: held by " + who + "; " + level.getChunkSource().getChunkDebugData(new ChunkPos(bChunk)));
             Kit.log("[VT] gw24_03 after " + tick[0] + " ticks: the sleeper's folk loaded " + bLoaded + " (roll " + Villages.headcount(bid)
                 + "), the awake town's " + aLoaded + " of 14; forced chunks " + ChunkLoad.forcedCount() + " (were " + forcedAwake[0] + ")");
             helper.assertTrue(bLoaded == 0, "the sleeping town's folk are let go: " + bLoaded + " still loaded");

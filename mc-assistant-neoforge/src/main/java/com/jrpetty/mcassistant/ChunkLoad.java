@@ -116,6 +116,14 @@ public final class ChunkLoad {
     }
 
     /** How many chunks the mod holds forced right now (for the perf probes and the status line). */
+    /** [growth24] Tests: who holds (forced) or asks for (waiting) this chunk in this level: "owner+" forced, "owner?" waiting. */
+    public static List<String> ownersForTests(ServerLevel level, long chunk) {
+        List<String> out = new ArrayList<>();
+        for (Key k : FORCED) if (k.chunk() == chunk && k.dimension().equals(level.dimension())) out.add(k.owner() + "+");
+        for (Key k : WANTED.keySet()) if (k.chunk() == chunk && k.dimension().equals(level.dimension())) out.add(k.owner() + "?");
+        return out;
+    }
+
     public static int forcedCount() {
         return FORCED.size();
     }

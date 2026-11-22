@@ -171,6 +171,42 @@ public final class MineLevels {
         return out;
     }
 
+    /**
+     * Tests: this level cut to its ends, as its miners would leave it worked out: a drift (closed at the edge) from every
+     * wall of its landing nobody has started from, every drift on it closed, every branch off them done. Its landing is cut.
+     */
+    public static void cutOutForTests(ServerLevel level, java.util.UUID village, int id) {
+        MineWorks.Works w = MineWorks.works(level, village);
+        MineWorks.Lvl l = w == null ? null : MineWorks.lvl(MineWorks.plan(level, w), id);
+        if (l == null) return;
+        net.minecraft.core.BlockPos r = MineWorks.roomMiddle(w, l);
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            int ox = r.getX() + 2 * d.getStepX(), oz = r.getZ() + 2 * d.getStepZ();
+            boolean taken = false;
+            for (MineWorks.Drift o : w.drifts) if (o.level == id && o.ox == ox && o.oz == oz) taken = true;
+            if (taken) continue;
+            MineWorks.Drift n = new MineWorks.Drift();
+            n.id = w.nextId++;
+            n.level = id;
+            n.ox = ox;
+            n.oz = oz;
+            n.heading = d.get2DDataValue();
+            w.drifts.add(n);
+        }
+        for (MineWorks.Drift d : w.drifts) {
+            if (d.level != id) continue;
+            if (d.closed == '-') d.closed = 'e';
+            for (int a = MineWorks.BRANCH_EVERY; a < d.path.length() - 1; a += MineWorks.BRANCH_EVERY) {
+                if (!MineWorks.anchor(d, a)) continue;
+                for (int side : new int[]{ 1, -1 }) {
+                    int[] b = d.branch(a, side);
+                    if (b == null) d.branches.add(new int[]{ a, side, 0, 1 }); else b[3] = 1;
+                }
+            }
+        }
+        MineWorks.save(w);
+    }
+
     /** Tests: is this level marked worked out? */
     public static boolean spentForTests(ServerLevel level, java.util.UUID village, int id) {
         MineWorks.Works w = MineWorks.works(level, village);
