@@ -15064,7 +15064,11 @@ far above the heart it stands, and such a street is paved and lit.
 - The ghost outline of a town being chosen rode over the canopy of a wood (the client keeps only the heightmap that counts
   leaves); it follows the ground under the trees now.
 - The waiting board: every cell of a spawner's board, clicked the way the game hands a click on (bare-handed, with food,
-  with a block), opens the founding screen (tested; and seen in the real client).
+  with a block), opens the founding screen (tested), and in the real client a right-click on it opens "Found a village
+  ... at the board". (The earlier attempt to photograph it moved the pointer before clicking, which in the game turns the
+  player's head: the click landed on the ground.)
+- Folk do not fill a street up to a terrace wall's coping, nor cut a step into a terrace (StuckSpots: a drop built on
+  purpose), and the ground audit passes over a building's ground the new town began while its levelling went on.
 
 ### Tests
 CityGrowGameTests cg01-cg04 (x 5,800,000 to 5,900,000, z 90,000): cg01 a town of forty-five buildings with its three rings
