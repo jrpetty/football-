@@ -154,6 +154,8 @@ public class WorksGoal extends Goal {
         if (shiftTicks % 20 == 0) STATE.put(a.getUUID(), phase + " " + (task == null ? "-" : task.kind + " cell " + ci + "/" + task.cells.size())
             + " blocks " + blocks.size() + " vein " + vein.size() + " walking " + (walking == null ? "-" : walking.toShortString())
             + " digging " + (digging == null ? "-" : digging.toShortString()) + " route " + ri + "/" + route.size());
+        if (shiftTicks % 1200 == 0) com.jrpetty.mcassistant.entity.MineWhy.note(a, "on a shift: " + STATE.get(a.getUUID())
+            + " stuck " + stuck + " out " + outTicks + " tasks " + tasks + " broke " + broke);   // [econ32b] minewhy only
         switch (phase) {
             case NEXT -> next(level);
             case WALK -> {
