@@ -45,6 +45,21 @@ public final class TerraceWalls {
             || s.is(Blocks.DEEPSLATE_BRICKS);
     }
 
+    /** Is a terrace's wall block under or beside either of these spots (the folk's floor and the way ahead), a few up or down? */
+    public static boolean near(net.minecraft.world.level.Level level, BlockPos here, BlockPos ahead) {
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (BlockPos c : new BlockPos[]{ here, ahead }) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    for (int dy = -4; dy <= 2; dy++) {
+                        if (isWall(level.getBlockState(m.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz)))) return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     /** Does this column of the plan want a wall (it stands two or more over a terraced neighbour)? */
     public static boolean wanted(FoundingPlan.Ground g, int i) {
         return Terraces.wallFoot(g, i) != Terraces.NONE;

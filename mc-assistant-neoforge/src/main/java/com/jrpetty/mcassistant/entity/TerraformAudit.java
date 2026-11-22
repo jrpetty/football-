@@ -122,6 +122,7 @@ public final class TerraformAudit {
             int x = hx + g.dx(i), z = hz + g.dz(i), y = top[i];
             BlockState over = level.getBlockState(m.set(x, y + 1, z));
             if (!over.isAir() && !Terraform.natural(over)) continue;   // the town's own work on it since (a field, a path)
+            if (townWork(level, m.set(x, y + 1, z))) continue;          // [city26] a building's ground or the way in to it, begun since
             if (sq[i]) {
                 c.merge("square", 1, Integer::sum);
                 if (y != g.target[i]) {                                          // [city26] its terrace's height (the heart's, unterraced)
@@ -234,6 +235,19 @@ public final class TerraformAudit {
         AABB box = new AABB(x0 + 7, y0, z0 + 7, x0 + w - 7, y0 + hgt + 8, z0 + w - 7);
         c.put("items", level.getEntitiesOfClass(ItemEntity.class, box, e -> e.isAlive()).size());
         return c;
+    }
+
+    /**
+     * [city26] Is this the ground of a building the new town has begun since (its footing, its eaves, a door and the way in
+     * to it)? A founding of forty takes minutes to finish its edge, and the town builds meanwhile: its builders ease the
+     * ground at a door, and that is the town's work, not the levelling's.
+     */
+    private static boolean townWork(ServerLevel level, BlockPos p) {
+        Villages.Village v = TownBlocks.townAt(level, p);
+        if (v == null) return false;
+        TownBlocks.Zone z = TownBlocks.zone(level, v, p);
+        return z == TownBlocks.Zone.BUILDING || z == TownBlocks.Zone.EAVES || z == TownBlocks.Zone.DOORWAY
+            || z == TownBlocks.Zone.APPROACH || z == TownBlocks.Zone.STAIRS;
     }
 
     /** [city26] Is this column faced with a terrace's wall from its top down to over the lower top beside it? */

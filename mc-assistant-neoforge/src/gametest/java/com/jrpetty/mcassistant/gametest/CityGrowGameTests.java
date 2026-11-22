@@ -207,6 +207,7 @@ public class CityGrowGameTests {
         Kit.prepare(level, cx, cz, half + 16);
         hillside(level, cx, cz, half);
         BlockPos heart = Kit.surface(level, cx, cz);
+        com.jrpetty.mcassistant.entity.TownBlocks.traceForTests(true);
         Founding.Outcome o = Founding.foundNow(level, heart, folk, 0F, null);
         Kit.log("[VT] cg02 founding at " + heart.toShortString() + ": " + o.message());
         final long[] start = { -1 };
@@ -221,6 +222,14 @@ public class CityGrowGameTests {
             TerraformAudit.Done d = TerraformAudit.near(heart, 40);
             if (d == null) { helper.fail("the founding finished with no plan kept"); return; }
             Map<String, Integer> c = TerraformAudit.scan(level, d);
+            if (TerraformAudit.FIRST.containsKey("offLevel")) {
+                String[] q = TerraformAudit.FIRST.get("offLevel").split("[, ]");
+                BlockPos at = new BlockPos(Integer.parseInt(q[0]), Integer.parseInt(q[1]), Integer.parseInt(q[2]));
+                StringBuilder tr = new StringBuilder();
+                for (int dy = -2; dy <= 2; dy++) tr.append(" ").append(dy).append(":").append(com.jrpetty.mcassistant.entity.TownBlocks.setBy(at.above(dy)));
+                Kit.log("[VT] cg02 who touched the first off-level column:" + tr);
+            }
+            com.jrpetty.mcassistant.entity.TownBlocks.traceForTests(false);
             Kit.log("[VT] cg02 AUDIT y=" + d.level() + " " + TerraformAudit.line(c) + (TerraformAudit.FIRST.isEmpty() ? "" : " | first: " + TerraformAudit.FIRST));
             Kit.Expect expect = new Kit.Expect();
             FoundingPlan.Ground g = d.ground();
