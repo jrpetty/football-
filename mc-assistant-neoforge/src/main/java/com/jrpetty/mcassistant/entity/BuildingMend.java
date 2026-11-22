@@ -36,6 +36,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *     (never a plank or a log: a shelf, a post);</li>
  * <li>a workstation laid as a block of a wall, floor or roof (a crafting table for a brick) taken out into the stores and
  *     the wall's own block laid in its place (a chest, a barrel or a furnace, with somebody's things in it, left);</li>
+ * <li>a footing standing on nothing (a house at a terrace's edge, its front over the drop) underpinned with a pier of its
+ *     own stone down to the ground;</li>
  * <li>scaffolding left round it struck.</li>
  * </ul>
  * Never a block a player put there (PlayerBlocks), never a building still going up, a player's own building (its floors
@@ -242,6 +244,25 @@ public final class BuildingMend {
             Crafts.store(level, v, new ItemStack(st.getBlock().asItem()));
             level.setBlock(p.pos(), BuildGoal.orient(own.defaultBlockState(), p, b.facing(), level, p.pos()), 3);
             fixed.merge("fixture_out_of_wall", 1, Integer::sum);
+        }
+        // Its footing on nothing (a house set at a terrace's edge, its front over the drop): a pier of the footing's own stone
+        // built down under it to the ground, as a mason would underpin it. Only through air (never water, nor a player's block),
+        // and only where the ground is found within a dozen.
+        Block foot = most(byStyle.getOrDefault(Blueprints.Style.FOUNDATION, Map.of()));
+        if (foot == null) foot = Blocks.COBBLESTONE;
+        for (BuildGoal.Placement p : mine.values()) {
+            if (p.pos().getY() != minY || p.part() != BuildGoal.Part.BLOCK) continue;
+            BlockPos f = p.pos();
+            if (!BuildingAudit.holds(level.getBlockState(f)) || !level.getBlockState(f.below()).isAir()) continue;
+            int depth = 1;
+            while (depth <= 12 && level.getBlockState(f.below(depth)).isAir()) depth++;
+            if (depth > 12 || !BuildingAudit.holds(level.getBlockState(f.below(depth)))) continue;
+            boolean mayAll = true;
+            for (int d = 1; d < depth && mayAll; d++) mayAll = !PlayerBlocks.placed(level, f.below(d))
+                && (TownBlocks.mayBuild(level, v, f.below(d), b.anchor(), TownBlocks.Why.REPAIR) || TownBlocks.mayPlace(level, v, f.below(d), TownBlocks.Why.TERRAFORM));
+            if (!mayAll) continue;
+            for (int d = 1; d < depth; d++) level.setBlock(f.below(d), foot.defaultBlockState(), 2 | 16);
+            fixed.merge("footing_underpinned", depth - 1, Integer::sum);
         }
         // Scaffolding left round it.
         for (BlockPos q : BlockPos.betweenClosed(x0 - 3, minY - 1, z0 - 3, x1 + 3, maxY + 2, z1 + 3)) {
