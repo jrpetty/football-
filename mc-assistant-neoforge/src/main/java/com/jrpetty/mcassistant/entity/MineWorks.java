@@ -1062,7 +1062,10 @@ public final class MineWorks {
         // height, seventy-six off, was "below in the works", sent up by a way out of the works it was never in ("Can't find
         // my way to the pithead").
         boolean ground = MineGround.has(v) ? MineGround.reserved(v, p.getX(), p.getZ()) : TownMine.inMine(v, p);   // the faces set aside, not the whole grid round the first
-        return p.getY() < w.top - 2 && (ground || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 80
+        // Deep under the rock it is below however far out (a vein followed into a cave a hundred and thirty blocks off
+        // the shaft is still the works' to get it out of: at eighty, such a miner's way up was refused, and it was sent
+        // up forty-eight times where it stood).
+        return p.getY() < w.top - 2 && (ground || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 256
             && p.getY() < w.top - 12 && !level.canSeeSky(p));
     }
 
