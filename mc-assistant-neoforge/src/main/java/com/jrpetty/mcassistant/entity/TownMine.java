@@ -147,7 +147,10 @@ public final class TownMine {
     /** Is this spot in one of the town's mine faces? */
     public static boolean inMine(UUID village, BlockPos p) {
         BlockPos site = kept(village);
-        return site != null && faceOf(site, p) != null;
+        if (site == null) return false;
+        if (faceOf(site, p) != null) return true;
+        int[] f = MineReach.face(site, p.getX(), p.getZ());                 // [growth24] a face of the widened ground
+        return f != null && MineGround.faceReserved(village, f[0], f[1]);
     }
 
     /** The middle of the face this spot is in (y left as given), or null outside the mine. */

@@ -131,6 +131,32 @@ public final class MineGround {
         return faces.size();
     }
 
+    /** [growth24] The ring of the farthest face set aside (faces round the first, as grid places), or -1 for none. */
+    public static int ring(UUID village) {
+        int most = -1;
+        for (long k : faces(village)) most = Math.max(most, Math.max(Math.abs((int) (k >> 32)), Math.abs((int) k)));
+        return most;
+    }
+
+    /** [growth24] These faces (grid places round the first face, `site`) set aside with the rest, for good (MineReach). */
+    public static void addFaces(UUID village, BlockPos site, List<int[]> add) {
+        if (add.isEmpty()) return;
+        int r = TownMine.PITCH / 2;
+        StringBuilder fs = new StringBuilder(Ledger.note(village, "mine.faces") == null ? "" : Ledger.note(village, "mine.faces"));
+        StringBuilder gs = new StringBuilder(Ledger.note(village, "mine.ground") == null ? "" : Ledger.note(village, "mine.ground"));
+        for (int[] c : add) {
+            int x = site.getX() + c[0] * TownMine.PITCH, z = site.getZ() + c[1] * TownMine.PITCH;
+            if (fs.length() > 0) fs.append(';');
+            fs.append(c[0]).append(':').append(c[1]);
+            if (gs.length() > 0) gs.append(';');
+            gs.append(x - r - MARGIN).append(',').append(z - r - MARGIN).append(',').append(x + r + MARGIN).append(',').append(z + r + MARGIN);
+        }
+        Ledger.note(village, "mine.faces", fs.toString());
+        Ledger.note(village, "mine.ground", gs.toString());
+        GROUND.remove(village);
+        FACES.remove(village);
+    }
+
     /** On a look after a load: a mine opened before its ground was kept is set aside as it stands. Whether it was now. */
     public static boolean ensure(ServerLevel level, Villages.Village v) {
         BlockPos site = TownMine.siteOf(v.id());

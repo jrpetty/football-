@@ -116,17 +116,19 @@ public final class MineLevels {
 
     /** The plan's further levels: for each level worked out, the next of its ore (and so on while those are worked out). */
     static void extend(ServerLevel level, MineWorks.Works w, List<MineWorks.Lvl> plan, int floor) {
-        if (w.spent == 0) return;
+        if (w.spent == 0 && w.rooms < (1 << BASES)) return;
         List<MineWorks.Lvl> firsts = new ArrayList<>(plan);
         boolean mountain = MineWorks.mountain(level, w), badlands = MineWorks.badlands(level, w);
         for (MineWorks.Lvl first : firsts) {
-            if (!spent(w, first.id())) continue;
+            if (!spent(w, first.id()) && (w.rooms & (1 << id(first.id(), 1))) == 0) continue;
             List<Integer> at = places(w, firsts, first, floor, mountain, badlands);
             for (int k = 1; k <= at.size(); k++) {
                 int id = id(first.id(), k);
+                // The next opened once the one before is worked out; and one opened stays (its ground widened, MineReach,
+                // the one before may be worked again).
+                if (!spent(w, id(first.id(), k - 1)) && (w.rooms & (1 << id)) == 0) break;
                 int sides = at.get(k - 1);
                 plan.add(new MineWorks.Lvl(id, name(id), sides, w.top - 3 * sides));
-                if (!spent(w, id)) break;
             }
         }
         plan.sort(Comparator.comparingInt(MineWorks.Lvl::sides));
@@ -149,6 +151,14 @@ public final class MineLevels {
         MineDemand.reshare(w.village);
         MineWorks.Lvl next = MineWorks.lvl(MineWorks.plan(level, w), id(base(l.id()), nth(l.id()) + 1));
         long day = level.getDayTime() / 24000L;
+        if (next == null && !MineReach.widen(level, w.village).isEmpty()) {
+            // [growth24] Every level of its ore worked out: the ground widened, and the drifts stopped at its old edge driven on.
+            int reopened = reopenAtEdge(w, base(l.id()));
+            Villages.tell(w.village, day, "the miners worked out " + l.name() + " of the mine (Y" + l.y() + "), the last of its "
+                + ore(base(l.id())).word + "; with the ground widened, " + reopened + " drifts stopped at its old edge are driven on");
+            MineDemand.reshare(w.village);
+            return;
+        }
         Villages.tell(w.village, day, "the miners worked out " + l.name() + " of the mine (Y" + l.y() + ")"
             + (next != null ? "; " + next.name() + " is to be opened off the shaft at Y" + next.y()
             : "; there is no more of its " + ore(base(l.id())).word + " within the shaft's reach"));
@@ -207,10 +217,49 @@ public final class MineLevels {
         MineWorks.save(w);
     }
 
+    /** Tests: this level marked worked out, quietly (no news, no widening): as the miners leave a level they have done with. */
+    public static void spendForTests(ServerLevel level, java.util.UUID village, int id) {
+        MineWorks.Works w = MineWorks.works(level, village);
+        if (w == null) return;
+        w.spent |= 1 << id;
+        MineWorks.save(w);
+    }
+
+    /** Tests: this level found worked out by a miner, now (MineWorks.driftTask's end): marked, the next opened or the ground widened. */
+    public static void markSpentForTests(ServerLevel level, java.util.UUID village, int id) {
+        MineWorks.Works w = MineWorks.works(level, village);
+        MineWorks.Lvl l = w == null ? null : MineWorks.lvl(MineWorks.plan(level, w), id);
+        if (l != null) markSpent(level, w, l);
+    }
+
+    /** Tests: the closed mark of each drift on this level (as chars). */
+    public static String closedForTests(ServerLevel level, java.util.UUID village, int id) {
+        MineWorks.Works w = MineWorks.works(level, village);
+        StringBuilder sb = new StringBuilder();
+        if (w != null) for (MineWorks.Drift d : w.drifts) if (d.level == id) sb.append(d.closed);
+        return sb.toString();
+    }
+
     /** Tests: is this level marked worked out? */
     public static boolean spentForTests(ServerLevel level, java.util.UUID village, int id) {
         MineWorks.Works w = MineWorks.works(level, village);
         return w != null && spent(w, id);
+    }
+
+    /** The drifts of this ore's levels stopped at the edge of the ground opened again, and those levels no longer worked out. */
+    static int reopenAtEdge(MineWorks.Works w, int base) {
+        int n = 0;
+        for (MineWorks.Drift d : w.drifts) {
+            if (base(d.level) != base || d.closed != 'e') continue;
+            d.closed = '-';
+            d.blocked = false;
+            d.turns = 0;
+            d.bends = 0;
+            w.spent &= ~(1 << d.level);
+            n++;
+        }
+        MineWorks.save(w);
+        return n;
     }
 
     private static int countOn(MineWorks.Works w, int id) {

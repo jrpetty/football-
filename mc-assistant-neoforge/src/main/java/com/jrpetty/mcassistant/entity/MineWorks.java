@@ -415,7 +415,7 @@ public final class MineWorks {
     static boolean inGround(ServerLevel level, Works w, int x, int z) {
         BlockPos site = new BlockPos(w.sx, 0, w.sz);
         for (int[] c : new int[][]{ { x, z }, { x - 2, z - 2 }, { x + 2, z - 2 }, { x - 2, z + 2 }, { x + 2, z + 2 } }) {
-            int[] f = TownMine.faceIndex(site, new BlockPos(c[0], 0, c[1]));
+            int[] f = MineReach.face(site, c[0], c[1]);                    // [growth24] out to the widened ground's rings
             if (f == null || !MineGround.faceReserved(w.village, f[0], f[1])) return false;
         }
         if (MineGround.otherMeets(w.village, x - 2, z - 2, x + 2, z + 2)) return false;

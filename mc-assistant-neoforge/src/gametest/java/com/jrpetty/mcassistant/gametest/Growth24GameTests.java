@@ -286,4 +286,116 @@ public class Growth24GameTests {
             helper.succeed();
         });
     }
+    /**
+     * The iron drain named and stopped: an Iron Age town short of its age's iron, a smith of long standing, thirty bars in
+     * the stores and the miners' rack empty. The smith's forge turns no bar into an iron pick for the stores (a stone pick
+     * cuts iron ore; the rack is kept in stone till the iron is past its mark), and the town keeps its bars; past the mark
+     * an iron pick is forged again. What iron does go out is booked in the mine's books by what took it (Crafts.forge).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "gw24_05_iron_kept")
+    public static void gw24_05_iron_kept(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.OreFlow.forgetForTests();
+        final int x = 5418000;
+        Kit.hold(level, x, Z, 40);
+        Kit.prepare(level, x, Z, 40);
+        level.setDayTime(24000L * 4 + 2000);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 10);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        List<VillageFolkEntity> all = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f && !f.isBaby()) all.add(f);
+        helper.runAtTickTime(5, () -> {
+            for (int i = 0; i < all.size(); i++) all.get(i).setJob(i == 0 ? StationTask.SMITH : i < 7 ? StationTask.MINE : StationTask.FARM);
+            VillageFolkEntity smith = all.get(0);
+            smith.tradeXpForTests(StationTask.SMITH, 20000);
+            Villages.ageForTests(v.id(), Villages.Age.IRON);
+            com.jrpetty.mcassistant.entity.Picks.emptyRackForTests(level, v);
+            for (BlockPos p : Villages.storeChests(level, v.id())) {
+                if (level.getBlockEntity(p) instanceof net.minecraft.world.Container c) { c.clearContent(); c.setChanged(); }
+            }
+            Market.intoStoresForTests(level, v.id(), new ItemStack(Items.IRON_INGOT, 30));
+            Market.intoStoresForTests(level, v.id(), new ItemStack(Items.OAK_PLANKS, 64));
+            Market.intoStoresForTests(level, v.id(), new ItemStack(Items.STICK, 32));
+            Market.intoStoresForTests(level, v.id(), new ItemStack(Items.COBBLESTONE, 64));
+            Villages.forgetStock();
+            java.util.function.Predicate<ItemStack> ironPick = st -> st.is(Items.IRON_PICKAXE);
+            List<String> made = new ArrayList<>();
+            for (int i = 0; i < 12; i++) made.add(String.valueOf(com.jrpetty.mcassistant.entity.Crafts.smithForTests(level, v, smith)));
+            Villages.forgetStock();
+            int iron = Market.stock(level, v.id(), st -> st.is(Items.IRON_INGOT));
+            int picks = Market.stock(level, v.id(), ironPick);
+            boolean saving = com.jrpetty.mcassistant.entity.MineHands.kept(level, v.id());
+            // Past the mark: the forge makes the iron pick again.
+            Market.intoStoresForTests(level, v.id(), new ItemStack(Items.IRON_INGOT, 30));
+            Villages.forgetStock();
+            List<String> then = new ArrayList<>();
+            for (int i = 0; i < 12 && Market.stock(level, v.id(), ironPick) == 0; i++) {
+                then.add(String.valueOf(com.jrpetty.mcassistant.entity.Crafts.smithForTests(level, v, smith)));
+                Villages.forgetStock();
+            }
+            int picksThen = Market.stock(level, v.id(), ironPick);
+            List<String> books = com.jrpetty.mcassistant.entity.OreFlow.lines(v.id(), level.getDayTime() / 24000L);
+            Kit.log("[VT] gw24_05 saving " + saving + ": thirty bars, the smith " + made + "; bars left " + iron + ", iron picks " + picks
+                + "; with sixty: " + then + ", iron picks " + picksThen + " | books " + books);
+            helper.assertTrue(saving, "the Iron Age short of its iron is saving it");
+            helper.assertTrue(picks == 0, "no iron pick forged for the stores while the age saves its iron: " + picks);
+            helper.assertTrue(iron >= 24, "the town keeps its bars: " + iron + " of 30");
+            helper.assertTrue(picksThen >= 1, "past the rack's mark an iron pick is forged again: " + picksThen);
+            helper.assertTrue(books.stream().anyMatch(l -> l.contains("Crafts.forge")), "the books name the forge: " + books);
+            helper.succeed();
+        });
+    }
+    /**
+     * The mine's ground widened when every level of an ore is worked out: the iron level and its five further levels done
+     * with, the last of them found worked out by its miner; the ground takes in the faces of the next ring out that touch it
+     * (none on the town's ground), the drifts stopped at the old edge on the iron's levels are opened again and those levels
+     * are no longer worked out. The news says so.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "gw24_06_ground_widened")
+    public static void gw24_06_ground_widened(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 5422000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        Villages.ageForTests(v, Villages.Age.IRON);
+        List<Integer> further = MineLevels.placesForTests(level, v, MineWorks.IRON);
+        helper.assertTrue(!further.isEmpty(), "further iron levels planned");
+        int last = MineWorks.IRON + 5 * further.size();
+        for (int k = 0; k < further.size(); k++) {
+            int id = MineWorks.IRON + 5 * k;
+            MineLevels.cutOutForTests(level, v, id);
+            MineLevels.spendForTests(level, v, id);
+        }
+        MineLevels.cutOutForTests(level, v, last);
+        int faces = com.jrpetty.mcassistant.entity.MineGround.faceCount(v), ring = com.jrpetty.mcassistant.entity.MineGround.ring(v);
+        String before = MineLevels.closedForTests(level, v, MineWorks.IRON) + "/" + MineLevels.closedForTests(level, v, last);
+        MineLevels.markSpentForTests(level, v, last);
+        int facesAfter = com.jrpetty.mcassistant.entity.MineGround.faceCount(v), ringAfter = com.jrpetty.mcassistant.entity.MineGround.ring(v);
+        String after = MineLevels.closedForTests(level, v, MineWorks.IRON) + "/" + MineLevels.closedForTests(level, v, last);
+        boolean spentFirst = MineLevels.spentForTests(level, v, MineWorks.IRON), spentLast = MineLevels.spentForTests(level, v, last);
+        // None of the new ground on the town's.
+        BlockPos site = new BlockPos(r.sx(), 0, r.sz());
+        int inTown = 0, added = 0;
+        for (int i = -ringAfter; i <= ringAfter; i++) {
+            for (int j = -ringAfter; j <= ringAfter; j++) {
+                if (Math.max(Math.abs(i), Math.abs(j)) != ringAfter || !com.jrpetty.mcassistant.entity.MineGround.faceReserved(v, i, j)) continue;
+                added++;
+                BlockPos c = site.offset(i * com.jrpetty.mcassistant.entity.TownMine.PITCH, 0, j * com.jrpetty.mcassistant.entity.TownMine.PITCH);
+                if (com.jrpetty.mcassistant.entity.TownDigs.inTownGroundRaw(level, v, r.heart(), c, 0)) inTown++;
+            }
+        }
+        boolean told = false;
+        for (Villages.News n : Villages.news(v)) if (n.text().contains("ground was widened")) told = true;
+        Kit.log("[VT] gw24_06 the iron's " + (further.size() + 1) + " levels worked out: faces " + faces + " (ring " + ring + ") -> " + facesAfter
+            + " (ring " + ringAfter + "), " + added + " in the new ring, " + inTown + " on the town's ground; drifts closed " + before + " -> " + after
+            + "; worked out: first " + spentFirst + ", last " + spentLast + "; told " + told);
+        helper.assertTrue(facesAfter > faces && ringAfter == ring + 1, "the ground widened by a ring: " + faces + " -> " + facesAfter);
+        helper.assertTrue(inTown == 0, "none of it on the town's ground: " + inTown);
+        helper.assertTrue(!after.contains("e") && after.contains("-"), "the drifts stopped at the edge driven on: " + before + " -> " + after);
+        helper.assertTrue(!spentFirst && !spentLast, "the iron's levels worked again");
+        helper.assertTrue(told, "the news tells of it");
+        helper.succeed();
+    }
 }
