@@ -147,4 +147,47 @@ public final class FolkGait {
         }
         return smooth((age - s.poseAt) / 7.0F);
     }
+
+    /**
+     * Stood about with nothing in its hands to do (no act, no walk, no moment of its manner's): never dead still. Its eyes
+     * go round slowly (now this way, now that, now down), its weight shifts from one foot to the other every several
+     * seconds (the hip out over the standing leg, the other knee easing forward), each folk on its own clock.
+     */
+    static void idle(VillageFolkEntity folk, ModelPart head, ModelPart body, ModelPart ra, ModelPart la, ModelPart rl, ModelPart ll,
+                     float age, float walk) {
+        if (old) return;
+        float w = 1.0F - Math.min(1.0F, walk * 3.0F);
+        if (w <= 0.0F) return;
+        int id = folk.getId();
+        float t = age / 20.0F;
+        float look = noise(id * 3 + 1, t / 4.5F), down = noise(id * 3 + 2, t / 6.0F), weight = noise(id * 3, t / 8.0F);
+        head.yRot += 0.42F * look * w;
+        head.xRot += (0.08F + 0.1F * down) * w;
+        float shift = Mth.clamp(weight * 1.6F, -1.0F, 1.0F) * w;
+        body.zRot += 0.035F * shift;
+        body.x += 0.35F * shift;
+        head.x += 0.35F * shift;
+        ra.x += 0.35F * shift;
+        la.x += 0.35F * shift;
+        rl.xRot -= 0.11F * Math.max(0.0F, shift);
+        ll.xRot -= 0.11F * Math.max(0.0F, -shift);
+        rl.zRot += 0.03F * shift;
+        ll.zRot += 0.03F * shift;
+    }
+
+    /** A smooth wander between -1 and 1 (value noise): a new aim every step of t, eased into. */
+    private static float noise(int seed, float t) {
+        int i = Mth.floor(t);
+        float f = t - i;
+        float a = hash(seed, i), b = hash(seed, i + 1);
+        return Mth.lerp(f * f * (3.0F - 2.0F * f), a, b);
+    }
+
+    private static float hash(int seed, int i) {
+        int h = seed * 0x27d4eb2d ^ i * 0x165667b1;
+        h ^= h >>> 15;
+        h *= 0x85ebca6b;
+        h ^= h >>> 13;
+        return (h & 0xFFFF) / 32767.5F - 1.0F;
+    }
 }

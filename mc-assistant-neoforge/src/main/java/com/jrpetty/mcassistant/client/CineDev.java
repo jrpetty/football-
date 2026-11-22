@@ -163,6 +163,7 @@ public final class CineDev {
                 }
                 case "hud" -> mc.options.hideGui = w[1].equals("off");
                 case "hint" -> CinemaCam.hints(w[1].equals("on"));
+                case "side" -> CinemaCam.followSide = w[1].equals("on");
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
         }

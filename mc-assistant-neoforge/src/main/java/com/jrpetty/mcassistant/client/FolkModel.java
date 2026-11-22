@@ -623,6 +623,10 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
 
         swingTool(folk, rightMain ? HumanoidArm.RIGHT : HumanoidArm.LEFT);
         FolkPoses.apply(this, folk, limbSwing, limbSwingAmount, ageInTicks, young);   // [individual] its gait and its moments
+        if (folk.animSeen().act == 0 && poseKind == 0 && attackTime <= 0.0F && !folk.isSleeping()
+            && com.jrpetty.mcassistant.entity.Manner.idleOf(folk.clientManner()) == com.jrpetty.mcassistant.entity.Manner.NO_IDLE) {
+            FolkGait.idle(folk, head, body, rightArm, leftArm, rightLeg, leftLeg, ageInTicks, folk.animSeen().gaitWeight);   // [vision27] never dead still
+        }
         FolkAnimations.apply(rig, folk, ageInTicks, rightMain, young, attackTime);    // [anim] what it is doing: its work, its life
         missilePose(folk, rightMain);                                  // [war-bows] over the gait: a drawn bow, a crossbow spanned
         int carried = regalia == 0 || young ? RegaliaModel.NO_HAND : RegaliaLayer.holds(folk);   // [regalia19] the sceptre, the staff
