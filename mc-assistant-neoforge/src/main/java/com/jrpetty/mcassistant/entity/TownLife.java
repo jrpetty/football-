@@ -100,6 +100,7 @@ public final class TownLife {
                 chimney(level, b, v, false);
                 addressSign(level, id, v.centre(), b, v, false);
                 BizFronts.board(level, id, v.centre(), b, v, false);   // [biz30] a business's name where the door's sign had no wall
+                BizFronts.display(level, id, b);                       // [biz30] its trade's wares out on its casks
                 if (b.structure().equals("house")) washingLine(level, b, v, false);
                 if (b.structure().equals("tavern")) Tavern.board(level, v, b, false);
             }
@@ -149,6 +150,7 @@ public final class TownLife {
             chimney(level, b, null, true);
             addressSign(level, village, heart, b, null, true);
             BizFronts.board(level, village, heart, b, null, true);   // [biz30]
+            BizFronts.display(level, village, b);                     // [biz30]
             if (b.structure().equals("house")) washingLine(level, b, null, true);
             if (b.structure().equals("cafe")) Cafe.setOut(level, village, b, Cafe.menuGoods(level, village));
             if (b.structure().equals("tavern")) Tavern.board(level, b);

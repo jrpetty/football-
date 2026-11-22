@@ -158,6 +158,12 @@ public class BusinessLookGameTests {
                     com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
                 }
                 com.jrpetty.mcassistant.entity.TownLife.dressNow(level, id, heart, built, List.of(Items.BREAD, Items.APPLE, Items.CARROT));
+                // The ways in at its doors made, as the town's rounds make them (DoorWays).
+                for (Ledger.Building b : built) {
+                    for (com.jrpetty.mcassistant.entity.DoorWays.Door d : com.jrpetty.mcassistant.entity.DoorWays.doorsOf(level, b)) {
+                        com.jrpetty.mcassistant.entity.DoorWays.mendForTests(level, d);
+                    }
+                }
                 doneAt[0] = helper.getTick();
                 return;
             }
@@ -499,7 +505,7 @@ public class BusinessLookGameTests {
             if (i < 2) f.tradeXpForTests(t.work(), 20000);                // an old hand at it, as a town's own makers are
             if (i < 2) Kit.log("[VT] " + kind + " " + f.displayNameCap() + " at " + f.stationTask() + " busy " + com.jrpetty.mcassistant.entity.TownJobs.busy(f));
             f.spend(f.purse());
-            f.earn(80);
+            f.earn(200);
             folk.add(f);
         }
         UUID id = folk.get(0).ownerId();
@@ -519,6 +525,11 @@ public class BusinessLookGameTests {
         net.minecraft.world.Container box2 = (net.minecraft.world.Container) level.getBlockEntity(chest2);
         for (int i = 27; i < MAKINGS.length && i - 27 < box2.getContainerSize(); i++) box2.setItem(i - 27, new ItemStack(MAKINGS[i], MAKINGS[i].getDefaultMaxStackSize()));
         box2.setChanged();
+        for (int k = 1; k <= 2; k++) {                                    // room in the stores for what comes in
+            BlockPos more = chest2.east(2 * k);
+            level.setBlockAndUpdate(more, Blocks.CHEST.defaultBlockState());
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, more);
+        }
         // The trade's own building, as the town has one by the time a business of it opens: its bench, its furnace, its anvil.
         String works = VillageFolkEntity.buildingForTests(t.work());
         if (works != null && Blueprints.has(works)) {
@@ -687,6 +698,7 @@ public class BusinessLookGameTests {
             case "clothier" -> com.jrpetty.mcassistant.entity.Purchases.Need.CLOTHES;
             case "baker", "butcher", "fishmonger", "cafe", "inn", "greengrocer" -> com.jrpetty.mcassistant.entity.Purchases.Need.FOOD;
             case "tavern", "apothecary" -> com.jrpetty.mcassistant.entity.Purchases.Need.TREAT;
+            case "weaver", "chandler", "potter" -> com.jrpetty.mcassistant.entity.Purchases.Need.LUXURY;
             default -> com.jrpetty.mcassistant.entity.Purchases.Need.HOME;
         };
     }

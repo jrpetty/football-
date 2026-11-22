@@ -163,11 +163,11 @@ public final class BuildingMend {
                     boolean grassy = fs.is(Blocks.GRASS_BLOCK) || fs.is(Blocks.MYCELIUM) || fs.is(Blocks.PODZOL) || drawnFloor && Restore.earthy(fs);
                     boolean hole = drawnFloor && !BuildingAudit.holds(fs) && fs.getFluidState().isEmpty() && mine.get(f.above().asLong()) == null;
                     if (grassy || hole) {
-                        if (grassy && TownBlocks.mayPlace(level, v, f, TownBlocks.Why.REPAIR)) {
+                        if (grassy && TownBlocks.mayBuild(level, v, f, b.anchor(), TownBlocks.Why.REPAIR)) {
                             Crafts.store(level, v, new ItemStack(fs.getBlock().asItem()));
                             level.setBlock(f, floor.defaultBlockState(), 3);
                             fixed.merge("floor_relaid", 1, Integer::sum);
-                        } else if (hole && TownBlocks.mayPlace(level, v, f, TownBlocks.Why.REPAIR)) {
+                        } else if (hole && TownBlocks.mayBuild(level, v, f, b.anchor(), TownBlocks.Why.REPAIR)) {
                             level.setBlock(f, floor.defaultBlockState(), 3);
                             fixed.merge("floor_hole", 1, Integer::sum);
                         }

@@ -5,6 +5,8 @@ import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.StandingSignBlock;
 import net.minecraft.world.level.block.WallSignBlock;
@@ -92,9 +94,11 @@ public final class BizFronts {
             Direction side = out.getClockWise();
             List<BlockPos> walls = new ArrayList<>();
             walls.add(door.above(2));                                       // the lintel
-            for (int k = 1; k <= 3; k++) {
-                walls.add(door.above().relative(side, k));
-                walls.add(door.above().relative(side.getOpposite(), k));
+            for (int up = 1; up <= 2; up++) {
+                for (int k = 1; k <= 3; k++) {
+                    walls.add(door.above(up).relative(side, k));
+                    walls.add(door.above(up).relative(side.getOpposite(), k));
+                }
             }
             for (BlockPos wall : walls) {
                 BlockPos spot = wall.relative(out);
@@ -111,8 +115,12 @@ public final class BizFronts {
         for (BlockPos door : doors) {
             Direction out = out(door, box);
             if (out == null) continue;
-            posts.add(door.relative(out, 2).relative(out.getClockWise(), 2));
-            posts.add(door.relative(out, 2).relative(out.getCounterClockWise(), 2));
+            for (int far = 2; far <= 3; far++) {
+                for (int k = 2; k <= 3; k++) {
+                    posts.add(door.relative(out, far).relative(out.getClockWise(), k));
+                    posts.add(door.relative(out, far).relative(out.getCounterClockWise(), k));
+                }
+            }
         }
         int cx = (box[0] + box[1]) / 2, cz = (box[2] + box[3]) / 2;
         int reach = front.getAxis() == Direction.Axis.X ? (box[1] - box[0]) / 2 : (box[3] - box[2]) / 2;
@@ -122,7 +130,7 @@ public final class BizFronts {
         posts.add(mid.relative(front.getClockWise(), 3));
         for (BlockPos at : posts) {
             BlockPos foot = null;
-            for (int dy = 1; dy >= -2 && foot == null; dy--) {
+            for (int dy = 3; dy >= -4 && foot == null; dy--) {
                 BlockPos c = at.above(dy);
                 if (level.getBlockState(c).isAir() && level.getBlockState(c.above()).isAir()
                         && level.getBlockState(c.below()).isFaceSturdy(level, c.below(), Direction.UP)) foot = c;
@@ -137,6 +145,69 @@ public final class BizFronts {
             return true;
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------ its wares on show
+
+    /** What each trade's building shows on its casks and counters, the first the stores hold first. */
+    static java.util.List<net.minecraft.world.item.Item> showsOf(String structure) {
+        net.minecraft.world.item.Item[] it = switch (structure) {
+            case "bakery" -> new net.minecraft.world.item.Item[]{ Items.BREAD, Items.CAKE, Items.COOKIE, Items.PUMPKIN_PIE, Items.WHEAT };
+            case "smithy" -> new net.minecraft.world.item.Item[]{ Items.IRON_PICKAXE, Items.IRON_AXE, Items.IRON_SWORD, Items.IRON_SHOVEL,
+                Items.SHEARS, Items.BUCKET, Items.STONE_PICKAXE, Items.IRON_INGOT };
+            case "inn", "restaurant", "guesthouse" -> new net.minecraft.world.item.Item[]{ Items.BREAD, Items.COOKED_BEEF, Items.BAKED_POTATO,
+                Items.RABBIT_STEW, Items.COOKED_CHICKEN, Items.PUMPKIN_PIE, Items.APPLE };
+            case "tavern", "brewery" -> new net.minecraft.world.item.Item[]{ Items.HONEY_BOTTLE, Items.GLASS_BOTTLE, Items.SWEET_BERRIES, Items.APPLE };
+            case "store" -> new net.minecraft.world.item.Item[]{ Items.TORCH, Items.LANTERN, Items.BUCKET, Items.SHEARS, Items.FLINT_AND_STEEL,
+                Items.FISHING_ROD, Items.CANDLE, Items.STRING };
+            case "market" -> new net.minecraft.world.item.Item[]{ Items.CARROT, Items.POTATO, Items.APPLE, Items.BREAD, Items.BEETROOT,
+                Items.WHEAT, Items.MELON_SLICE, Items.PUMPKIN, Items.EGG };
+            case "auction" -> new net.minecraft.world.item.Item[]{ Items.PAINTING, Items.BOOK, Items.GOLD_INGOT, Items.EMERALD, Items.CLOCK };
+            case "bank" -> new net.minecraft.world.item.Item[]{ Items.GOLD_INGOT, Items.GOLD_NUGGET, Items.EMERALD, Items.IRON_INGOT };
+            case "postoffice" -> new net.minecraft.world.item.Item[]{ Items.PAPER, Items.BOOK, Items.WRITABLE_BOOK, Items.MAP, Items.FEATHER };
+            case "tradingpost" -> new net.minecraft.world.item.Item[]{ Items.EMERALD, Items.MAP, Items.COMPASS, Items.BOOK };
+            case "workshop" -> new net.minecraft.world.item.Item[]{ Items.CHEST, Items.BARREL, Items.LADDER, Items.ITEM_FRAME, Items.SHEARS,
+                Items.LEATHER_CHESTPLATE, Items.WHITE_BED };
+            case "fletcher" -> new net.minecraft.world.item.Item[]{ Items.ARROW, Items.BOW, Items.FEATHER, Items.FLINT };
+            case "maproom" -> new net.minecraft.world.item.Item[]{ Items.MAP, Items.COMPASS, Items.PAPER };
+            case "apiary" -> new net.minecraft.world.item.Item[]{ Items.HONEY_BOTTLE, Items.HONEYCOMB, Items.CANDLE };
+            case "divershed", "harbour" -> new net.minecraft.world.item.Item[]{ Items.COD, Items.SALMON, Items.COOKED_COD, Items.KELP };
+            case "huntlodge" -> new net.minecraft.world.item.Item[]{ Items.LEATHER, Items.RABBIT_HIDE, Items.COOKED_RABBIT, Items.FEATHER };
+            case "stable" -> new net.minecraft.world.item.Item[]{ Items.SADDLE, Items.LEAD, Items.WHEAT, Items.CARROT };
+            case "smeltery", "foundry" -> new net.minecraft.world.item.Item[]{ Items.IRON_INGOT, Items.GOLD_INGOT, Items.COPPER_INGOT, Items.GLASS, Items.BRICK };
+            case "wheelwright" -> new net.minecraft.world.item.Item[]{ Items.OAK_BOAT, Items.MINECART, Items.STICK };
+            case "infirmary" -> new net.minecraft.world.item.Item[]{ Items.GLISTERING_MELON_SLICE, Items.GLASS_BOTTLE, Items.HONEY_BOTTLE };
+            default -> new net.minecraft.world.item.Item[0];
+        };
+        return java.util.List.of(it);
+    }
+
+    /**
+     * [biz30] Its wares out on its casks: a business's casks with nothing over them hold one of each of its trade's goods the
+     * town's stores have (shown, not taken: a frame on the cask, as the café's and the shop's counters show theirs, Cafe.setOut).
+     * Only what the stores hold; a trade with nothing in has bare casks, and a cask whose good is gone is cleared. The café and
+     * the shop set out their own. How many changed.
+     */
+    public static int display(ServerLevel level, UUID village, Ledger.Building b) {
+        String s = b.structure();
+        if (s.equals("cafe") || s.equals("shop") || s.equals(Store.STRUCTURE) || !BuildingAudit.BUSINESSES.contains(s)) return 0;   // (theirs set out by Cafe, StoreFloor)
+        java.util.List<net.minecraft.world.item.Item> shows = showsOf(s);
+        if (shows.isEmpty()) return 0;
+        java.util.List<BlockPos> casks = Cafe.counters(b);
+        if (casks.isEmpty()) return 0;
+        java.util.List<ItemStack> goods = new ArrayList<>();
+        if (s.equals("tavern") || s.equals("brewery")) goods.addAll(Cafe.drinksInStores(level, village));
+        for (net.minecraft.world.item.Item it : shows) {
+            if (goods.size() >= casks.size()) break;
+            if (Market.stock(level, village, x -> x.is(it)) > 0) goods.add(new ItemStack(it));
+        }
+        int changed = 0;
+        for (int k = 0; k < casks.size(); k++) {
+            BlockPos at = casks.get(k);
+            if (!ServicePoints.isCounter(level.getBlockState(at))) continue;   // not built yet
+            if (TownLife.frameOn(level, at.above(), k < goods.size() ? goods.get(k) : ItemStack.EMPTY, true)) changed++;
+        }
+        return changed;
     }
 
     /** The sign paid for and the hand at it, or free. */
