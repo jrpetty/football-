@@ -174,6 +174,7 @@ public final class CineDev {
                 case "page" -> LifeClient.open(w[1]);                               // a player page, as its button asks
                 case "cmd" -> com.jrpetty.mcassistant.net.LifeNetwork.command(line.trim().substring(4));
                 case "open" -> open(mc, w[1]);
+                case "waiting" -> { mc.setScreen(null); Waiting.start(line.trim().substring(8)); }   // the "opening..." line, as on a slow server
                 case "city" -> { if (mc.screen instanceof CityScreen c) c.devPage(line.trim().substring(5).replace('_', ' ')); }
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
