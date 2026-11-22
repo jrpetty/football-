@@ -340,11 +340,11 @@ public final class TownJobs {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!(a instanceof VillageFolkEntity f) || !fit(f, works)
                 || ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) continue;
-            if (RESTING.containsKey(f.getUUID())) continue;              // had its turn: somebody else's now
+            boolean idleHand = Busywork.spare(f);                         // [life28] nothing at all to do just now
+            if (RESTING.containsKey(f.getUUID()) && !idleHand) continue; // had its turn: somebody else's now (unless it stands idle)
             if (PostStints.busy(f)) continue;                            // [roles-e] at its post's work: the wagon, the town's plans
             // [city9] The streets' hands, past the eighth, are never a post's holder (its stints would wait on the streets).
             if (streetsWork(works) && (f == Wheelwrights.holder(v.id()) || f == TownPlanner.holder(v.id()))) continue;
-            boolean idleHand = Busywork.spare(f);                         // [life28] nothing at all to do just now
             if (idleOnly && !idleHand) continue;
             if (over != null && !spare(f, over) && !idleHand) continue;  // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();
