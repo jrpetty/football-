@@ -29,7 +29,7 @@ final class BizShop {
         boolean on = StartBusiness.SHOP.equals(chosen);
         boolean has = PlayerShops.of(v.id(), p.getUUID()) != null;
         page.row(new ItemStack(McAssistantMod.SHOP_COUNTER_ITEM.get()), (on ? "✔ " : "") + "A shop of your own (the easiest)",
-                has ? "You keep one already: this goes to its screen"
+                has ? "You keep " + PlayerShops.ofAll(v.id(), p.getUUID()).size() + " here already: open another, its own room, counter and licence (and a keeper, for you can't mind two counters)"   // [biz30]
                     : "You fill its shelves, folk come in and buy at its counter; no charter, no hands to pay; a licence of "
                         + PlayerLife.coins(PlayerShops.licence(v.id())), "")
             .button(on ? "Chosen" : "Choose", "kind", LifePage.args("k", StartBusiness.SHOP), !on, "Chosen");
@@ -41,7 +41,7 @@ final class BizShop {
         page.heading("Where will your shop be?");
         PlayerShops.Shop shop = PlayerShops.of(v.id(), p.getUUID());
         if (shop != null) {
-            page.row(new ItemStack(McAssistantMod.SHOP_COUNTER_ITEM.get()), (prem.equals("shop") ? "✔ " : "") + "Your shop, " + shop.name,
+            page.row(new ItemStack(McAssistantMod.SHOP_COUNTER_ITEM.get()), (prem.equals("shop") ? "✔ " : "") + "Your shop, " + shop.name + " (no new one: its screen)",
                     PlayerShops.stateWords(level, shop), "")
                 .button(prem.equals("shop") ? "Chosen" : "Choose", "prem", LifePage.args("p", "shop"), !prem.equals("shop"), "Chosen");
         }

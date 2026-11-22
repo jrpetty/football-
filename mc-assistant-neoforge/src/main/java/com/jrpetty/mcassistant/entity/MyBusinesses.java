@@ -54,7 +54,12 @@ public final class MyBusinesses implements PlayerLife.Page {
                 Businesses.pence(due) + " of it is yours", "").button("Take it", "drawclosed", LifePage.args("firm", x.id));
         }
         if (b == null) {
-            page.text("You hold no business in " + Villages.name(v.id()) + " yet.", 4);
+            page.text("You hold no chartered business in " + Villages.name(v.id()) + " yet.", 4);
+            for (PlayerShops.Shop sh : PlayerShops.ofAll(v.id(), p.getUUID())) {   // [biz30] its shops, though
+                page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), sh.name + " (your shop)",
+                        "till " + PlayerLife.coins(sh.till) + " · " + PlayerShops.stateWords(p.serverLevel(), sh), "")
+                    .button("Open it", "shopof", LifePage.args("key", sh.key()));
+            }
             // [ui29] what one is and how it starts, not just a button
             page.text("A shop of your own is the easiest: a room with a Shop Counter, stock in a chest, and folk come to buy. "
                 + "Or charter a firm: it hires hands of its own to make and sell what the town is short of. Either starts here, in three steps.", 0);
@@ -63,10 +68,24 @@ public final class MyBusinesses implements PlayerLife.Page {
         }
         c.args.putString("firm", b.id);
         List<Business> mine = mine(v.id(), p.getUUID());
-        if (mine.size() > 1) {
-            LifePage.Row r = page.buttons();
-            for (Business x : mine) r.button((x == b ? "✔ " : "") + x.name, "pick", LifePage.args("firm", x.id));
+        // [biz30] Every business of its here, a row each: its till, this week's profit, its hands; run it or open its books.
+        List<PlayerShops.Shop> shops = PlayerShops.ofAll(v.id(), p.getUUID());
+        if (c.tab.isEmpty() || c.tab.equals("summary")) {
+            long day = Businesses.today(level);
+            page.heading("All your businesses in " + Villages.name(v.id()) + " (" + (mine.size() + shops.size()) + ")");
+            for (Business x : mine) {
+                BusinessTypes.BusinessType xt = Enterprise.kindOf(v.id(), x);
+                page.row(xt == null ? null : StartBusiness.icon(xt), (x == b ? "✔ " : "") + x.name,
+                        "till " + Businesses.pence(x.till) + " · this week " + Businesses.pence(x.last(day, 7).net()) + " · " + Enterprise.hands(v.id(), x).size() + " hands", "")
+                    .button("Run it", "pick", LifePage.args("firm", x.id), x != b, "Shown below").button("Books", "bookof", LifePage.args("firm", x.id));
+            }
+            for (PlayerShops.Shop sh : shops) {
+                page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.SHOP_COUNTER_ITEM.get()), sh.name + " (your shop)",
+                        "till " + PlayerLife.coins(sh.till) + " · " + PlayerShops.stateWords(level, sh) + (sh.keeper != null ? " · keeper " + sh.keeperName : " · no keeper"), "")
+                    .button("Open it", "shopof", LifePage.args("key", sh.key()));
+            }
         }
+        page.buttons().button("Start another business", "start", null);
         if (c.tab.isEmpty()) c.tab = "summary";
         page.tab("summary", "Summary", c.tab.equals("summary")).tab("hands", "Hands", c.tab.equals("hands")).tab("stock", "Stock", c.tab.equals("stock"))
             .tab("prices", "Prices", c.tab.equals("prices")).tab("money", "Money", c.tab.equals("money")).tab("more", "Shares & closing", c.tab.equals("more"));
@@ -172,6 +191,19 @@ public final class MyBusinesses implements PlayerLife.Page {
         if (action.equals("shop")) { PlayerLife.open(p, "shop", null); return "#open:"; }   // [ui29] the empty page's second way
         if (action.startsWith("tab:")) { c.tab = action.substring(4); return ""; }
         if (action.equals("pick")) { c.args.putString("firm", args.getString("firm")); return ""; }
+        if (action.equals("bookof")) {                                      // [biz30] any of its firms' books, from the list
+            Business x = Businesses.of(v.id(), args.getString("firm"));
+            if (x == null || !x.ownedBy(p.getUUID())) return "!No such business of yours.";
+            BusinessBooks.show(p, v.id(), x);
+            return "#open:";
+        }
+        if (action.equals("shopof")) {                                      // [biz30] one of its shops' screen
+            PlayerShops.Shop sh = PlayerShops.byKey(v.id(), args.getString("key"));
+            if (sh == null || !sh.owner.equals(p.getUUID())) return "!No such shop of yours.";
+            PlayerShops.choose(p.getUUID(), sh);
+            PlayerLife.open(p, "shop", null);
+            return "#open:";
+        }
         if (action.equals("drawclosed")) {                                  // [biz30]
             Business x = Businesses.of(v.id(), args.getString("firm"));
             return x == null ? "!No such business." : Businesses.takeDrawings(v.id(), x, p);

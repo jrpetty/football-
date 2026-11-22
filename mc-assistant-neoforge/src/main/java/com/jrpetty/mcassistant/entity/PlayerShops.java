@@ -82,6 +82,9 @@ public final class PlayerShops {
     /** A shop: whose, where, what, and its books. */
     public static final class Shop {
         public UUID owner = new UUID(0, 0), village = new UUID(0, 0);
+        /** [biz30] Which of its owner's shops in the town: its owner's id for the first (as the register always had it),
+         *  "owner#2" and on for more. */
+        public String id = "";
         public String ownerName = "", name = "", kind = "general";
         public BlockPos anchor = BlockPos.ZERO;
         public int opens = OPENS, closes = CLOSES;
@@ -117,6 +120,7 @@ public final class PlayerShops {
             CompoundTag t = new CompoundTag();
             t.putUUID("owner", owner);
             t.putUUID("village", village);
+            t.putString("id", key());
             t.putString("ownerName", ownerName);
             t.putString("name", name);
             t.putString("kind", kind);
@@ -163,10 +167,16 @@ public final class PlayerShops {
             return t;
         }
 
+        /** [biz30] Its key in the register (and its note's). */
+        public String key() {
+            return id.isEmpty() ? owner.toString() : id;
+        }
+
         static Shop load(CompoundTag t) {
             Shop s = new Shop();
             s.owner = t.getUUID("owner");
             s.village = t.getUUID("village");
+            s.id = t.getString("id");
             s.ownerName = t.getString("ownerName");
             s.name = t.getString("name");
             s.kind = t.getString("kind");
@@ -244,7 +254,9 @@ public final class PlayerShops {
 
     // ------------------------------------------------------------------ the register
 
-    private static final Map<UUID, Map<UUID, Shop>> TOWNS = new ConcurrentHashMap<>();
+    private static final Map<UUID, Map<String, Shop>> TOWNS = new ConcurrentHashMap<>();
+    /** [biz30] The shop each player has chosen to look at, of the several it may keep in a town (its counter, its row). */
+    private static final Map<UUID, String> CHOSEN = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         TOWNS.clear();
@@ -255,15 +267,15 @@ public final class PlayerShops {
         ShopKeepers.resetForTests();
     }
 
-    /** The shops of a town, by owner (read from the ledger once). */
-    static Map<UUID, Shop> town(UUID village) {
+    /** The shops of a town, by key (read from the ledger once). */
+    static Map<String, Shop> town(UUID village) {
         return TOWNS.computeIfAbsent(village, v -> {
-            Map<UUID, Shop> m = new LinkedHashMap<>();
+            Map<String, Shop> m = new LinkedHashMap<>();
             for (Map.Entry<String, String> e : Ledger.notes(v).entrySet()) {
                 if (!e.getKey().startsWith(NOTE) || e.getValue() == null || e.getValue().isEmpty()) continue;
                 try {
                     Shop s = Shop.load(TagParser.parseTag(e.getValue()));
-                    m.put(s.owner, s);
+                    m.put(s.key(), s);
                 } catch (Exception ex) {
                     com.mojang.logging.LogUtils.getLogger().warn("[player15] a shop's note could not be read: {}", ex.toString());
                 }
@@ -273,23 +285,52 @@ public final class PlayerShops {
     }
 
     static void save(Shop s) {
-        town(s.village).put(s.owner, s);
-        Ledger.note(s.village, NOTE + s.owner, s.save().toString());
+        town(s.village).put(s.key(), s);
+        Ledger.note(s.village, NOTE + s.key(), s.save().toString());
     }
 
     static void forget(Shop s) {
-        Map<UUID, Shop> m = TOWNS.get(s.village);
-        if (m != null) m.remove(s.owner);
-        Ledger.forget(s.village, NOTE + s.owner);
+        Map<String, Shop> m = TOWNS.get(s.village);
+        if (m != null) m.remove(s.key());
+        Ledger.forget(s.village, NOTE + s.key());
     }
 
     public static List<Shop> all(UUID village) {
         return new ArrayList<>(town(village).values());
     }
 
+    /** The owner's shop in this town: the one it chose last of its several (its counter's), else its first. */
     @Nullable
     public static Shop of(UUID village, UUID owner) {
-        return town(village).get(owner);
+        Map<String, Shop> m = town(village);
+        String chosen = CHOSEN.get(owner);
+        if (chosen != null) {
+            Shop c = m.get(chosen);
+            if (c != null && c.owner.equals(owner) && c.village.equals(village)) return c;
+        }
+        Shop first = m.get(owner.toString());
+        if (first != null) return first;
+        for (Shop s : m.values()) if (s.owner.equals(owner)) return s;
+        return null;
+    }
+
+    /** [biz30] Every shop this player keeps in this town, the first first. */
+    public static List<Shop> ofAll(UUID village, UUID owner) {
+        List<Shop> out = new ArrayList<>();
+        for (Shop s : town(village).values()) if (s.owner.equals(owner)) out.add(s);
+        out.sort(java.util.Comparator.comparingLong((Shop s) -> s.since).thenComparing(Shop::key));
+        return out;
+    }
+
+    /** [biz30] This shop the one its owner's pages are about now. */
+    public static void choose(UUID player, Shop s) {
+        CHOSEN.put(player, s.key());
+    }
+
+    /** [biz30] A shop by its key. */
+    @Nullable
+    public static Shop byKey(UUID village, String key) {
+        return town(village).get(key);
     }
 
     /** The player's shop in the town they stand in (or the nearest town that has one of theirs). */
@@ -436,30 +477,42 @@ public final class PlayerShops {
             p.sendSystemMessage(Component.literal("A shop is kept in a town: set the " + what + " in a building of yours inside one.").withStyle(ChatFormatting.YELLOW));
             return;
         }
-        Shop s = of(v.id(), p.getUUID());
+        // [biz30] One of its shops whose room this is (a second counter in it, its sign), or one whose mark is gone (it
+        // moves here); else a shop of its own anew: a player may keep as many as it likes, each with its own room.
+        Shop s = null;
+        Shop moved = null;
+        for (Shop o : ofAll(v.id(), p.getUUID())) {
+            if (!level.isLoaded(o.anchor) || o.anchor.equals(pos)) { if (o.anchor.equals(pos)) { s = o; break; } continue; }
+            ShopNeeds.Survey sv = ShopNeeds.survey(level, o.anchor);
+            if (!sv.room.isEmpty() && (sv.counters.contains(pos) || touches(sv, pos))) { s = o; break; }
+            if (!anchorStands(level, o) && moved == null) moved = o;
+        }
+        if (s == null && moved != null) {
+            s = moved;
+            s.anchor = pos.immutable();                                     // its old mark is gone: it moves here
+        }
         if (s != null && level.isLoaded(s.anchor) && !(s.anchor.equals(pos))) {
-            ShopNeeds.Survey sv = ShopNeeds.survey(level, s.anchor);
-            if (sv.room.isEmpty() || !(sv.counters.contains(pos) || touches(sv, pos))) {
-                if (anchorStands(level, s)) {
-                    p.sendSystemMessage(Component.literal("You keep a shop in " + Villages.name(v.id()) + " already, " + s.name + " at "
-                        + s.anchor.getX() + ", " + s.anchor.getZ() + ": one to a town. This " + what + " is only furniture.").withStyle(ChatFormatting.YELLOW));
-                    return;
-                }
-                s.anchor = pos.immutable();                                 // its old mark is gone: it moves here
-            }
             if (counter && !s.anchor.equals(pos) && !level.getBlockState(s.anchor).is(McAssistantMod.SHOP_COUNTER.get())) s.anchor = pos.immutable();
             resurvey(level, s);
             save(s);
             remind(level, s, p, true);
-            PlayerLife.open(p, "shop", LifePage.args("tab", "setup"));
+            choose(p.getUUID(), s);                                          // [biz30] this one's pages
+            choose(p.getUUID(), s);                                              // [biz30]
+        PlayerLife.open(p, "shop", LifePage.args("tab", "setup"));
             return;
         }
         if (s == null) {
+            List<Shop> others = ofAll(v.id(), p.getUUID());
             s = new Shop();
             s.owner = p.getUUID();
             s.village = v.id();
+            if (!others.isEmpty()) {                                         // [biz30] its second, its third...
+                int n = others.size() + 1;
+                while (byKey(v.id(), p.getUUID() + "#" + n) != null) n++;
+                s.id = p.getUUID() + "#" + n;
+            }
             s.ownerName = p.getGameProfile().getName();
-            s.name = s.ownerName + (s.ownerName.endsWith("s") ? "' Shop" : "'s Shop");
+            s.name = s.ownerName + (s.ownerName.endsWith("s") ? "' Shop" : "'s Shop") + (others.isEmpty() ? "" : " No. " + (others.size() + 1));
             s.since = today(level);
             s.weekDay = s.since;
             s.ratesDay = s.since;
@@ -472,6 +525,7 @@ public final class PlayerShops {
         p.sendSystemMessage(Component.literal("This is your shop now. Give it a name and its hours, and see what it still needs.").withStyle(ChatFormatting.GOLD));
         remind(level, s, p, true);
         display(level, s);
+        choose(p.getUUID(), s);                                              // [biz30]
         PlayerLife.open(p, "shop", LifePage.args("tab", "setup"));
     }
 
@@ -517,6 +571,7 @@ public final class PlayerShops {
             p.sendSystemMessage(Component.literal(s.name + ", " + s.ownerName + "'s shop: " + stateWords(p.serverLevel(), s) + ".").withStyle(ChatFormatting.GRAY));
             return;
         }
+        choose(p.getUUID(), s);                                              // [biz30] the counter's own shop, of its several
         PlayerLife.open(p, "shop", LifePage.args("tab", s.setUp ? "shop" : "setup"));
     }
 
@@ -838,7 +893,7 @@ public final class PlayerShops {
     private static void near(ServerLevel level, BlockPos pos) {
         Villages.Village v = Villages.nearest(level, pos, 200);
         if (v == null) return;
-        Map<UUID, Shop> m = TOWNS.get(v.id());
+        Map<String, Shop> m = TOWNS.get(v.id());
         if (m == null) return;
         for (Shop s : m.values()) {
             if (Math.abs(s.anchor.getX() - pos.getX()) <= ShopNeeds.REACH + 1 && Math.abs(s.anchor.getZ() - pos.getZ()) <= ShopNeeds.REACH + 1

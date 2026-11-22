@@ -6,14 +6,14 @@
       "title": "Opening a shop of your own",
       "icon": "mc_assistant:shop_counter",
       "kind": "howto",
-      "q": ["how do i open a shop", "how do i make a shop", "can i have my own shop", "how to set up a store", "start a shop", "open a store in town", "how do i sell things in my own shop", "player shop", "how to make a shop in the village", "shop counter how to use", "how do i run a shop"],
+      "q": ["how do i open a shop", "how do i make a shop", "can i have my own shop", "how to set up a store", "start a shop", "open a store in town", "how do i sell things in my own shop", "player shop", "how to make a shop in the village", "shop counter how to use", "how do i run a shop", "can i have more than one shop"],
       "kw": ["shop", "store", "open", "shopcounter", "counter", "setup", "premises"],
       "answer": "A shop of your own is the easiest business: a room with a Shop Counter and stock in a chest, and folk come in to buy. Press U, then Open a shop.",
       "more": ["You fill the shelves, folk come in and buy at the counter, the coin goes into its till.", "No charter and no hands to pay; just a licence when you register."],
       "steps": ["Press U → Open a shop: choose premises (a building of your own, have the town build it, or buy one for sale).", "Building your own: any room with walls, a roof and a door onto a street or the square; set a Shop Counter in it (or hang a Shop Sign).", "The shop's screen opens on Setup: name it, pick its kind and hours, and register (a licence of a week's rates, 3 coins at least).", "Stock it: every chest, barrel, shelf and pot inside is stock. Set prices on Stock & prices.", "Follow 'Getting started' on the Shop tab until the first sale."],
       "controls": ["[U] → Your shop → Open a shop", "[Right-click] Shop Counter → Setup · Stock & prices · Books · Keeper"],
       "items": ["mc_assistant:shop_counter", "mc_assistant:shop_sign", "minecraft:chest"],
-      "tips": ["Stock what folk here have a use for: the Stock tab says who would buy each ware and why.", "One shop per town. A shop wants no standing, unlike a chartered business."],
+      "tips": ["Stock what folk here have a use for: the Stock tab says who would buy each ware and why.", "Keep as many shops as you like, here and in other towns: each has its own room, counter, licence and keeper (you can't mind two counters at once), and the shop's screen has a button for each. A shop wants no standing, unlike a chartered business."],
       "warn": ["Until the checklist is all ticks it stays shut: its sign says what it still needs."],
       "related": ["biz_shop_checklist", "biz_shop_stock", "biz_keeper", "biz_start", "trouble_no_customers"],
       "covers": ["item:shop_counter"]
@@ -86,7 +86,7 @@
       "more": ["1.", "A kind (what the town is short of first, with the week's takings to expect).", "2.", "Premises (your shop, a stall or a room the town lets, have the town build it, or buy a building).", "3.", "Confirm: the charter fee (10 coins) and the building, with 'Borrow N and open it' if you're short."],
       "steps": ["Press U → Start a business. On 'A kind', pick one (the first is 'A shop of your own, the easiest').", "On 'Premises', choose where it works; for a new building, pick a drawing and a plot from the gallery.", "On 'Confirm', check what's paid now and open it.", "Then follow the welcome's next steps and run it from Your businesses."],
       "controls": ["[U] → Start a business", "[Right-click] a folk → Trade → Money → Start a business", "Bank counter → Start a business"],
-      "tips": ["A chartered firm has hands of its own who make and sell its wares.", "The town charters anybody it knows and has nothing against: a citizen, a friend, or a visitor who has said hello."],
+      "tips": ["A chartered firm has hands of its own who make and sell its wares.", "The town charters anybody it knows and has nothing against: a citizen, a friend, or a visitor who has said hello.", "Start as many businesses as you like, of any kinds, in one town or several: each its own charter fee, premises and hands. Your businesses lists them all."],
       "warn": ["A stranger nobody has spoken to is turned away: say hello to a few folk first (the step offers a button)."],
       "related": ["biz_kinds", "biz_run", "biz_open_shop", "trouble_cant_charter"],
       "covers": []
@@ -101,7 +101,7 @@
       "answer": "Your businesses page runs each firm: its hands, stock, prices and money. Press U, then Run it beside the firm.",
       "more": ["Your businesses (U → Run it, or 'Show me my businesses') runs a firm by tabs: Summary, Hands (the best the town can spare, post an opening, take the best applicant), Stock (order its makings), Prices (its markup beside the going price), Money (invest, take drawings) and Shares & closing (the bourse, winding it up)."],
       "controls": ["[U] → Your businesses → Run it", "Tabs: Summary · Hands · Stock · Prices · Money · Shares & closing"],
-      "tips": ["A new player's firm has a week's grace; if it's in trouble you're told daily in chat what to do (coin in the till, stock, a hand).", "With no business yet, the page explains the two kinds and has both ways in: Start a business and Open a shop."],
+      "tips": ["Run several: Your businesses lists every firm you own with its till, this week's profit and its hands, a button to open each one's books, and Start another business.", "A new player's firm has a week's grace; if it's in trouble you're told daily in chat what to do (coin in the till, stock, a hand).", "With no business yet, the page explains the two kinds and has both ways in: Start a business and Open a shop."],
       "warn": ["A firm owing more than it's worth, out of cash and credit, can be taken to court by its creditors after the grace."],
       "related": ["biz_start", "biz_books", "property_land_shares"],
       "covers": []
@@ -225,7 +225,7 @@
       "q": ["do folk start businesses", "competition between shops", "villager businesses", "will folk compete with my shop", "entrepreneurs"],
       "kw": ["competition", "entrepreneur", "firms", "rival"],
       "answer": "Folk open businesses of their own too, and compete with yours on price and name.",
-      "more": ["Folk open businesses of their own too, of the same kinds, when the town is short of something.", "They compete on price and name: a folk buying its needs goes to whichever seller is the better buy (price, the walk, the shop's name), including your shop."],
+      "more": ["Folk open businesses of their own too, of the same kinds, when the town is short of something.", "They compete on price and name: a folk buying its needs goes to whichever seller is the better buy (price, the walk, the shop's name), including your shop.", "A folk whose business pays its way for weeks opens another: a branch of its trade or one beside it (the baker's café), up to four as its success carries it, never more than its fair share of the town's businesses. Each branch has a keeper of its own; a branch that loses money is shut. Its profile lists every business it owns."],
       "related": ["biz_kinds", "biz_shop_stock", "money_market"],
       "covers": []
     },
