@@ -35,6 +35,8 @@ public final class BizFronts {
 
     private BizFronts() {}
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     /** A sign at this building's front already (any sign, board or banner within two of its walls). */
     static boolean signed(ServerLevel level, Ledger.Building b) {
         int[] box = box(b);
@@ -258,7 +260,9 @@ public final class BizFronts {
         if (b == null) return;
         if (!level.isLoaded(b.anchor()) || !Ledger.buildings(v.id()).contains(b)) { PENDING.remove(v.id()); return; }
         int tries = TRIES.merge(v.id(), 1, Integer::sum);
-        if (board(level, v.id(), v.centre(), b, v, false) || tries > 90) {       // (up; or a quarter of an hour on it: the round's again)
+        boolean up = board(level, v.id(), v.centre(), b, v, false);
+        if (up || tries > 90) {                                              // (up; or a quarter of an hour on it: the round's again)
+            LOG.info("[MCA-BUILD] [biz30] {}: the {}'s name board {}", Villages.name(v.id()), b.structure(), up ? "is up" : "found no place or no hand: left for the round");
             PENDING.remove(v.id());
             TRIES.remove(v.id());
         }
@@ -270,7 +274,10 @@ public final class BizFronts {
     public static boolean round(ServerLevel level, UUID village, BlockPos heart, Ledger.Building b, Villages.Village v) {
         if (PENDING.containsKey(village)) return false;                      // one at a time: the one waiting first
         boolean up = board(level, village, heart, b, v, false);
-        if (!up && BuildingAudit.BUSINESSES.contains(b.structure())) PENDING.put(village, b);
+        if (!up && BuildingAudit.BUSINESSES.contains(b.structure())) {
+            PENDING.put(village, b);
+            LOG.info("[MCA-BUILD] [biz30] {}: the {} at {} wants a name board: a hand sent for it", Villages.name(village), b.structure(), b.anchor().toShortString());
+        }
         return up;
     }
 

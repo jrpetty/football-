@@ -367,6 +367,49 @@ public class BusinessLookGameTests {
         if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
     }
 
+    /**
+     * A work table left standing where a building goes (the square's work table, and a fountain raised round it at
+     * Ironmouth, the table for a block of its basin): the builder takes it up, as it takes up a fence, and lays the block
+     * the drawing wants. A fountain and a shop, each over a crafting table, a loom and a grindstone in their cells.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "bl05_no_workstation_for_a_brick")
+    public static void bl05_no_workstation_for_a_brick(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x0 = 6515000;
+        Kit.hold(level, x0 + 30, Z, 70);
+        Kit.prepare(level, x0 + 30, Z, 70);
+        BlockPos heart = Kit.surface(level, x0 - 40, Z);
+        VillageFolkEntity hand = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(hand != null, "a village");
+        UUID id = hand.ownerId();
+        Villages.Village v = Villages.get(id);
+        int base = Kit.surface(level, x0, Z).getY();
+        Kit.Expect ok = new Kit.Expect();
+        BuildingAudit.Report r = new BuildingAudit.Report();
+        int i = 0;
+        for (String n : List.of("fountain", "shop")) {
+            BlockPos lot = new BlockPos(x0 + 40 * i++, 0, Z);
+            shape(level, Ground.FLAT, lot, n, base, 950 + i);
+            BlockPos anchor = new BlockPos(lot.getX(), base, lot.getZ());
+            Block[] tables = { Blocks.CRAFTING_TABLE, Blocks.LOOM, Blocks.GRINDSTONE };
+            int put = 0;
+            for (BuildGoal.Placement p : BuildGoal.plan(n, anchor, Direction.NORTH, 13)) {
+                if (put >= tables.length || p.part() != BuildGoal.Part.BLOCK || p.pos().getY() > anchor.getY() + 1) continue;
+                if (p.pos().getY() < anchor.getY() - 1 || (p.pos().getX() + p.pos().getZ()) % 3 != 0) continue;
+                level.setBlock(p.pos(), tables[put++].defaultBlockState(), 3);
+            }
+            ok.that(put == tables.length, n + ": the tables set in its cells (" + put + ")");
+            String words = BuildGoal.buildNowForTests(hand, n, anchor, Direction.NORTH, BuildWorldGameTests::stock);
+            Ledger.built(id, n, anchor, Direction.NORTH);
+            BuildingAudit.building(level, v, n, n, anchor, Direction.NORTH, r);
+            Kit.log("[VT] bl05 " + n + ": " + words);
+        }
+        Kit.log("[VT] bl05 " + r.line() + " " + r.examples.getOrDefault("fixture_as_block", List.of()));
+        ok.that(r.count("fixture_as_block") == 0, "no workstation left for a block: " + r.examples.getOrDefault("fixture_as_block", List.of()));
+        if (ok.clean()) helper.succeed(); else helper.fail(ok.summary());
+    }
+
     // ================================================================== every kind of business, from its start to its close
 
     @GameTest(template = EMPTY, timeoutTicks = 400, batch = "bl10_toolsmith_start_to_close")

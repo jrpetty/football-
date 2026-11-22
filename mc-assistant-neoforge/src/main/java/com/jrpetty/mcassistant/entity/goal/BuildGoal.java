@@ -1318,6 +1318,9 @@ public class BuildGoal extends Goal {
                 || st.getBlock() instanceof net.minecraft.world.level.block.BedBlock) return false;
         if (com.jrpetty.mcassistant.entity.ParkGround.digging(p)) return false;
         if (com.jrpetty.mcassistant.entity.TownBlocks.fitting(st)) return false;
+        // [biz30] A workstation standing where a wall's, a floor's or a roof's block goes (the square's work table, and a
+        // fountain raised round it on the square of Ironmouth): no building block, however solid. Taken up, as a fence is.
+        if (p.part() == Part.BLOCK && com.jrpetty.mcassistant.entity.BuildingAudit.fixture(st)) return true;
         return com.jrpetty.mcassistant.entity.Restore.judge(st, p) == com.jrpetty.mcassistant.entity.Restore.Kind.WRONG;
     }
 
