@@ -349,6 +349,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level().isClientSide) return;
         FolkAction.tick(this);                                 // [anim] what its body is doing, for the client
         if (showcase) return;
+        Elbowroom.tick(this);                                  // [vision27] not stood in another folk
         if (HELD_FOR_TESTS.contains(getUUID())) return;        // [growth22] tests: held to the job in hand, nothing else
         if (laterLine != null && tickCount >= laterAt) {
             FolkTalk.speak(this, laterLine);

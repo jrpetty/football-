@@ -13,6 +13,10 @@ public final class AnimConfig {
 
     public enum Effects { ALL, SOME, NONE }
 
+    /** [vision27] The folk's name tags: everything the server writes, the name (and a stuck folk's warning, a hurt one's
+     *  health), only the one you look at, or none. */
+    public enum Plates { FULL, NAME, LOOK, OFF }
+
     public static final ModConfigSpec SPEC;
     /** The particles of the folk's work and life: all of them, a few (one in three, and only close by), or none. */
     public static final ModConfigSpec.EnumValue<Effects> EFFECTS;
@@ -24,6 +28,11 @@ public final class AnimConfig {
     public static final ModConfigSpec.BooleanValue FACES;
     /** The camera turned round to watch the player's own emote in first person, and back after. */
     public static final ModConfigSpec.BooleanValue EMOTE_CAMERA;
+    /** [vision27] The name tags over the folk's heads, and how far off they show (fading out towards the edge). */
+    public static final ModConfigSpec.EnumValue<Plates> PLATES;
+    public static final ModConfigSpec.IntValue PLATE_RANGE;
+    /** [vision27] Birds by day and crickets at night in a town (client/TownAmbience). */
+    public static final ModConfigSpec.BooleanValue AMBIENCE;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -38,6 +47,15 @@ public final class AnimConfig {
             .define("faces", true);
         EMOTE_CAMERA = b.comment("In first person, turn the camera round to watch your own emote, and back after.")
             .define("emoteCamera", true);
+        b.pop();
+        b.push("town");                                                                         // [vision27] name tags, sounds
+        PLATES = b.comment("The folk's name tags: FULL (trade, level, name, badges, health), NAME (the name, a stuck folk's warning,",
+                "a hurt one's health), LOOK (only the folk you look at) or OFF. F1 and the camera's clean shot hide them all.")
+            .defineEnum("nameTags", Plates.NAME);
+        PLATE_RANGE = b.comment("How far away (blocks) name tags show; they fade out over the last third of it.")
+            .defineInRange("nameTagRange", 32, 8, 64);
+        AMBIENCE = b.comment("Birds by day and crickets at night, out of doors in a town.")
+            .define("ambience", true);
         b.pop();
         SPEC = b.build();
     }
@@ -61,5 +79,22 @@ public final class AnimConfig {
 
     public static boolean emoteCamera() {
         try { return EMOTE_CAMERA.get(); } catch (RuntimeException e) { return true; }
+    }
+
+    /** [vision27] */
+    public static Plates plates() {
+        try { return PLATES.get(); } catch (RuntimeException e) { return Plates.NAME; }
+    }
+
+    public static int plateRange() {
+        try { return PLATE_RANGE.get(); } catch (RuntimeException e) { return 32; }
+    }
+
+    public static void setPlates(Plates p) {
+        try { PLATES.set(p); SPEC.save(); } catch (RuntimeException ignored) { }
+    }
+
+    public static boolean ambience() {
+        try { return AMBIENCE.get(); } catch (RuntimeException e) { return true; }
     }
 }

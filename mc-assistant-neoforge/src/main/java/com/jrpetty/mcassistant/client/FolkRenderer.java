@@ -348,6 +348,18 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         }
     }
 
+    /** [vision27] Its name tag: the player's choice of it, shorter range, faded at the edge (FolkPlates). */
+    @Override
+    protected boolean shouldShowName(VillageFolkEntity folk) {
+        return FolkPlates.show(folk, super.shouldShowName(folk), this.entityRenderDispatcher);
+    }
+
+    @Override
+    protected void renderNameTag(VillageFolkEntity folk, net.minecraft.network.chat.Component name, PoseStack pose,
+                                 MultiBufferSource buffer, int light, float partialTick) {
+        FolkPlates.draw(folk, name, pose, buffer, light, partialTick, getFont(), this.entityRenderDispatcher);
+    }
+
     @Override
     public void render(VillageFolkEntity folk, float entityYaw, float partialTick,
                        PoseStack pose, MultiBufferSource buffer, int packedLight) {
@@ -383,10 +395,12 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         super.render(folk, entityYaw, partialTick, pose, FolkBatch.around(buffer), packedLight);   // [anim] its passes batched
         if (sat) pose.popPose();
         if (FolkPortrait.drawing()) return;                              // [ui] a likeness on a screen: no marks, bubble or icon
-        QuestClient.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick);   // [quests] "!" or "?" over its head
+        boolean labels = !net.minecraft.client.Minecraft.getInstance().options.hideGui;   // [vision27] F1, the camera's clean shot: no labels
+        if (labels) QuestClient.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick);   // [quests] "!" or "?" over its head
 
         double far = this.entityRenderDispatcher.distanceToSqr(folk);
         FolkEffects.tick(folk, far);                                    // [anim] sparks, chips, steam, notes: once a tick, in sight only
+        if (!labels) return;                                            // [vision27]
         FolkMarks.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick, far, packedLight);   // [anim] an idea, a coin, Zzz
         RegaliaLayer.mark(folk, pose, buffer, this.entityRenderDispatcher, partialTick, far);   // [regalia19] a crown over a ruler's name
         if (far < 24 * 24 && bubble(folk, pose, buffer)) return;

@@ -93,6 +93,7 @@ public final class FoundingClient {
         FoundingScreen s = looking;
         if (s == null) return;
         Minecraft mc = Minecraft.getInstance();
+        if (mc.options.hideGui) return;                                          // [vision27] F1 hides it, as the game's HUD
         if (System.currentTimeMillis() > lookUntil) {
             looking = null;
             FoundingGhost.fade();

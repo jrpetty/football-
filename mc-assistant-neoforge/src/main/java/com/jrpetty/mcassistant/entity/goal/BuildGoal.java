@@ -1268,6 +1268,7 @@ public class BuildGoal extends Goal {
             }
         }
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        com.jrpetty.mcassistant.entity.BuildFx.placed(assistant, pos);   // [vision27] heard and seen going in
         placed++;
         assistant.note(AssistantEntity.Deed.BLOCKS_BUILT, 1);
         skipped = 0;
