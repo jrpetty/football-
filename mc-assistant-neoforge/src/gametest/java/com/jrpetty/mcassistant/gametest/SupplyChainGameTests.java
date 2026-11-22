@@ -237,6 +237,46 @@ public class SupplyChainGameTests {
         MineWorksGameTests.done(helper);
     }
 
+    /**
+     * A level gone barren: the iron level with hundreds of blocks of drift cut on it this week and no ore out of them; its
+     * miner's next look finds it worked out, and the second iron level is planned off the shaft.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "sc06_barren_level")
+    public static void sc06_barren_level(GameTestHelper helper) {
+        MineLevels.forgetCutForTests();
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6618000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0);
+        Villages.ageForTests(v, Villages.Age.IRON);
+        java.util.Map<com.jrpetty.mcassistant.entity.MineDemand.Ore, Integer> stock = MineWorksGameTests.plenty();
+        stock.put(com.jrpetty.mcassistant.entity.MineDemand.Ore.IRON, 0);
+        com.jrpetty.mcassistant.entity.MineDemand.stockForTests(v, stock);
+        MineWorksGameTests.kit(m, Items.IRON_PICKAXE);
+        MineWorksGameTests.zone(r, m, 16);
+        int y1 = MineWorks.levelY(level, v, MineWorks.IRON);
+        MineWorksGameTests.tower(r, y1 - 3);
+        MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - y1) / 3) + 1, m);
+        MineWorks.roomForTests(level, v, MineWorks.IRON);
+        // A while's work: a few hundred blocks of drift, no ore.
+        MineLevels.cutForTests(level, v, MineWorks.IRON, 300);
+        com.jrpetty.mcassistant.entity.MineWorks.Task t0 = MineWorks.next(level, m);
+        if (t0 != null) MineWorks.release(v, t0, m.getUUID());
+        boolean early = MineLevels.spentForTests(level, v, MineWorks.IRON);
+        MineLevels.cutForTests(level, v, MineWorks.IRON, 200);
+        com.jrpetty.mcassistant.entity.MineWorks.Task t = MineWorks.next(level, m);
+        if (t != null) MineWorks.release(v, t, m.getUUID());
+        boolean spent = MineLevels.spentForTests(level, v, MineWorks.IRON);
+        List<String> plan = MineWorks.planForTests(level, v);
+        Kit.log("[VT] sc06 iron level at Y" + y1 + ": after 300 bare blocks spent " + early + ", after 500 spent " + spent + "; next task "
+            + (t == null ? "-" : t.words()) + "; plan " + plan);
+        helper.assertTrue(!early, "three hundred blocks are not yet barren");
+        helper.assertTrue(spent, "five hundred bare blocks in a week: the iron level worked out");
+        helper.assertTrue(plan.stream().anyMatch(x -> x.startsWith((MineWorks.IRON + 5) + ":the second iron level")), "the second iron level planned: " + plan);
+        com.jrpetty.mcassistant.entity.MineDemand.stockForTests(v, null);
+        MineWorksGameTests.done(helper);
+    }
+
     /** A hungry town wants more farmers: its farms short of hands the morning its larder is low. */
     @GameTest(template = "empty", timeoutTicks = 200, batch = "sc04_hungry_farms")
     public static void sc04_hungry_farms(GameTestHelper helper) {

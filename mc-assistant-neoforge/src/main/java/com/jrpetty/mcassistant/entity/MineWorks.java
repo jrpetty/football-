@@ -621,6 +621,13 @@ public final class MineWorks {
     @Nullable
     private static Task driftTask(ServerLevel level, Works w, Lvl l, VillageFolkEntity f, long now) {
         UUID me = f.getUUID();
+        // [econ32] A level gone barren this week (hundreds of blocks, next to no ore): worked out, and the next of its ore opened.
+        if (MineLevels.barren(w, l, w.week)) {
+            MineLevels.clearCut(w, l.id());
+            com.mojang.logging.LogUtils.getLogger().info("[MCA-WORKS] {}: {} gone barren ({} ore this week)", Villages.name(w.village), l.name(), w.oreWeek[l.id()]);
+            MineLevels.markSpent(level, w, l);
+            return null;
+        }
         List<Drift> here = new ArrayList<>();
         for (Drift d : w.drifts) if (d.level == l.id()) here.add(d);
         // Its own drift: the branches behind the face first while two or more wait, then the face.
@@ -1070,6 +1077,7 @@ public final class MineWorks {
         if (w == null) return;
         newWeek(level, w);
         w.dug += t.broke;
+        if (t.kind == Kind.FACE || t.kind == Kind.BRANCH) MineLevels.cut(w, t.level, t.broke, w.week);   // [econ32] a level gone barren
         if (t.level >= 0 && t.level < w.oreWeek.length) {                       // [growth24] further levels counted too
             w.oreWeek[t.level] += t.ore;
             w.oreAll[t.level] += t.ore;

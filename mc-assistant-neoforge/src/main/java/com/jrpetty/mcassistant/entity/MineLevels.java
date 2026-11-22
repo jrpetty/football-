@@ -134,6 +134,61 @@ public final class MineLevels {
         plan.sort(Comparator.comparingInt(MineWorks.Lvl::sides));
     }
 
+    // ------------------------------------------------------------------ [econ32] a level gone barren
+
+    /** Blocks cut on each level this week, by town: {week, blocks a level...}. Kept in memory (a restart starts the count again). */
+    private static final java.util.Map<java.util.UUID, long[]> CUT = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Blocks cut on a level in a week with next to no ore before it is given up as barren (the deep level more: its ore is scarce). */
+    static final int BARREN_BLOCKS = 400, BARREN_DEEP = 800;
+    /** Ore at most, in those blocks, for a level to be barren. */
+    static final int BARREN_ORE = 2;
+
+    /** So many blocks cut on this level (MineWorks.done). */
+    static void cut(MineWorks.Works w, int id, int blocks, long week) {
+        if (id < 0 || id >= BASES * (MOST + 1) || blocks <= 0) return;
+        long[] c = CUT.computeIfAbsent(w.village, k -> new long[1 + BASES * (MOST + 1)]);
+        synchronized (c) {
+            if (c[0] != week) { java.util.Arrays.fill(c, 0); c[0] = week; }
+            c[1 + id] += blocks;
+        }
+    }
+
+    /** Blocks cut on this level this week. */
+    static int cutThisWeek(MineWorks.Works w, int id, long week) {
+        long[] c = CUT.get(w.village);
+        if (c == null || c[0] != week || id < 0 || id >= BASES * (MOST + 1)) return 0;
+        return (int) c[1 + id];
+    }
+
+    /**
+     * Has this level gone barren: hundreds of blocks of drift cut on it this week and next to no ore out of them? The local run's
+     * Iron Age town's iron level had 2,775 blocks of tunnel and 393 ore in all, and brought "ore this week 0" with eight
+     * miners on it: the ore near the shaft had been taken, and the drifts ran on through bare rock towards the edges of the
+     * ground, ninety blocks out, while the second iron level waited for every one of them to reach an edge. A barren level is
+     * worked out as surely as one cut to its ends: the next level of its ore is opened.
+     */
+    static boolean barren(MineWorks.Works w, MineWorks.Lvl l, long week) {
+        if (l.id() < 0 || l.id() >= w.oreWeek.length) return false;
+        int blocks = cutThisWeek(w, l.id(), week);
+        return blocks >= (base(l.id()) == MineWorks.DEEP ? BARREN_DEEP : BARREN_BLOCKS) && w.oreWeek[l.id()] <= BARREN_ORE;
+    }
+
+    /** The week's count for this level started again (it was found barren and marked worked out). */
+    static void clearCut(MineWorks.Works w, int id) {
+        long[] c = CUT.get(w.village);
+        if (c != null && id >= 0 && id < BASES * (MOST + 1)) synchronized (c) { c[1 + id] = 0; }
+    }
+
+    /** Tests: so many blocks cut on this level this week. */
+    public static void cutForTests(net.minecraft.server.level.ServerLevel level, java.util.UUID village, int id, int blocks) {
+        MineWorks.Works w = MineWorks.works(level, village);
+        if (w != null) cut(w, id, blocks, w.week);
+    }
+
+    public static void forgetCutForTests() {
+        CUT.clear();
+    }
+
     /** Is this level worked out: every drift on it closed and every branch off them cut? (Its landing is cut.) */
     static boolean workedOut(ServerLevel level, MineWorks.Works w, MineWorks.Lvl l, List<MineWorks.Drift> here) {
         for (MineWorks.Drift d : here) {

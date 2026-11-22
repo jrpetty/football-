@@ -47,7 +47,7 @@ public class MineWorksGameTests {
 
     private static final int Z = 90000;
     /** The shaft's first landing: high enough for all five levels to be planned. */
-    private static final int TOP = 100;
+    static final int TOP = 100;
 
     record Rig(ServerLevel level, List<VillageFolkEntity> miners, UUID v, BlockPos heart, int sx, int sz) {}
 
