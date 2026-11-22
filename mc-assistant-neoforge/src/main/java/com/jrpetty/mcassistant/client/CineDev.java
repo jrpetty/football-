@@ -164,10 +164,53 @@ public final class CineDev {
                 case "hud" -> mc.options.hideGui = w[1].equals("off");
                 case "hint" -> CinemaCam.hints(w[1].equals("on"));
                 case "side" -> CinemaCam.followSide = w[1].equals("on");
+                // [ui29] gui N (0 = auto) / size W H: the GUI scale and the window, for checking every screen at each
+                case "gui" -> {
+                    mc.options.guiScale().set(Integer.parseInt(w[1]));
+                    mc.resizeDisplay();
+                }
+                case "size" -> mc.getWindow().setWindowed(Integer.parseInt(w[1]), Integer.parseInt(w[2]));
+                case "close" -> mc.setScreen(null);
+                case "page" -> LifeClient.open(w[1]);                               // a player page, as its button asks
+                case "cmd" -> com.jrpetty.mcassistant.net.LifeNetwork.command(line.trim().substring(4));
+                case "open" -> open(mc, w[1]);
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
         }
         com.mojang.logging.LogUtils.getLogger().info("[vision27] cinedev: ran {} lines", lines.size());
+    }
+
+    /** [ui29] Open a screen the way its key or button does, for the screen audit's pictures. */
+    private static void open(Minecraft mc, String what) {
+        switch (what) {
+            case "city" -> CityScreen.request();
+            case "village" -> VillageScreen.request();
+            case "plots" -> PlotsClient.requestOpen();
+            case "finance" -> FinanceClient.open(null);
+            case "favourites" -> FavouritesClient.open(null, null);
+            case "camera" -> CameraScreen.open();
+            case "admin" -> AdminClient.open("");
+            case "crew" -> mc.setScreen(new CrewScreen());
+            case "map" -> mc.setScreen(new MapScreen());
+            case "totals" -> mc.setScreen(new TotalsScreen());
+            case "blockbook" -> mc.setScreen(new BlockBookScreen());
+            case "emote" -> mc.setScreen(new EmoteWheelScreen());
+            case "profile", "talk" -> {
+                if (mc.player == null || mc.level == null || mc.gameMode == null) return;
+                VillageFolkEntity best = null;
+                double bestD = 36.0;
+                for (Entity e : mc.level.entitiesForRendering()) {
+                    if (e instanceof VillageFolkEntity f && !f.isBaby() && !f.isSleeping() && f.distanceToSqr(mc.player) < bestD) {
+                        bestD = f.distanceToSqr(mc.player);
+                        best = f;
+                    }
+                }
+                if (best == null) return;
+                if (what.equals("profile")) FolkProfileScreen.openEntity(best.getId(), null, null);
+                else mc.gameMode.interact(mc.player, best, net.minecraft.world.InteractionHand.MAIN_HAND);
+            }
+            default -> com.mojang.logging.LogUtils.getLogger().warn("[ui29] cinedev: no screen '{}'", what);
+        }
     }
 
     private static float f(String s) { return Float.parseFloat(s); }
