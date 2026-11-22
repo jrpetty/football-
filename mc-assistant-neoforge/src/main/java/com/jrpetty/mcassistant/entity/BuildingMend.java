@@ -32,13 +32,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li>a floor of grass or bare earth, and a hole in a floor, laid in the building's own floor (what most of its laid floor
  *     is made of);</li>
  * <li>the ground standing up into a room (a bank, a hummock) dug out, and water or lava lying in one taken up;</li>
- * <li>a block nobody drew left on its own in a room (a builder's pillar's last block, a lump hung in the air) taken down;</li>
- * <li>a workstation, chest or barrel laid as a block of a wall, floor or roof (a crafting table for a brick) taken out
- *     into the stores and the wall's own block laid in its place;</li>
+ * <li>a lump of earth or rough stone nobody drew left on its own in a room (a builder's pillar's last block) taken down
+ *     (never a plank or a log: a shelf, a post);</li>
+ * <li>a workstation laid as a block of a wall, floor or roof (a crafting table for a brick) taken out into the stores and
+ *     the wall's own block laid in its place (a chest, a barrel or a furnace, with somebody's things in it, left);</li>
  * <li>scaffolding left round it struck.</li>
  * </ul>
  * Never a block a player put there (PlayerBlocks), never a building still going up, a player's own building (its floors
- * are its owner's), a folk's own house, nor the drawing's own cells that are as drawn. Done once a town (Ledger note
+ * are its owner's), a building a player keeps a shop in, a folk's own house, nor the drawing's own cells that are as drawn. Done once a town (Ledger note
  * "buildings.mended"), a few buildings a round, and what it did written in the log and the note.
  */
 public final class BuildingMend {
@@ -106,7 +107,20 @@ public final class BuildingMend {
         if (HousingMarket.isPrivate(id, b.anchor()) || HomeMaking.householdsOwn(id, b.anchor())) return false;   // a folk's own house
         net.minecraft.nbt.CompoundTag prop = PropertyMarket.get(id, PropertyMarket.keyAt(b.anchor()));
         if (prop != null && "player".equals(prop.getString("ownerKind"))) return false;   // a player's own building: its owner's to see to
+        // [life28's caution] a player's shop in it (its counter, its shelves, its chests are the player's to arrange)
+        int r = BuildGoal.halfOf(b.structure()) + 1;
+        for (PlayerShops.Shop sh : PlayerShops.all(id)) {
+            if (Math.abs(sh.anchor.getX() - b.anchor().getX()) <= r && Math.abs(sh.anchor.getZ() - b.anchor().getZ()) <= r
+                    && Math.abs(sh.anchor.getY() - b.anchor().getY()) <= 8) return false;
+        }
         return true;
+    }
+
+    /** A lump the mend may take down when it stands alone in a room: earth or rough stone, never planks, logs or anybody's
+     *  fittings (a lone plank may be a shelf, a log a post: SquareDress learnt that the hard way). */
+    static boolean lump(BlockState st) {
+        return Terraform.earth(st) && !st.is(Blocks.BEDROCK) || st.is(Blocks.COBBLESTONE) || st.is(Blocks.MOSSY_COBBLESTONE)
+            || st.is(Blocks.COBBLED_DEEPSLATE) || st.is(Blocks.GRAVEL);
     }
 
     /** One building made good inside. Adds what it did to {@code fixed}. */
@@ -184,7 +198,7 @@ public final class BuildingMend {
                     if (st.is(Blocks.GRASS_BLOCK) || BuildingAudit.plantish(level, c, st)) kind = "plants";
                     else if (indoor && Terraform.earth(st) && !st.is(Blocks.BEDROCK)) kind = "earth";
                     else if (indoor && (st.getFluidState().is(FluidTags.WATER) || st.getFluidState().is(FluidTags.LAVA)) && st.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock) kind = "fluid";
-                    else if (BuildingAudit.holds(st) && !st.hasBlockEntity() && lone(level, c)) kind = "stray";
+                    else if (lump(st) && lone(level, c)) kind = "stray";
                     if (kind == null) continue;
                     if (!kind.equals("fluid") && !kind.equals("plants")) {
                         ItemStack it = new ItemStack(st.getBlock().asItem());
@@ -204,13 +218,10 @@ public final class BuildingMend {
             if (p.part() != BuildGoal.Part.BLOCK) continue;
             BlockState st = level.getBlockState(p.pos());
             if (!BuildingAudit.fixture(st) || PlayerBlocks.placed(level, p.pos())) continue;
+            if (level.getBlockEntity(p.pos()) instanceof net.minecraft.world.Container) continue;   // a chest, a barrel, a furnace: somebody's things in it, left
             Block own = most(byStyle.getOrDefault(p.style(), Map.of()));
             if (own == null) own = floor;
             if (own == null) continue;
-            if (level.getBlockEntity(p.pos()) instanceof net.minecraft.world.Container c) {
-                for (int i = 0; i < c.getContainerSize(); i++) if (!c.getItem(i).isEmpty()) Crafts.store(level, v, c.getItem(i).copy());
-                c.clearContent();
-            }
             Crafts.store(level, v, new ItemStack(st.getBlock().asItem()));
             level.setBlock(p.pos(), BuildGoal.orient(own.defaultBlockState(), p, b.facing(), level, p.pos()), 3);
             fixed.merge("fixture_out_of_wall", 1, Integer::sum);
