@@ -173,12 +173,18 @@ public final class BuildingAudit {
         }
         r.add(name, "floating", floating, at(fWhere));
 
+        // The footing's own shape (a building is not always its box): a column is inside it where the footing layer is drawn
+        // there and on all four sides of it.
+        Set<Long> footed = new HashSet<>();
+        for (BuildGoal.Placement p : mine.values()) if (p.pos().getY() == minY) footed.add(BlockPos.asLong(p.pos().getX(), 0, p.pos().getZ()));
         // ---- the rooms: what is in the cells the drawing leaves open, inside the walls and under a ceiling
         int grass = 0, earth = 0, fluid = 0, holes = 0, earthFloor = 0, dark = 0, stray = 0;
         BlockPos gW = null, eW = null, wW = null, hW = null, efW = null, dW = null, sW = null;
         for (int x = x0 + 1; x < x1; x++) {
             for (int z = z0 + 1; z < z1; z++) {
                 long col = BlockPos.asLong(x, 0, z);
+                if (!footed.contains(col) || !footed.contains(BlockPos.asLong(x + 1, 0, z)) || !footed.contains(BlockPos.asLong(x - 1, 0, z))
+                        || !footed.contains(BlockPos.asLong(x, 0, z + 1)) || !footed.contains(BlockPos.asLong(x, 0, z - 1))) continue;
                 Integer roof = ceiling.get(col);
                 boolean indoor = !open && roof != null;
                 int top = indoor ? roof : minY + 3;
@@ -187,8 +193,8 @@ public final class BuildingAudit {
                 if (level.isLoaded(floor) && !playerPut(level, floor)) {
                     BlockState fs = level.getBlockState(floor);
                     BuildGoal.Placement fp = mine.get(floor.asLong());
-                    boolean drawnFloor = fp != null && fp.part() == BuildGoal.Part.BLOCK;
-                    if (indoor || drawnFloor) {
+                    boolean drawnFloor = fp != null && fp.part() == BuildGoal.Part.BLOCK && fp.style() != Blueprints.Style.SOIL;
+                    if (!open && (indoor || drawnFloor)) {
                         if (fs.is(Blocks.GRASS_BLOCK) || fs.is(Blocks.MYCELIUM) || fs.is(Blocks.PODZOL)) {
                             grass++;
                             if (gW == null) gW = floor;
@@ -213,14 +219,14 @@ public final class BuildingAudit {
                             holes++;
                             if (hW == null) hW = c;
                         }
-                        if (p.part() == BuildGoal.Part.BLOCK && st.is(Blocks.GRASS_BLOCK)) {
+                        if (p.part() == BuildGoal.Part.BLOCK && p.style() != Blueprints.Style.SOIL && !open && st.is(Blocks.GRASS_BLOCK)) {
                             grass++;
                             if (gW == null) gW = c;
                         }
                         continue;
                     }
                     if (playerPut(level, c)) continue;
-                    if (st.is(Blocks.GRASS_BLOCK) || plantish(level, c, st)) {
+                    if (!open && (st.is(Blocks.GRASS_BLOCK) || plantish(level, c, st))) {
                         if (indoor || st.is(Blocks.GRASS_BLOCK) || y <= minY + 2) {
                             grass++;
                             if (gW == null) gW = c;

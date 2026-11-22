@@ -195,6 +195,7 @@ public final class VillageCommands {
             // the world founded, or one from before its ground was levelled). An operator, or the world's owner.
             .then(Commands.literal("level").executes(VillageCommands::levelGround))
             .then(Commands.literal("groundcheck").requires(src -> src.hasPermission(2)).executes(VillageCommands::groundCheck))   // [terra10]
+            .then(Commands.literal("buildcheck").requires(src -> src.hasPermission(2)).executes(VillageCommands::buildCheck))   // [biz30]
             // Which version of the mod is loaded: its number and the newest change in it.
             .then(Commands.literal("version").executes(ctx -> {
                 String v = "MC Assistant " + com.jrpetty.mcassistant.McAssistantMod.version() + " — "
@@ -712,6 +713,25 @@ public final class VillageCommands {
             + " | first: " + com.jrpetty.mcassistant.entity.TerraformAudit.FIRST;
         ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         com.mojang.logging.LogUtils.getLogger().info("[MCA-FOUND] {}", line);
+        return 1;
+    }
+
+    /** [biz30] /village buildcheck: every building of the town nearest here looked over (entity/BuildingAudit), into the log. */
+    private static int buildCheck(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(level, here, 400);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No town near here."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.entity.BuildingAudit.Report r = com.jrpetty.mcassistant.entity.BuildingAudit.town(level, v);
+        String line = "BUILDINGS " + Villages.name(v.id()) + ": " + r.line();
+        org.slf4j.Logger log = com.mojang.logging.LogUtils.getLogger();
+        log.info("[MCA-BUILDCHECK] {}", line);
+        for (java.util.Map.Entry<String, java.util.Map<String, Integer>> e : r.each.entrySet()) log.info("[MCA-BUILDCHECK]   {} {}", e.getKey(), e.getValue());
+        for (java.util.Map.Entry<String, java.util.List<String>> e : r.examples.entrySet()) for (String s : e.getValue()) log.info("[MCA-BUILDCHECK]   {}: {}", e.getKey(), s);
+        ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         return 1;
     }
 
