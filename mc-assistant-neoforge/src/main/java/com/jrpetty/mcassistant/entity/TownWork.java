@@ -59,6 +59,7 @@ public final class TownWork {
         CityWater.sweep(level, v);                  // [city9] no water left running off a building over the town's ground
         Store.tick(level, v);                       // [econ-store] the shop's staff, its stock book and its deliveries
         WorkTools.rounds(level, v);                 // [workitems] the milestones, the window boxes, the thatch, the shop's book
+        StoreRoom.ahead(level, v.id());                // [econ32] room in the stores made before they are full
         streets(level, v, now);
     }
 
