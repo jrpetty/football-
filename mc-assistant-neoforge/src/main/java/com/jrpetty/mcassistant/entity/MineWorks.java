@@ -298,6 +298,14 @@ public final class MineWorks {
                     w.drifts.add(d);
                 }
             }
+            // [econ32b] A level marked worked out with not a block of drift dug on it (marked so the moment it opened, its
+            // landing walls refused) is opened again: it was never worked.
+            for (int id = 0; id < 32; id++) {
+                if ((w.spent & (1 << id)) == 0) continue;
+                int dug = 0;
+                for (Drift d : w.drifts) if (d.level == id) dug += d.path.length();
+                if (dug == 0 && (w.rooms & (1 << id)) != 0) w.spent &= ~(1 << id);
+            }
             if (parts.length > 2 && !parts[2].isEmpty()) {                               // [econ32b] the barren count
                 String[] c = parts[2].split(",");
                 for (int i = 0; i < Math.min(c.length, w.sinceOre.length); i++) w.sinceOre[i] = Integer.parseInt(c[i].trim());
