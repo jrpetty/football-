@@ -379,7 +379,9 @@ public class BusinessLookGameTests {
         int x0 = 6515000;
         Kit.hold(level, x0 + 30, Z, 70);
         Kit.prepare(level, x0 + 30, Z, 70);
-        BlockPos heart = Kit.surface(level, x0 - 40, Z);
+        BlockPos heart = Kit.surface(level, x0 - 220, Z);                   // (out past the town's own streets and square)
+        Kit.hold(level, heart.getX(), heart.getZ(), 24);
+        Kit.prepare(level, heart.getX(), heart.getZ(), 24);
         VillageFolkEntity hand = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(hand != null, "a village");
         UUID id = hand.ownerId();
@@ -394,16 +396,20 @@ public class BusinessLookGameTests {
             BlockPos anchor = new BlockPos(lot.getX(), base, lot.getZ());
             Block[] tables = { Blocks.CRAFTING_TABLE, Blocks.LOOM, Blocks.GRINDSTONE };
             int put = 0;
+            List<BuildGoal.Placement> at = new ArrayList<>();
             for (BuildGoal.Placement p : BuildGoal.plan(n, anchor, Direction.NORTH, 13)) {
                 if (put >= tables.length || p.part() != BuildGoal.Part.BLOCK || p.pos().getY() > anchor.getY() + 1) continue;
                 if (p.pos().getY() < anchor.getY() - 1 || (p.pos().getX() + p.pos().getZ()) % 3 != 0) continue;
                 level.setBlock(p.pos(), tables[put++].defaultBlockState(), 3);
+                at.add(p);
             }
             ok.that(put == tables.length, n + ": the tables set in its cells (" + put + ")");
             String words = BuildGoal.buildNowForTests(hand, n, anchor, Direction.NORTH, BuildWorldGameTests::stock);
             Ledger.built(id, n, anchor, Direction.NORTH);
             BuildingAudit.building(level, v, n, n, anchor, Direction.NORTH, r);
             Kit.log("[VT] bl05 " + n + ": " + words);
+            for (BuildGoal.Placement p : at) Kit.log("[VT] bl05   " + p.pos().subtract(anchor).toShortString() + " " + p.style() + " now "
+                + level.getBlockState(p.pos()).getBlock() + " wrong " + BuildGoal.wrongInCell(level.getBlockState(p.pos()), p));
         }
         Kit.log("[VT] bl05 " + r.line() + " " + r.examples.getOrDefault("fixture_as_block", List.of()));
         ok.that(r.count("fixture_as_block") == 0, "no workstation left for a block: " + r.examples.getOrDefault("fixture_as_block", List.of()));
