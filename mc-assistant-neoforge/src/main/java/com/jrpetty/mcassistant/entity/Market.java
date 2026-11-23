@@ -1351,6 +1351,14 @@ public final class Market {
         return new String[]{ one, two, p + coinWord(p), md ? "Market day!" : trend > 0 ? "\u2191 dearer" : trend < 0 ? "\u2193 cheaper" : "" };
     }
 
+    /** [pa33] A player's assistant sells a lot of this (out of its own pack) for its player, who is paid: the market's
+     *  own sale, the same price and the same books as a player at the stall. */
+    public static String sellFor(ServerLevel level, Villages.Village v, Player p, ItemStack lot) {
+        Good g = goodFor(lot);
+        if (g == null) return "The village doesn't buy " + lot.getHoverName().getString() + ".";
+        return sell(level, v, p, lot, g, marketDay(v.id(), level.getDayTime() / 24000L));
+    }
+
     private static String sell(ServerLevel level, Villages.Village v, Player p, ItemStack hand, Good g, boolean md) {
         UUID id = v.id();
         if (hand.getCount() < g.bundle()) return "The village buys " + g.name().toLowerCase() + " by the " + g.bundle() + ".";

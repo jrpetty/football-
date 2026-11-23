@@ -72,6 +72,14 @@ public final class McAssistantMod {
             .clientTrackingRange(10)
             .build("village_folk"));
 
+    /** [pa33] The Player AI Assistant: a player's own companion. Its own type: never one of the village folk. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.jrpetty.mcassistant.pa.PlayerAssistantEntity>>
+        PLAYER_ASSISTANT = ENTITY_TYPES.register("player_assistant", () -> EntityType.Builder
+            .of(com.jrpetty.mcassistant.pa.PlayerAssistantEntity::new, MobCategory.CREATURE)
+            .sized(0.6F, 1.8F)
+            .clientTrackingRange(10)
+            .build("player_assistant"));
+
     // Extended menu type: the entity id travels to the client in the buffer.
     public static final DeferredHolder<MenuType<?>, MenuType<AssistantMenu>> ASSISTANT_MENU =
         MENU_TYPES.register("assistant", () -> IMenuTypeExtension.create(AssistantMenu::new));
@@ -169,6 +177,10 @@ public final class McAssistantMod {
 
     // The Memory Core: dropped when a companion dies — right-click the ground
     // to bring that exact bot back (name, level, role, waypoints, station).
+    /** [pa33] The Assistant Whistle: makes your Player AI Assistant where you use it, and calls it to you. */
+    public static final DeferredItem<com.jrpetty.mcassistant.pa.PaWhistleItem> ASSISTANT_WHISTLE =
+        ITEMS.registerItem("assistant_whistle", com.jrpetty.mcassistant.pa.PaWhistleItem::new, new net.minecraft.world.item.Item.Properties().stacksTo(1));
+
     public static final DeferredItem<com.jrpetty.mcassistant.item.MemoryCoreItem> MEMORY_CORE =
         ITEMS.registerItem("memory_core", com.jrpetty.mcassistant.item.MemoryCoreItem::new);
 
@@ -349,6 +361,7 @@ public final class McAssistantMod {
                 out.accept(STOREHOUSE_ITEM.get());
                 out.accept(VILLAGE_BOARD_ITEM.get());
                 out.accept(ASSISTANT_SPAWNER_ITEM.get());
+                out.accept(ASSISTANT_WHISTLE.get());                      // [pa33]
                 out.accept(JOB_BOARD_ITEM.get());
                 out.accept(ZONE_MARKER.get());
                 out.accept(PLACE_MARKER.get());
@@ -386,7 +399,9 @@ public final class McAssistantMod {
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, AssistantConfig.SPEC);
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.jrpetty.mcassistant.admin.AdminConfig.SPEC);   // [admin] the admin toolkit's switches
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, AnimConfig.SPEC);   // [anim] how much of the folk's life is drawn
-        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, UiConfig.SPEC, "mc_assistant-ui-client.toml");   // [ui] favourites' toasts and tracker
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, UiConfig.SPEC, "mc_assistant-ui-client.toml");
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.jrpetty.mcassistant.pa.PaConfig.SPEC, "mc_assistant-assistant-server.toml");   // [pa33]
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, com.jrpetty.mcassistant.pa.PaClientConfig.SPEC, "mc_assistant-assistant-client.toml");   // [pa33] voice, HUD   // [ui] favourites' toasts and tracker
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);
         BLOCKS.register(modBus);
@@ -464,6 +479,7 @@ public final class McAssistantMod {
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {
         event.put(ASSISTANT.get(), AssistantEntity.createAttributes().build());
+        event.put(PLAYER_ASSISTANT.get(), AssistantEntity.createAttributes().build());   // [pa33]
         event.put(VILLAGE_FOLK.get(),
             com.jrpetty.mcassistant.entity.VillageFolkEntity.createAttributes().build());
     }
@@ -472,6 +488,7 @@ public final class McAssistantMod {
     private void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(ASSISTANT_SPAWNER_ITEM);
+            event.accept(ASSISTANT_WHISTLE);                                     // [pa33]
             event.accept(FOLK_SPAWNER_ITEM);
             event.accept(VILLAGE_CHARTER);
             event.accept(FOUNDING_KIT);                                          // [found23]

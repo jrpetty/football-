@@ -39,6 +39,9 @@ public class AssistantSpawnerBlock extends Block {
             || !(placer instanceof ServerPlayer serverPlayer)) {
             return;
         }
+        // [pa33] The spawner is your Player AI Assistant's now: placed, it waits to be clicked (and is its home and the
+        // place it comes back to). Hiring a crew hand from it is a sneak-click, below.
+        if (com.jrpetty.mcassistant.pa.PaSpawner.placed(serverPlayer, pos)) return;
         if (AssistantEntity.allFor(serverPlayer.getUUID()).size() >= AssistantEntity.maxPerOwner()) {
             serverPlayer.sendSystemMessage(Component.literal(
                 "<Assistant> You already run a full crew — dismiss one first (the spawner will keep)."));
@@ -77,6 +80,11 @@ public class AssistantSpawnerBlock extends Block {
             return InteractionResult.SUCCESS;
         }
 
+        // [pa33] A click brings out your Player AI Assistant (made here if you have none); a sneak-click hires a crew hand.
+        if (!serverPlayer.isShiftKeyDown()) {
+            com.jrpetty.mcassistant.pa.PaSpawner.clicked(serverPlayer, pos);
+            return InteractionResult.CONSUME;
+        }
         Vec3 spot = findSafeSpot(serverLevel, pos);
         AssistantEntity existing = AssistantEntity.byOwner(serverPlayer.getUUID());
 

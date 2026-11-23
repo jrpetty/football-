@@ -1,0 +1,870 @@
+package com.jrpetty.mcassistant.client.pa;
+
+import com.jrpetty.mcassistant.client.UiStyle;
+import com.jrpetty.mcassistant.pa.PaClientConfig;
+import com.jrpetty.mcassistant.pa.PaUnderstand;
+import com.jrpetty.mcassistant.pa.PlayerAssistantEntity;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * [pa33] The Player AI Assistant's panel (Y, or right-click it): Talk (a conversation with a text box, suggestion
+ * chips and a microphone), Orders (one click for the common jobs, each with a small picker for how many and where),
+ * Jobs (the live list with progress and times; reorder, cancel, pause), Pack (what it carries; its pack and gear) and
+ * About (its level, skills and record, and every setting). With no assistant yet it offers one. Fits every GUI scale
+ * from a 427x240 screen up.
+ */
+public class PaScreen extends Screen {
+
+    static final int BRAND = 0xFF1F8A7A, BRAND_LIGHT = 0xFF2BB5A0, BRAND_WASH = 0xFFD7EEEA, HEADER = 0xFF173B40;
+    private static final String[] TABS = {"talk", "orders", "jobs", "pack", "about"};
+    private static final String[] TAB_LABELS = {"Talk", "Orders", "Jobs", "Pack", "About"};
+
+    /** True while the portrait draws (its plate and bubble belong to the world, not the frame). */
+    static boolean drawingPortrait;
+
+    private String tab;
+    private int left, top, w, h, seen = -1;
+    private EditBox input, nameBox;
+    private int scroll, contentH, logScroll;
+    private boolean stickBottom = true;
+    private String picker = "";
+    private final List<String> pick = new ArrayList<>();       // the picker's choices so far
+    private boolean confirmDismiss;
+    private int tour = -1;
+
+    /** Click zones laid down while drawing: x, y, w, h, what to do, and a tooltip. */
+    private record Zone(int x, int y, int w, int h, Runnable run, String tip) {}
+
+    private final List<Zone> zones = new ArrayList<>();
+    private String tipNow = "";
+
+    public PaScreen(String tab) {
+        super(Component.literal("Player AI Assistant"));
+        this.tab = tab == null || tab.isEmpty() ? "talk" : tab;
+    }
+
+    @Override
+    public boolean isPauseScreen() { return false; }
+
+    @Override
+    protected void init() {
+        w = Math.min(this.width - 8, 420);
+        h = Math.min(this.height - 8, 262);
+        left = (this.width - w) / 2;
+        top = (this.height - h) / 2;
+        String keep = input == null ? "" : input.getValue();
+        input = new EditBox(font, left + 10, top + h - 34, w - 104, 16, Component.literal("Talk to your assistant"));
+        input.setMaxLength(240);
+        input.setHint(Component.literal("Say anything: \"get me 16 logs\", \"build a small house here\"..."));
+        input.setValue(keep);
+        input.setBordered(true);
+        addWidget(input);
+        nameBox = new EditBox(font, 0, 0, 90, 14, Component.literal("Name"));
+        nameBox.setMaxLength(16);
+        addWidget(nameBox);
+        if (tab.equals("talk")) setInitialFocus(input);
+    }
+
+    void startTour() {
+        tour = 0;
+        tab = "talk";
+    }
+
+    // ------------------------------------------------------------------ drawing
+
+    @Override
+    public void renderBackground(GuiGraphics g, int mx, int my, float pt) {
+        g.fill(0, 0, width, height, 0x70101014);
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        renderBackground(g, mx, my, pt);
+        zones.clear();
+        tipNow = "";
+        CompoundTag s = PaClient.state;
+        if (seen != PaClient.stamp) {
+            seen = PaClient.stamp;
+            if (stickBottom) logScroll = Integer.MAX_VALUE;
+            if (nameBox.getValue().isEmpty()) nameBox.setValue(s.getString("name"));
+        }
+        UiStyle.shadow(g, left, top, w, h);
+        UiStyle.panel(g, left, top, w, h);
+        input.visible = false;
+        nameBox.visible = false;
+        if (!s.getBoolean("has")) {
+            welcome(g, mx, my);
+            footer(g, mx, my);
+            tooltip(g, mx, my);
+            return;
+        }
+        header(g, s, mx, my);
+        int by = top + 44, bh = h - 44 - 14;
+        if (s.getBoolean("dead")) {
+            g.fill(left + 6, by, left + w - 6, by + 14, 0xFFEACBC2);
+            g.drawString(font, UiStyle.clip(font, s.getString("name") + " is knocked out: back in " + s.getInt("back") + "s. A whistle brings them back now.", w - 20),
+                left + 10, by + 3, UiStyle.DANGER, false);
+            by += 16;
+            bh -= 16;
+        }
+        switch (tab) {
+            case "talk" -> talk(g, s, left + 6, by, w - 12, bh, mx, my);
+            case "orders" -> orders(g, s, left + 6, by, w - 12, bh, mx, my);
+            case "jobs" -> scrolled(g, by, bh, mx, my, (y) -> jobs(g, s, left + 8, y, w - 22, mx, my));
+            case "pack" -> scrolled(g, by, bh, mx, my, (y) -> pack(g, s, left + 8, y, w - 22, mx, my));
+            case "about" -> scrolled(g, by, bh, mx, my, (y) -> about(g, s, left + 8, y, w - 22, mx, my));
+            default -> { }
+        }
+        footer(g, mx, my);
+        if (tour >= 0) tourOverlay(g, mx, my);
+        tooltip(g, mx, my);
+    }
+
+    private void header(GuiGraphics g, CompoundTag s, int mx, int my) {
+        g.fill(left + 1, top + 1, left + w - 1, top + 26, HEADER);
+        g.fill(left + 1, top + 26, left + w - 1, top + 27, BRAND_LIGHT);
+        // portrait
+        PlayerAssistantEntity a = PaClient.mine();
+        int px = left + 4, py = top + 3;
+        g.fill(px, py, px + 22, py + 22, 0xFF0E2A2E);
+        if (a != null) {
+            drawingPortrait = true;
+            try {
+                InventoryScreen.renderEntityInInventoryFollowsMouse(g, px, py, px + 22, py + 22, 10, 0.0625F, mx, my, a);
+            } finally {
+                drawingPortrait = false;
+            }
+        } else {
+            g.drawCenteredString(font, s.getString("name").isEmpty() ? "?" : s.getString("name").substring(0, 1), px + 11, py + 7, BRAND_LIGHT);
+        }
+        g.drawString(font, s.getString("name"), left + 30, top + 4, 0xFFFFFFFF, true);
+        String sub = "Player AI Assistant";
+        String state = s.getString("state");
+        if (a != null) state = a.state();
+        String[] f = state.split("\\|", -1);
+        if (f.length > 1 && !f[1].isEmpty()) sub = f[1];
+        g.drawString(font, UiStyle.clip(font, sub, w - 150), left + 30, top + 15, 0xFF9FD8CE, false);
+        // health
+        float hp = a != null ? a.getHealth() : s.getFloat("hp"), max = a != null ? a.getMaxHealth() : Math.max(1, s.getFloat("maxHp"));
+        int bx = left + w - 102;
+        g.drawString(font, (int) Math.ceil(hp) + "/" + (int) max + " ❤", bx, top + 4, 0xFFEFEFEF, false);
+        UiStyle.bar(g, bx, top + 15, 60, 4, hp / max, hp / max > 0.6F ? UiStyle.SUCCESS_FILL : hp / max > 0.3F ? UiStyle.WARNING_FILL : UiStyle.DANGER_FILL);
+        button(g, "✕", left + w - 20, top + 6, 14, 14, mx, my, true, false, "Close (Esc)", this::onClose);
+        // tabs
+        int tx = left + 6;
+        for (int i = 0; i < TABS.length; i++) {
+            String label = TAB_LABELS[i];
+            if (TABS[i].equals("jobs")) {
+                int n = s.getList("steps", Tag.TAG_COMPOUND).size();
+                if (n > 0) label += " (" + n + ")";
+            }
+            int tw = font.width(label) + 14;
+            boolean on = tab.equals(TABS[i]);
+            boolean over = in(mx, my, tx, top + 29, tw, 14);
+            UiStyle.topTab(g, tx, top + 29, tw, 14, UiStyle.State.of(true, on, over));
+            g.drawString(font, label, tx + 7, top + 32, on ? UiStyle.TEXT : UiStyle.TEXT_MUTED, false);
+            final String t = TABS[i];
+            zone(tx, top + 29, tw, 14, () -> { tab = t; scroll = 0; picker = ""; pick.clear(); confirmDismiss = false; }, "");
+            tx += tw + 2;
+        }
+    }
+
+    private void footer(GuiGraphics g, int mx, int my) {
+        String msg;
+        if (!PaClient.note.isEmpty() && System.currentTimeMillis() - PaClient.noteAt < 6000) msg = PaClient.note;
+        else if (!PaVoice.status.isEmpty() && System.currentTimeMillis() - PaVoice.statusAt < 6000) msg = PaVoice.status;
+        else msg = PaClient.PANEL.getTranslatedKeyMessage().getString() + " opens this  ·  hold " + PaClient.TALK.getTranslatedKeyMessage().getString()
+            + " to talk  ·  " + PaClient.WHEEL.getTranslatedKeyMessage().getString() + " action wheel  ·  right-click it";
+        g.drawString(font, UiStyle.clip(font, msg, w - 16), left + 8, top + h - 11, UiStyle.TEXT_FAINT, false);
+    }
+
+    // ------------------------------------------------------------------ no assistant yet
+
+    private void welcome(GuiGraphics g, int mx, int my) {
+        g.fill(left + 1, top + 1, left + w - 1, top + 26, HEADER);
+        g.drawString(font, "Meet your Player AI Assistant", left + 10, top + 9, 0xFFFFFFFF, true);
+        button(g, "✕", left + w - 20, top + 6, 14, 14, mx, my, true, false, "Close", this::onClose);
+        int y = top + 34, x = left + 12, iw = w - 24;
+        y = para(g, "A companion of your own. It follows you, talks with you, and does what a player does: chops, mines, farms, "
+            + "crafts, smelts, builds from the mod's drawings, fights, fetches and tidies. Tell it what you want in plain words, "
+            + "click an order, or hold a key and say it.", x, y, iw, UiStyle.TEXT);
+        y += 6;
+        boolean free = PaClient.state.getBoolean("free");
+        if (free) {
+            button(g, "Get my assistant", left + (w - 140) / 2, y, 140, 20, mx, my, true, true,
+                "Your assistant appears beside you, yours for good", () -> PaClient.send("summon", new CompoundTag()));
+            y += 28;
+        }
+        UiStyle.heading(g, font, "Other ways to get one", x, y, iw);
+        y += 13;
+        y = para(g, "• Craft an Assistant Whistle (4 iron, 4 redstone, a gold ingot) and use it on the ground.", x, y, iw, UiStyle.TEXT_MUTED);
+        y = para(g, "• Craft an Assistant Spawner (8 rotten flesh round a diamond), place it and click it: it becomes your assistant's home.", x, y, iw, UiStyle.TEXT_MUTED);
+        y += 4;
+        button(g, "Ask the Guide", x, y, 90, 16, mx, my, true, false, "The Guide's article on the assistant",
+            () -> com.jrpetty.mcassistant.client.guide.GuideClient.openAt(this, "pa_getting"));
+    }
+
+    // ------------------------------------------------------------------ talk
+
+    private void talk(GuiGraphics g, CompoundTag s, int x, int y, int iw, int ih, int mx, int my) {
+        int logH = ih - 40;
+        UiStyle.well(g, x, y, iw, logH, 0xFFE9EEEC);
+        // the conversation, newest at the bottom
+        ListTag log = s.getList("log", Tag.TAG_COMPOUND);
+        int bubbleW = Math.max(120, iw * 7 / 10);
+        List<Object[]> laid = new ArrayList<>();
+        int total = 4;
+        for (Tag t : log) {
+            CompoundTag l = (CompoundTag) t;
+            List<FormattedCharSequence> lines = font.split(Component.literal(l.getString("t")), bubbleW - 10);
+            laid.add(new Object[]{l.getInt("w"), lines});
+            total += lines.size() * 10 + 8 + (l.getInt("w") == 1 ? 0 : 0);
+        }
+        int maxScroll = Math.max(0, total - logH + 4);
+        logScroll = Math.max(0, Math.min(logScroll, maxScroll));
+        stickBottom = logScroll >= maxScroll;
+        g.enableScissor(x + 1, y + 1, x + iw - 1, y + logH - 1);
+        int cy = y + 4 - logScroll;
+        if (log.isEmpty()) {
+            g.drawCenteredString(font, "Say hello, or try one of the suggestions below.", x + iw / 2, y + logH / 2 - 4, UiStyle.TEXT_FAINT);
+        }
+        for (Object[] o : laid) {
+            int who = (Integer) o[0];
+            @SuppressWarnings("unchecked") List<FormattedCharSequence> lines = (List<FormattedCharSequence>) o[1];
+            int lw = 0;
+            for (FormattedCharSequence l : lines) lw = Math.max(lw, font.width(l));
+            int bw2 = lw + 10, bh2 = lines.size() * 10 + 4;
+            int bx = who == 0 ? x + iw - bw2 - 6 : x + 6;
+            int fill = who == 0 ? UiStyle.BUBBLE_YOU : who == 1 ? UiStyle.BUBBLE_THEM : 0xFFE4E4E4;
+            if (cy + bh2 > y && cy < y + logH) {
+                g.fill(bx, cy, bx + bw2, cy + bh2, fill);
+                g.fill(bx, cy, bx + 2, cy + bh2, who == 0 ? UiStyle.ACCENT_FILL : who == 1 ? BRAND_LIGHT : 0xFF999999);
+                for (int i = 0; i < lines.size(); i++) g.drawString(font, lines.get(i), bx + 6, cy + 2 + i * 10, UiStyle.TEXT, false);
+            }
+            cy += bh2 + 4;
+        }
+        g.disableScissor();
+        if (maxScroll > 0) UiStyle.scrollBar(g, x + iw - 5, y + 1, logH - 2, logScroll, total, logH);
+        // chips: its question's choices, else suggestions for now
+        List<String[]> chips = new ArrayList<>(PaClient.choices);
+        if (chips.isEmpty() && s.contains("ask")) {
+            for (Tag t : s.getList("askChoices", Tag.TAG_COMPOUND)) chips.add(new String[]{((CompoundTag) t).getString("l"), ((CompoundTag) t).getString("s")});
+        }
+        boolean asked = !chips.isEmpty();
+        if (chips.isEmpty()) chips = PaChips.forNow();
+        int chipY = y + logH + 3, chipX = x;
+        for (String[] c : chips) {
+            int cw = font.width(c[0]) + 10;
+            if (chipX + cw > x + iw) break;
+            boolean over = in(mx, my, chipX, chipY, cw, 13);
+            g.fill(chipX, chipY, chipX + cw, chipY + 13, over ? BRAND_LIGHT : asked ? BRAND : 0xFFBFD9D4);
+            g.drawString(font, c[0], chipX + 5, chipY + 3, over || asked ? 0xFFFFFFFF : UiStyle.TEXT, false);
+            final String say = c[1];
+            zone(chipX, chipY, cw, 13, () -> chip(say), asked ? "" : "Say: \"" + say + "\"");
+            chipX += cw + 4;
+        }
+        // the box, send and the microphone
+        input.visible = true;
+        input.setX(x + 2);
+        input.setY(y + ih - 19);
+        input.setWidth(iw - 92);
+        input.render(g, mx, my, 0);
+        String typed = input.getValue();
+        if (!typed.isEmpty() && input.isFocused()) {
+            List<String> sug = PaUnderstand.complete(typed, 3);
+            if (!sug.isEmpty() && sug.get(0).startsWith(typed.toLowerCase())) {
+                String rest = sug.get(0).substring(typed.length());
+                g.drawString(font, rest, input.getX() + 4 + font.width(typed), input.getY() + 4, 0xFF9A9A9A, false);
+            }
+            int sy = input.getY() - 2 - sug.size() * 12;
+            for (int i = 0; i < sug.size(); i++) {
+                int sw = font.width(sug.get(i)) + 10;
+                boolean over = in(mx, my, input.getX(), sy + i * 12, sw, 12);
+                g.fill(input.getX(), sy + i * 12, input.getX() + sw, sy + i * 12 + 12, over ? 0xFFF4F4F4 : 0xF0FFFFFF);
+                g.drawString(font, sug.get(i), input.getX() + 5, sy + i * 12 + 2, UiStyle.TEXT_MUTED, false);
+                final String v = sug.get(i);
+                zone(input.getX(), sy + i * 12, sw, 12, () -> { input.setValue(v); input.moveCursorToEnd(false); }, "");
+            }
+        }
+        button(g, "Send", x + iw - 86, y + ih - 19, 44, 16, mx, my, !typed.isBlank(), true, "Send (Enter)", this::sendTyped);
+        boolean listening = PaVoice.listening;
+        button(g, listening ? "■ Stop" : "🎤 Talk", x + iw - 40, y + ih - 19, 40, 16, mx, my, true, listening,
+            listening ? "Stop listening and send" : "Click, speak, click again (or hold " + PaClient.TALK.getTranslatedKeyMessage().getString() + " outside this panel)",
+            () -> { if (PaVoice.listening) PaVoice.stopListening(); else PaVoice.startListening(); });
+        if (listening && !PaVoice.transcript.isEmpty()) {
+            g.drawString(font, UiStyle.clip(font, "“" + PaVoice.transcript + "”", iw - 100), x + 4, y + logH - 12, BRAND, false);
+        }
+    }
+
+    private void chip(String say) {
+        if (say.startsWith("#change ")) {
+            input.setValue(say.substring(8));
+            input.moveCursorToEnd(false);
+            setFocused(input);
+            PaClient.choices = new ArrayList<>();
+            return;
+        }
+        if (say.startsWith("#guide:")) {
+            String id = say.substring(7);
+            if (id.isEmpty()) com.jrpetty.mcassistant.client.guide.GuideClient.open(this);
+            else com.jrpetty.mcassistant.client.guide.GuideClient.openAt(this, id);
+            return;
+        }
+        if (say.equals("#tour")) {
+            startTour();
+            return;
+        }
+        PaClient.talk(say, false);
+        stickBottom = true;
+        logScroll = Integer.MAX_VALUE;
+    }
+
+    private void sendTyped() {
+        String t = input.getValue().trim();
+        if (t.isEmpty()) return;
+        PaClient.talk(t, false);
+        input.setValue("");
+        stickBottom = true;
+        logScroll = Integer.MAX_VALUE;
+    }
+
+    // ------------------------------------------------------------------ orders
+
+    /** label, picker key ("" = at once), what it says at once / the picker's phrase, tooltip. */
+    private static final String[][] ORDERS = {
+        {"Follow me", "", "follow me", "It follows you and fights what comes at you"},
+        {"Stay here", "", "stay here", "It waits where it stands"},
+        {"Come here", "", "come here", "It comes to you (from anywhere)"},
+        {"Guard me", "", "guard me", "It sticks close and attacks anything hostile near you"},
+        {"Guard here", "guardhere", "", "It holds a post and guards it"},
+        {"Gather wood", "wood", "", "It chops trees (and makes an axe if it must)"},
+        {"Gather stone", "stone", "", "It mines stone (making a pickaxe first if it has none)"},
+        {"Mine ore", "ore", "", "It digs a mine to the right depth for the ore and follows the veins"},
+        {"Mine down", "down", "", "It digs a staircase mine down to a level"},
+        {"Farm", "farm", "", "Harvest and replant, or lay out a new field"},
+        {"Build", "build", "", "A building from the mod's drawings, where you choose"},
+        {"Craft", "craft", "", "It makes it from scratch: gathers, smelts and crafts the whole chain"},
+        {"Smelt", "smelt", "", "It finds a furnace (or makes one) and smelts with fuel"},
+        {"Deposit", "deposit", "", "It puts its pack away in a chest"},
+        {"Fight", "fight", "", "It attacks"},
+        {"Bring food", "", "bring me food", "It brings you food (cooking or hunting some if it has none)"},
+        {"Light up", "", "light up the area", "It places torches round about (making them if it can)"},
+        {"Sort chests", "", "sort the chests", "It tidies the chests near by"},
+        {"Go home", "", "go home", "It walks home (its spawner, or where you set it)"},
+        {"Stop", "", "stop", "It stops everything at once"},
+    };
+
+    private void orders(GuiGraphics g, CompoundTag s, int x, int y, int iw, int ih, int mx, int my) {
+        int cols = iw >= 380 ? 5 : 4;
+        int tw = (iw - (cols - 1) * 4) / cols, th = 16;
+        int rows = (ORDERS.length + cols - 1) / cols;
+        for (int i = 0; i < ORDERS.length; i++) {
+            String[] o = ORDERS[i];
+            int cx = x + (i % cols) * (tw + 4), cy = y + 2 + (i / cols) * (th + 3);
+            boolean on = picker.equals(o[1]) && !o[1].isEmpty();
+            boolean danger = o[0].equals("Stop");
+            boolean over = in(mx, my, cx, cy, tw, th);
+            g.fill(cx, cy, cx + tw, cy + th, on ? BRAND : over ? 0xFFE6F2EF : danger ? 0xFFEFD3CC : 0xFFDCE6E4);
+            g.fill(cx, cy + th - 1, cx + tw, cy + th, on ? BRAND_LIGHT : 0xFF9DB5B0);
+            PaIcons.draw(g, iconFor(o[0]), cx + 2, cy + 2);
+            g.drawString(font, UiStyle.clip(font, o[0], tw - 18), cx + 16, cy + 4, on ? 0xFFFFFFFF : UiStyle.TEXT, false);
+            zone(cx, cy, tw, th, () -> {
+                if (o[1].isEmpty()) { PaClient.talk(o[2], false); tab = "talk"; }
+                else { picker = picker.equals(o[1]) ? "" : o[1]; pick.clear(); }
+            }, o[3]);
+        }
+        int py = y + 2 + rows * (th + 3) + 4;
+        if (picker.isEmpty()) {
+            para(g, "Click an order. The ones with choices open a picker here. Everything you click shows in Talk, where it answers.", x + 2, py + 2, iw - 4, UiStyle.TEXT_FAINT);
+            return;
+        }
+        UiStyle.well(g, x, py, iw, y + ih - py - 2, 0xFFEFF5F4);
+        pickerBody(g, x + 6, py + 4, iw - 12, mx, my);
+    }
+
+    private static String iconFor(String label) {
+        return switch (label) {
+            case "Follow me" -> "follow"; case "Stay here" -> "stay"; case "Come here" -> "follow"; case "Guard me", "Guard here" -> "guard";
+            case "Gather wood" -> "gather"; case "Gather stone", "Mine ore", "Mine down" -> "mine_ore"; case "Farm" -> "farm";
+            case "Build" -> "build"; case "Craft" -> "craft"; case "Smelt" -> "smelt"; case "Deposit" -> "deposit";
+            case "Fight" -> "fight"; case "Bring food" -> "bring_food"; case "Light up" -> "light_area"; case "Sort chests" -> "sort";
+            case "Go home" -> "go_home"; case "Stop" -> "paused";
+            default -> "";
+        };
+    }
+
+    /** A picker: rows of choices; the order it makes shows, with Go. */
+    private void pickerBody(GuiGraphics g, int x, int y, int iw, int mx, int my) {
+        String[][] rows;
+        switch (picker) {
+            case "wood" -> rows = new String[][]{{"How many logs", "8", "16", "32", "64"}};
+            case "stone" -> rows = new String[][]{{"How much stone", "16", "32", "64", "128"}};
+            case "ore" -> rows = new String[][]{{"Which ore", "iron", "coal", "copper", "gold", "redstone", "diamond"}, {"Until it has", "8", "16", "32"}};
+            case "down" -> rows = new String[][]{{"Down to", "Y 16 (iron)", "Y 0", "Y -16 (gold)", "Y -58 (diamond)"}};
+            case "farm" -> rows = new String[][]{{"What", "tend the crops", "farm where I look", "new field here"}};
+            case "build" -> rows = new String[][]{{"What", "small house", "shelter", "farm", "storage", "workshop", "smeltery", "watchtower"},
+                {"Where", "in front of me", "where I'm looking", "by my home"}};
+            case "craft" -> rows = new String[][]{{"What", "stone pickaxe", "iron pickaxe", "stone sword", "stone axe", "torches", "chest", "furnace",
+                "crafting table", "planks", "bread", "bucket"}, {"How many", "1", "4", "16"}};
+            case "smelt" -> rows = new String[][]{{"What", "iron", "gold", "sand into glass", "logs into charcoal", "beef", "porkchop"}, {"How many", "8", "16", "32"}};
+            case "deposit" -> rows = new String[][]{{"Where", "the nearest chest", "the chest I'm looking at"}};
+            case "fight" -> rows = new String[][]{{"What", "the nearest monster", "what I'm looking at"}};
+            case "guardhere" -> rows = new String[][]{{"What", "this spot", "the farm", "my base"}};
+            default -> rows = new String[0][];
+        }
+        int cy = y;
+        for (int r = 0; r < rows.length; r++) {
+            String[] row = rows[r];
+            g.drawString(font, row[0], x, cy + 3, UiStyle.TEXT_MUTED, false);
+            int cx = x + 76;
+            for (int i = 1; i < row.length; i++) {
+                int bw = font.width(row[i]) + 10;
+                if (cx + bw > x + iw) { cx = x + 76; cy += 15; }
+                boolean on = pick.size() > r && pick.get(r).equals(row[i]);
+                final int rr = r;
+                final String v = row[i];
+                button(g, row[i], cx, cy, bw, 13, mx, my, true, on, "", () -> {
+                    while (pick.size() <= rr) pick.add("");
+                    pick.set(rr, v);
+                });
+                cx += bw + 3;
+            }
+            cy += 17;
+        }
+        String say = phrase();
+        if (say != null) {
+            g.drawString(font, UiStyle.clip(font, "“" + say + "”", iw - 60), x, cy + 4, BRAND, false);
+            button(g, "Go", x + iw - 50, cy, 50, 15, mx, my, true, true, "Send this order", () -> {
+                PaClient.talk(say, false);
+                picker = "";
+                pick.clear();
+                tab = "talk";
+            });
+        } else {
+            g.drawString(font, "Pick one from each row.", x, cy + 4, UiStyle.TEXT_FAINT, false);
+        }
+    }
+
+    /** The order the picker makes, or null while a row is unpicked. */
+    private String phrase() {
+        String a = pick.isEmpty() ? null : pick.get(0);
+        String b = pick.size() > 1 ? pick.get(1) : null;
+        if (a == null || a.isEmpty()) return null;
+        return switch (picker) {
+            case "wood" -> "gather " + a + " logs";
+            case "stone" -> "gather " + a + " stone";
+            case "ore" -> b == null || b.isEmpty() ? null : (a.equals("diamond") ? "mine for diamonds until you have " + b : "mine " + a + " until you have " + b);
+            case "down" -> "dig a mine down to level " + a.replaceAll("^Y (-?\\d+).*$", "$1");
+            case "farm" -> a.equals("tend the crops") ? "tend the farm" : a.equals("farm where I look") ? "farm this field" : "build a farm here";
+            case "build" -> b == null || b.isEmpty() ? null : (a.equals("farm") ? "build a farm" : "build a " + a)
+                + (b.equals("in front of me") ? " here" : b.equals("where I'm looking") ? " over there" : " by my house");
+            case "craft" -> b == null || b.isEmpty() ? null : "craft " + (b.equals("1") ? (a.endsWith("s") ? "" : "a ") : b + " ") + a;
+            case "smelt" -> b == null || b.isEmpty() ? null : "smelt " + b + " " + a.split(" ")[0];
+            case "deposit" -> a.startsWith("the nearest") ? "deposit your items" : "put everything in that chest";
+            case "fight" -> a.startsWith("the nearest") ? "fight the monsters" : "attack that";
+            case "guardhere" -> a.equals("this spot") ? "guard here" : a.equals("the farm") ? "guard the farm" : "guard the base";
+            default -> null;
+        };
+    }
+
+    // ------------------------------------------------------------------ jobs
+
+    private int jobs(GuiGraphics g, CompoundTag s, int x, int y, int iw, int mx, int my) {
+        ListTag steps = s.getList("steps", Tag.TAG_COMPOUND);
+        boolean paused = s.getBoolean("paused");
+        int cy = y;
+        button(g, paused ? "▶ Resume" : "⏸ Pause", x, cy, 64, 14, mx, my, !steps.isEmpty(), paused, paused ? "Carry on" : "Hold the list; it waits",
+            () -> job(paused ? "resume" : "pause", 0));
+        button(g, "Clear all", x + 68, cy, 56, 14, mx, my, !steps.isEmpty(), false, "Stop and forget the whole list", () -> job("clear", 0));
+        button(g, "Undo last order", x + 128, cy, 86, 14, mx, my, true, false, "Put the list back as it was before your last order",
+            () -> PaClient.talk("undo", false));
+        cy += 20;
+        if (steps.isEmpty()) {
+            UiStyle.empty(g, font, "Nothing on the list", "Give it something to do in Talk or Orders.", x, cy, iw, 50);
+            return cy + 54 - y;
+        }
+        for (int i = 0; i < steps.size(); i++) {
+            CompoundTag st = steps.getCompound(i);
+            boolean now = st.getBoolean("now");
+            int rh = 26;
+            UiStyle.card(g, x, cy, iw, rh, now ? BRAND_LIGHT : st.getBoolean("auto") ? 0xFFB0B0B0 : 0xFF8FB0AA);
+            PaIcons.draw(g, st.getString("k").toLowerCase(), x + 5, cy + 3);
+            String label = PaNetLabel.cap(st.getString("l")) + (st.getBoolean("auto") ? " (on its own)" : "");
+            g.drawString(font, UiStyle.clip(font, label, iw - 110), x + 20, cy + 3, UiStyle.TEXT, false);
+            int pct = st.getInt("pct");
+            String tally = st.getString("tally");
+            String eta = now ? "about " + PaNetLabel.time(st.getInt("eta")) + " left" : "about " + PaNetLabel.time(st.getInt("eta"));
+            g.drawString(font, (now ? (paused ? "Paused" : "Now") : "Next") + " · " + eta + (tally.isEmpty() ? "" : " · " + tally),
+                x + 20, cy + 14, UiStyle.TEXT_FAINT, false);
+            if (now && pct >= 0) UiStyle.bar(g, x + iw - 104, cy + 16, 50, 4, pct / 100F, BRAND_LIGHT);
+            final int idx = i;
+            button(g, "▲", x + iw - 50, cy + 5, 14, 14, mx, my, i > 0, false, "Sooner", () -> job("up", idx));
+            button(g, "▼", x + iw - 34, cy + 5, 14, 14, mx, my, i < steps.size() - 1, false, "Later", () -> job("down", idx));
+            button(g, "✕", x + iw - 18, cy + 5, 14, 14, mx, my, true, false, "Cancel this one", () -> job("cancel", idx));
+            cy += rh + 3;
+        }
+        return cy - y;
+    }
+
+    private void job(String op, int i) {
+        CompoundTag a = new CompoundTag();
+        a.putString("op", op);
+        a.putInt("i", i);
+        PaClient.send("job", a);
+    }
+
+    // ------------------------------------------------------------------ pack
+
+    private int pack(GuiGraphics g, CompoundTag s, int x, int y, int iw, int mx, int my) {
+        int cy = y;
+        UiStyle.heading(g, font, "What it carries (" + s.getInt("packUsed") + "/27 slots)", x, cy, iw);
+        cy += 14;
+        button(g, "Open its pack and gear", x, cy, 130, 16, mx, my, true, true, "Move things in and out, give it armour and tools (or sneak-right-click it)",
+            () -> PaClient.send("pack", new CompoundTag()));
+        button(g, "What do you need?", x + 136, cy, 100, 16, mx, my, true, false, "It tells you what it's missing",
+            () -> { PaClient.talk("what do you need", false); tab = "talk"; });
+        cy += 22;
+        g.drawString(font, "In its hand: " + s.getString("held"), x, cy, UiStyle.TEXT_MUTED, false);
+        cy += 12;
+        g.drawString(font, "Food: " + s.getInt("food") + "    Mode: " + s.getString("mode"), x, cy, UiStyle.TEXT_MUTED, false);
+        cy += 14;
+        ListTag p = s.getList("pack", Tag.TAG_STRING);
+        if (p.isEmpty()) {
+            g.drawString(font, "Its pack is empty.", x, cy, UiStyle.TEXT_FAINT, false);
+            cy += 12;
+        }
+        int col = 0;
+        for (Tag t : p) {
+            g.drawString(font, UiStyle.clip(font, "• " + t.getAsString(), iw / 2 - 6), x + col * (iw / 2), cy, UiStyle.TEXT, false);
+            col++;
+            if (col == 2) { col = 0; cy += 11; }
+        }
+        if (col == 1) cy += 11;
+        return cy - y + 4;
+    }
+
+    // ------------------------------------------------------------------ about and settings
+
+    private int about(GuiGraphics g, CompoundTag s, int x, int y, int iw, int mx, int my) {
+        CompoundTag set = s.getCompound("set");
+        int half = iw >= 360 ? iw / 2 - 4 : iw;
+        int cy = y;
+        // about it
+        UiStyle.heading(g, font, "About " + s.getString("name"), x, cy, half);
+        cy += 14;
+        cy = line(g, "Level " + s.getInt("level") + "  ·  " + s.getInt("xp") + " xp  ·  " + s.getInt("done") + " jobs done for you", x, cy, half);
+        String[] pers = {"Cheerful", "Dry", "Calm"};
+        int p = Math.floorMod(s.getInt("pers"), 3);
+        g.drawString(font, "Personality", x, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, pers[p], x + 70, cy, 70, 13, mx, my, true, false, "How it talks: click to change", () -> look("pers", p + 1));
+        cy += 16;
+        int lk = Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length);
+        g.drawString(font, "Look", x, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, "◀", x + 70, cy, 13, 13, mx, my, true, false, "", () -> look("look", lk - 1));
+        g.drawCenteredString(font, PaRenderer.LOOK_NAMES[lk], x + 112, cy + 3, UiStyle.TEXT);
+        button(g, "▶", x + 141, cy, 13, 13, mx, my, true, false, "", () -> look("look", lk + 1));
+        cy += 16;
+        g.drawString(font, "Name", x, cy + 3, UiStyle.TEXT_MUTED, false);
+        nameBox.visible = true;
+        nameBox.setX(x + 70);
+        nameBox.setY(cy);
+        nameBox.setWidth(Math.min(90, half - 120));
+        nameBox.render(g, mx, my, 0);
+        button(g, "Rename", x + 74 + nameBox.getWidth(), cy, 46, 14, mx, my, !nameBox.getValue().isBlank(), false, "", () -> {
+            CompoundTag a = new CompoundTag();
+            a.putString("name", nameBox.getValue());
+            PaClient.send("look", a);
+        });
+        cy += 18;
+        for (Tag t : s.getList("deeds", Tag.TAG_STRING)) cy = line(g, "• " + t.getAsString(), x, cy, half);
+        if (!s.getString("today").isEmpty()) cy = line(g, "Today: " + s.getString("today"), x, cy, half);
+        if (!s.getString("death").isEmpty()) cy = line(g, s.getString("death"), x, cy, half);
+        button(g, "Replay the tour", x, cy + 2, 90, 14, mx, my, true, false, "The quick tour of this panel", this::startTour);
+        if (!confirmDismiss) button(g, "Dismiss...", x + 96, cy + 2, 64, 14, mx, my, true, false, "Send it away for good (it gives back everything it carries)", () -> confirmDismiss = true);
+        else button(g, "Really dismiss " + s.getString("name"), x + 96, cy + 2, Math.min(half - 96, 130), 14, mx, my, true, true, "This can't be undone",
+            () -> { PaClient.send("dismiss", new CompoundTag()); confirmDismiss = false; });
+        cy += 20;
+        int leftEnd = cy;
+        // settings
+        int sx = half == iw ? x : x + half + 8;
+        cy = half == iw ? cy + 4 : y;
+        UiStyle.heading(g, font, "Settings", sx, cy, half);
+        cy += 14;
+        boolean speak = PaClientConfig.get(PaClientConfig.SPEAK, true);
+        cy = toggle(g, "Speak its replies aloud", speak, sx, cy, half, mx, my, PaVoice.tts().status(), () -> PaClientConfig.set(PaClientConfig.SPEAK, !speak));
+        List<String> voices = PaVoice.tts().voices();
+        int vi = PaClientConfig.get(PaClientConfig.VOICE, 0);
+        String vname = voices.isEmpty() ? "Default" : voices.get(Math.min(vi, voices.size() - 1));
+        g.drawString(font, "Voice", sx, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, UiStyle.clip(font, vname, 90), sx + 60, cy, 96, 13, mx, my, voices.size() > 1, false, "Your computer's voices: click for the next",
+            () -> { PaClientConfig.set(PaClientConfig.VOICE, voices.isEmpty() ? 0 : (vi + 1) % voices.size()); PaVoice.speak("Hello, this is my voice."); });
+        cy += 15;
+        int rate = PaClientConfig.get(PaClientConfig.RATE, 0), vol = PaClientConfig.get(PaClientConfig.VOLUME, 80);
+        cy = stepper(g, "Speed", rate + "", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.RATE, Math.max(-5, rate - 1)),
+            () -> PaClientConfig.set(PaClientConfig.RATE, Math.min(5, rate + 1)));
+        cy = stepper(g, "Volume", vol + "%", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.VOLUME, Math.max(0, vol - 10)),
+            () -> PaClientConfig.set(PaClientConfig.VOLUME, Math.min(100, vol + 10)));
+        boolean listen = PaClientConfig.get(PaClientConfig.LISTEN, false);
+        cy = toggle(g, "Listen (hold " + PaClient.TALK.getTranslatedKeyMessage().getString() + " to talk)", listen, sx, cy, half, mx, my, PaVoice.stt().status(),
+            () -> PaClientConfig.set(PaClientConfig.LISTEN, !listen));
+        if (listen && !PaVoice.stt().ready()) {
+            boolean agreed = PaClientConfig.get(PaClientConfig.AGREED, false);
+            cy = para(g, "Listening needs the offline speech model (Vosk, about 40 MB), downloaded once into your config folder. Only the words you say go to the server.",
+                sx, cy, half, UiStyle.TEXT_FAINT);
+            button(g, PaVoice.installing ? "Downloading..." : agreed ? "Download again" : "I agree: download it", sx, cy, 120, 14, mx, my, !PaVoice.installing, true, "",
+                () -> { PaClientConfig.set(PaClientConfig.AGREED, true); PaVoice.install(); });
+            cy += 18;
+        }
+        boolean hud = PaClientConfig.get(PaClientConfig.HUD, true);
+        cy = toggle(g, "Show what it's doing on screen", hud, sx, cy, half, mx, my, "", () -> PaClientConfig.set(PaClientConfig.HUD, !hud));
+        cy = toggle(g, "Auto-help when it has no orders", set.getBoolean("auto"), sx, cy, half, mx, my,
+            "Keeps the furnace going, the farm picked, the chests sorted, you fed and safe; it says what it's doing and you can veto it", () -> setting("auto", !set.getBoolean("auto")));
+        cy = toggle(g, "Ask before long or big jobs", set.getBoolean("confirm"), sx, cy, half, mx, my, "", () -> setting("confirm", !set.getBoolean("confirm")));
+        cy = toggle(g, "May use your chests", set.getBoolean("chests"), sx, cy, half, mx, my,
+            "Off: only chests you point it at. Never a town's stores or anyone else's.", () -> setting("chests", !set.getBoolean("chests")));
+        cy = toggle(g, "May break blocks near your builds", set.getBoolean("break"), sx, cy, half, mx, my, "", () -> setting("break", !set.getBoolean("break")));
+        cy = toggle(g, "Take shelter at night", set.getBoolean("sleep"), sx, cy, half, mx, my, "", () -> setting("sleep", !set.getBoolean("sleep")));
+        int roam = set.getInt("roam");
+        cy = stepper(g, "Roam", roam + " blocks", sx, cy, mx, my, () -> settingInt("roam", roam - 8), () -> settingInt("roam", roam + 8));
+        String[] chat = {"Quiet", "Low", "Normal", "Chatty"};
+        int ch = Math.max(0, Math.min(3, set.getInt("chatty")));
+        g.drawString(font, "Chattiness", sx, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, chat[ch], sx + 60, cy, 60, 13, mx, my, true, false, "How much it says unasked (it always answers you)", () -> settingInt("chatty", (ch + 1) % 4));
+        cy += 15;
+        int spend = set.getInt("spend");
+        cy = stepper(g, "Spend limit", spend + " coins", sx, cy, mx, my, () -> settingInt("spend", spend - 16), () -> settingInt("spend", spend + 16));
+        return Math.max(leftEnd, cy) - y + 4;
+    }
+
+    private int line(GuiGraphics g, String text, int x, int y, int w) {
+        return para(g, text, x, y, w, UiStyle.TEXT);
+    }
+
+    private int toggle(GuiGraphics g, String label, boolean on, int x, int y, int w, int mx, int my, String tip, Runnable flip) {
+        g.drawString(font, UiStyle.clip(font, label, w - 44), x, y + 3, UiStyle.TEXT, false);
+        int bx = x + w - 38;
+        boolean over = in(mx, my, bx, y, 36, 13);
+        g.fill(bx, y, bx + 36, y + 13, on ? (over ? BRAND_LIGHT : BRAND) : (over ? 0xFFCFCFCF : 0xFFB5B5B5));
+        g.fill(on ? bx + 22 : bx + 2, y + 2, on ? bx + 34 : bx + 14, y + 11, 0xFFFFFFFF);
+        g.drawString(font, on ? "On" : "Off", on ? bx + 5 : bx + 17, y + 3, on ? 0xFFFFFFFF : UiStyle.TEXT_MUTED, false);
+        zone(bx, y, 36, 13, flip, tip);
+        if (!tip.isEmpty() && in(mx, my, x, y, w - 40, 13)) tipNow = tip;
+        return y + 15;
+    }
+
+    private int stepper(GuiGraphics g, String label, String value, int x, int y, int mx, int my, Runnable down, Runnable up) {
+        g.drawString(font, label, x, y + 3, UiStyle.TEXT_MUTED, false);
+        button(g, "-", x + 60, y, 13, 13, mx, my, true, false, "", down);
+        g.drawCenteredString(font, value, x + 104, y + 3, UiStyle.TEXT);
+        button(g, "+", x + 135, y, 13, 13, mx, my, true, false, "", up);
+        return y + 15;
+    }
+
+    private void setting(String key, boolean v) {
+        CompoundTag a = new CompoundTag();
+        a.putBoolean(key, v);
+        PaClient.send("settings", a);
+    }
+
+    private void settingInt(String key, int v) {
+        CompoundTag a = new CompoundTag();
+        a.putInt(key, v);
+        PaClient.send("settings", a);
+    }
+
+    private void look(String key, int v) {
+        CompoundTag a = new CompoundTag();
+        a.putInt(key, v);
+        PaClient.send("look", a);
+    }
+
+    // ------------------------------------------------------------------ the tour
+
+    private static final String[][] TOUR = {
+        {"header", "This is your assistant's panel. Press Y any time to open it, or right-click your assistant."},
+        {"input", "Talk to it here in plain words: \"follow me\", \"get me 16 logs\", \"build a small house here\". Typos are fine."},
+        {"chips", "Or click a suggestion: they change with what you're looking at and holding, and the time of day."},
+        {"orders", "Orders: one click for the common jobs. The ones with choices ask how many and where."},
+        {"jobs", "Jobs: what it's doing now and next, with progress. Reorder, cancel or pause any time. \"Stop\" always works at once."},
+        {"mic", "Voice: hold Z and speak (turn listening on in About first). Its replies are spoken aloud, and always shown."},
+        {"wheel", "Out in the world, look at something and press X: the action wheel offers what fits (mine this vein, use that chest, attack that)."},
+    };
+
+    private void tourOverlay(GuiGraphics g, int mx, int my) {
+        if (tour >= TOUR.length) { tour = -1; PaClient.send("tour", new CompoundTag()); PaClientConfig.set(PaClientConfig.TOURED, true); return; }
+        String where = TOUR[tour][0];
+        int hx, hy, hw, hh;
+        switch (where) {
+            case "header" -> { hx = left; hy = top; hw = w; hh = 27; }
+            case "input" -> { hx = left + 6; hy = top + h - 36; hw = w - 12; hh = 20; }
+            case "chips" -> { hx = left + 6; hy = top + h - 55; hw = w - 12; hh = 16; }
+            case "orders", "jobs" -> {
+                int tx = left + 6;
+                int idx = where.equals("orders") ? 1 : 2;
+                for (int i = 0; i < idx; i++) tx += font.width(TAB_LABELS[i]) + 16;
+                hx = tx; hy = top + 29; hw = font.width(TAB_LABELS[idx]) + 14; hh = 14;
+            }
+            case "mic" -> { hx = left + w - 48; hy = top + h - 36; hw = 42; hh = 20; }
+            default -> { hx = left + w / 2 - 40; hy = top + h / 2 - 10; hw = 80; hh = 20; }
+        }
+        // dim everything but the spot
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 400);
+        int dim = 0x90000000;
+        g.fill(0, 0, width, hy, dim);
+        g.fill(0, hy + hh, width, height, dim);
+        g.fill(0, hy, hx, hy + hh, dim);
+        g.fill(hx + hw, hy, width, hy + hh, dim);
+        g.renderOutline(hx - 1, hy - 1, hw + 2, hh + 2, BRAND_LIGHT);
+        int bw = Math.min(260, width - 20);
+        List<FormattedCharSequence> lines = font.split(Component.literal(TOUR[tour][1]), bw - 16);
+        int bh = lines.size() * 10 + 30;
+        int bx = Math.max(6, Math.min(width - bw - 6, hx + hw / 2 - bw / 2));
+        int byy = hy + hh + 6 + bh < height ? hy + hh + 6 : hy - bh - 6;
+        g.fill(bx, byy, bx + bw, byy + bh, 0xF0173B40);
+        g.fill(bx, byy, bx + 2, byy + bh, BRAND_LIGHT);
+        for (int i = 0; i < lines.size(); i++) g.drawString(font, lines.get(i), bx + 8, byy + 6 + i * 10, 0xFFFFFFFF, false);
+        String step = (tour + 1) + "/" + TOUR.length;
+        g.drawString(font, step, bx + 8, byy + bh - 14, 0xFF9FD8CE, false);
+        g.pose().popPose();
+        // buttons above the dim
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 450);
+        button(g, tour == TOUR.length - 1 ? "Done" : "Next", bx + bw - 48, byy + bh - 17, 42, 13, mx, my, true, true, "", () -> {
+            tour++;
+            if (tour < TOUR.length && (TOUR[tour][0].equals("orders") || TOUR[tour][0].equals("jobs") || TOUR[tour][0].equals("wheel"))) tab = "talk";
+        });
+        button(g, "Skip", bx + bw - 94, byy + bh - 17, 42, 13, mx, my, true, false, "", () -> tour = TOUR.length);
+        g.pose().popPose();
+    }
+
+    // ------------------------------------------------------------------ the small kit
+
+    private interface Body {
+        int draw(int y);
+    }
+
+    private void scrolled(GuiGraphics g, int by, int bh, int mx, int my, Body body) {
+        UiStyle.well(g, left + 6, by, w - 12, bh, UiStyle.PAGE);
+        g.enableScissor(left + 7, by + 1, left + w - 7, by + bh - 1);
+        int startZones = zones.size();
+        contentH = body.draw(by + 4 - scroll);
+        g.disableScissor();
+        // zones outside the visible body do nothing
+        zones.removeIf(z -> zones.indexOf(z) >= startZones && (z.y() + z.h() <= by || z.y() >= by + bh));
+        int max = Math.max(0, contentH - bh + 8);
+        if (scroll > max) scroll = max;
+        if (max > 0) UiStyle.scrollBar(g, left + w - 12, by + 1, bh - 2, scroll, contentH + 8, bh);
+    }
+
+    private int para(GuiGraphics g, String text, int x, int y, int w, int colour) {
+        for (FormattedCharSequence l : font.split(Component.literal(text), w)) {
+            g.drawString(font, l, x, y, colour, false);
+            y += 10;
+        }
+        return y + 2;
+    }
+
+    private void button(GuiGraphics g, String label, int x, int y, int bw, int bh, int mx, int my, boolean enabled, boolean primary, String tip, Runnable run) {
+        boolean over = enabled && in(mx, my, x, y, bw, bh);
+        int fill = !enabled ? 0xFFBDBDBD : primary ? (over ? BRAND_LIGHT : BRAND) : (over ? 0xFFF0F0F0 : 0xFFDCDCDC);
+        g.fill(x, y, x + bw, y + bh, fill);
+        g.fill(x, y + bh - 1, x + bw, y + bh, primary && enabled ? 0xFF135A50 : 0xFF8E8E8E);
+        int ink = !enabled ? UiStyle.TEXT_DISABLED : primary ? 0xFFFFFFFF : UiStyle.TEXT;
+        String l = UiStyle.clip(font, label, bw - 4);
+        g.drawString(font, l, x + (bw - font.width(l)) / 2, y + (bh - 8) / 2, ink, false);
+        if (enabled) zone(x, y, bw, bh, run, tip);
+        else if (!tip.isEmpty() && in(mx, my, x, y, bw, bh)) tipNow = tip;
+    }
+
+    private void zone(int x, int y, int zw, int zh, Runnable run, String tip) {
+        zones.add(new Zone(x, y, zw, zh, run, tip));
+    }
+
+    private void tooltip(GuiGraphics g, int mx, int my) {
+        String tip = tipNow;
+        for (int i = zones.size() - 1; i >= 0 && tip.isEmpty(); i--) {
+            Zone z = zones.get(i);
+            if (in(mx, my, z.x(), z.y(), z.w(), z.h()) && !z.tip().isEmpty()) tip = z.tip();
+        }
+        if (!tip.isEmpty()) {
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 500);
+            UiStyle.tooltip(g, font, tip, mx, my, 220);
+            g.pose().popPose();
+        }
+    }
+
+    private static boolean in(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx < x + w && my >= y && my < y + h;
+    }
+
+    // ------------------------------------------------------------------ input
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        for (int i = zones.size() - 1; i >= 0; i--) {
+            Zone z = zones.get(i);
+            if (in(mx, my, z.x(), z.y(), z.w(), z.h())) {
+                UiStyle.click();
+                z.run().run();
+                return true;
+            }
+        }
+        return super.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double dx, double dy) {
+        if (tab.equals("talk")) {
+            logScroll = Math.max(0, logScroll - (int) (dy * 20));
+            stickBottom = false;
+        } else {
+            scroll = Math.max(0, scroll - (int) (dy * 20));
+        }
+        return true;
+    }
+
+    @Override
+    public boolean keyPressed(int key, int scan, int mods) {
+        if (tour >= 0 && key == GLFW.GLFW_KEY_ESCAPE) { tour = TOUR.length; return true; }
+        if (input.isFocused()) {
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { sendTyped(); return true; }
+            if (key == GLFW.GLFW_KEY_TAB) {
+                List<String> sug = PaUnderstand.complete(input.getValue(), 1);
+                if (!sug.isEmpty()) { input.setValue(sug.get(0)); input.moveCursorToEnd(false); }
+                return true;
+            }
+            if (key != GLFW.GLFW_KEY_ESCAPE) return input.keyPressed(key, scan, mods) || true;
+        }
+        if (nameBox.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) return nameBox.keyPressed(key, scan, mods) || true;
+        if (PaClient.PANEL.matches(key, scan) && !input.isFocused()) { onClose(); return true; }
+        return super.keyPressed(key, scan, mods);
+    }
+
+    @Override
+    public boolean charTyped(char c, int mods) {
+        if (input.isFocused()) return input.charTyped(c, mods);
+        if (nameBox.isFocused()) return nameBox.charTyped(c, mods);
+        return super.charTyped(c, mods);
+    }
+
+    @Override
+    public void tick() {
+        // the panel asks for fresh numbers now and then while it is open (progress, health)
+        if (minecraft != null && minecraft.level != null && minecraft.level.getGameTime() % 20 == 0) PaClient.send("state", new CompoundTag());
+    }
+}

@@ -17,11 +17,12 @@
     {"id": "camera", "title": "The camera & filming", "icon": "minecraft:spyglass", "blurb": "The K camera: orbits, fly-throughs, following a folk, time-lapses"},
     {"id": "items", "title": "Items & blocks", "icon": "minecraft:crafting_table", "blurb": "Everything the mod adds: what it is, how to make it, what it does"},
     {"id": "keys", "title": "Keys & controls", "icon": "minecraft:oak_button", "blurb": "Every key, every button, and the screens they open"},
+    {"id": "assistant", "title": "Player AI Assistant", "icon": "mc_assistant:assistant_whistle", "blurb": "Your own companion: getting one, talking, voice, orders and settings"},
     {"id": "companions", "title": "Assistants (companions)", "icon": "mc_assistant:assistant_spawner", "blurb": "Your own helpers: the crew, their orders, plots and markers"},
     {"id": "admin", "title": "Settings & server admin", "icon": "minecraft:command_block", "blurb": "For operators: config files, the admin panel, time and limits"},
     {"id": "trouble", "title": "Troubleshooting", "icon": "minecraft:redstone_torch", "blurb": "Idle folk, empty shops, towns that won't grow, and other snags"}
   ],
   "files": ["start.json", "founding.json", "folk.json", "talk.json", "jobs.json", "building.json", "business.json", "money.json",
     "property.json", "civic.json", "defence.json", "progress.json", "life.json", "festivals.json", "camera.json", "items.json",
-    "keys.json", "companions.json", "admin.json", "trouble.json"]
+    "keys.json", "assistant.json", "companions.json", "admin.json", "trouble.json"]
 }

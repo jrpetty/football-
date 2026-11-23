@@ -606,7 +606,7 @@ public class BuildGoal extends Goal {
         }
         // A settlement's builders level and clear the ground they build on; a hired
         // assistant building beside a player's own trees and terraces does not.
-        if (centered && assistant.isSettler()) {
+        if (centered && (assistant.isSettler() || assistant.levelsBuildSite())) {   // [pa33] the Player AI Assistant builds as well as a town's builder
             if ("fortify".equals(structure)) followTheGround(base); else addTerrainWork(base, drawing);
         }
         // What is in the way comes down first; then bottom-up, so nothing floats while we work;

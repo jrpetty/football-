@@ -4074,7 +4074,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * a moment after this one was filed can see it.
      */
     private void fileOnRegister() {
-        if (ownerId == null) return;
+        if (ownerId == null || !onCrewRegister()) return;   // [pa33] the Player AI Assistant is nobody's crew
         Map<String, AssistantEntity> filed = BY_OWNER.get(ownerId);
         // Already filed, and still the one on the register under that name.
         if (ownerId.equals(registeredOwner) && assistantName.equals(registeredName)
@@ -4650,6 +4650,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** A block went down: the one raising the building is getting somewhere. */
     public void noteBuildProgress() { }
+
+    /** [pa33] On its owner's crew register (byOwner, allFor, the crew screens and counts)? The Player AI Assistant
+     *  is not: it is its own thing, kept in its own books (pa/PaData). */
+    protected boolean onCrewRegister() { return true; }
+
+    /** [pa33] Does it level and clear the ground under what it builds, as a town's builder does? */
+    public boolean levelsBuildSite() { return false; }
 
     /** Does this one talk to the player at all? An assistant does — it is
      *  yours, and its needs are your business. Village Folk do not, ever:

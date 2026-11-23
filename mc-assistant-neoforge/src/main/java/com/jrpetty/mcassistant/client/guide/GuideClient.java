@@ -206,6 +206,17 @@ public final class GuideClient {
         return search;
     }
 
+    /** [pa33] The Guide's search, for the Player AI Assistant to answer questions about the mod in its own words. */
+    @Nullable
+    public static GuideSearch searchForAssistant() {
+        return search();
+    }
+
+    /** [pa33] Is the player an operator (the operators' articles are theirs)? */
+    public static boolean operatorForAssistant() {
+        return operator();
+    }
+
     @Nullable
     static String loadError() {
         return loadError;

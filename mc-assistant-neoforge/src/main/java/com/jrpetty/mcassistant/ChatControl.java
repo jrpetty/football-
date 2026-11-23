@@ -291,6 +291,33 @@ public final class ChatControl {
         return crew;
     }
 
+    /** [pa33] The Player AI Assistant's talk box hands this reader what its own could not read (no chat involved): run it
+     *  if this reader knows it, and say whether it did. Nothing is said when it does not. */
+    public static boolean understood(AssistantEntity a, ServerPlayer player, String raw) {
+        String text = spokenNumbers(raw.toLowerCase().trim());
+        if (text.isEmpty() || PATROL_BETWEEN.matcher(text).matches()) {
+            if (!text.isEmpty()) dispatch(a, player, text, true);
+            return !text.isEmpty();
+        }
+        List<Action> actions = new ArrayList<>();
+        Action prev = null;
+        for (String clause : CLAUSE_SPLIT.split(text)) {
+            String c = LEAD_IN.matcher(clause.trim()).replaceFirst("").trim();
+            if (c.isEmpty()) continue;
+            Action act = parseClause(c, prev, false);
+            if (act == null) return false;                 // all of it, or none: half an order is worse than a question
+            actions.add(act);
+            prev = act;
+        }
+        if (actions.isEmpty()) return false;
+        try {
+            execute(a, player, actions, false, true);
+        } catch (Exception ex) {
+            return false;
+        }
+        return true;
+    }
+
     private static void dispatch(AssistantEntity a, ServerPlayer player, String text, boolean explicit) {
         // Spoken numbers -> digits first ("gather twenty logs" -> "gather 20
         // logs"), before any splitting, since "and" can be part of a number.
