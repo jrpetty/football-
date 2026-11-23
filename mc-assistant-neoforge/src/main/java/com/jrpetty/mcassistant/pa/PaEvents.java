@@ -27,6 +27,20 @@ public final class PaEvents {
         PaNet.refresh(p, PaLife.find(p));
     }
 
+    /** [pa33b] On a server with chat: someone else naming an assistant near them is talking to it (its own player's chat is never read). */
+    @SubscribeEvent
+    public static void onChat(net.neoforged.neoforge.event.ServerChatEvent event) {
+        ServerPlayer p = event.getPlayer();
+        String msg = event.getRawText();
+        if (p == null || msg == null || msg.isBlank()) return;
+        String low = " " + msg.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9 ]", " ") + " ";
+        for (PlayerAssistantEntity a : p.serverLevel().getEntitiesOfClass(PlayerAssistantEntity.class, p.getBoundingBox().inflate(24))) {
+            if (a.isOwner(p)) continue;
+            String name = a.getAssistantName().toLowerCase(java.util.Locale.ROOT);
+            if (!name.isEmpty() && low.contains(" " + name + " ")) PaBanter.stranger(a, p, msg, false);
+        }
+    }
+
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;

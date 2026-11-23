@@ -210,8 +210,12 @@ public final class PaPhrases {
     public static String line(String key, PaPersona.Tri t, Dice random, PaPersona.Recent recent, String... kv) {
         Map<String, String> fill = new HashMap<>();
         for (int i = 0; i + 1 < kv.length; i += 2) fill.put(kv[i], kv[i + 1]);
-        if (!DANGER.contains(key) && BANK.containsKey(key)) {
+        if (!DANGER.contains(key) && (BANK.containsKey(key) || PaLines.has("say." + key))) {
             String raw = PaPersona.from(PaPersona.linesFor("say." + key, t, random), random, recent);
+            if (raw != null) return PaPersona.fill(raw, fill);
+        }
+        if (!BANK.containsKey(key)) {                          // [pa33b] only in the written lines: their plain corner
+            String raw = PaPersona.from(PaLines.get(PaLines.has("say." + key + "@serious") ? "say." + key + "@serious" : "say." + key), random, recent);
             if (raw != null) return PaPersona.fill(raw, fill);
         }
         return line(key, Personality.CALM, random, fill);

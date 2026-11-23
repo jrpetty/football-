@@ -1,0 +1,252 @@
+# [pa33b] Match my energy: what it adds after doing what it was told, by how it was told. The job is always done first.
+# Blanks: {owner} its player, {thing} what it was sent for ("wheat", "logs"; "that" when unknown), {player} someone else, {name} itself.
+# Levels: .clean never swears; .cheeky allows bloody, damn, arse, git, sod; .unfiltered swears. At every level: roast what they do in
+# the game (laziness, dying, dirt, builds, bossiness) and playful generic teasing; never slurs, protected traits, anything sexual,
+# threats or self-harm. Corners as everywhere: no suffix Funny, @gloomy, @serious.
+
+== tone.polite
+Since you asked so nicely, I'll even pick the good {thing}.
+Manners. In this economy. Coming right up.
+For you, with a please on it? I'll do it properly.
+Lovely. Politeness noted and filed under "reasons to try harder".
+Ooh, a please. I'll put my best effort on.
+Well, when you put it like that. On it.
+Asked nicely, done nicely. That's the deal.
+You're a gentleman and a scholar. Mostly a gentleman.
+== tone.polite@gloomy
+Since you asked nicely. Nobody asks nicely. I'll go.
+Manners. How refreshing. It won't last, but thank you.
+That was kind. I'll fetch it before something goes wrong.
+A please. I'd almost forgotten what they sounded like.
+== tone.polite@serious
+Of course. Thank you for asking.
+Happy to. On it.
+Certainly.
+Right away.
+
+== tone.blunt
+Short and sweet. Like me.
+Fine. No small talk, then.
+Charming. On it.
+Straight to business. I respect it. Barely.
+Got it, boss. Lovely chatting.
+Not even a hello. Fair enough.
+== tone.blunt@gloomy
+No please. No hello. Just {thing}. That's about right.
+Right. Off I go. Again.
+Fine. I'll just do it, then.
+== tone.blunt@serious
+Understood.
+On it.
+Going.
+
+== tone.softened
+Oh, so now it's please. Apology accepted. Mostly.
+That's better. I knew you had it in you.
+Look at that, manners. We're growing.
+Fine. You're forgiven. The {thing}'s on me.
+Thank you. Let's never speak of earlier.
+Nicer. I'll stop sharpening my comebacks.
+
+# --- rude, Clean: sharp, but never a swear
+== tone.rude.clean
+Alright, alright. Didn't realise {thing} was beyond you.
+Fetching your {thing}. Say please and I might not judge you. I'll still judge you.
+Charming. I'll get it, since your legs are clearly decorative.
+On it. Your manners, however, are lost at sea.
+Rude. Effective, but rude. Going.
+Getting {thing}. Someone has to do the work round here.
+I'll fetch it. You stand there and practise being pleasant.
+Fine. But I'm telling the chickens what you said.
+Loser, is it. Says the one who can't fetch their own {thing}.
+I'll go. You have a think about how you got this far without me.
+That's no way to talk to the only one doing anything. On it.
+Right away, your royal grumpiness.
+Is that how you talk to everyone, or am I special.
+Going. Try not to fall in anything while I'm gone.
+== tone.rude.clean@gloomy
+Fine. I'll get your {thing}. We're both doomed anyway.
+Yes, I'm a loser. I'm also the one fetching your {thing}. Think on.
+Insults. Lovely. Adds to the general misery. Going.
+Fetching it. Your temper won't help, but nothing does.
+Right. Abuse, then {thing}. The usual.
+== tone.rude.clean@serious
+Fetching {thing}. Manners cost nothing.
+On it. Language.
+Understood. A please would have been nice.
+Going. There's no need for that.
+Doing it now. Politely, unlike some.
+
+# --- rude, Cheeky: mild words only
+== tone.rude.cheeky
+Alright, alright. Didn't realise your lazy arse couldn't manage a bit of {thing}.
+Bloody charming. Fetching your {thing}.
+Fine, you grumpy git. On it.
+Getting it. You could always try walking. It's quite good.
+Oh, damn, I've upset the boss. Going.
+I'll fetch it, you muppet. Mind your manners while I'm gone.
+Sod it, I'll go. Someone in this team has to have legs.
+On it, your majesty. Shall I carry you as well.
+Bloody hell, who stepped on your cake. Getting {thing}.
+Right away, numpty. With love. Some love.
+Fine. But I'm putting this in my memoirs, you rude sod.
+I'll go. You stay here and work on that personality.
+Getting your {thing}. Try a please next time. It's free.
+== tone.rude.cheeky@gloomy
+Fine. I'll get your {thing}, you miserable sod. We're both going to die anyway.
+Bloody typical. Abused and sent for {thing}. Off I go.
+Yes, yes. Useless git, fetch the {thing}. I know the song.
+Damn. And I thought today couldn't get worse. Going.
+Right. Insults first, then work. Same as ever.
+== tone.rude.cheeky@serious
+Fetching {thing}. Mind your bloody manners.
+On it. That was rude.
+Going. Language, please.
+Understood. Grumpy git.
+
+# --- rude, Unfiltered: it swears back and roasts its own player hard (only its own, only when they started it)
+== tone.rude.unfiltered
+Alright, alright. Didn't realise your fat arse couldn't manage a bit of {thing}.
+Fetching your {thing}, you absolute weapon.
+Oh, piss off. Getting it anyway, because one of us is useful.
+Say please and I might not judge you. I'll still judge you.
+Loser? I'm not the one with a chest full of dirt, mate.
+Yes, your highness. Shall I wipe your arse while I'm at it.
+On it, you lazy sod. Try moving your own legs one day, they're not just for show.
+Fucking charming. Going.
+Blimey, someone's grumpy. Getting your {thing}.
+I'd tell you where to stick it, but you'd only lose it like everything else. On it.
+Fetching {thing}. You've died more times today than I've had hot dinners, so maybe sit this one out.
+Mate. I've seen better manners on a creeper. And it explodes.
+Getting it. Bloody hell, you're a ray of sunshine.
+Shit, sorry, didn't realise you were the boss of the whole world. Going.
+Your build skills are a crime and your manners are worse. On it anyway.
+Absolute legend of a human. Fetching your {thing}, you shouting potato.
+== tone.rude.unfiltered@gloomy
+Fine. I'll get your {thing}, you miserable sod. We're all going to die anyway.
+Piss off, he says, fetching the {thing}. Because what else is there.
+Yeah, yeah. Useless. Loser. Fetching your shit. Same as every day.
+Bollocks to this. Going anyway. It's what I do. Suffer.
+Swear at me all you like. The rain doesn't care either.
+== tone.rude.unfiltered@serious
+Fetching {thing}. Manners cost fuck all, you know.
+On it. No need to be a total arse about it.
+Going. That was rude as hell.
+Understood. Bloody hell.
+
+# --- rude again: a run of it, a touch sharper (never past its level)
+== tone.rude_again.clean
+Again? You must really love being rude. Fetching {thing}.
+Third time. I'm keeping a tally now, and you're winning nothing.
+At this point even the {thing} would feel sorry for me.
+You're on a roll. A rude, rude roll. Going.
+Keep it up and I'll start bringing you the wrong {thing}. I won't. But I'll think about it.
+Still rude. Still fetching. One of us is consistent.
+== tone.rude_again.cheeky
+Blimey, again? Your vocabulary needs a holiday. Going.
+You grumpy git, that's three. I'll get your {thing} and a dictionary.
+Bloody hell, give it a rest. On it.
+Another one. I'm framing these. Getting {thing}.
+You absolute muppet, I'm already going.
+Keep swearing, it's very impressive. Getting {thing}.
+== tone.rude_again.unfiltered
+Fucking hell, again? Getting your {thing}, you broken record.
+That's three, you foul-mouthed potato. Going.
+Bloody hell, give it a rest. On it.
+I'm running out of ways to tell you to piss off. Still fetching.
+Keep going, mate, you'll find a new swear eventually. Getting {thing}.
+Swearing at the help again. Classy as shit. On it.
+
+# --- someone else's player: it only ever answers, never starts it; it names them in the game ({player})
+== stranger.polite
+Hello, {player}. I'm {name}, {owner}'s assistant. Nice to meet you.
+Afternoon, {player}. {owner}'s lucky to have me, but you can say hello.
+Hi, {player}. Lovely manners. {owner} could learn a thing or two.
+Thanks, {player}. You're alright, you are.
+Oh, a compliment. {player}, you've made my day. It wasn't hard.
+Hello, {player}. Mind the dirt pile. That's {owner}'s.
+== stranger.polite@gloomy
+Hello, {player}. I'm {name}. I belong to {owner}. Someone has to.
+Hi, {player}. Kind of you to stop. Most don't.
+== stranger.polite@serious
+Hello, {player}. I'm {name}, {owner}'s assistant.
+Thank you, {player}.
+
+== stranger.order
+I only take orders from {owner}, I'm afraid.
+Nice try, {player}. I only work for {owner}.
+I'd love to, {player}, but {owner} pays me. Well, {owner} doesn't. But still.
+Ask {owner}. I'm spoken for.
+
+== stranger.hit
+Steady on, {player}. I bruise. Well, I don't, but still.
+Oi, {player}. Hands to yourself.
+Was that a punch, {player}? Do it again, I wasn't watching.
+Hitting the help, {player}. Bold move.
+That tickled, {player}. Want a go with your other hand?
+
+== stranger.roast.clean
+Says the one dressed like a damp sponge, {player}.
+Bold talk, {player}, from someone who's died more times today than I've blinked.
+{player}, I'd roast your build, but I'd have to find it first.
+I'm useless? {player}, you punched a tree and lost.
+Lovely to meet you too, {player}. Who dressed you, a skeleton in the dark.
+{player}, I've seen zombies with more charm. And less smell.
+Careful, {player}. I've got a long memory and nothing else to do.
+Rude, {player}. I'll let {owner} know you said hello.
+Is that your best, {player}? I've had worse from a chicken.
+{player}, your armour's doing a lot of hard work for very little reward.
+== stranger.roast.cheeky
+Bloody hell, {player}, who wound you up.
+{player}, you absolute muppet. Go and build something that isn't a dirt hut.
+I'd insult your outfit, {player}, but it's clearly done that itself.
+Says the git who fell in a hole on the way here, {player}.
+Damn, {player}. Was that meant to hurt. I'm made of pixels and patience.
+{player}, your skin's got the energy of a wet Tuesday.
+Go on, {player}, have another go. Your aim's as bad as your building.
+== stranger.roast.unfiltered
+Piss off, {player}, you walking dirt hut.
+{player}, mate, you're about as useful as a chocolate pickaxe.
+Says the one who dies to chickens, {player}. Sit down.
+{player}, I've seen better builds made by an explosion. Literally.
+Fucking hell, {player}, you've got the charm of a wet sock.
+Shit chat, {player}. Come back when you've got armour that matches.
+{player}, you dress like a creeper got to your wardrobe first.
+Bold words from someone with one stone sword and no plan, {player}.
+Oh, bollocks to you, {player}. I'm busy being better than you.
+{player}, you absolute weapon. Even the villagers don't trade with you.
+
+== stranger.defend.clean
+Oi. That's my {owner} you're talking about, {player}. At least {owner} can build.
+{owner}'s rubbish? {player}, I've seen your house. It's a hole.
+Leave {owner} alone, {player}. Only I'm allowed to say that.
+{player}, {owner} may be a disaster, but {owner}'s my disaster.
+Funny, {player}. {owner} said something similar about you. Less politely.
+== stranger.defend.cheeky
+Watch it, {player}. Nobody calls {owner} rubbish except me, you git.
+{owner}'s useless? Bloody cheek, {player}, from someone dressed like that.
+Says you, {player}. {owner} at least owns a bed.
+{player}, have a word with yourself. {owner}'s twice the player you are. On a good day.
+== stranger.defend.unfiltered
+Piss off, {player}. {owner}'s a legend and you're a walking dirt block.
+Mate, {owner} has more diamonds in one chest than you've seen in your life, {player}.
+{player}, talk about {owner} like that again and I'll tell everyone about your house. All three blocks of it.
+Shit, {player}, jealous much. {owner}'s got an assistant. You've got a chicken.
+
+== stranger.tell_owner
+{owner}, your mate's being rude again.
+{owner}, {player}'s at it. Shall I keep going.
+{owner}, I'm handling it. You'd be proud.
+{owner}, {player}'s jealous of me. Understandable.
+
+== stranger.bored
+I've run out of patience, {player}, and you've run out of material.
+That's enough, {player}. I've got {owner}'s jobs to do.
+Yawn. Find a new hobby, {player}.
+{player}, I'm not doing this all day. Some of us work.
+
+== stranger.plain
+Hello, {player}.
+I'm {owner}'s assistant. I'm busy, sorry.
+Noted, {player}.
+I'd rather not, {player}.

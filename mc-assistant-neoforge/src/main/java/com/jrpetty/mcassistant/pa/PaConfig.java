@@ -13,6 +13,8 @@ public final class PaConfig {
 
     public static final ModConfigSpec SPEC;
     static final ModConfigSpec.IntValue PER_PLAYER, RESPAWN_SECONDS, SUMMON_COOLDOWN, BUDGET_MICROS, ROAM_MAX, SPEND_MAX;
+    static final ModConfigSpec.ConfigValue<String> MAX_LANGUAGE;            // [pa33b]
+    static final ModConfigSpec.BooleanValue ROAST_OTHERS;
     static final ModConfigSpec.BooleanValue FREE_FIRST, SAFETY, TOWN_WORK, LLM_ON;
     static final ModConfigSpec.ConfigValue<String> LLM_URL, LLM_KEY, LLM_MODEL;
 
@@ -36,6 +38,11 @@ public final class PaConfig {
             .defineInRange("spendMax", 500, 0, 100000);
         BUDGET_MICROS = b.comment("The assistant's own thinking (talk, auto-help, progress) per server tick, in microseconds, for all of them together.")
             .defineInRange("tickBudgetMicros", 400, 50, 20000);
+        MAX_LANGUAGE = b.comment("[pa33b] The strongest language an assistant may use back when its player is rude to it (others see its bubbles):",
+            "clean (never swears), cheeky (bloody, damn, arse, git), or unfiltered (swears). A player's own Language setting can't go past this.")
+            .define("maxLanguage", "cheeky");
+        ROAST_OTHERS = b.comment("[pa33b] May an assistant roast another player back when that player roasts it or its owner first? (Never unprompted.)")
+            .define("allowRoastOthers", true);
         b.pop();
         b.comment("Optional free conversation through a remote language model. OFF by default and never needed: every order,",
             "question and reply works offline without it. When on, only sentences the assistant could not read are sent, with the",
@@ -78,6 +85,11 @@ public final class PaConfig {
     public static int roamMax() { return read(ROAM_MAX, 64); }
 
     public static int spendMax() { return read(SPEND_MAX, 500); }
+
+    /** [pa33b] The language cap: 0 clean, 1 cheeky, 2 unfiltered. */
+    public static int maxLanguage() { return PaTone.cap(read(MAX_LANGUAGE, "cheeky")); }
+
+    public static boolean allowRoastOthers() { return read(ROAST_OTHERS, true); }
 
     public static int budgetMicros() { return read(BUDGET_MICROS, 400); }
 

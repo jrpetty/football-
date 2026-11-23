@@ -744,6 +744,23 @@ public class PaScreen extends Screen {
             mu == 0 ? "Say \"no more jokes\" or \"shut up\" any time; this does the same" : "Say \"you can talk again\" or click to go back to Talking",
             () -> settingInt("mute", (mu + 1) % 3));
         cy += 15;
+        // [pa33b] match my energy: how strong its language back may be (never past the server's cap), and other players
+        int lang = Math.max(0, Math.min(2, set.getInt("language"))), cap = set.contains("langCap") ? set.getInt("langCap") : 1;
+        g.drawString(font, "Language", sx, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, com.jrpetty.mcassistant.pa.PaTone.LANGUAGE[lang] + (lang > cap ? " *" : ""), sx + 60, cy, 76, 13, mx, my, true, false,
+            lang > cap ? "This server allows up to " + com.jrpetty.mcassistant.pa.PaTone.LANGUAGE[cap] + ", so it talks " + com.jrpetty.mcassistant.pa.PaTone.LANGUAGE[cap] + " here"
+                : "When you're rude to it, it answers in kind: Clean never swears, Cheeky is mild (bloody, damn, arse), Unfiltered swears back",
+            () -> settingInt("language", (lang + 1) % 3));
+        cy += 15;
+        if (lang > cap) { g.drawString(font, UiStyle.clip(font, "* This server allows up to " + com.jrpetty.mcassistant.pa.PaTone.LANGUAGE[cap] + ".", half), sx, cy, UiStyle.TEXT_FAINT, false); cy += 11; }
+        int rb = Math.max(0, Math.min(2, set.getInt("roastBack")));
+        g.drawString(font, "Others", sx, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, UiStyle.clip(font, "Roast back: " + com.jrpetty.mcassistant.pa.PaStrangers.ROAST_BACK[rb], 110), sx + 60, cy, 112, 13, mx, my, true, false,
+            set.getBoolean("roastAllowed") || !set.contains("roastAllowed") ? "Other players who roast it (or you) get it back, by name. It never starts it."
+                : "This server has turned roasting other players off", () -> settingInt("roastBack", (rb + 1) % 3));
+        cy += 15;
+        cy = toggle(g, "Defend me", !set.contains("defend") || set.getBoolean("defend"), sx, cy, half, mx, my,
+            "When someone else says you're rubbish, it sticks up for you", () -> setting("defend", !(!set.contains("defend") || set.getBoolean("defend"))));
         int spend = set.getInt("spend");
         cy = stepper(g, "Spend limit", spend + " coins", sx, cy, mx, my, () -> settingInt("spend", spend - 16), () -> settingInt("spend", spend + 16));
         return Math.max(leftEnd, cy) - y + 4;

@@ -17,7 +17,7 @@ public final class PaQuips {
         {PaQuips.Comeback.JOKE, "tell me a joke|tell us a joke|tell a joke|say something funny|make me laugh|cheer me up|got any jokes|know any jokes|a joke|joke please|another joke"},
         {PaQuips.Comeback.LOVE, "love you|love ya|luv you|luv u|luv ya|i love you|you're the best|youre the best|ur the best|best mate|marry me|my favourite|you're my favourite|adore you"},
         {PaQuips.Comeback.PRAISE, "good lad|good boy|good girl|good job|well done|nice work|great job|great work|legend|absolute legend|top man|top lad|star|you're a star|brilliant work|cracking job|proper job|good effort|nice one mate|clever clogs|smashing|you're amazing|youre amazing|ace work|good work"},
-        {PaQuips.Comeback.INSULT, "useless|rubbish|garbage|terrible|awful|pathetic|hopeless|worst|bad at this|you suck|muppet|numpty|plonker|idiot|stupid|dumb|thick|donkey|waste of space|pillock|wally|div|nitwit|clown|you're a joke|youre a joke|get lost|naff|dozy|daft|slow coach|lazy"},
+        {PaQuips.Comeback.INSULT, "useless|loser|rubbish|garbage|terrible|awful|pathetic|hopeless|worst|bad at this|you suck|muppet|numpty|plonker|idiot|stupid|dumb|thick|donkey|waste of space|pillock|wally|div|nitwit|clown|you're a joke|youre a joke|get lost|naff|dozy|daft|slow coach|lazy"},
     };
 
     /** What its player's words are, if they're lip or a kind word or a joke request (typos allowed); else null. */

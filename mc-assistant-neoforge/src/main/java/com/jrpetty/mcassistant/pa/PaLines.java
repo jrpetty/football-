@@ -21,7 +21,7 @@ public final class PaLines {
 
     private PaLines() {}
 
-    public static final String[] FILES = {"lines_say.txt", "lines_death.txt", "lines_quip.txt", "lines_comeback.txt", "lines_look.txt"};
+    public static final String[] FILES = {"lines_say.txt", "lines_death.txt", "lines_quip.txt", "lines_comeback.txt", "lines_look.txt", "lines_tone.txt"};
 
     private static volatile Map<String, List<String>> all;
     /** [pa33b] Tags written in front of a line ("[bad] ...": a joke it knows is terrible; "[anim:shrug] ...": done with a gesture). */

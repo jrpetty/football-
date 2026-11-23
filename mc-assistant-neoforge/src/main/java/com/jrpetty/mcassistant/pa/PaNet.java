@@ -65,6 +65,16 @@ public final class PaNet {
         send(p, PaPayload.OPEN, t);
     }
 
+    /** [pa33b] Someone else's assistant, right-clicked: a little chat box (no orders, no pack, no settings). */
+    public static void openStranger(ServerPlayer p, PlayerAssistantEntity a) {
+        CompoundTag t = new CompoundTag();
+        t.putString("tab", "stranger");
+        t.putInt("id", a.getId());
+        t.putString("name", a.displayNameCap());
+        t.putString("owner", a.ownerName());
+        send(p, PaPayload.OPEN, t);
+    }
+
     /** The panel's state, sent when something changed while it is open (and on open). */
     public static void refresh(ServerPlayer p, @Nullable PlayerAssistantEntity a) {
         send(p, PaPayload.STATE, state(p, a));
@@ -144,7 +154,12 @@ public final class PaNet {
         set.putInt("chatty", r.chatty);
         set.putFloat("funny", r.funny);                          // [pa33b]
         set.putFloat("gloomy", r.gloomy);
-        set.putInt("mute", r.mute);                               // [pa33b] 0 talking, 1 no jokes, 2 quiet
+        set.putInt("mute", r.mute);
+        set.putInt("language", r.language);
+        set.putInt("langCap", PaConfig.maxLanguage());
+        set.putInt("roastBack", r.roastBack);
+        set.putBoolean("defend", r.defend);
+        set.putBoolean("roastAllowed", PaConfig.allowRoastOthers());                               // [pa33b] 0 talking, 1 no jokes, 2 quiet
         set.putInt("spend", r.spend);
         set.putInt("roamMax", PaConfig.roamMax());
         set.putInt("spendMax", PaConfig.spendMax());

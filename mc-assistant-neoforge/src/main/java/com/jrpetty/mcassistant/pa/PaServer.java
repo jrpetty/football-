@@ -42,6 +42,10 @@ public final class PaServer {
                 if (r != null) PaLife.dismiss(p, r);
             }
             case "talk" -> talk(p, r, a, args);
+            case "stranger" -> {                                    // [pa33b] someone else's assistant, from its little chat box
+                if (p.level().getEntity(args.getInt("id")) instanceof PlayerAssistantEntity other && !other.isOwner(p) && other.distanceToSqr(p) < 16 * 16)
+                    PaBanter.stranger(other, p, args.getString("text"), false);
+            }
             case "settings" -> {
                 if (r == null) return;
                 if (args.contains("auto")) r.autoHelp = args.getBoolean("auto");
@@ -61,6 +65,9 @@ public final class PaServer {
                 }
                 if (args.contains("mute") && a != null && args.getInt("mute") != r.mute) PaOrders.hush(a, args.getInt("mute"));   // [pa33b] About, Orders, wheel
                 else if (args.contains("mute")) r.mute = Math.max(0, Math.min(2, args.getInt("mute")));
+                if (args.contains("language")) r.language = Math.max(0, Math.min(2, args.getInt("language")));     // [pa33b] match my energy
+                if (args.contains("roastBack")) r.roastBack = Math.max(0, Math.min(2, args.getInt("roastBack")));
+                if (args.contains("defend")) r.defend = args.getBoolean("defend");
                 if (args.contains("spend")) r.spend = Math.max(0, Math.min(PaConfig.spendMax(), args.getInt("spend")));
                 PaData.touch();
                 PaNet.refresh(p, a);

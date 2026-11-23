@@ -169,6 +169,53 @@ public final class PaBanter {
         if (raw != null) PaTalk.comment(a, 1, fill(a, raw));
     }
 
+    // ------------------------------------------------------------------ [pa33b] match my energy
+
+    /** A line back in kind for an order's tone, at its corner of the triangle (null when there are none). */
+    public static String toneLine(PlayerAssistantEntity a, String key, String thing) {
+        String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt), a.getRandom()::nextInt, a.mind.recent);
+        if (raw == null) raw = PaPersona.from(PaLines.get(key), a.getRandom()::nextInt, a.mind.recent);   // a corner with nothing written: the list itself
+        return raw == null ? null : fill(a, raw, "thing", thing);
+    }
+
+    /**
+     * Someone else's player said something to it (its chat box, a chat line naming it) or hit it. It answers them by
+     * their in-game name, in kind, never first; no orders from them; bored of anyone who keeps on; silent while hushed.
+     */
+    public static void stranger(PlayerAssistantEntity a, ServerPlayer p, String text, boolean hit) {
+        PaData.Rec r = a.rec();
+        if (r == null || a.isOwner(p) || r.mute >= 2) return;
+        long now = a.level().getGameTime();
+        boolean order = false;
+        if (!hit) {
+            PaUnderstand.Reading rd = PaUnderstand.read(PaTone.read(text).order(), a.getAssistantName());
+            order = rd.steps().stream().anyMatch(st -> st.kind().queued() || st.kind() == PaIntent.Kind.FOLLOW || st.kind() == PaIntent.Kind.STAY
+                || st.kind() == PaIntent.Kind.COME || st.kind() == PaIntent.Kind.GUARD_ME || st.kind() == PaIntent.Kind.STOP);
+        }
+        PaStrangers.Said s = hit ? PaStrangers.Said.HIT : PaStrangers.said(text, a.ownerName(), a.getAssistantName(), order);
+        PaStrangers.Limit.Verdict v = a.mind.strangers.check(p.getUUID(), now);
+        if (v == PaStrangers.Limit.Verdict.SILENT) return;
+        int level = PaTone.level(r.language, PaConfig.maxLanguage());
+        String key = v == PaStrangers.Limit.Verdict.BORED ? "stranger.bored"
+            : PaStrangers.key(s, r.roastBack, r.defend, PaConfig.allowRoastOthers(), level, r.mute);
+        if (key == null) return;
+        boolean roast = key.startsWith("stranger.roast") || key.startsWith("stranger.defend") || key.equals("stranger.hit");
+        int heat = 0;
+        if (roast) heat = a.mind.strangers.heat(p.getUUID()).take(new PaTone.Read(PaTone.Tone.RUDE, 1, false, false, ""), now) + 1;
+        String who = p.getGameProfile().getName();
+        String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt), a.getRandom()::nextInt, a.mind.recent);
+        if (raw == null) raw = PaPersona.from(PaLines.get(key), a.getRandom()::nextInt, a.mind.recent);
+        if (raw == null) return;
+        String line = fill(a, raw, "player", who);
+        // its player close by and it keeps happening: it brings them in
+        if (roast && a.getOwnerPlayer() instanceof ServerPlayer owner && owner.level() == a.level() && owner.distanceToSqr(a) < 32 * 32
+                && (heat >= 2 || a.getRandom().nextInt(100) < 25)) {
+            String tell = PaPersona.from(PaLines.get("stranger.tell_owner"), a.getRandom()::nextInt, a.mind.recent);
+            if (tell != null) line = line + " " + fill(a, tell, "player", who);
+        }
+        PaTalk.reply(a, line);
+    }
+
     // ------------------------------------------------------------------ comebacks and jokes
 
     public static PaQuips.Comeback comeback(String text) {

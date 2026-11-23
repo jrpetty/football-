@@ -1115,6 +1115,109 @@ public class PlayerAssistantGameTests {
         });
     }
 
+    /** pai39: match my energy: a rude order is done and answered in kind at its player's Language (never past the server cap,
+     *  never while hushed); someone else is answered by name in kind, never ordered, defended against, rate-limited. */
+    @GameTest(template = EMPTY, timeoutTicks = 1400, batch = "pai39_energy")
+    public static void pai39_energy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_114_000, y = ground(level, x);
+        ServerPlayer pa = player(helper, level, new BlockPos(x, y, Z));
+        ServerPlayer pb = player(helper, level, new BlockPos(x + 4, y, Z));
+        PlayerAssistantEntity a = assistant(helper, pa);
+        int cap = com.jrpetty.mcassistant.pa.PaConfig.maxLanguage();
+        a.rec().language = 2;                                         // Unfiltered asked for; the server's cap rules
+        say(pa, a, "go get my wheat you fucking loser");
+        String first = lastWords(a);
+        helper.assertTrue(!a.plan.idle(), "the wheat is being fetched: " + a.state());
+        String lv = cap >= 2 ? "unfiltered" : cap == 1 ? "cheeky" : "clean";
+        helper.assertTrue(fromLists(first, "tone.rude." + lv, "tone.rude_again." + lv), "answered in kind at " + lv + " (cap " + cap + "): " + first);
+        for (String w : first.split("[^A-Za-z*$']+")) helper.assertTrue(cap >= 2 || !com.jrpetty.mcassistant.pa.PaTone.strong(w), "never past the cap: " + first);
+        say(pa, a, "stop");
+        a.rec().language = 0;                                         // Clean
+        say(pa, a, "get me 16 logs you useless idiot");
+        String clean = lastWords(a);
+        helper.assertTrue(fromLists(clean, "tone.rude.clean", "tone.rude_again.clean"), "a clean comeback: " + clean);
+        for (String w : clean.split("[^A-Za-z*$']+")) helper.assertTrue(!com.jrpetty.mcassistant.pa.PaTone.swear(w) || w.equalsIgnoreCase("hell"), "Clean never swears: " + clean);
+        say(pa, a, "stop");
+        a.setMute(1);
+        int before = said(a);
+        say(pa, a, "get me 16 logs you useless idiot");
+        String hushed = lastWords(a);
+        helper.assertTrue(!fromLists(hushed, "tone.rude.clean", "tone.rude_again.clean") && said(a) - before == 1 && !a.plan.idle(),
+            "hushed: the job and a plain reply, no roast: " + hushed);
+        say(pa, a, "stop");
+        a.setMute(0);
+        a.rec().language = 2;
+        // someone else
+        String[] got = new String[6];
+        int n0 = said(a);
+        stranger(pb, a, "Hello");
+        got[0] = since(a, n0);
+        helper.assertTrue(fromLists(got[0], "stranger.polite") && got[0].contains(pb.getGameProfile().getName()), "friendly, by name: " + got[0]);
+        helper.runAfterDelay(170, () -> {
+            AssistantEntity.Mode m0 = a.getMode();
+            int planned = a.plan.steps.size();
+            int n1 = said(a);
+            stranger(pb, a, "guard me");
+            got[1] = since(a, n1);
+            helper.assertTrue(fromLists(got[1], "stranger.order") && a.getMode() == m0 && a.plan.steps.size() == planned, "no orders from strangers: " + got[1] + " (" + a.getMode() + ")");
+            helper.runAfterDelay(170, () -> {
+                int n2 = said(a);
+                stranger(pb, a, "You're useless");
+                got[2] = since(a, n2);
+                helper.assertTrue(fromLists(got[2].replaceAll(" " + java.util.regex.Pattern.quote(pa.getGameProfile().getName()) + ",.*$", ""), "stranger.roast." + lv)
+                    || fromLists(got[2], "stranger.roast." + lv), "roasted back at " + lv + ": " + got[2]);
+                helper.runAfterDelay(170, () -> {
+                    int n3 = said(a);
+                    stranger(pb, a, "Your owner's rubbish");
+                    got[3] = since(a, n3);
+                    helper.assertTrue(got[3].contains(pa.getGameProfile().getName()), "sticks up for its player: " + got[3]);
+                    int n = said(a);
+                    stranger(pb, a, "you're rubbish");                // within eight seconds
+                    helper.assertTrue(said(a) == n, "one reply in eight seconds to the same player");
+                    helper.runAfterDelay(170, () -> {
+                        a.setMute(2);
+                        int m = said(a);
+                        stranger(pb, a, "You're useless");
+                        helper.assertTrue(said(a) == m, "quiet: not a word to anyone");
+                        a.setMute(0);
+                        Kit.log("pai39 owner rude at " + lv + ": \"" + first + "\"; clean: \"" + clean + "\"; hushed: \"" + hushed + "\"; stranger: \"" + got[0]
+                            + "\" / \"" + got[1] + "\" / \"" + got[2] + "\" / \"" + got[3] + "\"; rate-limited; quiet silences");
+                        helper.succeed();
+                    });
+                });
+            });
+        });
+    }
+
+    private static void stranger(ServerPlayer p, PlayerAssistantEntity a, String text) {
+        CompoundTag t = new CompoundTag();
+        t.putInt("id", a.getId());
+        t.putString("text", text);
+        PaServer.act(p, "stranger", t);
+    }
+
+    /** Is this said line one of these lists' lines (blanks filled with anything)? */
+    private static boolean fromLists(String said, String... keys) {
+        for (String k : keys) for (String c : new String[]{"", "@gloomy", "@serious", "@sf", "@sg", "@fg"})
+            for (String l : com.jrpetty.mcassistant.pa.PaLines.get(k + c)) {
+                String re = java.util.regex.Pattern.quote(l).replaceAll("\\{[a-z]+\\}", "\\\\E.*\\\\Q");
+                if (said.matches(re + ".*")) return true;
+            }
+        return false;
+    }
+
+    /** The first line it said after it had said so many (or "" if none). */
+    private static String since(PlayerAssistantEntity a, int n) {
+        int k = 0;
+        for (PaData.Line l : a.rec().log) {
+            if (l.who() != 1) continue;
+            k += Math.max(1, l.times());
+            if (k > n) return l.text();
+        }
+        return "";
+    }
+
     /** How many lines it has said (a line said again counts again). */
     private static int said(PlayerAssistantEntity a) {
         int n = 0;

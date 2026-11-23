@@ -169,6 +169,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
             }
             return false;
         }
+        if (source.getEntity() instanceof ServerPlayer sp && !level().isClientSide) PaBanter.stranger(this, sp, "", true);   // [pa33b] "Steady on."
         return super.hurt(source, amount);
     }
 
@@ -285,7 +286,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         if (level().isClientSide) return InteractionResult.SUCCESS;
         if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
         if (!obeys(sp)) {
-            PaTalk.to(this, sp, PaTalk.line(this, "not_owner", "owner", ownerName));
+            PaNet.openStranger(sp, this);                               // [pa33b] a little chat box: talk to it, never order it
             return InteractionResult.CONSUME;
         }
         // Food in the hand: a meal for it.

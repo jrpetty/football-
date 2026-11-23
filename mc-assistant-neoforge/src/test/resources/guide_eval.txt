@@ -460,3 +460,6 @@ how do i talk to my assistant => pa_talking
 how do i make my assistant shut up => pa_quiet
 my assistant keeps making jokes how do i stop it => pa_quiet
 how do i let my assistant talk again => pa_quiet
+why does my assistant swear back at me => pa_energy
+how do i stop my assistant swearing => pa_energy
+can my assistant roast other players => pa_energy

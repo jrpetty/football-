@@ -82,11 +82,21 @@ class PaPersonaTest {
         for (String mob : List.of("zombie", "creeper", "enderman")) assertTrue(PaLines.get("self." + mob).size() >= 15, mob);
     }
 
+    /** [pa33b] The words its player can switch on (Language: Cheeky, Unfiltered), and only in those lists. */
+    static final java.util.Set<String> SWEARS = java.util.Set.of("fuck", "shit", "bitch", "bastard", "arse", "crap", "bloody", "wank", "piss", "cock", "dick", "fat");
+
     @Test
     void nothingBannedAnywhere() {
-        for (String s : allLines()) {
-            String low = " " + s.toLowerCase(Locale.ROOT).replaceAll("[^a-z' -]", " ") + " ";
-            for (String b : BANNED) assertFalse(low.contains(" " + b + " ") || low.contains(" " + b + "s "), "banned \"" + b + "\" in: " + s);
+        for (Map.Entry<String, List<String>> e : PaLines.all().entrySet()) {
+            String k = e.getKey();
+            boolean strong = k.matches("(tone|stranger)\\..*(cheeky|unfiltered).*");     // its player chose it, under the server's cap
+            for (String s : e.getValue()) {
+                String low = " " + s.toLowerCase(Locale.ROOT).replaceAll("[^a-z' -]", " ") + " ";
+                for (String b : BANNED) {
+                    if (strong && SWEARS.contains(b)) continue;
+                    assertFalse(low.contains(" " + b + " ") || low.contains(" " + b + "s "), "banned \"" + b + "\" in " + k + ": " + s);
+                }
+            }
         }
     }
 
@@ -96,7 +106,8 @@ class PaPersonaTest {
         for (Map.Entry<String, List<String>> e : PaLines.all().entrySet()) {
             for (String s : e.getValue()) {
                 assertFalse(s.contains("!"), "an exclamation mark in " + e.getKey() + ": " + s);
-                if (s.toLowerCase(Locale.ROOT).contains("damn")) assertTrue(e.getKey().startsWith("self."), "damn outside a look line: " + s);
+                if (s.toLowerCase(Locale.ROOT).contains("damn")) assertTrue(e.getKey().startsWith("self.") || e.getKey().matches("(tone|stranger)\\..*(cheeky|unfiltered).*"),
+                    "damn outside a look line or a Language list: " + s);
             }
         }
     }
@@ -299,6 +310,8 @@ class PaPersonaTest {
         {"comebacks and jokes", "comeback.", "joke"},
         {"looks (self-aware and themed)", "self.", "look."},
         {"levels and tricks", "say.level", "say.trick", "trick.", "level."},
+        {"match my energy (its player's tone)", "tone."},
+        {"other players", "stranger."},
     };
 
     @Test
@@ -358,7 +371,8 @@ class PaPersonaTest {
     @Test
     void fillLeavesNoBlanks() {
         for (String s : allLines()) {
-            String f = PaPersona.fill(s, Map.of("owner", "Alex", "name", "Pip", "did", "Built a small house", "what", "I'm out of coal.", "item", "iron"));
+            String f = PaPersona.fill(s, Map.of("owner", "Alex", "name", "Pip", "did", "Built a small house", "what", "I'm out of coal.", "item", "iron",
+                "thing", "wheat", "player", "Sam"));
             assertFalse(f.contains("{") || f.contains("}"), "a blank left in: " + f);
         }
         assertNotNull(PaLines.get("say.ok"));

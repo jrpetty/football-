@@ -96,6 +96,7 @@ public final class PaClient {
                 PaToast.maybeShow(data.getBoolean("has"));
             }
             case PaPayload.OPEN -> {
+                if (data.getString("tab").equals("stranger")) { mc.setScreen(new PaStrangerScreen(data)); return; }   // [pa33b]
                 state = data;
                 stamp++;
                 PaScreen s = new PaScreen(data.getString("tab"));

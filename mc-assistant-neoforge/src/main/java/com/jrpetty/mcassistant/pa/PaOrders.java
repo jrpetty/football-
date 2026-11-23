@@ -70,7 +70,9 @@ public final class PaOrders {
     }
 
     private static void hear0(ServerPlayer p, PlayerAssistantEntity a, String text, Look look) {
-        PaUnderstand.Reading reading = PaUnderstand.read(text, a.getAssistantName());
+        // [pa33b] match my energy: the attitude comes off before the order is read ("go get my wheat you fucking loser" fetches wheat)
+        PaTone.Read tone = PaTone.read(text);
+        PaUnderstand.Reading reading = PaUnderstand.read(tone.tone() == PaTone.Tone.RUDE || tone.polite() ? tone.order() : text, a.getAssistantName());
         Pending pend = PENDING.get(p.getUUID());
         if (pend != null) {
             Kind first = reading.steps().isEmpty() ? null : reading.steps().get(0).kind();
@@ -95,6 +97,19 @@ public final class PaOrders {
             hush(a, mu == PaQuips.Mute.ON ? 0 : mu == PaQuips.Mute.JOKES ? 1 : 2);
             if (order) run(p, a, reading.steps(), look, text);
             return;
+        }
+        // [pa33b] an order said rudely, politely or bluntly: done straight away, then a word back in kind (never while hushed)
+        if (mr != null && tone.tone() != PaTone.Tone.NEUTRAL) {
+            int before = a.mind.toneHeat.take(tone, a.level().getGameTime());
+            boolean order = reading.clarify() == null && reading.steps().stream().anyMatch(st -> st.kind().queued()
+                || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);
+            if (order) {
+                run(p, a, reading.steps(), look, text);
+                String key = PaTone.key(tone, before, a.mind.toneHeat.heat(), PaTone.level(mr.language, PaConfig.maxLanguage()), mr.mute);
+                String back = key == null ? null : PaBanter.toneLine(a, key, thing(reading));
+                if (back != null) PaTalk.reply(a, back);
+                return;
+            }
         }
         // [pa33b] lip, a kind word, or "tell me a joke": answered in kind. With a real order in it, the order first.
         PaQuips.Comeback cb = PaBanter.comeback(text);
@@ -127,6 +142,12 @@ public final class PaOrders {
             return;
         }
         run(p, a, reading.steps(), look, text);
+    }
+
+    /** [pa33b] What it was sent for, for "your {thing}": the first order's thing, else "that". */
+    static String thing(PaUnderstand.Reading reading) {
+        for (PaIntent i : reading.steps()) if (i.item() != null && !i.item().isBlank()) return i.item();
+        return "that";
     }
 
     /** [pa33b] Hush it (1 no jokes, 2 quiet) or lift it (0), with one short line in its own voice; never a sulk. */

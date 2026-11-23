@@ -296,6 +296,58 @@
       "covers": []
     },
     {
+      "id": "pa_energy",
+      "title": "Your assistant matches your energy",
+      "icon": "minecraft:goat_horn",
+      "kind": "howto",
+      "q": [
+        "my assistant swore at me",
+        "why is my assistant rude back",
+        "assistant roasts me",
+        "stop my assistant swearing",
+        "assistant language setting",
+        "can my assistant roast other players",
+        "someone is insulting my assistant",
+        "talk to someone else's assistant"
+      ],
+      "kw": [
+        "swear",
+        "rude",
+        "roast",
+        "language",
+        "polite",
+        "insult",
+        "clean",
+        "unfiltered",
+        "cheeky",
+        "players"
+      ],
+      "answer": "Say it nicely and it's warm; bark it and it's dry; be rude and it fires back a witty roast. It still does the job straight away, every time.",
+      "more": [
+        "Language in About sets how strong its comebacks get: Clean never swears (the default), Cheeky is mild (bloody, damn, arse), Unfiltered swears back. The server can cap it, and About says so.",
+        "It only roasts you when you started it, and only what you do in the game: dying a lot, hoarding dirt, bad builds, being bossy.",
+        "Other players can right-click it to chat. It answers them by name, in kind, and sticks up for you if they're rude about you. It never starts it, never takes their orders, and gets bored of anyone who keeps on.",
+        "Roast back (On, Only when insulted, Off) and Defend me are in About. Quiet or no jokes silences all of it."
+      ],
+      "steps": [
+        "Press Y, open About, and set Language.",
+        "To answer someone else's assistant, right-click it and type, or click a quick line."
+      ],
+      "controls": [
+        "[Y] assistant panel",
+        "Right-click someone else's assistant to chat"
+      ],
+      "items": [],
+      "tips": [
+        "A please or a thanks cools it down after a rude run."
+      ],
+      "related": [
+        "pa_quiet",
+        "pa_personality"
+      ],
+      "covers": []
+    },
+    {
       "id": "pa_looks",
       "title": "Choosing your assistant's look",
       "icon": "minecraft:leather_chestplate",

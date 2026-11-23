@@ -32,6 +32,8 @@ public final class PaBrain {
     /** The brain's scratch, per assistant. */
     public static final class Mind {
         public int lastSaid = -100000, lastComment = -100000;
+        public final PaTone.Heat toneHeat = new PaTone.Heat();          // [pa33b] its player's recent tone
+        public final PaStrangers.Limit strangers = new PaStrangers.Limit();   // [pa33b] other players: rate and heat, per player
         @Nullable public BlockPos post;
         @Nullable public BlockPos roamCentre;
         long nightWarnedDay = -1;
