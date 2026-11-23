@@ -152,6 +152,7 @@ public class PaTaskGoal extends Goal {
     // ------------------------------------------------------------------ place a block
 
     private void place() {
+        if (t.item.equals("bed")) { placeBed(); return; }                  // [pa33c-2b] two blocks, and its spawn after
         Item item = itemFor(t.item);
         if (item == Items.AIR || !(item instanceof BlockItem bi)) { finish("I don't know how to place " + t.item + ".", true); return; }
         int slot = -1;
@@ -182,6 +183,60 @@ public class PaTaskGoal extends Goal {
         a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         a.placeSound(spot);
         finish("Put the " + t.item + " down.", false);
+    }
+
+    /** [pa33c-2b] Put its bed down (foot and head on solid ground, out of anyone's land) and make it its spawn. */
+    private void placeBed() {
+        int slot = -1;
+        for (int i = 0; i < a.getInventoryItems().size(); i++) if (a.getInventoryItems().get(i).is(net.minecraft.tags.ItemTags.BEDS)) { slot = i; break; }
+        if (slot < 0) { finish("I haven't got a bed to put down.", true); return; }
+        if (!(a.getInventoryItems().get(slot).getItem() instanceof BlockItem bi) || !(bi.getBlock() instanceof net.minecraft.world.level.block.BedBlock bed)) {
+            finish("That's not a bed I can put down.", true);
+            return;
+        }
+        if (t.stage == 0) {
+            BlockPos at = t.pos != null ? t.pos : a.blockPosition();
+            BlockPos foot = null;
+            Direction facing = Direction.NORTH;
+            boolean barred = false;
+            search:
+            for (int r = 1; r <= 4; r++) {
+                for (BlockPos p : BlockPos.betweenClosed(at.offset(-r, -1, -r), at.offset(r, 1, r))) {
+                    for (Direction d : Direction.Plane.HORIZONTAL) {
+                        BlockPos head = p.relative(d);
+                        if (!free(p) || !free(head) || p.equals(at) || head.equals(at)) continue;
+                        if (PaSafety.offLimits(a, p) || PaSafety.offLimits(a, head)) { barred = true; continue; }
+                        foot = p.immutable();
+                        facing = d;
+                        break search;
+                    }
+                }
+            }
+            if (foot == null) {
+                finish(barred ? "That's someone's land. I won't put a bed there without them saying so." : "There's no room for a bed there.", true);
+                return;
+            }
+            work.add(foot);
+            work.add(foot.relative(facing));
+            t.stage = 1;
+        }
+        BlockPos foot = work.get(0), head = work.get(1);
+        if (!reach(foot, 4.0)) { if (gaveUpWalking()) finish("I couldn't get to the spot for my bed.", true); return; }
+        if (!free(foot) || !free(head)) { t.stage = 0; work.clear(); return; }    // something moved in: look again
+        Direction facing = Direction.getNearest(head.getX() - foot.getX(), 0, head.getZ() - foot.getZ());
+        BlockState st = bed.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, facing);
+        a.level().setBlock(foot, st.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        a.level().setBlock(head, st.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        a.getInventoryItems().get(slot).shrink(1);
+        a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        a.placeSound(foot);
+        PaOrders.setBed(a, head);
+        finish("Put my bed down at " + head.getX() + " " + head.getY() + " " + head.getZ() + ". That's where I'll come back if I fall.", false);
+    }
+
+    private boolean free(BlockPos p) {
+        return a.level().getBlockState(p).canBeReplaced() && a.level().getBlockState(p.above()).canBeReplaced()
+            && a.level().getBlockState(p.below()).isSolidRender(a.level(), p.below());
     }
 
     static Item itemFor(String phrase) {

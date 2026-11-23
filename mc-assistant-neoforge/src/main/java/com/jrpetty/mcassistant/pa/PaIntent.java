@@ -11,6 +11,8 @@ public record PaIntent(Kind kind, String item, int amount, Place place, String r
     public enum Kind {
         // moving and standing
         FOLLOW, STAY, COME, GUARD_ME, GUARD_HERE, GO_HOME, SET_HOME, EXPLORE,
+        // [pa33c-2b] its bed, which is where it comes back after a fall
+        BED_USE, BED_PLACE, BED_WHERE,
         // work
         GATHER, MINE_ORE, MINE_DOWN, FARM, BUILD, CRAFT, SMELT, DEPOSIT, FETCH, GIVE, BRING_FOOD, FIGHT, HUNT, FISH,
         BREED, SHEAR, LIGHT_AREA, SORT, CLEAR_AREA, FUEL, TRADE_BUY, TRADE_SELL, REPAIR,
@@ -33,7 +35,7 @@ public record PaIntent(Kind kind, String item, int amount, Place place, String r
         public boolean queued() {
             return switch (this) {
                 case GATHER, MINE_ORE, MINE_DOWN, FARM, BUILD, CRAFT, SMELT, DEPOSIT, FETCH, GIVE, BRING_FOOD, HUNT, FISH,
-                     BREED, SHEAR, LIGHT_AREA, SORT, CLEAR_AREA, FUEL, TRADE_BUY, TRADE_SELL, REPAIR, GO_HOME, EXPLORE -> true;
+                     BREED, SHEAR, LIGHT_AREA, SORT, CLEAR_AREA, FUEL, TRADE_BUY, TRADE_SELL, REPAIR, GO_HOME, EXPLORE, BED_PLACE -> true;
                 default -> false;
             };
         }

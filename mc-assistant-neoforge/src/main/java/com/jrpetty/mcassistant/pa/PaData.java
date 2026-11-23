@@ -53,6 +53,9 @@ public final class PaData extends SavedData {
         /** [pa33b] Match my energy: its language back (0 Clean, 1 Cheeky, 2 Unfiltered; never past the server cap), roasting others back (0 On, 1 only when they insult it, 2 Off), defending its player. */
         public int language, roastBack;
         public boolean defend = true;
+        /** [pa33c-2b] Its beds: the one it was told to use, and the last it slept in (where it comes back after a fall). */
+        @Nullable public BlockPos bed, lastBed;
+        public String bedDim = "", lastBedDim = "";
         /** [pa33b] When its player last left (wall clock), for "you've been gone ages". */
         public long leftAt;
 
@@ -126,6 +129,8 @@ public final class PaData extends SavedData {
             t.putInt("Lang", language);
             t.putInt("RoastBack", roastBack);
             t.putBoolean("Defend", defend);
+            if (bed != null) { t.putLong("Bed", bed.asLong()); t.putString("BedDim", bedDim); }
+            if (lastBed != null) { t.putLong("LastBed", lastBed.asLong()); t.putString("LastBedDim", lastBedDim); }
             t.putLong("LeftAt", leftAt);
             t.putInt("Spend", spend);
             if (spawner != null) { t.putLong("Spawner", spawner.asLong()); t.putString("SpawnerDim", spawnerDim); }
@@ -176,6 +181,8 @@ public final class PaData extends SavedData {
             r.language = Math.max(0, Math.min(2, t.getInt("Lang")));
             r.roastBack = Math.max(0, Math.min(2, t.getInt("RoastBack")));
             r.defend = !t.contains("Defend") || t.getBoolean("Defend");
+            if (t.contains("Bed")) { r.bed = BlockPos.of(t.getLong("Bed")); r.bedDim = t.getString("BedDim"); }
+            if (t.contains("LastBed")) { r.lastBed = BlockPos.of(t.getLong("LastBed")); r.lastBedDim = t.getString("LastBedDim"); }
             r.leftAt = t.getLong("LeftAt");
             r.spend = t.contains("Spend") ? t.getInt("Spend") : 64;
             if (t.contains("Spawner")) { r.spawner = BlockPos.of(t.getLong("Spawner")); r.spawnerDim = t.getString("SpawnerDim"); }

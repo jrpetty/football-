@@ -903,3 +903,152 @@ Undone, {owner}.
 I've undone that.
 == say.mute_all@gloomy
 Quiet, then. I'll keep my opinions where the rain can't get them.
+
+# [pa33c-2b] its bed: where it comes back after a fall
+== say.bed_set
+That's my bed now. If I fall, I'll wake up here.
+Bed claimed. My spawn point, my rules.
+Lovely. My very own rectangle of sleep. That's where I'll come back.
+This is my bed now. Don't let anyone else drool on it.
+Noted. If anything kills me, I'll be back right here.
+My bed. My spawn. My one luxury.
+== say.bed_set@gloomy
+My bed, then. Where I'll come back after the next disaster.
+Fine. I'll respawn here. It's as good a place as any to start again.
+That's my bed now. I'll be seeing a lot of it, I expect.
+A bed. Somewhere to wake up after it all goes wrong.
+My spawn's here now. Ready for the inevitable.
+Bed set. I'll be back here. Repeatedly, knowing my luck.
+== say.bed_set@serious
+That's my bed now. I'll respawn here.
+Bed set. This is my spawn point.
+Done. If I fall, I'll come back here.
+This bed is mine now. My spawn is here.
+Spawn set to this bed.
+Understood. I'll respawn at this bed.
+== say.bed_busy
+Someone's already using that one. I'm not that rude.
+That bed's taken. I'll find my own, thanks.
+That's somebody's bed. I don't steal beds. Much.
+Occupied. I'm not climbing in with anyone.
+That one's spoken for. Point me at a free one.
+Not that one. It's somebody else's spawn.
+== say.bed_busy@gloomy
+That bed's taken. Of course it is.
+Someone else sleeps there. I'll do without.
+Taken. Even the beds are against me.
+That's somebody's bed. Story of my life.
+Not mine to take. Nothing ever is.
+Occupied. I'll sleep standing up, then.
+== say.bed_busy@serious
+That bed's in use.
+Someone else uses that bed.
+That's another player's bed.
+That one's taken. Point me at a free bed.
+I won't take that bed: it's someone's spawn.
+Occupied. I need a free one.
+== say.bed_point
+Point me at a bed first. Look at it and say it again.
+Which bed? Look at one and tell me again.
+I'll need you to look at the bed you mean.
+Show me the bed: look at it, then say "use this bed".
+I can't see a bed where you're looking.
+No bed there. Look right at one and ask again.
+== say.bed_point@gloomy
+Which bed. Look at one. I'll wait. I'm good at waiting.
+No bed there. Just floor. Like my expectations.
+Look at a bed and say it again. Please.
+I can't see a bed. I can barely see the point.
+There's no bed where you're looking.
+Point me at an actual bed, then.
+== say.bed_point@serious
+Look at a bed and say it again.
+I can't see a bed there.
+Which bed? Look at it first.
+No bed where you're looking.
+Point me at the bed you mean.
+Show me the bed first.
+== say.bed_none
+I haven't got a bed. Say "place a bed here" and I'll sort one out.
+No bed yet. I sleep wherever I fall over. Say "place a bed here".
+I'm bedless. Give me one, or say "place a bed here".
+No bed. Tell me "use this bed" while you look at one.
+I've not got a bed. If I fall, I'll come back by my spawner or you.
+Bed? Never had one. "Place a bed here" would change that.
+== say.bed_none@gloomy
+No bed. I just sort of stand there all night. Say "place a bed here".
+I haven't got a bed. Nobody's ever offered.
+Bedless. Like a sad wandering knight. "Place a bed here" if you like.
+No bed. If I fall I'll turn up near you, I suppose.
+I've no bed. "Use this bed" on one would be nice.
+No bed. I'll manage. I always manage.
+== say.bed_none@serious
+I don't have a bed. Say "place a bed here".
+No bed yet. Look at one and say "use this bed".
+I haven't got a bed. I'll respawn at my spawner or near you.
+No bed. "Place a bed here" sets one up.
+I have no bed at the moment.
+No bed assigned yet.
+== say.bed_where
+My bed's at {x} {y} {z}, about {dist} blocks {dir}. Very comfy. Very square.
+Over there: {x} {y} {z}. About {dist} blocks {dir}. It's the one with my dent in it.
+{x} {y} {z}, roughly {dist} blocks {dir}. Don't sit on it.
+About {dist} blocks {dir}, at {x} {y} {z}. That's where I wake up after you get me killed.
+At {x} {y} {z}. {dist} blocks {dir}, give or take a creeper.
+My bed: {x} {y} {z}, {dist} blocks {dir}. Feel free to tuck me in.
+== say.bed_where@gloomy
+My bed's at {x} {y} {z}, about {dist} blocks {dir}. Where I go to start over.
+{x} {y} {z}. About {dist} blocks {dir}. It's not much, but it's where I come back.
+About {dist} blocks {dir}: {x} {y} {z}. Lumpy, but mine.
+At {x} {y} {z}, {dist} blocks {dir}. I'll be seeing it again soon, I expect.
+My bed is {dist} blocks {dir}, at {x} {y} {z}.
+{x} {y} {z}, {dist} blocks {dir}. My little square of hope.
+== say.bed_where@serious
+My bed is at {x} {y} {z}, about {dist} blocks {dir}.
+At {x} {y} {z}: {dist} blocks {dir}.
+{dist} blocks {dir}, at {x} {y} {z}.
+My bed: {x} {y} {z}, about {dist} blocks {dir}.
+It's at {x} {y} {z}, {dist} blocks {dir} of you.
+{x} {y} {z}, roughly {dist} blocks {dir}.
+== say.bed_gone
+My bed's gone. I'll sleep wherever, I suppose.
+Someone broke my bed. Rude. I'll make do.
+My bed's vanished. I've come back here instead.
+No bed to come back to. Somebody owes me a bed.
+My bed's gone, so I've turned up here. Bedless and brave.
+Bed's broken. Spawned somewhere else. Not thrilled.
+== say.bed_gone@gloomy
+My bed's gone. I'll sleep wherever, I suppose.
+My bed's gone. Of course it is.
+No bed. Someone broke it. Nothing lasts.
+My bed's been taken from me. I'll cope. Barely.
+The bed's gone. I came back here instead. Lovely.
+Bedless again. It was nice while it lasted.
+== say.bed_gone@serious
+My bed's gone, so I came back here.
+My bed was broken. I've respawned elsewhere.
+No bed to return to. Respawned here instead.
+My bed is missing. I'm back here instead.
+The bed's gone; I used my next spawn point.
+Bed broken. Respawned at the fallback.
+== say.respawn_bed
+Morning. Well, not morning. Back from the dead, in my own bed.
+Up again, fresh from my bed. Did I miss anything.
+Back. I woke up in my bed. Like it was all a bad dream.
+Respawned in bed. Best way to come back from a disaster.
+Back in my bed, back on my feet. Where were we.
+Woke up in my bed. Bit embarrassing. Coming.
+== say.respawn_bed@gloomy
+Back. In my bed. Again.
+Woke up in my bed. The nightmare continues.
+Respawned in bed. As if nothing happened. Something did.
+Back at my bed. Let's try not to do that again.
+Up from my bed. Ready to fall over again.
+In my bed again. It's always my bed.
+== say.respawn_bed@serious
+I'm back, at my bed.
+Respawned at my bed.
+Back on my feet at my bed.
+Returned to my bed. Coming to you.
+I've respawned at my bed.
+Back, at my bed. What's next?

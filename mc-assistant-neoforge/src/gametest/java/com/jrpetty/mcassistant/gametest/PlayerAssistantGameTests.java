@@ -1190,6 +1190,59 @@ public class PlayerAssistantGameTests {
         });
     }
 
+    /** pai40: its bed: "use this bed" makes it its spawn, it comes back there after a fall, "place a bed here" puts one down
+     *  from its pack, and a broken bed falls back (with a word). */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pai40_bed")
+    public static void pai40_bed(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_117_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        BlockPos foot = new BlockPos(x + 8, y, Z + 6), head = foot.north();
+        level.setBlock(foot, Blocks.RED_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(head, Blocks.RED_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        say(p, a, "use this bed", foot, -1);
+        helper.assertTrue(head.equals(a.rec().bed) && head.equals(a.rec().lastBed), "use this bed: its spawn (" + a.rec().bed + ", " + lastWords(a) + ")");
+        say(p, a, "where's your bed");
+        helper.assertTrue(lastWords(a).contains(head.getX() + " " + head.getY() + " " + head.getZ()), "says where: " + lastWords(a));
+        // knocked out far away: it comes back at its bed
+        a.teleportTo(x + 30, y, Z + 30);
+        a.hurt(level.damageSources().generic(), 1000F);
+        helper.runAfterDelay(20, () -> {
+            PaData.Rec r = a.rec() != null ? a.rec() : PaData.first(p.getUUID());
+            r.deadUntil = level.getGameTime();                    // its time is up
+            helper.runAfterDelay(30, () -> {
+                PlayerAssistantEntity b = com.jrpetty.mcassistant.pa.PaLife.find(p);
+                helper.assertTrue(b != null && b.blockPosition().closerThan(head, 3.5), "back at its bed: " + (b == null ? "none" : b.blockPosition().toShortString()));
+                // place a bed: one from its pack, put down near its player, and its spawn after
+                b.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLUE_BED));
+                say(p, b, "place a bed here");
+                helper.runAfterDelay(200, () -> {
+                    PaData.Rec r2 = b.rec();
+                    helper.assertTrue(r2.bed != null && !r2.bed.equals(head) && level.getBlockState(r2.bed).is(Blocks.BLUE_BED), "placed a bed of its own: " + r2.bed + " (" + lastWords(b) + ")");
+                    BlockPos placed = r2.bed;
+                    // that bed broken: it falls back to beside its player, and says so
+                    level.setBlock(placed, Blocks.AIR.defaultBlockState(), 3);
+                    level.setBlock(placed.relative(level.getBlockState(placed).isAir() ? net.minecraft.core.Direction.NORTH : net.minecraft.core.Direction.NORTH), Blocks.AIR.defaultBlockState(), 3);
+                    r2.lastBed = placed;
+                    b.hurt(level.damageSources().generic(), 1000F);
+                    helper.runAfterDelay(20, () -> {
+                        PaData.Rec r3 = PaData.first(p.getUUID());
+                        r3.deadUntil = level.getGameTime();
+                        helper.runAfterDelay(30, () -> {
+                            PlayerAssistantEntity c = com.jrpetty.mcassistant.pa.PaLife.find(p);
+                            helper.assertTrue(c != null && allWords(c).toLowerCase().contains("bed"), "a broken bed: back elsewhere, and says so: " + (c == null ? "none" : lastWords(c)));
+                            Kit.log("pai40 bed: use-this-bed spawn " + head.toShortString() + "; respawned at it; placed " + placed.toShortString() + "; broken -> \"" + lastWords(c) + "\"");
+                            helper.succeed();
+                        });
+                    });
+                });
+            });
+        });
+    }
+
     private static void stranger(ServerPlayer p, PlayerAssistantEntity a, String text) {
         CompoundTag t = new CompoundTag();
         t.putInt("id", a.getId());

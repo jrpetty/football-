@@ -78,7 +78,7 @@ public final class PaSpeech {
         return d < 20 ? d : d < 100 ? Math.round(d / 5f) * 5 : Math.round(d / 10f) * 10;
     }
 
-    static String bearing(double dx, double dz) {
+    public static String bearing(double dx, double dz) {
         double ang = Math.toDegrees(Math.atan2(-dx, dz));
         String[] names = {"south", "south-west", "west", "north-west", "north", "north-east", "east", "south-east"};
         return names[(int) Math.round(((ang % 360) + 360) % 360 / 45.0) % 8];

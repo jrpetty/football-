@@ -146,6 +146,50 @@ public final class PaOrders {
         run(p, a, reading.steps(), look, text);
     }
 
+    /** [pa33c-2b] The head block of the bed at (or beside) this spot, or null. */
+    @Nullable
+    static BlockPos bedHead(net.minecraft.world.level.Level level, @Nullable BlockPos at) {
+        if (at == null) return null;
+        for (BlockPos p : new BlockPos[]{at, at.below(), at.above()}) {
+            net.minecraft.world.level.block.state.BlockState s = level.getBlockState(p);
+            if (!(s.getBlock() instanceof net.minecraft.world.level.block.BedBlock)) continue;
+            if (s.getValue(net.minecraft.world.level.block.BedBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.HEAD) return p.immutable();
+            return p.relative(s.getValue(net.minecraft.world.level.block.BedBlock.FACING)).immutable();
+        }
+        return null;
+    }
+
+    /** [pa33c-2b] Is someone else sleeping in it, or is it a player's own spawn bed near them? It never takes a used bed. */
+    static boolean bedBusy(PlayerAssistantEntity a, BlockPos head) {
+        net.minecraft.world.level.block.state.BlockState s = a.level().getBlockState(head);
+        if (s.getBlock() instanceof net.minecraft.world.level.block.BedBlock && s.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)
+            && !(a.isSleeping() && a.getSleepingPos().map(head::equals).orElse(false))) return true;
+        if (a.level() instanceof net.minecraft.server.level.ServerLevel sl) for (ServerPlayer pl : sl.players()) {
+            if (a.isOwner(pl)) continue;                      // its own player may share theirs
+            BlockPos sp = pl.getRespawnPosition();
+            if (sp != null && pl.getRespawnDimension() == sl.dimension() && (sp.equals(head) || sp.closerThan(head, 1.5))) return true;
+        }
+        return false;
+    }
+
+    /** [pa33c-2b] This bed is its bed, and where it comes back after a fall. */
+    static void setBed(PlayerAssistantEntity a, BlockPos head) {
+        PaData.Rec r = a.rec();
+        if (r != null) {
+            r.bed = head;
+            r.bedDim = a.level().dimension().location().toString();
+            r.lastBed = head;
+            r.lastBedDim = r.bedDim;
+            PaData.touch();
+        }
+        a.useBed(head);
+    }
+
+    static boolean hasBed(PlayerAssistantEntity a) {
+        for (net.minecraft.world.item.ItemStack s : a.getInventoryItems()) if (s.is(net.minecraft.tags.ItemTags.BEDS)) return true;
+        return false;
+    }
+
     /** [pa33b] What it was sent for, for "your {thing}": the first order's thing, else "that". */
     static String thing(PaUnderstand.Reading reading) {
         for (PaIntent i : reading.steps()) if (i.item() != null && !i.item().isBlank()) return i.item();
@@ -279,6 +323,22 @@ public final class PaOrders {
                 a.equipBestWeapon();
                 a.setTarget(target);
                 return "Going after the " + target.getName().getString().toLowerCase() + "!";
+            }
+            case BED_USE -> {                                      // [pa33c-2b] "use this bed": its spawn from now on
+                BlockPos head = bedHead(a.level(), look.block());
+                if (head == null) return PaTalk.line(a, "bed_point");
+                if (bedBusy(a, head)) return PaTalk.line(a, "bed_busy");
+                setBed(a, head);
+                return PaTalk.line(a, "bed_set");
+            }
+            case BED_WHERE -> {
+                PaData.Rec r = a.rec();
+                BlockPos b = r == null ? null : r.lastBed != null ? r.lastBed : r.bed;
+                if (b == null) return PaTalk.line(a, "bed_none");
+                double dx = b.getX() + 0.5 - p.getX(), dz = b.getZ() + 0.5 - p.getZ();
+                int dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
+                return PaTalk.line(a, "bed_where", "x", "" + b.getX(), "y", "" + b.getY(), "z", "" + b.getZ(), "dist", "" + dist,
+                    "dir", com.jrpetty.mcassistant.pa.voice.PaSpeech.bearing(dx, dz));
             }
             case SET_HOME -> {
                 BlockPos at = where(p, a, Kind.SET_HOME == i.kind() ? PaIntent.Place.HERE : i.place(), look);
@@ -594,6 +654,17 @@ public final class PaOrders {
                 } else s.jobs.add(Job.withdraw(i.item(), amount));
                 s.jobs.add(Job.give(i.item(), amount));
                 out.add(s);
+                return null;
+            }
+            case BED_PLACE -> {                                    // [pa33c-2b] "place a bed here": one from its pack, or made first
+                BlockPos at = where(p, a, i.place() == PaIntent.Place.NONE ? PaIntent.Place.HERE : i.place(), look);
+                if (!hasBed(a)) {                                   // made from scratch, as "craft a white bed" would be
+                    String why = plan(p, a, new PaIntent(Kind.CRAFT, "white bed", 1, PaIntent.Place.NONE, said), look, out, said);
+                    if (why != null) return "I've no bed and can't make one: " + why;
+                }
+                PaPlan.Step put = step("put my bed down", Kind.BED_PLACE, 20);
+                put.task = new PaTask(PaTask.Kind.PLACE, at, "bed", 1);
+                out.add(put);
                 return null;
             }
             case GIVE -> {

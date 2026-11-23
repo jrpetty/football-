@@ -127,6 +127,11 @@ public class PlayerAssistantEntity extends AssistantEntity {
 
     public void setPersonality(int p) { this.entityData.set(DATA_PERS, p); }
 
+    /** [pa33c-2b] Sleep in this bed from now on (its head block), as a player sets their spawn. */
+    public void useBed(BlockPos head) {
+        takeBed(head);
+    }
+
     /** [pa33b] How hushed it is (0 talking, 1 no jokes, 2 quiet): its record on the server, its nameplate's copy on the client. */
     public int mute() {
         PaData.Rec r = rec();

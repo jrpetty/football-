@@ -140,6 +140,10 @@ public final class PaUnderstand {
         }
         norm = (" " + norm + " ").replaceAll(" (?:go|come|run|hurry) and ", " ").replaceAll(" (?:would|do) you mind ", " ").trim();
         String flat = norm.replace(" , ", " ").replace(",", "").trim();
+        // [pa33c-2b] its bed, read whole ("that's your bed" would lose its lead-in; "where's your bed" is an order, not a question)
+        if (flat.matches("^(?:this|that)(?:'s|s| is| one is| one's)? (?:your|ur) (?:bed|spawn)(?: now)?$")) return new Reading(List.of(PaIntent.of(Kind.BED_USE, text).withPlace(Place.LOOKED)), null);
+        if (flat.matches("^(?:where(?:'s|s| is| are)? (?:is )?(?:your|ur) (?:bed|spawn)|where do you sleep|which bed is yours|have you got a bed|do you have a bed)(?: .*)?$"))
+            return new Reading(List.of(PaIntent.of(Kind.BED_WHERE, text)), null);
         // A question is read whole: it is not cut into steps.
         PaIntent q = question(flat, text);
         if (q != null) return new Reading(List.of(q), null);
@@ -326,6 +330,15 @@ public final class PaUnderstand {
             if (what.isEmpty()) return PaIntent.of(Kind.GUARD_ME, raw).withPlace(Place.ME);
             return new PaIntent(Kind.GUARD_HERE, what, 0, place == Place.NONE ? Place.HERE : place, raw);
         }
+        // [pa33c-2b] its bed (where it comes back after a fall)
+        if (c.matches("^(?:where(?:'s| is| are)? (?:is )?your bed|where do you sleep|where(?:'s| is) your spawn|show me your bed|which bed is yours|have you got a bed|do you have a bed)(?: .*)?$"))
+            return PaIntent.of(Kind.BED_WHERE, raw);
+        if (c.matches("^(?:use|take|have|claim) (?:this|that|the|my spare) bed(?: .*)?$") || c.matches("^(?:sleep|spawn) (?:in|at|on) (?:this|that) bed(?: .*)?$")
+            || c.matches("^(?:this|that)(?:'s| is) your bed(?: .*)?$") || c.matches("^(?:make|set) (?:this|that)(?: bed)? (?:as )?your (?:bed|spawn)(?: .*)?$")
+            || c.matches("^set (?:your )?spawn (?:at|to|on) (?:this|that) bed(?: .*)?$") || c.matches("^use (?:this|that) (?:as|for) your (?:bed|spawn)(?: .*)?$"))
+            return PaIntent.of(Kind.BED_USE, raw).withPlace(Place.LOOKED);
+        if (c.matches("^(?:place|put|set up|make|build|lay down|get) (?:yourself |down )?(?:a|your|a new|your own) bed(?: .*)?$") || c.matches("^put your bed (?:down|here|there|by mine|next to mine)(?: .*)?$"))
+            return PaIntent.of(Kind.BED_PLACE, raw).withPlace(place == Place.NONE ? Place.HERE : place);
         if (c.matches("^(?:sleep|go to (?:bed|sleep)|to (?:bed|sleep)|rest|take shelter|hide|get inside|shelter)(?: .*)?$")) return PaIntent.of(Kind.SLEEP, raw);
         if (c.matches("^(?:go|head|return|walk|run|get|travel)? ?(?:back )?(?:home|to (?:the |your |my )?(?:home|base|house|bed))(?: .*)?$")
             || c.matches("^(?:return|go back|head back|go home|back to base|retreat)(?: .*)?$")) {

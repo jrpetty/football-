@@ -113,6 +113,7 @@ public final class PaBrain {
         }
         if (t % 20 == 0) personalSpace(a);
         if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
+        if (t % 20 == 5) sleptIn(a);                              // [pa33c-2b] the bed it sleeps in is its spawn
         if (t % 10 == 0) boat(a);                                 // [pa33b] along with its player on the water
         if (t % 40 == 0) {
             safety(a);
@@ -476,6 +477,19 @@ public final class PaBrain {
             return;
         }
         if (a.plan.idle() && a.tickCount - m.lastSaid > 6000 && a.tickCount - m.lastComment > 6000) PaBanter.quip(a, "quip.idle", 2, null);
+    }
+
+    /** [pa33c-2b] Like a player: the last bed it slept in is where it comes back after a fall. */
+    static void sleptIn(PlayerAssistantEntity a) {
+        PaData.Rec r = a.rec();
+        if (r == null || !a.isSleeping()) return;
+        a.getSleepingPos().ifPresent(p -> {
+            BlockPos head = PaOrders.bedHead(a.level(), p);
+            if (head == null || head.equals(r.lastBed)) return;
+            r.lastBed = head;
+            r.lastBedDim = a.level().dimension().location().toString();
+            PaData.touch();
+        });
     }
 
     /** [pa33b] Joke Machine: a remark on something its player just did (mined, placed, jumped, ate, opened a chest). */
