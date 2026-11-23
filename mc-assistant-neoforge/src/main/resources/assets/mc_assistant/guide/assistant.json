@@ -170,7 +170,7 @@
         "The panel opens on the tab you had last.",
         "Personalities: Cheerful, Dry or Calm. Looks: eight outfits."],
       "steps": ["Press Y and open Settings.", "Pick a section on the left, then click a setting to change it."],
-      "controls": ["[Y] assistant panel"],
+      "controls": ["[Y] assistant panel", "[Ctrl+Tab] or [Left]/[Right] next tab", "[Up]/[Down] Settings sections"],
       "items": [],
       "tips": ["Replay the tour from Settings, Advanced any time."],
       "related": ["pa_voice", "pa_autohelp"],

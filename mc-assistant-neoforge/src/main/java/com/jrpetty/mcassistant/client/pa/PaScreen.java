@@ -1424,7 +1424,7 @@ public class PaScreen extends Screen {
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
         if (tour >= 0 && key == GLFW.GLFW_KEY_ESCAPE) { tour = TOUR.length; return true; }
-        if (input.isFocused()) {
+        if (input.isFocused() && !(key == GLFW.GLFW_KEY_TAB && (mods & GLFW.GLFW_MOD_CONTROL) != 0)) {
             if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { sendTyped(); return true; }
             if (key == GLFW.GLFW_KEY_TAB) {
                 List<String> sug = PaUnderstand.complete(input.getValue(), 1);
@@ -1436,6 +1436,25 @@ public class PaScreen extends Screen {
         if (nameBox.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) return nameBox.keyPressed(key, scan, mods) || true;
         if (tab.equals("settings") && section == 0 && triangle.key(key)) return true;
         if (PaClient.PANEL.matches(key, scan) && !input.isFocused()) { onClose(); return true; }
+        if (nameBox.isFocused()) return super.keyPressed(key, scan, mods);
+        // [pa33c-2b] keys round the panel: Ctrl+Tab / Ctrl+Shift+Tab or left and right for the tabs, up and down for Settings' sections
+        boolean ctrlTab = key == GLFW.GLFW_KEY_TAB && (mods & GLFW.GLFW_MOD_CONTROL) != 0;
+        if (ctrlTab || key == GLFW.GLFW_KEY_LEFT || key == GLFW.GLFW_KEY_RIGHT) {
+            int i = java.util.Arrays.asList(TABS).indexOf(tab);
+            int step = key == GLFW.GLFW_KEY_LEFT || (ctrlTab && (mods & GLFW.GLFW_MOD_SHIFT) != 0) ? -1 : 1;
+            tab = TABS[Math.floorMod(i + step, TABS.length)];
+            scroll = 0;
+            PaClientConfig.set(PaClientConfig.LASTTAB, tab);
+            if (tab.equals("talk")) setFocused(input);
+            UiStyle.click();
+            return true;
+        }
+        if (tab.equals("settings") && (key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_DOWN)) {
+            section = Math.floorMod(section + (key == GLFW.GLFW_KEY_UP ? -1 : 1), SECTIONS.length);
+            scroll = 0;
+            UiStyle.click();
+            return true;
+        }
         return super.keyPressed(key, scan, mods);
     }
 
