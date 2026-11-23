@@ -93,6 +93,7 @@ public final class PaClient {
             case PaPayload.STATE -> {
                 state = data;
                 stamp++;
+                PaToast.maybeShow(data.getBoolean("has"));
             }
             case PaPayload.OPEN -> {
                 state = data;
