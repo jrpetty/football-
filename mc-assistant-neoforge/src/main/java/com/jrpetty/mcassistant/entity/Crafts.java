@@ -67,6 +67,12 @@ public final class Crafts {
 
     public static void resetForTests() { LAST.clear(); }
 
+    /** [biz30d] Ticks since this folk's last turn at its craft (-1 if it has had none yet). */
+    static int sinceTurn(VillageFolkEntity f) {
+        Integer t = LAST.get(f.getUUID());
+        return t == null ? -1 : f.tickCount - t;
+    }
+
     /** One piece of the craft's work, if one is due. Returns whether it did any. */
     public static boolean work(VillageFolkEntity f, ServerLevel level) {
         UUID village = f.ownerId();

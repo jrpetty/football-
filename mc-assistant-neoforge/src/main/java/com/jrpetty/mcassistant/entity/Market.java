@@ -791,6 +791,13 @@ public final class Market {
     }
 
     /** A folk's wage for a day's work: a coin, and one more at each of levels ten and twenty-five. */
+    /** [biz30d] The part of a hand's wage that is the town's to pay whoever employs it: its offices, the elder's coin, the
+     *  school's teaching (as JobWorth reckons them), never more than the wage itself. */
+    static int civicPart(VillageFolkEntity f, int wage) {
+        JobWorth.Pay pay = JobWorth.payOf(f);
+        return Math.max(0, Math.min(wage, pay.teaching() + pay.elder() + pay.office()));
+    }
+
     public static int wage(AssistantEntity a) {
         if (a instanceof VillageFolkEntity f) return Wealth.wage(f);       // by trade, level, office and the day's work
         int lv = a.veteranLevel();
@@ -859,8 +866,16 @@ public final class Market {
             // At the rate the leader set today (Leader.payRate): over the odds, or part held back.
             w = JobWorth.atLeadersRate(id, w);         // [econ-wages] never under the living wage
             int own = MarketMaker.paysHand(level, v, f, w); // [econ-1a] the market's staff (storekeepers, couriers) out of its cash
-            if (own < 0) own = Businesses.paysHand(level, v, f, w);   // [business-books] a business's hand is paid out of its till
-            if (own >= 0) { PAID.put(f.getUUID(), new long[]{ level.getDayTime() / 24000L, own }); continue; }
+            // [biz30d] A firm pays its hand for its work, not for the town's offices it holds: the elder's coin, the school's
+            // teaching and an office's allowance are the treasury's to pay, as for any hand. (A bakery whose one baker
+            // taught the school and kept an office paid it ten coins a day at a trade worth four, and went to the court.)
+            int civic = own < 0 ? civicPart(f, w) : 0;
+            if (own < 0) own = Businesses.paysHand(level, v, f, w - civic);   // [business-books] a business's hand is paid out of its till
+            if (own >= 0) {
+                PAID.put(f.getUUID(), new long[]{ level.getDayTime() / 24000L, own });
+                if (civic <= 0 || Businesses.employer(id, f) == null) continue;
+                w = civic;                                                // the town's part, paid with the town's own hands below
+            }
             hands.add(f);
             wages.add(w);
             bill += w;
@@ -898,7 +913,8 @@ public final class Market {
             hands.get(i).paid(got);
             Purchases.payday(level, hands.get(i));     // [econ-prices] its slate at the counter paid back first
             Accounts.payday(level, hands.get(i));      // [econ-1a] and what it owes the market
-            PAID.put(hands.get(i).getUUID(), new long[]{ day, got });
+            long[] was = PAID.get(hands.get(i).getUUID());                // [biz30d] a firm's hand: its firm's pay and the town's part
+            PAID.put(hands.get(i).getUUID(), new long[]{ day, got + (was != null && was[0] == day ? was[1] : 0) });
             paid += got;
             taxed += tax;
         }

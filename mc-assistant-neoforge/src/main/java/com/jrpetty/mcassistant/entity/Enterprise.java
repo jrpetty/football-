@@ -285,6 +285,22 @@ public final class Enterprise {
     /** A firm's shelf: so many of a ware at the most, whatever the want. */
     static final int MOST_ON_SHELF = 12;
 
+    /** [biz30d] A cheap ware's shelf holds up to so many coins' worth of its makings, and never more than this many. */
+    static final double SHELF_COINS = 30.0;
+    static final int MOST_ON_SHELF_CHEAP = 32;
+
+    /**
+     * [biz30d] The most a firm keeps of a ware: twelve, or for a cheap one (a loaf) thirty coins' worth of its makings, to
+     * thirty-two. A bakery with the town's call for forty loaves a day kept twelve: sold out by mid-morning, its baker at the
+     * town's tables or its works till its shelf was short again, and the town's folk ate raw potatoes meanwhile.
+     */
+    static int shelfMost(ServerLevel level, UUID village, String key) {
+        ItemStack one = Stockroom.sampleOf(key);
+        double each = one.isEmpty() ? 0 : CostBook.atMarket(level, village, one);
+        if (each <= 0.01) return MOST_ON_SHELF;
+        return (int) Math.max(MOST_ON_SHELF, Math.min(MOST_ON_SHELF_CHEAP, Math.floor(SHELF_COINS / each)));
+    }
+
     /**
      * What a firm's shelf should hold of each of its wares, set each morning: three days of the week's want of it (what sold
      * at every counter and every firm, what was asked for and not there, refused as too dear, and the households' shopping
@@ -300,7 +316,7 @@ public final class Enterprise {
             int[] w = Stockroom.week7(level, village, key);
             double want = w[0] + w[1] + refused7(village, key) + lists.getOrDefault(key, 0) + firmsSold7(level, village, key);
             if (want <= 0) continue;
-            int n = (int) Math.min(MOST_ON_SHELF, Math.ceil(want * 3 / 7.0) + 1);
+            int n = (int) Math.min(shelfMost(level, village, key), Math.ceil(want * 3 / 7.0) + 1);
             tg.putInt(key, n);
             any = true;
         }
@@ -2080,12 +2096,50 @@ public final class Enterprise {
                 CostBook.atMarket(level, village, one), ValueAdded.worth(village, one) * MarketMaker.priceLevel(village), l == null || l.qty <= 0 ? 0 : l.each() / 100.0,
                 b.allTime.lines.containsKey(key) ? b.allTime.lines.get(key).units : 0));
         }
+        // [biz30d] Its week's books, line by line, its last orders, and each hand's pay as made up: where its money went.
+        Business.Day wk = b.last(Businesses.today(level) - 1, 7);
+        sb.append(String.format(Locale.ROOT, "; WEEK rev %s cogs %s wages %s rent %s other %s taxes %s interest %s losses %s bought %s",
+            Businesses.pence(wk.revenue), Businesses.pence(wk.cogs), Businesses.pence(wk.wages), Businesses.pence(wk.rent), Businesses.pence(wk.other),
+            Businesses.pence(wk.taxes), Businesses.pence(wk.interest), Businesses.pence(wk.losses), Businesses.pence(wk.bought)));
+        for (Map.Entry<String, Business.Line> e : wk.lines.entrySet()) {
+            Business.Line l = e.getValue();
+            sb.append(String.format(Locale.ROOT, " [%s u%d rev %s cogs %s made %d in %d missed %d]", e.getKey().replace("minecraft:", ""), l.units,
+                Businesses.pence(l.revenue), Businesses.pence(l.cogs), l.made, l.in, l.missed));
+        }
+        StringBuilder ob = new StringBuilder();
+        for (int i = Math.max(0, b.orders.size() - 4); i < b.orders.size(); i++) {
+            Business.Order o = b.orders.get(i);
+            ob.append(' ').append(o.day()).append(':').append(o.qty()).append(' ').append(o.item().replace("minecraft:", "")).append(" of ").append(o.supplier())
+                .append(' ').append(Businesses.pence(o.total()));
+        }
+        if (ob.length() > 0) sb.append("; ORDERS").append(ob);
+        for (VillageFolkEntity f : hands(village, b)) sb.append("; PAY ").append(f.displayNameCap()).append(' ').append(Wealth.breakdown(f));
         for (VillageFolkEntity f : hands(village, b)) {
             sb.append("; hand ").append(f.displayNameCap()).append(' ').append(f.stationTask().name().toLowerCase(Locale.ROOT)).append(" lv")
                 .append(f.tradeLevel(f.stationTask())).append(benchFirst(f) ? " bench-first" : "").append(f.stationTask() == StationTask.COOK ? " role " + Hospitality.role(f) : "")
                 .append(": ").append(f.brainNoteForBooks());
         }
         return sb.toString();
+    }
+
+    /**
+     * [biz30d] The log, once a minute by day: a firm's hand that has had no turn at its bench for two minutes, and what it
+     * is at instead (a bakery whose one baker baked nothing for a week went to the court with its shelf bare).
+     */
+    static void idleHandLog(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null || !(f.level() instanceof ServerLevel level)) return;
+        long t = level.getDayTime() % 24000L;
+        if (t < 1000L || t > 11000L) return;
+        Business b = employerOf(village, f);
+        if (b == null) return;
+        int since = Crafts.sinceTurn(f);
+        if (since >= 0 && since < 2400) return;
+        WorkZone z = f.workZone();
+        com.mojang.logging.LogUtils.getLogger().info("[MCA-FIRMHAND] {}: {} of {}: no turn at its bench for {}s: {}; missing {}; zone {}, {} blocks off; break {}; lent {}",
+            Villages.name(village), f.displayNameCap(), b.name, since < 0 ? "ever" : since / 20, f.brainNoteForBooks(), f.missingEssentials(),
+            z == null ? "none" : z.containsColumn(f.blockPosition()) ? "in" : "out", z == null ? -1 : (int) Math.sqrt(z.center().distSqr(f.blockPosition())),
+            f.onBreakNow(), f.lentZone() != null);
     }
 
     /** Tests: a hand taken on now. */

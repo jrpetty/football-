@@ -91,7 +91,7 @@ public final class IouBook {
     private static final StackWalker WALKER = StackWalker.getInstance();
     private static final java.util.Set<String> PLUMBING = java.util.Set.of(
         IouBook.class.getName(), Accounts.class.getName(), MarketMaker.class.getName(), TownWork.class.getName(), Crafts.class.getName(),
-        Market.class.getName(), Workshop.class.getName());
+        Market.class.getName(), Workshop.class.getName(), Masonry.class.getName());   // [biz30d] whose dressed blocks, not the mason's
 
     /** The first two places outside the money's plumbing that led to this IOU ("Builders.lay:120<Builders.tick:88"). */
     static String site() {

@@ -442,6 +442,7 @@ public final class Stockroom {
         Book b = book(level, village, s);
         line(b, key(what)).missed[0]++;
         save(b);
+        Businesses.missedAtCounter(level, village, s, key(what));          // [biz30c] the counter's business's data: a sale missed
     }
 
     /** [roles-c] Tests: how many of this a seller was asked for today and had not got. */

@@ -158,11 +158,25 @@ public final class TownBudget {
      * carry a seventh of what it would a week on: it put off its houses on the strength of a week it had not had yet.
      */
     static long week(UUID village) {
-        long in = revenue7(village);
         long opened = MarketMaker.openedDay(village);
-        if (opened < 0) return in;
-        long days = Math.max(1, Math.min(7, Accounts.dayNow() - opened + 1));
-        return days >= 7 ? in : in * 7 / days;
+        if (opened < 0) return revenue7(village);
+        // [biz30d] At a week's rate over the last fortnight (the days it has been open, if fewer): the market's share comes in
+        // lumps, as it sets the town's IOUs against what it holds over its float, and a week without one halved what the
+        // town could carry overnight (ent15: 448c on day 14, 165c on day 17, 470c on day 20), and the bound with it.
+        long days = Math.max(1, Math.min(DAYS, Accounts.dayNow() - opened + 1));
+        return revenueOver(village, days) * 7 / days;
+    }
+
+    /** [biz30d] The last so many days' money in, pennies (today's so far among it). */
+    static long revenueOver(UUID village, long days) {
+        long n = 0, day = Accounts.dayNow();
+        for (Tag e : Accounts.list(books(village), "days")) {
+            CompoundTag t = (CompoundTag) e;
+            if (day - t.getLong("day") >= days) continue;
+            CompoundTag in = t.getCompound("in");
+            for (String k : in.getAllKeys()) n += in.getLong(k);
+        }
+        return n;
     }
 
     /** [econ-1d] The town's grown folk. */

@@ -667,7 +667,11 @@ public final class Businesses {
                 b.account += p - got;                                    // the counting house owes it the rest
             }
             Lot lot = b.stock.computeIfAbsent(key, k -> new Lot());
-            if (lot.qty < n && !b.mirror()) supply(level, village, b, what, key, n - lot.qty, day, false);
+            if (lot.qty < n && !b.mirror()) {
+                if (Enterprise.isFirm(b)) com.mojang.logging.LogUtils.getLogger().info("[MCA-BIZ] {} sold {} {} holding {}: the rest bought in at {}c each",   // [biz30d] the log
+                    b.name, n, key, lot.qty, String.format(java.util.Locale.ROOT, "%.2f", storesEach(level, village, what.copyWithCount(1))));
+                supply(level, village, b, what, key, n - lot.qty, day, false);
+            }
             if (lot.qty >= n) cogs = lot.take(n);
             else {
                 // A player's own goods at a stall, or what was had with no history: at the standard cost.
@@ -734,6 +738,14 @@ public final class Businesses {
         b.today(today(level)).line(key).missed += n;
         b.allTime.line(key).missed += n;
         dirty();
+    }
+
+    /** [biz30c] A sale the town's own counter missed (Stockroom.missed): onto the books of the business behind it. */
+    public static void missedAtCounter(ServerLevel level, UUID village, Stockroom.Seller seller, String key) {
+        if (village == null || TownLod.away(village)) return;
+        Business b = behind(village, seller);
+        if (b == null) b = of(village, "storehouse");
+        missed(level, b, key, 1);
     }
 
     /** [biz30] Minutes it was open, and of them the minutes a keeper was in, onto today's book. */

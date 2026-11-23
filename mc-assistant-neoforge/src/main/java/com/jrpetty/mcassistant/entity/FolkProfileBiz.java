@@ -144,10 +144,19 @@ public final class FolkProfileBiz {
         List<Business> mine = FirmBranches.owned(village, f.getUUID());
         if (mine.isEmpty()) return "";
         String why = FirmBranches.whyNot(level, village, f);
+        // [biz30c] its own farm, mine or boat (its trade's own business, listed with its firms) named, so the count agrees
+        List<String> own = new ArrayList<>();
+        for (Business b : Businesses.all(village)) {
+            if (b.open && !b.town() && !b.mirror() && !Enterprise.isFirm(b) && b.ownedBy(f.getUUID())) own.add(b.type.title.toLowerCase(Locale.ROOT));
+        }
+        if (why != null && why.startsWith("they run ") && !own.isEmpty()) {
+            int at = why.indexOf(", and ");
+            if (at > 0) why = why.substring(0, at) + " (besides their own " + String.join(" and ", own) + ")" + why.substring(at);
+        }
         BusinessTypes.BusinessType t = Enterprise.kindOf(village, mine.get(0));
         String noun = t == null ? "business" : t.noun();
-        if (why == null) return "Thinking of opening " + (mine.size() == 1 ? "a second " : "another ") + noun + ", if the town wants one.";
-        return "Not opening another just yet: " + why + ".";
+        if (why == null) return f.displayNameCap() + " is thinking of opening " + (mine.size() == 1 ? "a second " : "another ") + noun + ", if the town wants one.";
+        return f.displayNameCap() + " is not opening another just yet: " + why + ".";
     }
 
     /** The town page: its standing, offices, petitions, what it thinks of the viewer, its warmest and coldest. */
@@ -165,9 +174,10 @@ public final class FolkProfileBiz {
             int aff = f.persona().affinity(viewer.getUUID());
             out.putInt("you", aff);
             out.putString("you_word", Persona.standing(aff));
-            out.putString("raise", aff >= 60 ? "It thinks the world of you already."
-                : "Talk with it each day (a little each time), give it what it loves" + (f.persona().rolled() ? " (" + f.persona().loves().words + ")" : "")
-                + ", help with its work and the town's (a shift on the jobs board), and keep your word; a gift it hates, or a blow, sets it back.");
+            String nm = f.displayNameCap();                              // [biz30c] the folk by name, not "it"
+            out.putString("raise", aff >= 60 ? nm + " thinks the world of you already."
+                : "Talk with " + nm + " each day (a little each time), give them what they love" + (f.persona().rolled() ? " (" + f.persona().loves().words + ")" : "")
+                + ", help with their work and the town's (a shift on the jobs board), and keep your word; a gift they hate, or a blow, sets it back.");
         }
         ListTag hist = new ListTag();
         List<Persona.Memory> mem = f.persona().memories();
