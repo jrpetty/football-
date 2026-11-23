@@ -375,8 +375,8 @@ public final class MineStairs extends SavedData {
         if (CaveDwellers.caving(f)) { BELOW.remove(id); return; }       // [caves] down there on purpose: its own marks see it home
         // [econ32b] Indoors in one of the town's buildings (a smelter at its furnaces under the smeltery's roof) is not lost
         // underground: the long run's smelters were sent "up" out of the smeltery every few minutes.
-        if (f.ownerId() != null && f.villageCentre() != null && f.stationTask() != AssistantEntity.StationTask.MINE
-                && indoors(level, f.ownerId(), f.villageCentre(), f.blockPosition())) {
+        if (f.ownerId() != null && f.villageCentre() != null && indoors(level, f.ownerId(), f.villageCentre(), f.blockPosition())
+                && (f.stationTask() != AssistantEntity.StationTask.MINE || !MineWorks.below(f))) {   // [econ32c] a miner at home too
             BELOW.remove(id);
             return;
         }
