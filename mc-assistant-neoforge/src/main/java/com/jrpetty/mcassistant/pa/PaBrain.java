@@ -130,7 +130,7 @@ public final class PaBrain {
             cur.fail = "";
             if (!cur.keepBase || cur.base < 0) cur.base = cur.count.isEmpty() ? -1 : PaItems.count(a, cur.count);
             cur.keepBase = false;
-            a.mind.roamCentre = a.blockPosition();
+            a.mind.roamCentre = cur.centre != null ? cur.centre : a.blockPosition();
             a.mind.lastPct = -1;
             a.mind.sameFor = 0;
             for (Job j : cur.jobs) a.enqueue(j);
@@ -170,7 +170,7 @@ public final class PaBrain {
             cur.fail = "I found " + cur.tally(a) + " " + cur.count + " before the mine ran out.";
         }
         PaData.Rec r = a.rec();
-        if (!cur.fail.isEmpty() && (retool(a, cur) || unstick(a, cur))) return;
+        if (!cur.fail.isEmpty() && (retool(a, cur) || unstick(a, cur) || farther(a, cur))) return;
         if (!cur.fail.isEmpty() && cur.optional && plan.steps.stream().anyMatch(s -> !s.auto)) {
             // a finishing touch it can't make: it says so plainly and gets on with the rest
             PaTalk.reply(a, "I couldn't " + cur.label + ": " + lower(trimEnd(shortReason(cur.fail))) + " I'll do without it.");
@@ -234,6 +234,30 @@ public final class PaBrain {
         rearm(a, cur);
         a.plan.steps.add(0, cur);
         PaTalk.comment(a, 1, pit ? "Oops, I've dug myself into a hole. Climbing out, then I'll try again." : "Couldn't get there. Let me try another way.");
+        return true;
+    }
+
+    /**
+     * Nothing of the kind within reach (no trees round here): like a player it looks further afield, says where it is
+     * going, walks there and gathers round that spot. Once per step; within twice its roam, never past 96 blocks.
+     */
+    static boolean farther(PlayerAssistantEntity a, PaPlan.Step cur) {
+        if (cur.auto || cur.retools >= 2 || cur.centre != null || cur.target <= 0) return false;
+        com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind kind = null;
+        for (Job j : cur.jobs) if (j.type() == Job.Type.GATHER) kind = j.kind();
+        if (kind == null) return false;
+        PaData.Rec r = a.rec();
+        int roam = r == null ? 32 : r.roam;
+        BlockPos found = PaFind.nearest(a, kind, Math.min(96, Math.max(48, roam * 2)));
+        if (found == null) return false;
+        cur.retools++;
+        rearm(a, cur);
+        cur.centre = found;
+        cur.jobs.add(0, Job.goTo(found.getX() + " " + found.getY() + " " + found.getZ()));
+        a.plan.steps.add(0, cur);
+        int far = (int) Math.sqrt(a.blockPosition().distSqr(found));
+        PaTalk.reply(a, "There's none right here, but I can see " + kind.label + " about " + far + " blocks "
+            + PaOrders.bearing(a.position(), Vec3.atCenterOf(found)) + ". Heading there.");
         return true;
     }
 

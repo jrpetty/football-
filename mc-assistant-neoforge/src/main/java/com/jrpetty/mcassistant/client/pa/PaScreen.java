@@ -743,7 +743,7 @@ public class PaScreen extends Screen {
                 for (int i = 0; i < idx; i++) tx += font.width(TAB_LABELS[i]) + 16;
                 hx = tx; hy = top + 29; hw = font.width(TAB_LABELS[idx]) + 14; hh = 14;
             }
-            case "mic" -> { hx = left + w - 48; hy = top + h - 36; hw = 42; hh = 20; }
+            case "mic" -> { hx = left + w - 60; hy = top + h - 36; hw = 54; hh = 20; }
             default -> { hx = left + w / 2 - 40; hy = top + h / 2 - 10; hw = 80; hh = 20; }
         }
         // dim everything but the spot
@@ -755,6 +755,12 @@ public class PaScreen extends Screen {
         g.fill(0, hy, hx, hy + hh, dim);
         g.fill(hx + hw, hy, width, hy + hh, dim);
         g.renderOutline(hx - 1, hy - 1, hw + 2, hh + 2, BRAND_LIGHT);
+        if (where.equals("wheel")) {
+            // no part of the panel to point at: the key itself, as it reads on the keyboard
+            g.fill(hx, hy, hx + hw, hy + hh, 0xF0173B40);
+            String k = "[" + PaClient.WHEEL.getTranslatedKeyMessage().getString() + "] action wheel";
+            g.drawString(font, k, hx + (hw - font.width(k)) / 2, hy + 6, 0xFFFFFFFF, false);
+        }
         int bw = Math.min(260, width - 20);
         List<FormattedCharSequence> lines = font.split(Component.literal(TOUR[tour][1]), bw - 16);
         int bh = lines.size() * 10 + 30;

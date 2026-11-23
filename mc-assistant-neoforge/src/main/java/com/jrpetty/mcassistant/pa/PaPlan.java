@@ -48,6 +48,8 @@ public final class PaPlan {
         public String make = "";
         /** A nice-to-have (a house's torch or door): if it can't be done, it says so and the plan carries on. */
         public boolean optional;
+        /** Where its work area is centred when it has gone further afield for this step (not saved). */
+        @Nullable public net.minecraft.core.BlockPos centre;
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();

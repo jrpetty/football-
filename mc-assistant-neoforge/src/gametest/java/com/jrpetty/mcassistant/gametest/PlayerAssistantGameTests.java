@@ -774,4 +774,21 @@ public class PlayerAssistantGameTests {
             helper.succeed();
         });
     }
+
+    /** pai28: no trees within reach: it says where the nearest are, walks there and gets the logs. */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pai28_trees_further")
+    public static void pai28_trees_further(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_081_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        for (int t = 0; t < 3; t++) for (int dy = 0; dy < 4; dy++) level.setBlock(new BlockPos(x + 34 + t * 2, y + dy, Z + 1), Blocks.OAK_LOG.defaultBlockState(), 2);
+        say(p, a, "get me 8 logs");
+        helper.succeedWhen(() -> {
+            int logs = a.countMatching(st -> st.is(net.minecraft.tags.ItemTags.LOGS));
+            helper.assertTrue(logs >= 8, "it went to the trees and got the logs: " + logs + " (" + lastWords(a) + ")");
+            helper.assertTrue(allWords(a).contains("Heading there"), "and said where it was going: " + allWords(a));
+            Kit.log("pai28 no trees near; went ~35 blocks to them; " + logs + " logs (" + allWords(a) + ")");
+        });
+    }
 }

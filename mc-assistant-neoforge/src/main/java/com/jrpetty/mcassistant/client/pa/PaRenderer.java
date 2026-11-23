@@ -174,10 +174,10 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
         List<FormattedCharSequence> lines = TextCache.splitPlain(font, text, 170);
         if (lines.size() > 5) lines = lines.subList(0, 5);
         pose.pushPose();
-        pose.translate(0.0F, a.getBbHeight() + 0.6F + lines.size() * 0.25F, 0.0F);
-        pose.mulPose(this.entityRenderDispatcher.cameraOrientation());
-        // right up close it shrinks a little, so it never fills the camera
+        // right up close it shrinks a little, so it never fills the camera (and sits lower, so its top stays in view)
         float near = (float) Math.max(0.55, Math.min(1.0, Math.sqrt(d2) / 5.0));
+        pose.translate(0.0F, a.getBbHeight() + 0.45F + lines.size() * 0.25F * near, 0.0F);
+        pose.mulPose(this.entityRenderDispatcher.cameraOrientation());
         pose.scale(0.025F * near, -0.025F * near, 0.025F * near);
         Matrix4f mx = pose.last().pose();
         int widest = 0;
