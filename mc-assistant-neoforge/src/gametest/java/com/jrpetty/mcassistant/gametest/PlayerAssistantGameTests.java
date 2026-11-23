@@ -822,6 +822,24 @@ public class PlayerAssistantGameTests {
         });
     }
 
+    /** pai30: "smelt 4 raw iron": with coal in its pack and a furnace by, four iron ingots come out (it makes the furnace if there is none). */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pai30_smelt")
+    public static void pai30_smelt(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_087_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        level.setBlock(new BlockPos(x + 3, y, Z + 2), Blocks.FURNACE.defaultBlockState(), 3);
+        a.insertGiven(new ItemStack(Items.RAW_IRON, 4));
+        a.insertGiven(new ItemStack(Items.COAL, 4));
+        say(p, a, "smelt 4 raw iron");
+        helper.succeedWhen(() -> {
+            int ingots = a.countMatching(st -> st.is(Items.IRON_INGOT));
+            helper.assertTrue(ingots >= 4, "four iron ingots: " + ingots + " (" + a.state() + ": " + lastWords(a) + ")");
+            Kit.log("pai30 smelted " + ingots + " iron ingots (" + lastWords(a) + ")");
+        });
+    }
+
     /** A small oak: a five-log trunk and a crown of leaves that stay. */
     private static void tree(ServerLevel level, BlockPos t) {
         for (int dy = 0; dy < 5; dy++) level.setBlock(t.above(dy), Blocks.OAK_LOG.defaultBlockState(), 2);
