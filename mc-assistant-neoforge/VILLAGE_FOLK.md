@@ -15527,3 +15527,16 @@ works' round, instead of only when a load will not go in (then the load went on 
   the mine's ground or the wall's ring, across the river or on a cliff), it goes up at the town's edge instead: on level,
   dry ground past the town's furthest building, its door to the town, off the fields, the mine, the wall's ring and the
   railways, as a knight's manor is.
+- **The diamonds stay for the age.** A town famous for its gems holds its fair without the diamonds the age asks for, and
+  the morning's traders count the diamonds as the age does before they buy any (they used to buy eight a morning down to
+  the age's own count).
+- **The watch's armour keeps counting while the cave team is away.** The iron on the watch's and the cave team's backs
+  counts toward what the age asks for; while the cave team is out of reach, the most it came to in the last day or so
+  still counts, so the age's iron does not jump by forty bars every time they set off.
+- **Nobody stands on the mine's headframe.** The miners' place at the mine is the pithead's floor, not the top of the
+  headframe's beams. A folk put back on its plot stands on the floor; a rider stepping out of the cage, or anybody found
+  in the well, is put on solid ground (never on a log, a fence or leaves); and anybody found standing on the headframe
+  for a few seconds is put down on the pithead's floor.
+- **No terrace stub.** On a hillside town, no column of a terrace is left standing two or more blocks over three of the
+  columns beside it (a lot's corner at the square's edge was sometimes left as a stub a block across); it comes down to
+  the highest of them.
