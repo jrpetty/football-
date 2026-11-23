@@ -98,6 +98,7 @@ public class PlayerAssistantGameTests {
         PaData.Rec r = a.rec();
         r.confirm = false;
         r.autoHelp = false;
+        a.setPaXpForTests(0);                                     // [pa33d] level 1, whatever an earlier test's copy of it earned
         return a;
     }
 

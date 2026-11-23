@@ -48,6 +48,11 @@ public final class PaChallenge {
         return o ? 1 : m ? -1 : 0;
     }
 
+    /** How far across the ground (a tree's trunk counts as reached from beside it). */
+    static double flat(net.minecraft.world.phys.Vec3 at, BlockPos goal) {
+        return Math.hypot(at.x - (goal.getX() + 0.5), at.z - (goal.getZ() + 0.5)) - 0.5;
+    }
+
     /** Its walking speed in a race, from its level (it sprints like a player; a better runner each level). */
     public static double raceSpeed(int level) {
         return 1.15 + 0.035 * (Math.max(1, Math.min(10, level)) - 1);
@@ -114,7 +119,7 @@ public final class PaChallenge {
             case "race" -> {
                 if (a.getNavigation().isDone() || now % 20 == 0) a.getNavigation().moveTo(g.goal.getX() + 0.5, g.goal.getY(), g.goal.getZ() + 0.5, raceSpeed(a.veteranLevel()));
                 a.setSprinting(true);
-                int w = raceWinner(Math.sqrt(p.blockPosition().distSqr(g.goal)), Math.sqrt(a.blockPosition().distSqr(g.goal)));
+                int w = raceWinner(flat(p.position(), g.goal), flat(a.position(), g.goal));
                 if (w != 0) finish(a, p, g, w > 0 ? 1 : -1);
                 else if (now > g.end) finish(a, p, g, 0);
             }

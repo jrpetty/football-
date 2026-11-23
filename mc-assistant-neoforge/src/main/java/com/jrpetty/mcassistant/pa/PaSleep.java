@@ -44,7 +44,8 @@ public final class PaSleep {
         boolean nearHome = home != null && a.blockPosition().closerThan(home, 20);
         boolean want = m.bedtime || ownerAsleep && a.distanceToSqr(owner) < 48 * 48
             || r.sleepAtNight && a.plan.idle() && (nearOwner || nearHome);
-        if (!want || a.getTarget() != null || danger(a)) { a.sleepWanted = false; return; }
+        if (!want || a.getTarget() != null && a.getTarget().isAlive() || danger(a)) { a.sleepWanted = false; return; }
+        if (a.getTarget() != null) a.setTarget(null);                       // a target that is gone
         BlockPos bed = bed(a, r);
         if (bed == null) { a.sleepWanted = false; return; }
         a.sleepWanted = true;
