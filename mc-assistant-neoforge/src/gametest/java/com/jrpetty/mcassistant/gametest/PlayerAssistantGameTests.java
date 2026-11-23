@@ -1713,8 +1713,12 @@ public class PlayerAssistantGameTests {
                 a.insertGiven(new net.minecraft.world.item.ItemStack(Items.ENDER_PEARL, 2));
                 a.teleportTo(x + 0.5, y, Z + 0.5);
                 com.jrpetty.mcassistant.pa.PaMoves.throwPearlForTests(a, new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5));
+                // where it lands (it may walk back to its post after, as told to stay)
+                net.minecraft.world.phys.Vec3 there = new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5);
+                double[] nearest = {Double.MAX_VALUE};
+                for (int t = 2; t <= 78; t += 2) helper.runAfterDelay(t, () -> nearest[0] = Math.min(nearest[0], a.position().distanceTo(there)));
                 helper.runAfterDelay(80, () -> {
-                    helper.assertTrue(a.position().distanceTo(new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5)) < 4.0, "pearled across: " + a.blockPosition().toShortString());
+                    helper.assertTrue(nearest[0] < 4.0, "pearled across: came within " + nearest[0] + ", now " + a.blockPosition().toShortString());
                     Kit.log("pai48 moves: trick shot hit, clutch, pearl");
                     helper.succeed();
                 });
