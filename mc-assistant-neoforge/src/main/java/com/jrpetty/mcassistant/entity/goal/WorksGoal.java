@@ -448,7 +448,7 @@ public class WorksGoal extends Goal {
         }
         if (straight) {
             if (!a.getNavigation().isDone()) a.getNavigation().stop();
-            a.getMoveControl().setWantedPosition(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, 1.0D);
+            a.getMoveControl().setWantedPosition(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, PACE);
             a.getLookControl().setLookAt(dest.getX() + 0.5, dest.getY() + 1.5, dest.getZ() + 0.5);
         }
         if (d < best - 0.2) { best = d; stuck = 0; } else stuck++;
@@ -511,9 +511,16 @@ public class WorksGoal extends Goal {
         if (far) { a.walkTo(dest, 1.1D); return; }
         // [fixes14] To the spot itself (the pathfinder's own reach of a block stopped it a cell short).
         net.minecraft.world.level.pathfinder.Path path = a.getNavigation().createPath(dest, 0);
-        if (path != null) a.getNavigation().moveTo(path, 1.0D);
-        else a.getNavigation().moveTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, 1.0D);
+        if (path != null) a.getNavigation().moveTo(path, PACE);
+        else a.getNavigation().moveTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, PACE);
     }
+
+    /**
+     * [econ32c] The pace along the works' own tunnels: a jog, as a miner who knows them goes. With the cage in the shaft
+     * the walk along the drifts (a hundred blocks and more out from the landing on a worked level) was most of a shift:
+     * a quarter at the face, three fifths walking.
+     */
+    private static final double PACE = 1.5D;
 
     private boolean open(BlockPos p) {
         return a.level().getBlockState(p).getCollisionShape(a.level(), p).isEmpty()
