@@ -745,6 +745,9 @@ public final class Market {
             have -= TradeDeals.spokenFor(id, g);           // [econ-trade] what a partner is promised goes to the partner, not off the map
             int plenty = (int) Math.round(g.bundle() * 4 * Ethos.keepFactor(id));   // [identity] kept back by its character
             if (g.what() == Items.DIAMOND) plenty = Math.max(plenty, AgeOres.diamondsKept(id));   // [econ32d] the next age's diamonds kept
+            // [econ32d] Counted as the age counts them (Villages.need): the market's count took in chests the age's did not, sold
+            // six diamonds down to its own mark, and the age was four short again.
+            if (g.what() == Items.DIAMOND && AgeOres.diamondsKept(id) > 0) have = Math.min(have, Villages.stock(level, v.centre(), Villages.Task.DIAMOND, Villages.storesRadius(id)));
             if (have < plenty + g.bundle()) continue;
             // As much as is wanted, from what it has to spare: up to eight lots of a thing.
             int lotWorth = Math.max(1, (int) Math.floor(g.bundle() * PriceIndex.each(level, id, g) * 0.8));   // [econ-prices]
