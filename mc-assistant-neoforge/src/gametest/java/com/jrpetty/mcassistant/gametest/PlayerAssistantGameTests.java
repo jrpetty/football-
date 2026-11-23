@@ -8,6 +8,7 @@ import com.jrpetty.mcassistant.pa.PaBrain;
 import com.jrpetty.mcassistant.pa.PaChests;
 import com.jrpetty.mcassistant.pa.PaConfig;
 import com.jrpetty.mcassistant.pa.PaData;
+import com.jrpetty.mcassistant.pa.PaItems;
 import com.jrpetty.mcassistant.pa.PaLife;
 import com.jrpetty.mcassistant.pa.PaOrders;
 import com.jrpetty.mcassistant.pa.PaSafety;
@@ -681,6 +682,53 @@ public class PlayerAssistantGameTests {
                 + " ticks over the " + PaConfig.budgetMicros() + " us budget");
             helper.assertTrue(us < PaConfig.budgetMicros(), "within budget: " + us);
             helper.succeed();
+        });
+    }
+
+    /** pai24: dug into a pit it can't walk out of: it climbs out on blocks from its pack (no teleport) and follows. */
+    @GameTest(template = EMPTY, timeoutTicks = 800, batch = "pai24_climb_out")
+    public static void pai24_climb_out(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_069_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        BlockPos pit = new BlockPos(x + 4, y - 3, Z);                     // three deep: the floor is the bottom of the world here
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int dy = -1; dy <= 2; dy++) {
+            level.setBlock(pit.offset(dx, dy, dz), Blocks.STONE.defaultBlockState(), 2);
+        }
+        for (int dy = 0; dy <= 2; dy++) level.setBlock(pit.above(dy), Blocks.AIR.defaultBlockState(), 2);
+        a.teleportTo(pit.getX() + 0.5, pit.getY(), pit.getZ() + 0.5);
+        a.insertGiven(new ItemStack(Items.COBBLESTONE, 16));
+        say(p, a, "follow me");
+        helper.succeedWhen(() -> {
+            helper.assertTrue(a.getY() >= y - 0.01, "it climbed out: y " + String.format("%.1f", a.getY()) + " of " + y);
+            helper.assertTrue(level.getBlockState(pit).is(Blocks.COBBLESTONE), "on its own blocks (pillared, not teleported)");
+            helper.assertTrue(a.distanceTo(p) < 6, "and came to its player: " + String.format("%.1f", a.distanceTo(p)));
+            Kit.log("pai24 climbed out of a 3-deep pit on its own cobblestone, " + a.countMatching(st -> st.is(Items.COBBLESTONE)) + " left");
+        });
+    }
+
+    /** pai25: its pickaxe wears out half way through a dig: it makes a new one and finishes the count, no pause. */
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "pai25_pickaxe_wears_out")
+    public static void pai25_pickaxe_wears_out(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_072_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        for (int dx = 4; dx <= 10; dx++) for (int dz = -3; dz <= 3; dz++) level.setBlock(new BlockPos(x + dx, y - 1, Z + dz), Blocks.STONE.defaultBlockState(), 2);
+        level.setBlock(new BlockPos(x - 2, y, Z + 2), Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
+        ItemStack worn = new ItemStack(Items.WOODEN_PICKAXE);
+        worn.setDamageValue(worn.getMaxDamage() - 4);
+        a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, worn);
+        a.insertGiven(new ItemStack(Items.STICK, 8));
+        a.insertGiven(new ItemStack(Items.OAK_PLANKS, 8));
+        say(p, a, "gather 20 stone");
+        helper.succeedWhen(() -> {
+            helper.assertTrue(a.plan.idle() && !a.plan.paused, "the dig is over and nothing paused (" + a.state() + ": " + lastWords(a) + ")");
+            int stone = a.countMatching(st -> st.is(Items.COBBLESTONE));
+            helper.assertTrue(stone >= 17, "it finished the count with a new pickaxe: " + stone + " cobblestone");
+            helper.assertTrue(PaItems.hasPickaxe(a), "it has a working pickaxe again");
+            Kit.log("pai25 pickaxe wore out; made a new one; " + stone + " cobblestone (" + allWords(a) + ")");
         });
     }
 }

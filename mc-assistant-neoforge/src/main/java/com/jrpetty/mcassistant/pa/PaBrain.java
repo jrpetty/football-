@@ -40,6 +40,8 @@ public final class PaBrain {
         @Nullable Vec3 lastPos;
         public final Set<String> vetoed = new HashSet<>();
         int lastPct = -1, sameFor;
+        /** Beats left of climbing out of a hole (PaClimb). */
+        public int climbing;
     }
 
     // ------------------------------------------------------------------ the budget
@@ -80,7 +82,10 @@ public final class PaBrain {
     private static void think(PlayerAssistantEntity a, boolean spare) {
         int t = a.tickCount + a.getId();
         if (t % 20 == 0 && !valid(a)) return;
-        if (t % 5 == 0) feed(a);                                  // never skipped: stop and orders must be prompt
+        if (t % 5 == 0) {
+            if (a.mind.climbing > 0) PaClimb.tick(a);              // out of the hole first, then on with the plan
+            else feed(a);                                         // never skipped: stop and orders must be prompt
+        }
         if (!spare) return;
         if (t % 10 == 0) state(a);
         if (t % 40 == 0) {
@@ -157,7 +162,7 @@ public final class PaBrain {
             cur.fail = "I found " + cur.tally(a) + " " + cur.count + " before the mine ran out.";
         }
         PaData.Rec r = a.rec();
-        if (!cur.fail.isEmpty() && retool(a, cur)) return;
+        if (!cur.fail.isEmpty() && (retool(a, cur) || unstick(a, cur))) return;
         if (!cur.fail.isEmpty()) {
             boolean more = plan.steps.stream().anyMatch(s -> !s.auto);
             if (cur.auto) { plan.dropAuto(); return; }
@@ -199,6 +204,23 @@ public final class PaBrain {
         a.plan.steps.add(0, cur);
         a.plan.steps.add(0, pick);
         PaTalk.comment(a, 1, "My pickaxe wore out. Making a new one, then back to it.");
+        return true;
+    }
+
+    private static final java.util.regex.Pattern NO_REACH = java.util.regex.Pattern.compile("(?i)(couldn'?t reach|can'?t reach|can'?t get to|no way to|got stuck)");
+
+    /**
+     * It couldn't reach something (the crafting table, a chest, the site): if it has dug itself into a pit it climbs
+     * out first; either way it tries the step once more before it troubles its player.
+     */
+    static boolean unstick(PlayerAssistantEntity a, PaPlan.Step cur) {
+        if (cur.auto || cur.retools >= 2 || !NO_REACH.matcher(cur.fail).find()) return false;
+        cur.retools++;
+        boolean pit = PaClimb.trapped(a);
+        if (pit) a.mind.climbing = 12;
+        rearm(a, cur);
+        a.plan.steps.add(0, cur);
+        PaTalk.comment(a, 1, pit ? "Oops, I've dug myself into a hole. Climbing out, then I'll try again." : "Couldn't get there. Let me try another way.");
         return true;
     }
 
@@ -298,6 +320,7 @@ public final class PaBrain {
             a.mind.lastPct = pct;
             stuckWorking = a.mind.sameFor >= 60;                  // two minutes of nothing at all
         }
+        if (a.plan.idle() && a.mind.climbing == 0 && PaClimb.trapped(a)) { a.mind.climbing = 12; return; }   // boxed in a pit: climb, don't teleport
         if (wantsMove && !moving) a.mind.stuckFor++; else if (moving) a.mind.stuckFor = 0;
         if (danger || a.mind.stuckFor >= 8 || stuckWorking) {
             a.mind.stuckFor = 0;
