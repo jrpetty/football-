@@ -55,6 +55,7 @@ public final class AgeSites {
 
     public static void resetForTests() {
         MISSES.clear();
+        HELD.clear();
     }
 
     /** Has this age's building missed so many looks for its street that it may take a lot walked dry? */
@@ -102,5 +103,13 @@ public final class AgeSites {
     /** Built, or its ground given up: the note let go. */
     static void forget(UUID village, String project) {
         com.jrpetty.mcassistant.village.Ledger.forget(village, SITE + project);
+    }
+
+    private static final Map<String, Integer> HELD = new ConcurrentHashMap<>();
+
+    /** Keep an age's building's ground through a builder's failure to reach it (Villages.rejectSite): true, five times. */
+    static boolean holdGround(UUID village, String project) {
+        if (kept(village, project) == null) return false;
+        return HELD.merge(village + "|" + project, 1, Integer::sum) <= 5;
     }
 }

@@ -3307,6 +3307,14 @@ public final class Villages {
     /** The builders could not get to this lot: give it up, never pick it again,
      *  and have another look in half a minute. */
     public static void rejectSite(UUID villageId, String project, long gameTime) {
+        // [econ32c] An age's building begun on its ground is not given up for a builder that could not get to it once (its
+        // own walls in the way of a path from where a restart left the builder): set aside a few minutes, its ground kept,
+        // up to a few times.
+        if (AgeSites.holdGround(villageId, project)) {
+            crewDone(villageId, project);
+            defer(villageId, project, gameTime + 2400L, "the builders could not get to its ground just now");
+            return;
+        }
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);
         AgeSites.forget(villageId, project);                          // [econ32c] its ground given up
