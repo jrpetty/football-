@@ -48,6 +48,14 @@ public final class PaBrain {
         /** [pa33d] A bare ping it glances at, till when (a turn of the head, nothing more). */
         @Nullable public BlockPos glanceAt;
         public int glanceUntil, endSaidAt = -100000;
+        /** [pa33e] Elytra following: wings on (by it), when it took off, its last rocket and word. */
+        public boolean wingsOn;
+        public int takeoffAt, rocketAt = -1000, flightSaidAt = -100000;
+        /** [pa33e] Parkour: a jump in the air (from, to, the gap), a gap it fell short at, a bridge or pillar under way. */
+        public int leapAt, pkStuck, pkMode, pkLaid, pkRestUntil, pkSaidAt = -100000;
+        public double pkDist;
+        @Nullable public BlockPos leapFrom, leapTo, pkJump;
+        @Nullable PaParkour.Gap leapGap, failedGap, pkBridge;
         int ownerHurtTick = -100000, meHurtTick = -100000, lastTip, lastAuto, stuckFor, sortedAt = -100000;
         int lastDiamonds = -1, threatTick = -100000;
         @Nullable Vec3 lastPos;

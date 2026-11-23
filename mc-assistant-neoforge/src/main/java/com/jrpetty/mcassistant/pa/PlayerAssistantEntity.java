@@ -528,6 +528,11 @@ public class PlayerAssistantEntity extends AssistantEntity {
 
     /** [pa33e] It never walks through a portal on its own: it crosses with its player (carried across beside them the
      *  moment they arrive), so it can neither run ahead into the Nether alone nor bounce back out of the portal it came by. */
+    /** [pa33e] Wings open or shut (the elytra's flag; the game shuts it again on the ground or without an elytra). */
+    public void glide(boolean on) {
+        setSharedFlag(7, on);
+    }
+
     @Override
     public boolean canUsePortal(boolean allowPassengers) {
         return false;

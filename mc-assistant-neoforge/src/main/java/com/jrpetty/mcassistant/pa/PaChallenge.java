@@ -28,6 +28,7 @@ public final class PaChallenge {
         boolean over, went;
         /** [pa33e] Its mode before a run (it runs on STAY, so following you doesn't tug it back to the line). */
         @Nullable com.jrpetty.mcassistant.entity.AssistantEntity.Mode before;
+        String scoreShown = "";
 
         Game(String kind, @Nullable BlockPos goal, long start, long end, int ownerBase, int mineBase) {
             this.kind = kind;
@@ -145,7 +146,9 @@ public final class PaChallenge {
                     a.getLookControl().setLookAt(g.goal.getX() + 0.5, g.goal.getY() + 0.5, g.goal.getZ() + 0.5);
                     if (PaShots.shootAt(a, g.goal)) g.mineScore++;
                 }
-                if (now > g.end) finish(a, p, g, Integer.compare(g.ownerScore, g.mineScore));
+                String score = "You " + g.ownerScore + ", " + a.displayNameCap() + " " + g.mineScore;   // [pa33e] the score as it goes
+                if (!score.equals(g.scoreShown)) { g.scoreShown = score; PaNet.note(p, score); }
+                if (now > g.end || now > g.start + 400 + 100) finish(a, p, g, Integer.compare(g.ownerScore, g.mineScore));   // its ten shots, then a moment for your last
             }
             default -> GAMES.remove(p.getUUID());
         }

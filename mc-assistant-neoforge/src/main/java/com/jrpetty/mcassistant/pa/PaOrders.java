@@ -871,6 +871,13 @@ public final class PaOrders {
             case SHOOT_AT -> {
                 String lock = locked(a, "trick");
                 if (lock != null) return lock;
+                net.minecraft.world.entity.Entity mover = look.entity() >= 0 ? p.level().getEntity(look.entity()) : null;
+                if (mover != null) {                                       // [pa33e] something on the move: led, as a player leads it
+                    PaPlan.Step s = step("a trick shot at the " + mover.getName().getString().toLowerCase(java.util.Locale.ROOT), Kind.SHOOT_AT, 10);
+                    s.task = new PaTask(PaTask.Kind.SHOOT, mover.blockPosition(), "e:" + mover.getId(), 3);
+                    out.add(s);
+                    return null;
+                }
                 if (look.block() == null) return "Look at the thing to hit, or ping it, and say it again.";
                 PaPlan.Step s = step("a trick shot", Kind.SHOOT_AT, 10);
                 s.task = new PaTask(PaTask.Kind.SHOOT, look.block(), "", 3);
