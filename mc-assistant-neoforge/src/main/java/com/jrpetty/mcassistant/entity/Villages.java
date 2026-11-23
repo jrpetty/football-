@@ -3096,6 +3096,7 @@ public final class Villages {
             int enough = project.equals("lighthouse") ? 24 : 6;         // [econ32b] the lighthouse looks further for the water's edge
             for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : places) {
                 if (valid >= enough) break;
+                SiteWhy.lot(half[0] <= lot.halfAcross() && half[1] <= lot.halfDeep());   // [econ32d] the big enough lots' reasons too
                 if (!CityGrowth.laidOut(villageId, lot)) { SiteWhy.count("ring not laid out"); continue; }     // [city26] only the rings of the plan laid out so far
                 index++;
                 boolean spoken = false;
@@ -3165,6 +3166,9 @@ public final class Villages {
             } else if (!waiting && free > 0) {
                 LAPS.merge(villageId, 1, Integer::sum);         // a whole look and nothing: less particular next time
             }
+            // [econ32d] An age's building no lot of the plan will take (too big for the lots on its streets, the great lots under
+            // fields, the mine, the wall's ring or over the water) goes up at the town's edge after a while (AgeSites.edge).
+            if (site == null && valid == 0 && !waiting) site = AgeSites.edge(level, v, project);
         }
         // [mine7] Nothing goes up on a mine's ground (a manor's land, a shed or an office by the water, out past the plan).
         if (site != null && !project.equals("fortify")) {

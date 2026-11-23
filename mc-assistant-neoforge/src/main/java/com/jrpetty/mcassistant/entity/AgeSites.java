@@ -57,6 +57,7 @@ public final class AgeSites {
     public static void resetForTests() {
         MISSES.clear();
         HELD.clear();
+        BARE.clear();
     }
 
     /** Has this age's building missed so many looks for its street that it may take a lot walked dry? */
@@ -135,5 +136,101 @@ public final class AgeSites {
             if (++laid >= 20) return true;
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------ [econ32d] the town's edge
+
+    /** Looks with no lot of the plan that would do before an age's building goes up at the town's edge. */
+    static final int EDGE_AFTER = 6;
+    private static final Map<String, Integer> BARE = new ConcurrentHashMap<>();
+
+    /**
+     * An age's building that no lot of the plan will take, look after look, set out at the town's edge, its door to the town
+     * (as a knight's manor is: KnightManors.find). A Diamond Age river town of seventy had forty-four lots big enough for its
+     * chapel, every one under its fields or its mine, on the wall's ring, across the river, against a neighbour or on a cliff;
+     * without the chapel the age could never come. Null until it has missed {@link #EDGE_AFTER} looks, or with no ground.
+     */
+    @javax.annotation.Nullable
+    static Villages.Site edge(ServerLevel level, Villages.Village v, String project) {
+        if (!ASKED.contains(project) || project.equals("house") || project.equals("well")) return null;
+        String k = v.id() + "|" + project;
+        if (BARE.merge(k, 1, Integer::sum) < EDGE_AFTER) return null;
+        Villages.Site s = edgeGround(level, v, project);
+        if (s == null && SiteWhy.LOG) com.mojang.logging.LogUtils.getLogger().info("[MCA-SITEWHY] {}: no ground at the town's edge for the {} either",
+            Villages.name(v.id()), project);
+        if (s != null) {
+            BARE.remove(k);
+            com.mojang.logging.LogUtils.getLogger().info("[MCA-BUILD] {}: the {} goes up at the town's edge, at {}, {} (no lot of the plan would take it)",
+                Villages.name(v.id()), project, s.anchor().getX(), s.anchor().getZ());
+        }
+        return s;
+    }
+
+    /** Ground at the town's edge for it: rings out past its buildings (its colonies aside) in sixteen directions, the nearest
+     *  first; level and dry (KnightManors.level), clear of its buildings and the ground set out for others, off its fields,
+     *  its mine, its wall's ring, its railways, the flood's ground, a player's building and any other town's. */
+    @javax.annotation.Nullable
+    static Villages.Site edgeGround(ServerLevel level, Villages.Village v, String project) {
+        java.util.UUID id = v.id();
+        BlockPos c = v.centre();
+        int[] half = com.jrpetty.mcassistant.entity.goal.Blueprints.has(project)
+            ? com.jrpetty.mcassistant.entity.goal.Blueprints.fullHalf(project) : com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(project);
+        int mine = Math.max(half[0], half[1]);
+        int reach = 16;
+        List<com.jrpetty.mcassistant.village.Ledger.Building> built = com.jrpetty.mcassistant.village.Ledger.buildings(id);
+        for (com.jrpetty.mcassistant.village.Ledger.Building b : built) {
+            if (Footways.skip(b.structure())) continue;                   // the wall, the storehouse in its shed, the colonies far off
+            int[] h = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(b.structure());
+            double d = Math.sqrt(b.anchor().distSqr(new BlockPos(c.getX(), b.anchor().getY(), c.getZ())));
+            if (d > 3 * Villages.VILLAGE_RANGE) continue;
+            reach = Math.max(reach, (int) Math.ceil(d) + Math.max(h[0], h[1]));
+        }
+        Map<String, Villages.Site> others = Villages.sitesOf(id);
+        for (int ring = reach + mine + 4; ring <= reach + mine + 40; ring += 6) {
+            for (int i = 0; i < 16; i++) {
+                double ang = Math.PI * 2 * i / 16.0;
+                int x = c.getX() + (int) Math.round(Math.cos(ang) * ring), z = c.getZ() + (int) Math.round(Math.sin(ang) * ring);
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                net.minecraft.core.Direction back = Math.abs(Math.cos(ang)) >= Math.abs(Math.sin(ang))
+                    ? (Math.cos(ang) > 0 ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST)
+                    : (Math.sin(ang) > 0 ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH);
+                boolean turned = back.getAxis() == net.minecraft.core.Direction.Axis.X;
+                int hx = turned ? half[1] : half[0], hz = turned ? half[0] : half[1];
+                BlockPos ground = KnightManors.level(level, x, z, hx, hz);
+                if (ground == null) continue;
+                boolean clear = true;
+                for (com.jrpetty.mcassistant.village.Ledger.Building b : built) {
+                    if (Footways.skip(b.structure())) continue;
+                    int[] h = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(b.structure());
+                    if (Math.abs(b.anchor().getX() - x) <= h[0] + hx + 4 && Math.abs(b.anchor().getZ() - z) <= h[1] + hz + 4) { clear = false; break; }
+                }
+                for (Map.Entry<String, Villages.Site> o : others.entrySet()) {
+                    if (o.getKey().equals(project)) continue;
+                    BlockPos a = o.getValue().anchor();
+                    if (Math.abs(a.getX() - x) <= 2 * mine + 6 && Math.abs(a.getZ() - z) <= 2 * mine + 6) { clear = false; break; }
+                }
+                if (!clear) continue;
+                int dx = x - c.getX(), dz = z - c.getZ();
+                if (Villages.onFarmland(id, dx, dz, hx, hz) || MineGround.anyMeets(x - hx - 1, z - hz - 1, x + hx + 1, z + hz + 1)
+                    || CastleWall.onRing(id, dx, dz, hx, hz) || Railways.crosses(id, x - hx, z - hz, x + hx, z + hz)
+                    || Floods.lowGround(id, ground) || PlayerGap.crowds(level, id, ground, hx, hz)) continue;
+                Villages.Village other = Villages.nearest(level, ground, Villages.VILLAGE_RANGE);
+                if (other != null && !other.id().equals(id)) continue;
+                if (VanillaVillages.meets(level, x - hx, z - hz, x + hx, z + hz, VanillaVillages.MARGIN)) continue;
+                return new Villages.Site(ground, back, 0);
+            }
+        }
+        return null;
+    }
+
+    /** Tests: a look with no lot of the plan for it (edge). */
+    @javax.annotation.Nullable
+    public static Villages.Site edgeForTests(ServerLevel level, Villages.Village v, String project) {
+        return edge(level, v, project);
+    }
+
+    /** Tests: the edge's count for this building, as if it had missed so many looks. */
+    public static void bareForTests(java.util.UUID village, String project, int looks) {
+        BARE.put(village + "|" + project, looks);
     }
 }
