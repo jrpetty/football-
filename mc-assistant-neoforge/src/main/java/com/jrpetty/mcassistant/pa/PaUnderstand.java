@@ -455,7 +455,7 @@ public final class PaUnderstand {
         if (c.matches("^(?:mine|dig|strip mine|branch mine|tunnel|excavate|quarry|go mining|start mining|look for|search for|prospect)(?: .*)?$")) {
             Matcher lv = LEVEL.matcher(c);
             String ore = findIn(c, ORES);
-            if (has(c, "vein", "that ore", "this ore") || (has(c, "this", "that") && ore.isEmpty() && !has(c, "down"))) {
+            if (has(c, "vein", "that ore", "this ore") || (has(c, "this", "that", "these", "those") && !has(c, "down"))) {
                 return new PaIntent(Kind.MINE_ORE, ore.isEmpty() ? "vein" : ore, amount, Place.LOOKED, raw);
             }
             if (!ore.isEmpty()) return new PaIntent(Kind.MINE_ORE, ore, amount, Place.NONE, raw);

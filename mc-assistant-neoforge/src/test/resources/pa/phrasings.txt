@@ -102,6 +102,7 @@ dig down to y 16 || MINE_DOWN:level:16
 dig a tunnel || MINE_DOWN
 mine this vein || MINE_ORE@LOOKED
 mine that ore || MINE_ORE@LOOKED
+mine that iron || MINE_ORE@LOOKED
 mine 32 stone || GATHER:stone:32
 mine || ?
 # --- farming

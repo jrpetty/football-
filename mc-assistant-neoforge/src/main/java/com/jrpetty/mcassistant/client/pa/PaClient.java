@@ -176,9 +176,10 @@ public final class PaClient {
             line.putString("t", (voice ? "(voice) " : "") + text.trim());
             log.add(line);
             state.put("log", log);
-            choices = new ArrayList<>();
-            stamp++;
         }
+        choices = new ArrayList<>();                            // answered: the chips go (a veto's too)
+        vetoAt = 0;
+        stamp++;
         send("talk", a);
     }
 

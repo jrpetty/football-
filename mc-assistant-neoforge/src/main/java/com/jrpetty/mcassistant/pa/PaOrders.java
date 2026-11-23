@@ -382,7 +382,9 @@ public final class PaOrders {
             case MINE_ORE -> {
                 String ore = i.item();
                 if (!PaItems.hasPickaxe(a)) needPickaxe(a, out);
-                if (ore.equals("vein") || i.place() == PaIntent.Place.LOOKED) {
+                GatherGoal.Kind seen = look.block() == null ? null : kindAt(a, look.block());
+                boolean looking = seen != null && !ore.equals("vein") && seen.label.toLowerCase().contains(ore);   // "mine iron", eyes on iron ore
+                if (ore.equals("vein") || i.place() == PaIntent.Place.LOOKED || looking) {
                     // the vein looked at: gather that ore round it
                     BlockPos b = look.block();
                     GatherGoal.Kind k = b == null ? null : kindAt(a, b);

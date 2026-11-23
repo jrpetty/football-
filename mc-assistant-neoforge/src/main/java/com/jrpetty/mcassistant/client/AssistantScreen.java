@@ -46,9 +46,9 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
             this.addRenderableWidget(Button.builder(Component.literal("\u2039 Back"), b -> {
                     if (this.minecraft != null && this.minecraft.player != null) {
                         this.minecraft.player.closeContainer();
-                        net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
-                        t.putString("tab", "pack");
-                        com.jrpetty.mcassistant.client.pa.PaClient.send("open", t);
+                        // its panel at once, from what the client knows; the server's fresh state follows
+                        this.minecraft.setScreen(new com.jrpetty.mcassistant.client.pa.PaScreen("pack"));
+                        com.jrpetty.mcassistant.client.pa.PaClient.send("state", new net.minecraft.nbt.CompoundTag());
                     }
                 }).bounds(x + 8, y + 100, 100, bh).build(b2 -> ((UiButton) new UiButton(b2)).primary()));
             addButton(x + 112, y + 100, 56, bh, "Stash", AssistantMenu.BTN_DEPOSIT);
@@ -172,7 +172,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         String pace = AssistantEntity.foodLabel(diet) + " " + diet + "%";
 
         String status = a.clientStatus();
-        if (a instanceof com.jrpetty.mcassistant.pa.PlayerAssistantEntity) status = "Shift-click to give or take";   // [pa33]
+        if (a instanceof com.jrpetty.mcassistant.pa.PlayerAssistantEntity) status = "Shift-click items";   // [pa33]
         int colour = Ui.statusColour(status);
         g.drawString(this.font, Component.literal(
             clipTo(status, imageWidth - 16 - this.font.width(pace) - 6)),
