@@ -3671,7 +3671,8 @@ every party wall. There are three kinds, so a town's streets show who lives wher
 * **The grand terrace** (in a town: the Iron Age and thirty folk): three Georgian town houses four
   storeys high. Iron railings along the street round a flagged area with a lamp on a stone pier,
   steps up to the front door under a tall fanlight, tall windows in three bays, a stone ground floor
-  and brick above, a stone band at every floor, iron balconettes before the first floor's windows,
+  and brick above, a stone band at every floor, a balcony along the band before the tall first-floor windows (an iron
+  railing the width of each house between the party walls' stone piers),
   a stone cornice and parapet with a low slate roof behind it, and the stacks up the party walls.
   Inside: the hall up the side and the stair in two flights up the back, the dining room (a long
   table under a chandelier, four chairs, shelves) and the kitchen on the raised ground floor, the
@@ -3681,7 +3682,9 @@ every party wall. There are three kinds, so a town's streets show who lives wher
   lots side by side facing the same street (every block of homes has a pair on its outer street).
   So the avenues and streets fill with rows facing one another across the road.
 * **When, and which.** Whenever the town would build its next house, it weighs who is short of a
-  home of their standing (Wealth: a household's best-off grown folk): the homeless, and tenants
+  home of their standing (its means as the housing market reckons them: what it can put to a house, its
+  savings at the bank, what it has put by and the share of a house it owns; not its tools, clothes or
+  comforts): the homeless, and tenants
   living below their standing. If well-off households want a town house and the place is a town, a
   grand terrace goes on the builders' list ahead of the house; if comfortable households want a
   better house and the town is in the Iron Age, a bay-fronted terrace; and if two or more
@@ -3696,12 +3699,15 @@ every party wall. There are three kinds, so a town's streets show who lives wher
 * **Built honestly.** The builders raise a row like anything else, every block out of the stores,
   a load at a time from the footing up. Once it stands the town's hands finish it house by house,
   out of the stores: the brickwork faced in brick where the builders had to make do with stone (a
-  stretch at a time, the stone back into the stores), each front door painted its own colour (red,
+  stretch at a time, the stone back into the stores), the roofs slated from the Iron Age (deepslate tiles, the wood
+  back into the stores), a coping laid as a whole block cut down to its slab, each front door painted its own colour (red,
   black, green, teal, yellow, plum... a dye from the stores; never the same as the house next
-  door), the grand row's railings and balconettes in iron (the smith's bars), a chimney pot on each
+  door), the grand row's railings and balcony rails in iron (the smith's bars), a chimney pot on each
   house's flues (a flower pot or a decorated pot) and its hearth fire lit on the stack while
   somebody lives there, and the number and name by every door ("No. 2 / Mill Lane / Cottages /
-  Tansy").
+  Tansy"). The rows have their own hand for this, on top of the town's other works (the age's
+  make-over of every building kept the walls crew busy for days while the new rows stood half in
+  cobble and timber).
 * **Its name.** Each row is named for its street and its kind: Mill Lane Cottages, Mill Lane
   Terrace, Mill Lane Place (and a second of a kind on the same street Row, Villas or Parade). Each
   house has its number: "No. 3, Mill Lane Cottages" on a folk's card, the homes' book and the city
