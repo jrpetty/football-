@@ -256,7 +256,7 @@ public final class PaClient {
         while (PANEL.consumeClick()) {
             if (mc.screen == null) {
                 CompoundTag a = new CompoundTag();
-                a.putString("tab", "talk");
+                a.putString("tab", "last");                          // [pa33c-2b] the tab you had last
                 send("open", a);
             }
         }

@@ -128,6 +128,13 @@ public class PlayerAssistantGameTests {
         return b.toString();
     }
 
+    /** Did it say any of these, in any case? (Six or more ways to say each reply: never match one exact wording.) */
+    private static boolean saidAny(PlayerAssistantEntity a, String... bits) {
+        String said = allWords(a).toLowerCase(java.util.Locale.ROOT);
+        for (String b : bits) if (said.contains(b.toLowerCase(java.util.Locale.ROOT))) return true;
+        return false;
+    }
+
     private static int count(AssistantEntity a, net.minecraft.world.item.Item item) {
         return a.countMatching(s -> s.is(item));
     }
@@ -459,7 +466,7 @@ public class PlayerAssistantGameTests {
         say(p, a, "blargh flob");
         helper.assertTrue(lastWords(a).startsWith("I'm not sure what you mean"), "asked back about nonsense: " + lastWords(a));
         say(p, a, "gather unobtainium");
-        helper.assertTrue(lastWords(a).contains("unobtainium"), "names what it doesn't know: " + lastWords(a));
+        helper.assertTrue(lastWords(a).toLowerCase(java.util.Locale.ROOT).contains("unobtainium"), "names what it doesn't know: " + lastWords(a));
         // a big job is checked first, and "no" cancels it
         a.rec().confirm = true;
         say(p, a, "dig a mine down to level -40");
@@ -485,7 +492,7 @@ public class PlayerAssistantGameTests {
             ItemStack fuel = level.getBlockEntity(furnace) instanceof Container c ? c.getItem(1) : ItemStack.EMPTY;
             boolean burning = level.getBlockState(furnace).getValue(net.minecraft.world.level.block.FurnaceBlock.LIT);
             helper.assertTrue(!fuel.isEmpty() || burning, "the furnace fuelled (" + a.state() + "; " + lastWords(a) + ")");
-            helper.assertTrue(allWords(a).contains("furnace"), "it said what it was doing: " + allWords(a));
+            helper.assertTrue(saidAny(a, "furnace"), "it said what it was doing: " + allWords(a));
             Kit.log("pai15 furnace fuelled on its own; said " + allWords(a));
         });
     }
@@ -525,7 +532,7 @@ public class PlayerAssistantGameTests {
         BlockPos inTown = new BlockPos(x + 4, y - 1, Z + 4);
         helper.assertTrue(PaSafety.offLimits(a, inTown) && !a.inZone(inTown), "the town's ground is off limits to it");
         say(p, a, "build a small house here");
-        helper.assertTrue(a.plan.idle() && lastWords(a).contains("ground"), "it won't build on the town's ground: " + lastWords(a));
+        helper.assertTrue(a.plan.idle() && lastWords(a).toLowerCase(java.util.Locale.ROOT).contains("ground"), "it won't build on the town's ground: " + lastWords(a));
         BlockPos chest = new BlockPos(x + 3, y, Z + 3);
         level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
         helper.assertTrue(!PaChests.allowed(a, level, chest), "nor open a chest on it");
@@ -787,7 +794,7 @@ public class PlayerAssistantGameTests {
         helper.succeedWhen(() -> {
             int logs = a.countMatching(st -> st.is(net.minecraft.tags.ItemTags.LOGS)) + p.getInventory().countItem(Items.OAK_LOG);
             helper.assertTrue(logs >= 8, "it went to the trees and got the logs (for you): " + logs + " (" + lastWords(a) + ")");
-            helper.assertTrue(allWords(a).contains("Heading there"), "and said where it was going: " + allWords(a));
+            helper.assertTrue(saidAny(a, "heading there", "on my way", "off i go"), "and said where it was going: " + allWords(a));
             Kit.log("pai28 no trees near; went ~35 blocks to them; " + logs + " logs (" + allWords(a) + ")");
         });
     }
@@ -882,7 +889,7 @@ public class PlayerAssistantGameTests {
                     helper.assertTrue(got > 0 && paid > 0, "it bought cobblestone with its player's coin: " + got + " for " + paid + " (" + allWords(a)
                         + "; stock " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)) + ")");
                     helper.assertTrue(paid <= a.rec().spend, "never past the limit: paid " + paid + " of " + a.rec().spend);
-                    helper.assertTrue(allWords(a).contains("spending limit"), "and said why it stopped: " + lastWords(a));
+                    helper.assertTrue(saidAny(a, "spending limit"), "and said why it stopped: " + lastWords(a));
                     mark[0] = paid;
                     mark[1] = got;
                     mark[2] = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
@@ -920,7 +927,8 @@ public class PlayerAssistantGameTests {
             a.hunger.set(4, 0, 0);                                // hungry too: no healing on its own
             a.setHealth(Math.max(1.0F, a.getMaxHealth() * 0.4F));
             helper.succeedWhen(() -> {
-                helper.assertTrue(allWords(a).contains("nothing to eat") || allWords(a).contains("out of food") || allWords(a).contains("pantry is empty"),
+                String said = allWords(a).toLowerCase(java.util.Locale.ROOT);    // any of its six-plus ways to say it, any case
+                helper.assertTrue(said.contains("nothing to eat") || said.contains("out of food") || said.contains("pantry is empty"),
                     "with no food it asks: " + lastWords(a));
                 Kit.log("pai32 ate (hp " + low + " -> " + healed + ", bread " + bread + "/4); with none: \"" + lastWords(a) + "\"");
             });
@@ -1102,7 +1110,7 @@ public class PlayerAssistantGameTests {
             level.addFreshEntity(c);
             int[] w = {said(a)};
             helper.runAfterDelay(60, () -> {
-                helper.assertTrue(allWords(a).contains("Creeper near you"), "warnings still come through: " + lastWords(a));
+                helper.assertTrue(saidAny(a, "creeper near you", "creeper"), "warnings still come through: " + lastWords(a));
                 c.discard();
                 PaData.Rec back = PaData.Rec.loadForTests(a.rec().saveForTests());
                 helper.assertTrue(back.mute == 2, "quiet is kept over a save: " + back.mute);
@@ -1381,6 +1389,7 @@ public class PlayerAssistantGameTests {
         // an area between two corners (a moment later: pings are held to one a quarter second)
         say(p, a, "stop");
         helper.runAfterDelay(10, () -> {
+            PaServer.pingRateForTests(p.getUUID());               // game ticks outrun the clock here
             PaServer.act(p, "ping", pingTag("AREA", "clear", new BlockPos(x - 4, y, Z + 8), new BlockPos(x + 2, y, Z + 12)));
             helper.assertTrue(labels(a).toLowerCase().contains("clear"), "area cleared: " + labels(a) + " (" + lastWords(a) + ")");
             Kit.log("pai42 pings: " + labels(a) + "; waypoints " + a.rec().waypoints.keySet());
@@ -1402,5 +1411,74 @@ public class PlayerAssistantGameTests {
         StringBuilder b = new StringBuilder();
         for (var s : a.plan.all()) b.append(s.label).append("; ");
         return b.toString();
+    }
+
+    /** pai43: the Pack tab: two rows open at first (new piles never start in the third), things handed over both ways and
+     *  onto its gear, Equip best, Sort, Keep, Dump junk and Give me everything (kept things stay). [pa33c-2b] */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pai43_pack")
+    public static void pai43_pack(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_126_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        helper.runAfterDelay(5, () -> {
+            var inv = a.getInventoryItems();
+            for (int i = 0; i < inv.size(); i++) inv.set(i, net.minecraft.world.item.ItemStack.EMPTY);
+            a.teleportTo(x + 2, y, Z + 1);
+            int open = com.jrpetty.mcassistant.pa.PaPack.open(a.veteranLevel());
+            // fill every open slot with a different thing: the next new pile has nowhere to go
+            net.minecraft.world.item.Item[] fill = {Items.STICK, Items.OAK_PLANKS, Items.COBBLESTONE, Items.DIRT, Items.SAND, Items.GRAVEL, Items.TORCH, Items.COAL,
+                Items.RAW_IRON, Items.IRON_INGOT, Items.BREAD, Items.APPLE, Items.WHEAT_SEEDS, Items.STRING, Items.FLINT, Items.FEATHER, Items.BONE, Items.ROTTEN_FLESH,
+                Items.CLAY_BALL, Items.BRICK, Items.GLASS, Items.LADDER, Items.OAK_DOOR, Items.CHEST, Items.FURNACE, Items.CRAFTING_TABLE, Items.BUCKET};
+            for (int i = 0; i < open; i++) a.insertGiven(new net.minecraft.world.item.ItemStack(fill[i], 8));
+            net.minecraft.world.item.ItemStack left = a.insertGiven(new net.minecraft.world.item.ItemStack(Items.DIAMOND, 2));
+            helper.assertTrue(open == 27 || (!left.isEmpty() && inv.get(open).isEmpty() && a.isPackFull()), "closed row stays closed: open " + open + ", left " + left);
+            helper.assertTrue(a.insertGiven(new net.minecraft.world.item.ItemStack(Items.STICK, 8)).isEmpty(), "piles still grow");
+            // take one to you, give one back into a chosen free slot
+            pack(p, "take", "i", 0);
+            helper.assertTrue(inv.get(0).isEmpty() && p.getInventory().countItem(Items.STICK) == 16, "taken: " + p.getInventory().countItem(Items.STICK));
+            p.getInventory().setItem(3, new net.minecraft.world.item.ItemStack(Items.IRON_CHESTPLATE));
+            CompoundTag give = new CompoundTag();
+            give.putString("op", "give"); give.putInt("j", 3); give.putInt("i", 0);
+            PaServer.act(p, "packop", give);
+            helper.assertTrue(inv.get(0).is(Items.IRON_CHESTPLATE) && p.getInventory().getItem(3).isEmpty(), "given into slot 0: " + inv.get(0));
+            // Equip best: the chestplate goes on
+            pack(p, "best", null, 0);
+            helper.assertTrue(a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE), "equipped best: " + a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST));
+            // keep the dirt, then dump junk: the rotten flesh and gravel go, the kept dirt stays
+            int dirtAt = -1;
+            for (int i = 0; i < inv.size(); i++) if (inv.get(i).is(Items.DIRT)) dirtAt = i;
+            pack(p, "lock", "i", dirtAt);
+            helper.assertTrue(a.rec().keep.contains("minecraft:dirt"), "dirt kept");
+            pack(p, "dump", null, 0);
+            helper.assertTrue(a.countMatching(st -> st.is(Items.ROTTEN_FLESH) || st.is(Items.GRAVEL)) == 0 && a.countMatching(st -> st.is(Items.DIRT)) == 8,
+                "junk dumped, kept dirt stays: dirt " + a.countMatching(st -> st.is(Items.DIRT)));
+            // sort: tools/armour, food, ores... laid from the first slot, no gaps
+            pack(p, "sort", null, 0);
+            boolean gap = false, seenEmpty = false;
+            for (int i = 0; i < inv.size(); i++) { if (inv.get(i).isEmpty()) seenEmpty = true; else if (seenEmpty) gap = true; }
+            helper.assertTrue(!gap, "sorted with no gaps");
+            // give me everything: all but the kept dirt
+            for (int i = 0; i < 36; i++) p.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+            pack(p, "all", null, 0);
+            int leftIn = a.countMatching(st -> !st.isEmpty());
+            helper.assertTrue(a.countMatching(st -> st.is(Items.DIRT)) == 8 && a.countMatching(st -> !st.is(Items.DIRT)) == 0, "everything but the kept: " + leftIn + " left");
+            // too far: nothing changes hands
+            a.teleportTo(x + 30, y, Z + 30);
+            p.getInventory().setItem(0, new net.minecraft.world.item.ItemStack(Items.BREAD, 3));
+            CompoundTag far = new CompoundTag();
+            far.putString("op", "give"); far.putInt("j", 0);
+            PaServer.act(p, "packop", far);
+            helper.assertTrue(p.getInventory().getItem(0).getCount() == 3, "too far to hand over");
+            Kit.log("pai43 pack: open " + open + ", kept " + a.rec().keep);
+            helper.succeed();
+        });
+    }
+
+    private static void pack(ServerPlayer p, String op, String key, int v) {
+        CompoundTag t = new CompoundTag();
+        t.putString("op", op);
+        if (key != null) t.putInt(key, v);
+        PaServer.act(p, "packop", t);
     }
 }

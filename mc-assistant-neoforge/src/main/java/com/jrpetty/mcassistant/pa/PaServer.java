@@ -78,6 +78,13 @@ public final class PaServer {
                 if (args.contains("roastBack")) r.roastBack = Math.max(0, Math.min(2, args.getInt("roastBack")));
                 if (args.contains("defend")) r.defend = args.getBoolean("defend");
                 if (args.contains("spend")) r.spend = Math.max(0, Math.min(PaConfig.spendMax(), args.getInt("spend")));
+                if (args.getBoolean("reset")) {                     // [pa33c-2b] Settings, Advanced: its settings as they came
+                    r.autoHelp = true; r.useChests = true; r.breakNearBuilds = false; r.confirm = true; r.sleepAtNight = false;
+                    r.roam = 32; r.chatty = 2; r.spend = 64; r.funny = (float) PaPersona.DEFAULT_FUNNY; r.gloomy = (float) PaPersona.DEFAULT_GLOOMY;
+                    r.mute = 0; r.language = 0; r.roastBack = 0; r.defend = true; r.keep.clear();
+                    if (a != null) a.setNightHome(false);
+                }
+                if (args.getBoolean("clearBed")) { r.bed = null; r.lastBed = null; }   // [pa33c-2b] back at its spawner (or you) after a fall
                 PaData.touch();
                 PaNet.refresh(p, a);
             }
@@ -105,6 +112,12 @@ public final class PaServer {
             case "pack" -> {
                 if (a != null && a.obeys(p)) a.openManagementScreen(p);
             }
+            case "packop" -> {                                      // [pa33c-2b] the Pack tab: a move or a button
+                if (a == null || r == null || !a.obeys(p)) return;
+                String note = PaPack.op(p, a, r, args);
+                if (!note.isEmpty()) PaNet.note(p, note);
+                PaNet.refresh(p, a);
+            }
             case "log" -> {
                 // a Guide answer the client gave as its assistant's words
                 if (a != null) PaTalk.reply(a, args.getString("text"));
@@ -118,6 +131,11 @@ public final class PaServer {
 
     private static final java.util.Map<java.util.UUID, PaPings.Rate> PINGS = new java.util.concurrent.ConcurrentHashMap<>();
     private static final java.util.Map<java.util.UUID, PaPings.Rate> MARKS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Game tests: forget a player's ping rate (their ticks run faster than the wall clock). */
+    public static void pingRateForTests(java.util.UUID u) {
+        PINGS.remove(u);
+    }
 
     /**
      * [pa33c-2b] A ping wheel choice: the option's own words, with the ping as what "that" and "there" mean, through the

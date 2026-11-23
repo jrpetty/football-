@@ -78,7 +78,7 @@ public final class PaVoice {
     public static void startListening() {
         if (listening || hearing) return;
         if (!PaClientConfig.get(PaClientConfig.LISTEN, false)) {
-            say("Listening is off: turn it on in your assistant's About tab (Y).");
+            say("Listening is off: turn it on in your assistant's Settings, Voice (Y).");
             return;
         }
         if (!stt().ready()) {

@@ -123,7 +123,8 @@ final class PaHud {
         // what it said, when it is out of sight
         if (ms < PaClient.subtitleUntil) {
             PlayerAssistantEntity a = PaClient.mine();
-            boolean seen = a != null && a.distanceTo(mc.player) < 14 && mc.player.hasLineOfSight(a);
+            boolean seen = a != null && a.distanceTo(mc.player) < 14 && mc.player.hasLineOfSight(a)
+                && !com.jrpetty.mcassistant.pa.PaClientConfig.get(com.jrpetty.mcassistant.pa.PaClientConfig.SUBTITLES, false);   // [pa33c-2b] subtitles always
             if (!seen) {
                 var lines = font.split(net.minecraft.network.chat.Component.literal(PaClient.subtitle), Math.min(320, w - 40));
                 int n = Math.min(3, lines.size());

@@ -313,8 +313,38 @@ public class PlayerAssistantEntity extends AssistantEntity {
             return InteractionResult.CONSUME;
         }
         if (sp.isShiftKeyDown()) openManagementScreen(sp);             // sneak: straight to its pack
-        else PaNet.open(sp, this, "talk");
+        else PaNet.open(sp, this, "last");                             // [pa33c-2b] the tab it was last on
         return InteractionResult.CONSUME;
+    }
+
+    // ------------------------------------------------------------------ [pa33c-2b] its pack: rows open with its level
+
+    /** Piles grow in any slot; a new pile starts only in an open one (two rows at first, the third at level 3). */
+    @Override
+    public ItemStack insertItem(ItemStack stack) {
+        if (stack.isEmpty()) return ItemStack.EMPTY;
+        net.minecraft.core.NonNullList<ItemStack> inv = getInventoryItems();
+        int open = Math.min(inv.size(), PaPack.open(veteranLevel()));
+        ItemStack remaining = stack.copy();
+        for (int i = 0; i < inv.size() && !remaining.isEmpty(); i++) {
+            ItemStack slot = inv.get(i);
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, remaining)) {
+                int moved = Math.min(slot.getMaxStackSize() - slot.getCount(), remaining.getCount());
+                if (moved > 0) { slot.grow(moved); remaining.shrink(moved); }
+            }
+        }
+        for (int i = 0; i < open && !remaining.isEmpty(); i++) {
+            if (inv.get(i).isEmpty()) { inv.set(i, remaining); remaining = ItemStack.EMPTY; }
+        }
+        return remaining;
+    }
+
+    @Override
+    public boolean isPackFull() {
+        net.minecraft.core.NonNullList<ItemStack> inv = getInventoryItems();
+        int open = Math.min(inv.size(), PaPack.open(veteranLevel()));
+        for (int i = 0; i < open; i++) if (inv.get(i).isEmpty()) return false;
+        return true;
     }
 
     // ------------------------------------------------------------------ falling and coming back

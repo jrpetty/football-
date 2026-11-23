@@ -25,10 +25,10 @@ public final class PaClientConfig {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
         b.push("voice");
         SPEAK = b.comment("Your assistant speaks its replies out loud (your computer's own voice). Its words always show too.").define("speak", true);
-        VOICE = b.comment("Which of your computer's voices it uses (0 = the first; the About tab lists them).").defineInRange("voice", 0, 0, 64);
+        VOICE = b.comment("Which of your computer's voices it uses (0 = the first; the Settings tab lists them).").defineInRange("voice", 0, 0, 64);
         RATE = b.comment("How fast it speaks: -5 slow .. 5 fast.").defineInRange("rate", 0, -5, 5);
         VOLUME = b.comment("How loud: 0..100.").defineInRange("volume", 80, 0, 100);
-        LISTEN = b.comment("Push-to-talk: hold the talk key and speak. Off until you turn it on in the About tab.").define("listen", false);
+        LISTEN = b.comment("Push-to-talk: hold the talk key and speak. Off until you turn it on in the Settings tab (Voice).").define("listen", false);
         AGREED = b.comment("You agreed to download the offline speech model (about 40 MB, once) into this config folder.").define("modelAgreed", false);
         ENGINE = b.comment("Speech recognition: auto (Windows' own if present, else the offline model), windows, or vosk.").define("engine", "auto");
         PITCH = b.comment("[pa33b] Its pitch: -5 lower .. 5 higher.").defineInRange("pitch", 0, -5, 5);

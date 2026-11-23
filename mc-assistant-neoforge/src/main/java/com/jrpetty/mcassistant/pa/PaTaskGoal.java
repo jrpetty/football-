@@ -425,7 +425,7 @@ public class PaTaskGoal extends Goal {
             int price = com.jrpetty.mcassistant.entity.Market.quoteFor(level, v, owner, new ItemStack(item));
             if (price > 0 && spent + price > limit) {
                 finish(done > 0 ? "Bought " + done + " " + word + " for you; another lot (" + price + " coins) would go past my spending limit of " + limit + "."
-                    : "That's " + price + " coins a lot, over my spending limit of " + limit + ". Raise it in my About tab if you want me to.", done == 0);
+                    : "That's " + price + " coins a lot, over my spending limit of " + limit + ". Raise it in my Settings (Behaviour) if you want me to.", done == 0);
                 return;
             }
             said = com.jrpetty.mcassistant.entity.Market.buy(level, v, owner, new ItemStack(item));

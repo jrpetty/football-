@@ -91,6 +91,14 @@ public final class PaNet {
         send(p, PaPayload.STATE, state(p, a));
     }
 
+    /** [pa33c-2b] A short note on the panel's foot (not its words): "Come closer to hand things over". */
+    public static void note(ServerPlayer p, String text) {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("note", true);
+        t.putString("text", text);
+        send(p, PaPayload.SAY, t);
+    }
+
     /** A line said: to its owner (logged, spoken, with choices when it asks), and as a bubble to everyone in sight. */
     public static void say(PlayerAssistantEntity a, String text, boolean speak, @Nullable List<PaUnderstand.Choice> choices, int ticks) {
         say(a, text, speak, choices, ticks, false);
@@ -229,6 +237,13 @@ public final class PaNet {
                 .forEach(e -> pl.add(StringTag.valueOf(e.getValue() + " " + e.getKey())));
             t.put("pack", pl);
             t.putInt("packUsed", (int) a.getInventoryItems().stream().filter(s -> !s.isEmpty()).count());
+            PaPack.state(t, a, r);
+            BlockPos bedAt = r.lastBed != null ? r.lastBed : r.bed;           // [pa33c-2b] Settings, Advanced
+            if (bedAt != null) t.putString("bed", bedAt.getX() + " " + bedAt.getY() + " " + bedAt.getZ());
+            BlockPos home = PaOrders.homeOf(a);
+            if (home != null) t.putString("home", home.getX() + " " + home.getY() + " " + home.getZ());
+            t.putInt("xpNext", AssistantEntity.xpForLevel(a.veteranLevel() + 1));
+            t.putInt("xpHere", AssistantEntity.xpForLevel(a.veteranLevel()));                                   // [pa33c-2b] the Pack tab's slots, gear, open rows, locks
             t.putString("held", a.getMainHandItem().isEmpty() ? "nothing" : a.getMainHandItem().getHoverName().getString());
             t.putString("dim", a.level().dimension().location().getPath());
             t.putInt("dist", (int) Math.sqrt(a.distanceToSqr(p)));
