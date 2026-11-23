@@ -1438,4 +1438,108 @@ public class SupplyChainGameTests {
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
+
+    // ============================================================ [econ32d] nobody on the headframe
+
+    /** Ground a folk stands on, a block or so from the pithead's floor, off the headframe, with a way to the works' way in. */
+    private static String ground(MineWorksGameTests.Rig r, VillageFolkEntity m, BlockPos p) {
+        ServerLevel level = r.level();
+        if (com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, r.v(), p)) return "on the headframe";
+        if (p.getY() > MineWorksGameTests.TOP + 1) return "above the pithead's floor (Y" + p.getY() + ")";
+        net.minecraft.world.level.block.state.BlockState under = level.getBlockState(p.below());
+        if (under.is(net.minecraft.tags.BlockTags.LOGS) || under.is(net.minecraft.tags.BlockTags.LEAVES) || under.is(net.minecraft.tags.BlockTags.FENCES)
+            || !under.isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) return "not on ground (" + under.getBlock() + ")";
+        // A way from it to the works' way in, the walk to the town (the rig's pithead stands on a tower over the flat).
+        BlockPos in = com.jrpetty.mcassistant.entity.MineRoof.cellsForTests(level, r.v())[3];
+        m.teleportTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
+        m.setOnGround(true);                                    // (as its next tick would find it: a path is only made from the ground)
+        net.minecraft.world.level.pathfinder.Path way = m.getNavigation().createPath(in, 1);
+        if (!p.equals(in) && (way == null || !way.canReach())) return "no way to the works' way in at " + in.toShortString();
+        return null;
+    }
+
+    /**
+     * [econ32d] The headframe: the miners' plot is the pithead's floor, not the top of the headframe's beams (where the
+     * heightmap put it); a miner put on the beams is put down on the pithead's floor within ten seconds by its own ticks; a
+     * miner found in the well is put out on ground; and with every cell round the pithead's stop blocked, a rider still
+     * steps out on ground further round, never on the headframe. Every cell a block or so from the floor, with a way to the
+     * works' way in (the walk to the town).
+     */
+    @GameTest(template = "empty", timeoutTicks = 1200, batch = "sc27_off_the_headframe")
+    public static void sc27_off_the_headframe(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = liftRig(helper, 6700000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0);
+        com.jrpetty.mcassistant.entity.MineRoof.resetForTests();
+        Kit.Expect ok = new Kit.Expect();
+        BlockPos[] cells = com.jrpetty.mcassistant.entity.MineRoof.cellsForTests(level, v);
+        helper.assertTrue(cells != null, "the works");
+        int beams = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, r.sx(), r.sz());
+        BlockPos plot = MineWorks.pithead(level, v, new BlockPos(r.sx(), 0, r.sz()));
+        String floorWhy = ground(r, m, cells[0]), downWhy = ground(r, m, cells[1]);
+        Kit.log("[VT] sc27 the headframe's top at Y" + beams + "; the miners' plot " + (plot == null ? "none" : plot.toShortString()) + ", the pithead's floor "
+            + cells[0].toShortString() + " (" + (floorWhy == null ? "ground" : floorWhy) + "), put down at " + cells[1].toShortString() + " (" + (downWhy == null ? "ground" : downWhy) + ")");
+        ok.that(beams >= MineWorksGameTests.TOP + 3, "a headframe over the shaft: its top at Y" + beams);
+        ok.that(plot != null && plot.equals(cells[0]) && Math.abs(plot.getX() - r.sx()) <= 1 && Math.abs(plot.getZ() - r.sz()) <= 1, "the miners' plot is the pithead's floor: " + plot);
+        ok.that(floorWhy == null, "the pithead's floor is ground: " + floorWhy);
+        ok.that(downWhy == null, "the put-down cell is ground: " + downWhy);
+        // In the well, not riding: put out at the pithead, on ground.
+        com.jrpetty.mcassistant.entity.MineLift.done(m.getUUID());
+        m.teleportTo(r.sx() + 0.5, MineWorksGameTests.TOP - 3, r.sz() + 0.5);
+        com.jrpetty.mcassistant.entity.MineLift.watchForTests(level, v);
+        BlockPos out = m.blockPosition();
+        String outWhy = ground(r, m, out);
+        // Every cell round the pithead's stop fenced off: still out on ground further round.
+        com.jrpetty.mcassistant.entity.MineLift.Stop top = com.jrpetty.mcassistant.entity.MineLift.stops(v).get(0);
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) for (int dy = 0; dy <= 1; dy++) {
+            BlockPos p = top.board().offset(dx, dy, dz);
+            if (Math.max(Math.abs(p.getX() - r.sx()), Math.abs(p.getZ() - r.sz())) <= 1) continue;
+            if (level.getBlockState(p).isAir()) level.setBlock(p, Blocks.OAK_FENCE.defaultBlockState(), 2);
+        }
+        m.teleportTo(r.sx() + 0.5, MineWorksGameTests.TOP - 3, r.sz() + 0.5);
+        com.jrpetty.mcassistant.entity.MineLift.watchForTests(level, v);
+        BlockPos out2 = m.blockPosition();
+        boolean out2Head = com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, v, out2);
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) for (int dy = 0; dy <= 1; dy++) {
+            BlockPos p = top.board().offset(dx, dy, dz);
+            if (level.getBlockState(p).is(Blocks.OAK_FENCE)) level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+        }
+        String out2Why = out2Head ? "on the headframe" : ground(r, m, out2);    // (its way checked with the fences taken down again)
+        Kit.log("[VT] sc27 found in the well: put out at " + out.toShortString() + " (" + (outWhy == null ? "ground" : outWhy) + "); with the pithead fenced round, at "
+            + out2.toShortString() + " (" + (out2Why == null ? "ground" : out2Why) + ")");
+        ok.that(outWhy == null, "out of the well on ground: " + outWhy);
+        ok.that(out2Why == null, "out of the well on ground with the pithead's cells taken: " + out2Why);
+        // Stuck on the beams (its legs not its own): the guard's looks, a second apart, put it down on the third.
+        m.teleportTo(r.sx() + 0.5, beams, r.sz() + 0.5);
+        boolean first = false, second = false;
+        com.jrpetty.mcassistant.entity.MineRoof.checkForTests(m, level);
+        first = com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, v, m.blockPosition());
+        com.jrpetty.mcassistant.entity.MineRoof.checkForTests(m, level);
+        second = com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, v, m.blockPosition());
+        com.jrpetty.mcassistant.entity.MineRoof.checkForTests(m, level);
+        BlockPos put = m.blockPosition();
+        String putWhy = ground(r, m, put);
+        Kit.log("[VT] sc27 held on the beams: still up after one look " + first + ", two " + second + "; after three at " + put.toShortString()
+            + " (" + (putWhy == null ? "ground" : putWhy) + "), put down " + com.jrpetty.mcassistant.entity.MineRoof.DOWNS);
+        ok.that(first && second && com.jrpetty.mcassistant.entity.MineRoof.DOWNS == 1, "put down on the third look, not before");
+        ok.that(putWhy == null, "put down on ground: " + putWhy);
+        helper.assertTrue(ok.clean(), ok.summary());
+        // On the beams: down within ten seconds, by its own ticks.
+        m.teleportTo(r.sx() + 0.5, beams, r.sz() + 0.5);
+        final int[] tick = { 0 };
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            boolean up = com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, v, m.blockPosition())
+                || m.getBlockY() > MineWorksGameTests.TOP + 1 || !m.onGround();
+            if (up && tick[0] < 200) return false;
+            String why = up ? "still on the headframe" : ground(r, m, m.blockPosition());
+            Kit.log("[VT] sc27 put on the beams at Y" + beams + ": after " + tick[0] + " ticks at " + m.blockPosition().toShortString() + " ("
+                + (why == null ? "ground" : why) + "), put down " + com.jrpetty.mcassistant.entity.MineRoof.DOWNS);
+            helper.assertTrue(!up && tick[0] <= 200, "down off the headframe onto the pithead's ground within ten seconds: " + tick[0] + " ticks");
+            helper.assertTrue(why == null, "down on ground: " + why);
+            MineWorksGameTests.done(helper);
+            return true;
+        });
+    }
 }
