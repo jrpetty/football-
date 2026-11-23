@@ -635,10 +635,16 @@ public class PaTaskGoal extends Goal {
             a.getNavigation().stop();
             t.stage = 1;
         }
-        int done = a.getBlockY() - pillarStart;
+        int done = t.stage - 1;                                                    // blocks laid under it so far
         t.progress = done * 100 / Math.max(1, t.amount);
-        if (done >= t.amount) { a.earn("trick"); finish("Up " + t.amount + " blocks. Nice view.", false); return; }
+        if (done >= t.amount && a.onGround()) {
+            a.earn("trick");
+            a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.STAY);   // it stays up there till called down
+            finish("Up " + t.amount + " blocks. Nice view. Say \"come here\" when you want me down.", false);
+            return;
+        }
         if (!a.level().getBlockState(a.blockPosition().above(2)).isAir()) { finish("There's a ceiling in the way.", true); return; }
+        if (done >= t.amount) return;                                             // the last one laid: land on it
         if (a.onGround() && cool == 0 && jumpFrom == null) { jumpFrom = a.blockPosition(); a.jumpFromGround(); return; }
         if (jumpFrom != null && a.getY() >= jumpFrom.getY() + 1.05) {          // risen clear: the block goes where its feet were
             if (a.level().getBlockState(jumpFrom).canBeReplaced()) {
@@ -649,6 +655,7 @@ public class PaTaskGoal extends Goal {
                     s.shrink(1);
                     a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
                     a.placeSound(jumpFrom);
+                    t.stage++;
                     break;
                 }
             }
@@ -664,7 +671,7 @@ public class PaTaskGoal extends Goal {
     // ------------------------------------------------------------------ [pa33d] a trick shot at a block (a ping, a target, a bell)
 
     private void shoot() {
-        if (!a.hasBow() || a.countMatching(st -> st.is(Items.ARROW)) == 0) { finish(PaTalk.line(a, "need_bow"), true); return; }
+        if (!PaShots.hasBow(a) || a.countMatching(st -> st.is(Items.ARROW)) == 0) { finish(PaTalk.line(a, "need_bow"), true); return; }
         BlockPos at = t.pos;
         if (at == null) { finish("Point at what to hit.", true); return; }
         if (!PaShots.canShoot(a, at)) {

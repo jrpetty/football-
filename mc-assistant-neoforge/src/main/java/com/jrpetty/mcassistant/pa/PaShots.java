@@ -17,6 +17,25 @@ public final class PaShots {
 
     private PaShots() {}
 
+    /** A bow in its hand or its pack (its own: not the town watch's rule for who may draw one). */
+    public static boolean hasBow(PlayerAssistantEntity a) {
+        return a.getMainHandItem().is(Items.BOW) || a.countMatching(s -> s.is(Items.BOW)) > 0;
+    }
+
+    /** The bow into its hand (what was there goes in the pack). */
+    static void drawBow(PlayerAssistantEntity a) {
+        if (a.getMainHandItem().is(Items.BOW)) return;
+        var inv = a.getInventoryItems();
+        for (int i = 0; i < inv.size(); i++) {
+            if (inv.get(i).is(Items.BOW)) {
+                ItemStack held = a.getMainHandItem().copy();
+                a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, inv.get(i).copy());
+                inv.set(i, held);
+                return;
+            }
+        }
+    }
+
     /** Can it shoot that from here (in range for its level, with a clear line)? */
     public static boolean canShoot(PlayerAssistantEntity a, BlockPos at) {
         double d = Math.sqrt(a.blockPosition().distSqr(at));
@@ -29,7 +48,8 @@ public final class PaShots {
 
     /** One arrow at a block. True when it will hit it (the flight worked out at once); false for a miss or no shot. */
     public static boolean shootAt(PlayerAssistantEntity a, BlockPos at) {
-        if (!a.hasBow() || a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return false;
+        if (!hasBow(a) || a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return false;
+        drawBow(a);
         int lv = a.veteranLevel();
         float velocity = 2.6F + 0.04F * lv;
         Arrow arrow = new Arrow(a.level(), a, new ItemStack(Items.ARROW), a.getMainHandItem().copy());

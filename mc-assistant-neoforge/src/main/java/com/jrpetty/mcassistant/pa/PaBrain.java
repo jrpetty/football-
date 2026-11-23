@@ -45,6 +45,9 @@ public final class PaBrain {
         public int blockUntil, clutchTick, pearlAt = -100000, pearlStuck;
         public double pearlDist;
         @Nullable public BlockPos clutchAt;
+        /** [pa33d] A bare ping it glances at, till when (a turn of the head, nothing more). */
+        @Nullable public BlockPos glanceAt;
+        public int glanceUntil;
         int ownerHurtTick = -100000, meHurtTick = -100000, lastTip, lastAuto, stuckFor, sortedAt = -100000;
         int lastDiamonds = -1, threatTick = -100000;
         @Nullable Vec3 lastPos;
@@ -114,6 +117,7 @@ public final class PaBrain {
             if (a.mind.climbing > 0) PaClimb.tick(a);              // out of the hole first, then on with the plan
             else feed(a);                                         // never skipped: stop and orders must be prompt
         }
+        PaMoves.tick(a);                                          // [pa33d] shield, clutch, sprint, pearl: never held back by the budget
         if (!spare) return;
         if (t % 10 == 0) state(a);
         if (a.mind.openPanelAt > 0 && a.tickCount >= a.mind.openPanelAt) {
@@ -124,7 +128,10 @@ public final class PaBrain {
         if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
         if (t % 20 == 5) sleptIn(a);                              // [pa33c-2b] the bed it sleeps in is its spawn
         if (t % 10 == 3) PaSleep.tick(a);                         // [pa33d] bedtime
-        PaMoves.tick(a);                                          // [pa33d] shield, clutch, sprint, pearl by level
+        if (a.mind.glanceAt != null) {                            // [pa33d] a look at a bare ping
+            if (a.tickCount < a.mind.glanceUntil) a.getLookControl().setLookAt(a.mind.glanceAt.getX() + 0.5, a.mind.glanceAt.getY() + 0.5, a.mind.glanceAt.getZ() + 0.5);
+            else a.mind.glanceAt = null;
+        }
         if (t % 2 == 0) PaChallenge.tick(a);                      // [pa33d] a race, a mining minute, a shooting match
         if (t % 10 == 0) boat(a);                                 // [pa33b] along with its player on the water
         if (t % 40 == 0) {

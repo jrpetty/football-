@@ -189,6 +189,11 @@ public final class PaPingClient {
         Marker m = new Marker(aim.at(), aim.label(), act ? PaPings.quick(aim.target()).sort() : PaPings.bare(), PaPings.MARK_MS, aim, !act);
         add(m);
         chime(mc, aim.target() == PaPings.Target.MOB || aim.target() == PaPings.Target.LAVA);
+        if (!act && aim.block() != null) {                                 // [pa33d] it glances at it (a look, never an order)
+            CompoundTag g = new CompoundTag();
+            g.putInt("x", aim.block().getX()); g.putInt("y", aim.block().getY()); g.putInt("z", aim.block().getZ());
+            PaClient.send("glance", g);
+        }
         if (act) send(aim, PaPings.quick(aim.target()), null);
         else if (PaClientConfig.get(PaClientConfig.SHAREPINGS, false)) {
             CompoundTag t = new CompoundTag();

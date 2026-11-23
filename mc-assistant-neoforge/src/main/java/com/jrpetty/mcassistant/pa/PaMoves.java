@@ -75,10 +75,12 @@ public final class PaMoves {
         if (a.onGround() || a.isInWater() || a.fallDistance < 4.0F || a.getDeltaMovement().y > -0.5) return;
         if (a.level().dimension() == net.minecraft.world.level.Level.NETHER) return;   // water boils there
         if (a.countMatching(s -> s.is(Items.WATER_BUCKET)) == 0) return;
-        BlockPos ground = groundBelow(a, 4);
+        double vy = -a.getDeltaMovement().y;
+        int look = (int) Math.ceil(vy * 2 + 3);                              // as far as the next two ticks of falling
+        BlockPos ground = groundBelow(a, look);
         if (ground == null) return;
         double above = a.getY() - (ground.getY() + 1);
-        if (above > 3.2 || a.fallDistance + above < 6.0F) return;            // only a fall that would hurt, and only just before it lands
+        if (above > Math.max(3.2, vy * 1.6 + 0.6) || a.fallDistance + above < 6.0F) return;   // only a fall that would hurt, just before it lands
         BlockPos at = ground.above();
         if (!a.level().getBlockState(at).canBeReplaced()) return;
         a.level().setBlock(at, Blocks.WATER.defaultBlockState(), 3);
@@ -164,5 +166,10 @@ public final class PaMoves {
         a.level().playSound(null, a.blockPosition(), net.minecraft.sounds.SoundEvents.ENDER_PEARL_THROW, net.minecraft.sounds.SoundSource.NEUTRAL, 0.5F, 0.4F);
         a.playAnim("point");
         a.earn("trick");
+    }
+
+    /** Tests: a pearl at a spot, now. */
+    public static void throwPearlForTests(PlayerAssistantEntity a, Vec3 to) {
+        throwPearl(a, to);
     }
 }

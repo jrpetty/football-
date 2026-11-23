@@ -117,6 +117,12 @@ public final class PaServer {
                 if (args.contains("xpMult")) PaConfig.setXpMultiplier(args.getDouble("xpMult"));
                 PaNet.refresh(p, a);
             }
+            case "glance" -> {                                      // [pa33d] a bare ping: it looks over, nothing more (no order, no log)
+                if (a == null || !a.obeys(p) || a.getTarget() != null || a.isSleeping() || a.distanceToSqr(p) > 48 * 48) return;
+                if (!MARKS.computeIfAbsent(p.getUUID(), k -> new PaPings.Rate()).allow(System.currentTimeMillis())) return;
+                a.mind.glanceAt = new BlockPos(args.getInt("x"), args.getInt("y"), args.getInt("z"));
+                a.mind.glanceUntil = a.tickCount + 40;
+            }
             case "packop" -> {                                      // [pa33c-2b] the Pack tab: a move or a button
                 if (a == null || r == null || !a.obeys(p)) return;
                 String note = PaPack.op(p, a, r, args);

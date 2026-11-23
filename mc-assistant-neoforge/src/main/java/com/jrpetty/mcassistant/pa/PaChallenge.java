@@ -77,7 +77,7 @@ public final class PaChallenge {
                 BlockPos target = look.block();
                 if (target == null || !a.level().getBlockState(target).is(net.minecraft.world.level.block.Blocks.TARGET))
                     return "Point at a target block (or ping one) and say \"shooting contest\". Ten shots each.";
-                if (a.countMatching(s -> s.is(net.minecraft.world.item.Items.ARROW)) < 5 || !a.hasBow()) return PaTalk.line(a, "need_bow");
+                if (a.countMatching(s -> s.is(net.minecraft.world.item.Items.ARROW)) < 5 || !PaShots.hasBow(a)) return PaTalk.line(a, "need_bow");
                 GAMES.put(p.getUUID(), new Game("shoot", target.immutable(), now + COUNT, now + COUNT + 20 * 60, 0, 0));
                 a.plan.paused = true;
                 return PaTalk.line(a, "challenge_shoot");

@@ -1618,4 +1618,131 @@ public class PlayerAssistantGameTests {
             });
         });
     }
+
+    private static void atLevel(PlayerAssistantEntity a, int lv) {
+        a.setPaXpForTests(com.jrpetty.mcassistant.pa.PaLevels.xpFor(lv));
+    }
+
+    /** pai47: skills by level: locked ones say when they open; taming a wolf for its player; trading with a villager with
+     *  its emeralds; pillaring up. [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pai47_skills")
+    public static void pai47_skills(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_138_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 1);
+        say(p, a, "enchant my sword");
+        helper.assertTrue(fromLists(lastWords(a), "say.skill_locked") && lastWords(a).contains("6"), "locked till level 6: " + lastWords(a));
+        atLevel(a, 3);
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.BONE, 30));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.EMERALD, 5));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.COBBLESTONE, 16));
+        net.minecraft.world.entity.animal.Wolf wolf = EntityType.WOLF.create(level);
+        wolf.moveTo(x + 6.5, y, Z + 2.5, 0, 0);
+        wolf.setNoAi(true);
+        level.addFreshEntity(wolf);
+        say(p, a, "tame that wolf", null, wolf.getId());
+        helper.runAfterDelay(400, () -> {
+            helper.assertTrue(wolf.isTame() && wolf.isOwnedBy(p), "tamed for its player: " + wolf.isTame() + " (" + lastWords(a) + ")");
+            net.minecraft.world.entity.npc.Villager v = EntityType.VILLAGER.create(level);
+            v.moveTo(x - 5.5, y, Z + 2.5, 0, 0);
+            v.setNoAi(true);
+            v.setVillagerData(v.getVillagerData().setProfession(net.minecraft.world.entity.npc.VillagerProfession.FARMER).setLevel(1));
+            level.addFreshEntity(v);
+            boolean sellsBread = v.getOffers().stream().anyMatch(o -> o.getResult().is(Items.BREAD));
+            int bread = a.countMatching(st -> st.is(Items.BREAD));
+            say(p, a, "buy bread from that villager", null, v.getId());
+            helper.runAfterDelay(200, () -> {
+                int got = a.countMatching(st -> st.is(Items.BREAD)) - bread;
+                helper.assertTrue(!sellsBread || got > 0 && a.countMatching(st -> st.is(Items.EMERALD)) < 5, "bought bread with its emeralds: " + got + " (" + lastWords(a) + ")");
+                int y0 = a.getBlockY();
+                say(p, a, "pillar up 4");
+                helper.runAfterDelay(160, () -> {
+                    helper.assertTrue(a.getBlockY() >= y0 + 4 && level.getBlockState(a.blockPosition().below()).is(Blocks.COBBLESTONE), "pillared up 4: " + (a.getBlockY() - y0) + " (" + lastWords(a) + ")");
+                    Kit.log("pai47 skills: locked line, wolf tamed, " + got + " bread bought, pillared " + (a.getBlockY() - y0));
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
+    /** pai48: moves by level: a trick shot at a target block (level 10: on target), a water-bucket clutch on a long fall
+     *  (level 8: no harm, the water back in the bucket), an ender pearl to catch up (level 9). [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "pai48_moves")
+    public static void pai48_moves(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_141_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 10);
+        a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(Items.BOW));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.ARROW, 16));
+        BlockPos target = new BlockPos(x + 12, y + 1, Z);
+        level.setBlock(target, Blocks.TARGET.defaultBlockState(), 3);
+        a.teleportTo(x + 0.5, y, Z + 0.5);
+        int arrows = a.countMatching(st -> st.is(Items.ARROW));
+        say(p, a, "shoot that target", target, -1);
+        helper.runAfterDelay(120, () -> {
+            helper.assertTrue(a.countMatching(st -> st.is(Items.ARROW)) < arrows, "it shot");
+            helper.assertTrue(fromLists(lastWords(a), "say.trick_hit", "say.trick_long"), "level 10: on target: " + lastWords(a));
+            // the clutch: up twenty blocks with a water bucket
+            atLevel(a, 8);
+            a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.item.ItemStack.EMPTY);
+            a.insertGiven(new net.minecraft.world.item.ItemStack(Items.WATER_BUCKET));
+            say(p, a, "stay here");
+            a.setHealth(a.getMaxHealth());
+            float hp = a.getHealth();
+            a.teleportTo(x + 4.5, y + 22, Z + 6.5);
+            helper.runAfterDelay(80, () -> {
+                helper.assertTrue(a.getHealth() >= a.getMaxHealth() - 0.01F && a.getLastDamageSource() == null, "no harm from the fall: " + a.getHealth() + " of " + a.getMaxHealth()
+                    + ", hurt by " + (a.getLastDamageSource() == null ? "nothing" : a.getLastDamageSource().getMsgId()) + " | " + lastWords(a));
+                helper.assertTrue(a.countMatching(st -> st.is(Items.WATER_BUCKET)) == 1, "the water back in the bucket");
+                boolean wet = false;
+                for (BlockPos q : BlockPos.betweenClosed(new BlockPos(x + 2, y - 1, Z + 4), new BlockPos(x + 7, y + 2, Z + 9))) if (level.getBlockState(q).is(Blocks.WATER)) wet = true;
+                helper.assertTrue(!wet, "no water left behind");
+                // the pearl
+                atLevel(a, 9);
+                a.insertGiven(new net.minecraft.world.item.ItemStack(Items.ENDER_PEARL, 2));
+                a.teleportTo(x + 0.5, y, Z + 0.5);
+                com.jrpetty.mcassistant.pa.PaMoves.throwPearlForTests(a, new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5));
+                helper.runAfterDelay(80, () -> {
+                    helper.assertTrue(a.position().distanceTo(new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5)) < 4.0, "pearled across: " + a.blockPosition().toShortString());
+                    Kit.log("pai48 moves: trick shot hit, clutch, pearl");
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
+    /** pai49: better gear from its pack (iron ingots into a pickaxe and a sword, put on); a run to a marker against its
+     *  player (it wins against one who stands still, and says so). [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 1500, batch = "pai49_gear_race")
+    public static void pai49_gear_race(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_144_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 6);
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.IRON_INGOT, 5));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.STICK, 8));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 16));
+        say(p, a, "upgrade your gear");
+        helper.runAfterDelay(500, () -> {
+            boolean pick = a.countMatching(st -> st.is(Items.IRON_PICKAXE)) > 0 || a.getMainHandItem().is(Items.IRON_PICKAXE);
+            boolean sword = a.countMatching(st -> st.is(Items.IRON_SWORD)) > 0 || a.getMainHandItem().is(Items.IRON_SWORD);
+            helper.assertTrue(pick && sword, "an iron pickaxe and sword: " + pick + ", " + sword + " (" + lastWords(a) + ")");
+            BlockPos goal = new BlockPos(x + 20, y - 1, Z + 4);
+            CompoundTag t = new CompoundTag();
+            t.putString("text", "race me to that tree");
+            t.putInt("bx", goal.getX()); t.putInt("by", goal.getY()); t.putInt("bz", goal.getZ());
+            PaServer.act(p, "talk", t);
+            helper.assertTrue(fromLists(lastWords(a), "say.challenge_race"), "on your marks: " + lastWords(a));
+            helper.succeedWhen(() -> {
+                helper.assertTrue(fromLists(lastWords(a), "say.challenge_won", "tone.challenge.won.cheeky", "tone.challenge.won.unfiltered")
+                    || lastWords(a).toLowerCase().contains("win"), "it won the run: " + lastWords(a));
+                Kit.log("pai49: upgraded, won the run: " + lastWords(a));
+            });
+        });
+    }
 }
