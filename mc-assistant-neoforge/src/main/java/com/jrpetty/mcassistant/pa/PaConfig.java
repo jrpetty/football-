@@ -17,6 +17,7 @@ public final class PaConfig {
     static final ModConfigSpec.BooleanValue ROAST_OTHERS;
     static final ModConfigSpec.IntValue START_HEARTS, MAX_HEARTS;             // [pa33c-2b]
     static final ModConfigSpec.BooleanValue KEEP_PACK;
+    static final ModConfigSpec.DoubleValue XP_MULT;                           // [pa33d]
     static final ModConfigSpec.BooleanValue FREE_FIRST, SAFETY, TOWN_WORK, LLM_ON;
     static final ModConfigSpec.ConfigValue<String> LLM_URL, LLM_KEY, LLM_MODEL;
 
@@ -48,6 +49,8 @@ public final class PaConfig {
         MAX_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 10.").defineInRange("maxHearts", 10, 1, 50);
         KEEP_PACK = b.comment("[pa33c-2b] Does a fallen assistant keep its pack (true), or drop it where it fell like a player (false)?")
             .define("keepPackOnDeath", true);
+        XP_MULT = b.comment("[pa33d] How fast assistants level up: their experience is multiplied by this (1 = the intended grind, many game days to level 10).",
+            "Operators can change it in game from the assistant's panel (Settings, Advanced).").defineInRange("xpMultiplier", 1.0, 0.0, 100.0);
         ROAST_OTHERS = b.comment("[pa33b] May an assistant roast another player back when that player roasts it or its owner first? (Never unprompted.)")
             .define("allowRoastOthers", true);
         b.pop();
@@ -101,6 +104,26 @@ public final class PaConfig {
     public static int maxHearts() { return read(MAX_HEARTS, 10); }
 
     public static boolean keepPack() { return read(KEEP_PACK, true); }
+
+    /** [pa33d] The server's experience multiplier (operators set it from the panel). */
+    public static double xpMultiplier() {
+        Double t = xpForTests;
+        return t != null ? t : read(XP_MULT, 1.0);
+    }
+
+    private static volatile Double xpForTests;
+
+    public static void xpMultiplierForTests(Double m) { xpForTests = m; }
+
+    /** [pa33d] An operator's change from the panel: kept in the server's config file. */
+    public static void setXpMultiplier(double m) {
+        try {
+            XP_MULT.set(Math.max(0.0, Math.min(100.0, m)));
+            XP_MULT.save();
+        } catch (Exception e) {
+            xpForTests = Math.max(0.0, Math.min(100.0, m));            // no config loaded (a test): for this run
+        }
+    }
 
     public static boolean allowRoastOthers() { return read(ROAST_OTHERS, true); }
 

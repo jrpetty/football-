@@ -807,7 +807,9 @@ public class PaScreen extends Screen {
         g.fill(x, cy, x + Math.round(bw * part), cy + 7, BRAND_LIGHT);
         if (in(mx, my, x, cy, bw, 7)) tipNow = xp + " xp; level " + (s.getInt("level") + 1) + " at " + hi;
         cy += 10;
-        cy = line(g, xp + " xp  ·  " + (hi - xp) + " to the next level  ·  " + s.getInt("done") + " jobs done for you", x, cy, half);
+        cy = line(g, (s.getInt("level") >= 10 ? xp + " xp  ·  the top level" : xp + " xp  ·  " + (hi - xp) + " to level " + (s.getInt("level") + 1))
+            + "  ·  " + s.getInt("done") + " jobs done for you", x, cy, half);
+        if (!s.getString("nextSkills").isEmpty()) cy = para(g, s.getString("nextSkills"), x, cy, half, BRAND);   // [pa33d] what the next level opens
         PlayerAssistantEntity a = PaClient.mine();
         float hp = a != null ? a.getHealth() : s.getFloat("hp"), max = a != null ? a.getMaxHealth() : Math.max(1, s.getFloat("maxHp"));
         int food = a != null ? a.food() : s.getInt("hunger");
@@ -827,6 +829,17 @@ public class PaScreen extends Screen {
         int leftEnd = cy;
         int sx = half == iw ? x : x + half + 12;
         cy = half == iw ? cy + 6 : y;
+        UiStyle.heading(g, font, "Its skills", sx, cy, half);                // [pa33d] what each level opens, ticked when it has it
+        cy += 14;
+        int lvNow = s.getInt("level");
+        for (Tag t : s.getList("skills", Tag.TAG_COMPOUND)) {
+            CompoundTag c = (CompoundTag) t;
+            boolean got = lvNow >= c.getInt("lv");
+            String row = (got ? "\u2714 " : "L" + c.getInt("lv") + "  ") + c.getString("l");
+            g.drawString(font, UiStyle.clip(font, row, half), sx, cy, got ? UiStyle.TEXT : faint(), false);
+            cy += 10;
+        }
+        cy += 6;
         UiStyle.heading(g, font, "Its record", sx, cy, half);
         cy += 14;
         ListTag deeds = s.getList("deeds", Tag.TAG_STRING);
@@ -1039,6 +1052,12 @@ public class PaScreen extends Screen {
         return cy;
     }
 
+    private void admin(double mult) {
+        CompoundTag t = new CompoundTag();
+        t.putDouble("xpMult", Math.max(0, Math.min(100, mult)));
+        PaClient.send("admin", t);
+    }
+
     private int secLook(GuiGraphics g, CompoundTag s, int sx, int cy, int half, int mx, int my) {
         int lk = Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length);
         g.drawString(font, "Its look", sx, cy + 3, muted(), false);
@@ -1088,6 +1107,15 @@ public class PaScreen extends Screen {
         else button(g, "Really reset", sx + bw + 4, cy, bw, 14, mx, my, true, true, "Its settings go back to how they came",
             () -> { CompoundTag t = new CompoundTag(); t.putBoolean("reset", true); PaClient.send("settings", t); confirmReset = false; });
         cy += 20;
+        if (s.getBoolean("op")) {                                       // [pa33d] operators: how fast every assistant levels on this server
+            UiStyle.heading(g, font, "Server (operators)", sx, cy, half);
+            cy += 14;
+            double m = s.getDouble("xpMult");
+            String shown = (m == Math.floor(m) ? String.valueOf((int) m) : String.format(java.util.Locale.ROOT, "%.2f", m)) + "\u00D7 xp";
+            cy = stepper(g, "Levelling", shown, sx, cy, mx, my, () -> admin(m <= 1 ? Math.max(0, m - 0.25) : m - 1), () -> admin(m < 1 ? m + 0.25 : m + 1));
+            cy = para(g, "Every assistant's experience on this server is multiplied by this (1: the intended grind, many game days to level 10).", sx, cy, half, faint());
+            cy += 4;
+        }
         UiStyle.heading(g, font, "Dismiss", sx, cy, half);
         cy += 14;
         cy = para(g, "Send " + s.getString("name") + " away for good. It gives back everything it carries first. This can't be undone.", sx, cy, half, faint());

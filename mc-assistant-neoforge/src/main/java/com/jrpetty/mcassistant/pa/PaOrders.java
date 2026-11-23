@@ -464,12 +464,11 @@ public final class PaOrders {
                 return i.kind() == Kind.AUTO_ON ? "Auto-help is on: when you've nothing for me I'll keep the base tidy, the furnace going and the farm picked, and tell you what I'm up to."
                     : "Auto-help is off. I'll only do what you ask.";
             }
-            case SLEEP -> {
-                PaData.Rec r = a.rec();
-                if (r != null) { r.sleepAtNight = true; PaData.touch(); }
+            case SLEEP -> {                                       // [pa33d] to bed now (at night), or at dark
                 a.setNightHome(true);
-                return "I'll take shelter at night from now on.";
+                return PaSleep.goToBed(a);
             }
+            case WAKE -> { return PaSleep.wakeUp(a); }
             case RENAME -> {
                 PaLife.rename(a, i.item());
                 return "Call me " + a.displayNameCap() + " from now on.";
@@ -515,6 +514,7 @@ public final class PaOrders {
                 PaNet.send(p, PaPayload.GUIDE, t);
                 return "";
             }
+            case CHALLENGE -> { return PaChallenge.start(p, a, i.item(), look); }     // [pa33d] race me, mining, shooting
             case GREETING -> {
                 return PaTalk.line(a, "hello", "owner", p.getGameProfile().getName());
             }
@@ -588,14 +588,23 @@ public final class PaOrders {
                 if (k == GatherGoal.Kind.OBSIDIAN && !hasDiamondPick(a)) return "Obsidian needs a diamond pickaxe, and I haven't one.";
                 int amount = n > 0 ? n : 16;
                 // [pa33c-2b] "chop that" at a tree you point at or pinged: it walks there and fells that one
-                if (i.place() == PaIntent.Place.LOOKED && look.block() != null && k == GatherGoal.Kind.LOGS && kindAt(a, look.block()) == k) {
+                BlockPos lookedLog = look.block() == null ? null : treeLog(a, look.block());   // [pa33d] the leaves mean their tree
+                if (i.place() == PaIntent.Place.LOOKED && lookedLog != null && k == GatherGoal.Kind.LOGS) {
                     int logs = 0;
-                    BlockPos b = look.block();
+                    BlockPos b = lookedLog;
                     while (logs < 32 && a.level().getBlockState(b.below()).is(net.minecraft.tags.BlockTags.LOGS)) b = b.below();
                     for (BlockPos c = b; logs < 32 && a.level().getBlockState(c).is(net.minecraft.tags.BlockTags.LOGS); c = c.above()) logs++;
                     amount = n > 0 ? n : Math.max(3, logs);
                     PaPlan.Step s = step("chop that tree", Kind.GATHER, eta(k, amount) + 10);
-                    s.jobs.add(Job.goTo(b.getX() + " " + b.getY() + " " + b.getZ()));
+                    BlockPos stand = b;                                         // beside the trunk, not in it
+                    double sd = Double.MAX_VALUE;
+                    for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                        BlockPos q = b.relative(dir);
+                        if (!a.level().getBlockState(q).getCollisionShape(a.level(), q).isEmpty()) continue;
+                        double d = q.distSqr(a.blockPosition());
+                        if (d < sd) { sd = d; stand = q; }
+                    }
+                    s.jobs.add(Job.goTo(stand.getX() + " " + stand.getY() + " " + stand.getZ()));
                     s.jobs.add(Job.gather(k, amount));
                     s.count = what;
                     s.target = amount;
@@ -772,7 +781,105 @@ public final class PaOrders {
                 out.add(s);
                 return null;
             }
+            // ---------------------------------------------------------------- [pa33d] the rest of the game, by level
+            case ENCHANT -> {
+                String lock = locked(a, "enchant");
+                if (lock != null) return lock;
+                if (a.countMatching(st -> st.is(net.minecraft.world.item.Items.LAPIS_LAZULI)) == 0) return PaTalk.line(a, "need_lapis");
+                PaPlan.Step s = step("enchant my " + i.item(), Kind.ENCHANT, 40);
+                s.jobs.add(Job.enchant(i.item().equals("gear") || i.item().equals("items") || i.item().equals("stuff") || i.item().equals("things") ? "gear" : i.item()));
+                out.add(s);
+                return null;
+            }
+            case NETHER -> {
+                String lock = locked(a, "nether");
+                if (lock != null) return lock;
+                if (i.raw() != null && i.raw().toLowerCase().matches(".*\\b(come|follow|go|head|let'?s go)\\b.*nether.*") && !i.raw().toLowerCase().matches(".*\\b(get|gather|collect|mine|fetch|bring)\\b.*")) {
+                    a.setMode(AssistantEntity.Mode.FOLLOW);           // through the portal at your heels
+                    a.mind.post = null;                                // no step: nothing to "finish", it just comes along
+                    PaTalk.reply(a, PaTalk.line(a, "nether_with"));
+                    return null;
+                }
+                int amount = n > 0 ? n : 16;
+                PaPlan.Step s = step("fetch " + amount + " " + i.item() + " from the Nether", Kind.NETHER, 240);
+                s.jobs.add(Job.nether(i.item(), amount));
+                out.add(s);
+                return null;
+            }
+            case TAME -> {
+                String lock = locked(a, "tame");
+                if (lock != null) return lock;
+                BlockPos at = look.entity() >= 0 && p.level().getEntity(look.entity()) != null ? p.level().getEntity(look.entity()).blockPosition() : where(p, a, i.place(), look);
+                PaPlan.Step s = step("tame the " + (i.item().equals("any") ? "animal" : i.item()), Kind.TAME, 30);
+                s.task = new PaTask(PaTask.Kind.TAME, at, i.item(), look.entity());
+                out.add(s);
+                return null;
+            }
+            case VTRADE -> {
+                String lock = locked(a, "trade");
+                if (lock != null) return lock;
+                BlockPos at = look.entity() >= 0 && p.level().getEntity(look.entity()) != null ? p.level().getEntity(look.entity()).blockPosition() : where(p, a, i.place(), look);
+                String[] bs = i.item().split(":", 2);
+                PaPlan.Step s = step((bs[0].equals("sell") ? "sell " : "buy ") + bs[1].replace("anything", "something") + (bs[0].equals("sell") ? " to" : " from") + " the villager", Kind.VTRADE, 25);
+                s.task = new PaTask(PaTask.Kind.VTRADE, at, i.item(), n);
+                out.add(s);
+                return null;
+            }
+            case BREW -> {
+                String lock = locked(a, "brew");
+                if (lock != null) return lock;
+                PaPlan.Step s = step("brew " + i.item() + " potions", Kind.BREW, 60);
+                s.task = new PaTask(PaTask.Kind.BREW, look.block() != null ? look.block() : a.blockPosition(), i.item(), 3);
+                out.add(s);
+                return null;
+            }
+            case UPGRADE -> {
+                String lock = locked(a, "upgrade");
+                if (lock != null) return lock;
+                List<String> want = PaGear.upgrades(a);
+                if (want.isEmpty()) return PaTalk.line(a, "upgrade_none");
+                for (String w : want) {
+                    String why = plan(p, a, new PaIntent(Kind.CRAFT, w, 1, PaIntent.Place.NONE, said), look, out, said);
+                    if (why != null && out.isEmpty()) return why;
+                }
+                PaPlan.Step eq = step("put on my new gear", Kind.UPGRADE, 5);
+                eq.task = new PaTask(PaTask.Kind.EQUIP, null, "", 0);
+                out.add(eq);
+                return null;
+            }
+            case PLACE_THING -> {
+                String lock = locked(a, "redstone");
+                if (lock != null) return lock;
+                return plan(p, a, new PaIntent(Kind.CRAFT, i.item(), 1, i.place() == PaIntent.Place.NONE ? PaIntent.Place.LOOKED : i.place(), said), look, out, said);
+            }
+            case MAP -> {
+                String lock = locked(a, "explore");
+                if (lock != null) return lock;
+                PaPlan.Step s = step("map the area", Kind.MAP, 90);
+                s.task = new PaTask(PaTask.Kind.MAP, p.blockPosition(), "", 0);
+                out.add(s);
+                return null;
+            }
+            case PILLAR -> {
+                String lock = locked(a, "bridge");
+                if (lock != null) return lock;
+                PaPlan.Step s = step("pillar up " + Math.max(2, Math.min(24, n)) + " blocks", Kind.PILLAR, 10 + n * 2);
+                s.task = new PaTask(PaTask.Kind.PILLAR, null, "", Math.max(2, Math.min(24, n)));
+                out.add(s);
+                return null;
+            }
+            case SHOOT_AT -> {
+                String lock = locked(a, "trick");
+                if (lock != null) return lock;
+                if (look.block() == null) return "Look at the thing to hit, or ping it, and say it again.";
+                PaPlan.Step s = step("a trick shot", Kind.SHOOT_AT, 10);
+                s.task = new PaTask(PaTask.Kind.SHOOT, look.block(), "", 3);
+                out.add(s);
+                return null;
+            }
             case BRIDGE -> {
+                String lock = locked(a, "bridge");
+                if (lock != null) return lock;
                 PaPlan.Step s = step("build a bridge", Kind.BRIDGE, 90);
                 BlockPos at = where(p, a, i.place(), look);
                 if (at != null) s.jobs.add(Job.goTo(at.getX() + " " + at.getY() + " " + at.getZ()));
@@ -851,6 +958,8 @@ public final class PaOrders {
                 return null;
             }
             case BREED -> {
+                String lockB = locked(a, "tame");                    // [pa33d] animals at level 2
+                if (lockB != null) return lockB;
                 PaPlan.Step s = step("breed the " + i.item(), Kind.BREED, 40);
                 s.jobs.add(Job.breed(i.item().equals("animals") ? null : animal(i.item()), n > 0 ? n : 2));
                 out.add(s);
@@ -1034,6 +1143,14 @@ public final class PaOrders {
 
     // ------------------------------------------------------------------ helpers
 
+    /** [pa33d] A skill it hasn't the level for yet: an honest line saying when (null when it has it). */
+    @Nullable
+    static String locked(PlayerAssistantEntity a, String skill) {
+        int need = PaLevels.levelOf(skill);
+        if (need == 0 || a.veteranLevel() >= need) return null;
+        return PaTalk.line(a, "skill_locked", "need", String.valueOf(need), "level", String.valueOf(a.veteranLevel()));
+    }
+
     static PaPlan.Step step(String label, Kind kind, int eta) {
         PaPlan.Step s = new PaPlan.Step();
         s.label = label;
@@ -1130,6 +1247,21 @@ public final class PaOrders {
             case BUILD -> 180;
             default -> 30;
         };
+    }
+
+    /** The log a look at a tree means: the block itself, or (looking at its leaves) the nearest log below them. */
+    @Nullable
+    static BlockPos treeLog(AssistantEntity a, BlockPos b) {
+        if (a.level().getBlockState(b).is(net.minecraft.tags.BlockTags.LOGS)) return b;
+        if (!a.level().getBlockState(b).is(net.minecraft.tags.BlockTags.LEAVES)) return null;
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (BlockPos q : BlockPos.betweenClosed(b.offset(-3, -5, -3), b.offset(3, 1, 3))) {
+            if (!a.level().getBlockState(q).is(net.minecraft.tags.BlockTags.LOGS)) continue;
+            double d = q.distSqr(b);
+            if (d < bd) { bd = d; best = q.immutable(); }
+        }
+        return best;
     }
 
     @Nullable

@@ -40,6 +40,8 @@ public final class PaPlan {
         /** Something it decided to do by itself (auto-help): any order from its player comes first. */
         public boolean auto;
         public boolean fed;
+        /** [pa33d] The most it has counted so far (not saved): what was handed over on the way still counts. */
+        public int best = -1;
         /** Times it has stopped to make a new tool for this step (a pickaxe worn out half way). */
         public int retools;
         /** Keep the progress counted so far when the step starts again after a new tool. */

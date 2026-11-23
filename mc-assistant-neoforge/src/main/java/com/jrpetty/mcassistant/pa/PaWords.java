@@ -88,10 +88,11 @@ public final class PaWords {
         "hello", "goodbye", "bye", "yes", "no", "ok", "night", "dark", "torch", "small", "big", "little", "tiny",
         "quick", "simple", "basic", "nice", "everything", "anything", "something", "auto", "yourself", "own",
         "market", "shop", "coins", "money",
-        "ping", "pings", "mark", "marker", "bridge", "waypoint", "route", "skip", "closest", "nearest", "died"));   // [pa33c-2b]
+        "ping", "pings", "mark", "marker", "bridge", "waypoint", "route", "skip", "closest", "nearest", "died",   // [pa33c-2b]
+        "tame", "lever", "button", "wolf", "pillar", "enchant", "quartz", "parrot", "ocelot", "upgrade", "netherrack"));   // [pa33d]
 
     /** Plain English the assistant must not "correct" into an order word ("mind" is not "mine", "your" is not "you"). */
-    public static final Set<String> COMMON = new java.util.HashSet<>(List.of(("that this those these them they their there then than with have want need some when "
+    public static final Set<String> COMMON = new java.util.HashSet<>(List.of(("gear target trick shot armor armour villager race contest nether bell wake bedtime that this those these them they their there then than with have want need some when "
         + "where which while your yours ours from into onto over under good nice job thing things also just only much many more most less very "
         + "really sure keep going never mind take back feed done been were will would could should shall might must does gone came gave went "
         + "work works name call called once before again around about above below next left right front behind inside outside each every other "

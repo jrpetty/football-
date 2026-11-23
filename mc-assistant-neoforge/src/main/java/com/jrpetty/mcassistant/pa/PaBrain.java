@@ -37,6 +37,17 @@ public final class PaBrain {
         @Nullable public BlockPos post;
         @Nullable public BlockPos roamCentre;
         long nightWarnedDay = -1;
+        /** [pa33d] Told to go to bed (till morning); when it last talked in its sleep; was its player asleep. */
+        public boolean bedtime, ownerWasAsleep;
+        public int sleepTalkAt;
+        /** [pa33d] Moves: the shield up (till when), the clutch's water (and when), the last pearl and how stuck it is. */
+        public boolean blocking;
+        public int blockUntil, clutchTick, pearlAt = -100000, pearlStuck;
+        public double pearlDist;
+        @Nullable public BlockPos clutchAt;
+        /** [pa33d] A bare ping it glances at, till when (a turn of the head, nothing more). */
+        @Nullable public BlockPos glanceAt;
+        public int glanceUntil, endSaidAt = -100000;
         int ownerHurtTick = -100000, meHurtTick = -100000, lastTip, lastAuto, stuckFor, sortedAt = -100000;
         int lastDiamonds = -1, threatTick = -100000;
         @Nullable Vec3 lastPos;
@@ -106,6 +117,7 @@ public final class PaBrain {
             if (a.mind.climbing > 0) PaClimb.tick(a);              // out of the hole first, then on with the plan
             else feed(a);                                         // never skipped: stop and orders must be prompt
         }
+        PaMoves.tick(a);                                          // [pa33d] shield, clutch, sprint, pearl: never held back by the budget
         if (!spare) return;
         if (t % 10 == 0) state(a);
         if (a.mind.openPanelAt > 0 && a.tickCount >= a.mind.openPanelAt) {
@@ -115,6 +127,12 @@ public final class PaBrain {
         if (t % 20 == 0) personalSpace(a);
         if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
         if (t % 20 == 5) sleptIn(a);                              // [pa33c-2b] the bed it sleeps in is its spawn
+        if (t % 10 == 3) PaSleep.tick(a);                         // [pa33d] bedtime
+        if (a.mind.glanceAt != null) {                            // [pa33d] a look at a bare ping
+            if (a.tickCount < a.mind.glanceUntil) a.getLookControl().setLookAt(a.mind.glanceAt.getX() + 0.5, a.mind.glanceAt.getY() + 0.5, a.mind.glanceAt.getZ() + 0.5);
+            else a.mind.glanceAt = null;
+        }
+        if (t % 2 == 0) PaChallenge.tick(a);                      // [pa33d] a race, a mining minute, a shooting match
         if (t % 10 == 0) boat(a);                                 // [pa33b] along with its player on the water
         if (t % 40 == 0) {
             safety(a);
@@ -166,6 +184,8 @@ public final class PaBrain {
         }
         boolean running = a.jobCount() > 0 || (cur.task != null && a.task == cur.task);
         int pct = cur.percent(a);
+        cur.best = Math.max(cur.best, pct);                                // [pa33d] logs handed over mid-way still count
+        if (!running) pct = Math.max(pct, cur.best);
         // like a player, it stops when it has what it was sent for (a dig "until you have 20", or 16 logs)
         if ((cur.stopAtTarget || "GATHER".equals(cur.kind)) && cur.target > 0 && pct >= 100 && running) {
             a.clearQueue();
@@ -211,6 +231,7 @@ public final class PaBrain {
             return;
         }
         if (r != null && !cur.auto) { r.jobsDone++; PaData.touch(); }
+        a.earn("BUILD".equals(cur.kind) ? "build" : cur.auto ? "craft" : "job");   // [pa33d] paid for the job done
         String res = cur.task != null && !cur.task.result.isEmpty() ? cur.task.result : "";
         boolean last = plan.steps.stream().noneMatch(s -> !s.auto);
         if (cur.auto) {
@@ -274,12 +295,30 @@ public final class PaBrain {
         cur.retools++;
         rearm(a, cur);
         cur.centre = found;
-        cur.jobs.add(0, Job.goTo(found.getX() + " " + found.getY() + " " + found.getZ()));
+        BlockPos stand = beside(a, found);                                 // [pa33d] beside it, not inside the trunk
+        cur.jobs.add(0, Job.goTo(stand.getX() + " " + stand.getY() + " " + stand.getZ()));
         a.plan.steps.add(0, cur);
         int far = (int) Math.sqrt(a.blockPosition().distSqr(found));
         PaTalk.reply(a, "There's none right here, but I can see " + kind.label + " about " + far + " blocks "
             + PaOrders.bearing(a.position(), Vec3.atCenterOf(found)) + ". Heading there.");
         return true;
+    }
+
+    /** [pa33d] Somewhere to stand beside a block (the side nearest it): open, with ground under it. */
+    static BlockPos beside(PlayerAssistantEntity a, BlockPos b) {
+        BlockPos best = b;
+        double bd = Double.MAX_VALUE;
+        for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            for (int dy = 0; dy >= -3; dy--) {
+                BlockPos q = b.relative(dir).above(dy);
+                if (!a.level().getBlockState(q).getCollisionShape(a.level(), q).isEmpty()) break;
+                if (a.level().getBlockState(q.below()).getCollisionShape(a.level(), q.below()).isEmpty()) continue;
+                double d = q.distSqr(a.blockPosition());
+                if (d < bd) { bd = d; best = q.immutable(); }
+                break;
+            }
+        }
+        return best;
     }
 
     /** Ready a step to run again, planning only what is still missing and keeping the progress counted so far. */
@@ -329,7 +368,11 @@ public final class PaBrain {
             line = "Fighting a " + a.getTarget().getName().getString().toLowerCase();
         } else if (a.plan.paused) {
             icon = "paused";
-            line = "Paused (" + a.plan.total() + " waiting)";
+            PaChallenge.Game game = a.getOwnerId() == null ? null : PaChallenge.GAMES.get(a.getOwnerId());
+            line = a.isSleeping() ? "Asleep" : a.sleepWanted ? "Off to bed"
+                : game != null ? (game.kind.equals("race") ? "Racing you" : game.kind.equals("mine") ? "Mining contest: " + game.mineScore + " to your " + game.ownerScore
+                    : "Shooting contest: " + game.mineScore + " to your " + game.ownerScore)
+                : "Paused (" + a.plan.total() + " waiting)";   // [pa33d]
         } else if (cur != null) {
             icon = cur.kind.toLowerCase();
             String tally = cur.tally(a);

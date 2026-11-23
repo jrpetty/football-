@@ -15,11 +15,14 @@ public record PaIntent(Kind kind, String item, int amount, Place place, String r
         BED_USE, BED_PLACE, BED_WHERE,
         // [pa33c-2b] pings and waypoints: go to a place, save one, find the nearest of something, mark it, edit the queue
         GOTO, WAYPOINT, FIND, MARK, PING_EDIT, BRIDGE,
+        // [pa33d] the rest of the game: enchanting, the Nether, taming, villagers, better gear, redstone, maps, pillars,
+        // trick shots at a ping, and challenges against its player
+        ENCHANT, NETHER, TAME, VTRADE, UPGRADE, PLACE_THING, MAP, PILLAR, SHOOT_AT, CHALLENGE, BREW,
         // work
         GATHER, MINE_ORE, MINE_DOWN, FARM, BUILD, CRAFT, SMELT, DEPOSIT, FETCH, GIVE, BRING_FOOD, FIGHT, HUNT, FISH,
         BREED, SHEAR, LIGHT_AREA, SORT, CLEAR_AREA, FUEL, TRADE_BUY, TRADE_SELL, REPAIR,
         // control
-        STOP, UNDO, PAUSE, RESUME, AUTO_ON, AUTO_OFF, SLEEP, RENAME,
+        STOP, UNDO, PAUSE, RESUME, AUTO_ON, AUTO_OFF, SLEEP, WAKE, RENAME,
         // asking it things
         STATUS, DOING, INVENTORY, NEEDS, HELP, WHERE, QUESTION,
         // small talk and answers
@@ -37,7 +40,8 @@ public record PaIntent(Kind kind, String item, int amount, Place place, String r
         public boolean queued() {
             return switch (this) {
                 case GATHER, MINE_ORE, MINE_DOWN, FARM, BUILD, CRAFT, SMELT, DEPOSIT, FETCH, GIVE, BRING_FOOD, HUNT, FISH,
-                     BREED, SHEAR, LIGHT_AREA, SORT, CLEAR_AREA, FUEL, TRADE_BUY, TRADE_SELL, REPAIR, GO_HOME, EXPLORE, BED_PLACE, GOTO, BRIDGE -> true;
+                     BREED, SHEAR, LIGHT_AREA, SORT, CLEAR_AREA, FUEL, TRADE_BUY, TRADE_SELL, REPAIR, GO_HOME, EXPLORE, BED_PLACE, GOTO, BRIDGE,
+                     ENCHANT, NETHER, TAME, VTRADE, UPGRADE, PLACE_THING, MAP, PILLAR, SHOOT_AT, BREW -> true;
                 default -> false;
             };
         }

@@ -37,6 +37,7 @@ final class PaVitals {
                 hp.setBaseValue(want);
                 if (a.getHealth() > a.getMaxHealth()) a.setHealth(a.getMaxHealth());
             }
+            levelPerks(a, level(a));                                   // [pa33d] quicker on its feet, harder hits, a longer look ahead
         }
         // work: sprinting (quicker than a walk) costs as a player's sprint does
         Vec3 now = a.position();
@@ -114,5 +115,25 @@ final class PaVitals {
             return true;
         }
         return false;
+    }
+
+    private static final net.minecraft.resources.ResourceLocation LEVEL_ID =
+        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "pa_level");
+
+    /** [pa33d] What its level does to its body: walking speed, damage, how far it plans a path. */
+    static void levelPerks(PlayerAssistantEntity a, int lv) {
+        perk(a, Attributes.MOVEMENT_SPEED, PaLevels.speedPercent(lv) / 100.0, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+        perk(a, Attributes.ATTACK_DAMAGE, PaLevels.damage(lv), net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE);
+        perk(a, Attributes.FOLLOW_RANGE, PaLevels.followRange(lv) - 32, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE);
+    }
+
+    private static void perk(PlayerAssistantEntity a, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attr, double amount,
+                             net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation op) {
+        var inst = a.getAttribute(attr);
+        if (inst == null) return;
+        var cur = inst.getModifier(LEVEL_ID);
+        if (cur != null && Math.abs(cur.amount() - amount) < 1e-6) return;
+        inst.removeModifier(LEVEL_ID);
+        if (amount != 0) inst.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(LEVEL_ID, amount, op));
     }
 }
