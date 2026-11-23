@@ -33,7 +33,7 @@ public final class PaBanter {
     /** Joke Machine: the top chattiness with the dot at (or near) the Funny corner. */
     public static boolean jokeMachine(PlayerAssistantEntity a) {
         PaData.Rec r = a.rec();
-        return r != null && r.chatty >= 4 && r.tri().funny() >= 0.8;
+        return r != null && r.mute == 0 && r.chatty >= 4 && r.tri().funny() >= 0.8;
     }
 
     /**
@@ -42,18 +42,18 @@ public final class PaBanter {
      */
     public static boolean quip(PlayerAssistantEntity a, String key, int least, @Nullable String moment, String... kv) {
         PaData.Rec r = a.rec();
-        if (r == null || r.chatty < least) return false;
+        if (r == null || r.chatty < least || r.mute > 0) return false;    // [pa33b] hushed: no jokes, no remarks
         PaPersona.Tri t = r.tri();
         if (a.getRandom().nextInt(100) >= chance(t)) return false;
         String raw = PaPersona.remark(key, t, r.look, moment, a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) return false;
-        return PaTalk.comment(a, least, fill(a, raw, kv));
+        return PaTalk.comment(a, least, fill(a, raw, kv), !key.startsWith("quip.idle") && !key.startsWith("jm."));
     }
 
     /** A remark straight after a warning (the warning has just been said plainly): no wait, but still its blend and chattiness. */
     public static boolean after(PlayerAssistantEntity a, String key, @Nullable String moment) {
         PaData.Rec r = a.rec();
-        if (r == null || r.chatty < 1 || a.getRandom().nextInt(100) >= chance(r.tri())) return false;
+        if (r == null || r.chatty < 1 || r.mute > 0 || a.getRandom().nextInt(100) >= chance(r.tri())) return false;
         String raw = PaPersona.remark(key, r.tri(), r.look, moment, a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) return false;
         PaTalk.reply(a, fill(a, raw));
@@ -117,7 +117,7 @@ public final class PaBanter {
         a.mind.deathCause = cause;
         String key = deathKey(cause, repeat, nearBed, diamonds, a.getRandom()::nextInt);
         // lightly rated: dying a lot, it doesn't remark on every one
-        boolean remark = r.chatty > 0 && a.getRandom().nextInt(100) < chance(r.tri()) && (a.mind.deathsRecent < 3 || a.getRandom().nextInt(2) == 0);
+        boolean remark = r.chatty > 0 && r.mute == 0 && a.getRandom().nextInt(100) < chance(r.tri()) && (a.mind.deathsRecent < 3 || a.getRandom().nextInt(2) == 0);
         if (remark) {
             String raw = PaPersona.remark("death." + key, r.tri(), r.look, cause, a.getRandom()::nextInt, a.mind.recent);
             if (raw != null) PaTalk.reply(a, fill(a, raw));
@@ -164,7 +164,7 @@ public final class PaBanter {
     /** A while after its player respawns: a follow-up, sometimes. */
     public static void respawned(PlayerAssistantEntity a) {
         PaData.Rec r = a.rec();
-        if (r == null || a.getRandom().nextInt(100) >= 60) return;
+        if (r == null || r.mute > 0 || a.getRandom().nextInt(100) >= 60) return;
         String raw = PaPersona.remark("respawn.follow", r.tri(), r.look, null, a.getRandom()::nextInt, a.mind.recent);
         if (raw != null) PaTalk.comment(a, 1, fill(a, raw));
     }
@@ -178,15 +178,12 @@ public final class PaBanter {
     /** Its answer to lip or praise: in kind, never sulking; "shut up" turns its chatter down a notch. */
     public static String answer(PlayerAssistantEntity a, PaQuips.Comeback cb) {
         PaData.Rec r = a.rec();
-        PaPersona.Tri t = r == null ? a.tri() : r.tri();
+        PaPersona.Tri t = a.tri();                                    // hushed, the Serious corner
+        if (cb == PaQuips.Comeback.JOKE && r != null && r.mute > 0) return PaTalk.line(a, "joke_muted");
         if (cb == PaQuips.Comeback.JOKE) {
             String intro = PaPersona.from(PaLines.get("comeback.joke"), a.getRandom()::nextInt, a.mind.recent);
             String joke = PaPersona.from(PaLines.get("joke"), a.getRandom()::nextInt, a.mind.recent);
             return (intro == null ? "" : intro + " ") + (joke == null ? "I've forgotten all my jokes. That's the joke." : joke);
-        }
-        if (cb == PaQuips.Comeback.SHUTUP && r != null) {
-            r.chatty = Math.max(0, r.chatty - 1);
-            PaData.touch();
         }
         String key = "comeback." + cb.name().toLowerCase(Locale.ROOT);
         String raw = PaPersona.remark(key, t, r == null ? 0 : r.look, null, a.getRandom()::nextInt, a.mind.recent);

@@ -136,7 +136,7 @@ And here's the rain. Right on cue.
 Bit of drizzle. Very British of it.
 Raining again. I'd fetch an umbrella if they existed.
 Lovely weather for ducks. And zombies.
-Rain. Nature's way of saying stay in.
+Rain. The sky's not angry, just disappointed.
 It's chucking it down. Excellent.
 == quip.rain@gloomy
 It's raining. Of course it is.
@@ -169,6 +169,11 @@ Rain, {owner}. Noted, logged, mildly resented.
 It's started raining. Very on brand for the weather.
 Rain. I'm told it's good for the soil.
 == quip.idle
+[bad] I was going to tell you a joke about a bed, but I haven't made it up yet. That was terrible. I'm keeping it.
+[bad] Why did the scarecrow get a medal. Outstanding in his field. That's not even a Minecraft joke. I've let us both down.
+[bad] I tried to write a joke about cobblestone. It's still a work in progress. Like all cobblestone.
+[bad] Did you hear about the creeper who went to therapy. He had a lot to get off his chest. Then he did. Loudly.
+[bad] I've got a joke about lava, but it's a bit hot to handle. I'll leave it.
 I've been staring at that sheep. It's been staring back.
 Quiet, isn't it. Too quiet. No, it's just quiet.
 Did you know cows don't blink. Neither do I.
@@ -216,7 +221,7 @@ Waiting for orders. Try to make it a good one.
 Where does it go. Honestly, I couldn't tell you.
 Lovely. Bit dry.
 That's my lunch. And dinner. And emotional support.
-Delicious. In a blocky sort of way.
+Delicious. Well. Square. Square's a flavour.
 Food. Yes. Very good. Continue living.
 Bread again. The menu is not ambitious.
 Eating on the job. Don't tell anyone.
@@ -224,6 +229,15 @@ That'll keep me going till the next creeper.
 
 # Joke Machine: running commentary on what its player is doing (top chattiness at the Funny corner)
 == jm.mine
+[bad] Mining again. You really dig this, don't you. Sorry. That was terrible. I'm keeping it.
+[bad] I'd make a joke about stone, but it'd fall flat. Like the stone. I'll stop.
+[bad] Ore you sure about this. Yes, I know. I heard it as I said it.
+[bad] That block was taken for granite. That's my worst one. For now.
+[bad] You're a real miner celebrity. I'm not proud of that one.
+[bad] I'd help, but I'm a little short on pick-up lines. Ignore me.
+[bad] Cobblestone again. Oh well, it's a solid choice. I'll see myself out.
+[bad] Mine, mine, mine. Like a seagull with a pickaxe. Sorry.
+[bad] Rock on. No, I'm not sorry. A bit sorry.
 Oh, mining. My favourite spectator sport.
 Hit it harder. It respects that.
 That block had a family, you know.
@@ -240,6 +254,14 @@ That's not mining, that's an argument with the ground.
 You've got a lovely swing. For a person who swings at rocks.
 Ah, the gentle music of rock being destroyed.
 == jm.place
+[bad] Building's going well. Brick by brick, block by block, pun by pun. Sorry.
+[bad] You've got a lot on your plate. Well, on the ground. That's where you put it. Never mind.
+[bad] That block looks great there. It really fills the space. That's the joke. It's not a good joke.
+[bad] Placing blocks. Some would call it architecture. I'd call it a plinth-ful of effort. I'm sorry.
+[bad] I'd say you're building a reputation. You're building a wall. Same thing, really. It isn't.
+[bad] Nice placement. You've got real block-ability. I'm keeping that one, against advice.
+[bad] Stacking up nicely. Unlike my jokes.
+[bad] That's one more block than yesterday. The economy of cubes is booming. Badly worded. Moving on.
 Bold placement. Very avant-garde.
 Is that where that goes. If you say so.
 Building, are we. I'll fetch the planning permission.
@@ -256,6 +278,14 @@ Every great building starts with a confused block.
 Steady hand. Questionable vision.
 That's going on the cover of Blocks Monthly.
 == jm.jump
+[bad] Jump. That's the leap of faith I was talking about. I wasn't talking about anything.
+[bad] You're really jumping to conclusions. Literally. I'll go and stand over there.
+[bad] Hop, hop. Are you part rabbit. That one was terrible. I'm keeping it.
+[bad] Higher. No, that's it. That's the height. It's fine.
+[bad] Spring in your step today. Unusual for autumn. I don't know what month it is.
+[bad] Jumping for joy, or for the crops. Either way, the crops lose.
+[bad] Up you go, down you come. Gravity's very reliable. Unlike my material.
+[bad] If jumping were a sport, you'd be... jumping. I didn't plan the end of that.
 A jump. Bold of you.
 Jumping for joy, or just jumping.
 Up you go. And down. Riveting.
@@ -269,6 +299,14 @@ Is this cardio. Are we doing cardio now.
 That jump achieved nothing. Inspiring.
 Up, down. A classic.
 == jm.eat
+[bad] Bread again. You're on a roll. Yes. I'm aware.
+[bad] Eating on the job. Very hands-on. Mouths-on. I'll stop.
+[bad] Steak. Rare choice. Medium joke. Well done, me.
+[bad] That apple a day keeps the zombies away. It doesn't. Nothing does. Enjoy your apple.
+[bad] Snacking. Lettuce celebrate. There isn't any lettuce. I just wanted to say it.
+[bad] You and food. Name a more iconic duo. I'll wait. Don't say me and puns.
+[bad] Hungry work, adventuring. Well, it's mostly carrying. Hungry carrying.
+[bad] Cookies. That's the way the cookie crumbles. Into your face. Sorry.
 Eating again. Growing lad.
 That looks delicious. I'll take your word for it.
 Chew properly. I'm watching.
@@ -278,10 +316,17 @@ Snack time. Every time is snack time.
 Mind the crumbs. Oh. You don't make crumbs. Lucky.
 That's your fifth meal today. I'm not judging. I am a bit.
 Mmm. I imagine.
-Food: the reason you're still alive.
+Food. Keeping you alive, one questionable chop at a time.
 Hungry work, being you.
 Good, eat up. I'm not carrying you home.
 == jm.chest
+[bad] Opening the chest. Let's hope it gets something off its chest. I'll be quiet.
+[bad] Another chest. You've got a real treasure trove. A treasure... normal amount, really.
+[bad] Chest day. Never skip chest day. Nobody laughs at that one. I do.
+[bad] In the chest. Out of the chest. A gripping box set.
+[bad] Organising, are we. Very orderly. Very boxed in. I'm sorry.
+[bad] If it's not in the chest, it's in another chest. That's the whole system. That's not a joke, that's a confession.
+[bad] Chests: where things go to be forgotten neatly.
 Ooh, a chest. What's inside. Dirt. It's always dirt.
 Rummaging. Classy.
 Let me guess. Cobblestone and a single sad potato.
@@ -295,19 +340,33 @@ Chest diving. An Olympic sport, I hear.
 Find what you were after. No. Thought not.
 Every chest a mystery. Mostly mysteriously full of seeds.
 == jm.idle
+[bad] Standing still. Bold. Very statuesque. Statue-esque. Ignore me.
+[bad] While we wait, a joke. What's brown and sticky. A stick. That one's older than the world. Keeping it.
+[bad] Waiting for something to happen. Something will. Probably a creeper.
+[bad] Nothing happening. I've rehearsed my reaction to nothing. Here it is: hmm.
+[bad] I've counted every block in sight. Twice. The second count was more exciting.
+[bad] Do you think the sun ever gets bored going round. I would. I'd go square.
+[bad] I knew a pig once who was very good at waiting. Well, he was bacon time. I'm so sorry.
+[bad] Thinking about a joke about time. It'll come to me eventually.
 Standing still. Very zen.
 Are you thinking, or buffering.
 Have you frozen. Blink twice.
 Taking it all in. The grass. The other grass.
 Contemplation. Deep. Square.
 You've not moved for a while. Should I check for a pulse.
-Admiring the view. It's very green.
+Admiring the view. Someone's really committed to green.
 If you're waiting for something to happen, it won't.
 A moment of peace. I'll ruin it shortly.
 Stand still long enough and someone builds a statue.
 Lovely stillness. Like a painting. A boring one.
 I can hear you thinking from here.
 == jm.weather
+[bad] Lovely weather for it. For what, I couldn't say. For weather.
+[bad] Bit cloudy. Nothing I can't overcast. Sorry. That's dreadful.
+[bad] Sunny. Don't get too excited, it'll only go down again. That's not a joke, that's astronomy.
+[bad] Is it raining or am I just a bit mist-taken. Mist. Like fog. I'll stop.
+[bad] The sky's having a mood. I relate.
+[bad] Fine weather for a walk. Or a sit. Or a moan. I'll take the moan.
 Lovely weather. For a creeper.
 It's a nice day. Suspiciously nice.
 The sky's behaving. For now.
@@ -319,6 +378,12 @@ Bit breezy. I assume. I can't feel breezes.
 Perfect day for it. Whatever it is.
 Not a cloud in the sky. Just square ones.
 == jm.progress
+[bad] Coming along nicely. Unlike my jokes, which were never coming along at all.
+[bad] Progress. Slow, steady, block-shaped.
+[bad] Halfway there. Living on a prayer. That's a song, not a strategy.
+[bad] We're getting there. Wherever there is. I hope there has snacks.
+[bad] Steady work. The kind they don't write songs about. Except that one. Badly.
+[bad] Nearly done. The finish line's in sight. It's made of dirt, but it's in sight.
 Making progress. Slowly, but beautifully.
 That's coming along. Unlike your inventory management.
 Halfway there. Or a quarter. I'm rubbish at fractions.
@@ -543,7 +608,7 @@ Is it just me, or is everything square.
 I've got opinions on all of this. Brace yourself.
 You know what this needs. More commentary.
 I'm not saying I'm the best assistant. I'm thinking it loudly.
-Every day's an adventure. Some days it's a small one.
+Every day's an adventure. Today's is mostly walking.
 Honestly, I'd watch this on telly.
 You'd be lost without me. Possibly literally.
 I'm narrating. Someone has to.

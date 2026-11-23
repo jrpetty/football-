@@ -381,6 +381,7 @@ public class PaScreen extends Screen {
         {"Light up", "", "light up the area", "It places torches round about (making them if it can)"},
         {"Sort chests", "", "sort the chests", "It tidies the chests near by"},
         {"Go home", "", "go home", "It walks home (its spawner, or where you set it)"},
+        {"Quiet", "", "be quiet", "It stops chatting and joking: answers and warnings only (click again to let it talk)"},   // [pa33b]
         {"Stop", "", "stop", "It stops everything at once"},
     };
 
@@ -388,8 +389,11 @@ public class PaScreen extends Screen {
         int cols = iw >= 380 ? 5 : 4;
         int tw = (iw - (cols - 1) * 4) / cols, th = 16;
         int rows = (ORDERS.length + cols - 1) / cols;
+        boolean hushed = s.getCompound("set").getInt("mute") > 0;
         for (int i = 0; i < ORDERS.length; i++) {
             String[] o = ORDERS[i];
+            if (o[0].equals("Quiet") && hushed) o = new String[]{"Talk again", "", "you can talk again", "It chats and jokes again"};
+            final String[] oo = o;
             int cx = x + (i % cols) * (tw + 4), cy = y + 2 + (i / cols) * (th + 3);
             boolean on = picker.equals(o[1]) && !o[1].isEmpty();
             boolean danger = o[0].equals("Stop");
@@ -399,9 +403,9 @@ public class PaScreen extends Screen {
             PaIcons.draw(g, iconFor(o[0]), cx + 2, cy + 2);
             g.drawString(font, UiStyle.clip(font, o[0], tw - 18), cx + 16, cy + 4, on ? 0xFFFFFFFF : UiStyle.TEXT, false);
             zone(cx, cy, tw, th, () -> {
-                if (o[1].isEmpty()) { PaClient.talk(o[2], false); tab = "talk"; }
-                else { picker = picker.equals(o[1]) ? "" : o[1]; pick.clear(); defaults(); }
-            }, o[3]);
+                if (oo[1].isEmpty()) { PaClient.talk(oo[2], false); tab = "talk"; }
+                else { picker = picker.equals(oo[1]) ? "" : oo[1]; pick.clear(); defaults(); }
+            }, oo[3]);
         }
         int py = y + 2 + rows * (th + 3) + 4;
         if (picker.isEmpty()) {
@@ -731,6 +735,14 @@ public class PaScreen extends Screen {
         button(g, chat[ch], sx + 60, cy, 76, 13, mx, my, true, false,
             ch == 4 && triangle.tri().funny() >= 0.8 ? "Joke Machine: a remark on everything you do, every 10 to 20 seconds" : "How much it says unasked (it always answers you)",
             () -> settingInt("chatty", (ch + 1) % 5));
+        cy += 15;
+        // [pa33b] hushed or not: Talking, No jokes (plain words), Quiet (answers and warnings only); kept until lifted
+        String[] hush = {"Talking", "No jokes", "Quiet"};
+        int mu = Math.max(0, Math.min(2, set.getInt("mute")));
+        g.drawString(font, "Jokes & chat", sx, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, (mu > 0 ? "\u00D7 " : "") + hush[mu], sx + 60, cy, 76, 13, mx, my, true, mu > 0,
+            mu == 0 ? "Say \"no more jokes\" or \"shut up\" any time; this does the same" : "Say \"you can talk again\" or click to go back to Talking",
+            () -> settingInt("mute", (mu + 1) % 3));
         cy += 15;
         int spend = set.getInt("spend");
         cy = stepper(g, "Spend limit", spend + " coins", sx, cy, mx, my, () -> settingInt("spend", spend - 16), () -> settingInt("spend", spend + 16));

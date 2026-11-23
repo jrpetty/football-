@@ -194,7 +194,7 @@ Undone. Like it never happened. Unlike that time with the lava.
 Taken back. We'll never speak of it.
 Scrapped. A clean slate.
 Undone. I wasn't keen on that one either.
-Unordered. Unasked. Unremembered.
+Undone. If anyone asks, it was never my idea.
 Gone. Your secret's safe with me.
 Rolled back. History is written by the assistant.
 Cancelled. Bold, decisive. I admire it.
@@ -502,3 +502,52 @@ Scrapped. Sensible, probably.
 Alright, I won't. Disappointed, but I won't.
 Consider it forgotten.
 Cancelled. I'll unpack my enthusiasm.
+
+# [pa33b] Told to hush, and told it can talk again. One short line, in character; never a sulk.
+== say.mute_all
+Fine. Silent mode. You'll miss me.
+Going quiet. I'll save the good ones for later.
+Quiet it is. Warnings only. And the odd meaningful look.
+Understood. I'll talk when it matters, or when something's on fire.
+Muted. Under protest, but muted.
+Zipped. My thoughts will have to entertain themselves.
+== say.mute_all@gloomy
+Right. I'll suffer quietly.
+Quiet. I'm good at quiet. I've had practice.
+Fine. I'll keep it all in. It's roomy in here.
+Silence, then. It suits the weather.
+== say.mute_all@serious
+Understood.
+Going quiet. Warnings and answers only.
+Quiet mode.
+== say.mute_jokes
+No jokes. Business only. This is going to be hard for both of us.
+Jokes off. I'll be so efficient you won't recognise me.
+Fine. Serious mode. I've put the material away.
+Understood. Straight answers from here on.
+No more jokes. Not even the good one about the creeper.
+== say.mute_jokes@gloomy
+No jokes. Not that they were cheering anyone up.
+Fine. Just the facts. The facts are bleak, but there you go.
+Jokes off. It's probably for the best.
+== say.mute_jokes@serious
+Understood. Plain answers only.
+No jokes.
+Noted. Straight answers.
+== say.mute_on
+Oh, thank goodness. I had so much saved up.
+Back on. Brace yourself.
+Talking again. I made a list while I was quiet.
+Right. Where was I. Oh yes, everything.
+Unmuted. I'll ease back in. Possibly.
+== say.mute_on@gloomy
+Talking again. I'd got used to the quiet.
+Back. I've been thinking. Mostly about rain.
+Very well. I'll resume my commentary on our decline.
+== say.mute_on@serious
+Understood. Back to normal.
+Talking again.
+Normal service resumed.
+== say.joke_muted
+Jokes are off. Say "jokes back on" and I'll find you one.
+I'm on no jokes. Say "you can talk again" to lift it.

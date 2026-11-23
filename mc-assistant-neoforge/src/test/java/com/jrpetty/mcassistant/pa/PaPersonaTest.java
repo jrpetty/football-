@@ -209,7 +209,6 @@ class PaPersonaTest {
             {"you're useless", "INSULT"}, {"ur usless", "INSULT"}, {"you are rubbish", "INSULT"}, {"youre rubish", "INSULT"}, {"you muppet", "INSULT"},
             {"what a numpty", "INSULT"}, {"absolute plonker", "INSULT"}, {"you're pathetic", "INSULT"}, {"waste of space", "INSULT"}, {"you idiot", "INSULT"},
             {"youre stupid", "INSULT"}, {"you donkey", "INSULT"}, {"you wally", "INSULT"}, {"youre hopeless", "INSULT"}, {"you're terible", "INSULT"},
-            {"shut up", "SHUTUP"}, {"shutup", "SHUTUP"}, {"shut uo", "SHUTUP"}, {"pipe down", "SHUTUP"}, {"zip it", "SHUTUP"}, {"give it a rest", "SHUTUP"},
             {"good lad", "PRAISE"}, {"good ladd", "PRAISE"}, {"you absolute legend", "PRAISE"}, {"legnd", "PRAISE"}, {"well done", "PRAISE"},
             {"nice work", "PRAISE"}, {"top man", "PRAISE"}, {"cracking job", "PRAISE"}, {"love you", "LOVE"}, {"luv u", "LOVE"}, {"i love you", "LOVE"},
             {"you're the best", "LOVE"}, {"tell me a joke", "JOKE"}, {"tel me a joke", "JOKE"}, {"make me laugh", "JOKE"}, {"got any jokes", "JOKE"},
@@ -225,6 +224,119 @@ class PaPersonaTest {
         assertTrue(ok >= cases.length - 1, miss.toString());
         for (String plain : List.of("follow me", "i think we need logs", "get me 16 logs", "build a house", "mine some iron", "start mining", "come here"))
             assertNull(PaQuips.comeback(plain), "an order is not lip: " + plain);
+    }
+
+    // ------------------------------------------------------------------ [pa33b] hush: "shut up" and "no more jokes", and back on
+
+    @Test
+    void hushPhrasingsParseToTheirLevel() {
+        String[][] cases = {
+            // quiet: answers and warnings only
+            {"shut up", "ALL"}, {"shutup", "ALL"}, {"oi shut up", "ALL"}, {"shut up please", "ALL"}, {"be quiet", "ALL"}, {"quiet", "ALL"}, {"quiet please", "ALL"},
+            {"stop talking", "ALL"}, {"enough", "ALL"}, {"pipe down", "ALL"}, {"zip it", "ALL"}, {"give it a rest", "ALL"}, {"put a sock in it", "ALL"},
+            {"wind your neck in", "ALL"}, {"button it", "ALL"}, {"belt up", "ALL"}, {"hush", "ALL"}, {"shush", "ALL"}, {"keep it down mate", "ALL"},
+            {"shut uo", "ALL"}, {"be quite", "ALL"}, {"stop talkin", "ALL"}, {"pipe dwn", "ALL"}, {"put a sok in it", "ALL"}, {"wind yer neck in", "ALL"},
+            {"shut up and follow me", "ALL"},
+            // no jokes: plain words
+            {"stop making jokes", "JOKES"}, {"no more jokes", "JOKES"}, {"no jokes", "JOKES"}, {"enough jokes", "JOKES"}, {"cut the jokes", "JOKES"},
+            {"stop joking", "JOKES"}, {"be serious", "JOKES"}, {"no banter", "JOKES"}, {"stop makin jokes", "JOKES"}, {"no more jokse", "JOKES"},
+            {"enough with the jokes mate", "JOKES"}, {"stop the banter", "JOKES"},
+        };
+        String[][] back = {
+            {"you can talk again", "ON"}, {"jokes back on", "ON"}, {"go on then", "ON"}, {"you can joke again", "ON"}, {"unmute", "ON"},
+            {"talk again please", "ON"}, {"you can tlak again", "ON"}, {"jokes on", "ON"}, {"carry on talking", "ON"}, {"go on", "ON"},
+        };
+        int ok = 0;
+        StringBuilder miss = new StringBuilder();
+        for (String[] c : cases) {
+            PaQuips.Mute got = PaQuips.mute(c[0], false);
+            if (got != null && got.name().equals(c[1])) ok++; else miss.append(c[0]).append(" -> ").append(got).append("; ");
+        }
+        for (String[] c : back) {
+            PaQuips.Mute got = PaQuips.mute(c[0], true);
+            if (got != null && got.name().equals(c[1])) ok++; else miss.append(c[0]).append(" -> ").append(got).append("; ");
+        }
+        System.out.printf("[pa33b] hush phrasings: %d/%d%n", ok, cases.length + back.length);
+        assertTrue(cases.length + back.length >= 40);
+        assertEquals(cases.length + back.length, ok, miss.toString());
+        // never mistaken: orders, ordinary talk, and "talk again" words while it is talking anyway
+        for (String plain : List.of("follow me", "go on then, get me 16 logs", "get me 16 logs", "stop", "build somewhere quiet", "enough logs now",
+                "tell me a joke", "i think the jokes are good", "go to the village", "talk to the villager", "quietly mine the iron", "you're useless"))
+            assertNull(PaQuips.mute(plain, false), "not a hush: " + plain);
+        assertNull(PaQuips.mute("go on then, get me 16 logs", true), "an order while quiet is still an order");
+        assertNull(PaQuips.mute("you can talk again", false), "nothing to lift");
+        assertNull(PaQuips.comeback("shut up"), "a hush is not lip any more");
+    }
+
+    @Test
+    void itSpeaksUnaskedOnlyNowAndThen() {
+        assertTrue(PaQuips.gap(2, false) >= 3600, "usual chattiness: one remark every three minutes or so");
+        assertTrue(PaQuips.gap(2, true) < PaQuips.gap(2, false), "a little sooner around events");
+        assertTrue(PaQuips.gap(1, false) > PaQuips.gap(2, false) && PaQuips.gap(0, false) > PaQuips.gap(1, false));
+        assertTrue(PaQuips.gap(4, false) <= 60 && PaQuips.gap(4, true) <= 60, "only Won't shut up keeps going");
+        for (String k : List.of("say.mute_all", "say.mute_all@gloomy", "say.mute_all@serious", "say.mute_jokes", "say.mute_jokes@gloomy",
+                "say.mute_jokes@serious", "say.mute_on", "say.mute_on@gloomy", "say.mute_on@serious", "say.joke_muted"))
+            assertTrue(PaLines.get(k).size() >= 2, k);
+        assertTrue(PaLines.get("say.mute_all").contains("Fine. Silent mode. You'll miss me."));
+        assertTrue(PaLines.get("say.mute_all@gloomy").contains("Right. I'll suffer quietly."));
+        assertTrue(PaLines.get("say.mute_all@serious").contains("Understood."));
+        for (String k : PaLines.keys()) if (k.startsWith("say.mute")) for (String l : PaLines.get(k))
+            assertTrue(l.length() <= 80 && !l.toLowerCase().contains("sulk"), "short and never a sulk: " + l);
+    }
+
+    /** Situations, for counting: a key belongs to the first group whose prefix it has. */
+    static final String[][] SITUATIONS = {
+        {"greetings", "say.intro", "say.greet", "say.hello", "say.bye", "quip.back_short", "quip.back_long", "quip.morning", "quip.nightlogin"},
+        {"orders", "say.ok", "say.follow", "say.stay", "say.come", "say.guard", "say.confirm", "say.pause", "say.resume", "say.cancelled", "say.undo", "say.mute", "say.joke_muted"},
+        {"jobs done", "say.done", "say.step", "say.did"},
+        {"fails", "say.cant", "say.stuck", "say.no_", "say.unknown", "say.not_owner", "say.lost", "say.fail"},
+        {"deaths by cause", "death.", "respawn."},
+        {"weather and time", "quip.rain", "jm.weather", "say.night", "say.dawn"},
+        {"mobs", "quip.creeper", "say.threat", "say.fight", "quip.hit", "say.hurt", "say.me_hurt", "say.owner_hurt"},
+        {"finds", "say.diamonds", "say.found", "quip.village", "quip.dirt", "quip.nether", "say.ore"},
+        {"idle", "quip.idle", "jm.idle", "quip.wandered", "quip.slow_answer", "quip.asked_twice"},
+        {"Joke Machine", "jm."},
+        {"comebacks and jokes", "comeback.", "joke"},
+        {"looks (self-aware and themed)", "self.", "look."},
+        {"levels and tricks", "say.level", "say.trick", "trick.", "level."},
+    };
+
+    @Test
+    void fourHundredPlusLinesBySituationAndAFewOwnedBadJokes() {
+        Map<String, Integer> by = new java.util.LinkedHashMap<>();
+        for (String[] g : SITUATIONS) by.put(g[0], 0);
+        int corners = 0, total = 0, other = 0;
+        java.util.Set<String> distinct = new java.util.HashSet<>();
+        for (Map.Entry<String, List<String>> e : PaLines.all().entrySet()) {
+            String k = e.getKey();
+            int n = e.getValue().size();
+            distinct.addAll(e.getValue());
+            total += n;
+            if (k.contains("@") && !k.startsWith("self.") && !k.startsWith("look.")) corners += n;
+            String base = k.contains("@") ? k.substring(0, k.indexOf('@')) : k;
+            String hit = null;
+            for (String[] g : SITUATIONS) { for (int i = 1; i < g.length && hit == null; i++) if (base.startsWith(g[i])) hit = g[0]; if (hit != null) break; }
+            if (hit == null) other += n; else by.merge(hit, n, Integer::sum);
+        }
+        StringBuilder sb = new StringBuilder("[pa33b] lines by situation:");
+        by.forEach((k, v) -> sb.append(" ").append(k).append(" ").append(v).append(";"));
+        System.out.println(sb + " other replies " + other + "; of all those, corner and edge variants " + corners + "; distinct " + distinct.size() + " of " + total);
+        assertTrue(distinct.size() >= 400, "400+ distinct custom lines: " + distinct.size());
+        for (String g : List.of("greetings", "orders", "jobs done", "deaths by cause", "weather and time", "mobs", "finds", "idle", "comebacks and jokes",
+                "looks (self-aware and themed)", "Joke Machine"))
+            assertTrue(by.get(g) >= 15, g + ": " + by.get(g));
+        // the deliberately bad jokes (it knows, and owns them): a small share of the Funny lines
+        int funny = 0, bad = 0;
+        for (Map.Entry<String, List<String>> e : PaLines.all().entrySet()) {
+            String k = e.getKey();
+            if (k.contains("@") || k.startsWith("self.") || k.startsWith("look.")) continue;
+            for (String l : e.getValue()) { funny++; if (PaLines.bad(l)) bad++; }
+        }
+        double share = 100.0 * bad / funny;
+        System.out.printf("[pa33b] owned bad jokes: %d of %d Funny lines (%.1f%%)%n", bad, funny, share);
+        assertTrue(share >= 8 && share <= 20, "bad-joke share 8-20%: " + share);
+        assertTrue(PaLines.get("joke").stream().anyMatch(l -> !PaLines.bad(l)), "the joke pool has clever ones too");
+        for (List<String> l : PaLines.all().values()) for (String s : l) assertFalse(s.startsWith("["), "a tag left on a line: " + s);
     }
 
     @Test

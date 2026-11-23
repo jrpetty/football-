@@ -86,6 +86,16 @@ public final class PaOrders {
             }
             PENDING.remove(p.getUUID());                // anything else is a new order: the old question lapses
         }
+        // [pa33b] "shut up" (quiet: answers and warnings only), "no more jokes" (plain words), "you can talk again" (itself)
+        PaData.Rec mr = a.rec();
+        PaQuips.Mute mu = mr == null ? null : PaQuips.mute(text, mr.mute > 0);
+        if (mu != null) {
+            boolean order = reading.clarify() == null && reading.steps().stream().anyMatch(st -> st.kind().queued()
+                || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);
+            hush(a, mu == PaQuips.Mute.ON ? 0 : mu == PaQuips.Mute.JOKES ? 1 : 2);
+            if (order) run(p, a, reading.steps(), look, text);
+            return;
+        }
         // [pa33b] lip, a kind word, or "tell me a joke": answered in kind. With a real order in it, the order first.
         PaQuips.Comeback cb = PaBanter.comeback(text);
         if (cb != null) {
@@ -117,6 +127,17 @@ public final class PaOrders {
             return;
         }
         run(p, a, reading.steps(), look, text);
+    }
+
+    /** [pa33b] Hush it (1 no jokes, 2 quiet) or lift it (0), with one short line in its own voice; never a sulk. */
+    public static void hush(PlayerAssistantEntity a, int level) {
+        PaData.Rec r = a.rec();
+        if (r == null) return;
+        PaPersona.Tri own = r.tri();                       // its own corner, not the muted one, for the acknowledgement
+        String key = level == 0 ? "mute_on" : level == 1 ? "mute_jokes" : "mute_all";
+        a.setMute(level);
+        PaTalk.reply(a, PaPhrases.line(key, own, a.getRandom()::nextInt, a.mind.recent, "owner", a.ownerName().isEmpty() ? "you" : a.ownerName(),
+            "name", a.displayNameCap()));
     }
 
     /** Carry out what was read: answers now, work into the plan. */

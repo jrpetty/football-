@@ -59,6 +59,8 @@ public final class PaServer {
                     r.funny = (float) t.funny();
                     r.gloomy = (float) t.gloomy();
                 }
+                if (args.contains("mute") && a != null && args.getInt("mute") != r.mute) PaOrders.hush(a, args.getInt("mute"));   // [pa33b] About, Orders, wheel
+                else if (args.contains("mute")) r.mute = Math.max(0, Math.min(2, args.getInt("mute")));
                 if (args.contains("spend")) r.spend = Math.max(0, Math.min(PaConfig.spendMax(), args.getInt("spend")));
                 PaData.touch();
                 PaNet.refresh(p, a);

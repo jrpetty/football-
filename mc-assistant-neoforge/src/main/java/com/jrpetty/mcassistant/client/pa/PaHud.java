@@ -35,7 +35,8 @@ final class PaHud {
                 int pct = f.length > 2 ? parse(f[2]) : -1;
                 if (!line.isEmpty() && !(f[0].equals("follow") && a != null && a.distanceTo(mc.player) < 12 && !PaClient.state.getBoolean("busyHud"))) {
                     String name = PaClient.name();
-                    String text = name + ": " + line;
+                    int mute = a != null ? a.mute() : PaClient.state.getCompound("set").getInt("mute");
+                    String text = name + (mute == 2 ? " (quiet)" : mute == 1 ? " (no jokes)" : "") + ": " + line;   // [pa33b] hushed shows
                     int tw = Math.min(font.width(text), 200);
                     int x = 4, y = 4, bw = tw + 22;
                     g.fill(x, y, x + bw, y + (pct >= 0 ? 17 : 14), BRAND_DARK);

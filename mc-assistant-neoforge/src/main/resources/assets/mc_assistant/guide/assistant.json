@@ -248,6 +248,54 @@
       "covers": []
     },
     {
+      "id": "pa_quiet",
+      "title": "Make your assistant be quiet (or stop joking)",
+      "icon": "minecraft:bell",
+      "kind": "howto",
+      "q": [
+        "make my assistant shut up",
+        "stop my assistant talking",
+        "assistant talks too much",
+        "stop the assistant making jokes",
+        "turn off assistant jokes",
+        "mute my assistant",
+        "how do i make my assistant talk again"
+      ],
+      "kw": [
+        "quiet",
+        "shut",
+        "mute",
+        "jokes",
+        "talking",
+        "chatty",
+        "silent"
+      ],
+      "answer": "Tell it \"shut up\" (or click Quiet) and it only answers you and warns you. Tell it \"no more jokes\" and it talks plainly. \"You can talk again\" brings it back.",
+      "more": [
+        "It understands most ways of saying it, typos too: be quiet, pipe down, zip it, give it a rest, put a sock in it, wind your neck in, button it.",
+        "Quiet still answers every order and still warns you about danger. It never sulks or works any worse.",
+        "It stays quiet, even after you log out, until you say \"you can talk again\" or \"jokes back on\". Its nameplate and the HUD say \"quiet\" or \"no jokes\" while it lasts.",
+        "Chattiness in About sets how often it talks unasked: about once every few minutes on Normal. Only Won't shut up keeps going."
+      ],
+      "steps": [
+        "Press X for the action wheel and click Quiet, or say or type \"shut up\".",
+        "To let it talk again, click Talk again, or say \"you can talk again\"."
+      ],
+      "controls": [
+        "[X] action wheel",
+        "[Y] assistant panel"
+      ],
+      "items": [],
+      "tips": [
+        "About > Jokes & chat cycles Talking, No jokes and Quiet."
+      ],
+      "related": [
+        "pa_personality",
+        "pa_voice"
+      ],
+      "covers": []
+    },
+    {
       "id": "pa_looks",
       "title": "Choosing your assistant's look",
       "icon": "minecraft:leather_chestplate",

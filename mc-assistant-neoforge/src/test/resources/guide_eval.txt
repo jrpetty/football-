@@ -457,3 +457,6 @@ what is the player ai assistant => pa_what
 what does x do => pa_wheel
 how do i see what my assistant is doing => pa_jobs
 how do i talk to my assistant => pa_talking
+how do i make my assistant shut up => pa_quiet
+my assistant keeps making jokes how do i stop it => pa_quiet
+how do i let my assistant talk again => pa_quiet

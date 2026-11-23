@@ -24,6 +24,8 @@ public final class PaLines {
     public static final String[] FILES = {"lines_say.txt", "lines_death.txt", "lines_quip.txt", "lines_comeback.txt", "lines_look.txt"};
 
     private static volatile Map<String, List<String>> all;
+    /** [pa33b] Tags written in front of a line ("[bad] ...": a joke it knows is terrible; "[anim:shrug] ...": done with a gesture). */
+    private static final Map<String, Set<String>> TAGS = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static Map<String, List<String>> all() {
         Map<String, List<String>> m = all;
@@ -45,6 +47,29 @@ public final class PaLines {
         return !get(key).isEmpty();
     }
 
+    /** [pa33b] A line's tags ("bad", "anim:shrug"); empty when it has none. */
+    public static Set<String> tags(String line) {
+        all();
+        return line == null ? Set.of() : TAGS.getOrDefault(line, Set.of());
+    }
+
+    /** [pa33b] One of its deliberately bad jokes (it owns them). */
+    public static boolean bad(String line) {
+        return tags(line).contains("bad");
+    }
+
+    /** [pa33b] Leading "[tag]" marks off a written line: the line, and its tags into the set given. */
+    public static String untag(String line, Set<String> into) {
+        String t = line;
+        while (t.startsWith("[")) {
+            int end = t.indexOf(']');
+            if (end < 2) break;
+            into.add(t.substring(1, end).trim().toLowerCase(java.util.Locale.ROOT));
+            t = t.substring(end + 1).trim();
+        }
+        return t;
+    }
+
     public static Set<String> keys() {
         return all().keySet();
     }
@@ -64,7 +89,13 @@ public final class PaLines {
                         m.computeIfAbsent(key, k -> new ArrayList<>());
                         continue;
                     }
-                    if (key != null) m.get(key).add(t);
+                    if (key != null) {
+                        Set<String> tags = new java.util.LinkedHashSet<>();
+                        String said = untag(t, tags);
+                        if (said.isEmpty()) continue;
+                        if (!tags.isEmpty()) TAGS.merge(said, tags, (x, y) -> { Set<String> u = new java.util.LinkedHashSet<>(x); u.addAll(y); return u; });
+                        m.get(key).add(said);
+                    }
                 }
             } catch (Exception ignored) {
                 // a missing file only means fewer lines: the plain ones still work

@@ -144,6 +144,7 @@ public final class PaNet {
         set.putInt("chatty", r.chatty);
         set.putFloat("funny", r.funny);                          // [pa33b]
         set.putFloat("gloomy", r.gloomy);
+        set.putInt("mute", r.mute);                               // [pa33b] 0 talking, 1 no jokes, 2 quiet
         set.putInt("spend", r.spend);
         set.putInt("roamMax", PaConfig.roamMax());
         set.putInt("spendMax", PaConfig.spendMax());

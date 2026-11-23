@@ -36,6 +36,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
     /** What it is doing, for the plate, the HUD and the panel: "icon|line|percent". */
     private static final EntityDataAccessor<String> DATA_STATE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> DATA_PERS = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_MUTE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);   // [pa33b] for its nameplate
     private static final EntityDataAccessor<String> DATA_SHOWN = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
 
     private int slot;
@@ -59,6 +60,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         builder.define(DATA_OWNER, "");
         builder.define(DATA_STATE, "");
         builder.define(DATA_PERS, 0);
+        builder.define(DATA_MUTE, 0);
         builder.define(DATA_SHOWN, "");
     }
 
@@ -81,6 +83,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.entityData.set(DATA_OWNER, r.ownerName);
         this.entityData.set(DATA_LOOK, r.look);
         this.entityData.set(DATA_PERS, r.personality);
+        this.entityData.set(DATA_MUTE, r.mute);
         if (!r.name.isEmpty() && !r.name.equalsIgnoreCase(getAssistantName())) rename(r.name);
         this.entityData.set(DATA_SHOWN, displayNameCap());
     }
@@ -118,10 +121,25 @@ public class PlayerAssistantEntity extends AssistantEntity {
     /** [pa33b] Its place in the personality triangle (from its record; Banter when it has none). */
     public PaPersona.Tri tri() {
         PaData.Rec r = rec();
+        if (r != null && r.mute > 0) return PaPersona.Tri.of(0, 0);          // [pa33b] hushed: the Serious corner's plain words
         return r == null ? PaPersona.Tri.of(PaPersona.DEFAULT_FUNNY, PaPersona.DEFAULT_GLOOMY) : r.tri();
     }
 
     public void setPersonality(int p) { this.entityData.set(DATA_PERS, p); }
+
+    /** [pa33b] How hushed it is (0 talking, 1 no jokes, 2 quiet): its record on the server, its nameplate's copy on the client. */
+    public int mute() {
+        PaData.Rec r = rec();
+        return r != null ? r.mute : this.entityData.get(DATA_MUTE);
+    }
+
+    /** [pa33b] Hush it, or lift it: kept in its record (saved) and shown on its nameplate. */
+    public void setMute(int m) {
+        PaData.Rec r = rec();
+        int v = Math.max(0, Math.min(2, m));
+        if (r != null) { r.mute = v; PaData.touch(); }
+        this.entityData.set(DATA_MUTE, v);
+    }
 
     /** "icon|line|percent": what it is doing, synced for the plate and the HUD. */
     public String state() { return this.entityData.get(DATA_STATE); }

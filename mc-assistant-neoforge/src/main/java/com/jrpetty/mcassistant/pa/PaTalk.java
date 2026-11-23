@@ -59,11 +59,17 @@ public final class PaTalk {
 
     /** Something it says unasked (a comment, a tip, a job done), at this chattiness or above (0 quiet .. 3 chatty). */
     public static boolean comment(PlayerAssistantEntity a, int least, String text) {
+        return comment(a, least, text, false);
+    }
+
+    /** As comment; an event (something just happened) may come a little sooner than idle chatter. */
+    public static boolean comment(PlayerAssistantEntity a, int least, String text, boolean event) {
         PaData.Rec r = a.rec();
         int chatty = r == null ? 2 : r.chatty;
         if (chatty < least) return false;
-        // rate limit: chattier means sooner; a quiet one waits a good while between remarks
-        int gap = switch (chatty) { case 4 -> 60; case 3 -> 100; case 2 -> 400; case 1 -> 1200; default -> 2400; };
+        if (r != null && r.mute >= 2 && least > 0) return false;   // [pa33b] told to be quiet: nothing unasked
+        // rate limit: [pa33b] at the usual chattiness one remark every few minutes (sooner around events); only "Won't shut up" keeps on
+        int gap = PaQuips.gap(chatty, event);
         if (a.tickCount - a.mind.lastComment < gap && least > 0) return false;
         a.mind.lastComment = a.tickCount;
         reply(a, text);

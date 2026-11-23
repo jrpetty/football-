@@ -48,6 +48,8 @@ public final class PaData extends SavedData {
         public int roam = 32, chatty = 2, spend = 64;
         /** [pa33b] Its place in the personality triangle (funny, gloomy; serious is the rest): Banter to start. */
         public float funny = (float) PaPersona.DEFAULT_FUNNY, gloomy = (float) PaPersona.DEFAULT_GLOOMY;
+        /** [pa33b] Told to hush: 0 talking, 1 no jokes (plain words), 2 quiet (answers and warnings only). Kept until lifted. */
+        public int mute;
         /** [pa33b] When its player last left (wall clock), for "you've been gone ages". */
         public long leftAt;
 
@@ -117,6 +119,7 @@ public final class PaData extends SavedData {
             t.putInt("Chatty", chatty);
             t.putFloat("Funny", funny);
             t.putFloat("Gloomy", gloomy);
+            t.putInt("Mute", mute);
             t.putLong("LeftAt", leftAt);
             t.putInt("Spend", spend);
             if (spawner != null) { t.putLong("Spawner", spawner.asLong()); t.putString("SpawnerDim", spawnerDim); }
@@ -163,6 +166,7 @@ public final class PaData extends SavedData {
             r.roam = t.contains("Roam") ? t.getInt("Roam") : 32;
             r.chatty = t.contains("Chatty") ? t.getInt("Chatty") : 2;
             if (t.contains("Funny")) { r.funny = t.getFloat("Funny"); r.gloomy = t.getFloat("Gloomy"); }
+            r.mute = Math.max(0, Math.min(2, t.getInt("Mute")));
             r.leftAt = t.getLong("LeftAt");
             r.spend = t.contains("Spend") ? t.getInt("Spend") : 64;
             if (t.contains("Spawner")) { r.spawner = BlockPos.of(t.getLong("Spawner")); r.spawnerDim = t.getString("SpawnerDim"); }

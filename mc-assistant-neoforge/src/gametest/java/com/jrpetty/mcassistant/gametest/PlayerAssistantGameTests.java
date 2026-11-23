@@ -1060,6 +1060,68 @@ public class PlayerAssistantGameTests {
         helper.succeed();
     }
 
+    /** pai38: "shut up" quiets it (answers and warnings only), "no more jokes" leaves plain words, "you can talk again" lifts it; kept over a save. */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "pai38_mute")
+    public static void pai38_mute(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_111_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.rec().chatty = 4;                                       // Won't shut up, at the Joker corner: the Joke Machine
+        a.rec().funny = 1.0F;
+        a.rec().gloomy = 0.0F;
+        helper.assertTrue(com.jrpetty.mcassistant.pa.PaBanter.jokeMachine(a), "Joke Machine on to start");
+        say(p, a, "oi, shut up");
+        helper.assertTrue(a.rec().mute == 2 && a.mute() == 2, "quiet: " + a.rec().mute);
+        String ack = lastWords(a);
+        helper.assertTrue(!ack.isEmpty() && ack.length() < 80, "one short acknowledgement: " + ack);
+        helper.assertTrue(!com.jrpetty.mcassistant.pa.PaBanter.jokeMachine(a), "no Joke Machine while quiet");
+        int[] start = {said(a)}, tick = {0};
+        helper.onEachTick(() -> {
+            tick[0]++;
+            if (tick[0] % 10 == 0) {                              // its player mining, placing, jumping, eating, opening chests, standing about
+                String[] did = {"jm.mine", "jm.place", "jm.jump", "jm.eat", "jm.chest"};
+                com.jrpetty.mcassistant.pa.PaBrain.ownerDid(a, did[(tick[0] / 10) % did.length]);
+                com.jrpetty.mcassistant.pa.PaBanter.quip(a, "quip.idle", 1, null);
+                com.jrpetty.mcassistant.pa.PaBanter.quip(a, "quip.rain", 1, null);
+            }
+        });
+        helper.runAfterDelay(1000, () -> {
+            int unasked = said(a) - start[0];
+            helper.assertTrue(unasked == 0, "nothing unasked in 1000 ticks of a Won't-shut-up Joker: " + unasked + " (" + lastWords(a) + ")");
+            int before = said(a);
+            say(p, a, "follow me");
+            helper.assertTrue(said(a) > before, "orders still answered: " + lastWords(a));
+            String plain = lastWords(a);
+            net.minecraft.world.entity.monster.Creeper c = EntityType.CREEPER.create(level);
+            c.moveTo(x + 5.5, y, Z + 0.5, 0, 0);
+            c.setNoAi(true);
+            level.addFreshEntity(c);
+            int[] w = {said(a)};
+            helper.runAfterDelay(60, () -> {
+                helper.assertTrue(allWords(a).contains("Creeper near you"), "warnings still come through: " + lastWords(a));
+                c.discard();
+                PaData.Rec back = PaData.Rec.loadForTests(a.rec().saveForTests());
+                helper.assertTrue(back.mute == 2, "quiet is kept over a save: " + back.mute);
+                say(p, a, "no more jokes");
+                helper.assertTrue(a.rec().mute == 1 && a.tri().serious() > 0.99, "no jokes: plain words (" + a.tri().label() + ")");
+                say(p, a, "you can talk again");
+                helper.assertTrue(a.rec().mute == 0 && a.tri().funny() > 0.99, "talking again, its own self: " + a.rec().mute + " " + a.tri().label());
+                helper.assertTrue(com.jrpetty.mcassistant.pa.PaBanter.jokeMachine(a), "Joke Machine back");
+                Kit.log("pai38 quiet: ack \"" + ack + "\"; 0 unasked in 1000 ticks; order answered \"" + plain + "\"; creeper warned; kept over a save; "
+                    + "no-jokes then back: \"" + lastWords(a) + "\"");
+                helper.succeed();
+            });
+        });
+    }
+
+    /** How many lines it has said (a line said again counts again). */
+    private static int said(PlayerAssistantEntity a) {
+        int n = 0;
+        for (PaData.Line l : a.rec().log) if (l.who() == 1) n += Math.max(1, l.times());
+        return n;
+    }
+
     /** A small oak: a five-log trunk and a crown of leaves that stay. */
     private static void tree(ServerLevel level, BlockPos t) {
         for (int dy = 0; dy < 5; dy++) level.setBlock(t.above(dy), Blocks.OAK_LOG.defaultBlockState(), 2);

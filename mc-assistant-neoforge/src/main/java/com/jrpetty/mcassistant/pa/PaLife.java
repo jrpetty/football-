@@ -209,7 +209,7 @@ public final class PaLife {
         long time = a.level().getDayTime() % 24000L;
         String key = mins >= 0 && mins < 10 ? "quip.back_short" : mins >= 180 ? "quip.back_long"
             : time < 2000 ? "quip.morning" : time > 13000 && time < 23000 ? "quip.nightlogin" : null;
-        if (key != null && a.getRandom().nextInt(100) < PaBanter.chance(r.tri())) {
+        if (key != null && r.mute == 0 && a.getRandom().nextInt(100) < PaBanter.chance(r.tri())) {
             String raw = PaPersona.remark(key, r.tri(), r.look, null, a.getRandom()::nextInt, a.mind.recent);
             if (raw != null) return PaBanter.fill(a, raw, "owner", p.getGameProfile().getName());
         }
@@ -222,7 +222,7 @@ public final class PaLife {
             r.ownerName = p.getGameProfile().getName();
             if (!r.away || r.dead(p.serverLevel().getGameTime())) continue;
             PlayerAssistantEntity a = spawn(p.serverLevel(), r, p.blockPosition().relative(p.getDirection(), 3), p);
-            if (a != null) {
+            if (a != null && r.mute < 2) {                 // [pa33b] told to be quiet: it stands up without a word
                 PaTalk.greet(a, greeting(a, r, p));   // [pa33b] by how long they were away and the time of day
             }
         }
