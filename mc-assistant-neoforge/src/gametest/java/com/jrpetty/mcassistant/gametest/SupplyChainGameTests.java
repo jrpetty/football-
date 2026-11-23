@@ -1272,8 +1272,8 @@ public class SupplyChainGameTests {
     }
 
     /**
-     * [econ32c] A player rides the cage by its levers: the pithead's lever takes it down to the next stop, and, sneaking, the
-     * coal level's lever takes it back up. No command.
+     * [econ32c] A player rides the cage by its levers and buttons: the pithead's lever takes it down to the next stop, and the
+     * button by the coal level's lever takes it back up to the pithead. No command.
      */
     @GameTest(template = "empty", timeoutTicks = 1200, batch = "sc19_lift_player")
     public static void sc19_lift_player(GameTestHelper helper) {
@@ -1293,8 +1293,9 @@ public class SupplyChainGameTests {
             t++;
         }
         boolean down = atStop(p, coal);
-        p.setShiftKeyDown(true);
-        ok.that(com.jrpetty.mcassistant.entity.MineLift.pull(level, p, coal.lever()), "the coal level's lever is the cage's");
+        boolean button = level.getBlockState(coal.button()).getBlock() instanceof net.minecraft.world.level.block.ButtonBlock;
+        ok.that(button, "a button by the coal level's lever");
+        ok.that(com.jrpetty.mcassistant.entity.MineLift.pull(level, p, coal.button()), "the coal level's button is the cage's");
         int u = 0;
         while (com.jrpetty.mcassistant.entity.MineLift.state(p.getUUID()) != com.jrpetty.mcassistant.entity.MineLift.State.ARRIVED && u < 300) {
             com.jrpetty.mcassistant.entity.MineLift.runForTests(level, v, 1);
@@ -1302,7 +1303,7 @@ public class SupplyChainGameTests {
         }
         boolean up = atStop(p, top);
         Kit.log("[VT] sc19 the player: down to the coal level " + down + " (" + t + " ticks), up to the pithead " + up + " (" + u + " ticks) at " + p.blockPosition().toShortString());
-        ok.that(down && up, "down by the lever, up by the lever sneaking");
+        ok.that(down && up, "down by the lever, up by the button");
         helper.assertTrue(ok.clean(), ok.summary());
         MineWorksGameTests.done(helper);
     }

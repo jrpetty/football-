@@ -58,8 +58,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *     bars in the pillar onto the well and a lever on the landing's floor by it.</li>
  * <li><b>The cage</b>: drawn by block displays (a trapdoor floor and roof, iron bars round), carrying up to four at a time
  *     stop to stop at a block and a half a tick, a run of the whole shaft in five seconds; the chain rattles as it sets off
- *     and a bell rings when it stops. Folk queue for it at the stop (WorksGoal); a player pulls the lever: down to the next
- *     stop, or, sneaking, up to the pithead.</li>
+ *     and a bell rings when it stops. Folk queue for it at the stop (WorksGoal); a player pulls the lever for the next
+ *     stop down, or presses the button by it for the pithead (at the pithead, for the deepest stop).</li>
  * <li><b>Safety</b>: nobody is let into the well but a rider in the cage; anybody found in it outside the cage (a server
  *     stopped mid-ride, a chunk unloaded under it) is put out at the nearest stop's landing; a folk that waits too long for
  *     the cage takes the stair (WorksGoal), which is kept for when the cage is busy or the well blocked.</li>
@@ -86,7 +86,7 @@ public final class MineLift {
     public enum State { NONE, WAITING, RIDING, ARRIVED }
 
     /** A stop: the step of the shaft it is at (its corner landing), its floor height, where riders stand, its lever. */
-    public record Stop(int index, int y, BlockPos board, BlockPos lever, String name) {}
+    public record Stop(int index, int y, BlockPos board, BlockPos lever, String name, BlockPos button) {}
 
     static final class Ask {
         final UUID who;
@@ -148,7 +148,8 @@ public final class MineLift {
     private static Stop stop(MineWorks.Works w, int corner, String name) {
         int[] o = MineWorks.diag((corner / 4) % 4);
         int y = w.top - MineWorks.drop(corner);
-        return new Stop(corner, y, MineWorks.stepPoint(w, corner), new BlockPos(w.sx + 3 * o[0], y, w.sz + 2 * o[1]), name);
+        return new Stop(corner, y, MineWorks.stepPoint(w, corner), new BlockPos(w.sx + 3 * o[0], y, w.sz + 2 * o[1]), name,
+            new BlockPos(w.sx + 2 * o[0], y, w.sz + 3 * o[1]));
     }
 
     /**
@@ -189,7 +190,8 @@ public final class MineLift {
         BlockPos under = new BlockPos(w.sx, bottom - 1, w.sz);                // a floor under the pool
         if (!level.getBlockState(under).isFaceSturdy(level, under, Direction.UP)) { level.setBlock(under, Blocks.STONE_BRICKS.defaultBlockState(), 2); put++; }
         // The stops: a window of bars onto the well, a lever on the landing's floor.
-        for (Stop s : stops) {
+        for (Stop s0 : new ArrayList<>(stops)) {
+            Stop s = s0;
             int[] o = MineWorks.diag((s.index() / 4) % 4);
             if (s.y() <= w.top - 2) {
                 for (int h = 0; h < 2; h++) {
@@ -224,8 +226,24 @@ public final class MineLift {
                         break;
                     }
                 }
-                if (!lv.equals(s.lever())) stops.set(stops.indexOf(s), new Stop(s.index(), s.y(), s.board(), lv, s.name()));
+                if (!lv.equals(s.lever())) stops.set(stops.indexOf(s), s = new Stop(s.index(), s.y(), s.board(), lv, s.name(), s.button()));
             }
+            // A stone button on the landing's floor by it: up to the pithead (from the pithead, down to the deepest stop).
+            BlockPos bt = null;
+            for (BlockPos c : new BlockPos[]{ s.button(), new BlockPos(w.sx + 3 * o[0], s.y(), w.sz + 3 * o[1]), new BlockPos(w.sx + 2 * o[0], s.y(), w.sz + 4 * o[1]),
+                    new BlockPos(w.sx + 4 * o[0], s.y(), w.sz + 3 * o[1]) }) {
+                if (c.equals(s.lever())) continue;
+                if (level.getBlockState(c).getBlock() instanceof net.minecraft.world.level.block.ButtonBlock) { bt = c; break; }
+                if (level.getBlockState(c).canBeReplaced() && level.getBlockState(c.above()).getCollisionShape(level, c.above()).isEmpty()
+                        && level.getBlockState(c.below()).isFaceSturdy(level, c.below(), Direction.UP)) {
+                    level.setBlock(c, Blocks.STONE_BUTTON.defaultBlockState().setValue(net.minecraft.world.level.block.ButtonBlock.FACE, AttachFace.FLOOR)
+                        .setValue(net.minecraft.world.level.block.ButtonBlock.FACING, o[0] < 0 ? Direction.EAST : Direction.WEST), 3);
+                    put++;
+                    bt = c;
+                    break;
+                }
+            }
+            if (bt != null && !bt.equals(s.button())) stops.set(stops.indexOf(s), new Stop(s.index(), s.y(), s.board(), s.lever(), s.name(), bt));
         }
         // The chain from the headframe's beam down to the cap.
         for (int y = w.top + 3; y < w.top + 8; y++) {
@@ -568,7 +586,8 @@ public final class MineLift {
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onUseBlock(PlayerInteractEvent.RightClickBlock e) {
         if (!(e.getLevel() instanceof ServerLevel level) || !(e.getEntity() instanceof ServerPlayer p) || LIFTS.isEmpty()) return;
-        if (!(level.getBlockState(e.getPos()).getBlock() instanceof LeverBlock)) return;
+        if (!(level.getBlockState(e.getPos()).getBlock() instanceof LeverBlock)
+            && !(level.getBlockState(e.getPos()).getBlock() instanceof net.minecraft.world.level.block.ButtonBlock)) return;
         if (pull(level, p, e.getPos())) {
             e.setCanceled(true);
             e.setCancellationResult(InteractionResult.SUCCESS);
@@ -580,12 +599,15 @@ public final class MineLift {
         for (Lift l : LIFTS.values()) {
             for (int i = 0; i < l.stops.size(); i++) {
                 Stop s = l.stops.get(i);
-                if (!s.lever().equals(at)) continue;
+                boolean button = s.button().equals(at);
+                if (!s.lever().equals(at) && !button) continue;
                 if (state(p.getUUID()) != State.NONE) {
                     if (state(p.getUUID()) == State.ARRIVED) STATE.remove(p.getUUID());
                     else { p.displayClientMessage(Component.literal("The cage is on its way."), true); return true; }
                 }
-                Stop to = p.isShiftKeyDown() ? (i == 0 ? l.stops.get(l.stops.size() - 1) : l.stops.get(0))
+                // The lever: down to the next stop (from the deepest, up to the pithead). The button (or the lever pulled
+                // sneaking, with nothing in hand): up to the pithead, or from the pithead down to the deepest stop.
+                Stop to = button || p.isShiftKeyDown() ? (i == 0 ? l.stops.get(l.stops.size() - 1) : l.stops.get(0))
                     : i + 1 < l.stops.size() ? l.stops.get(i + 1) : l.stops.get(0);
                 if (ask(p, l.village, s.index(), to.index())) {
                     level.playSound(null, at, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4F, 0.6F);
