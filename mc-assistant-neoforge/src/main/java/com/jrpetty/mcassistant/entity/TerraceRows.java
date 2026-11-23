@@ -651,15 +651,25 @@ public final class TerraceRows {
 
     // ------------------------------------------------------------------ who lives where
 
-    /** A household's standing: its best-off grown folk's (Wealth). */
+    /**
+     * [house34b] A household's standing for its house: its means as the housing market reckons them (means), on the
+     * folk's scale (Wealth.tier). It was its best-off grown folk's whole worth, tools and clothes and comforts at home
+     * and all: a miner's iron pick and a coat made a household with nothing put by "comfortable", and the towns built
+     * bay-fronted rows for folk who could not keep them.
+     */
     static Wealth.Tier standing(List<VillageFolkEntity> household) {
-        Wealth.Tier best = Wealth.Tier.POOR;
-        for (VillageFolkEntity f : household) {
-            if (f.isBaby()) continue;
-            Wealth.Tier w = Wealth.tier(f);
-            if (w.ordinal() > best.ordinal()) best = w;
-        }
-        return best;
+        return Wealth.tier(means(household));
+    }
+
+    /** [house34b] What a household has for a house: what it can put to one (HousingMarket.cashOf: its purses over its living,
+     *  its savings at the bank, what it has put by toward its house) and the share of a house it owns. */
+    static int means(List<VillageFolkEntity> household) {
+        UUID village = null;
+        for (VillageFolkEntity f : household) if (f.ownerId() != null) { village = f.ownerId(); break; }
+        if (village == null) return 0;
+        int n = HousingMarket.cashOf(village, household);
+        for (VillageFolkEntity f : Homes.grown(household)) n += Homes.ownedShare(f);
+        return n;
     }
 
     /** May this household have this house of a row? A town house is for the well-off; a bay-fronted house for those who can
