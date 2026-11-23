@@ -1495,7 +1495,10 @@ public class PlayerAssistantGameTests {
             int wave = com.jrpetty.mcassistant.entity.FolkAction.Act.WAVE.ordinal();
             helper.assertTrue((a.animValue() & 0xFF) == wave, "a hello waves: " + (a.animValue() & 0xFF));
             String bad = null;
-            for (String l : com.jrpetty.mcassistant.pa.PaLines.get("comeback.joke")) if (com.jrpetty.mcassistant.pa.PaLines.bad(l) && !l.contains("{")) { bad = l; break; }
+            for (var e : com.jrpetty.mcassistant.pa.PaLines.all().entrySet()) {
+                for (String l : e.getValue()) if (bad == null && com.jrpetty.mcassistant.pa.PaLines.bad(l) && !l.contains("{")
+                    && com.jrpetty.mcassistant.pa.PaAnimWords.tagged(com.jrpetty.mcassistant.pa.PaLines.tags(l)) == null) bad = l;
+            }
             helper.assertTrue(bad != null, "an owned bad joke to tell");
             int turn = a.animValue() >> 8;
             com.jrpetty.mcassistant.pa.PaTalk.reply(a, bad);
