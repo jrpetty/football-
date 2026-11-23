@@ -739,7 +739,7 @@ public class PaScreen extends Screen {
         // [pa33b] hushed or not: Talking, No jokes (plain words), Quiet (answers and warnings only); kept until lifted
         String[] hush = {"Talking", "No jokes", "Quiet"};
         int mu = Math.max(0, Math.min(2, set.getInt("mute")));
-        g.drawString(font, "Jokes & chat", sx, cy + 3, UiStyle.TEXT_MUTED, false);
+        g.drawString(font, "Jokes", sx, cy + 3, UiStyle.TEXT_MUTED, false);
         button(g, (mu > 0 ? "\u00D7 " : "") + hush[mu], sx + 60, cy, 76, 13, mx, my, true, mu > 0,
             mu == 0 ? "Say \"no more jokes\" or \"shut up\" any time; this does the same" : "Say \"you can talk again\" or click to go back to Talking",
             () -> settingInt("mute", (mu + 1) % 3));

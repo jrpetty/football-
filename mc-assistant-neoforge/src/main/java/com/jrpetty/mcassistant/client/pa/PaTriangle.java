@@ -65,7 +65,7 @@ final class PaTriangle {
         g.drawString(font, t.label(), x, under, UiStyle.TEXT, false);
         under += 10;
         String mix = pct(t.serious()) + " serious · " + pct(t.funny()) + " funny · " + pct(t.gloomy()) + " gloomy";
-        g.drawString(font, UiStyle.clip(font, mix, size + 60), x, under, UiStyle.TEXT_FAINT, false);
+        g.drawString(font, UiStyle.clip(font, mix, size + font.width("Professional") + 20), x, under, UiStyle.TEXT_FAINT, false);
         under += 11;
         int bucket = (int) (funny * 20) * 100 + (int) (gloomy * 20);
         if (bucket != sampleBucket) {
