@@ -105,7 +105,7 @@ public final class PaLife {
             List.of(new Choice("Take the tour", "#tour"), new Choice("Follow me", "follow me"), new Choice("Get me 16 logs", "get me 16 logs"),
                 new Choice("Build a small house here", "build a small house here")));
         PaData.touch();
-        PaNet.open(p, a, "talk");
+        a.mind.openPanelAt = a.tickCount + 40;          // let its player see it arrive and say hello, then the panel with the choices
         return a;
     }
 

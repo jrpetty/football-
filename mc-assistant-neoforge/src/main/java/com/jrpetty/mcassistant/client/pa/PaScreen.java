@@ -205,7 +205,7 @@ public class PaScreen extends Screen {
         boolean free = PaClient.state.getBoolean("free");
         if (free) {
             button(g, "Get my assistant", left + (w - 140) / 2, y, 140, 20, mx, my, true, true,
-                "Your assistant appears beside you, yours for good", () -> PaClient.send("summon", new CompoundTag()));
+                "Your assistant appears beside you, yours for good", () -> { PaClient.send("summon", new CompoundTag()); onClose(); });
             y += 28;
         }
         UiStyle.heading(g, font, "Other ways to get one", x, y, iw);

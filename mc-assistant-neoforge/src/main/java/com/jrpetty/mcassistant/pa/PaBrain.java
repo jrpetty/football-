@@ -43,6 +43,8 @@ public final class PaBrain {
         /** Beats left of climbing out of a hole (PaClimb). */
         public int climbing;
         int tips;
+        /** When to open its player's panel after it first arrives (0: not pending). */
+        public int openPanelAt;
     }
 
     // ------------------------------------------------------------------ the budget
@@ -89,6 +91,10 @@ public final class PaBrain {
         }
         if (!spare) return;
         if (t % 10 == 0) state(a);
+        if (a.mind.openPanelAt > 0 && a.tickCount >= a.mind.openPanelAt) {
+            a.mind.openPanelAt = 0;
+            if (a.getOwnerPlayer() instanceof ServerPlayer owner) PaNet.open(owner, a, "talk");
+        }
         if (t % 20 == 0) personalSpace(a);
         if (t % 40 == 0) {
             safety(a);
