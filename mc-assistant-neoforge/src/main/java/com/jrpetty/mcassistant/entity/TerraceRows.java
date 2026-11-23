@@ -918,6 +918,9 @@ public final class TerraceRows {
     private static final Map<Long, Integer> DRESS_LOOK = new ConcurrentHashMap<>();
     /** How many bricks a hand lays facing a row in a round. */
     static final int REFACE = 48;
+    /** The rows' own crew (TownJobs): not the walls crew, which the age's make-over of every building keeps at one spot
+     *  after another for days, while the rows stood half in cobble and timber waiting on it. */
+    static final String ROWS_WORK = "terraces";
 
     /** Each house's own colour, by where it stands: never the same as the house beside it. */
     static Paint paint(Ledger.Building b, int i) {
@@ -948,7 +951,7 @@ public final class TerraceRows {
             if (there.is(Blocks.BRICKS) || !there.isCollisionShapeFullBlock(level, pl.pos()) || there.hasBlockEntity()) continue;
             if (!free) {
                 if (laid == 0 && (Crafts.stock(level, v, st -> st.is(Items.BRICKS)) < 1
-                        || !TownJobs.atWork(level, v, "walls", pl.pos(), "facing " + name(id, b) + " in brick"))) break;
+                        || !TownJobs.atWork(level, v, ROWS_WORK, pl.pos(), "facing " + name(id, b) + " in brick"))) break;
                 if (Crafts.takeOne(level, v, st -> st.is(Items.BRICKS)).isEmpty()) break;
                 Crafts.giveBack(level, v, there.getBlock().asItem(), 1);                  // what came off goes back into the stores
             }
@@ -977,7 +980,7 @@ public final class TerraceRows {
                 if (!free) {
                     java.util.function.Predicate<ItemStack> tile = it -> it.is(Items.DEEPSLATE_TILES) || it.is(Items.COBBLED_DEEPSLATE);
                     if (slated == 0 && (Crafts.stock(level, v, tile) < 1
-                            || !TownJobs.atWork(level, v, "walls", pl.pos(), "slating the roof of " + name(id, b)))) break;
+                            || !TownJobs.atWork(level, v, ROWS_WORK, pl.pos(), "slating the roof of " + name(id, b)))) break;
                     if (Crafts.takeOne(level, v, tile).isEmpty()) break;
                     Crafts.giveBack(level, v, there.getBlock().asItem(), 1);
                 }
