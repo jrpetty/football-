@@ -187,7 +187,7 @@ public class PaScreen extends Screen {
         if (!PaClient.note.isEmpty() && System.currentTimeMillis() - PaClient.noteAt < 6000) msg = PaClient.note;
         else if (!PaVoice.status.isEmpty() && System.currentTimeMillis() - PaVoice.statusAt < 6000) msg = PaVoice.status;
         else msg = PaClient.PANEL.getTranslatedKeyMessage().getString() + " opens this  ·  hold " + PaClient.TALK.getTranslatedKeyMessage().getString()
-            + " to talk  ·  " + PaClient.WHEEL.getTranslatedKeyMessage().getString() + " action wheel  ·  right-click it";
+            + " to talk  ·  " + PaClient.WHEEL.getTranslatedKeyMessage().getString() + " action wheel" + (PaClient.has() ? "  ·  right-click it" : "");
         g.drawString(font, UiStyle.clip(font, msg, w - 16), left + 8, top + h - 11, UiStyle.TEXT_FAINT, false);
     }
 
@@ -215,6 +215,16 @@ public class PaScreen extends Screen {
         y += 4;
         button(g, "Ask the Guide", x, y, 90, 16, mx, my, true, false, "The Guide's article on the assistant",
             () -> com.jrpetty.mcassistant.client.guide.GuideClient.openAt(this, "pa_getting"));
+        y += 24;
+        if (y + 40 < top + h - 14) {
+            UiStyle.heading(g, font, "Things you can say to it", x, y, iw);
+            y += 13;
+            for (String ex : new String[]{"\"Follow me\"   \"Get me 16 logs\"   \"Build a small house here\"",
+                    "\"Mine iron until you have 20\"   \"Guard me\"   \"What are you doing?\""}) {
+                g.drawString(font, UiStyle.clip(font, ex, iw), x, y, BRAND, false);
+                y += 11;
+            }
+        }
     }
 
     // ------------------------------------------------------------------ talk
@@ -301,7 +311,7 @@ public class PaScreen extends Screen {
         }
         button(g, "Send", x + iw - 86, y + ih - 19, 44, 16, mx, my, !typed.isBlank(), true, "Send (Enter)", this::sendTyped);
         boolean listening = PaVoice.listening;
-        button(g, listening ? "■ Stop" : "🎤 Talk", x + iw - 40, y + ih - 19, 40, 16, mx, my, true, listening,
+        button(g, listening ? "\u25A0 Send" : "\u25CF Speak", x + iw - 40, y + ih - 19, 40, 16, mx, my, true, listening,
             listening ? "Stop listening and send" : "Click, speak, click again (or hold " + PaClient.TALK.getTranslatedKeyMessage().getString() + " outside this panel)",
             () -> { if (PaVoice.listening) PaVoice.stopListening(); else PaVoice.startListening(); });
         if (listening && !PaVoice.transcript.isEmpty()) {

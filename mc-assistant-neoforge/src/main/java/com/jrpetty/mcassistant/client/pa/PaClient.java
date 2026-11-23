@@ -167,7 +167,7 @@ public final class PaClient {
             ListTag log = state.getList("log", Tag.TAG_COMPOUND);
             CompoundTag line = new CompoundTag();
             line.putInt("w", 0);
-            line.putString("t", (voice ? "🎤 " : "") + text.trim());
+            line.putString("t", (voice ? "(voice) " : "") + text.trim());
             log.add(line);
             state.put("log", log);
             choices = new ArrayList<>();

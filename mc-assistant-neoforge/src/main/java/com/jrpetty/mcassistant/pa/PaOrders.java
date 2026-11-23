@@ -57,7 +57,7 @@ public final class PaOrders {
         if (text.length() > 240) text = text.substring(0, 240);
         PaData.Rec r = a.rec();
         if (r != null) {
-            r.say(0, (voice ? "🎤 " : "") + text, a.level().getGameTime());
+            r.say(0, (voice ? "(voice) " : "") + text, a.level().getGameTime());
             PaData.touch();
         }
         PlayerAssistantEntity before = PaChests.askAs(a);

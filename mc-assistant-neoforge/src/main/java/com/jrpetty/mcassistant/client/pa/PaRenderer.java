@@ -114,7 +114,7 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
     /** Its name (with what it is doing beside it), its player's, and a health line. */
     private void plate(PlayerAssistantEntity a, PoseStack pose, MultiBufferSource buffer, int light, double d2) {
         Font font = getFont();
-        String name = a.displayNameCap();
+        String name = a.shownName();
         String owner = a.ownerName().isEmpty() ? "Player AI Assistant" : a.ownerName() + "'s assistant";
         String[] st = a.state().split("\\|", -1);
         String icon = st.length > 0 ? st[0] : "";
@@ -125,11 +125,15 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
         Matrix4f mx = pose.last().pose();
         float nw = font.width(name);
         float x = -nw / 2.0F + 6;
-        font.drawInBatch(name, x, 0, INK, false, mx, buffer, Font.DisplayMode.NORMAL, PLATE_BG, LightTexture.FULL_BRIGHT);
+        // drawn as the game draws a name tag: the panel with a ghost of the words first, then the words over it
+        font.drawInBatch(name, x, 0, 0x20FFFFFF, false, mx, buffer, Font.DisplayMode.SEE_THROUGH, PLATE_BG, LightTexture.FULL_BRIGHT);
+        font.drawInBatch(name, x, 0, INK, false, mx, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
         pose.pushPose();
         pose.scale(0.75F, 0.75F, 0.75F);
         float ow = font.width(owner);
-        font.drawInBatch(owner, -ow / 2.0F, 14, OWNER_INK, false, pose.last().pose(), buffer, Font.DisplayMode.NORMAL, PLATE_BG, LightTexture.FULL_BRIGHT);
+        Matrix4f om = pose.last().pose();
+        font.drawInBatch(owner, -ow / 2.0F, 17, 0x20FFFFFF, false, om, buffer, Font.DisplayMode.SEE_THROUGH, PLATE_BG, LightTexture.FULL_BRIGHT);
+        font.drawInBatch(owner, -ow / 2.0F, 17, OWNER_INK, false, om, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
         pose.popPose();
         // health: a thin bar under the name
         float frac = Math.max(0, Math.min(1, a.getHealth() / a.getMaxHealth()));
@@ -178,7 +182,7 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
         float half = widest / 2.0F + 4;
         quad(vc, mx, -half, -13, half, lines.size() * 10 + 2, BUBBLE_BG);
         quad(vc, mx, -half, -13, -half + 2, lines.size() * 10 + 2, 0xFF2BB5A0);
-        String name = a.displayNameCap();
+        String name = a.shownName();
         font.drawInBatch(Component.literal(name), -font.width(name) / 2.0F, -11, 0xFF8FE3D3, false, mx, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
         for (int i = 0; i < lines.size(); i++) {
             FormattedCharSequence line = lines.get(i);

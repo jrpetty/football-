@@ -36,6 +36,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
     /** What it is doing, for the plate, the HUD and the panel: "icon|line|percent". */
     private static final EntityDataAccessor<String> DATA_STATE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> DATA_PERS = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<String> DATA_SHOWN = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
 
     private int slot;
     private long incarnation;
@@ -58,6 +59,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         builder.define(DATA_OWNER, "");
         builder.define(DATA_STATE, "");
         builder.define(DATA_PERS, 0);
+        builder.define(DATA_SHOWN, "");
     }
 
     @Override
@@ -80,6 +82,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.entityData.set(DATA_LOOK, r.look);
         this.entityData.set(DATA_PERS, r.personality);
         if (!r.name.isEmpty() && !r.name.equalsIgnoreCase(getAssistantName())) rename(r.name);
+        this.entityData.set(DATA_SHOWN, displayNameCap());
     }
 
     /** Its record in the books (null on the client, or once it has been dismissed). */
@@ -94,6 +97,19 @@ public class PlayerAssistantEntity extends AssistantEntity {
     }
 
     public int look() { return this.entityData.get(DATA_LOOK); }
+
+    /** Its name as shown over its head and in its panel (synced: the client has no other copy of it). */
+    public String shownName() {
+        if (!level().isClientSide) return displayNameCap();
+        String n = this.entityData.get(DATA_SHOWN);
+        return n.isEmpty() ? "Assistant" : n;
+    }
+
+    @Override
+    public void rename(String newName) {
+        super.rename(newName);
+        if (!level().isClientSide) this.entityData.set(DATA_SHOWN, displayNameCap());
+    }
 
     public void setLook(int look) { this.entityData.set(DATA_LOOK, look); }
 
@@ -244,10 +260,11 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.entityData.set(DATA_LOOK, tag.getInt("PaLook"));
         this.entityData.set(DATA_PERS, tag.getInt("PaPers"));
         plan.load(tag.getCompound("PaPlan"));
+        this.entityData.set(DATA_SHOWN, displayNameCap());
     }
 
     @Override
     public Component getName() {
-        return Component.literal(displayNameCap());
+        return Component.literal(shownName());
     }
 }

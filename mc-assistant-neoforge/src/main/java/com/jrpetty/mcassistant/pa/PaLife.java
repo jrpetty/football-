@@ -92,7 +92,7 @@ public final class PaLife {
             r.spawner = at.immutable();
             r.spawnerDim = level.dimension().location().toString();
         }
-        PlayerAssistantEntity a = spawn(level, r, at != null ? at : p.blockPosition(), p);
+        PlayerAssistantEntity a = spawn(level, r, at != null ? at : p.blockPosition().relative(p.getDirection(), 3), p);
         if (a == null) {
             PaData.remove(r);
             tell(p, "There's no room for your assistant here.");
