@@ -52,6 +52,7 @@ public final class AgeSites {
      * (steps cut into the bank, never across the water) as an island town does.
      */
     private static final Map<String, Integer> MISSES = new ConcurrentHashMap<>();
+    static final int PATIENCE = 4;
 
     public static void resetForTests() {
         MISSES.clear();
@@ -60,7 +61,9 @@ public final class AgeSites {
 
     /** Has this age's building missed so many looks for its street that it may take a lot walked dry? */
     static boolean hungry(UUID village, String project) {
-        return ASKED.contains(project) && MISSES.getOrDefault(village + "|" + project, 0) >= CityPlan.PATIENCE;
+        // [econ32d] Four looks, not the town's twelve: an age's building that finds no lot is set aside five minutes between
+        // looks (Villages.defer), and twelve of them were an hour of the age standing still (and a restart began them again).
+        return ASKED.contains(project) && MISSES.getOrDefault(village + "|" + project, 0) >= PATIENCE;
     }
 
     /** A look for this building is over (Villages.siteFor). */
