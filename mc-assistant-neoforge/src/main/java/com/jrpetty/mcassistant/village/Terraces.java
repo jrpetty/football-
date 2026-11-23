@@ -224,6 +224,24 @@ public final class Terraces {
             for (int k = 0; k < c; k++) if (in[nb[k]] && what[nb[k]] != LONE && out[nb[k]] != NONE) low = Math.min(low, out[nb[k]]);
             out[i] = low == Integer.MAX_VALUE ? (int) Math.round(surface[i]) : low;
         }
+        // [econ32d] no pillar: a column standing two or more over three or four of the terraces beside it comes down to the
+        // highest of them. A lot's corner or a street's end with a lower terrace on three sides was left a stub a block across
+        // and six to ten high (the hillside's audit found one on a street now and then, as the plan's seed fell).
+        for (int pass = 0; pass < 4; pass++) {
+            boolean moved = false;
+            for (int i = 0; i < n; i++) {
+                if (!in[i] || out[i] == NONE || what[i] == HEART) continue;
+                int c = neighbours(i, side, nb), under = 0, top = Integer.MIN_VALUE;
+                for (int k = 0; k < c; k++) {
+                    int j = nb[k];
+                    if (!in[j] || out[j] == NONE || out[i] - out[j] < 2) continue;
+                    under++;
+                    top = Math.max(top, out[j]);
+                }
+                if (under >= 3) { out[i] = top; moved = true; }
+            }
+            if (!moved) break;
+        }
         return out;
     }
 
