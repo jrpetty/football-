@@ -917,7 +917,8 @@ public class PlayerAssistantGameTests {
             a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
             a.setHealth(6.0F);
             helper.succeedWhen(() -> {
-                helper.assertTrue(allWords(a).contains("nothing to eat") || allWords(a).contains("out of food") || allWords(a).contains("pantry is empty"),
+                String said = allWords(a).toLowerCase(java.util.Locale.ROOT);    // any of its six-plus ways to say it, any case
+                helper.assertTrue(said.contains("nothing to eat") || said.contains("out of food") || said.contains("pantry is empty"),
                     "with no food it asks: " + lastWords(a));
                 Kit.log("pai32 ate (hp 8 -> " + healed + ", bread " + bread + "/4); with none: \"" + lastWords(a) + "\"");
             });
