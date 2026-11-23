@@ -384,8 +384,13 @@ public class SupplyChainGameTests {
             stores(level, id, x, new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.STICK, 32),   // [econ32] the age's iron in hand: no iron pick while it saves (Picks.ironFor)
                 new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW));
             int picksBefore = stock(level, id, pick);
+            // [econ32c] The founder with a smith's hand of its own. A founder without the skill must take the town's smith
+            // on as its hand (Enterprise.skilledHand), and after some tests (Growth24's trade on credit ran just before it
+            // each time it failed) the smith was not free to be taken on: no toolshop, one run in three. What this test is
+            // about is the smith stepping back for a toolshop, not who can be hired into one.
+            folk.get(1).tradeXpForTests(StationTask.SMITH, 20000);
             Business shop = Enterprise.foundForTests(level, v, "toolsmith", folk.get(1));
-            if (shop == null) Kit.log("[VT] sc2_06 no toolshop opened: the founder " + folk.get(1).debugLine() + " | the smith " + smith.debugLine());   // [econ32c] why, when it fails
+            if (shop == null) Kit.log("[VT] sc2_06 no toolshop opened: elder " + Villages.elder(id) + "; the founder " + folk.get(1).debugLine() + " | the smith " + smith.debugLine());
             helper.assertTrue(shop != null, "a toolshop opened");
             Business.Lot lot = new Business.Lot();
             lot.qty = 2;
@@ -1287,7 +1292,10 @@ public class SupplyChainGameTests {
         p.teleportTo(level, top.board().getX() + 0.5, top.board().getY(), top.board().getZ() + 0.5, 0, 0);
         Kit.Expect ok = new Kit.Expect();
         ok.that(com.jrpetty.mcassistant.entity.MineLift.pull(level, p, top.lever()), "the pithead's lever is the cage's");
-        p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        p.gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.getAbilities().mayfly = false;
+        p.getAbilities().flying = false;
+        Kit.log("[VT] sc19 the player's mode " + p.gameMode.getGameModeForPlayer() + ", creative " + p.isCreative() + ", may fly " + p.getAbilities().mayfly);
         int t = 0;
         boolean flew = false;
         while (com.jrpetty.mcassistant.entity.MineLift.state(p.getUUID()) != com.jrpetty.mcassistant.entity.MineLift.State.ARRIVED && t < 300) {

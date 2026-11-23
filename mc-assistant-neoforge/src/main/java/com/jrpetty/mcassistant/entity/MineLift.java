@@ -462,7 +462,7 @@ public final class MineLift {
     private static final java.util.Set<UUID> AFLOAT = ConcurrentHashMap.newKeySet();
 
     private static void afloat(Entity e, boolean on) {
-        if (!(e instanceof ServerPlayer p) || p.isCreative() || p.isSpectator()) return;
+        if (!(e instanceof ServerPlayer p) || !p.gameMode.getGameModeForPlayer().isSurvival()) return;   // a creative player flies anyway
         if (on && !p.getAbilities().mayfly) { p.getAbilities().mayfly = true; p.onUpdateAbilities(); AFLOAT.add(p.getUUID()); }
         else if (!on && AFLOAT.remove(p.getUUID())) { p.getAbilities().mayfly = false; p.getAbilities().flying = false; p.onUpdateAbilities(); }
     }
@@ -523,7 +523,7 @@ public final class MineLift {
             BlockPos out = exit(level, l, best);
             place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
             // A player left in the well by a stop mid-ride may have been saved with the cage's leave to fly: taken back.
-            if (e instanceof ServerPlayer pl && !pl.isCreative() && !pl.isSpectator() && pl.getAbilities().mayfly) {
+            if (e instanceof ServerPlayer pl && pl.gameMode.getGameModeForPlayer().isSurvival() && pl.getAbilities().mayfly) {
                 pl.getAbilities().mayfly = false; pl.getAbilities().flying = false; pl.onUpdateAbilities(); AFLOAT.remove(pl.getUUID());
             }
             STATE.remove(e.getUUID());
