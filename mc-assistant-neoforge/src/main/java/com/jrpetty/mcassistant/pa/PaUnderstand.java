@@ -233,6 +233,8 @@ public final class PaUnderstand {
         m = Pattern.compile("^sell (?:my |your |the |some )?(\\d+ )?([a-z ]+?) to (?:that|this|the|a) villager$").matcher(c);
         if (m.find()) return new PaIntent(Kind.VTRADE, "sell:" + m.group(2).trim(), m.group(1) == null ? 0 : Integer.parseInt(m.group(1).trim()), Place.LOOKED, raw);
         if (c.matches("^trade with (?:that|this|the) villager$")) return new PaIntent(Kind.VTRADE, "buy:anything", 0, Place.LOOKED, raw);
+        m = Pattern.compile("^(?:brew|make|mix) (?:me |us )?(?:a |an |some |\\d+ )?(healing|health|swiftness|speed|fire resistance|night vision|strength|regeneration|leaping|water breathing)? ?(?:potions?|brew)$").matcher(c);
+        if (m.find()) return new PaIntent(Kind.BREW, m.group(1) == null ? "healing" : m.group(1).replace("health", "healing").replace("speed", "swiftness"), 3, Place.NONE, raw);
         if (c.matches("^(?:upgrade|improve) (?:your |its |the )?(?:gear|tools|armour|armor|kit|equipment|stuff|items)$|^gear up$|^kit yourself out$|^(?:make|craft) (?:yourself )?(?:some )?(?:better|new) (?:gear|tools|armour|armor|kit)$|^get yourself (?:some )?better (?:gear|tools|armour|armor)$"))
             return PaIntent.of(Kind.UPGRADE, raw);
         m = Pattern.compile("^(?:place|put|stick|add|fit) (?:a |an |the |me a )?(lever|stone button|oak button|button|oak door|iron door|door|pressure plate|stone pressure plate|redstone torch)(?: .*)?$").matcher(c);

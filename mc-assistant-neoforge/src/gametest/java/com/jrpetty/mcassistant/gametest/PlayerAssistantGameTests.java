@@ -1745,4 +1745,29 @@ public class PlayerAssistantGameTests {
             });
         });
     }
+
+    /** pai50: brewing at a stand (level 5): bottles filled at the water, wart and fuel in, then the ingredient: three
+     *  healing potions in its pack. [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 2000, batch = "pai50_brew")
+    public static void pai50_brew(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_147_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 5);
+        BlockPos stand = new BlockPos(x + 4, y, Z + 2);
+        level.setBlock(stand, Blocks.BREWING_STAND.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(x - 3, y - 1, Z + 3), Blocks.WATER.defaultBlockState(), 3);
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.GLASS_BOTTLE, 3));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.NETHER_WART, 2));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.BLAZE_POWDER, 2));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.GLISTERING_MELON_SLICE, 2));
+        say(p, a, "brew some healing potions");
+        helper.succeedWhen(() -> {
+            long healing = a.getInventoryItems().stream().filter(st -> st.is(Items.POTION) && st.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS) != null
+                && st.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS).is(net.minecraft.world.item.alchemy.Potions.HEALING)).mapToInt(net.minecraft.world.item.ItemStack::getCount).sum();
+            helper.assertTrue(healing == 3, "three healing potions: " + healing + " (" + lastWords(a) + ")");
+            Kit.log("pai50 brew: " + lastWords(a));
+        });
+    }
 }

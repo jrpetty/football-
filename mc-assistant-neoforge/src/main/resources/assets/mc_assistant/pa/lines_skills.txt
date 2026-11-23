@@ -442,3 +442,47 @@ That's a draw.
 [anim:shrug] You won. Don't be a dick about it.
 [anim:shrug] For fuck's sake. Fine.
 [anim:shrug] Lost. That was shit of me.
+
+# [pa33d] The End: the crystals first, then the dragon.
+== say.end_crystal
+Crystals first. Can't have it healing while we hit it.
+Popping the crystals. Cover your ears.
+One crystal down. Plenty to go. Keep moving.
+Shooting the crystals off. That's the plan, isn't it.
+I'll take the crystals. You take the shiny dragon.
+Crystal spotted. Not for long.
+== say.end_crystal@gloomy
+Crystals. They explode. Of course they do.
+Shooting crystals. Hope they don't take us with them.
+One crystal gone. Many left. As always.
+The crystals heal it. Naturally.
+Popping them. Stand well back.
+I'll shoot the crystals. Somebody has to.
+== say.end_crystal@serious
+Shooting the crystals.
+Crystals first.
+Taking out the crystals.
+Crystal down.
+Clearing the crystals.
+On the crystals.
+== say.end_dragon
+Big lizard, coming up. Arrows away.
+I've got you covered. Hit it when it lands.
+Dragon. I've always wanted to say that. Dragon.
+Arrows on the dragon. Mind its breath. It's terrible.
+It's coming round. Get ready.
+Aim for the head. Well, aim for any of it.
+== say.end_dragon@gloomy
+The dragon. This is how it ends.
+Shooting at a dragon. As one does.
+It's huge. And angry. Wonderful.
+Arrows away. For all the good they'll do.
+Dragon. We'll be fine. Probably not.
+Here it comes. Brace.
+== say.end_dragon@serious
+Engaging the dragon.
+Arrows on the dragon.
+Dragon incoming.
+Covering you.
+Hit it when it perches.
+On the dragon.

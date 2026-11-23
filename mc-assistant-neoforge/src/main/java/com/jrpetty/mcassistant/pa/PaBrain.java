@@ -47,7 +47,7 @@ public final class PaBrain {
         @Nullable public BlockPos clutchAt;
         /** [pa33d] A bare ping it glances at, till when (a turn of the head, nothing more). */
         @Nullable public BlockPos glanceAt;
-        public int glanceUntil;
+        public int glanceUntil, endSaidAt = -100000;
         int ownerHurtTick = -100000, meHurtTick = -100000, lastTip, lastAuto, stuckFor, sortedAt = -100000;
         int lastDiamonds = -1, threatTick = -100000;
         @Nullable Vec3 lastPos;

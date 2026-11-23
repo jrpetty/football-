@@ -31,6 +31,7 @@ public final class PaMoves {
             if (lv >= PaLevels.levelOf("parkour")) sprintAfter(a);
             if (lv >= PaLevels.levelOf("pearl")) pearl(a);
         }
+        if (a.tickCount % 30 == 11 && lv >= PaLevels.levelOf("end") && a.level().dimension() == net.minecraft.world.level.Level.END) end(a);
     }
 
     // ------------------------------------------------------------------ the shield
@@ -166,6 +167,44 @@ public final class PaMoves {
         a.level().playSound(null, a.blockPosition(), net.minecraft.sounds.SoundEvents.ENDER_PEARL_THROW, net.minecraft.sounds.SoundSource.NEUTRAL, 0.5F, 0.4F);
         a.playAnim("point");
         a.earn("trick");
+    }
+
+    // ------------------------------------------------------------------ the End: crystals first, then the dragon
+
+    /** In the End with its player at level 10: the healing crystals shot off their pillars, then arrows at the dragon. */
+    static void end(PlayerAssistantEntity a) {
+        if (!PaShots.hasBow(a) || a.countMatching(s -> s.is(Items.ARROW)) == 0 || a.isSleeping()) return;
+        if (!(a.getOwnerPlayer() instanceof ServerPlayer owner) || owner.level() != a.level()) return;
+        net.minecraft.world.entity.boss.enderdragon.EndCrystal crystal = null;
+        double bd = 64 * 64;
+        for (net.minecraft.world.entity.boss.enderdragon.EndCrystal c : a.level().getEntitiesOfClass(net.minecraft.world.entity.boss.enderdragon.EndCrystal.class, a.getBoundingBox().inflate(64))) {
+            double d = c.distanceToSqr(a);
+            if (d < bd && a.hasLineOfSight(c)) { bd = d; crystal = c; }
+        }
+        if (crystal != null) {
+            shootAtEntity(a, crystal);
+            if (a.tickCount - a.mind.endSaidAt > 600) { a.mind.endSaidAt = a.tickCount; PaTalk.reply(a, PaTalk.line(a, "end_crystal")); }
+            return;
+        }
+        for (net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon : a.level().getEntitiesOfClass(net.minecraft.world.entity.boss.enderdragon.EnderDragon.class, a.getBoundingBox().inflate(48))) {
+            if (!dragon.isAlive()) continue;
+            shootAtEntity(a, dragon);
+            if (a.tickCount - a.mind.endSaidAt > 600) { a.mind.endSaidAt = a.tickCount; PaTalk.reply(a, PaTalk.line(a, "end_dragon")); }
+            return;
+        }
+    }
+
+    static void shootAtEntity(PlayerAssistantEntity a, net.minecraft.world.entity.Entity e) {
+        if (a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return;
+        PaShots.drawBow(a);
+        net.minecraft.world.entity.projectile.Arrow arrow = new net.minecraft.world.entity.projectile.Arrow(a.level(), a, new ItemStack(Items.ARROW), a.getMainHandItem().copy());
+        Vec3 aim = e.position().add(0, e.getBbHeight() * 0.5, 0).add(e.getDeltaMovement().scale(Math.sqrt(a.distanceToSqr(e)) / 3.0));
+        double dx = aim.x - a.getX(), dy = aim.y - arrow.getY(), dz = aim.z - a.getZ(), horiz = Math.sqrt(dx * dx + dz * dz);
+        a.getLookControl().setLookAt(aim.x, aim.y, aim.z);
+        arrow.shoot(dx, dy + horiz * 0.15, dz, 3.0F, PaLevels.spread(a.veteranLevel()));
+        a.level().addFreshEntity(arrow);
+        a.swing(InteractionHand.MAIN_HAND);
+        a.playSound(net.minecraft.sounds.SoundEvents.ARROW_SHOOT, 1.0F, 1.0F);
     }
 
     /** Tests: a pearl at a spot, now. */

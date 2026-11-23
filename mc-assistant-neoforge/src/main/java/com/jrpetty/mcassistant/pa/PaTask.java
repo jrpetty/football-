@@ -12,7 +12,7 @@ import javax.annotation.Nullable;
  */
 public final class PaTask {
 
-    public enum Kind { FUEL, PLACE, FIELD, BUY, SELL, TAME, VTRADE, EQUIP, MAP, PILLAR, SHOOT }   // [pa33d] the last six
+    public enum Kind { FUEL, PLACE, FIELD, BUY, SELL, TAME, VTRADE, EQUIP, MAP, PILLAR, SHOOT, BREW }   // [pa33d] the last six
 
     public final Kind kind;
     @Nullable public final BlockPos pos;

@@ -173,7 +173,8 @@ class PaUnderstandTest {
             {"place a lever there", "PLACE_THING:lever:1@LOOKED"}, {"put a door here", "PLACE_THING:door:1@LOOKED"}, {"map this area", "MAP@HERE"},
             {"pillar up 8", "PILLAR:pillar:8"}, {"shoot that target", "SHOOT_AT@LOOKED"}, {"trick shot", "SHOOT_AT@LOOKED"},
             {"race me to that tree", "CHALLENGE:race@LOOKED"}, {"who can mine more in a minute", "CHALLENGE:mine"}, {"shooting contest", "CHALLENGE:shoot@LOOKED"},
-            {"shoot that", "FIGHT:monsters@LOOKED"}, {"where's the closest village", "FIND:village"}};
+            {"shoot that", "FIGHT:monsters@LOOKED"}, {"where's the closest village", "FIND:village"}, {"brew a healing potion", "BREW:healing:3"},
+            {"make me some swiftness potions", "BREW:swiftness:3"}, {"brew potions", "BREW:healing:3"}};
         for (String[] t : c) org.junit.jupiter.api.Assertions.assertEquals(t[1], PaUnderstand.read(t[0], "pip").brief(), t[0]);
     }
 }

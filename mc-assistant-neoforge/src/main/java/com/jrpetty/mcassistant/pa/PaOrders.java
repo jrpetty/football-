@@ -816,6 +816,14 @@ public final class PaOrders {
                 out.add(s);
                 return null;
             }
+            case BREW -> {
+                String lock = locked(a, "brew");
+                if (lock != null) return lock;
+                PaPlan.Step s = step("brew " + i.item() + " potions", Kind.BREW, 60);
+                s.task = new PaTask(PaTask.Kind.BREW, look.block() != null ? look.block() : a.blockPosition(), i.item(), 3);
+                out.add(s);
+                return null;
+            }
             case UPGRADE -> {
                 String lock = locked(a, "upgrade");
                 if (lock != null) return lock;

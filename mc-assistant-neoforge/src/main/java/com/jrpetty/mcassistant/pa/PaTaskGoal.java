@@ -109,6 +109,7 @@ public class PaTaskGoal extends Goal {
             case MAP -> map();
             case PILLAR -> pillar();
             case SHOOT -> shoot();
+            case BREW -> brew();
         }
     }
 
@@ -693,5 +694,100 @@ public class PaTaskGoal extends Goal {
             a.playAnim("shrug");
             finish(PaTalk.line(a, "trick_miss", "dist", String.valueOf(dist)), false);
         }
+    }
+
+    // ------------------------------------------------------------------ [pa33d] brewing basic potions at a stand
+
+    static Item brewIngredient(String what) {
+        return switch (what) {
+            case "swiftness" -> Items.SUGAR;
+            case "fire resistance" -> Items.MAGMA_CREAM;
+            case "night vision" -> Items.GOLDEN_CARROT;
+            case "strength" -> Items.BLAZE_POWDER;
+            case "regeneration" -> Items.GHAST_TEAR;
+            case "leaping" -> Items.RABBIT_FOOT;
+            case "water breathing" -> Items.PUFFERFISH;
+            default -> Items.GLISTERING_MELON_SLICE;
+        };
+    }
+
+    private static boolean waterBottle(ItemStack s) {
+        var pc = s.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS);
+        return s.is(Items.POTION) && pc != null && pc.is(net.minecraft.world.item.alchemy.Potions.WATER);
+    }
+
+    private void brew() {
+        Item ingredient = brewIngredient(t.item);
+        if (t.stage == 0) {
+            BlockPos from = t.pos != null ? t.pos : a.blockPosition();
+            BlockPos stand = null;
+            for (BlockPos q : BlockPos.betweenClosed(from.offset(-12, -4, -12), from.offset(12, 4, 12)))
+                if (a.level().getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity) { stand = q.immutable(); break; }
+            if (stand == null) { finish("I can't see a brewing stand nearby.", true); return; }
+            String missing = a.countMatching(st -> st.is(Items.NETHER_WART)) == 0 ? "nether wart"
+                : a.countMatching(st -> st.is(Items.BLAZE_POWDER)) < (ingredient == Items.BLAZE_POWDER ? 2 : 1) ? "blaze powder"
+                : a.countMatching(st -> st.is(ingredient)) == 0 ? new ItemStack(ingredient).getHoverName().getString().toLowerCase()
+                : a.countMatching(PaTaskGoal::waterBottle) + a.countMatching(st -> st.is(Items.GLASS_BOTTLE)) == 0 ? "glass bottles" : null;
+            if (missing != null) { finish("I need " + missing + " to brew that.", true); return; }
+            work.add(stand);
+            t.stage = 1;
+        }
+        if (t.stage == 1) {                                                // bottles of water first, filled at the nearest water
+            if (a.countMatching(PaTaskGoal::waterBottle) >= Math.min(3, a.countMatching(PaTaskGoal::waterBottle) + a.countMatching(st -> st.is(Items.GLASS_BOTTLE)))) { t.stage = 2; return; }
+            BlockPos water = null;
+            for (BlockPos q : BlockPos.betweenClosed(a.blockPosition().offset(-10, -3, -10), a.blockPosition().offset(10, 3, 10)))
+                if (a.level().getFluidState(q).isSource() && a.level().getFluidState(q).is(net.minecraft.tags.FluidTags.WATER)) { water = q.immutable(); break; }
+            if (water == null) { t.stage = a.countMatching(PaTaskGoal::waterBottle) > 0 ? 2 : 9; if (t.stage == 9) finish("I need water near by to fill the bottles.", true); return; }
+            if (!reach(water, 3.0)) { if (gaveUpWalking()) finish("I couldn't get to the water.", true); return; }
+            while (a.countMatching(PaTaskGoal::waterBottle) < 3 && a.removeMatching(st -> st.is(Items.GLASS_BOTTLE), 1) == 1) {
+                ItemStack wb = net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER);
+                ItemStack left = a.insertItem(wb);
+                if (!left.isEmpty()) a.spawnAtLocation(left);
+            }
+            a.level().playSound(null, water, SoundEvents.BOTTLE_FILL, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            t.stage = 2;
+            return;
+        }
+        BlockPos stand = work.get(0);
+        if (!(a.level().getBlockEntity(stand) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity bs)) { finish("The brewing stand's gone.", true); return; }
+        if (!reach(stand, 3.0)) { if (gaveUpWalking()) finish("I couldn't get to the brewing stand.", true); return; }
+        if (t.stage == 2) {                                                // bottles in, fuel in, wart on top
+            for (int i = 0; i < 3; i++) if (bs.getItem(i).isEmpty()) {
+                for (int k = 0; k < a.getInventoryItems().size(); k++) if (waterBottle(a.getInventoryItems().get(k))) { bs.setItem(i, a.getInventoryItems().get(k).split(1)); break; }
+            }
+            if (bs.getItem(4).isEmpty()) { a.removeMatching(st -> st.is(Items.BLAZE_POWDER), 1); bs.setItem(4, new ItemStack(Items.BLAZE_POWDER)); }
+            a.removeMatching(st -> st.is(Items.NETHER_WART), 1);
+            bs.setItem(3, new ItemStack(Items.NETHER_WART));
+            bs.setChanged();
+            a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            t.stage = 3;
+            t.progress = 20;
+            return;
+        }
+        if (t.stage == 3 || t.stage == 5) {                                // brewing: wait till the top slot is used up
+            if (!bs.getItem(3).isEmpty()) { if (t.ticks % 100 == 0) t.progress = Math.min(90, t.progress + 5); if (t.ticks > 20 * 120) finish("The stand isn't brewing. Has it fuel.", true); return; }
+            t.stage++;
+            return;
+        }
+        if (t.stage == 4) {                                                // awkward potions: now the ingredient
+            a.removeMatching(st -> st.is(ingredient), 1);
+            bs.setItem(3, new ItemStack(ingredient));
+            bs.setChanged();
+            a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            t.stage = 5;
+            t.progress = 55;
+            return;
+        }
+        int got = 0;                                                       // stage 6: bottles out, into its pack
+        for (int i = 0; i < 3; i++) {
+            ItemStack p = bs.getItem(i);
+            if (p.isEmpty()) continue;
+            ItemStack left = a.insertItem(p.copy());
+            if (!left.isEmpty()) a.spawnAtLocation(left);
+            bs.setItem(i, ItemStack.EMPTY);
+            got++;
+        }
+        a.earn("brew");
+        finish("Brewed " + got + " potion" + (got == 1 ? "" : "s") + " of " + t.item + ". They're in my pack.", false);
     }
 }
