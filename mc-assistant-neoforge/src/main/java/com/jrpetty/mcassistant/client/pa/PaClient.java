@@ -269,5 +269,6 @@ public final class PaClient {
         if (mc.player == null || mc.options.hideGui || mc.screen instanceof PaScreen) return;
         GuiGraphics g = event.getGuiGraphics();
         PaHud.draw(g, mc);
+        PaBubbles.draw(g, mc);                                    // [pa33c-2b] speech, inside the screen
     }
 }

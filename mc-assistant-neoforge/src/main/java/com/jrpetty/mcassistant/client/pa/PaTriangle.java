@@ -62,10 +62,18 @@ final class PaTriangle {
         g.fill(dx - 2, dy - 2, dx + 3, dy + 3, focused ? 0xFFFFFFFF : 0xFFF2E8B0);
         int under = by + 14;
         PaPersona.Tri t = tri();
-        g.drawString(font, t.label(), x, under, UiStyle.TEXT, false);
-        under += 10;
+        // [pa33c-2b] the region's name, big and bold: it's the fun part
+        g.pose().pushPose();
+        g.pose().translate(x, under, 0);
+        g.pose().scale(1.4F, 1.4F, 1.0F);
+        g.drawString(font, Component.literal(t.label()).withStyle(net.minecraft.ChatFormatting.BOLD), 0, 0, UiStyle.TEXT, false);
+        g.pose().popPose();
+        under += 15;
+        int avail = size + font.width("Professional") + 20;
         String mix = pct(t.serious()) + " serious · " + pct(t.funny()) + " funny · " + pct(t.gloomy()) + " gloomy";
-        g.drawString(font, UiStyle.clip(font, mix, size + font.width("Professional") + 20), x, under, UiStyle.TEXT_FAINT, false);
+        if (font.width(mix) > avail) mix = "Serious " + pct(t.serious()) + "  Funny " + pct(t.funny()) + "  Gloomy " + pct(t.gloomy());
+        if (font.width(mix) > avail) mix = "S " + pct(t.serious()) + " · F " + pct(t.funny()) + " · G " + pct(t.gloomy());
+        g.drawString(font, mix, x, under, UiStyle.TEXT_FAINT, false);
         under += 11;
         int bucket = (int) (funny * 20) * 100 + (int) (gloomy * 20);
         if (bucket != sampleBucket) {
@@ -76,7 +84,7 @@ final class PaTriangle {
             sample = s == null ? PaPersona.from(PaLines.get("say.ok@serious"), r::nextInt, null) : s;
             if (sample == null) sample = "On it.";
         }
-        List<FormattedCharSequence> lines = font.split(Component.literal("“" + sample + "”"), size + 60);
+        List<FormattedCharSequence> lines = font.split(Component.literal("“" + sample + "”").withStyle(net.minecraft.ChatFormatting.BOLD), avail);
         for (FormattedCharSequence l : lines) { g.drawString(font, l, x, under, PaScreen.BRAND, false); under += 10; }
         return under + 2;
     }

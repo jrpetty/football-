@@ -125,7 +125,9 @@ public final class PaOrders {
             return;
         }
         // [pa33b] the same order again so soon: done again, with a remark
-        boolean twice = text.equalsIgnoreCase(a.mind.lastOrder) && a.tickCount - a.mind.lastOrderAt < 2400 && !reading.steps().isEmpty();
+        // [pa33c-2b] only a job asked for again counts ("stop", "stay", "follow me" twice just do it, with a plain reply)
+        boolean twice = text.equalsIgnoreCase(a.mind.lastOrder) && a.tickCount - a.mind.lastOrderAt < 2400 && !reading.steps().isEmpty()
+            && reading.steps().stream().allMatch(st -> st.kind().queued());
         a.mind.lastOrder = text;
         a.mind.lastOrderAt = a.tickCount;
         a.mind.askedTwice = twice;                       // remarked on after the reply (PaBrain)
