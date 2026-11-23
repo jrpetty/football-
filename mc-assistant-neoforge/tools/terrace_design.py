@@ -175,6 +175,8 @@ def workers():
         # the parlour: an armchair at a table with a cloth on it, the dresser; the hall's lamp lights the door
         H.put(0, 0, -4, '<'); H.put(1, 0, -4, 'P'); H.put(1, 1, -4, 'X'); H.put(0, 0, -2, 'K')
         H.put(1, 2, -3, 'j'); H.put(3, 2, -4, 'j')
+        for c, z in ((1, -3), (2, -3), (1, -2), (2, -2)):
+            H.put(c, 0, z, 'X')                                  # the parlour's rug
         # the wall between the parlour and the kitchen, a doorway through it
         for h in (0, 1, 2, 4, 5, 6):
             H.put(0, h, -1, 'W'); H.put(1, h, -1, 'W')
@@ -186,6 +188,7 @@ def workers():
         H.put(1, 4, -3, '['); H.put(1, 4, -2, '['); H.put(3, 4, -4, '('); H.put(2, 6, -3, 'j')
         # the back bedroom: the children's two, a chest
         H.put(1, 4, 1, '['); H.put(1, 4, 0, '['); H.put(3, 4, 1, '('); H.put(2, 6, 0, 'j')
+        H.put(2, 4, -3, 'X'); H.put(2, 4, -2, 'X'); H.put(2, 4, 0, 'X')   # rag rugs by the beds
         # the yard: the wall to the lane with its gate, the coal bunker, the privy, the water butt
         H.put(0, 0, REAR, 'Z'); H.put(1, 0, REAR, 'Z'); H.put(2, 0, REAR, 'g'); H.put(3, 0, REAR, 'Z')
         H.put(0, 1, REAR, 's'); H.put(1, 1, REAR, 's'); H.put(3, 1, REAR, 's')
@@ -296,6 +299,8 @@ def bayfronted():
         H.put(2, 0, -2, 'P'); H.put(2, 1, -2, 'X'); H.put(1, 0, -2, '<'); H.put(3, 0, -2, '>')
         H.put(0, 0, 0, 'K'); H.put(0, 1, 0, 'K')
         H.put(2, 2, -1, 'j'); H.put(5, 2, 0, 'j'); H.put(5, 2, 2, 'j')
+        for c in (1, 2, 3):
+            H.put(c, 0, -1, 'X'); H.put(c, 0, 0, 'X')            # the parlour's carpet
         # the kitchen: the range, the bench, a cask, the chest; a lamp
         H.put(0, 0, 3, 'U'); H.put(1, 0, 3, 'T'); H.put(2, 0, 3, 'Q'); H.put(3, 0, 3, 'C')
         H.put(1, 2, 2, 'j')
@@ -303,6 +308,8 @@ def bayfronted():
         H.put(1, 4, -1, '['); H.put(1, 4, 0, '['); H.put(3, 4, 0, 'C'); H.put(2, 7, 0, 'j')
         # the back bedroom: the children's two, a chest; the landing's lamp
         H.put(1, 4, 2, '['); H.put(1, 4, 3, '['); H.put(3, 4, 3, 'C'); H.put(2, 7, 2, 'j'); H.put(5, 7, 1, 'j')
+        for c, z in ((2, -1), (2, 0), (3, -1), (2, 2), (2, 3)):
+            H.put(c, 4, z, 'X')                                  # rugs in the bedrooms
         if end:
             x = -10 if i == 0 else 11
             for h in (1, 2):
@@ -336,9 +343,9 @@ def grand():
             d.put(x, -1, z, 'F')
         for z in range(FRONT, BACK + 1):
             for h in range(0, DECK + 2):
-                d.put(x, h, z, 'S' if h <= F2 - 1 else 'Z')
+                d.put(x, h, z, 'S' if h <= F2 - 1 or h == DECK + 1 and z == FRONT else 'Z')
         d.put(x, 0, -4, 'S'); d.put(x, 0, -3, 'S'); d.put(x, 0, RAIL, 'S'); d.put(x, 1, RAIL, 'S')
-        d.put(x, F2, -3, 'S'); d.put(x, DECK, -3, 'n'); d.put(x, DECK + 2, FRONT, 's')
+        d.put(x, F2, -3, 'S'); d.put(x, DECK, -3, 'S'); d.put(x, DECK + 2, FRONT, 's')
     for i, H in enumerate(houses):
         end = i == 0 or i == len(houses) - 1
         for c in range(6):
@@ -391,7 +398,7 @@ def grand():
         H.put(5, 5, -3, 'j')
         # the cornice and the parapet
         for c in range(6):
-            H.put(c, DECK, -3, 'n')
+            H.put(c, DECK, -3, 'S')                              # the cornice, projecting
             H.put(c, DECK + 2, FRONT, 's')
         # the stair: two flights up the back, rising from the hall to the left
         for k, c in enumerate((5, 4, 3, 2, 1)):
@@ -408,14 +415,20 @@ def grand():
         H.put(1, 2, -1, '<'); H.put(3, 2, -1, '>'); H.put(1, 2, 0, '<'); H.put(3, 2, 0, '>')
         H.put(0, 2, -1, 'K'); H.put(0, 3, -1, 'K')
         H.put(2, 5, 0, 'j'); H.put(5, 5, -1, 'j')
+        for c in (1, 2, 3):
+            H.put(c, 2, 1, 'X')                                  # the dining room's carpet
         H.put(0, 2, 3, 'U'); H.put(1, 2, 3, 'C'); H.put(2, 2, 3, 'Q'); H.put(3, 2, 3, 'T')
         H.put(1, 5, 2, 'j')
         # the first floor: the master bedroom, the pair of beds heads to the party wall, a chest, a desk and shelves
         H.put(1, 7, 1, '['); H.put(1, 7, 0, '['); H.put(2, 7, 1, 'C')
         H.put(4, 7, -1, 'K'); H.put(4, 8, -1, 'K'); H.put(3, 10, 0, 'j'); H.put(5, 10, 1, 'j'); H.put(1, 10, 2, 'j')
+        for c, z in ((2, -1), (3, -1), (2, 0), (3, 0), (4, 0)):
+            H.put(c, 7, z, 'X')                                  # the bedroom's carpet
         # the second floor: the children's two, a servant's bed, a chest
         H.put(1, 12, 1, '['); H.put(1, 12, 0, '['); H.put(4, 12, 1, ']'); H.put(2, 12, 1, 'C')
         H.put(2, 14, -1, 'j'); H.put(3, 14, 2, 'j')
+        for c, z in ((2, -1), (3, -1), (2, 0), (3, 0)):
+            H.put(c, 12, z, 'X')
         if end:
             x = -10 if i == 0 else 11
             for h in (3, 4, 5):

@@ -85,6 +85,7 @@ public final class Grow {
         UUID id = v.id();
         long now = level.getGameTime();
         HousingMarket.tick(level, v);                                // [vision27] a folk's own house going up: on its own clock (eight blocks every 5 s)
+        TerraceRows.finish(level, v);                                // [house34] the terraces finished house by house, on the same clock
         if (now - LAST.getOrDefault(id, -100000L) < Ethos.growEvery(id, 300L)) return;   // [identity] sooner in a forward-looking town
         LAST.put(id, now);
         Luxuries.candles(level, v);                                  // the households' candles, lit at dusk (Luxuries)

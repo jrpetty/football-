@@ -159,6 +159,8 @@ public final class TerraceRows {
         STEPPED.clear();
         PLANS.clear();
         DRESS_LOOK.clear();
+        FINISHED.clear();
+        PIECES.clear();
         WORTH.clear();
         WANT.clear();
     }
@@ -203,6 +205,8 @@ public final class TerraceRows {
         if (!isRow(project)) return;
         int[] s = PROPOSED.remove(village + "|" + site.anchor().asLong());
         if (s != null) recordSteps(village, site.anchor(), s);
+        LOG.info("[MCA-TERRACE] {}: {} on the lot at {} (its back {}), its houses' floors {}", Villages.name(village), project,
+            site.anchor().toShortString(), site.facing(), s == null ? "level" : Arrays.toString(s));
     }
 
     private static int step(int[] steps, int i) {
@@ -836,12 +840,29 @@ public final class TerraceRows {
             Ledger.note(id, COST + "day", Long.toString(day));
         }
         opened(id, day);
-        for (Ledger.Building b : rows) {
+        moveUp(level, v, day);
+    }
+
+    private static final Map<UUID, Long> FINISHED = new ConcurrentHashMap<>();
+    private static final Map<String, Integer> PIECES = new ConcurrentHashMap<>();
+
+    /** Grow's clock (every five seconds): the next piece of the finishing of the town's rows, by a hand sent to it. */
+    static void finish(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        long now = level.getGameTime();
+        Long last = FINISHED.get(id);
+        if (last != null && now - last < 100L && now >= last) return;
+        FINISHED.put(id, now);
+        for (Ledger.Building b : rows(id)) {
             if (!Land.areaLoaded(level, b.anchor(), 12) || Ledger.raising(id, b.anchor())) continue;
             if (!standing(level, id, b)) continue;
-            if (dress(level, v, b, false) > 0) break;          // one piece of work a round
+            int n = dress(level, v, b, false);
+            if (n > 0) {
+                int all = PIECES.merge(b.anchor().asLong() + "", n, Integer::sum);
+                if (all == n || all % 200 < n) LOG.info("[MCA-TERRACE] {}: the hands finishing {} ({} pieces so far)", Villages.name(id), name(id, b), all);
+                break;                                          // one piece of work a round
+            }
         }
-        moveUp(level, v, day);
     }
 
     /** Is the row up (its doors hung)? */
@@ -881,17 +902,21 @@ public final class TerraceRows {
         new Paint(Blocks.WARPED_DOOR, Items.GREEN_DYE, "green"), new Paint(Blocks.CRIMSON_DOOR, Items.PURPLE_DYE, "plum") };
 
     private static final Map<Long, Integer> DRESS_LOOK = new ConcurrentHashMap<>();
+    /** How many bricks a hand lays facing a row in a round. */
+    static final int REFACE = 48;
 
     /** Each house's own colour, by where it stands: never the same as the house beside it. */
     static Paint paint(Ledger.Building b, int i) {
         Tier t = tier(b.structure());
         Paint[] list = t == Tier.WORKERS ? WORKERS_DOORS : t == Tier.BAY ? BAY_DOORS : GRAND_DOORS;
         int seed = (int) (CityDress.mix(b.anchor(), 0x7e44ace5L) & 0x7fffffff);
-        return list[(seed + i * 2 + (i % 2 == 1 ? 1 : 0)) % list.length];
+        int stride = list.length % 2 == 1 || list.length > 4 ? 2 : 1;          // a different colour for every house of the row
+        return list[(seed + i * stride) % list.length];
     }
 
     /**
-     * A piece of the finishing of a row ({@code free}: all of it at once, for nothing): each front door painted, the grand
+     * A piece of the finishing of a row ({@code free}: all of it at once, for nothing): its brickwork faced in brick where
+     * the builders had to make do with stone (a stretch at a time, the stone back into the stores), each front door painted, the grand
      * row's railings in iron, each house's chimney pots and its fire lit while it is lived in, the numbers and names by
      * the doors. Out of the stores, by a hand at work there; how many pieces were done.
      */
@@ -901,6 +926,26 @@ public final class TerraceRows {
         UUID id = v == null ? null : v.id();
         int[] steps = steps(b.anchor());
         int done = 0;
+        // the brickwork faced in brick where it went up in whatever the builders had (a stretch at a time)
+        int laid = 0;
+        for (BuildGoal.Placement pl : plan(id, b)) {
+            if (pl.part() != BuildGoal.Part.BLOCK || pl.style() != Blueprints.Style.BRICK) continue;
+            BlockState there = level.getBlockState(pl.pos());
+            if (there.is(Blocks.BRICKS) || !there.isCollisionShapeFullBlock(level, pl.pos()) || there.hasBlockEntity()) continue;
+            if (!free) {
+                if (laid == 0 && (Crafts.stock(level, v, st -> st.is(Items.BRICKS)) < 1
+                        || !TownJobs.atWork(level, v, "walls", pl.pos(), "facing " + name(id, b) + " in brick"))) break;
+                if (Crafts.takeOne(level, v, st -> st.is(Items.BRICKS)).isEmpty()) break;
+                Crafts.giveBack(level, v, there.getBlock().asItem(), 1);                  // what came off goes back into the stores
+            }
+            level.setBlock(pl.pos(), Blocks.BRICKS.defaultBlockState(), 2);
+            laid++;
+            if (!free && laid >= REFACE) break;
+        }
+        if (laid > 0) {
+            done += laid;
+            if (!free) return done;
+        }
         for (Spot s : spots(b)) {
             int i = s.index(), st = step(steps, i);
             // the front door, its household's colour
@@ -1126,6 +1171,72 @@ public final class TerraceRows {
     }
 
     // ------------------------------------------------------------------ staging and tests
+
+    /**
+     * The pictures (/village terrace stage, ops): on a flat stage at the spot, a paved street running east, and along its
+     * south side the three rows end to end, a cross street between each, every one dressed as a town finishes it; or, on
+     * "slope", the street climbing a block every five and a workers' and a bay-fronted row stepping up it. In the Iron
+     * Age's look (brick, dressed stone, slate), not out of any stores. Returns where each row's anchor is.
+     */
+    public static String stage(ServerLevel level, BlockPos at, String kind) {
+        boolean slope = "slope".equals(kind);
+        String[] rows = slope ? new String[]{ "terrace", "terrace2" } : new String[]{ "terrace", "terrace2", "terrace3" };
+        int x0 = at.getX() - 8, x1 = at.getX() + 25 * rows.length + 8, z0 = at.getZ() - 14, z1 = at.getZ() + 12;
+        int y = at.getY();
+        for (int x = x0; x <= x1; x++) {
+            int rise = slope ? Math.max(0, (x - at.getX()) / 6) : 0;
+            for (int z = z0; z <= z1; z++) {
+                for (int h = -6; h <= 40; h++) {
+                    BlockPos p = new BlockPos(x, y + h, z);
+                    BlockState want = h < rise - 1 ? Blocks.DIRT.defaultBlockState() : h == rise - 1 ? Blocks.GRASS_BLOCK.defaultBlockState()
+                        : Blocks.AIR.defaultBlockState();
+                    if (level.getBlockState(p) != want) level.setBlock(p, want, 2 | 16);
+                }
+                // the street before the rows, paved, with its kerbs
+                if (z >= at.getZ() - 11 && z <= at.getZ() - 7) {
+                    BlockPos road = new BlockPos(x, y + rise - 1, z);
+                    boolean kerb = z == at.getZ() - 7 || z == at.getZ() - 11;
+                    level.setBlock(road, (kerb ? Blocks.SMOOTH_STONE : Blocks.STONE_BRICKS).defaultBlockState(), 2 | 16);
+                }
+            }
+        }
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < rows.length; i++) {
+            Tier t = tier(rows[i]);
+            int cx = at.getX() + 10 + 25 * i;
+            Direction back = Direction.SOUTH;
+            BlockPos base = new BlockPos(cx, y, at.getZ());
+            int[] steps = new int[t.count()];
+            int lo = Integer.MAX_VALUE;
+            Direction right = back.getClockWise();
+            for (int k = 0; k < t.count(); k++) {
+                BlockPos street = base.relative(right, t.doorDx(k)).relative(back, -6);
+                steps[k] = BuildGoal.groundTop(level, street.getX(), street.getZ());
+                lo = Math.min(lo, steps[k]);
+            }
+            for (int k = 0; k < t.count(); k++) steps[k] -= lo;
+            BlockPos anchor = base.atY(lo);
+            // the ground under each house made to its floor, as the builders make it
+            for (int dx = t.walls[0]; dx <= t.walls[t.walls.length - 1]; dx++) {
+                int[] own = owners(t, dx);
+                int s = Integer.MAX_VALUE;
+                for (int o : own) s = Math.min(s, steps[o]);
+                for (int dz = -5; dz <= 5; dz++) {
+                    BlockPos col = anchor.relative(right, dx).relative(back, dz);
+                    for (int h = -4; h <= 30; h++) {
+                        BlockPos p = col.above(h);
+                        level.setBlock(p, h < s - 1 ? Blocks.DIRT.defaultBlockState() : h == s - 1 ? Blocks.GRASS_BLOCK.defaultBlockState()
+                            : Blocks.AIR.defaultBlockState(), 2 | 16);
+                    }
+                }
+            }
+            Ledger.Building b = stampForTests(level, rows[i], anchor, back, steps, null);
+            dress(level, null, b, true);
+            out.append(out.length() == 0 ? "" : "; ").append(rows[i]).append(' ').append(anchor.getX()).append(' ').append(anchor.getY())
+                .append(' ').append(anchor.getZ()).append(" steps ").append(Arrays.toString(steps));
+        }
+        return out.toString();
+    }
 
     /** Tests and the camera: a row stamped at once, its steps as given, dressed for nothing. Returns its register entry
      *  (not put on any town's register). */

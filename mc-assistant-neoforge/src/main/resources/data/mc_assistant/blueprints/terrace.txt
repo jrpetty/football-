@@ -25,8 +25,8 @@ SZS8ZZZ8SZZZS8ZZZ8SZS
 Z3..(Z)..2Z3..(Z)..2Z
 ZT..&Z&..TZT..&Z&..TZ
 ZWW..Z..WWZWW..Z..WWZ
-ZK...Z...KZK...Z...KZ
-Z...^Z^...Z...^Z^...Z
+ZKXX.Z.XXKZKXX.Z.XXKZ
+Z.XX^Z^XX.Z.XX^Z^XX.Z
 Z<P..Z..P>Z<P..Z..P>Z
 SSSZDZDZSSZSSZDZDZSSS
 layer 1
@@ -71,10 +71,10 @@ layer 4
 .....................
 SZZGZZZGZZZZZGZZZGZZS
 Z.[.(Z).].Z.[.(Z).].Z
-Z.[..Z..].Z.[..Z..].Z
+Z.[X.Z.X].Z.[X.Z.X].Z
 ZWW..Z..WWZWW..Z..WWZ
-Z.[..Z..].Z.[..Z..].Z
-Z.[.PZP.].Z.[.PZP.].Z
+Z.[X.Z.X].Z.[X.Z.X].Z
+Z.[XPZPX].Z.[XPZPX].Z
 G...(Z)...Z...(Z)...G
 SZGGZZZGGZZZGGZZZGGZS
 layer 5

@@ -285,6 +285,11 @@ public final class VillageCommands {
             .then(Commands.literal("flats")
                 .executes(VillageCommands::flats)
                 .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(VillageCommands::flatsStage)))
+            // [house34] The terraces set out on a stage at the spot, for the pictures (ops; from a palette, not the stores): each row
+            // dressed, and on "slope" a workers' and a bay-fronted row stepping up a street that climbs.
+            .then(Commands.literal("terrace").requires(src -> src.hasPermission(2))
+                .then(Commands.literal("stage").executes(ctx -> terraceStage(ctx, "rows"))
+                    .then(Commands.literal("slope").executes(ctx -> terraceStage(ctx, "slope")))))
             // The job market between towns: the notices, the applications, who came and went (JobMarketCommands).
             .then(JobMarketCommands.node())
             // [interviews] The town's interviews, set and held; a word put in, a seat on the panel, a choice; (ops) one staged now.
@@ -1220,6 +1225,13 @@ public final class VillageCommands {
     }
 
     /** [flats] /village flats stage: a furnished block of flats set out at the spot, its door to the south. */
+    private static int terraceStage(CommandContext<CommandSourceStack> ctx, String kind) {   // [house34]
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        String where = com.jrpetty.mcassistant.entity.TerraceRows.stage(ctx.getSource().getLevel(), at, kind);
+        ctx.getSource().sendSuccess(() -> Component.literal("TERRACESTAGE " + where), false);
+        return 1;
+    }
+
     private static int flatsStage(CommandContext<CommandSourceStack> ctx) {
         net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
         String where = com.jrpetty.mcassistant.entity.Flats.stage(ctx.getSource().getLevel(), at);

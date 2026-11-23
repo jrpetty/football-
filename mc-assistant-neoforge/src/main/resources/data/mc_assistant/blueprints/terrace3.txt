@@ -46,7 +46,7 @@ layer 2
 SSSSSSSSSSSSSSSSSSSSSS
 SUCQT.<SUCQT.<SUCQT.<S
 S......S......S......S
-S......S......S......S
+S.XXX..S.XXX..S.XXX..S
 S.<P>..S.<P>..S.<P>..S
 SK<P>..SK<P>..SK<P>..S
 SSSSSSDSSSSSSDSSSSSSDS
@@ -107,8 +107,8 @@ ZZZZZZZZZZZZZZZZZZZZZZ
 Z....<.Z....<.Z....<.Z
 Z......Z......Z......Z
 Z.[C...Z.[C...Z.[C...Z
-Z.[....Z.[....Z.[....Z
-Z....K.Z....K.Z....K.Z
+Z.[XXX.Z.[XXX.Z.[XXX.Z
+Z..XXK.Z..XXK.Z..XXK.Z
 ZZGZGZGZZGZGZGZZGZGZGZ
 ..P.P.P..P.P.P..P.P.P.
 ......................
@@ -167,8 +167,8 @@ SZGZGZZZZGZGZZZZGZGZZS
 Z...P..Z...P..Z...P..Z
 G......Z......Z......G
 Z.[C.].Z.[C.].Z.[C.].Z
-Z.[....Z.[....Z.[....Z
-Z......Z......Z......Z
+Z.[XX..Z.[XX..Z.[XX..Z
+Z..XX..Z..XX..Z..XX..Z
 SZGZGZGZZGZGZGZZGZGZGS
 ......................
 ......................
@@ -206,7 +206,7 @@ ZRRRRRRZRRRRRRZRRRRRRZ
 ZRRRRRRZRRRRRRZRRRRRRZ
 ZRRRRRRZRRRRRRZRRRRRRZ
 ZSSSSSSZSSSSSSZSSSSSSZ
-nnnnnnnnnnnnnnnnnnnnnn
+SSSSSSSSSSSSSSSSSSSSSS
 ......................
 ......................
 layer 16
@@ -217,7 +217,7 @@ Z......Z......Z......Z
 Z......Z......Z......Z
 Z......Z......Z......Z
 ^^^^^^^^^^^^^^^^^^^^^^
-SSSSSSSZSSSSSSZSSSSSSS
+SSSSSSSSSSSSSSSSSSSSSS
 ......................
 ......................
 ......................

@@ -22,8 +22,8 @@ SZZZZZ8ZZZZZZ8ZZZZZZ8S
 ZUTQC..ZUTQC..ZUTQC..Z
 Z......Z......Z......Z
 ZWWW...ZWWW...ZWWW...Z
-ZK...^.ZK...^.ZK...^.Z
-Z......Z......Z......Z
+ZKXXX^.ZKXXX^.ZKXXX^.Z
+Z.XXX..Z.XXX..Z.XXX..Z
 SZ<P>ZDZZ<P>ZDZZ<P>ZDS
 SSSSSS.SSSSSS.SSSSSS.S
 Z*****.Z*****.Z*****.Z
@@ -67,11 +67,11 @@ SSSSSSjSSSSSSjSSSSSSjS
 layer 4
 ......................
 SZZZZZZZZZZZZZZZZZZZZS
-Z.[.C..Z.[.C..Z.[.C..Z
-Z.[....Z.[....Z.[....Z
+Z.[XC..Z.[XC..Z.[XC..Z
+Z.[X...Z.[X...Z.[X...Z
 ZWWW...ZWWW...ZWWW...Z
-Z.[.CP.Z.[.CP.Z.[.CP.Z
-Z.[....Z.[....Z.[....Z
+Z.[XCP.Z.[XCP.Z.[XCP.Z
+Z.[XX..Z.[XX..Z.[XX..Z
 SZZZZZZZZZZZZZZZZZZZZS
 ^^^^^^^^^^^^^^^^^^^^^^
 ......................
