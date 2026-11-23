@@ -6788,6 +6788,10 @@ public class VillageFolkEntity extends AssistantEntity {
             deadFieldSince = now;
             return false;
         }
+        // [biz30d] Not while it is short of its kit (no hoe, it tills nothing): the clock starts again once it has it. A farmer
+        // without its hoe gave up field after field it could never have tilled, each new one fenced and given a bucket on the
+        // town's account.
+        if (!missingEssentials().isEmpty()) { deadFieldSince = now; return false; }
         if (now - deadFieldSince < 30000L || tickCount - deadFieldLook < 1200) return false;
         deadFieldLook = tickCount;
         BlockPos c = z.center();
