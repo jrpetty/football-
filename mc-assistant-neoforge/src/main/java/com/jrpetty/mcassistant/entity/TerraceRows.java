@@ -745,11 +745,15 @@ public final class TerraceRows {
      */
     public static List<String> wanted(UUID village, List<String> projects) {
         int house = projects.indexOf("house");
-        if (house < 0) { WANT.remove(village); return projects; }
         for (Tier t : Tier.values()) if (projects.contains(t.structure)) return projects;
+        // one going up already: that one stays on the list ahead of the house till it is built ([house34b]: it was dropped
+        // from the list the moment its lot was chosen, and the builders went on raising houses while the row's lot waited)
+        for (String k : Villages.sitesOf(village).keySet()) {
+            if (isRow(k)) { projects.add(house < 0 ? projects.size() : house, k); return projects; }
+        }
+        if (house < 0) { WANT.remove(village); return projects; }
         Villages.Age age = Villages.ageOf(village);
         if (age.ordinal() < Villages.Age.STONE.ordinal() || Villages.headcount(village) < 12) { WANT.remove(village); return projects; }
-        for (String k : Villages.sitesOf(village).keySet()) if (isRow(k)) return projects;    // one going up already
         Tier t = choose(village);
         if (t == null) { WANT.remove(village); return projects; }
         projects.add(house, t.structure);
@@ -931,6 +935,22 @@ public final class TerraceRows {
     /** The rows' own crew (TownJobs): not the walls crew, which the age's make-over of every building keeps at one spot
      *  after another for days, while the rows stood half in cobble and timber waiting on it. */
     static final String ROWS_WORK = "terraces";
+    /** [house34b] The wash on the yards' lines: sheets and shirts, white, blue, pink, yellow, grey. */
+    private static final Block[] WASH = { Blocks.WHITE_WALL_BANNER, Blocks.LIGHT_BLUE_WALL_BANNER, Blocks.WHITE_WALL_BANNER,
+        Blocks.PINK_WALL_BANNER, Blocks.YELLOW_WALL_BANNER, Blocks.LIGHT_GRAY_WALL_BANNER, Blocks.WHITE_WALL_BANNER };
+    private static final Block[] WALL_BANNERS = { Blocks.WHITE_WALL_BANNER, Blocks.ORANGE_WALL_BANNER, Blocks.MAGENTA_WALL_BANNER,
+        Blocks.LIGHT_BLUE_WALL_BANNER, Blocks.YELLOW_WALL_BANNER, Blocks.LIME_WALL_BANNER, Blocks.PINK_WALL_BANNER, Blocks.GRAY_WALL_BANNER,
+        Blocks.LIGHT_GRAY_WALL_BANNER, Blocks.CYAN_WALL_BANNER, Blocks.PURPLE_WALL_BANNER, Blocks.BLUE_WALL_BANNER, Blocks.BROWN_WALL_BANNER,
+        Blocks.GREEN_WALL_BANNER, Blocks.RED_WALL_BANNER, Blocks.BLACK_WALL_BANNER };
+
+    /** The wall banner of a banner's colour, to hang it on a line. */
+    @Nullable
+    private static Block wallBanner(ItemStack banner) {
+        if (!(banner.getItem() instanceof net.minecraft.world.item.BannerItem bi)) return null;
+        net.minecraft.world.item.DyeColor c = bi.getColor();
+        return WALL_BANNERS[c.getId() % WALL_BANNERS.length];
+    }
+
     /** A whole block where a slab was drawn, and the slab it is cut down to. */
     private static final Map<Block, Block> SLAB_OF = Map.of(
         Blocks.COBBLESTONE, Blocks.COBBLESTONE_SLAB, Blocks.STONE_BRICKS, Blocks.STONE_BRICK_SLAB, Blocks.STONE, Blocks.STONE_SLAB,
@@ -961,17 +981,25 @@ public final class TerraceRows {
         int done = 0;
         // the brickwork faced in brick where it went up in whatever the builders had (a stretch at a time)
         int laid = 0;
+        boolean[] have = { free || Crafts.stock(level, v, st -> st.is(Items.BRICKS)) > 0, free || Crafts.stock(level, v, st -> st.is(Items.STONE_BRICKS)) > 0 };
         for (BuildGoal.Placement pl : plan(id, b)) {
-            if (pl.part() != BuildGoal.Part.BLOCK || pl.style() != Blueprints.Style.BRICK) continue;
+            if (pl.part() != BuildGoal.Part.BLOCK) continue;
+            // the brick in brick; and ([house34b]) the dressed stone (the grand row's ground floors, the bands, the quoins) in
+            // stone bricks where the masons had only rough cobble
+            boolean brick = pl.style() == Blueprints.Style.BRICK;
+            if (!brick && pl.style() != Blueprints.Style.MASONRY) continue;
             BlockState there = level.getBlockState(pl.pos());
-            if (there.is(Blocks.BRICKS) || !there.isCollisionShapeFullBlock(level, pl.pos()) || there.hasBlockEntity()) continue;
+            if (!brick && !(there.is(Blocks.COBBLESTONE) || there.is(Blocks.MOSSY_COBBLESTONE))) continue;
+            Block face = brick ? Blocks.BRICKS : Blocks.STONE_BRICKS;
+            Item faceItem = brick ? Items.BRICKS : Items.STONE_BRICKS;
+            if (there.is(face) || !there.isCollisionShapeFullBlock(level, pl.pos()) || there.hasBlockEntity()) continue;
+            if (!have[brick ? 0 : 1]) continue;
             if (!free) {
-                if (laid == 0 && (Crafts.stock(level, v, st -> st.is(Items.BRICKS)) < 1
-                        || !TownJobs.atWork(level, v, ROWS_WORK, pl.pos(), "facing " + name(id, b) + " in brick"))) break;
-                if (Crafts.takeOne(level, v, st -> st.is(Items.BRICKS)).isEmpty()) break;
+                if (laid == 0 && !TownJobs.atWork(level, v, ROWS_WORK, pl.pos(), "facing " + name(id, b) + (brick ? " in brick" : " in dressed stone"))) break;
+                if (Crafts.takeOne(level, v, st -> st.is(faceItem)).isEmpty()) { have[brick ? 0 : 1] = false; continue; }
                 Crafts.giveBack(level, v, there.getBlock().asItem(), 1);                  // what came off goes back into the stores
             }
-            level.setBlock(pl.pos(), Blocks.BRICKS.defaultBlockState(), 2);
+            level.setBlock(pl.pos(), face.defaultBlockState(), 2);
             laid++;
             if (!free && laid >= REFACE) break;
         }
@@ -1085,6 +1113,51 @@ public final class TerraceRows {
                     boolean decorated = ((CityDress.mix(s.anchor(), 0x5a17L + k) >>> 5) & 3) == 0;
                     if (!free && !take(level, v, decorated ? Items.DECORATED_POT : Items.FLOWER_POT, "setting a chimney pot on " + address(id, s), pot)) continue;
                     level.setBlock(pot, decorated ? Blocks.DECORATED_POT.defaultBlockState() : Blocks.FLOWER_POT.defaultBlockState(), 3);
+                    done++;
+                    if (!free) return done;
+                }
+            }
+        }
+        // [house34b] the washing lines across the workers' yards, party wall to party wall, the week's wash pegged out
+        if (t == Tier.WORKERS) {
+            for (Spot s : spots(b)) {
+                int i = s.index(), st = step(steps, i), z = t.back + 1;
+                List<BlockPos> line = new ArrayList<>();
+                for (int dx = t.left(i) - 1; dx <= t.right(i) + 1; dx++) line.add(cell(b, dx, st + 2, z));
+                boolean up = level.getBlockState(line.get(1)).getBlock() instanceof FenceBlock;
+                if (!up) {
+                    boolean clear = true;
+                    for (BlockPos p : line) {
+                        BlockState there = level.getBlockState(p);
+                        if (!there.isAir() && !(there.getBlock() instanceof FenceBlock)) clear = false;
+                    }
+                    if (!clear) continue;
+                    if (!free) {
+                        if (Crafts.stock(level, v, it -> it.is(net.minecraft.tags.ItemTags.WOODEN_FENCES)) < line.size()
+                                || !TownJobs.atWork(level, v, "yards", line.get(1), "putting up the washing line at " + address(id, s))) continue;
+                        for (int k = 0; k < line.size(); k++) Crafts.takeOne(level, v, it -> it.is(net.minecraft.tags.ItemTags.WOODEN_FENCES));
+                    }
+                    BlockState post = Blocks.SPRUCE_FENCE.defaultBlockState();
+                    for (BlockPos p : line) if (level.getBlockState(p).isAir()) level.setBlock(p, post, 2 | 16);
+                    for (BlockPos p : line) level.setBlock(p, Block.updateFromNeighbourShapes(level.getBlockState(p), level, p), 2 | 16);
+                    done++;
+                    if (!free) return done;
+                }
+                // the wash: two pieces hung from the line over the middle of the yard
+                for (int k = 1; k <= 2; k++) {
+                    BlockPos p = cell(b, t.left(i) + k, st + 2, z + 1);
+                    if (!level.getBlockState(p).isAir() || !level.getBlockState(p.below()).isAir()) continue;
+                    if (!(level.getBlockState(cell(b, t.left(i) + k, st + 2, z)).getBlock() instanceof FenceBlock)) continue;
+                    Block wash = WASH[(int) ((CityDress.mix(s.anchor(), 0x3a5L + k) >>> 3) % WASH.length)];
+                    if (!free) {
+                        ItemStack got = Crafts.stock(level, v, it -> it.is(net.minecraft.tags.ItemTags.BANNERS)) < 1 ? ItemStack.EMPTY
+                            : TownJobs.atWork(level, v, "yards", p, "hanging out the washing at " + address(id, s))
+                            ? Crafts.takeOne(level, v, it -> it.is(net.minecraft.tags.ItemTags.BANNERS)) : ItemStack.EMPTY;
+                        if (got.isEmpty()) break;
+                        Block wall = wallBanner(got);
+                        if (wall != null) wash = wall;
+                    }
+                    level.setBlock(p, wash.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, b.facing()), 3);
                     done++;
                     if (!free) return done;
                 }
