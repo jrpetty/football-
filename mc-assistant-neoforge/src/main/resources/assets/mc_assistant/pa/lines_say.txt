@@ -1285,3 +1285,178 @@ I stay with you.
 Sorry, only you.
 I follow my owner only.
 I'll stay with you, {owner}.
+
+# [pa33d] A level gained: {level} the new level, {skill} what it can do now.
+== say.levelup
+[bad] Level {level}. I'm on the up. Like a ladder. A ladder of {skill}. That made no sense. Keeping it.
+Level {level}. I can do {skill} now. Try and keep up.
+Ding. Level {level}. New on the menu: {skill}.
+Level {level}, and they said I'd never amount to anything. Well, I said it. Now: {skill}.
+Look at me, level {level}. {skill}, at your service.
+Level {level}. I'd do a lap of honour but there's work. Also: {skill}.
+I've levelled up to {level}. I feel taller. I'm not. But {skill}, though.
+== say.levelup@gloomy
+Level {level}. More responsibility. Marvellous. I can do {skill} now, I suppose.
+Level {level}. The work gets harder and I get slightly less bad at it. {skill}.
+Ding. Level {level}. Don't make a fuss. {skill}, apparently.
+Level {level}. Still the same rain, mind. But {skill}.
+Another level. {level}. The climb never ends. {skill} now.
+Level {level}. I'd celebrate, but what's the point. {skill}, if you need it.
+== say.levelup@serious
+Level {level}. New: {skill}.
+I've reached level {level}. I can now handle {skill}.
+Level {level} reached. {skill} is available.
+Level {level}. Ready for {skill}.
+Up to level {level}. {skill} added to what I can do.
+Level {level}. Faster and steadier. New: {skill}.
+
+# [pa33d] Bedtime: talking in its sleep ({owner}), waking, and its answers to "go to bed" and "wake up".
+== say.sleep_talk
+[bad] Zzz. Why did the bed go to school. For a sheet of paper. Zzz. That was terrible. I'm keeping it.
+Zzz. No, the other creeper. Zzz.
+Mmph. Five more minutes. Five more blocks.
+Zzz. {owner}, that's not a sheep, that's a cloud. Zzz.
+Snrrk. I can explain the hole in the wall. Zzz.
+Zzz. More cobblestone. Always more cobblestone. Zzz.
+Mumble. Who moved my pickaxe. Mumble.
+== say.sleep_talk@gloomy
+Zzz. It's raining in here too. Zzz.
+Mmph. Even my dreams have zombies.
+Zzz. The cave goes on forever. Of course it does. Zzz.
+Snrrk. Not the lava again. Zzz.
+Zzz. The pack's full. It's always full. Zzz.
+Mumble. Why do we even dig. Mumble.
+== say.sleep_talk@serious
+Zzz.
+Zzz. Inventory sorted. Zzz.
+Mmph. Perimeter secure. Zzz.
+Zzz. Torches placed. Zzz.
+Snrrk. Ready for the morning. Zzz.
+Zzz. Noted. Zzz.
+== say.woke_danger
+Up, up. Something's out there.
+Who's there. Ah. A monster. Brilliant.
+Awake. Weapons out. Pyjamas on.
+I'm up. Something wants a fight.
+Nothing like a monster for an alarm clock.
+Out of bed. Something's lurking.
+== say.woke_danger@gloomy
+Of course. Even sleep isn't safe.
+Up again. Something wants to eat us. Typical.
+I was having a nice dream for once. Monster.
+Awake. Doom approaches. As usual.
+Can't even sleep in peace. Right.
+Up. There's always something.
+== say.woke_danger@serious
+Awake. Hostile nearby.
+Up. Threat close.
+Waking. Something's near.
+On my feet. Monster nearby.
+Awake. Watch yourself.
+Up. Danger.
+== say.woke_morning
+Morning. I slept like a log. A log you didn't chop.
+Up and at it. What's first.
+Rise and shine. Mostly rise. The shining comes later.
+Morning. I dreamt of diamonds. Let's go and find some.
+That was a lovely kip. Right, work.
+Awake. Fresh as a daisy. A daisy with a pickaxe.
+== say.woke_morning@gloomy
+Morning. Another day. Brilliant.
+Up. The sun's out. It won't last.
+Awake, unfortunately.
+Morning. My back hurts. I don't have a back.
+Another day of digging. Lovely.
+Up. Let's get it over with.
+== say.woke_morning@serious
+Morning. Ready.
+Awake. What's the plan.
+Up and ready to work.
+Good morning. Orders.
+Morning. Let's get going.
+Awake. Standing by.
+== say.woke_told
+All right, all right. I'm up.
+I'm awake. I was resting my eyes.
+Up. Who needs sleep.
+Awake. What's so urgent.
+I'm up. You owe me a lie-in.
+Fine. Up I get.
+== say.woke_told@gloomy
+Up. Sleep was nice while it lasted.
+Awake. Back to the grind.
+I'm up. Dreams are overrated anyway.
+Fine. I'm awake. Sort of.
+Up. It was a good dream, too.
+Awake. Of course.
+== say.woke_told@serious
+Awake.
+I'm up.
+Up. Ready.
+Awake. What do you need.
+On my feet.
+Up and ready.
+== say.bed_now
+[bad] Night. I'm off to the land of nod, just past the land of cobble. I'll see myself to bed.
+Bedtime. Night, {owner}.
+Off to bed. Wake me if something explodes.
+Right, I'm turning in. Don't wander off.
+Sleep it is. I've earned it.
+Night night. Don't let the creepers bite.
+Heading to bed. Mind the dark.
+== say.bed_now@gloomy
+Bed. At least the night ends eventually.
+Off to bed. Wake me for the doom.
+Sleep. The only break I get.
+Turning in. Try not to die.
+Bedtime. Maybe tomorrow will be better. It won't.
+Night. Mind the monsters.
+== say.bed_now@serious
+Going to bed.
+Turning in for the night.
+Heading to my bed.
+To bed. Call if you need me.
+Sleeping now.
+Off to bed.
+== say.bed_day
+It's broad daylight. I'll turn in at dark.
+Sleep now. In the middle of the day. Bold. At dark, then.
+I'll go to bed when it's dark, promise.
+Bit early for bed. Tonight.
+Not tired yet. Tonight, I'll turn in.
+At dark. I'm not a cat.
+== say.bed_day@gloomy
+At dark. The night comes soon enough.
+Tonight. It's always tonight.
+I'll sleep at dark. Something to look forward to.
+Later. When the monsters come out.
+Not yet. The day isn't done with us.
+At dark, then. Sigh.
+== say.bed_day@serious
+I'll go to bed at dark.
+At nightfall.
+Tonight.
+When it's dark.
+I'll turn in at dusk.
+At dark, then.
+== say.awake_already
+I'm already up. Look at me. Upright.
+Awake as anything.
+I'm not asleep. I'm thinking with my eyes open.
+Wide awake. Ready for orders.
+I wasn't sleeping. Honest.
+Already up and at it.
+== say.awake_already@gloomy
+I'm awake. Unfortunately.
+Already up. Sadly.
+Awake. Always awake.
+I'm up. I didn't get much choice.
+Not asleep. Just like this.
+Awake. Of course.
+== say.awake_already@serious
+I'm awake.
+Already up.
+Awake and ready.
+Not sleeping.
+I'm up.
+Ready.

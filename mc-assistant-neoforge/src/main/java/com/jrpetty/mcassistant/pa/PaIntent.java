@@ -19,7 +19,7 @@ public record PaIntent(Kind kind, String item, int amount, Place place, String r
         GATHER, MINE_ORE, MINE_DOWN, FARM, BUILD, CRAFT, SMELT, DEPOSIT, FETCH, GIVE, BRING_FOOD, FIGHT, HUNT, FISH,
         BREED, SHEAR, LIGHT_AREA, SORT, CLEAR_AREA, FUEL, TRADE_BUY, TRADE_SELL, REPAIR,
         // control
-        STOP, UNDO, PAUSE, RESUME, AUTO_ON, AUTO_OFF, SLEEP, RENAME,
+        STOP, UNDO, PAUSE, RESUME, AUTO_ON, AUTO_OFF, SLEEP, WAKE, RENAME,
         // asking it things
         STATUS, DOING, INVENTORY, NEEDS, HELP, WHERE, QUESTION,
         // small talk and answers

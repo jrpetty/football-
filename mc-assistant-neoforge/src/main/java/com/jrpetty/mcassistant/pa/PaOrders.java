@@ -464,12 +464,11 @@ public final class PaOrders {
                 return i.kind() == Kind.AUTO_ON ? "Auto-help is on: when you've nothing for me I'll keep the base tidy, the furnace going and the farm picked, and tell you what I'm up to."
                     : "Auto-help is off. I'll only do what you ask.";
             }
-            case SLEEP -> {
-                PaData.Rec r = a.rec();
-                if (r != null) { r.sleepAtNight = true; PaData.touch(); }
+            case SLEEP -> {                                       // [pa33d] to bed now (at night), or at dark
                 a.setNightHome(true);
-                return "I'll take shelter at night from now on.";
+                return PaSleep.goToBed(a);
             }
+            case WAKE -> { return PaSleep.wakeUp(a); }
             case RENAME -> {
                 PaLife.rename(a, i.item());
                 return "Call me " + a.displayNameCap() + " from now on.";

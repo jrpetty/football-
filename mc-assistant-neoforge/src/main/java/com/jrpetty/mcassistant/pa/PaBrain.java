@@ -37,6 +37,9 @@ public final class PaBrain {
         @Nullable public BlockPos post;
         @Nullable public BlockPos roamCentre;
         long nightWarnedDay = -1;
+        /** [pa33d] Told to go to bed (till morning); when it last talked in its sleep; was its player asleep. */
+        public boolean bedtime, ownerWasAsleep;
+        public int sleepTalkAt;
         int ownerHurtTick = -100000, meHurtTick = -100000, lastTip, lastAuto, stuckFor, sortedAt = -100000;
         int lastDiamonds = -1, threatTick = -100000;
         @Nullable Vec3 lastPos;
@@ -115,6 +118,7 @@ public final class PaBrain {
         if (t % 20 == 0) personalSpace(a);
         if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
         if (t % 20 == 5) sleptIn(a);                              // [pa33c-2b] the bed it sleeps in is its spawn
+        if (t % 10 == 3) PaSleep.tick(a);                         // [pa33d] bedtime
         if (t % 10 == 0) boat(a);                                 // [pa33b] along with its player on the water
         if (t % 40 == 0) {
             safety(a);
@@ -211,6 +215,7 @@ public final class PaBrain {
             return;
         }
         if (r != null && !cur.auto) { r.jobsDone++; PaData.touch(); }
+        a.earn("BUILD".equals(cur.kind) ? "build" : cur.auto ? "craft" : "job");   // [pa33d] paid for the job done
         String res = cur.task != null && !cur.task.result.isEmpty() ? cur.task.result : "";
         boolean last = plan.steps.stream().noneMatch(s -> !s.auto);
         if (cur.auto) {

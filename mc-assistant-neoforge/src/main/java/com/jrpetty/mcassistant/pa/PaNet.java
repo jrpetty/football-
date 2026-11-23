@@ -201,7 +201,6 @@ public final class PaNet {
             t.putFloat("hp", a.getHealth());
             t.putFloat("maxHp", a.getMaxHealth());
             t.putInt("level", a.veteranLevel());
-            t.putInt("xp", a.lifetimeXp());
             t.putInt("food", a.countFood());
             t.putInt("hunger", a.hunger.food());                  // [pa33c-2b] its hunger bar
             t.putString("mode", a.getMode().name().toLowerCase());
@@ -242,8 +241,21 @@ public final class PaNet {
             if (bedAt != null) t.putString("bed", bedAt.getX() + " " + bedAt.getY() + " " + bedAt.getZ());
             BlockPos home = PaOrders.homeOf(a);
             if (home != null) t.putString("home", home.getX() + " " + home.getY() + " " + home.getZ());
-            t.putInt("xpNext", AssistantEntity.xpForLevel(a.veteranLevel() + 1));
-            t.putInt("xpHere", AssistantEntity.xpForLevel(a.veteranLevel()));                                   // [pa33c-2b] the Pack tab's slots, gear, open rows, locks
+            int lv = a.veteranLevel();                                           // [pa33d] its own ladder
+            t.putInt("xp", (int) Math.min(Integer.MAX_VALUE, a.paXp()));
+            t.putInt("xpNext", PaLevels.xpFor(Math.min(PaLevels.MAX, lv + 1)));
+            t.putInt("xpHere", PaLevels.xpFor(lv));
+            t.putString("nextSkills", PaLevels.next(lv));
+            ListTag skills = new ListTag();
+            for (PaLevels.Skill sk : PaLevels.SKILLS) {
+                CompoundTag c = new CompoundTag();
+                c.putString("l", sk.label());
+                c.putInt("lv", sk.level());
+                skills.add(c);
+            }
+            t.put("skills", skills);
+            t.putDouble("xpMult", PaConfig.xpMultiplier());
+            t.putBoolean("op", p.hasPermissions(2));                                   // [pa33c-2b] the Pack tab's slots, gear, open rows, locks
             t.putString("held", a.getMainHandItem().isEmpty() ? "nothing" : a.getMainHandItem().getHoverName().getString());
             t.putString("dim", a.level().dimension().location().getPath());
             t.putInt("dist", (int) Math.sqrt(a.distanceToSqr(p)));

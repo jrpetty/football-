@@ -1514,4 +1514,108 @@ public class PlayerAssistantGameTests {
             });
         });
     }
+
+    /** pai45: the ten-level grind: work pays experience (scaled by difficulty), a level gained brings the moment (a cheer,
+     *  a line, its hearts and its legs), the server's multiplier speeds it, only operators may change it, and it is kept
+     *  over a save. [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pai45_levels")
+    public static void pai45_levels(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_132_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(null);
+        a.setPaXpForTests(0);
+        helper.runAfterDelay(25, () -> {
+            helper.assertTrue(a.veteranLevel() == 1, "a new one is level 1: " + a.veteranLevel());
+            float speed1 = (float) a.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+            long before = a.paXp();
+            a.earn("job");
+            helper.assertTrue(a.paXp() > before, "a job pays");
+            int said = said(a);
+            a.setPaXpForTests(com.jrpetty.mcassistant.pa.PaLevels.xpFor(4) - 1);
+            a.earn("job");
+            helper.assertTrue(a.veteranLevel() == 4, "level 4: " + a.veteranLevel());
+            helper.assertTrue((a.animValue() & 0xFF) == com.jrpetty.mcassistant.entity.FolkAction.Act.CHEER.ordinal(), "a cheer");
+            helper.assertTrue(said(a) > said && fromLists(lastWords(a), "say.levelup") && lastWords(a).contains("4"), "a line for it: " + lastWords(a));
+            helper.runAfterDelay(25, () -> {
+                helper.assertTrue(a.getMaxHealth() > 6.0F, "more hearts: " + a.getMaxHealth());
+                helper.assertTrue(a.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) > speed1, "quicker on its feet");
+                helper.assertTrue(a.experiencePercent() > 0, "quicker at the work");
+                // the multiplier: three times the pay
+                long b2 = a.paXp();
+                a.earn("build");
+                long one = a.paXp() - b2;
+                com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(3.0);
+                long b3 = a.paXp();
+                a.earn("build");
+                helper.assertTrue(a.paXp() - b3 == one * 3, "the multiplier: " + one + " then " + (a.paXp() - b3));
+                com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(null);
+                // only an operator may change it
+                CompoundTag ad = new CompoundTag();
+                ad.putDouble("xpMult", 50);
+                PaServer.act(p, "admin", ad);
+                helper.assertTrue(com.jrpetty.mcassistant.pa.PaConfig.xpMultiplier() == 1.0, "not an operator: unchanged");
+                // kept over a save
+                CompoundTag saved = new CompoundTag();
+                a.addAdditionalSaveData(saved);
+                helper.assertTrue(saved.getLong("PaXp") == a.paXp(), "saved");
+                Kit.log("pai45 levels: level " + a.veteranLevel() + ", xp " + a.paXp() + ", hp " + a.getMaxHealth());
+                helper.succeed();
+            });
+        });
+    }
+
+    /** pai46: bedtime: "go to bed" at night and it walks to its bed and lies down; a monster close by wakes it; "wake up"
+     *  gets it up; morning gets it up; in the day "go to bed" waits for dark. [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "pai46_sleep")
+    public static void pai46_sleep(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_135_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        BlockPos foot = new BlockPos(x + 6, y, Z + 3), head = foot.north();
+        level.setBlock(foot, Blocks.WHITE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(head, Blocks.WHITE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        say(p, a, "use this bed", foot, -1);
+        say(p, a, "go to bed");
+        helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.bed_day"), "in the day it waits for dark: " + lastWords(a));
+        level.setDayTime(14000);
+        say(p, a, "go to bed");
+        helper.assertTrue(fromLists(lastWords(a), "say.bed_now"), "bedtime: " + lastWords(a));
+        helper.runAfterDelay(160, () -> {
+            helper.assertTrue(a.isSleeping() && a.getPose() == net.minecraft.world.entity.Pose.SLEEPING, "asleep in its bed: " + a.getPose() + " at " + a.blockPosition().toShortString());
+            BlockPos at = a.blockPosition();
+            helper.runAfterDelay(40, () -> {
+                helper.assertTrue(a.isSleeping() && a.blockPosition().equals(at), "lies still");
+                // a monster close by: up at once
+                net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
+                z.moveTo(head.getX() + 3.5, y, head.getZ() + 0.5, 0, 0);
+                z.setNoAi(true);
+                level.addFreshEntity(z);
+                helper.runAfterDelay(30, () -> {
+                    helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_danger"), "a monster wakes it: " + lastWords(a));
+                    z.discard();
+                    say(p, a, "go to bed");
+                    helper.runAfterDelay(120, () -> {
+                        helper.assertTrue(a.isSleeping(), "back to bed");
+                        say(p, a, "wake up");
+                        helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_told"), "\"wake up\": " + lastWords(a));
+                        say(p, a, "go to bed");
+                        helper.runAfterDelay(120, () -> {
+                            helper.assertTrue(a.isSleeping(), "to bed a third time");
+                            level.setDayTime(24000 + 500);
+                            helper.runAfterDelay(30, () -> {
+                                helper.assertTrue(!a.isSleeping(), "morning: up");
+                                Kit.log("pai46 sleep: bed day/night, asleep, woke for a zombie, wake up, morning");
+                                helper.succeed();
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    }
 }

@@ -383,6 +383,8 @@ public final class PaUnderstand {
             return PaIntent.of(Kind.BED_USE, raw).withPlace(Place.LOOKED);
         if (c.matches("^(?:place|put|set up|make|build|lay down|get) (?:yourself |down )?(?:a|your|a new|your own) bed(?: .*)?$") || c.matches("^put your bed (?:down|here|there|by mine|next to mine)(?: .*)?$"))
             return PaIntent.of(Kind.BED_PLACE, raw).withPlace(place == Place.NONE ? Place.HERE : place);
+        if (c.matches("^(?:wake up|wakey wakey|wake|get up|up you get|rise and shine|morning sleepy ?head|stop sleeping|out of bed)(?: .*)?$")) return PaIntent.of(Kind.WAKE, raw);   // [pa33d]
+        if (c.matches("^(?:time for bed|bed ?time|time to sleep|time for sleep|go to bed|go to sleep|get some sleep|get to bed)(?: now)?$")) return PaIntent.of(Kind.SLEEP, raw);
         if (c.matches("^(?:sleep|go to (?:bed|sleep)|to (?:bed|sleep)|rest|take shelter|hide|get inside|shelter)(?: .*)?$")) return PaIntent.of(Kind.SLEEP, raw);
         if (c.matches("^(?:go|head|return|walk|run|get|travel)? ?(?:back )?(?:home|to (?:the |your |my )?(?:home|base|house|bed))(?: .*)?$")
             || c.matches("^(?:return|go back|head back|go home|back to base|retreat)(?: .*)?$")) {

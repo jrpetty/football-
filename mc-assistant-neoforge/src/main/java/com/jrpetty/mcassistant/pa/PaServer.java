@@ -112,6 +112,11 @@ public final class PaServer {
             case "pack" -> {
                 if (a != null && a.obeys(p)) a.openManagementScreen(p);
             }
+            case "admin" -> {                                       // [pa33d] operators only: the server's levelling multiplier
+                if (!p.hasPermissions(2)) { PaNet.note(p, "Only an operator can change that."); return; }
+                if (args.contains("xpMult")) PaConfig.setXpMultiplier(args.getDouble("xpMult"));
+                PaNet.refresh(p, a);
+            }
             case "packop" -> {                                      // [pa33c-2b] the Pack tab: a move or a button
                 if (a == null || r == null || !a.obeys(p)) return;
                 String note = PaPack.op(p, a, r, args);

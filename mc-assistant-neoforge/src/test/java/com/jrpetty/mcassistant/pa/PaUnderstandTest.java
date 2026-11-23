@@ -153,4 +153,14 @@ class PaUnderstandTest {
             org.junit.jupiter.api.Assertions.assertTrue(!r.steps().isEmpty() && r.steps().get(0).kind().name().equals(t[1]), t[0] + " -> " + r.brief());
         }
     }
+
+    @Test
+    void sleepOrders() {                                                   // [pa33d]
+        String[][] c = {{"go to bed", "SLEEP"}, {"time for bed", "SLEEP"}, {"bedtime", "SLEEP"}, {"go to sleep", "SLEEP"}, {"wake up", "WAKE"},
+            {"rise and shine", "WAKE"}, {"get up", "WAKE"}, {"wakey wakey", "WAKE"}};
+        for (String[] t : c) {
+            PaUnderstand.Reading r = PaUnderstand.read(t[0], "pip");
+            org.junit.jupiter.api.Assertions.assertTrue(!r.steps().isEmpty() && r.steps().get(0).kind().name().equals(t[1]), t[0] + " -> " + r.brief());
+        }
+    }
 }
