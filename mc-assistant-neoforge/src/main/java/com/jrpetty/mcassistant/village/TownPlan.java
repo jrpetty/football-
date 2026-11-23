@@ -277,6 +277,7 @@ public final class TownPlan {
             case "hall", "chapel", "barracks", "manor", "townhall", "store" -> "great";   // [econ-store] the store on a long lot
             case "court" -> "court";
             case "flats" -> "long";                                   // [flats-access] a block of flats, seventeen deep: a long lot
+            case "terrace", "terrace2", "terrace3" -> "row";          // [house34] a terrace: a long street front (TerraceLots)
             case "minster", "belfry", "amphitheatre" -> "great";          // [culture-wonders] the town's own wonders (TownWonders)
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern", "school", "bank", "museum", "stable",
@@ -326,6 +327,7 @@ public final class TownPlan {
     public static List<Lot> candidates(String structure) {
         String want = placeFor(structure);
         List<Lot> out = new ArrayList<>();
+        if (want.equals("row")) return TerraceLots.lots(structure.equals("terrace") ? 21 : 22);   // [house34] only a row's ground
         if (want.equals("well") || want.equals("monument")) {
             for (Lot s : squareSpots()) if (s.use().equals(want)) out.add(s);
         }

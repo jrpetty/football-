@@ -65,6 +65,8 @@ public class BuildGoal extends Goal {
         "park",
         // [flats] the Iron Age's blocks of flats (entity/Flats)
         "flats",
+        // [house34] the terraces: a workers' row, a bay-fronted row, a grand row of town houses (entity/TerraceRows)
+        "terrace", "terrace2", "terrace3",
 
         // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
         "museum",
@@ -671,6 +673,10 @@ public class BuildGoal extends Goal {
      * waiting for the one flat acre the world may not have made.
      */
     private void addTerrainWork(BlockPos base, String structure) {
+        if (com.jrpetty.mcassistant.entity.TerraceRows.isRow(structure)) {   // [house34] each house's ground to its own floor
+            com.jrpetty.mcassistant.entity.TerraceRows.terrainWork(assistant.level(), base, facing, structure, plan);
+            return;
+        }
         int[] g = footprint(structure);
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (Placement p : plan) taken.add(p.pos());
@@ -1829,6 +1835,10 @@ public class BuildGoal extends Goal {
     private static void layout(String structure, BlockPos feet, Direction facing,
                                boolean centered, int perimeterRadius, List<Placement> out) {
         Direction right = facing.getClockWise();
+        if (centered && com.jrpetty.mcassistant.entity.TerraceRows.isRow(structure)) {   // [house34] each house at its own height
+            com.jrpetty.mcassistant.entity.TerraceRows.layout(structure, feet, facing, out);
+            return;
+        }
         if (Blueprints.has(structure)) {
             // Drawn: every block where the drawing has it. Built in front of a hired hand
             // that was told to build one where it stands.

@@ -51,6 +51,7 @@ LEGEND = {
     "D": ("door", "door", "B"),
     "Y": ("door", "door", "R"),           # a door in a front-to-back wall (the flats' landings)
     "7": ("door", "door", "L"),           # [build-audit] the same, opening to the left
+    "8": ("door", "door", "F"),           # [house34] a back door, opening into the room from the yard
     "P": ("plank", "fence", None),
     "g": ("plank", "gate", None),
     "T": ("table", "cube", None),

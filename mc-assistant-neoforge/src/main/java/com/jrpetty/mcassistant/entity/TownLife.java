@@ -857,6 +857,7 @@ public final class TownLife {
     static boolean addressSign(ServerLevel level, UUID village, BlockPos heart, Ledger.Building b,
                                @Nullable Villages.Village v, boolean free) {
         if (!free && v == null) return false;
+        if (TerraceRows.isRow(b.structure())) return false;   // [house34] a sign by every house's door, put up by TerraceRows
         Fittings f = fittings(b);
         if (f.door() == null) return false;
         Direction front = b.facing().getOpposite();
@@ -922,6 +923,7 @@ public final class TownLife {
             case "postoffice" -> "The Post Office";            // [batchF] (Post)
             case "firestation" -> "The Fire Station";          // [disasters] (FireSafety)
             case "powderhut" -> "The Powder Hut";              // [fireworks] (FireworksMaker)
+            case "terrace", "terrace2", "terrace3" -> TerraceRows.title(structure);   // [house34] "The Workers' Terrace"
             default -> "The " + Character.toUpperCase(structure.charAt(0)) + structure.substring(1);
         };
     }

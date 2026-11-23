@@ -174,6 +174,7 @@ public final class Homes {
                 String key = e.getKey().substring(5);
                 Ledger.Building b = built.get(key);
                 if (b == null) b = Flats.building(id, key);                     // [flats] a flat: its block's, not a building of its own
+                if (b == null) b = TerraceRows.building(id, key);               // [house34] a house of a terrace: its row's
                 if (b == null) continue;
                 Home h = decode(b, e.getValue());
                 if (h != null) out.put(b.anchor().asLong(), h);
@@ -225,12 +226,14 @@ public final class Homes {
             save(village, h);
         }
         Flats.enrol(village, homes);                   // [flats] and every flat of its blocks of flats
+        TerraceRows.enrol(village, homes);             // [house34] and every house of its terraces
     }
 
     @Nullable
     static Ledger.Building building(UUID village, BlockPos anchor) {
         for (Ledger.Building b : Ledger.buildings(village)) if (b.anchor().equals(anchor)) return b;
-        return Flats.building(village, anchor.asLong());      // [flats] a flat in a block of flats
+        Ledger.Building flat = Flats.building(village, anchor.asLong());      // [flats] a flat in a block of flats
+        return flat != null ? flat : TerraceRows.building(village, anchor.asLong());   // [house34] a house of a terrace
     }
 
     @Nullable
@@ -253,6 +256,7 @@ public final class Homes {
     static Home homeAt(UUID village, BlockPos p) {
         for (Home h : homes(village).values()) {
             if (Flats.isFlat(h)) { if (Flats.inside(village, h, p)) return h; continue; }   // [flats] its own room, not the block
+            if (TerraceRows.isHouse(h)) { if (TerraceRows.inside(village, h, p)) return h; continue; }   // [house34] its own house of the row
             int[] half = BuildGoal.footprint(drawing(village, h));
             int r = Math.max(half[0], half[1]) + 1;
             if (Math.abs(p.getX() - h.anchor.getX()) <= r && Math.abs(p.getZ() - h.anchor.getZ()) <= r
@@ -281,6 +285,7 @@ public final class Homes {
     /** The heads of the beds made up in a house now, its own (from its plan) and the ones bought for it. */
     static List<BlockPos> bedsIn(ServerLevel level, UUID village, Home h) {
         if (Flats.isFlat(h)) return Flats.bedsIn(level, village, h);          // [flats] the beds in its own room
+        if (TerraceRows.isHouse(h)) return TerraceRows.bedsIn(level, village, h);   // [house34] the beds of its own house of the row
         List<BlockPos> out = new ArrayList<>();
         Ledger.Building b = building(village, h.anchor);
         if (b == null || !level.isLoaded(h.anchor)) return out;
@@ -555,13 +560,15 @@ public final class Homes {
         List<List<VillageFolkEntity>> waiting = waiting(id, folk, day);
         Flats.letFirst(level, v, waiting, day);        // [flats] the young, couples starting out and the hard-up: a flat first
         for (List<VillageFolkEntity> household : waiting) {
-            Home h = vacancyFor(level, id, household);
+            Home h = TerraceRows.vacancyFor(level, id, household);   // [house34] a house in the row of its standing first
+            if (h == null) h = vacancyFor(level, id, household);
             if (h == null) break;
             settle(level, v, h, household, day);
         }
         // The builders' list: a house for whoever still waits, with none standing empty.
         Villages.HOUSE_WANTED.put(id, wantsAHouse(level, id));
         Flats.tick(level, v, folk, day);               // [flats] the rest into flats, families out to houses, the blocks' upkeep
+        TerraceRows.tick(level, v, day);               // [house34] the terraces finished house by house; households moving up
         // A bed for every child (and any fetched from the shop that never came: delivered).
         for (BedErrand e : List.copyOf(BED_ERRANDS.values())) {
             if (!e.village().equals(id) || level.getGameTime() - e.started() < 6000L) continue;
@@ -726,6 +733,7 @@ public final class Homes {
         int bestBeds = Integer.MAX_VALUE;
         for (Home h : homes(village).values()) {
             if (!h.vacant() || seat(h) || Ledger.raising(village, h.anchor) || Flats.isFlat(h)) continue;   // [flats] let by Flats
+            if (!TerraceRows.mayHave(village, h, household)) continue;                                       // [house34] a town house for the well-off
             int beds = bedsIn(level, village, h).size();
             if (beds < Math.max(1, adults)) continue;
             // A manor is kept for a household that could buy it (it rents it first, like any, and buys
@@ -759,6 +767,7 @@ public final class Homes {
 
     /** How big a house is, for its rent: a house 1, a two-storey house 2, a manor 4. */
     static int size(UUID village, Home h) {
+        if (TerraceRows.isHouse(h)) return TerraceRows.size(village, h);    // [house34] a cottage 1, a bay-fronted house 2, a town house 3
         return h.structure.equals("manor") ? 4 : h.structure.equals("villa") ? 3 : Ledger.grown(village, h.anchor) ? 2 : 1;   // [econ-housing] a villa 3
     }
 
@@ -1090,6 +1099,7 @@ public final class Homes {
     @Nullable
     static BlockPos bedSpot(ServerLevel level, UUID village, Home h, List<BlockPos> beds) {
         if (Flats.isFlat(h)) return Flats.bedSpot(level, village, h, beds);   // [flats] in its own room
+        if (TerraceRows.isHouse(h)) return TerraceRows.bedSpot(level, village, h, beds);   // [house34]
         int[] half = BuildGoal.footprint(drawing(village, h));
         double cx = 0, cz = 0;
         for (BlockPos b : beds) { cx += b.getX(); cz += b.getZ(); }
@@ -1143,6 +1153,7 @@ public final class Homes {
     @Nullable
     static BlockPos chestOf(ServerLevel level, UUID village, Home h) {
         if (Flats.isFlat(h)) return Flats.chestOf(level, village, h);         // [flats] the chest in its own room
+        if (TerraceRows.isHouse(h)) return TerraceRows.chestOf(level, village, h);   // [house34]
         Ledger.Building b = building(village, h.anchor);
         if (b == null || !level.isLoaded(h.anchor)) return null;
         for (BuildGoal.Placement p : BuildGoal.plan(drawing(village, h), b.anchor(), b.facing(), 13)) {
@@ -1817,6 +1828,7 @@ public final class Homes {
             + (let.length() > 0 ? " (to let: " + let + ")" : "")
             + "; rent " + c[9] + coins(c[9]) + " yesterday" + (c[11] > 0 ? ", " + c[11] + " owed" : "")
             + Flats.line(village)                      // [flats] "; flats: 4 of 6 let"
+            + TerraceRows.line(village)                // [house34] "; terraces: 7 of 10 houses lived in"
             + "; houses are let, and sold to the tenants who save for them";
     }
 
@@ -1892,6 +1904,7 @@ public final class Homes {
             r.putLong("anchor", h.anchor.asLong());                // the building's, as on the Buildings page
             r.putString("address", v == null ? "" : address(village, v, h));
             r.putString("kind", Flats.isFlat(h) ? "flat" : seat(h) ? "the leader's hall" : h.structure.equals("manor") ? "manor"   // [flats]
+                : TerraceRows.isHouse(h) ? TerraceRows.kind(village, h)                                              // [house34]
                 : Ledger.grown(village, h.anchor) ? "two-storey house" : "house");
             r.putString("household", household.isEmpty() ? h.members.size() + " folk" : names(household));
             r.putInt("folk", h.members.size());
@@ -2166,6 +2179,7 @@ public final class Homes {
         out.addAll(HousingMarket.lines(level, id));      // [econ-housing] the index, prices and rents, houses going up, sales
         for (Home h : homes(id).values()) {
             StringBuilder sb = new StringBuilder(address(id, v, h)).append(" (").append(Flats.isFlat(h) ? "flat" : seat(h) ? "the leader's hall" : h.structure.equals("manor") ? "manor"
+                : TerraceRows.isHouse(h) ? TerraceRows.kind(id, h)                                                   // [house34]
                 : Ledger.grown(id, h.anchor) ? "two-storey house" : "house")
                 .append(", ").append(bedsIn(level, id, h).size()).append(" beds): ");
             if (h.members.isEmpty()) {
@@ -2235,6 +2249,7 @@ public final class Homes {
     static String address(UUID village, Villages.Village v, Home h) {
         if (seat(h)) return "the leader's hall";
         if (Flats.isFlat(h)) return Flats.address(village, h);              // [flats] "flat 2B, Elm Row Flats"
+        if (TerraceRows.isHouse(h)) return TerraceRows.address(village, h); // [house34] "No. 2, Mill Lane Cottages"
         Ledger.Building b = building(village, h.anchor);
         String[] a = b == null ? null : TownLife.address(village, v.centre(), b);
         return a == null ? "the house at " + h.anchor.getX() + ", " + h.anchor.getZ() : a[0] + ", " + a[1];
