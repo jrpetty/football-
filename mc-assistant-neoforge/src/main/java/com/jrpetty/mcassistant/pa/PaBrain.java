@@ -217,7 +217,7 @@ public final class PaBrain {
         if (cur.auto || cur.retools >= 2 || !NO_REACH.matcher(cur.fail).find()) return false;
         cur.retools++;
         boolean pit = PaClimb.trapped(a);
-        if (pit) a.mind.climbing = 12;
+        if (pit) a.mind.climbing = 30;
         rearm(a, cur);
         a.plan.steps.add(0, cur);
         PaTalk.comment(a, 1, pit ? "Oops, I've dug myself into a hole. Climbing out, then I'll try again." : "Couldn't get there. Let me try another way.");
@@ -320,7 +320,7 @@ public final class PaBrain {
             a.mind.lastPct = pct;
             stuckWorking = a.mind.sameFor >= 60;                  // two minutes of nothing at all
         }
-        if (a.plan.idle() && a.mind.climbing == 0 && PaClimb.trapped(a)) { a.mind.climbing = 12; return; }   // boxed in a pit: climb, don't teleport
+        if ((a.plan.idle() || a.plan.paused) && a.mind.climbing == 0 && PaClimb.trapped(a)) { a.mind.climbing = 30; return; }   // boxed in a pit: climb, don't teleport
         if (wantsMove && !moving) a.mind.stuckFor++; else if (moving) a.mind.stuckFor = 0;
         if (danger || a.mind.stuckFor >= 8 || stuckWorking) {
             a.mind.stuckFor = 0;

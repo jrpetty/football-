@@ -10,6 +10,10 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.pathfinder.Path;
+
+import javax.annotation.Nullable;
 
 /**
  * [pa33] Getting out of a hole the way a player does. Digging stone off a flat field can leave the assistant at the
@@ -21,8 +25,62 @@ public final class PaClimb {
 
     private PaClimb() {}
 
-    /** Can it not walk or hop out of where it stands, on any side? */
+    /** Boxed in, or at the bottom of a wider pit it can't find a way out of. */
     public static boolean trapped(PlayerAssistantEntity a) {
+        return boxed(a) || pitEdge(a) != null;
+    }
+
+    /**
+     * In a pit too deep to walk out of (open ground two or more blocks above its feet close by, and no path up to it):
+     * the pit cell by the wall it should climb from; null when it isn't in such a pit.
+     */
+    @Nullable
+    static BlockPos pitEdge(PlayerAssistantEntity a) {
+        if (!a.onGround() || a.isInWater() || a.isPassenger()) return null;
+        ServerLevel level = (ServerLevel) a.level();
+        BlockPos feet = a.blockPosition();
+        // walled in on (nearly) every side, not just standing by a house or a tree: eight bearings, out to 7 blocks
+        BlockPos rim = null;
+        int walled = 0;
+        int[][] bearings = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+        for (int[] b : bearings) {
+            for (int r = 1; r <= 7; r++) {
+                int cx = feet.getX() + b[0] * r, cz = feet.getZ() + b[1] * r;
+                int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, cx, cz);
+                if (top >= feet.getY() + 2) {
+                    walled++;
+                    if (rim == null || top < rim.getY()) rim = new BlockPos(cx, top, cz);   // the lowest rim is the way out
+                    break;
+                }
+            }
+        }
+        if (rim == null || walled < 7) return null;
+        Path path = a.getNavigation().createPath(rim, 1);
+        if (path != null && path.canReach()) return null;
+        // the cell inside the pit next to that wall: walk there, then build up against the wall
+        BlockPos cell = feet;
+        for (int i = 0; i < 8; i++) {
+            int dx = Integer.signum(rim.getX() - cell.getX()), dz = Integer.signum(rim.getZ() - cell.getZ());
+            BlockPos next = cell.offset(dx, 0, dz);
+            if (!open(level, next) || !open(level, next.above())) break;
+            cell = next;
+        }
+        return cell;
+    }
+
+    /** Is there a wall of the pit right beside it to build up against? */
+    static boolean byWall(PlayerAssistantEntity a) {
+        ServerLevel level = (ServerLevel) a.level();
+        BlockPos feet = a.blockPosition();
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockPos side = feet.relative(d);
+            if (!open(level, side) && !open(level, side.above())) return true;
+        }
+        return false;
+    }
+
+    /** Can it not walk or hop out of where it stands, on any side? */
+    public static boolean boxed(PlayerAssistantEntity a) {
         if (!a.onGround() || a.isInWater() || a.isPassenger()) return false;
         ServerLevel level = (ServerLevel) a.level();
         BlockPos feet = a.blockPosition();
@@ -70,7 +128,16 @@ public final class PaClimb {
     public static boolean tick(PlayerAssistantEntity a) {
         if (a.mind.climbing <= 0) return false;
         a.mind.climbing--;
-        if (!trapped(a)) { a.mind.climbing = 0; return false; }
+        boolean boxed = boxed(a);
+        if (!boxed) {
+            BlockPos edge = pitEdge(a);
+            if (edge == null) { a.mind.climbing = 0; return false; }
+            if (!a.blockPosition().equals(edge) && !byWall(a)) {
+                // to the wall first: a pillar in the middle of a pit only leads back down
+                a.getNavigation().moveTo(edge.getX() + 0.5, edge.getY(), edge.getZ() + 0.5, 1.0D);
+                return true;
+            }
+        }
         if (!up(a)) {
             a.mind.climbing = 0;
             if (a.getOwnerPlayer() instanceof net.minecraft.server.level.ServerPlayer owner && PaLife.bringTo(a, owner)) {

@@ -731,4 +731,26 @@ public class PlayerAssistantGameTests {
             Kit.log("pai25 pickaxe wore out; made a new one; " + stone + " cobblestone (" + allWords(a) + ")");
         });
     }
+
+    /** pai26: in the middle of a wide dug-out pit: it walks to a wall and builds up against it, then comes out. */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pai26_wide_pit")
+    public static void pai26_wide_pit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_075_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        BlockPos mid = new BlockPos(x + 8, y - 3, Z);
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) for (int dy = -1; dy <= 2; dy++) {
+            boolean inside = Math.abs(dx) <= 2 && Math.abs(dz) <= 2 && dy >= 0;
+            level.setBlock(mid.offset(dx, dy, dz), inside ? Blocks.AIR.defaultBlockState() : Blocks.STONE.defaultBlockState(), 2);
+        }
+        a.teleportTo(mid.getX() + 0.5, mid.getY(), mid.getZ() + 0.5);
+        a.insertGiven(new ItemStack(Items.COBBLESTONE, 16));
+        say(p, a, "follow me");
+        helper.succeedWhen(() -> {
+            helper.assertTrue(a.getY() >= y - 1.01, "it built itself up to the rim: y " + String.format("%.1f", a.getY()) + " of " + y);
+            helper.assertTrue(a.countMatching(st -> st.is(Items.COBBLESTONE)) < 16, "on its own blocks");
+            Kit.log("pai26 got out of a 5x5 pit three deep from its middle; " + a.countMatching(st -> st.is(Items.COBBLESTONE)) + " cobblestone left");
+        });
+    }
 }
