@@ -154,6 +154,15 @@ public class PlayerAssistantEntity extends AssistantEntity {
         return fairGame(target) && super.canAttack(target);
     }
 
+    /**
+     * [pa33b] Whatever its player hands it, it uses, as a player would: the crew's rank gating on iron and diamond
+     * tools is not for it (it was fighting with a pickaxe while an iron sword sat in its pack).
+     */
+    @Override
+    public boolean mayUseTier(ItemStack s) {
+        return true;
+    }
+
     /** May it fight this? Monsters and the like yes; people, assistants, crews and folk no. */
     public static boolean fairGame(@Nullable net.minecraft.world.entity.LivingEntity target) {
         return target == null || !(target instanceof Player || target instanceof AssistantEntity
