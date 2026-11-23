@@ -377,6 +377,18 @@ public final class TerraceRows {
                 }
             }
         }
+        // a front garden's beds: gravel or sand where the flowers go is dug out first, and earth laid in its place
+        java.util.Set<BlockPos> flowers = new java.util.HashSet<>();
+        for (BuildGoal.Placement p : plan) if (p.part() == BuildGoal.Part.FLOWER) flowers.add(p.pos());
+        List<BuildGoal.Placement> beds = new ArrayList<>();
+        for (BuildGoal.Placement p : plan) {
+            if (p.part() != BuildGoal.Part.BLOCK || p.style() != Blueprints.Style.SOIL || !flowers.contains(p.pos().above())) continue;
+            BlockState there = level.getBlockState(p.pos());
+            if (!there.is(net.minecraft.tags.BlockTags.DIRT) && Terraform.earth(there) && !there.is(Blocks.BEDROCK)) {
+                beds.add(new BuildGoal.Placement(p.pos(), BuildGoal.Part.CLEAR, Blueprints.Style.SOIL, Blueprints.Way.UP));
+            }
+        }
+        plan.addAll(beds);
         for (BlockPos c : BuildGoal.treeOnLot(level, structure, base, facing)) {
             plan.add(new BuildGoal.Placement(c, BuildGoal.Part.CLEAR, Blueprints.Style.GENERIC, Blueprints.Way.UP));
         }
