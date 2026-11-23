@@ -88,7 +88,8 @@ public final class PaOrders {
         }
         if (reading.clarify() != null) {
             // Before asking back: the old chat reader may know it ("tend the farm every 20 minutes", "patrol between...").
-            if (reading.steps().isEmpty() && com.jrpetty.mcassistant.ChatControl.understood(a, p, text)) {
+            if (reading.steps().isEmpty() && reading.clarify().question().startsWith("I'm not sure")
+                    && com.jrpetty.mcassistant.ChatControl.understood(a, p, text)) {
                 PaTalk.reply(a, PaPhrases.line("ok", a.personality(), a.getRandom()::nextInt));
                 return;
             }
@@ -434,6 +435,15 @@ public final class PaOrders {
                     s.task = new PaTask(PaTask.Kind.FIELD, at, "wheat", 0);
                     out.add(s);
                     return null;
+                }
+                if (!hasHoe(a)) {
+                    // a player's hoe makes short work of a field: one first, if it can be had
+                    CraftPlanner.Result cr = CraftPlanner.plan(a, "wooden_hoe", 1);
+                    if (cr.blockers().isEmpty() && !cr.jobs().isEmpty()) {
+                        PaPlan.Step hoe = step("make a hoe", Kind.CRAFT, 30);
+                        hoe.jobs.addAll(cr.jobs());
+                        out.add(hoe);
+                    }
                 }
                 PaPlan.Step s = step("tend the farm", Kind.FARM, 60);
                 s.jobs.add(Job.farm());

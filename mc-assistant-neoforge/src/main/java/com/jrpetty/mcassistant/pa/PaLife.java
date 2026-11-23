@@ -28,6 +28,8 @@ public final class PaLife {
 
     private PaLife() {}
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     /** Names it may start with (the player can rename it in its panel). */
     public static final List<String> NAMES = List.of("Pip", "Juniper", "Rowan", "Echo", "Sage", "Nova", "Milo", "Ivy", "Atlas",
         "Wren", "Clover", "Fern", "Orbit", "Bramble", "Comet", "Hazel", "Basil", "Indigo", "Pixel", "Tansy");
@@ -131,7 +133,7 @@ public final class PaLife {
         boolean fresh = r.snapshot == null;
         if (owner != null && (fresh || a.getOwnerId() == null)) a.setOwner(owner);
         Vec3 spot = safeSpot(level, near);
-        if (spot == null) return null;
+        if (spot == null) { LOG.info("[pa33] no safe spot near {}", near.toShortString()); return null; }
         PaData.incarnate(r);
         a.bind(r);
         a.moveTo(spot.x, spot.y, spot.z, owner != null ? owner.getYRot() + 180 : 0, 0);
@@ -139,7 +141,7 @@ public final class PaLife {
         a.setDeltaMovement(Vec3.ZERO);
         a.fallDistance = 0;
         a.clearFire();
-        if (!level.addFreshEntity(a)) return null;
+        if (!level.addFreshEntity(a)) { LOG.info("[pa33] the world would not take the assistant at {}", spot); return null; }
         r.entity = a.getUUID();
         r.away = false;
         r.snapshot = null;
@@ -383,6 +385,7 @@ public final class PaLife {
 
     /** A line to a player from the assistant system (no assistant to say it): their panel's footer and the action bar. */
     public static void tell(ServerPlayer p, String text) {
+        LOG.info("[pa33] to {}: {}", p.getGameProfile().getName(), text);
         p.displayClientMessage(net.minecraft.network.chat.Component.literal(text), true);
         CompoundTag t = new CompoundTag();
         t.putString("text", text);

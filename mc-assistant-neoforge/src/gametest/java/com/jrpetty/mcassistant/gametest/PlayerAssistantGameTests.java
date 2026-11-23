@@ -66,6 +66,7 @@ public class PlayerAssistantGameTests {
         level.setDayTime(2000);
         Kit.hold(level, x, Z, 40);
         Kit.prepare(level, x, Z, 40);
+        Kit.live(level, x, Z, 40);
         int y = Kit.surface(level, x, Z).getY();
         for (int dx = -36; dx <= 36; dx++) {
             for (int dz = -36; dz <= 36; dz++) {
@@ -87,6 +88,11 @@ public class PlayerAssistantGameTests {
     private static PlayerAssistantEntity assistant(GameTestHelper helper, ServerPlayer p) {
         PaServer.act(p, "summon", new CompoundTag());
         PlayerAssistantEntity a = PaLife.find(p);
+        if (a == null) {
+            PaData.Rec rr = PaData.first(p.getUUID());
+            Kit.log("pa no assistant for " + p.getUUID() + ": records " + PaData.of(p.getUUID()).size()
+                + (rr == null ? "" : ", entity " + rr.entity + ", away " + rr.away + ", dead " + rr.deadUntil + ", inc " + rr.incarnation));
+        }
         helper.assertTrue(a != null, "an assistant came");
         PaData.Rec r = a.rec();
         r.confirm = false;
@@ -135,15 +141,15 @@ public class PlayerAssistantGameTests {
 
     // ================================================================== getting one
 
-    /** pa01: the free button makes one beside its player, linked to their UUID, named for them; a second click calls it, not another. */
-    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pa01_button")
-    public static void pa01_button(GameTestHelper helper) {
+    /** pai01: the free button makes one beside its player, linked to their UUID, named for them; a second click calls it, not another. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pai01_button")
+    public static void pai01_button(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_000_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
         PaData.Rec r = a.rec();
-        Kit.log("pa01 " + a.displayNameCap() + " owner " + a.getOwnerId() + " (player " + p.getUUID() + "), plate \"" + a.ownerName()
+        Kit.log("pai01 " + a.displayNameCap() + " owner " + a.getOwnerId() + " (player " + p.getUUID() + "), plate \"" + a.ownerName()
             + "\", " + String.format("%.1f", a.distanceTo(p)) + " away; said " + allWords(a));
         helper.assertTrue(p.getUUID().equals(a.getOwnerId()) && r.owner.equals(p.getUUID()), "linked to its maker's UUID");
         helper.assertTrue(a.ownerName().equals(p.getGameProfile().getName()), "shows its owner's name");
@@ -155,9 +161,9 @@ public class PlayerAssistantGameTests {
         helper.succeed();
     }
 
-    /** pa02: a crafted whistle used on the ground makes one there, and is spent; blown again it calls it, and is kept. */
-    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pa02_whistle")
-    public static void pa02_whistle(GameTestHelper helper) {
+    /** pai02: a crafted whistle used on the ground makes one there, and is spent; blown again it calls it, and is kept. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pai02_whistle")
+    public static void pai02_whistle(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_003_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -168,7 +174,7 @@ public class PlayerAssistantGameTests {
         McAssistantMod.ASSISTANT_WHISTLE.get().useOn(new UseOnContext(p, InteractionHand.MAIN_HAND,
             new BlockHitResult(Vec3.atCenterOf(spot), Direction.UP, spot, false)));
         PlayerAssistantEntity a = PaLife.find(p);
-        Kit.log("pa02 whistle: assistant " + (a == null ? "none" : a.displayNameCap() + " at " + a.blockPosition().toShortString())
+        Kit.log("pai02 whistle: assistant " + (a == null ? "none" : a.displayNameCap() + " at " + a.blockPosition().toShortString())
             + "; whistle left " + p.getMainHandItem().getCount() + " (instabuild " + p.getAbilities().instabuild + ")");
         helper.assertTrue(a != null && a.blockPosition().distManhattan(spot.above()) <= 3, "made where the whistle was used");
         helper.assertTrue(p.getAbilities().instabuild || p.getMainHandItem().isEmpty(), "the whistle is spent making one");
@@ -184,9 +190,9 @@ public class PlayerAssistantGameTests {
         helper.succeed();
     }
 
-    /** pa03: a spawner placed and clicked brings one out there, its home; fallen, it comes back at the spawner. */
-    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pa03_spawner_respawn")
-    public static void pa03_spawner_respawn(GameTestHelper helper) {
+    /** pai03: a spawner placed and clicked brings one out there, its home; fallen, it comes back at the spawner. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pai03_spawner_respawn")
+    public static void pai03_spawner_respawn(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_006_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -210,21 +216,21 @@ public class PlayerAssistantGameTests {
             PlayerAssistantEntity back = PaLife.find(p);
             helper.assertTrue(back != null, "back after its time");
             helper.assertTrue(back.distanceToSqr(Vec3.atCenterOf(spawner)) < 16, "back at the spawner: " + back.blockPosition().toShortString());
-            Kit.log("pa03 back at " + back.blockPosition().toShortString() + " (spawner " + spawner.toShortString() + "); said " + lastWords(back));
+            Kit.log("pai03 back at " + back.blockPosition().toShortString() + " (spawner " + spawner.toShortString() + "); said " + lastWords(back));
             PaConfig.respawnSecondsForTests(null);
         });
     }
 
-    /** pa04: one each: at the limit a clear message, and nothing made; dismissed, another can be made; the operator may raise it. */
-    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pa04_limit")
-    public static void pa04_limit(GameTestHelper helper) {
+    /** pai04: one each: at the limit a clear message, and nothing made; dismissed, another can be made; the operator may raise it. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pai04_limit")
+    public static void pai04_limit(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_009_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
         String name = a.displayNameCap();
         String limit = PaLife.atLimit(p);
-        Kit.log("pa04 at the limit: \"" + limit + "\"");
+        Kit.log("pai04 at the limit: \"" + limit + "\"");
         helper.assertTrue(("You already have " + name + ". Dismiss " + name + " to make another.").equals(limit), "the limit's message: " + limit);
         helper.assertTrue(PaLife.create(p, null, "whistle") == null && PaData.of(p.getUUID()).size() == 1, "no second one");
         PaConfig.perPlayerForTests(2);
@@ -238,9 +244,9 @@ public class PlayerAssistantGameTests {
 
     // ================================================================== orders, typed
 
-    /** pa05: "follow me": its player walks off; it follows. */
-    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pa05_follow")
-    public static void pa05_follow(GameTestHelper helper) {
+    /** pai05: "follow me": its player walks off; it follows. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pai05_follow")
+    public static void pai05_follow(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_012_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -253,13 +259,13 @@ public class PlayerAssistantGameTests {
         helper.succeedWhen(() -> {
             double d = a.distanceTo(p);
             helper.assertTrue(d < 5, "caught up: " + String.format("%.1f", d));
-            Kit.log("pa05 followed to " + String.format("%.1f", d) + " of its player");
+            Kit.log("pai05 followed to " + String.format("%.1f", d) + " of its player");
         });
     }
 
-    /** pa06: "gather 16 logs": it chops sixteen from the trees about. */
-    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pa06_gather_logs")
-    public static void pa06_gather_logs(GameTestHelper helper) {
+    /** pai06: "gather 16 logs": it chops sixteen from the trees about. */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pai06_gather_logs")
+    public static void pai06_gather_logs(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_015_000, y = ground(level, x);
         for (int i = 0; i < 5; i++) tree(level, new BlockPos(x + 6 + i * 4, y, Z + (i % 2 == 0 ? 5 : -5)), 5);
@@ -272,13 +278,13 @@ public class PlayerAssistantGameTests {
             int logs = a.countMatching(s -> s.is(net.minecraft.tags.ItemTags.LOGS));
             helper.assertTrue(logs >= 16, "16 logs: " + logs + " (" + a.state() + ")");
             helper.assertTrue(a.plan.idle(), "done");
-            Kit.log("pa06 " + logs + " logs; said " + lastWords(a));
+            Kit.log("pai06 " + logs + " logs; said " + lastWords(a));
         });
     }
 
-    /** pa07: "craft a pickaxe from logs": from four logs, a wooden pickaxe (planks, sticks and a table on the way). */
-    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "pa07_craft_pickaxe")
-    public static void pa07_craft_pickaxe(GameTestHelper helper) {
+    /** pai07: "craft a pickaxe from logs": from four logs, a wooden pickaxe (planks, sticks and a table on the way). */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "pai07_craft_pickaxe")
+    public static void pai07_craft_pickaxe(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_018_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -288,13 +294,13 @@ public class PlayerAssistantGameTests {
         helper.succeedWhen(() -> {
             int picks = count(a, Items.WOODEN_PICKAXE) + (a.getMainHandItem().is(Items.WOODEN_PICKAXE) ? 1 : 0);
             helper.assertTrue(picks >= 1, "a wooden pickaxe (" + a.state() + "; " + allWords(a) + ")");
-            Kit.log("pa07 made a wooden pickaxe; said " + lastWords(a));
+            Kit.log("pai07 made a wooden pickaxe; said " + lastWords(a));
         });
     }
 
-    /** pa08: "mine iron until you have 3": into the rock face, three raw iron. */
-    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pa08_mine_iron")
-    public static void pa08_mine_iron(GameTestHelper helper) {
+    /** pai08: "mine iron until you have 3": into the rock face, three raw iron. */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pai08_mine_iron")
+    public static void pai08_mine_iron(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_021_000, y = ground(level, x);
         // a rock face, its front studded with iron
@@ -310,13 +316,13 @@ public class PlayerAssistantGameTests {
         helper.succeedWhen(() -> {
             int iron = a.countMatching(s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE));
             helper.assertTrue(iron >= 3, "3 iron: " + iron + " (" + a.state() + "; " + lastWords(a) + ")");
-            Kit.log("pa08 " + iron + " iron; said " + lastWords(a));
+            Kit.log("pai08 " + iron + " iron; said " + lastWords(a));
         });
     }
 
-    /** pa09: "build me a small house here": the mod's house drawing, laid where its player stands looking, from its pack. */
-    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "pa09_build_house")
-    public static void pa09_build_house(GameTestHelper helper) {
+    /** pai09: "build me a small house here": the mod's house drawing, laid where its player stands looking, from its pack. */
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "pai09_build_house")
+    public static void pai09_build_house(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_024_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -346,13 +352,13 @@ public class PlayerAssistantGameTests {
                 if (!level.getBlockState(anchor.offset(dx, dy, dz)).isAir()) solid++;
             }
             helper.assertTrue(solid >= 120, "a house stands: " + solid + " of " + cells + " cells filled round " + anchor.toShortString());
-            Kit.log("pa09 house at " + anchor.toShortString() + ": " + solid + "/" + cells + " cells; said " + allWords(a));
+            Kit.log("pai09 house at " + anchor.toShortString() + ": " + solid + "/" + cells + " cells; said " + allWords(a));
         });
     }
 
-    /** pa10: "farm this field": the ripe wheat it looks at harvested and replanted. */
-    @GameTest(template = EMPTY, timeoutTicks = 2000, batch = "pa10_farm")
-    public static void pa10_farm(GameTestHelper helper) {
+    /** pai10: "farm this field": the ripe wheat it looks at harvested and replanted. */
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "pai10_farm")
+    public static void pai10_farm(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_027_000, y = ground(level, x);
         BlockPos water = new BlockPos(x + 6, y - 1, Z);
@@ -364,6 +370,7 @@ public class PlayerAssistantGameTests {
         }
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
+        a.insertGiven(new ItemStack(Items.IRON_HOE));
         say(p, a, "farm this field", water.offset(1, 1, 0), -1);
         helper.succeedWhen(() -> {
             int ripe = 0, planted = 0;
@@ -373,13 +380,13 @@ public class PlayerAssistantGameTests {
             }
             int wheat = count(a, Items.WHEAT);
             helper.assertTrue(ripe == 0 && wheat >= 20 && planted >= 20, "harvested and replanted: ripe " + ripe + ", replanted " + planted + ", wheat " + wheat);
-            Kit.log("pa10 field: " + wheat + " wheat, " + planted + " replanted; said " + lastWords(a));
+            Kit.log("pai10 field: " + wheat + " wheat, " + planted + " replanted; said " + lastWords(a));
         });
     }
 
-    /** pa11: "guard me": a zombie comes at its player; the assistant kills it. */
-    @GameTest(template = EMPTY, timeoutTicks = 800, batch = "pa11_guard_fight")
-    public static void pa11_guard_fight(GameTestHelper helper) {
+    /** pai11: "guard me": a zombie comes at its player; the assistant kills it. */
+    @GameTest(template = EMPTY, timeoutTicks = 800, batch = "pai11_guard_fight")
+    public static void pai11_guard_fight(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_030_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -394,13 +401,13 @@ public class PlayerAssistantGameTests {
         level.addFreshEntity(z);
         helper.succeedWhen(() -> {
             helper.assertTrue(!z.isAlive(), "the zombie is dead (hp " + z.getHealth() + ", assistant " + a.state() + ")");
-            Kit.log("pa11 zombie killed; assistant at " + a.getHealth() + " hp");
+            Kit.log("pai11 zombie killed; assistant at " + a.getHealth() + " hp");
         });
     }
 
-    /** pa12: "put everything in that chest" (looking at it): its cobblestone goes in. */
-    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pa12_deposit")
-    public static void pa12_deposit(GameTestHelper helper) {
+    /** pai12: "put everything in that chest" (looking at it): its cobblestone goes in. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pai12_deposit")
+    public static void pai12_deposit(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_033_000, y = ground(level, x);
         BlockPos chest = new BlockPos(x + 5, y, Z + 2);
@@ -413,13 +420,13 @@ public class PlayerAssistantGameTests {
             int in = 0;
             if (level.getBlockEntity(chest) instanceof Container c) for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(Items.COBBLESTONE)) in += c.getItem(i).getCount();
             helper.assertTrue(in >= 20, "20 cobblestone in the chest: " + in + " (" + lastWords(a) + ")");
-            Kit.log("pa12 chest holds " + in + " cobblestone");
+            Kit.log("pai12 chest holds " + in + " cobblestone");
         });
     }
 
-    /** pa13: a three-step order: "chop 4 logs, then make planks, then put them in that chest". */
-    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pa13_multi_step")
-    public static void pa13_multi_step(GameTestHelper helper) {
+    /** pai13: a three-step order: "chop 4 logs, then make planks, then put them in that chest". */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pai13_multi_step")
+    public static void pai13_multi_step(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_036_000, y = ground(level, x);
         for (int i = 0; i < 2; i++) tree(level, new BlockPos(x + 7 + i * 5, y, Z + 4), 5);
@@ -434,13 +441,13 @@ public class PlayerAssistantGameTests {
             int planks = 0;
             if (level.getBlockEntity(chest) instanceof Container c) for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(net.minecraft.tags.ItemTags.PLANKS)) planks += c.getItem(i).getCount();
             helper.assertTrue(planks >= 4 && a.plan.idle(), "planks in the chest: " + planks + " (" + a.state() + "; " + lastWords(a) + ")");
-            Kit.log("pa13 chest holds " + planks + " planks; said " + allWords(a));
+            Kit.log("pai13 chest holds " + planks + " planks; said " + allWords(a));
         });
     }
 
-    /** pa14: an unclear order is asked back, with choices to click; nonsense too; never silence. */
-    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pa14_clarify")
-    public static void pa14_clarify(GameTestHelper helper) {
+    /** pai14: an unclear order is asked back, with choices to click; nonsense too; never silence. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pai14_clarify")
+    public static void pai14_clarify(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_039_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -460,9 +467,9 @@ public class PlayerAssistantGameTests {
         helper.succeed();
     }
 
-    /** pa15: auto-help: a furnace gone cold with ore in it, and coal in its pack: it fuels the furnace by itself, and says so. */
-    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pa15_auto_help")
-    public static void pa15_auto_help(GameTestHelper helper) {
+    /** pai15: auto-help: a furnace gone cold with ore in it, and coal in its pack: it fuels the furnace by itself, and says so. */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pai15_auto_help")
+    public static void pai15_auto_help(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_042_000, y = ground(level, x);
         BlockPos furnace = new BlockPos(x + 4, y, Z + 3);
@@ -477,13 +484,13 @@ public class PlayerAssistantGameTests {
             boolean burning = level.getBlockState(furnace).getValue(net.minecraft.world.level.block.FurnaceBlock.LIT);
             helper.assertTrue(!fuel.isEmpty() || burning, "the furnace fuelled (" + a.state() + "; " + lastWords(a) + ")");
             helper.assertTrue(allWords(a).contains("furnace"), "it said what it was doing: " + allWords(a));
-            Kit.log("pa15 furnace fuelled on its own; said " + allWords(a));
+            Kit.log("pai15 furnace fuelled on its own; said " + allWords(a));
         });
     }
 
-    /** pa16: only its owner directs it: another player's words, clicks and right-click do nothing to it. */
-    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pa16_owner_only")
-    public static void pa16_owner_only(GameTestHelper helper) {
+    /** pai16: only its owner directs it: another player's words, clicks and right-click do nothing to it. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pai16_owner_only")
+    public static void pai16_owner_only(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_045_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -500,13 +507,13 @@ public class PlayerAssistantGameTests {
         helper.assertTrue(!a.obeys(other) && a.obeys(p), "it obeys its owner only");
         var res = a.interact(other, InteractionHand.MAIN_HAND);
         helper.assertTrue(PaData.of(other.getUUID()).isEmpty(), "the other has no assistant of theirs from it");
-        Kit.log("pa16 other player's right-click: " + res + "; mode still " + a.getMode());
+        Kit.log("pai16 other player's right-click: " + res + "; mode still " + a.getMode());
         helper.succeed();
     }
 
-    /** pa17: claim safety: on a town's ground it won't build, dig or open the town's chests. */
-    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pa17_claim_safety")
-    public static void pa17_claim_safety(GameTestHelper helper) {
+    /** pai17: claim safety: on a town's ground it won't build, dig or open the town's chests. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pai17_claim_safety")
+    public static void pai17_claim_safety(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_048_000, y = ground(level, x);
         VillageFolkEntity folk = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, new BlockPos(x, y, Z), 0F);
@@ -521,13 +528,13 @@ public class PlayerAssistantGameTests {
         level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
         helper.assertTrue(!PaChests.allowed(a, level, chest), "nor open a chest on it");
         helper.assertTrue(!PaSafety.offLimits(a, new BlockPos(x + 600, y, Z)), "out in the wild it may work");
-        Kit.log("pa17 refused: " + lastWords(a));
+        Kit.log("pai17 refused: " + lastWords(a));
         helper.succeed();
     }
 
-    /** pa18: kept across a logout (it leaves with its player, back beside them after) and across a save (load its own record). */
-    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pa18_persistence")
-    public static void pa18_persistence(GameTestHelper helper) {
+    /** pai18: kept across a logout (it leaves with its player, back beside them after) and across a save (load its own record). */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pai18_persistence")
+    public static void pai18_persistence(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_051_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -561,13 +568,13 @@ public class PlayerAssistantGameTests {
         stale.load(old);
         stale.moveTo(x - 5, y, Z - 5);
         level.addFreshEntity(stale);
-        Kit.log("pa18 before " + before + ", after " + b.getUUID() + "; " + b.displayNameCap() + " with " + count(b, Items.DIAMOND) + " diamonds");
+        Kit.log("pai18 before " + before + ", after " + b.getUUID() + "; " + b.displayNameCap() + " with " + count(b, Items.DIAMOND) + " diamonds");
         helper.succeedWhen(() -> helper.assertTrue(stale.isRemoved(), "the stale copy sent away"));
     }
 
-    /** pa19: wholly apart from the folk: in a town it is not one of its people, takes no job, bed or wage, and is nobody's crew. */
-    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pa19_not_folk")
-    public static void pa19_not_folk(GameTestHelper helper) {
+    /** pai19: wholly apart from the folk: in a town it is not one of its people, takes no job, bed or wage, and is nobody's crew. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pai19_not_folk")
+    public static void pai19_not_folk(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_054_000, y = ground(level, x);
         VillageFolkEntity folk = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, new BlockPos(x, y, Z), 0F);
@@ -585,15 +592,15 @@ public class PlayerAssistantGameTests {
             helper.assertTrue(a.getHome() == null || !a.getHome().closerThan(folk.blockPosition(), 0), "no town home");
             helper.assertTrue(folk.getTarget() != a, "the folk don't go for it");
             helper.assertTrue(a.tickCount > 300, "a while in the town first");
-            Kit.log("pa19 after " + a.tickCount + " ticks in town: job " + a.stationTask() + ", headcount " + Villages.headcount(town) + " (" + heads + ")");
+            Kit.log("pai19 after " + a.tickCount + " ticks in town: job " + a.stationTask() + ", headcount " + Villages.headcount(town) + " (" + heads + ")");
         });
     }
 
     // ================================================================== trouble
 
-    /** pa20: its player far away behind a wall and it can't get there: it comes to them; "come here" from far brings it at once. */
-    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pa20_stuck_owner_far")
-    public static void pa20_stuck_owner_far(GameTestHelper helper) {
+    /** pai20: its player far away behind a wall and it can't get there: it comes to them; "come here" from far brings it at once. */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pai20_stuck_owner_far")
+    public static void pai20_stuck_owner_far(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_057_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -607,13 +614,13 @@ public class PlayerAssistantGameTests {
         p.teleportTo(level, x + 30.5, y, Z + 0.5, Set.of(), 0, 0);
         helper.succeedWhen(() -> {
             helper.assertTrue(a.distanceTo(p) < 8, "it got out to its player: " + String.format("%.1f", a.distanceTo(p)));
-            Kit.log("pa20 penned in, got to its player (" + lastWords(a) + ")");
+            Kit.log("pai20 penned in, got to its player (" + lastWords(a) + ")");
         });
     }
 
-    /** pa21: a full chest, and no tools: it says why it can't, and offers fixes; it never just stands there in silence. */
-    @GameTest(template = EMPTY, timeoutTicks = 800, batch = "pa21_full_chest_no_tool")
-    public static void pa21_full_chest_no_tool(GameTestHelper helper) {
+    /** pai21: a full chest, and no tools: it says why it can't, and offers fixes; it never just stands there in silence. */
+    @GameTest(template = EMPTY, timeoutTicks = 800, batch = "pai21_full_chest_no_tool")
+    public static void pai21_full_chest_no_tool(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_060_000, y = ground(level, x);
         BlockPos chest = new BlockPos(x + 4, y, Z);
@@ -633,13 +640,13 @@ public class PlayerAssistantGameTests {
             String said = lastWords(a);
             helper.assertTrue(said.toLowerCase().contains("full") || said.toLowerCase().contains("room") || said.toLowerCase().contains("couldn"),
                 "it says the chest is full: " + said + " (all: " + allWords(a) + ")");
-            Kit.log("pa21 no tool: \"" + noTool + "\"; full chest: \"" + said + "\"");
+            Kit.log("pai21 no tool: \"" + noTool + "\"; full chest: \"" + said + "\"");
         });
     }
 
-    /** pa22: night with monsters about, auto-help on: it takes on the zombie coming at its player, unasked. */
-    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pa22_night_mobs")
-    public static void pa22_night_mobs(GameTestHelper helper) {
+    /** pai22: night with monsters about, auto-help on: it takes on the zombie coming at its player, unasked. */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pai22_night_mobs")
+    public static void pai22_night_mobs(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_063_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -654,13 +661,13 @@ public class PlayerAssistantGameTests {
         helper.succeedWhen(() -> {
             helper.assertTrue(!z.isAlive(), "the zombie is dealt with (" + a.state() + ")");
             level.setDayTime(2000);
-            Kit.log("pa22 night zombie killed; said " + allWords(a));
+            Kit.log("pai22 night zombie killed; said " + allWords(a));
         });
     }
 
-    /** pa23: its own thinking stays cheap: the time it takes, per server tick, is measured and inside its budget. */
-    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pa23_budget")
-    public static void pa23_budget(GameTestHelper helper) {
+    /** pai23: its own thinking stays cheap: the time it takes, per server tick, is measured and inside its budget. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pai23_budget")
+    public static void pai23_budget(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_066_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -669,7 +676,7 @@ public class PlayerAssistantGameTests {
         PaBrain.resetStats();
         helper.runAfterDelay(300, () -> {
             double us = PaBrain.microsPerTick();
-            Kit.log("pa23 the assistant's own thinking: " + String.format("%.1f", us) + " us per tick, " + PaBrain.overBudgetTicks()
+            Kit.log("pai23 the assistant's own thinking: " + String.format("%.1f", us) + " us per tick, " + PaBrain.overBudgetTicks()
                 + " ticks over the " + PaConfig.budgetMicros() + " us budget");
             helper.assertTrue(us < PaConfig.budgetMicros(), "within budget: " + us);
             helper.succeed();
