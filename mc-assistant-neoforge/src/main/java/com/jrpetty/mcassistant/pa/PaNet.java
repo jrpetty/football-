@@ -158,7 +158,7 @@ public final class PaNet {
             t.putInt("xp", a.lifetimeXp());
             t.putInt("food", a.countFood());
             t.putString("mode", a.getMode().name().toLowerCase());
-            t.putString("state", a.state());
+            t.putString("state", a.state() == null ? "" : a.state());
             t.putBoolean("paused", a.plan.paused);
             ListTag steps = new ListTag();
             for (PaPlan.Step s : a.plan.all()) {
@@ -176,9 +176,10 @@ public final class PaNet {
             }
             t.put("steps", steps);
             ListTag deeds = new ListTag();
-            for (String line : a.workRecord(8)) deeds.add(StringTag.valueOf(line));
+            for (String line : a.workRecord(8)) if (line != null) deeds.add(StringTag.valueOf(line));
             t.put("deeds", deeds);
-            t.putString("today", a.productionSummary(5));
+            String today = a.productionSummary(5);
+            t.putString("today", today == null ? "" : today);
             Map<String, Integer> pack = new LinkedHashMap<>();
             for (ItemStack s : a.getInventoryItems()) {
                 if (s.isEmpty()) continue;

@@ -15,6 +15,16 @@ public final class PaServer {
     private PaServer() {}
 
     public static void act(ServerPlayer p, String action, CompoundTag args) {
+        try {
+            act0(p, action, args);
+        } catch (RuntimeException e) {
+            // a slip in the assistant never costs a player their connection: it is logged, and they are told
+            com.mojang.logging.LogUtils.getLogger().error("[pa33] the assistant's \"{}\" failed", action, e);
+            PaLife.tell(p, "Your assistant got confused by that. Try again?");
+        }
+    }
+
+    private static void act0(ServerPlayer p, String action, CompoundTag args) {
         PaData.Rec r = PaData.first(p.getUUID());
         if (args.contains("slot")) {
             PaData.Rec bySlot = PaData.find(p.getUUID(), args.getInt("slot"));
