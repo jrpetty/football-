@@ -7370,6 +7370,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (peekJob() != null || !getNavigation().isDone()) return;
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         long now = level().getGameTime();
+        // [biz30d] A firm's hand works for its firm, which pays it: it does not take the lead on the town's buildings (a
+        // bakery's owner led the town's house from first load to last block while its shelf stood bare). Not while it holds
+        // a lead already: that it finishes or hands back as before.
+        if (Enterprise.employerOf(village, this) != null && !Villages.holdsTheLead(village, getUUID(), now)) { buildNote("build: at its firm's work"); return; }
         if (!Villages.projectDue(village, now) && !Villages.resuming(village, getUUID(), now)) { buildNote("build: not due yet"); return; }   // [growth22] back at its own: no gap
         // The first building no other crew is raising (a thriving town has two or three going up at once:
         // Villages.crewsAllowed), or the one this hand's crew is already on.
