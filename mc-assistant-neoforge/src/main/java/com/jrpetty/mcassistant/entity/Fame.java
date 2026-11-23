@@ -261,6 +261,9 @@ public final class Fame {
         if (r.fame.isEmpty()) return 0;
         Product p = r.fame.keySet().iterator().next();
         Predicate<ItemStack> what = p::matches;
+        // [econ32d] Not the diamonds the age asks for (AgeOres.diamondsKept): a gem town's fair sold half its diamonds every
+        // season while its Diamond Age waited on four.
+        if (AgeOres.diamondsKept(id) > 0 && what.test(new ItemStack(Items.DIAMOND))) { Predicate<ItemStack> gems = what; what = st -> !st.is(Items.DIAMOND) && gems.test(st); }
         int have = Market.stock(level, id, what);
         int n = Math.min(48, have / 2);
         r.lastFair = day;
