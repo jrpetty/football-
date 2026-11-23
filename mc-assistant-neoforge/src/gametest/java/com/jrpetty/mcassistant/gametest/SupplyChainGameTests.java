@@ -1362,14 +1362,19 @@ public class SupplyChainGameTests {
         Kit.Expect ok = new Kit.Expect();
         ok.that(cf == 12 && ct == 16 && df == 12 && dt == 16, "each landing's chest topped up: 12 meals, 16 torches");
         m.removeMatching(st -> st.is(Items.BREAD) || st.is(Items.TORCH), 999);
+        java.util.function.Predicate<ItemStack> meal = st -> st.is(Items.BREAD) || st.is(Items.BAKED_POTATO) || st.is(Items.CARROT) || st.is(Items.APPLE)
+            || st.is(Items.COOKED_BEEF) || st.is(Items.COOKED_PORKCHOP) || st.is(Items.COOKED_MUTTON) || st.is(Items.COOKED_CHICKEN)
+            || st.is(Items.COOKED_COD) || st.is(Items.COOKED_SALMON) || st.is(Items.COOKED_RABBIT);
+        int mealsBefore = m.countCarried(meal);
         m.teleportTo(deep.board().getX() + 0.5, deep.board().getY(), deep.board().getZ() + 0.5);
         com.jrpetty.mcassistant.entity.MineLift.Stop near = com.jrpetty.mcassistant.entity.MineCache.near(level, m);
         String took = near == null ? "-" : com.jrpetty.mcassistant.entity.MineCache.take(level, m, near);
-        int bread = m.countCarried(st -> st.is(Items.BREAD)), torches = m.countCarried(st -> st.is(Items.TORCH));
+        int bread = m.countCarried(meal), torches = m.countCarried(st -> st.is(Items.TORCH));
         Kit.log("[VT] sc21 the miner at the copper landing: cache " + (near == null ? "none" : near.name()) + "; took " + took + "; carries " + bread + " bread, " + torches + " torches");
         ok.that(near != null && near.index() == deep.index(), "the copper landing's cache by it");
-        ok.that(bread == 4 && torches == 8, "a breather's share taken: " + bread + " bread, " + torches + " torches");
-        ok.that(com.jrpetty.mcassistant.entity.MineCache.countForTests(level, v, deep, true) == 8, "the chest the less for it");
+        int fromChest = 12 - com.jrpetty.mcassistant.entity.MineCache.countForTests(level, v, deep, true);
+        ok.that(bread >= 4 && torches == 8, "a breather's share taken: meals " + mealsBefore + " -> " + bread + ", " + torches + " torches");
+        ok.that(fromChest == Math.max(0, 4 - mealsBefore), "the chest the less for it: " + fromChest + " meals out of it");
         helper.assertTrue(ok.clean(), ok.summary());
         MineWorksGameTests.done(helper);
     }
