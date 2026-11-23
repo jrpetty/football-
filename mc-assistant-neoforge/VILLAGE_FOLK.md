@@ -15499,6 +15499,8 @@ works' round, instead of only when a load will not go in (then the load went on 
 - **Shifts at the face.** Along the works' own tunnels a miner goes at a jog. The ore the age is waiting on takes more than
   one miner in the works' share-out.
 - **The age's buildings keep their ground.** The lot an age's building was set out on is kept with the town, so after a
-  restart the half-raised building is finished where it stands instead of being begun again on another lot.
+  restart the half-raised building is finished where it stands instead of being begun again on another lot. Once a score
+  of its wall blocks stand there, a builder that cannot get to it does not give the lot up: the building is set aside a
+  few minutes and tried again (five times at most). A building with nothing laid takes another lot, as before.
 - The mine's report has a line for the cage (runs, riders) and for the cache, and the shifts line says where the works'
   time goes: at the face, walking, in the cage, on the way out.
