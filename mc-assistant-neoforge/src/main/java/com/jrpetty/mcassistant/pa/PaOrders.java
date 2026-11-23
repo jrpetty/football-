@@ -796,7 +796,7 @@ public final class PaOrders {
                 if (lock != null) return lock;
                 if (i.raw() != null && i.raw().toLowerCase().matches(".*\\b(come|follow|go|head|let'?s go)\\b.*nether.*") && !i.raw().toLowerCase().matches(".*\\b(get|gather|collect|mine|fetch|bring)\\b.*")) {
                     a.setMode(AssistantEntity.Mode.FOLLOW);           // through the portal at your heels
-                    out.add(step("follow you to the Nether", Kind.NETHER, 5));
+                    a.mind.post = null;                                // no step: nothing to "finish", it just comes along
                     PaTalk.reply(a, PaTalk.line(a, "nether_with"));
                     return null;
                 }

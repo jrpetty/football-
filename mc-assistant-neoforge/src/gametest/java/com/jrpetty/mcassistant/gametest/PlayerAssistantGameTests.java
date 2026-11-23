@@ -1561,6 +1561,12 @@ public class PlayerAssistantGameTests {
                 CompoundTag saved = new CompoundTag();
                 a.addAdditionalSaveData(saved);
                 helper.assertTrue(saved.getLong("PaXp") == a.paXp(), "saved");
+                // and kept in its record: a body stood up afresh (its copy lost) is not back at level 1
+                helper.assertTrue(a.rec().xp == a.paXp(), "kept in its record: " + a.rec().xp);
+                PlayerAssistantEntity fresh = com.jrpetty.mcassistant.McAssistantMod.PLAYER_ASSISTANT.get().create(level);
+                fresh.restoreXp(a.rec().xp);
+                helper.assertTrue(fresh.veteranLevel() == a.veteranLevel(), "a fresh body keeps the level: " + fresh.veteranLevel());
+                fresh.discard();
                 Kit.log("pai45 levels: level " + a.veteranLevel() + ", xp " + a.paXp() + ", hp " + a.getMaxHealth());
                 helper.succeed();
             });

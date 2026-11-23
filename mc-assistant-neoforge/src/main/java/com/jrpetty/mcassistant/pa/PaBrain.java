@@ -184,6 +184,8 @@ public final class PaBrain {
         }
         boolean running = a.jobCount() > 0 || (cur.task != null && a.task == cur.task);
         int pct = cur.percent(a);
+        cur.best = Math.max(cur.best, pct);                                // [pa33d] logs handed over mid-way still count
+        if (!running) pct = Math.max(pct, cur.best);
         // like a player, it stops when it has what it was sent for (a dig "until you have 20", or 16 logs)
         if ((cur.stopAtTarget || "GATHER".equals(cur.kind)) && cur.target > 0 && pct >= 100 && running) {
             a.clearQueue();

@@ -126,6 +126,7 @@ public final class PaLife {
             try {
                 a.load(t);
             } catch (Exception e) {
+                LOG.warn("[pa33] could not restore {} from its kept copy", r.name, e);
                 a = McAssistantMod.PLAYER_ASSISTANT.get().create(level);
                 if (a == null) return null;
             }
@@ -136,6 +137,7 @@ public final class PaLife {
         if (spot == null) { LOG.info("[pa33] no safe spot near {}", near.toShortString()); return null; }
         PaData.incarnate(r);
         a.bind(r);
+        a.restoreXp(r.xp);                                                 // [pa33d] never back at level 1 by accident
         a.moveTo(spot.x, spot.y, spot.z, owner != null ? owner.getYRot() + 180 : 0, 0);
         a.setHealth(!fresh && a.getHealth() > 1 ? a.getHealth() : a.getMaxHealth());
         a.setDeltaMovement(Vec3.ZERO);

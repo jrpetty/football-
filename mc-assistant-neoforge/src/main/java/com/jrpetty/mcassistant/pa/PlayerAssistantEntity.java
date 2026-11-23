@@ -386,12 +386,25 @@ public class PlayerAssistantEntity extends AssistantEntity {
         int before = veteranLevel();
         paXp = Math.min(10_000_000L, paXp + PaLevels.pay(base, level().getDifficulty().getId(), PaConfig.xpMultiplier()));
         int after = veteranLevel();
+        keepXp();
         if (after > before) PaLevelUp.levelUp(this, before, after);
+    }
+
+    /** Its record keeps a copy of its experience. */
+    void keepXp() {
+        PaData.Rec r = rec();
+        if (r != null && r.xp != paXp) { r.xp = paXp; PaData.touch(); }
+    }
+
+    /** A body stood up again never comes back lower than its record says. */
+    public void restoreXp(long kept) {
+        if (kept > paXp) paXp = Math.min(10_000_000L, kept);
     }
 
     /** Tests and admins: set its experience outright (no level-up moment). */
     public void setPaXpForTests(long xp) {
         paXp = Math.max(0, xp);
+        keepXp();
     }
 
     /** Its level quickens its work far more than a town hand's (level 10: 40% off). */
