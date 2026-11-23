@@ -682,6 +682,7 @@ public class GatherGoal extends Goal {
             if (!assistant.inZone(pos)) continue;    // stay inside the marked work zone
             BlockState rankSt = assistant.level().getBlockState(pos);
             if (!request.kind().matches(rankSt) || !rankAllows(request.kind(), rankSt)) continue;
+            if (assistant.sparesBuilds() && rankSt.is(net.minecraft.world.level.block.Blocks.COBBLESTONE)) continue;   // [pa33] laid stone is somebody's build
             // Never the step of somebody's mine stairs: the nearest stone to a plot's middle was the head
             // of its own stairs, and the miner came back up to a drop it could not climb (MineStairs).
             if (com.jrpetty.mcassistant.entity.MineStairs.isFloor(assistant.level(), pos)) continue;
@@ -701,7 +702,7 @@ public class GatherGoal extends Goal {
                 // Last of all, and only for a candidate that would actually win:
                 // this reads a few hundred blocks. A settlement's woodcutter must
                 // not fell the pillars of its own houses.
-                if (request.kind() == Kind.LOGS && assistant.isSettler() && !looksLikeATree(pos)) continue;
+                if (request.kind() == Kind.LOGS && (assistant.isSettler() || assistant.sparesBuilds()) && !looksLikeATree(pos)) continue;   // [pa33] sparesBuilds
                 bestDist = d;
                 best = pos.immutable();
             }

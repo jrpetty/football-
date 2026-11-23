@@ -785,10 +785,45 @@ public class PlayerAssistantGameTests {
         for (int t = 0; t < 3; t++) for (int dy = 0; dy < 4; dy++) level.setBlock(new BlockPos(x + 34 + t * 2, y + dy, Z + 1), Blocks.OAK_LOG.defaultBlockState(), 2);
         say(p, a, "get me 8 logs");
         helper.succeedWhen(() -> {
-            int logs = a.countMatching(st -> st.is(net.minecraft.tags.ItemTags.LOGS));
-            helper.assertTrue(logs >= 8, "it went to the trees and got the logs: " + logs + " (" + lastWords(a) + ")");
+            int logs = a.countMatching(st -> st.is(net.minecraft.tags.ItemTags.LOGS)) + p.getInventory().countItem(Items.OAK_LOG);
+            helper.assertTrue(logs >= 8, "it went to the trees and got the logs (for you): " + logs + " (" + lastWords(a) + ")");
             helper.assertTrue(allWords(a).contains("Heading there"), "and said where it was going: " + allWords(a));
             Kit.log("pai28 no trees near; went ~35 blocks to them; " + logs + " logs (" + allWords(a) + ")");
+        });
+    }
+
+    /** pai29: "Break near your builds" off (the default): it fells the tree, not the log beams of a build, nor laid cobblestone. */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "pai29_spares_builds")
+    public static void pai29_spares_builds(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_084_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        // a build: two log beams and a cobblestone wall, right beside it
+        for (int dy = 0; dy < 3; dy++) {
+            level.setBlock(new BlockPos(x + 2, y + dy, Z + 2), Blocks.OAK_LOG.defaultBlockState(), 2);
+            level.setBlock(new BlockPos(x + 4, y + dy, Z + 2), Blocks.OAK_LOG.defaultBlockState(), 2);
+            level.setBlock(new BlockPos(x + 3, y + dy, Z + 2), Blocks.COBBLESTONE.defaultBlockState(), 2);
+        }
+        // a tree a little further off: trunk and crown
+        BlockPos t = new BlockPos(x + 9, y, Z - 3);
+        for (int dy = 0; dy < 5; dy++) level.setBlock(t.above(dy), Blocks.OAK_LOG.defaultBlockState(), 2);
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int dy = 4; dy <= 6; dy++) {
+            BlockPos l = t.offset(dx, dy, dz);
+            if (level.getBlockState(l).isAir()) level.setBlock(l, Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true), 2);
+        }
+        say(p, a, "chop 4 logs");
+        helper.succeedWhen(() -> {
+            helper.assertTrue(a.plan.idle(), "the chopping is over (" + a.state() + ")");
+            int beams = 0, wall = 0;
+            for (int dy = 0; dy < 3; dy++) {
+                if (level.getBlockState(new BlockPos(x + 2, y + dy, Z + 2)).is(Blocks.OAK_LOG)) beams++;
+                if (level.getBlockState(new BlockPos(x + 4, y + dy, Z + 2)).is(Blocks.OAK_LOG)) beams++;
+                if (level.getBlockState(new BlockPos(x + 3, y + dy, Z + 2)).is(Blocks.COBBLESTONE)) wall++;
+            }
+            helper.assertTrue(beams == 6 && wall == 3, "the build is untouched: beams " + beams + "/6, wall " + wall + "/3");
+            helper.assertTrue(a.countMatching(st -> st.is(Items.OAK_LOG)) >= 4, "and it got its logs from the tree (" + lastWords(a) + ")");
+            Kit.log("pai29 spared the build (6 beams, 3 cobble); logs from the tree");
         });
     }
 }

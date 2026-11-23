@@ -159,6 +159,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
             || target instanceof net.minecraft.world.entity.TamableAnimal t && t.isTame());
     }
 
+    /** Its player's "Break near your builds" setting, off by default: then it fells trees, not house beams. */
+    @Override
+    public boolean sparesBuilds() {
+        PaData.Rec r = rec();
+        return r == null || !r.breakNearBuilds;
+    }
+
     /** May this player give it orders: its owner, or an operator. */
     public boolean obeys(Player p) {
         return isOwner(p) || (p instanceof ServerPlayer sp && sp.hasPermissions(2));

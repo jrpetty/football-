@@ -69,7 +69,7 @@ public final class PaStt {
         return switch (engine()) {
             case WINDOWS -> "Listening with Windows' own speech recognition (offline).";
             case VOSK -> "Listening with the offline speech model.";
-            case NONE -> windowsHere ? "Windows' speech recognition isn't available here." : "No speech model yet: turn listening on in the About tab to download it (about 40 MB, once).";
+            case NONE -> windowsHere ? "Windows' speech recognition isn't available here." : "No speech model yet: in your assistant's About tab, turn Listen on and click \"I agree: download it\" (about 40 MB, once).";
         };
     }
 

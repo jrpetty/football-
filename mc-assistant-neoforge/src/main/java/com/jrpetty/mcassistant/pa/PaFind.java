@@ -40,8 +40,21 @@ public final class PaFind {
         int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
         for (int y = top; y >= top - 12 && y > level.getMinBuildHeight(); y--) {
             BlockPos p = new BlockPos(x, y, z);
-            if (kind.matches(level.getBlockState(p)) && !PaSafety.offLimits(a, p)) return p;
+            var st = level.getBlockState(p);
+            if (!kind.matches(st) || PaSafety.offLimits(a, p) || a.isUnreachable(p)) continue;
+            if (a.sparesBuilds() && (st.is(net.minecraft.world.level.block.Blocks.COBBLESTONE) || kind == GatherGoal.Kind.LOGS && !tree(level, p))) continue;
+            return p;
         }
         return null;
+    }
+
+    /** A log with a crown of leaves over it: a tree, not a beam in somebody's house. */
+    static boolean tree(ServerLevel level, BlockPos pos) {
+        BlockPos top = pos;
+        for (int i = 0; i < 40 && level.getBlockState(top.above()).is(net.minecraft.tags.BlockTags.LOGS); i++) top = top.above();
+        for (BlockPos p : BlockPos.betweenClosed(top.offset(-3, -1, -3), top.offset(3, 3, 3))) {
+            if (level.getBlockState(p).getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) return true;
+        }
+        return false;
     }
 }

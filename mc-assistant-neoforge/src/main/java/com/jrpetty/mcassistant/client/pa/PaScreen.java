@@ -657,7 +657,8 @@ public class PaScreen extends Screen {
         cy = toggle(g, "Ask before big jobs", set.getBoolean("confirm"), sx, cy, half, mx, my, "", () -> setting("confirm", !set.getBoolean("confirm")));
         cy = toggle(g, "Use your chests", set.getBoolean("chests"), sx, cy, half, mx, my,
             "Off: only chests you point it at. Never a town's stores or anyone else's.", () -> setting("chests", !set.getBoolean("chests")));
-        cy = toggle(g, "Break near your builds", set.getBoolean("break"), sx, cy, half, mx, my, "", () -> setting("break", !set.getBoolean("break")));
+        cy = toggle(g, "Break near your builds", set.getBoolean("break"), sx, cy, half, mx, my,
+            "Off: it fells only trees and never takes laid cobblestone. On: any logs or stone will do.", () -> setting("break", !set.getBoolean("break")));
         cy = toggle(g, "Shelter at night", set.getBoolean("sleep"), sx, cy, half, mx, my, "", () -> setting("sleep", !set.getBoolean("sleep")));
         int roam = set.getInt("roam");
         cy = stepper(g, "Roam", roam + " blocks", sx, cy, mx, my, () -> settingInt("roam", roam - 8), () -> settingInt("roam", roam + 8));

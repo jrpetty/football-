@@ -380,6 +380,12 @@ public final class PaOrders {
                 s.count = what;
                 s.target = amount;
                 out.add(s);
+                // "get me 16 logs": they are for you, so it brings them over when it has them
+                if (i.raw() != null && i.raw().toLowerCase().matches(".*\\b(get|bring|fetch|grab|collect|chop|mine|dig) me\\b.*")) {
+                    PaPlan.Step give = step("bring you " + amount + " " + what, Kind.GIVE, 15);
+                    give.jobs.add(Job.give(what, amount));
+                    out.add(give);
+                }
                 return null;
             }
             case MINE_ORE -> {

@@ -4658,6 +4658,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [pa33] Does it level and clear the ground under what it builds, as a town's builder does? */
     public boolean levelsBuildSite() { return false; }
 
+    /** [pa33] Does it leave builds alone when it gathers (only trees for logs, never laid cobblestone)? */
+    public boolean sparesBuilds() { return false; }
+
     /** Does this one talk to the player at all? An assistant does — it is
      *  yours, and its needs are your business. Village Folk do not, ever:
      *  they are a settlement getting on with its own life in the background,
