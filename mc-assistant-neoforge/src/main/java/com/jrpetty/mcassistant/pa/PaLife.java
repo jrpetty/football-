@@ -207,7 +207,7 @@ public final class PaLife {
         for (PaData.Rec r : PaData.of(p.getUUID())) {
             r.ownerName = p.getGameProfile().getName();
             if (!r.away || r.dead(p.serverLevel().getGameTime())) continue;
-            PlayerAssistantEntity a = spawn(p.serverLevel(), r, p.blockPosition(), p);
+            PlayerAssistantEntity a = spawn(p.serverLevel(), r, p.blockPosition().relative(p.getDirection(), 3), p);
             if (a != null) {
                 PaTalk.reply(a, PaPhrases.line("greet", a.personality(), a.getRandom()::nextInt, "owner", p.getGameProfile().getName()));
             }

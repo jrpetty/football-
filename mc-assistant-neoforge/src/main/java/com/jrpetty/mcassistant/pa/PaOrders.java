@@ -127,7 +127,7 @@ public final class PaOrders {
         boolean ask = r == null || r.confirm;
         boolean big = work.size() >= 3 || work.stream().anyMatch(s -> confirmable(s));
         if (ask && big) {
-            String q = summary(work) + ", about " + time(work.stream().mapToInt(s -> s.eta).sum());
+            String q = summary(work) + ". About " + time(work.stream().mapToInt(s -> s.eta).sum());
             List<Choice> choices = List.of(new Choice("OK", "yes"), new Choice("Change", "#change " + said), new Choice("Cancel", "no"));
             PENDING.put(p.getUUID(), new Pending(q, choices, work, said));
             PaTalk.reply(a, PaPhrases.line("confirm", a.personality(), a.getRandom()::nextInt, "what", q), choices);
@@ -155,8 +155,8 @@ public final class PaOrders {
         a.plan.steps.addAll(work);
         a.plan.paused = false;
         if (a.getMode() == AssistantEntity.Mode.STAY) a.setMode(AssistantEntity.Mode.FOLLOW);   // it has work: it is not standing still
-        String what = work.size() == 1 ? work.get(0).label : work.size() + " things: " + summary(work);
-        PaTalk.reply(a, PaPhrases.line("ok", a.personality(), a.getRandom()::nextInt) + " " + cap(what) + ".");
+        String what = work.size() == 1 ? cap(work.get(0).label) : work.size() + " steps, starting with: " + work.get(0).label;
+        PaTalk.reply(a, PaPhrases.line("ok", a.personality(), a.getRandom()::nextInt) + " " + what + ".");
     }
 
     // ------------------------------------------------------------------ answers at once
@@ -472,6 +472,8 @@ public final class PaOrders {
                 PaPlan.Step s = step("make " + (amount > 1 ? amount + " " : "") + CraftPlanner.pretty(target), Kind.CRAFT,
                     Math.max(10, cr.jobs().stream().mapToInt(PaOrders::jobEta).sum()));
                 s.jobs.addAll(cr.jobs());
+                s.count = PaItems.itemKey(target);
+                s.target = s.count.isEmpty() ? 0 : amount;
                 if (s.jobs.isEmpty()) {
                     // already has it: nothing to make
                     if (i.place() == PaIntent.Place.NONE) return null;
@@ -762,6 +764,8 @@ public final class PaOrders {
         if (!cr.blockers().isEmpty() || cr.jobs().isEmpty()) return;
         PaPlan.Step s = step("make a " + CraftPlanner.pretty(target) + " first", Kind.CRAFT, Math.max(20, cr.jobs().stream().mapToInt(PaOrders::jobEta).sum()));
         s.jobs.addAll(cr.jobs());
+        s.count = PaItems.itemKey(target);
+        s.target = 1;
         out.add(s);
     }
 
@@ -890,9 +894,14 @@ public final class PaOrders {
 
     static String summary(List<PaPlan.Step> work) {
         List<String> l = new ArrayList<>();
-        for (PaPlan.Step s : work) l.add(s.label);
-        if (l.size() > 4) return String.join(", ", l.subList(0, 3)) + " and " + (l.size() - 3) + " more";
-        return cap(String.join(", then ", l));
+        for (PaPlan.Step s : work) l.add(s.label.replaceAll(" first$", ""));
+        if (l.size() == 1) return cap(l.get(0));
+        String last = l.get(l.size() - 1);
+        if (l.size() > 4) {
+            return "First " + l.get(0) + ", " + l.get(1) + " and " + l.get(2) + ", then " + (l.size() - 4) + " more step"
+                + (l.size() - 4 == 1 ? "" : "s") + ", and " + last;
+        }
+        return "First " + String.join(", then ", l.subList(0, l.size() - 1)) + ", and then " + last;
     }
 
     static String time(int seconds) {

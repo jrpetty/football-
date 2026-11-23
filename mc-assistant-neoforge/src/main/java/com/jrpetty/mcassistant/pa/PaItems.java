@@ -16,6 +16,10 @@ public final class PaItems {
     private PaItems() {}
 
     public static Predicate<ItemStack> of(String word) {
+        if (word.startsWith("item:")) {
+            net.minecraft.world.item.Item it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(word.substring(5)));
+            return s -> s.is(it);
+        }
         return switch (word) {
             case "logs" -> s -> s.is(ItemTags.LOGS);
             case "planks" -> s -> s.is(ItemTags.PLANKS);
@@ -48,7 +52,23 @@ public final class PaItems {
     }
 
     public static int count(AssistantEntity a, String word) {
-        return a.countMatching(of(word));
+        Predicate<ItemStack> m = of(word);
+        int n = a.countMatching(m);
+        for (net.minecraft.world.entity.EquipmentSlot slot : new net.minecraft.world.entity.EquipmentSlot[]{
+                net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.entity.EquipmentSlot.OFFHAND}) {
+            ItemStack h = a.getItemBySlot(slot);
+            if (!h.isEmpty() && m.test(h)) n += h.getCount();
+        }
+        return n;
+    }
+
+    /** "item:minecraft:wooden_pickaxe" for a recipe target, to count what was made. */
+    public static String itemKey(String target) {
+        net.minecraft.world.item.Item it = "planks".equals(target) ? Items.OAK_PLANKS : "sticks".equals(target) ? Items.STICK
+            : com.jrpetty.mcassistant.entity.RecipeBook.item(target);
+        if (it == Items.AIR) return "";
+        if ("planks".equals(target)) return "planks";
+        return "item:" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it);
     }
 
     /** The engine's gathering kind for a word, or null when it is not something the gatherer does. */

@@ -249,7 +249,7 @@ public class PaScreen extends Screen {
         g.enableScissor(x + 1, y + 1, x + iw - 1, y + logH - 1);
         int cy = y + 4 - logScroll;
         if (log.isEmpty()) {
-            g.drawCenteredString(font, "Say hello, or try one of the suggestions below.", x + iw / 2, y + logH / 2 - 4, UiStyle.TEXT_FAINT);
+            centred(g, "Say hello, or try one of the suggestions below.", x + iw / 2, y + logH / 2 - 4, UiStyle.TEXT_FAINT);
         }
         for (Object[] o : laid) {
             int who = (Integer) o[0];
@@ -290,7 +290,7 @@ public class PaScreen extends Screen {
         input.visible = true;
         input.setX(x + 2);
         input.setY(y + ih - 19);
-        input.setWidth(iw - 92);
+        input.setWidth(iw - 100);
         input.render(g, mx, my, 0);
         String typed = input.getValue();
         if (!typed.isEmpty() && input.isFocused()) {
@@ -309,9 +309,9 @@ public class PaScreen extends Screen {
                 zone(input.getX(), sy + i * 12, sw, 12, () -> { input.setValue(v); input.moveCursorToEnd(false); }, "");
             }
         }
-        button(g, "Send", x + iw - 86, y + ih - 19, 44, 16, mx, my, !typed.isBlank(), true, "Send (Enter)", this::sendTyped);
+        button(g, "Send", x + iw - 94, y + ih - 19, 40, 16, mx, my, !typed.isBlank(), true, "Send (Enter)", this::sendTyped);
         boolean listening = PaVoice.listening;
-        button(g, listening ? "\u25A0 Send" : "\u25CF Speak", x + iw - 40, y + ih - 19, 40, 16, mx, my, true, listening,
+        button(g, listening ? "\u25A0 Send" : "\u25CF Speak", x + iw - 50, y + ih - 19, 50, 16, mx, my, true, listening,
             listening ? "Stop listening and send" : "Click, speak, click again (or hold " + PaClient.TALK.getTranslatedKeyMessage().getString() + " outside this panel)",
             () -> { if (PaVoice.listening) PaVoice.stopListening(); else PaVoice.startListening(); });
         if (listening && !PaVoice.transcript.isEmpty()) {
@@ -360,8 +360,8 @@ public class PaScreen extends Screen {
         {"Come here", "", "come here", "It comes to you (from anywhere)"},
         {"Guard me", "", "guard me", "It sticks close and attacks anything hostile near you"},
         {"Guard here", "guardhere", "", "It holds a post and guards it"},
-        {"Gather wood", "wood", "", "It chops trees (and makes an axe if it must)"},
-        {"Gather stone", "stone", "", "It mines stone (making a pickaxe first if it has none)"},
+        {"Get wood", "wood", "", "It chops trees (and makes an axe if it must)"},
+        {"Get stone", "stone", "", "It mines stone (making a pickaxe first if it has none)"},
         {"Mine ore", "ore", "", "It digs a mine to the right depth for the ore and follows the veins"},
         {"Mine down", "down", "", "It digs a staircase mine down to a level"},
         {"Farm", "farm", "", "Harvest and replant, or lay out a new field"},
@@ -393,7 +393,7 @@ public class PaScreen extends Screen {
             g.drawString(font, UiStyle.clip(font, o[0], tw - 18), cx + 16, cy + 4, on ? 0xFFFFFFFF : UiStyle.TEXT, false);
             zone(cx, cy, tw, th, () -> {
                 if (o[1].isEmpty()) { PaClient.talk(o[2], false); tab = "talk"; }
-                else { picker = picker.equals(o[1]) ? "" : o[1]; pick.clear(); }
+                else { picker = picker.equals(o[1]) ? "" : o[1]; pick.clear(); defaults(); }
             }, o[3]);
         }
         int py = y + 2 + rows * (th + 3) + 4;
@@ -408,7 +408,7 @@ public class PaScreen extends Screen {
     private static String iconFor(String label) {
         return switch (label) {
             case "Follow me" -> "follow"; case "Stay here" -> "stay"; case "Come here" -> "follow"; case "Guard me", "Guard here" -> "guard";
-            case "Gather wood" -> "gather"; case "Gather stone", "Mine ore", "Mine down" -> "mine_ore"; case "Farm" -> "farm";
+            case "Get wood" -> "gather"; case "Get stone", "Mine ore", "Mine down" -> "mine_ore"; case "Farm" -> "farm";
             case "Build" -> "build"; case "Craft" -> "craft"; case "Smelt" -> "smelt"; case "Deposit" -> "deposit";
             case "Fight" -> "fight"; case "Bring food" -> "bring_food"; case "Light up" -> "light_area"; case "Sort chests" -> "sort";
             case "Go home" -> "go_home"; case "Stop" -> "paused";
@@ -466,6 +466,18 @@ public class PaScreen extends Screen {
         } else {
             g.drawString(font, "Pick one from each row.", x, cy + 4, UiStyle.TEXT_FAINT, false);
         }
+    }
+
+    /** The sensible choice already picked on a picker's later rows (how many, where): one click less. */
+    private void defaults() {
+        String second = switch (picker) {
+            case "ore" -> "8";
+            case "build" -> "in front of me";
+            case "craft" -> "1";
+            case "smelt" -> "8";
+            default -> null;
+        };
+        if (second != null) { pick.add(""); pick.add(second); }
     }
 
     /** The order the picker makes, or null while a row is unpicked. */
@@ -584,7 +596,7 @@ public class PaScreen extends Screen {
         int lk = Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length);
         g.drawString(font, "Look", x, cy + 3, UiStyle.TEXT_MUTED, false);
         button(g, "◀", x + 70, cy, 13, 13, mx, my, true, false, "", () -> look("look", lk - 1));
-        g.drawCenteredString(font, PaRenderer.LOOK_NAMES[lk], x + 112, cy + 3, UiStyle.TEXT);
+        centred(g, PaRenderer.LOOK_NAMES[lk], x + 112, cy + 3, UiStyle.TEXT);
         button(g, "▶", x + 141, cy, 13, 13, mx, my, true, false, "", () -> look("look", lk + 1));
         cy += 16;
         g.drawString(font, "Name", x, cy + 3, UiStyle.TEXT_MUTED, false);
@@ -614,7 +626,7 @@ public class PaScreen extends Screen {
         UiStyle.heading(g, font, "Settings", sx, cy, half);
         cy += 14;
         boolean speak = PaClientConfig.get(PaClientConfig.SPEAK, true);
-        cy = toggle(g, "Speak its replies aloud", speak, sx, cy, half, mx, my, PaVoice.tts().status(), () -> PaClientConfig.set(PaClientConfig.SPEAK, !speak));
+        cy = toggle(g, "Speak replies aloud", speak, sx, cy, half, mx, my, PaVoice.tts().status(), () -> PaClientConfig.set(PaClientConfig.SPEAK, !speak));
         List<String> voices = PaVoice.tts().voices();
         int vi = PaClientConfig.get(PaClientConfig.VOICE, 0);
         String vname = voices.isEmpty() ? "Default" : voices.get(Math.min(vi, voices.size() - 1));
@@ -639,14 +651,14 @@ public class PaScreen extends Screen {
             cy += 18;
         }
         boolean hud = PaClientConfig.get(PaClientConfig.HUD, true);
-        cy = toggle(g, "Show what it's doing on screen", hud, sx, cy, half, mx, my, "", () -> PaClientConfig.set(PaClientConfig.HUD, !hud));
-        cy = toggle(g, "Auto-help when it has no orders", set.getBoolean("auto"), sx, cy, half, mx, my,
+        cy = toggle(g, "Show what it's doing (HUD)", hud, sx, cy, half, mx, my, "", () -> PaClientConfig.set(PaClientConfig.HUD, !hud));
+        cy = toggle(g, "Auto-help", set.getBoolean("auto"), sx, cy, half, mx, my,
             "Keeps the furnace going, the farm picked, the chests sorted, you fed and safe; it says what it's doing and you can veto it", () -> setting("auto", !set.getBoolean("auto")));
-        cy = toggle(g, "Ask before long or big jobs", set.getBoolean("confirm"), sx, cy, half, mx, my, "", () -> setting("confirm", !set.getBoolean("confirm")));
-        cy = toggle(g, "May use your chests", set.getBoolean("chests"), sx, cy, half, mx, my,
+        cy = toggle(g, "Ask before big jobs", set.getBoolean("confirm"), sx, cy, half, mx, my, "", () -> setting("confirm", !set.getBoolean("confirm")));
+        cy = toggle(g, "Use your chests", set.getBoolean("chests"), sx, cy, half, mx, my,
             "Off: only chests you point it at. Never a town's stores or anyone else's.", () -> setting("chests", !set.getBoolean("chests")));
-        cy = toggle(g, "May break blocks near your builds", set.getBoolean("break"), sx, cy, half, mx, my, "", () -> setting("break", !set.getBoolean("break")));
-        cy = toggle(g, "Take shelter at night", set.getBoolean("sleep"), sx, cy, half, mx, my, "", () -> setting("sleep", !set.getBoolean("sleep")));
+        cy = toggle(g, "Break near your builds", set.getBoolean("break"), sx, cy, half, mx, my, "", () -> setting("break", !set.getBoolean("break")));
+        cy = toggle(g, "Shelter at night", set.getBoolean("sleep"), sx, cy, half, mx, my, "", () -> setting("sleep", !set.getBoolean("sleep")));
         int roam = set.getInt("roam");
         cy = stepper(g, "Roam", roam + " blocks", sx, cy, mx, my, () -> settingInt("roam", roam - 8), () -> settingInt("roam", roam + 8));
         String[] chat = {"Quiet", "Low", "Normal", "Chatty"};
@@ -657,6 +669,10 @@ public class PaScreen extends Screen {
         int spend = set.getInt("spend");
         cy = stepper(g, "Spend limit", spend + " coins", sx, cy, mx, my, () -> settingInt("spend", spend - 16), () -> settingInt("spend", spend + 16));
         return Math.max(leftEnd, cy) - y + 4;
+    }
+
+    private void centred(GuiGraphics g, String text, int cx, int y, int colour) {
+        g.drawString(font, text, cx - font.width(text) / 2, y, colour, false);
     }
 
     private int line(GuiGraphics g, String text, int x, int y, int w) {
@@ -678,7 +694,7 @@ public class PaScreen extends Screen {
     private int stepper(GuiGraphics g, String label, String value, int x, int y, int mx, int my, Runnable down, Runnable up) {
         g.drawString(font, label, x, y + 3, UiStyle.TEXT_MUTED, false);
         button(g, "-", x + 60, y, 13, 13, mx, my, true, false, "", down);
-        g.drawCenteredString(font, value, x + 104, y + 3, UiStyle.TEXT);
+        centred(g, value, x + 104, y + 3, UiStyle.TEXT);
         button(g, "+", x + 135, y, 13, 13, mx, my, true, false, "", up);
         return y + 15;
     }

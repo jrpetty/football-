@@ -147,6 +147,7 @@ public final class PaBrain {
         }
         // finished, one way or another
         plan.current = null;
+        if (cur.target > 0 && !cur.count.isEmpty() && pct >= 100) cur.fail = "";          // it has what it was sent for: whatever was said on the way
         if (cur.task != null && cur.task.failed && cur.fail.isEmpty()) cur.fail = cur.task.result;
         if (cur.fail.isEmpty() && cur.target > 0 && !cur.count.isEmpty() && pct >= 0 && pct < 60 && !cur.stopAtTarget) {
             cur.fail = "I only managed " + cur.tally(a) + " " + cur.count + "; there's no more I can reach round here.";

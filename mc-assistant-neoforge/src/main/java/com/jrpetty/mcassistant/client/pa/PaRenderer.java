@@ -160,10 +160,10 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
 
     private static void quad(com.mojang.blaze3d.vertex.VertexConsumer vc, Matrix4f m, float x0, float y0, float x1, float y1, int argb) {
         int l = LightTexture.FULL_BRIGHT;
-        vc.addVertex(m, x0, y0, 0.01F).setColor(argb).setLight(l);
-        vc.addVertex(m, x0, y1, 0.01F).setColor(argb).setLight(l);
-        vc.addVertex(m, x1, y1, 0.01F).setColor(argb).setLight(l);
-        vc.addVertex(m, x1, y0, 0.01F).setColor(argb).setLight(l);
+        vc.addVertex(m, x0, y0, -0.01F).setColor(argb).setLight(l);
+        vc.addVertex(m, x0, y1, -0.01F).setColor(argb).setLight(l);
+        vc.addVertex(m, x1, y1, -0.01F).setColor(argb).setLight(l);
+        vc.addVertex(m, x1, y0, -0.01F).setColor(argb).setLight(l);
     }
 
     /** What it said, over its head: dark glass, white words, wrapped, its name first. */

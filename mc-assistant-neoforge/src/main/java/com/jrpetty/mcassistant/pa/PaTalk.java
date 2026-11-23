@@ -22,6 +22,9 @@ public final class PaTalk {
         + "nothing (?:to|left)|couldn'?t|out of |don'?t have|haven'?t got|not enough|missing|no room|is full|are full|no pickaxe|need a |"
         + "before i can|i can build:|i can smelt:|too far|stuck)");
 
+    /** The engine sorting itself out ("don't have the parts... getting them first"): not a failure. */
+    private static final Pattern RECOVERING = Pattern.compile("(?i)(getting them first|first:|on it|i'll |i will |going to get|heading to|off to)");
+
     /** Ticks a bubble stays up: long enough to read on camera. */
     static int bubbleTicks(String text) {
         return Math.max(60, Math.min(240, 40 + text.length() * 2));
@@ -71,7 +74,7 @@ public final class PaTalk {
     public static void work(PlayerAssistantEntity a, String message) {
         if (message == null || message.isBlank()) return;
         PaPlan.Step s = a.plan.current;
-        if (FAIL.matcher(message).find()) {
+        if (FAIL.matcher(message).find() && !RECOVERING.matcher(message).find()) {
             if (s != null && s.fail.isEmpty()) s.fail = message;
             else if (s == null) comment(a, 1, message);
             return;
