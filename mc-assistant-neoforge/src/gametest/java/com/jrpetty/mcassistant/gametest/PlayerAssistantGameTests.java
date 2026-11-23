@@ -128,6 +128,13 @@ public class PlayerAssistantGameTests {
         return b.toString();
     }
 
+    /** Did it say any of these, in any case? (Six or more ways to say each reply: never match one exact wording.) */
+    private static boolean saidAny(PlayerAssistantEntity a, String... bits) {
+        String said = allWords(a).toLowerCase(java.util.Locale.ROOT);
+        for (String b : bits) if (said.contains(b.toLowerCase(java.util.Locale.ROOT))) return true;
+        return false;
+    }
+
     private static int count(AssistantEntity a, net.minecraft.world.item.Item item) {
         return a.countMatching(s -> s.is(item));
     }
@@ -459,7 +466,7 @@ public class PlayerAssistantGameTests {
         say(p, a, "blargh flob");
         helper.assertTrue(lastWords(a).startsWith("I'm not sure what you mean"), "asked back about nonsense: " + lastWords(a));
         say(p, a, "gather unobtainium");
-        helper.assertTrue(lastWords(a).contains("unobtainium"), "names what it doesn't know: " + lastWords(a));
+        helper.assertTrue(lastWords(a).toLowerCase(java.util.Locale.ROOT).contains("unobtainium"), "names what it doesn't know: " + lastWords(a));
         // a big job is checked first, and "no" cancels it
         a.rec().confirm = true;
         say(p, a, "dig a mine down to level -40");
@@ -485,7 +492,7 @@ public class PlayerAssistantGameTests {
             ItemStack fuel = level.getBlockEntity(furnace) instanceof Container c ? c.getItem(1) : ItemStack.EMPTY;
             boolean burning = level.getBlockState(furnace).getValue(net.minecraft.world.level.block.FurnaceBlock.LIT);
             helper.assertTrue(!fuel.isEmpty() || burning, "the furnace fuelled (" + a.state() + "; " + lastWords(a) + ")");
-            helper.assertTrue(allWords(a).contains("furnace"), "it said what it was doing: " + allWords(a));
+            helper.assertTrue(saidAny(a, "furnace"), "it said what it was doing: " + allWords(a));
             Kit.log("pai15 furnace fuelled on its own; said " + allWords(a));
         });
     }
@@ -525,7 +532,7 @@ public class PlayerAssistantGameTests {
         BlockPos inTown = new BlockPos(x + 4, y - 1, Z + 4);
         helper.assertTrue(PaSafety.offLimits(a, inTown) && !a.inZone(inTown), "the town's ground is off limits to it");
         say(p, a, "build a small house here");
-        helper.assertTrue(a.plan.idle() && lastWords(a).contains("ground"), "it won't build on the town's ground: " + lastWords(a));
+        helper.assertTrue(a.plan.idle() && lastWords(a).toLowerCase(java.util.Locale.ROOT).contains("ground"), "it won't build on the town's ground: " + lastWords(a));
         BlockPos chest = new BlockPos(x + 3, y, Z + 3);
         level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
         helper.assertTrue(!PaChests.allowed(a, level, chest), "nor open a chest on it");
@@ -787,7 +794,7 @@ public class PlayerAssistantGameTests {
         helper.succeedWhen(() -> {
             int logs = a.countMatching(st -> st.is(net.minecraft.tags.ItemTags.LOGS)) + p.getInventory().countItem(Items.OAK_LOG);
             helper.assertTrue(logs >= 8, "it went to the trees and got the logs (for you): " + logs + " (" + lastWords(a) + ")");
-            helper.assertTrue(allWords(a).contains("Heading there"), "and said where it was going: " + allWords(a));
+            helper.assertTrue(saidAny(a, "heading there", "on my way", "off i go"), "and said where it was going: " + allWords(a));
             Kit.log("pai28 no trees near; went ~35 blocks to them; " + logs + " logs (" + allWords(a) + ")");
         });
     }
@@ -882,7 +889,7 @@ public class PlayerAssistantGameTests {
                     helper.assertTrue(got > 0 && paid > 0, "it bought cobblestone with its player's coin: " + got + " for " + paid + " (" + allWords(a)
                         + "; stock " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)) + ")");
                     helper.assertTrue(paid <= a.rec().spend, "never past the limit: paid " + paid + " of " + a.rec().spend);
-                    helper.assertTrue(allWords(a).contains("spending limit"), "and said why it stopped: " + lastWords(a));
+                    helper.assertTrue(saidAny(a, "spending limit"), "and said why it stopped: " + lastWords(a));
                     mark[0] = paid;
                     mark[1] = got;
                     mark[2] = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
@@ -909,18 +916,21 @@ public class PlayerAssistantGameTests {
         PlayerAssistantEntity a = assistant(helper, p);
         a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
         a.insertGiven(new ItemStack(Items.BREAD, 4));
-        a.setHealth(8.0F);
+        a.hunger.set(12, 0, 0);                                   // [pa33c-2b] peckish (player rules: a full bar heals without eating)
+        float low = 3.0F;                                         // of its three hearts at level 1
+        a.setHealth(low);
         helper.runAfterDelay(400, () -> {
             int bread = a.countMatching(st -> st.is(Items.BREAD));
-            helper.assertTrue(a.getHealth() > 8.0F && bread < 4, "it ate and healed: hp " + a.getHealth() + ", bread left " + bread);
+            helper.assertTrue(a.getHealth() > low && bread < 4, "it ate and healed: hp " + a.getHealth() + " (from " + low + "), bread left " + bread);
             float healed = a.getHealth();
             a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
-            a.setHealth(6.0F);
+            a.hunger.set(4, 0, 0);                                // hungry too: no healing on its own
+            a.setHealth(Math.max(1.0F, a.getMaxHealth() * 0.4F));
             helper.succeedWhen(() -> {
                 String said = allWords(a).toLowerCase(java.util.Locale.ROOT);    // any of its six-plus ways to say it, any case
                 helper.assertTrue(said.contains("nothing to eat") || said.contains("out of food") || said.contains("pantry is empty"),
                     "with no food it asks: " + lastWords(a));
-                Kit.log("pai32 ate (hp 8 -> " + healed + ", bread " + bread + "/4); with none: \"" + lastWords(a) + "\"");
+                Kit.log("pai32 ate (hp " + low + " -> " + healed + ", bread " + bread + "/4); with none: \"" + lastWords(a) + "\"");
             });
         });
     }
@@ -1100,7 +1110,7 @@ public class PlayerAssistantGameTests {
             level.addFreshEntity(c);
             int[] w = {said(a)};
             helper.runAfterDelay(60, () -> {
-                helper.assertTrue(allWords(a).contains("Creeper near you"), "warnings still come through: " + lastWords(a));
+                helper.assertTrue(saidAny(a, "creeper near you", "creeper"), "warnings still come through: " + lastWords(a));
                 c.discard();
                 PaData.Rec back = PaData.Rec.loadForTests(a.rec().saveForTests());
                 helper.assertTrue(back.mute == 2, "quiet is kept over a save: " + back.mute);
@@ -1191,6 +1201,96 @@ public class PlayerAssistantGameTests {
         });
     }
 
+    /** pai40: its bed: "use this bed" makes it its spawn, it comes back there after a fall, "place a bed here" puts one down
+     *  from its pack, and a broken bed falls back (with a word). */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pai40_bed")
+    public static void pai40_bed(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_117_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        BlockPos foot = new BlockPos(x + 8, y, Z + 6), head = foot.north();
+        level.setBlock(foot, Blocks.RED_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(head, Blocks.RED_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        say(p, a, "use this bed", foot, -1);
+        helper.assertTrue(head.equals(a.rec().bed) && head.equals(a.rec().lastBed), "use this bed: its spawn (" + a.rec().bed + ", " + lastWords(a) + ")");
+        say(p, a, "where's your bed");
+        helper.assertTrue(lastWords(a).contains(head.getX() + " " + head.getY() + " " + head.getZ()), "says where: " + lastWords(a));
+        // knocked out far away: it comes back at its bed
+        a.teleportTo(x + 30, y, Z + 30);
+        a.hurt(level.damageSources().generic(), 1000F);
+        helper.runAfterDelay(20, () -> {
+            PaData.Rec r = a.rec() != null ? a.rec() : PaData.first(p.getUUID());
+            r.deadUntil = level.getGameTime();                    // its time is up
+            helper.runAfterDelay(30, () -> {
+                PlayerAssistantEntity b = com.jrpetty.mcassistant.pa.PaLife.find(p);
+                helper.assertTrue(b != null && b.blockPosition().closerThan(head, 3.5), "back at its bed: " + (b == null ? "none" : b.blockPosition().toShortString()));
+                // place a bed: one from its pack, put down near its player, and its spawn after
+                b.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLUE_BED));
+                say(p, b, "place a bed here");
+                helper.runAfterDelay(200, () -> {
+                    PaData.Rec r2 = b.rec();
+                    helper.assertTrue(r2.bed != null && !r2.bed.equals(head) && level.getBlockState(r2.bed).is(Blocks.BLUE_BED), "placed a bed of its own: " + r2.bed + " (" + lastWords(b) + ")");
+                    BlockPos placed = r2.bed;
+                    // that bed broken: it falls back to beside its player, and says so
+                    level.setBlock(placed, Blocks.AIR.defaultBlockState(), 3);
+                    level.setBlock(placed.relative(level.getBlockState(placed).isAir() ? net.minecraft.core.Direction.NORTH : net.minecraft.core.Direction.NORTH), Blocks.AIR.defaultBlockState(), 3);
+                    r2.lastBed = placed;
+                    b.hurt(level.damageSources().generic(), 1000F);
+                    helper.runAfterDelay(20, () -> {
+                        PaData.Rec r3 = PaData.first(p.getUUID());
+                        r3.deadUntil = level.getGameTime();
+                        helper.runAfterDelay(30, () -> {
+                            PlayerAssistantEntity c = com.jrpetty.mcassistant.pa.PaLife.find(p);
+                            helper.assertTrue(c != null && allWords(c).toLowerCase().contains("bed"), "a broken bed: back elsewhere, and says so: " + (c == null ? "none" : lastWords(c)));
+                            Kit.log("pai40 bed: use-this-bed spawn " + head.toShortString() + "; respawned at it; placed " + placed.toShortString() + "; broken -> \"" + lastWords(c) + "\"");
+                            helper.succeed();
+                        });
+                    });
+                });
+            });
+        });
+    }
+
+    /** pai41: hearts and hunger: three hearts at level 1, a hunger bar that work drains, eating the best food for the moment
+     *  (never rotten flesh when there's better, golden apples kept), healing only while fed, kept over a save. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pai41_hunger")
+    public static void pai41_hunger(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_120_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
+        helper.runAfterDelay(25, () -> {
+            helper.assertTrue(Math.abs(a.getMaxHealth() - 6.0F) < 0.01F, "three hearts at level 1: " + a.getMaxHealth());
+            int before = a.hunger.food();
+            for (int i = 0; i < 40; i++) a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            a.hunger.exhaust(30F);                                // a hard stint
+            helper.runAfterDelay(10, () -> {
+                helper.assertTrue(a.hunger.food() < before || a.hunger.saturation() < 5.0F, "work drains it: food " + a.hunger.food() + ", saturation " + a.hunger.saturation());
+                a.hunger.set(10, 0, 0);
+                a.setHealth(3.0F);
+                a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ROTTEN_FLESH, 4));
+                a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 2));
+                a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 1));
+                a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 1));
+                helper.runAfterDelay(30, () -> {
+                    int beef = a.countMatching(st -> st.is(net.minecraft.world.item.Items.COOKED_BEEF)),
+                        flesh = a.countMatching(st -> st.is(net.minecraft.world.item.Items.ROTTEN_FLESH)),
+                        apple = a.countMatching(st -> st.is(net.minecraft.world.item.Items.GOLDEN_APPLE));
+                    helper.assertTrue(beef == 0 && flesh == 4 && apple == 1, "hurt and hungry: the steak first, no rotten flesh, the golden apple kept (beef " + beef + ", flesh " + flesh + ", apple " + apple + ")");
+                    helper.assertTrue(a.hunger.food() > 10, "fed: " + a.hunger.food());
+                    CompoundTag t = a.saveWithoutId(new CompoundTag());
+                    helper.assertTrue(t.getInt("PaFood") == a.hunger.food(), "kept over a save: " + t.getInt("PaFood"));
+                    Kit.log("pai41 hunger: max " + a.getMaxHealth() + " HP at level 1; ate the steak (food now " + a.hunger.food() + ", saturation " + a.hunger.saturation() + ")");
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
     private static void stranger(ServerPlayer p, PlayerAssistantEntity a, String text) {
         CompoundTag t = new CompoundTag();
         t.putInt("id", a.getId());
@@ -1233,5 +1333,185 @@ public class PlayerAssistantGameTests {
             BlockPos l = t.offset(dx, dy, dz);
             if (level.getBlockState(l).isAir()) level.setBlock(l, Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true), 2);
         }
+    }
+
+    /** pai42: pings: a wheel choice is the order ("chop that" at the pinged tree), a plain marker never is, nor is anyone
+     *  else's ping; "remember this spot as the mine" and "go to the mine"; "ping the nearest iron"; "chop that, and that"
+     *  with two looks; "do the tree first", "skip that one", "cancel that ping"; an area's two corners cleared. [pa33c-2b] */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pai42_pings")
+    public static void pai42_pings(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_123_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_AXE));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_PICKAXE));
+        BlockPos t1 = new BlockPos(x + 12, y, Z + 4), t2 = new BlockPos(x + 12, y, Z - 6);
+        tree(level, t1, 5);
+        tree(level, t2, 4);
+        level.setBlock(new BlockPos(x - 9, y - 3, Z + 2), Blocks.IRON_ORE.defaultBlockState(), 3);
+        // a bare marker, shared: no order, nothing in its list
+        CompoundTag mark = new CompoundTag();
+        mark.putInt("x", t1.getX()); mark.putInt("y", t1.getY()); mark.putInt("z", t1.getZ()); mark.putString("label", "Oak tree");
+        PaServer.act(p, "mark", mark);
+        helper.assertTrue(a.plan.all().isEmpty(), "a bare ping is no order: " + a.plan.all().size());
+        // someone else's ping choice: never an order for this one
+        ServerPlayer other = player(helper, level, new BlockPos(x + 2, y, Z + 2));
+        PaServer.act(other, "ping", pingTag("TREE", "chop", t1, null));
+        helper.assertTrue(a.plan.all().isEmpty(), "another player's ping orders no one's assistant");
+        // the wheel's "Chop that" on the pinged tree
+        PaServer.act(p, "ping", pingTag("TREE", "chop", t1.above(2), null));
+        helper.assertTrue(labels(a).contains("chop that tree"), "wheel choice -> job: " + labels(a) + " (" + lastWords(a) + ")");
+        // a waypoint, and going to it
+        say(p, a, "remember this spot as the mine", new BlockPos(x - 6, y - 1, Z - 6), -1);
+        helper.assertTrue(a.rec().waypoints.containsKey("mine"), "waypoint saved: " + a.rec().waypoints.keySet() + " (" + lastWords(a) + ")");
+        say(p, a, "go to the mine");
+        helper.assertTrue(labels(a).contains("go to mine"), "goes to the mine: " + labels(a));
+        // reordered, skipped, cancelled
+        say(p, a, "do the mine first");
+        helper.assertTrue(a.plan.all().get(0).label.equals("go to mine"), "the mine first: " + labels(a) + " (" + lastWords(a) + ")");
+        int before = a.plan.total();
+        say(p, a, "skip that one");
+        helper.assertTrue(a.plan.total() == before - 1 && !labels(a).contains("go to mine"), "skipped: " + labels(a));
+        say(p, a, "cancel that ping");
+        helper.assertTrue(a.plan.total() == before - 2, "cancelled: " + labels(a) + " (" + lastWords(a) + ")");
+        // the nearest iron, pinged
+        say(p, a, "ping the nearest iron");
+        helper.assertTrue(fromLists(lastWords(a), "say.find_found") && lastWords(a).toLowerCase().contains("iron"), "found iron: " + lastWords(a));
+        // two "that"s with two looks: two trees, in order
+        CompoundTag two = new CompoundTag();
+        two.putString("text", "chop that, and that");
+        two.putInt("bx", t1.getX()); two.putInt("by", t1.getY() + 1); two.putInt("bz", t1.getZ());
+        two.putIntArray("looks", new int[]{t1.getX(), t1.getY() + 1, t1.getZ(), t2.getX(), t2.getY() + 1, t2.getZ()});
+        PaServer.act(p, "talk", two);
+        long chops = a.plan.all().stream().filter(s -> s.label.equals("chop that tree")).count();
+        helper.assertTrue(chops == 2, "two trees for two \"that\"s: " + labels(a) + " (" + lastWords(a) + ")");
+        // an area between two corners (a moment later: pings are held to one a quarter second)
+        say(p, a, "stop");
+        helper.runAfterDelay(10, () -> {
+            PaServer.pingRateForTests(p.getUUID());               // game ticks outrun the clock here
+            PaServer.act(p, "ping", pingTag("AREA", "clear", new BlockPos(x - 4, y, Z + 8), new BlockPos(x + 2, y, Z + 12)));
+            helper.assertTrue(labels(a).toLowerCase().contains("clear"), "area cleared: " + labels(a) + " (" + lastWords(a) + ")");
+            Kit.log("pai42 pings: " + labels(a) + "; waypoints " + a.rec().waypoints.keySet());
+            helper.succeed();
+        });
+    }
+
+    private static CompoundTag pingTag(String target, String opt, BlockPos at, BlockPos corner) {
+        CompoundTag t = new CompoundTag();
+        t.putString("target", target);
+        t.putString("opt", opt);
+        t.putString("label", target.toLowerCase());
+        t.putInt("x", at.getX()); t.putInt("y", at.getY()); t.putInt("z", at.getZ());
+        if (corner != null) { t.putInt("x2", corner.getX()); t.putInt("y2", corner.getY()); t.putInt("z2", corner.getZ()); }
+        return t;
+    }
+
+    private static String labels(PlayerAssistantEntity a) {
+        StringBuilder b = new StringBuilder();
+        for (var s : a.plan.all()) b.append(s.label).append("; ");
+        return b.toString();
+    }
+
+    /** pai43: the Pack tab: two rows open at first (new piles never start in the third), things handed over both ways and
+     *  onto its gear, Equip best, Sort, Keep, Dump junk and Give me everything (kept things stay). [pa33c-2b] */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pai43_pack")
+    public static void pai43_pack(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_126_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        helper.runAfterDelay(5, () -> {
+            var inv = a.getInventoryItems();
+            for (int i = 0; i < inv.size(); i++) inv.set(i, net.minecraft.world.item.ItemStack.EMPTY);
+            a.teleportTo(x + 2, y, Z + 1);
+            int open = com.jrpetty.mcassistant.pa.PaPack.open(a.veteranLevel());
+            // fill every open slot with a different thing: the next new pile has nowhere to go
+            net.minecraft.world.item.Item[] fill = {Items.STICK, Items.OAK_PLANKS, Items.COBBLESTONE, Items.DIRT, Items.SAND, Items.GRAVEL, Items.TORCH, Items.COAL,
+                Items.RAW_IRON, Items.IRON_INGOT, Items.BREAD, Items.APPLE, Items.WHEAT_SEEDS, Items.STRING, Items.FLINT, Items.FEATHER, Items.BONE, Items.ROTTEN_FLESH,
+                Items.CLAY_BALL, Items.BRICK, Items.GLASS, Items.LADDER, Items.OAK_DOOR, Items.CHEST, Items.FURNACE, Items.CRAFTING_TABLE, Items.BUCKET};
+            for (int i = 0; i < open; i++) a.insertGiven(new net.minecraft.world.item.ItemStack(fill[i], 8));
+            net.minecraft.world.item.ItemStack left = a.insertGiven(new net.minecraft.world.item.ItemStack(Items.DIAMOND, 2));
+            helper.assertTrue(open == 27 || (!left.isEmpty() && inv.get(open).isEmpty() && a.isPackFull()), "closed row stays closed: open " + open + ", left " + left);
+            helper.assertTrue(a.insertGiven(new net.minecraft.world.item.ItemStack(Items.STICK, 8)).isEmpty(), "piles still grow");
+            // take one to you, give one back into a chosen free slot
+            pack(p, "take", "i", 0);
+            helper.assertTrue(inv.get(0).isEmpty() && p.getInventory().countItem(Items.STICK) == 16, "taken: " + p.getInventory().countItem(Items.STICK));
+            p.getInventory().setItem(3, new net.minecraft.world.item.ItemStack(Items.IRON_CHESTPLATE));
+            CompoundTag give = new CompoundTag();
+            give.putString("op", "give"); give.putInt("j", 3); give.putInt("i", 0);
+            PaServer.act(p, "packop", give);
+            helper.assertTrue(inv.get(0).is(Items.IRON_CHESTPLATE) && p.getInventory().getItem(3).isEmpty(), "given into slot 0: " + inv.get(0));
+            // Equip best: the chestplate goes on
+            pack(p, "best", null, 0);
+            helper.assertTrue(a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE), "equipped best: " + a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST));
+            // keep the dirt, then dump junk: the rotten flesh and gravel go, the kept dirt stays
+            int dirtAt = -1;
+            for (int i = 0; i < inv.size(); i++) if (inv.get(i).is(Items.DIRT)) dirtAt = i;
+            pack(p, "lock", "i", dirtAt);
+            helper.assertTrue(a.rec().keep.contains("minecraft:dirt"), "dirt kept");
+            pack(p, "dump", null, 0);
+            helper.assertTrue(a.countMatching(st -> st.is(Items.ROTTEN_FLESH) || st.is(Items.GRAVEL)) == 0 && a.countMatching(st -> st.is(Items.DIRT)) == 8,
+                "junk dumped, kept dirt stays: dirt " + a.countMatching(st -> st.is(Items.DIRT)));
+            // sort: tools/armour, food, ores... laid from the first slot, no gaps
+            pack(p, "sort", null, 0);
+            boolean gap = false, seenEmpty = false;
+            for (int i = 0; i < inv.size(); i++) { if (inv.get(i).isEmpty()) seenEmpty = true; else if (seenEmpty) gap = true; }
+            helper.assertTrue(!gap, "sorted with no gaps");
+            // give me everything: all but the kept dirt
+            for (int i = 0; i < 36; i++) p.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+            pack(p, "all", null, 0);
+            int leftIn = a.countMatching(st -> !st.isEmpty());
+            helper.assertTrue(a.countMatching(st -> st.is(Items.DIRT)) == 8 && a.countMatching(st -> !st.is(Items.DIRT)) == 0, "everything but the kept: " + leftIn + " left");
+            // too far: nothing changes hands
+            a.teleportTo(x + 30, y, Z + 30);
+            p.getInventory().setItem(0, new net.minecraft.world.item.ItemStack(Items.BREAD, 3));
+            CompoundTag far = new CompoundTag();
+            far.putString("op", "give"); far.putInt("j", 0);
+            PaServer.act(p, "packop", far);
+            helper.assertTrue(p.getInventory().getItem(0).getCount() == 3, "too far to hand over");
+            Kit.log("pai43 pack: open " + open + ", kept " + a.rec().keep);
+            helper.succeed();
+        });
+    }
+
+    private static void pack(ServerPlayer p, String op, String key, int v) {
+        CompoundTag t = new CompoundTag();
+        t.putString("op", op);
+        if (key != null) t.putInt(key, v);
+        PaServer.act(p, "packop", t);
+    }
+
+    /** pai44: gestures with its words: a hello waves, an owned bad joke shrugs, a tagged line plays its own; each wears off;
+     *  quiet, none. [pa33c-2b] */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pai44_gestures")
+    public static void pai44_gestures(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_129_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        helper.runAfterDelay(5, () -> {
+            com.jrpetty.mcassistant.pa.PaTalk.reply(a, "Hello again.");
+            int wave = com.jrpetty.mcassistant.entity.FolkAction.Act.WAVE.ordinal();
+            helper.assertTrue((a.animValue() & 0xFF) == wave, "a hello waves: " + (a.animValue() & 0xFF));
+            String bad = null;
+            for (var e : com.jrpetty.mcassistant.pa.PaLines.all().entrySet()) {
+                for (String l : e.getValue()) if (bad == null && com.jrpetty.mcassistant.pa.PaLines.bad(l) && !l.contains("{")
+                    && com.jrpetty.mcassistant.pa.PaAnimWords.tagged(com.jrpetty.mcassistant.pa.PaLines.tags(l)) == null) bad = l;
+            }
+            helper.assertTrue(bad != null, "an owned bad joke to tell");
+            int turn = a.animValue() >> 8;
+            com.jrpetty.mcassistant.pa.PaTalk.reply(a, bad);
+            helper.assertTrue((a.animValue() & 0xFF) == com.jrpetty.mcassistant.entity.FolkAction.Act.SHRUG.ordinal() && (a.animValue() >> 8) != turn, "a bad joke shrugs");
+            helper.runAfterDelay(80, () -> {
+                helper.assertTrue((a.animValue() & 0xFF) == 0, "it wears off: " + (a.animValue() & 0xFF));
+                a.setMute(2);
+                com.jrpetty.mcassistant.pa.PaTalk.reply(a, "Hello again.");
+                helper.assertTrue((a.animValue() & 0xFF) == 0, "quiet: no flourish");
+                a.setMute(0);
+                Kit.log("pai44 gestures: wave, shrug, wore off, none when quiet");
+                helper.succeed();
+            });
+        });
     }
 }

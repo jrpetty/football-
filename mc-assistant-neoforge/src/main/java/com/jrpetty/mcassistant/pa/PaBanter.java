@@ -175,6 +175,8 @@ public final class PaBanter {
     public static String toneLine(PlayerAssistantEntity a, String key, String thing) {
         String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt), a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) raw = PaPersona.from(PaLines.get(key), a.getRandom()::nextInt, a.mind.recent);   // a corner with nothing written: the list itself
+        String film = System.getProperty("mca.pa.filmLine", "");          // [pa33c-2b] filming only: a chosen line, when the server is started with it
+        if (!film.isEmpty()) for (String k : PaLines.keys()) if (k.startsWith("tone.rude")) for (String l : PaLines.get(k)) if (l.contains(film)) raw = l;
         return raw == null ? null : fill(a, raw, "thing", thing);
     }
 

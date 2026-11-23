@@ -15,6 +15,8 @@ public final class PaConfig {
     static final ModConfigSpec.IntValue PER_PLAYER, RESPAWN_SECONDS, SUMMON_COOLDOWN, BUDGET_MICROS, ROAM_MAX, SPEND_MAX;
     static final ModConfigSpec.ConfigValue<String> MAX_LANGUAGE;            // [pa33b]
     static final ModConfigSpec.BooleanValue ROAST_OTHERS;
+    static final ModConfigSpec.IntValue START_HEARTS, MAX_HEARTS;             // [pa33c-2b]
+    static final ModConfigSpec.BooleanValue KEEP_PACK;
     static final ModConfigSpec.BooleanValue FREE_FIRST, SAFETY, TOWN_WORK, LLM_ON;
     static final ModConfigSpec.ConfigValue<String> LLM_URL, LLM_KEY, LLM_MODEL;
 
@@ -41,6 +43,11 @@ public final class PaConfig {
         MAX_LANGUAGE = b.comment("[pa33b] The strongest language an assistant may use back when its player is rude to it (others see its bubbles):",
             "clean (never swears), cheeky (bloody, damn, arse, git), or unfiltered (swears). A player's own Language setting can't go past this.")
             .define("maxLanguage", "cheeky");
+        START_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 1 (it gains more as it levels up, to maxHearts at level 10).")
+            .defineInRange("startHearts", 3, 1, 50);
+        MAX_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 10.").defineInRange("maxHearts", 10, 1, 50);
+        KEEP_PACK = b.comment("[pa33c-2b] Does a fallen assistant keep its pack (true), or drop it where it fell like a player (false)?")
+            .define("keepPackOnDeath", true);
         ROAST_OTHERS = b.comment("[pa33b] May an assistant roast another player back when that player roasts it or its owner first? (Never unprompted.)")
             .define("allowRoastOthers", true);
         b.pop();
@@ -88,6 +95,12 @@ public final class PaConfig {
 
     /** [pa33b] The language cap: 0 clean, 1 cheeky, 2 unfiltered. */
     public static int maxLanguage() { return PaTone.cap(read(MAX_LANGUAGE, "cheeky")); }
+
+    public static int startHearts() { return read(START_HEARTS, 3); }
+
+    public static int maxHearts() { return read(MAX_HEARTS, 10); }
+
+    public static boolean keepPack() { return read(KEEP_PACK, true); }
 
     public static boolean allowRoastOthers() { return read(ROAST_OTHERS, true); }
 

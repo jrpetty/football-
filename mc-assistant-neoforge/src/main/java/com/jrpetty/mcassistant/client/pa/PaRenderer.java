@@ -81,12 +81,12 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
     private final HumanoidModel<PlayerAssistantEntity> playerBody, skeletonBody, zombieBody, endermanBody;
 
     public PaRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx, new PlayerModel<>(ctx.bakeLayer(ModelLayers.PLAYER), false), 0.5F);
+        super(ctx, new PaAnims.Player(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5F);   // [pa33c-2b] with gestures
         this.items = ctx.getItemRenderer();
         this.playerBody = this.model;
-        this.skeletonBody = new HumanoidModel<>(ctx.bakeLayer(ModelLayers.SKELETON));
-        this.zombieBody = new HumanoidModel<>(ctx.bakeLayer(ModelLayers.ZOMBIE));
-        this.endermanBody = new HumanoidModel<>(ctx.bakeLayer(ModelLayers.ENDERMAN));
+        this.skeletonBody = new PaAnims.Body(ctx.bakeLayer(ModelLayers.SKELETON));
+        this.zombieBody = new PaAnims.Body(ctx.bakeLayer(ModelLayers.ZOMBIE));
+        this.endermanBody = new PaAnims.Body(ctx.bakeLayer(ModelLayers.ENDERMAN));
         this.addLayer(new HumanoidArmorLayer<>(this,
             new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
             new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
@@ -117,8 +117,9 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
         double d2 = this.entityRenderDispatcher.distanceToSqr(a);
         String said = PaClient.bubble(a.getId(), a.level().getGameTime());
         // its words are in the open panel already: no bubble filling the view behind it
-        if (said != null && d2 < 32 * 32 && !(mc.screen instanceof PaScreen)) bubble(a, said, pose, buffer, d2);
-        else if (d2 < 24 * 24) plate(a, pose, buffer, light, d2);
+        // [pa33c-2b] its words are drawn on the screen (PaBubbles), kept inside it; the plate stands aside meanwhile
+        if (said != null && d2 < 32 * 32 && !(mc.screen instanceof PaScreen)) return;
+        if (d2 < 24 * 24) plate(a, pose, buffer, light, d2);
     }
 
     @Override
@@ -188,31 +189,4 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
         vc.addVertex(m, x1, y0, -0.01F).setColor(argb).setLight(l);
     }
 
-    /** What it said, over its head: dark glass, white words, wrapped, its name first. */
-    private void bubble(PlayerAssistantEntity a, String text, PoseStack pose, MultiBufferSource buffer, double d2) {
-        Font font = getFont();
-        List<FormattedCharSequence> lines = TextCache.splitPlain(font, text, 170);
-        if (lines.size() > 5) lines = lines.subList(0, 5);
-        pose.pushPose();
-        // right up close it shrinks a little, so it never fills the camera (and sits lower, so its top stays in view)
-        float near = (float) Math.max(0.55, Math.min(1.0, Math.sqrt(d2) / 5.0));
-        pose.translate(0.0F, a.getBbHeight() + 0.45F + lines.size() * 0.25F * near, 0.0F);
-        pose.mulPose(this.entityRenderDispatcher.cameraOrientation());
-        pose.scale(0.025F * near, -0.025F * near, 0.025F * near);
-        Matrix4f mx = pose.last().pose();
-        int widest = 0;
-        for (FormattedCharSequence l : lines) widest = Math.max(widest, font.width(l));
-        var vc = buffer.getBuffer(net.minecraft.client.renderer.RenderType.textBackground());
-        float half = widest / 2.0F + 4;
-        quad(vc, mx, -half, -13, half, lines.size() * 10 + 2, BUBBLE_BG);
-        quad(vc, mx, -half, -13, -half + 2, lines.size() * 10 + 2, 0xFF2BB5A0);
-        String name = a.shownName();
-        font.drawInBatch(Component.literal(name), -font.width(name) / 2.0F, -11, 0xFF8FE3D3, false, mx, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-        for (int i = 0; i < lines.size(); i++) {
-            FormattedCharSequence line = lines.get(i);
-            float lx = -font.width(line) / 2.0F;
-            font.drawInBatch(line, lx, i * 10.0F + 1, INK, false, mx, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-        }
-        pose.popPose();
-    }
 }

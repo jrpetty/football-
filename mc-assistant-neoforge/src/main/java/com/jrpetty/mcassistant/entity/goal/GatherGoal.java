@@ -703,6 +703,7 @@ public class GatherGoal extends Goal {
                 // this reads a few hundred blocks. A settlement's woodcutter must
                 // not fell the pillars of its own houses.
                 if (request.kind() == Kind.LOGS && (assistant.isSettler() || assistant.sparesBuilds()) && !looksLikeATree(pos)) continue;   // [pa33] sparesBuilds
+                if (assistant.sparesBuilds() && assistant.partOfBuild(pos)) continue;   // [pa33c-2b] nor a wall with planks, glass or a door about it
                 bestDist = d;
                 best = pos.immutable();
             }
