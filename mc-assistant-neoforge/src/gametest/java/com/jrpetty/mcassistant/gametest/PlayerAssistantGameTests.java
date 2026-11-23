@@ -98,6 +98,7 @@ public class PlayerAssistantGameTests {
         PaData.Rec r = a.rec();
         r.confirm = false;
         r.autoHelp = false;
+        a.setPaXpForTests(0);                                     // [pa33d] level 1, whatever an earlier test's copy of it earned
         return a;
     }
 
@@ -1512,6 +1513,272 @@ public class PlayerAssistantGameTests {
                 Kit.log("pai44 gestures: wave, shrug, wore off, none when quiet");
                 helper.succeed();
             });
+        });
+    }
+
+    /** pai45: the ten-level grind: work pays experience (scaled by difficulty), a level gained brings the moment (a cheer,
+     *  a line, its hearts and its legs), the server's multiplier speeds it, only operators may change it, and it is kept
+     *  over a save. [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pai45_levels")
+    public static void pai45_levels(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_132_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(null);
+        a.setPaXpForTests(0);
+        helper.runAfterDelay(25, () -> {
+            helper.assertTrue(a.veteranLevel() == 1, "a new one is level 1: " + a.veteranLevel());
+            float speed1 = (float) a.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+            long before = a.paXp();
+            a.earn("job");
+            helper.assertTrue(a.paXp() > before, "a job pays");
+            int said = said(a);
+            a.setPaXpForTests(com.jrpetty.mcassistant.pa.PaLevels.xpFor(4) - 1);
+            a.earn("job");
+            helper.assertTrue(a.veteranLevel() == 4, "level 4: " + a.veteranLevel());
+            helper.assertTrue((a.animValue() & 0xFF) == com.jrpetty.mcassistant.entity.FolkAction.Act.CHEER.ordinal(), "a cheer");
+            helper.assertTrue(said(a) > said && fromLists(lastWords(a), "say.levelup") && lastWords(a).contains("4"), "a line for it: " + lastWords(a));
+            helper.runAfterDelay(25, () -> {
+                helper.assertTrue(a.getMaxHealth() > 6.0F, "more hearts: " + a.getMaxHealth());
+                helper.assertTrue(a.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) > speed1, "quicker on its feet");
+                helper.assertTrue(a.experiencePercent() > 0, "quicker at the work");
+                // the multiplier: three times the pay
+                long b2 = a.paXp();
+                a.earn("build");
+                long one = a.paXp() - b2;
+                com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(3.0);
+                long b3 = a.paXp();
+                a.earn("build");
+                helper.assertTrue(a.paXp() - b3 == one * 3, "the multiplier: " + one + " then " + (a.paXp() - b3));
+                com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(null);
+                // only an operator may change it
+                CompoundTag ad = new CompoundTag();
+                ad.putDouble("xpMult", 50);
+                PaServer.act(p, "admin", ad);
+                helper.assertTrue(com.jrpetty.mcassistant.pa.PaConfig.xpMultiplier() == 1.0, "not an operator: unchanged");
+                // kept over a save
+                CompoundTag saved = new CompoundTag();
+                a.addAdditionalSaveData(saved);
+                helper.assertTrue(saved.getLong("PaXp") == a.paXp(), "saved");
+                // and kept in its record: a body stood up afresh (its copy lost) is not back at level 1
+                helper.assertTrue(a.rec().xp == a.paXp(), "kept in its record: " + a.rec().xp);
+                PlayerAssistantEntity fresh = com.jrpetty.mcassistant.McAssistantMod.PLAYER_ASSISTANT.get().create(level);
+                fresh.restoreXp(a.rec().xp);
+                helper.assertTrue(fresh.veteranLevel() == a.veteranLevel(), "a fresh body keeps the level: " + fresh.veteranLevel());
+                fresh.discard();
+                Kit.log("pai45 levels: level " + a.veteranLevel() + ", xp " + a.paXp() + ", hp " + a.getMaxHealth());
+                helper.succeed();
+            });
+        });
+    }
+
+    /** pai46: bedtime: "go to bed" at night and it walks to its bed and lies down; a monster close by wakes it; "wake up"
+     *  gets it up; morning gets it up; in the day "go to bed" waits for dark. [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "pai46_sleep")
+    public static void pai46_sleep(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_135_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        BlockPos foot = new BlockPos(x + 6, y, Z + 3), head = foot.north();
+        level.setBlock(foot, Blocks.WHITE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(head, Blocks.WHITE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        say(p, a, "use this bed", foot, -1);
+        say(p, a, "go to bed");
+        helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.bed_day"), "in the day it waits for dark: " + lastWords(a));
+        level.setDayTime(14000);
+        say(p, a, "go to bed");
+        helper.assertTrue(fromLists(lastWords(a), "say.bed_now"), "bedtime: " + lastWords(a));
+        helper.runAfterDelay(160, () -> {
+            helper.assertTrue(a.isSleeping() && a.getPose() == net.minecraft.world.entity.Pose.SLEEPING, "asleep in its bed: " + a.getPose() + " at " + a.blockPosition().toShortString());
+            BlockPos at = a.blockPosition();
+            helper.runAfterDelay(40, () -> {
+                helper.assertTrue(a.isSleeping() && a.blockPosition().equals(at), "lies still");
+                // a monster close by: up at once
+                net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
+                z.moveTo(head.getX() + 3.5, y, head.getZ() + 0.5, 0, 0);
+                z.setNoAi(true);
+                level.addFreshEntity(z);
+                helper.runAfterDelay(30, () -> {
+                    helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_danger"), "a monster wakes it: " + lastWords(a));
+                    z.discard();
+                    say(p, a, "go to bed");
+                    helper.runAfterDelay(120, () -> {
+                        helper.assertTrue(a.isSleeping(), "back to bed");
+                        say(p, a, "wake up");
+                        helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_told"), "\"wake up\": " + lastWords(a));
+                        say(p, a, "go to bed");
+                        helper.runAfterDelay(120, () -> {
+                            helper.assertTrue(a.isSleeping(), "to bed a third time");
+                            level.setDayTime(24000 + 500);
+                            helper.runAfterDelay(30, () -> {
+                                helper.assertTrue(!a.isSleeping(), "morning: up");
+                                Kit.log("pai46 sleep: bed day/night, asleep, woke for a zombie, wake up, morning");
+                                helper.succeed();
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    }
+
+    private static void atLevel(PlayerAssistantEntity a, int lv) {
+        a.setPaXpForTests(com.jrpetty.mcassistant.pa.PaLevels.xpFor(lv));
+    }
+
+    /** pai47: skills by level: locked ones say when they open; taming a wolf for its player; trading with a villager with
+     *  its emeralds; pillaring up. [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pai47_skills")
+    public static void pai47_skills(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_138_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 1);
+        say(p, a, "enchant my sword");
+        helper.assertTrue(fromLists(lastWords(a), "say.skill_locked") && lastWords(a).contains("6"), "locked till level 6: " + lastWords(a));
+        atLevel(a, 3);
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.BONE, 30));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.EMERALD, 5));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.COBBLESTONE, 16));
+        net.minecraft.world.entity.animal.Wolf wolf = EntityType.WOLF.create(level);
+        wolf.moveTo(x + 6.5, y, Z + 2.5, 0, 0);
+        wolf.setNoAi(true);
+        level.addFreshEntity(wolf);
+        say(p, a, "tame that wolf", null, wolf.getId());
+        helper.runAfterDelay(400, () -> {
+            helper.assertTrue(wolf.isTame() && wolf.isOwnedBy(p), "tamed for its player: " + wolf.isTame() + " (" + lastWords(a) + ")");
+            net.minecraft.world.entity.npc.Villager v = EntityType.VILLAGER.create(level);
+            v.moveTo(x - 5.5, y, Z + 2.5, 0, 0);
+            v.setNoAi(true);
+            v.setVillagerData(v.getVillagerData().setProfession(net.minecraft.world.entity.npc.VillagerProfession.FARMER).setLevel(1));
+            level.addFreshEntity(v);
+            boolean sellsBread = v.getOffers().stream().anyMatch(o -> o.getResult().is(Items.BREAD));
+            int bread = a.countMatching(st -> st.is(Items.BREAD));
+            say(p, a, "buy bread from that villager", null, v.getId());
+            helper.runAfterDelay(200, () -> {
+                int got = a.countMatching(st -> st.is(Items.BREAD)) - bread;
+                helper.assertTrue(!sellsBread || got > 0 && a.countMatching(st -> st.is(Items.EMERALD)) < 5, "bought bread with its emeralds: " + got + " (" + lastWords(a) + ")");
+                int y0 = a.getBlockY();
+                say(p, a, "pillar up 4");
+                helper.runAfterDelay(160, () -> {
+                    helper.assertTrue(a.getBlockY() >= y0 + 4 && level.getBlockState(a.blockPosition().below()).is(Blocks.COBBLESTONE), "pillared up 4: " + (a.getBlockY() - y0) + " (" + lastWords(a) + ")");
+                    Kit.log("pai47 skills: locked line, wolf tamed, " + got + " bread bought, pillared " + (a.getBlockY() - y0));
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
+    /** pai48: moves by level: a trick shot at a target block (level 10: on target), a water-bucket clutch on a long fall
+     *  (level 8: no harm, the water back in the bucket), an ender pearl to catch up (level 9). [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "pai48_moves")
+    public static void pai48_moves(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_141_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 10);
+        a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(Items.BOW));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.ARROW, 16));
+        BlockPos target = new BlockPos(x + 12, y + 1, Z);
+        level.setBlock(target, Blocks.TARGET.defaultBlockState(), 3);
+        a.teleportTo(x + 0.5, y, Z + 0.5);
+        int arrows = a.countMatching(st -> st.is(Items.ARROW));
+        say(p, a, "shoot that target", target, -1);
+        helper.runAfterDelay(120, () -> {
+            helper.assertTrue(a.countMatching(st -> st.is(Items.ARROW)) < arrows, "it shot");
+            helper.assertTrue(fromLists(lastWords(a), "say.trick_hit", "say.trick_long"), "level 10: on target: " + lastWords(a));
+            // the clutch: up twenty blocks with a water bucket
+            atLevel(a, 8);
+            a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.item.ItemStack.EMPTY);
+            a.insertGiven(new net.minecraft.world.item.ItemStack(Items.WATER_BUCKET));
+            say(p, a, "stay here");
+            a.setHealth(a.getMaxHealth());
+            float hp = a.getHealth();
+            a.teleportTo(x + 4.5, y + 22, Z + 6.5);
+            helper.runAfterDelay(80, () -> {
+                helper.assertTrue(a.getHealth() >= a.getMaxHealth() - 0.01F && a.getLastDamageSource() == null, "no harm from the fall: " + a.getHealth() + " of " + a.getMaxHealth()
+                    + ", hurt by " + (a.getLastDamageSource() == null ? "nothing" : a.getLastDamageSource().getMsgId()) + " | " + lastWords(a));
+                helper.assertTrue(a.countMatching(st -> st.is(Items.WATER_BUCKET)) == 1, "the water back in the bucket");
+                boolean wet = false;
+                for (BlockPos q : BlockPos.betweenClosed(new BlockPos(x + 2, y - 1, Z + 4), new BlockPos(x + 7, y + 2, Z + 9))) if (level.getBlockState(q).is(Blocks.WATER)) wet = true;
+                helper.assertTrue(!wet, "no water left behind");
+                // the pearl
+                atLevel(a, 9);
+                a.insertGiven(new net.minecraft.world.item.ItemStack(Items.ENDER_PEARL, 2));
+                a.teleportTo(x + 0.5, y, Z + 0.5);
+                com.jrpetty.mcassistant.pa.PaMoves.throwPearlForTests(a, new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5));
+                // where it lands (it may walk back to its post after, as told to stay)
+                net.minecraft.world.phys.Vec3 there = new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5);
+                double[] nearest = {Double.MAX_VALUE};
+                for (int t = 2; t <= 78; t += 2) helper.runAfterDelay(t, () -> nearest[0] = Math.min(nearest[0], a.position().distanceTo(there)));
+                helper.runAfterDelay(80, () -> {
+                    helper.assertTrue(nearest[0] < 4.0, "pearled across: came within " + nearest[0] + ", now " + a.blockPosition().toShortString());
+                    Kit.log("pai48 moves: trick shot hit, clutch, pearl");
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
+    /** pai49: better gear from its pack (iron ingots into a pickaxe and a sword, put on); a run to a marker against its
+     *  player (it wins against one who stands still, and says so). [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 1500, batch = "pai49_gear_race")
+    public static void pai49_gear_race(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_144_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 6);
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.IRON_INGOT, 5));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.STICK, 8));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 16));
+        say(p, a, "upgrade your gear");
+        helper.runAfterDelay(500, () -> {
+            boolean pick = a.countMatching(st -> st.is(Items.IRON_PICKAXE)) > 0 || a.getMainHandItem().is(Items.IRON_PICKAXE);
+            boolean sword = a.countMatching(st -> st.is(Items.IRON_SWORD)) > 0 || a.getMainHandItem().is(Items.IRON_SWORD);
+            helper.assertTrue(pick && sword, "an iron pickaxe and sword: " + pick + ", " + sword + " (" + lastWords(a) + ")");
+            BlockPos goal = new BlockPos(x + 20, y - 1, Z + 4);
+            CompoundTag t = new CompoundTag();
+            t.putString("text", "race me to that tree");
+            t.putInt("bx", goal.getX()); t.putInt("by", goal.getY()); t.putInt("bz", goal.getZ());
+            PaServer.act(p, "talk", t);
+            helper.assertTrue(fromLists(lastWords(a), "say.challenge_race"), "on your marks: " + lastWords(a));
+            helper.succeedWhen(() -> {
+                helper.assertTrue(fromLists(lastWords(a), "say.challenge_won", "tone.challenge.won.cheeky", "tone.challenge.won.unfiltered")
+                    || lastWords(a).toLowerCase().contains("win"), "it won the run: " + lastWords(a));
+                Kit.log("pai49: upgraded, won the run: " + lastWords(a));
+            });
+        });
+    }
+
+    /** pai50: brewing at a stand (level 5): bottles filled at the water, wart and fuel in, then the ingredient: three
+     *  healing potions in its pack. [pa33d] */
+    @GameTest(template = EMPTY, timeoutTicks = 2000, batch = "pai50_brew")
+    public static void pai50_brew(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_147_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 5);
+        BlockPos stand = new BlockPos(x + 4, y, Z + 2);
+        level.setBlock(stand, Blocks.BREWING_STAND.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(x - 3, y - 1, Z + 3), Blocks.WATER.defaultBlockState(), 3);
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.GLASS_BOTTLE, 3));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.NETHER_WART, 2));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.BLAZE_POWDER, 2));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(Items.GLISTERING_MELON_SLICE, 2));
+        say(p, a, "brew some healing potions");
+        helper.succeedWhen(() -> {
+            long healing = a.getInventoryItems().stream().filter(st -> st.is(Items.POTION) && st.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS) != null
+                && st.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS).is(net.minecraft.world.item.alchemy.Potions.HEALING)).mapToInt(net.minecraft.world.item.ItemStack::getCount).sum();
+            helper.assertTrue(healing == 3, "three healing potions: " + healing + " (" + lastWords(a) + ")");
+            Kit.log("pai50 brew: " + lastWords(a));
         });
     }
 }

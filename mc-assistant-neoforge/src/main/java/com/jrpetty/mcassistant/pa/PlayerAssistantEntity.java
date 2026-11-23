@@ -184,6 +184,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         if (source.getEntity() instanceof ServerPlayer sp && !level().isClientSide) PaBanter.stranger(this, sp, "", true);   // [pa33b] "Steady on."
         boolean hit = super.hurt(source, amount);
         if (hit && !level().isClientSide) hunger.exhaust(0.1F);              // [pa33c-2b] a hit taken tires it, as a player
+        if (hit && !level().isClientSide && isSleeping()) PaSleep.wake(this, "danger");   // [pa33d] up at once
         return hit;
     }
 
@@ -337,6 +338,99 @@ public class PlayerAssistantEntity extends AssistantEntity {
         return InteractionResult.CONSUME;
     }
 
+    // ------------------------------------------------------------------ [pa33d] bedtime
+
+    /** It means to sleep now (PaSleep): the town folk's shift rule must not wake it. */
+    public boolean sleepWanted;
+
+    @Override
+    public boolean onShift() {
+        return !sleepWanted && super.onShift();
+    }
+
+    /** Asleep, it lies still (no goals walking it out of bed). */
+    @Override
+    protected boolean isImmobile() {
+        return super.isImmobile() || isSleeping();
+    }
+
+    // ------------------------------------------------------------------ [pa33d] its ten levels: the grind
+
+    private long paXp;
+
+    /** Its experience on its own ten-level ladder. */
+    public long paXp() {
+        return paXp;
+    }
+
+    /** Its level, 1..10, from its own ladder (the town folk's fifty rungs are not its). */
+    @Override
+    public int veteranLevel() {
+        return PaLevels.level(paXp);
+    }
+
+    /** Paid for its work as anyone is (the deeds, the kills), and onto its own ladder, scaled by difficulty and the server's multiplier. */
+    @Override
+    public void awardXp(int amount) {
+        super.awardXp(amount);
+        gainXp(amount);
+    }
+
+    /** Experience for a kind of work ("job", "build", "trick"...), scaled. */
+    public void earn(String what) {
+        gainXp(PaLevels.baseFor(what));
+    }
+
+    void gainXp(int base) {
+        if (base <= 0 || level().isClientSide) return;
+        int before = veteranLevel();
+        paXp = Math.min(10_000_000L, paXp + PaLevels.pay(base, level().getDifficulty().getId(), PaConfig.xpMultiplier()));
+        int after = veteranLevel();
+        keepXp();
+        if (after > before) PaLevelUp.levelUp(this, before, after);
+    }
+
+    /** Its record keeps a copy of its experience. */
+    void keepXp() {
+        PaData.Rec r = rec();
+        if (r != null && r.xp != paXp) { r.xp = paXp; PaData.touch(); }
+    }
+
+    /** A body stood up again never comes back lower than its record says. */
+    public void restoreXp(long kept) {
+        if (kept > paXp) paXp = Math.min(10_000_000L, kept);
+    }
+
+    /** Tests and admins: set its experience outright (no level-up moment). */
+    public void setPaXpForTests(long xp) {
+        paXp = Math.max(0, xp);
+        keepXp();
+    }
+
+    /** Its level quickens its work far more than a town hand's (level 10: 40% off). */
+    @Override
+    public int experiencePercent() {
+        return PaLevels.workPercent(veteranLevel());
+    }
+
+    /** Its bow by its level: a wild shot at first, steadier each level, and from level 4 it leads a moving target. */
+    @Override
+    public void performRangedAttack(net.minecraft.world.entity.LivingEntity target, float velocity) {
+        if (removeMatching(st -> st.is(net.minecraft.world.item.Items.ARROW), 1) < 1) return;
+        int lv = veteranLevel();
+        net.minecraft.world.entity.projectile.Arrow arrow = new net.minecraft.world.entity.projectile.Arrow(level(), this,
+            new ItemStack(net.minecraft.world.item.Items.ARROW), getMainHandItem().copy());
+        net.minecraft.world.phys.Vec3 aim = PaLevels.leads(lv) ? com.jrpetty.mcassistant.entity.FolkCombat.lead(this, target, velocity)
+            : target.position().add(0, target.getBbHeight() * 0.5, 0);
+        double dx = aim.x - getX(), dy = aim.y - arrow.getY(), dz = aim.z - getZ();
+        double horiz = Math.sqrt(dx * dx + dz * dz);
+        arrow.shoot(dx, dy + horiz * 0.2, dz, velocity, PaLevels.spread(lv));
+        playSound(net.minecraft.sounds.SoundEvents.ARROW_SHOOT, 1.0F, 1.0F / (getRandom().nextFloat() * 0.4F + 0.8F));
+        level().addFreshEntity(arrow);
+        ItemStack bow = getMainHandItem();
+        if (bow.is(net.minecraft.world.item.Items.BOW)) bow.hurtAndBreak(1, this, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+    }
+
     // ------------------------------------------------------------------ [pa33c-2b] gestures (the folk's own animations)
 
     private int animUntil, animTurn;
@@ -431,6 +525,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
         if (!level().isClientSide) hunger.exhaust(0.02F);                // work: digging, chopping, building
     }
 
+
+    /** [pa33e] It never walks through a portal on its own: it crosses with its player (carried across beside them the
+     *  moment they arrive), so it can neither run ahead into the Nether alone nor bounce back out of the portal it came by. */
+    @Override
+    public boolean canUsePortal(boolean allowPassengers) {
+        return false;
+    }
     @Override
     public void die(DamageSource source) {
         super.die(source);
@@ -449,6 +550,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         tag.putInt("PaPers", this.entityData.get(DATA_PERS));
         tag.put("PaPlan", plan.save());
         tag.putInt("PaFood", hunger.food());
+        tag.putLong("PaXp", paXp);                                          // [pa33d] its own ten levels
         tag.putFloat("PaSat", hunger.saturation());
         tag.putFloat("PaExh", hunger.exhaustion());
     }
@@ -464,6 +566,8 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.entityData.set(DATA_PERS, tag.getInt("PaPers"));
         plan.load(tag.getCompound("PaPlan"));
         if (tag.contains("PaFood")) hunger.set(tag.getInt("PaFood"), tag.getFloat("PaSat"), tag.getFloat("PaExh"));
+        // [pa33d] an older assistant starts from its career so far (a real one: a new one's starting few don't count)
+        paXp = tag.contains("PaXp") ? tag.getLong("PaXp") : lifetimeXp() >= 200 ? lifetimeXp() : 0;
         this.entityData.set(DATA_FOOD, hunger.food());
         this.entityData.set(DATA_SHOWN, displayNameCap());
     }

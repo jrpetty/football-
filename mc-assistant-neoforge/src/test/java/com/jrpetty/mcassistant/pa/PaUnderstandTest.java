@@ -153,4 +153,28 @@ class PaUnderstandTest {
             org.junit.jupiter.api.Assertions.assertTrue(!r.steps().isEmpty() && r.steps().get(0).kind().name().equals(t[1]), t[0] + " -> " + r.brief());
         }
     }
+
+    @Test
+    void sleepOrders() {                                                   // [pa33d]
+        String[][] c = {{"go to bed", "SLEEP"}, {"time for bed", "SLEEP"}, {"bedtime", "SLEEP"}, {"go to sleep", "SLEEP"}, {"wake up", "WAKE"},
+            {"rise and shine", "WAKE"}, {"get up", "WAKE"}, {"wakey wakey", "WAKE"}};
+        for (String[] t : c) {
+            PaUnderstand.Reading r = PaUnderstand.read(t[0], "pip");
+            org.junit.jupiter.api.Assertions.assertTrue(!r.steps().isEmpty() && r.steps().get(0).kind().name().equals(t[1]), t[0] + " -> " + r.brief());
+        }
+    }
+
+    @Test
+    void theRestOfTheGame() {                                              // [pa33d]
+        String[][] c = {{"enchant my sword", "ENCHANT:sword"}, {"enchant your stuff", "ENCHANT:items"}, {"get 20 quartz from the nether", "NETHER:quartz:20"},
+            {"come to the nether", "NETHER:netherrack:32"}, {"tame that wolf", "TAME:wolf@LOOKED"}, {"tame that", "TAME:any@LOOKED"},
+            {"buy 5 bread from that villager", "VTRADE:buy:bread:5@LOOKED"}, {"sell 20 wheat to that villager", "VTRADE:sell:wheat:20@LOOKED"},
+            {"trade with that villager", "VTRADE:buy:anything@LOOKED"}, {"upgrade your gear", "UPGRADE"}, {"gear up", "UPGRADE"},
+            {"place a lever there", "PLACE_THING:lever:1@LOOKED"}, {"put a door here", "PLACE_THING:door:1@LOOKED"}, {"map this area", "MAP@HERE"},
+            {"pillar up 8", "PILLAR:pillar:8"}, {"shoot that target", "SHOOT_AT@LOOKED"}, {"trick shot", "SHOOT_AT@LOOKED"},
+            {"race me to that tree", "CHALLENGE:race@LOOKED"}, {"who can mine more in a minute", "CHALLENGE:mine"}, {"shooting contest", "CHALLENGE:shoot@LOOKED"},
+            {"shoot that", "FIGHT:monsters@LOOKED"}, {"where's the closest village", "FIND:village"}, {"brew a healing potion", "BREW:healing:3"},
+            {"make me some swiftness potions", "BREW:swiftness:3"}, {"brew potions", "BREW:healing:3"}};
+        for (String[] t : c) org.junit.jupiter.api.Assertions.assertEquals(t[1], PaUnderstand.read(t[0], "pip").brief(), t[0]);
+    }
 }

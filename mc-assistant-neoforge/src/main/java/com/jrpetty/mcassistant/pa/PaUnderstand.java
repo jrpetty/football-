@@ -143,6 +143,8 @@ public final class PaUnderstand {
         // [pa33c-2b] pings and places, read whole (they look like questions or lead-ins otherwise)
         PaIntent place0 = places(flat, text);
         if (place0 != null) return new Reading(List.of(place0), null);
+        PaIntent skill0 = skills(flat, text);                          // [pa33d] the rest of the game, read whole
+        if (skill0 != null) return new Reading(List.of(skill0), null);
         // [pa33c-2b] its bed, read whole ("that's your bed" would lose its lead-in; "where's your bed" is an order, not a question)
         if (flat.matches("^(?:this|that)(?:'s|s| is| one is| one's)? (?:your|ur) (?:bed|spawn)(?: now)?$")) return new Reading(List.of(PaIntent.of(Kind.BED_USE, text).withPlace(Place.LOOKED)), null);
         if (flat.matches("^(?:where(?:'s|s| is| are)? (?:is )?(?:your|ur) (?:bed|spawn)|where do you sleep|which bed is yours|have you got a bed|do you have a bed)(?: .*)?$"))
@@ -206,6 +208,52 @@ public final class PaUnderstand {
         if (named.find() && !named.group(1).matches("home|base|house|bed|village|chest|chests|farm field")) return new PaIntent(Kind.GOTO, "@" + named.group(1).trim(), 0, Place.NONE, raw);
         if (c.matches("^(?:build|make|put) (?:a |me a )?bridge(?: over (?:that|this|it|there|the water|the lava))?$|^bridge (?:over )?(?:that|this|it|there)$"))
             return PaIntent.of(Kind.BRIDGE, raw).withPlace(Place.LOOKED);
+        return null;
+    }
+
+    /** [pa33d] Enchanting, the Nether, taming, villager trades, better gear, redstone bits, maps, pillars, trick shots
+     *  at a ping, challenges. Null when it's none of these. */
+    static PaIntent skills(String c, String raw) {
+        java.util.regex.Matcher m;
+        m = Pattern.compile("^enchant (?:my |your |the |this |that |some |all )?(sword|pickaxe|axe|bow|armour|armor|helmet|chestplate|leggings|boots|gear|tools|tool|stuff|items|things|it)?(?: .*)?$").matcher(c);
+        if (m.find()) return new PaIntent(Kind.ENCHANT, m.group(1) == null ? "gear" : m.group(1), 0, Place.NONE, raw);
+        if (c.matches("^(?:come |let us go |go |head |follow me )?(?:to|into|through) the nether(?: with me)?$|^nether trip$|^go nether$")) return new PaIntent(Kind.NETHER, "netherrack", 32, Place.NONE, raw);
+        m = Pattern.compile("^(?:get|gather|collect|mine|fetch|bring) (?:me |us )?(\\d+ |some )?(quartz|nether quartz|netherrack|glowstone|soul sand|magma)(?: from the nether| in the nether)?$").matcher(c);
+        if (m.find()) {
+            int n = m.group(1) == null || m.group(1).trim().equals("some") ? 16 : Integer.parseInt(m.group(1).trim());
+            return new PaIntent(Kind.NETHER, m.group(2).replace("nether ", ""), n, Place.NONE, raw);
+        }
+        m = Pattern.compile("^tame (?:that |this |the |a |an |me a |me an )?(wolf|dog|cat|ocelot|parrot|horse|animal|it|one|that|this)?(?: for me)?$").matcher(c);
+        if (m.find()) return new PaIntent(Kind.TAME, m.group(1) == null || m.group(1).matches("it|one|animal|that|this") ? "any" : m.group(1).equals("dog") ? "wolf" : m.group(1), 0, Place.LOOKED, raw);
+        m = Pattern.compile("^(?:buy|get|trade for) (?:me |us )?(\\d+ |some |a |an )?([a-z ]+?) from (?:that|this|the|a) villager$").matcher(c);
+        if (m.find()) {
+            int n = m.group(1) == null || !m.group(1).trim().matches("\\d+") ? 0 : Integer.parseInt(m.group(1).trim());
+            return new PaIntent(Kind.VTRADE, "buy:" + m.group(2).trim(), n, Place.LOOKED, raw);
+        }
+        m = Pattern.compile("^sell (?:my |your |the |some )?(\\d+ )?([a-z ]+?) to (?:that|this|the|a) villager$").matcher(c);
+        if (m.find()) return new PaIntent(Kind.VTRADE, "sell:" + m.group(2).trim(), m.group(1) == null ? 0 : Integer.parseInt(m.group(1).trim()), Place.LOOKED, raw);
+        if (c.matches("^trade with (?:that|this|the) villager$")) return new PaIntent(Kind.VTRADE, "buy:anything", 0, Place.LOOKED, raw);
+        m = Pattern.compile("^(?:brew|make|mix) (?:me |us )?(?:a |an |some |\\d+ )?(healing|health|swiftness|speed|fire resistance|night vision|strength|regeneration|leaping|water breathing)? ?(?:potions?|brew)$").matcher(c);
+        if (m.find()) return new PaIntent(Kind.BREW, m.group(1) == null ? "healing" : m.group(1).replace("health", "healing").replace("speed", "swiftness"), 3, Place.NONE, raw);
+        if (c.matches("^(?:upgrade|improve) (?:your |its |the )?(?:gear|tools|armour|armor|kit|equipment|stuff|items)$|^gear up$|^kit yourself out$|^(?:make|craft) (?:yourself )?(?:some )?(?:better|new) (?:gear|tools|armour|armor|kit)$|^get yourself (?:some )?better (?:gear|tools|armour|armor)$"))
+            return PaIntent.of(Kind.UPGRADE, raw);
+        m = Pattern.compile("^(?:place|put|stick|add|fit) (?:a |an |the |me a )?(lever|stone button|oak button|button|oak door|iron door|door|pressure plate|stone pressure plate|redstone torch)(?: .*)?$").matcher(c);
+        if (m.find()) return new PaIntent(Kind.PLACE_THING, m.group(1), 1, Place.LOOKED, raw);
+        if (c.matches("^(?:map|chart) (?:this|the) (?:area|place|land|region|surroundings)$|^make (?:me )?a map(?: of (?:this|the) area| of here)?$|^draw (?:me )?a map$"))
+            return PaIntent.of(Kind.MAP, raw).withPlace(Place.HERE);
+        m = Pattern.compile("^(?:pillar|tower|nerd pole) up(?: (\\d+)(?: blocks?)?)?$|^build (?:a |yourself a )?pillar(?: (\\d+)(?: blocks?)?(?: high)?)?$").matcher(c);
+        if (m.find()) {
+            String g = m.group(1) != null ? m.group(1) : m.group(2);
+            return new PaIntent(Kind.PILLAR, "pillar", g == null ? 5 : Integer.parseInt(g), Place.NONE, raw);
+        }
+        if (c.matches("^(?:shoot|hit) (?:that |the |this )(?:target|bell|block|ping|button|sign|marker|mark|spot)(?: .*)?$|^trick shot(?: that)?$|^show me a trick shot$|^shoot the ping$"))
+            return PaIntent.of(Kind.SHOOT_AT, raw).withPlace(Place.LOOKED);
+        if (c.matches("^race (?:me|you)(?: to (?:that|the|this) [a-z ]+)?$|^(?:i will |ill |i'll )?race you(?: to .*)?$|^first to (?:that|the) [a-z ]+(?: wins)?$"))
+            return new PaIntent(Kind.CHALLENGE, "race", 0, Place.LOOKED, raw);
+        if (c.matches("^(?:who can|let us see who can|bet i can|bet you cant|bet you can not) mine (?:the )?(?:more|most|faster)(?: in a minute| in 1 minute)?$|^mining (?:race|contest|competition|challenge)$"))
+            return new PaIntent(Kind.CHALLENGE, "mine", 0, Place.NONE, raw);
+        if (c.matches("^(?:shooting|archery) (?:contest|competition|match|challenge)$|^(?:who can|let us see who can|bet i can|bet you cant) (?:shoot|hit the target) (?:better|more|best)$"))
+            return new PaIntent(Kind.CHALLENGE, "shoot", 0, Place.LOOKED, raw);
         return null;
     }
 
@@ -327,6 +375,8 @@ public final class PaUnderstand {
     static PaIntent clause(String c, PaIntent prev, String raw) {
         PaIntent pl = places(c, raw);                                   // [pa33c-2b] "go there" as one step of several
         if (pl != null && pl.kind() != Kind.FIND) return pl;
+        PaIntent sk = skills(c, raw);                                   // [pa33d] "enchant my sword", "tame that wolf" as one step of several
+        if (sk != null && sk.kind() != Kind.CHALLENGE) return sk;
         String g = GERUND.get(c.split(" ")[0]);
         if (g != null) c = g + c.substring(c.indexOf(' ') < 0 ? c.length() : c.indexOf(' '));
         int amount = amount(c);
@@ -383,6 +433,8 @@ public final class PaUnderstand {
             return PaIntent.of(Kind.BED_USE, raw).withPlace(Place.LOOKED);
         if (c.matches("^(?:place|put|set up|make|build|lay down|get) (?:yourself |down )?(?:a|your|a new|your own) bed(?: .*)?$") || c.matches("^put your bed (?:down|here|there|by mine|next to mine)(?: .*)?$"))
             return PaIntent.of(Kind.BED_PLACE, raw).withPlace(place == Place.NONE ? Place.HERE : place);
+        if (c.matches("^(?:wake up|wakey wakey|wake|get up|up you get|rise and shine|morning sleepy ?head|stop sleeping|out of bed)(?: .*)?$")) return PaIntent.of(Kind.WAKE, raw);   // [pa33d]
+        if (c.matches("^(?:time for bed|bed ?time|time to sleep|time for sleep|go to bed|go to sleep|get some sleep|get to bed)(?: now)?$")) return PaIntent.of(Kind.SLEEP, raw);
         if (c.matches("^(?:sleep|go to (?:bed|sleep)|to (?:bed|sleep)|rest|take shelter|hide|get inside|shelter)(?: .*)?$")) return PaIntent.of(Kind.SLEEP, raw);
         if (c.matches("^(?:go|head|return|walk|run|get|travel)? ?(?:back )?(?:home|to (?:the |your |my )?(?:home|base|house|bed))(?: .*)?$")
             || c.matches("^(?:return|go back|head back|go home|back to base|retreat)(?: .*)?$")) {

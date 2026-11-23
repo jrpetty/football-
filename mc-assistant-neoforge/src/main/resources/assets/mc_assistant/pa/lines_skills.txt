@@ -1,0 +1,488 @@
+# [pa33d] Skills, trick shots, moves and challenges. Blanks: {need} the level a skill opens at, {level} its level now,
+# {dist} blocks, {score} a score, {owner} its player. No exclamation marks: it says things, it doesn't shout them.
+
+== say.skill_locked
+[bad] That's above my level. Literally. It's a level joke. I'll wait over here.
+That's a level {need} job and I'm level {level}. Keep me busy and I'll get there.
+Level {need} for that, I'm afraid. I'm {level}. Practice makes perfect, or at least level {need}.
+Not yet. I'll know how at level {need}. I'm level {level}, so, soon. Ish.
+I'd love to, but that opens at level {need}. Give me some work and ask again.
+I'm level {level}. That's a level {need} trick. Watch this space.
+Can't do that till level {need}. I'm working on it. Well, you're working me on it.
+== say.skill_locked@gloomy
+Level {need} for that. I'm {level}. The climb goes on.
+Not till level {need}. I'm only {level}. Story of my life.
+That's level {need}. I'll get there eventually. Probably.
+I'm level {level}. That needs {need}. Another thing I can't do yet.
+Level {need}, apparently. Such is life at level {level}.
+Not at level {level}. Ask me again at {need}. If we're still here.
+== say.skill_locked@serious
+That needs level {need}. I'm level {level}.
+Opens at level {need}. I'm at {level}.
+Not yet: level {need} for that.
+I'll be able to at level {need}.
+Level {need} required. Currently {level}.
+That comes at level {need}.
+
+== say.need_lapis
+[bad] No lapis. Lapis lazuli. More like lapis lazy, more like. I didn't bring any. Sorry.
+I'll need lapis for the table. A few pieces will do.
+No lapis, no enchanting. Hand me some and I'll get to it.
+Enchanting wants lapis lazuli. I've none on me.
+The table won't do anything without lapis. Got any.
+I need lapis for that. The blue stuff.
+Lapis first, then sparkles.
+== say.need_lapis@gloomy
+No lapis. Of course there's no lapis.
+Enchanting needs lapis. I have none. Naturally.
+Without lapis, the table just sits there. Like me.
+Lapis. I need it. I don't have it. The usual.
+No lapis on me. The magic will have to wait.
+I'd enchant it, but no lapis. Typical.
+== say.need_lapis@serious
+I need lapis lazuli for that.
+No lapis in my pack.
+Enchanting needs lapis.
+Lapis first, please.
+I'm out of lapis.
+I'll need some lapis.
+
+== say.nether_with
+[bad] The Nether. Nether here nor there. That's a Nether joke. Mind the lava.
+The Nether. Right behind you. Mind the lava, it minds nobody.
+Into the Nether. I'll watch your back. And your front. Everything's on fire.
+Nether trip. I've packed nothing fireproof. Let's go.
+After you. No, really, after you.
+Through the portal we go. Smells like burnt toast in there.
+I'm with you. Let's go and annoy some piglins.
+== say.nether_with@gloomy
+The Nether. Of course. Somewhere even hotter and more hostile.
+Through the portal. What could possibly go wrong. Everything.
+After you. I'll be the one on fire.
+The Nether. Lovely. Ghasts screaming at us.
+Fine. Into the inferno.
+Nether. I'll follow. It's not like I have a choice.
+== say.nether_with@serious
+Following you to the Nether.
+Behind you. Watch for ghasts.
+Through the portal with you.
+With you. Stay off the edges.
+Following. Mind the lava.
+I'm right behind you.
+
+== say.upgrade_none
+[bad] Nothing to upgrade with. I'm iron-ically short of iron.
+I've nothing better to make. Iron ingots or diamonds and I'll gear up.
+My gear's as good as my pack allows. Bring me iron or diamonds.
+Nothing to upgrade with. A few iron ingots would change that.
+I'm already wearing the best I can make. More iron, more shiny.
+No materials for better gear. Diamonds would be lovely.
+Can't improve on this without iron or diamonds.
+== say.upgrade_none@gloomy
+Nothing better to make. This is as good as it gets.
+No iron, no diamonds, no upgrade.
+I'm stuck with this. Bring me something shiny.
+Best I've got. Which isn't much.
+No materials. As usual.
+Can't make better gear out of nothing.
+== say.upgrade_none@serious
+Nothing to upgrade with. I need iron ingots or diamonds.
+My gear is already the best I can make.
+No materials for an upgrade.
+I'll need iron or diamonds.
+Nothing better available.
+Bring me iron or diamonds to upgrade.
+
+== say.need_bow
+[bad] No bow. I'd take a bow, but I haven't got one. That one was terrible. I'm keeping it.
+I'll need a bow and some arrows for that.
+No bow, no shot. Hand me one.
+I can throw rocks, but a bow would be better.
+Bow and arrows, please. I'm good, not magic.
+I haven't the bow for it. Or the arrows.
+Give me a bow and a few arrows and watch this.
+== say.need_bow@gloomy
+No bow. No arrows. No trick shots.
+I'd shoot it, but I have nothing to shoot with.
+A bow would help. I don't have one.
+No arrows. Of course.
+Without a bow I'm just pointing at it.
+No bow. Story of my life.
+== say.need_bow@serious
+I need a bow and arrows.
+No bow in my pack.
+Bow and arrows, please.
+I'm out of arrows.
+I'll need a bow for that.
+No bow or arrows.
+
+== say.trick_hit
+[bad] Hit. I'm on target today. That's an arrow pun. I'm keeping it.
+[anim:cheer] Bullseye. Did you see that. Tell me you saw that.
+[anim:cheer] Got it. {dist} blocks. Not that I'm counting.
+[anim:bow] Hit. I'll be signing autographs later.
+[anim:cheer] Right where I meant it. Mostly.
+[anim:cheer] Clean hit. I've still got it. I've always had it.
+[anim:bow] Nailed it. Applause is welcome.
+== say.trick_hit@gloomy
+[anim:shrug] Hit. Don't get used to it.
+[anim:shrug] Got it. Even a broken clock.
+[anim:shrug] Hit. I'm as surprised as you.
+[anim:shrug] Bullseye. It won't last.
+[anim:shrug] It hit. Something went right for once.
+[anim:shrug] Hit. Enjoy it, it's rare.
+== say.trick_hit@serious
+[anim:salute] Hit.
+[anim:salute] Target hit, {dist} blocks.
+[anim:salute] On target.
+[anim:salute] Got it.
+[anim:salute] Clean hit.
+[anim:salute] Hit, first time.
+
+== say.trick_long
+[anim:bow] {dist} blocks. Don't try that at home. Actually, do, it's fine.
+[anim:bow] Long shot, clean hit. {dist} blocks of pure talent.
+[anim:cheer] From {dist} blocks. Wind? What wind.
+[anim:bow] {dist} blocks out and dead centre. Write that down.
+[anim:cheer] Long range. {dist} blocks. I may retire on that.
+[anim:bow] {dist} blocks. I'm basically a skeleton now. A friendly one.
+== say.trick_long@gloomy
+[anim:shrug] {dist} blocks and it hit. The universe is confused.
+[anim:shrug] Long shot. It worked. Strange times.
+[anim:shrug] {dist} blocks. I'll never do that again.
+[anim:shrug] A hit from {dist}. Luck, mostly.
+[anim:shrug] {dist} blocks. Even I didn't think that would work.
+[anim:shrug] Hit from {dist} blocks. Don't expect it twice.
+== say.trick_long@serious
+[anim:salute] Hit at {dist} blocks.
+[anim:salute] Long range hit, {dist} blocks.
+[anim:salute] {dist} blocks, on target.
+[anim:salute] Target hit from {dist}.
+[anim:salute] Clean hit at range.
+[anim:salute] {dist} blocks. Hit.
+
+== say.trick_miss
+[bad] Why did the arrow go to school. To get a bit sharper. It didn't work.
+[bad] I'd tell you an archery joke, but it'd miss the point. Like that arrow.
+[anim:shrug] Missed. The wind did it. There's no wind. Still.
+[anim:shrug] Close. Close counts in horseshoes. And now archery.
+[anim:shrug] That was a warning shot. For the target.
+[anim:shrug] Missed on purpose. To make you feel better.
+[anim:shrug] The bow pulls left. It's the bow. It's always the bow.
+[anim:shrug] Nobody saw that. Agreed.
+== say.trick_miss@gloomy
+[anim:mourn] Missed. Of course I did.
+[anim:mourn] Missed. The story of my aim.
+[anim:mourn] Nowhere near. Very me.
+[anim:mourn] Missed. I knew I would.
+[anim:mourn] Another miss. Add it to the list.
+[anim:mourn] Missed. I'll go and stand in the rain.
+== say.trick_miss@serious
+[anim:think] Missed. I'll adjust.
+[anim:think] Off target.
+[anim:think] Miss. Correcting for distance.
+[anim:think] Not quite. Next time.
+[anim:think] Missed it.
+[anim:think] Missed. Too far for me yet.
+
+== say.clutch
+[bad] Water landing. I'm a natural. A natural bucket. That doesn't work. Keeping it.
+[anim:cheer] Water bucket. Never leave home without one.
+[anim:cheer] Clutch. Feel free to clap.
+[anim:cheer] And that's why I carry a bucket.
+[anim:cheer] Landed it. Like a cat. A wet cat.
+[anim:cheer] Splash. Not a scratch.
+[anim:cheer] Nailed the landing. Ten out of ten.
+== say.clutch@gloomy
+[anim:shrug] Water bucket. Survived. Again.
+[anim:shrug] Didn't die. Disappointing for the ground.
+[anim:shrug] Splash. Still here.
+[anim:shrug] Landed in water. Soaked, but alive.
+[anim:shrug] The bucket saved me. Nobody else would.
+[anim:shrug] Clutched it. Don't make a fuss.
+== say.clutch@serious
+[anim:salute] Water bucket landing.
+[anim:salute] Safe landing.
+[anim:salute] Clutched the fall.
+[anim:salute] Landed safely.
+[anim:salute] Water placed. No damage.
+[anim:salute] Fall broken.
+
+== say.pearl
+[bad] Pearl of wisdom: carry pearls. That was the joke. I'm sorry.
+[anim:point] Pearl. Back in a jiffy.
+[anim:point] Catching up the fast way.
+[anim:point] Ender pearl. Don't wait for me. I'm already there.
+[anim:point] Hold on, I'm coming. Through the air.
+[anim:point] Teleporting. Mind out.
+[anim:point] You walk, I'll fly. Sort of.
+== say.pearl@gloomy
+[anim:point] Pearl. Because walking was too much.
+[anim:point] Teleporting. It stings a bit.
+[anim:point] Pearl. You left me behind again.
+[anim:point] Catching up. Not that you'd notice.
+[anim:point] Ender pearl. Ouch.
+[anim:point] Pearl. I'll pretend that didn't hurt.
+== say.pearl@serious
+[anim:point] Pearling to you.
+[anim:point] Catching up.
+[anim:point] Ender pearl.
+[anim:point] On my way.
+[anim:point] Closing the distance.
+[anim:point] Coming to you.
+
+== say.challenge_busy
+We're already at it. Finish this one first.
+One game at a time. I'm winning this one.
+Hang on, we've a game on.
+Not now, we're mid-contest.
+Let's finish this first. I'm ahead.
+One challenge at once, please.
+== say.challenge_busy@gloomy
+We're already doing one. I'm losing, probably.
+One at a time. This one's bad enough.
+Finish this first.
+We're mid-game. Sadly.
+Already at it.
+Not yet. This one first.
+== say.challenge_busy@serious
+We already have a game on.
+Finish this one first.
+One at a time.
+We're mid-game.
+Let's finish this one.
+Already running a challenge.
+
+== say.challenge_race
+[bad] On your marks. I've got my marks. They're marker marks. Never mind. Three.
+A sprint to the marker. You're on. Three, two, one...
+First one there wins. Loser carries the cobblestone. On three.
+You're going down. Well, along. On three.
+Right. Marker's up. On your marks...
+I'll wait at the finish. Three, two...
+Get ready to see my back. On three.
+== say.challenge_race@gloomy
+A sprint. I'll lose. On three.
+Fine. Three, two, one, despair.
+You'll win. Let's get it over with. Three...
+Running. My legs are square. On three.
+Marker's up. Here we go.
+I'll try. On three.
+== say.challenge_race@serious
+To the marker. On three.
+Marker's up. Three, two, one.
+Ready. On three.
+First to the marker wins.
+Go on three.
+Get set.
+
+== say.challenge_mine
+[bad] A mining contest. Mine's going to be better than yours. Mine. Get it. Three.
+A minute's mining. Most blocks wins. Three, two...
+You're on. One minute. Count your blocks.
+Mining contest. Pickaxes ready.
+One minute. I'll try not to embarrass you.
+Most blocks in a minute. Starting in three.
+Let's see what you've got. One minute, go on three.
+== say.challenge_mine@gloomy
+A mining contest. I'll lose, but fine.
+One minute. Let's get it over with.
+Mining contest. My pickaxe is ready. I'm not.
+Most blocks wins. Not me, probably.
+One minute of digging. Lovely.
+Fine. Starting in three.
+== say.challenge_mine@serious
+One minute. Most blocks mined wins.
+Mining contest. On three.
+Ready. One minute.
+Most blocks in a minute.
+Starting in three.
+Mining contest. Go on three.
+
+== say.challenge_shoot
+Shooting contest. A minute each way. Most hits on the target wins.
+Target practice. Try to keep up.
+Archery contest. I'll go easy on you. I won't.
+Most hits in a minute. Bows ready.
+You and me and the target. Starting in three.
+Let's see your aim. On three.
+== say.challenge_shoot@gloomy
+A shooting contest. I'll miss. Fine.
+Most hits wins. I'll be the one losing.
+Archery. Let's get it over with.
+A minute of shooting. My aim is cursed.
+Fine. On three.
+Target practice. Mostly practice.
+== say.challenge_shoot@serious
+Shooting contest. Most hits in a minute.
+Target practice. On three.
+Most hits on the target wins.
+Ready. One minute.
+Starting in three.
+Archery contest. Go on three.
+
+== say.challenge_go
+[bad] Go. Like the game. The board game. No, not that one either.
+Go.
+And they're off.
+Go go go.
+Now.
+Off we go.
+Go on, then.
+== say.challenge_go@gloomy
+Go. Sigh.
+And we're off. Slowly.
+Go, I suppose.
+Off we go. Here I go, losing.
+Now. Fine.
+Go.
+== say.challenge_go@serious
+Go.
+Start.
+Now.
+Begin.
+Go.
+Off.
+
+== say.challenge_won
+[bad] I win. I'm a winner. A win-ner. A win-dow. That made no sense. Keeping it.
+[anim:cheer] I win. Better luck next time. Bring a faster you.
+[anim:cheer] Victory. I'd say it was close, but I'd be lying.
+[anim:dance] Winner. I'll accept my prize in cake.
+[anim:cheer] And that's how it's done. Lessons on Tuesdays.
+[anim:dance] Mine. Want a rematch. Please want a rematch.
+[anim:cheer] I won. Don't feel bad. Feel a bit bad.
+== say.challenge_won@gloomy
+[anim:shrug] I won. That's never happened before.
+[anim:shrug] Won. Something went right. Worrying.
+[anim:shrug] I won. Don't let it go to my head.
+[anim:shrug] A win. It won't last.
+[anim:shrug] I won. Huh.
+[anim:shrug] Victory. Strange feeling.
+== say.challenge_won@serious
+[anim:salute] I win.
+[anim:salute] My win. Good effort.
+[anim:salute] I won that one.
+[anim:salute] Victory. Rematch any time.
+[anim:salute] Won. Well played.
+[anim:salute] That's mine.
+
+== say.challenge_lost
+[bad] You win. I lost. I'm a lost cause. And a lost assistant. Lost all round.
+[anim:shrug] You win. I let you. That's my story.
+[anim:shrug] Beaten. I demand a rematch. And a lie-down.
+[anim:shrug] Fine, you win. My legs are square.
+[anim:shrug] You won. Don't tell anyone.
+[anim:shrug] Lost. I was going easy. Mostly.
+[anim:shrug] Well played. I'll get you next time.
+== say.challenge_lost@gloomy
+[anim:mourn] Lost. As foretold.
+[anim:mourn] You win. Of course you do.
+[anim:mourn] Beaten. I'll go and stand in the rain.
+[anim:mourn] Lost. My destiny.
+[anim:mourn] You won. I expected nothing else.
+[anim:mourn] Defeated. Again.
+== say.challenge_lost@serious
+[anim:salute] You win. Well done.
+[anim:salute] Your win.
+[anim:salute] You beat me.
+[anim:salute] Good game. You won.
+[anim:salute] Well played.
+[anim:salute] You take that one.
+
+== say.challenge_draw
+[bad] A draw. I'd draw you a picture, but I'm rubbish at that too.
+A draw. We're both brilliant. Mostly me.
+Even. Rematch.
+Tied. That's unsatisfying for everyone.
+Nobody wins. Nobody loses. Nobody's happy.
+A draw. Best of three.
+Dead even. I want a rematch.
+== say.challenge_draw@gloomy
+A draw. Nobody wins. Fitting.
+Tied. Meaningless, like everything.
+Even. How dull.
+A draw. Just my luck.
+Nobody won. As usual.
+Tied. Oh well.
+== say.challenge_draw@serious
+A draw.
+Tied.
+Even. Rematch.
+No winner.
+Dead even.
+That's a draw.
+
+# --- trash talk, Cheeky and Unfiltered (only within its Language setting and the server's cap)
+== tone.challenge.won.cheeky
+[anim:dance] Get in. Bloody hell, that was easy.
+[anim:cheer] I win, you muppet. Rematch whenever you fancy losing again.
+[anim:dance] Too slow. Was your arse glued down.
+[anim:cheer] Mine. Damn, I'm good.
+[anim:dance] Victory. Pack it in, you plonker.
+[anim:cheer] Beaten by your assistant. Bloody embarrassing, that.
+== tone.challenge.won.unfiltered
+[anim:dance] Get fucked. I win.
+[anim:cheer] Absolute shitshow from you. I win.
+[anim:dance] Too slow, dickhead. Rematch.
+[anim:cheer] I won. You're shit at this.
+[anim:dance] Bollocks to your effort. I win.
+[anim:cheer] Destroyed. Pick your arse up off the floor.
+== tone.challenge.lost.cheeky
+[anim:shrug] Bloody hell, you won. Fluke.
+[anim:shrug] Damn it. Rematch, you git.
+[anim:shrug] You won. Don't get cocky, you muppet.
+[anim:shrug] Lost. My legs are rubbish. Bloody square legs.
+[anim:shrug] Fine. You win. Smug git.
+[anim:shrug] Beaten. Damn it all.
+== tone.challenge.lost.unfiltered
+[anim:shrug] Fuck. You won.
+[anim:shrug] Shit. Rematch, right now.
+[anim:shrug] Bollocks. Fluke.
+[anim:shrug] You won. Don't be a dick about it.
+[anim:shrug] For fuck's sake. Fine.
+[anim:shrug] Lost. That was shit of me.
+
+# [pa33d] The End: the crystals first, then the dragon.
+== say.end_crystal
+Crystals first. Can't have it healing while we hit it.
+Popping the crystals. Cover your ears.
+One crystal down. Plenty to go. Keep moving.
+Shooting the crystals off. That's the plan, isn't it.
+I'll take the crystals. You take the shiny dragon.
+Crystal spotted. Not for long.
+== say.end_crystal@gloomy
+Crystals. They explode. Of course they do.
+Shooting crystals. Hope they don't take us with them.
+One crystal gone. Many left. As always.
+The crystals heal it. Naturally.
+Popping them. Stand well back.
+I'll shoot the crystals. Somebody has to.
+== say.end_crystal@serious
+Shooting the crystals.
+Crystals first.
+Taking out the crystals.
+Crystal down.
+Clearing the crystals.
+On the crystals.
+== say.end_dragon
+Big lizard, coming up. Arrows away.
+I've got you covered. Hit it when it lands.
+Dragon. I've always wanted to say that. Dragon.
+Arrows on the dragon. Mind its breath. It's terrible.
+It's coming round. Get ready.
+Aim for the head. Well, aim for any of it.
+== say.end_dragon@gloomy
+The dragon. This is how it ends.
+Shooting at a dragon. As one does.
+It's huge. And angry. Wonderful.
+Arrows away. For all the good they'll do.
+Dragon. We'll be fine. Probably not.
+Here it comes. Brace.
+== say.end_dragon@serious
+Engaging the dragon.
+Arrows on the dragon.
+Dragon incoming.
+Covering you.
+Hit it when it perches.
+On the dragon.

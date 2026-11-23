@@ -126,6 +126,7 @@ public final class PaLife {
             try {
                 a.load(t);
             } catch (Exception e) {
+                LOG.warn("[pa33] could not restore {} from its kept copy", r.name, e);
                 a = McAssistantMod.PLAYER_ASSISTANT.get().create(level);
                 if (a == null) return null;
             }
@@ -136,7 +137,9 @@ public final class PaLife {
         if (spot == null) { LOG.info("[pa33] no safe spot near {}", near.toShortString()); return null; }
         PaData.incarnate(r);
         a.bind(r);
+        a.restoreXp(r.xp);                                                 // [pa33d] never back at level 1 by accident
         a.moveTo(spot.x, spot.y, spot.z, owner != null ? owner.getYRot() + 180 : 0, 0);
+        a.setPortalCooldown();                                             // [pa33e] just come through with its player: not straight back out of the portal beside it
         a.setHealth(!fresh && a.getHealth() > 1 ? a.getHealth() : a.getMaxHealth());
         a.setDeltaMovement(Vec3.ZERO);
         a.fallDistance = 0;
@@ -144,7 +147,7 @@ public final class PaLife {
         if (!level.addFreshEntity(a)) { LOG.info("[pa33] the world would not take the assistant at {}", spot); return null; }
         r.entity = a.getUUID();
         r.away = false;
-        r.snapshot = null;
+        r.snapshot = a.saveWithoutId(new CompoundTag());                     // [pa33d] a copy from the start: lost before the next keep, it comes back as itself, not a blank
         PaData.touch();
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, spot.x, spot.y + 1, spot.z, 16, 0.4, 0.6, 0.4, 0.02);
         level.playSound(null, a.blockPosition(), net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_CHIME, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.2F);
@@ -163,12 +166,19 @@ public final class PaLife {
                         if (!level.getBlockState(feet.below()).isFaceSturdy(level, feet.below(), net.minecraft.core.Direction.UP)) continue;
                         if (level.getFluidState(feet).isSource() || level.getBlockState(feet.below()).is(net.minecraft.world.level.block.Blocks.LAVA)) continue;
                         AABB box = McAssistantMod.PLAYER_ASSISTANT.get().getDimensions().makeBoundingBox(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5);
+                        if (level.getBlockStates(box.inflate(0.3)).anyMatch(PaLife::portalOrFire)) continue;   // [pa33e] never stood in a portal (it would bounce straight back) or a fire
                         if (level.noCollision(box) && !level.containsAnyLiquid(box)) return new Vec3(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5);
                     }
                 }
             }
         }
         return null;
+    }
+
+    /** [pa33e] A portal or a fire: no place to stand it up. */
+    static boolean portalOrFire(net.minecraft.world.level.block.state.BlockState st) {
+        return st.getBlock() instanceof net.minecraft.world.level.block.NetherPortalBlock || st.getBlock() instanceof net.minecraft.world.level.block.EndPortalBlock
+            || st.is(net.minecraft.tags.BlockTags.FIRE);
     }
 
     // ------------------------------------------------------------------ calling it, carrying it across

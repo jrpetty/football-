@@ -63,6 +63,8 @@ public final class PaData extends SavedData {
         public final java.util.Set<String> keep = new java.util.LinkedHashSet<>();
         /** [pa33b] When its player last left (wall clock), for "you've been gone ages". */
         public long leftAt;
+        /** [pa33d] Its experience, kept here too: a body stood up afresh (a lost copy) keeps its level. */
+        public long xp;
 
         public PaPersona.Tri tri() {
             return PaPersona.Tri.of(funny, gloomy);
@@ -143,6 +145,7 @@ public final class PaData extends SavedData {
             for (String k : keep) kl.add(net.minecraft.nbt.StringTag.valueOf(k));
             t.put("Keep", kl);
             t.putLong("LeftAt", leftAt);
+            t.putLong("Xp", xp);
             t.putInt("Spend", spend);
             if (spawner != null) { t.putLong("Spawner", spawner.asLong()); t.putString("SpawnerDim", spawnerDim); }
             t.putLong("DeadUntil", deadUntil);
@@ -198,6 +201,7 @@ public final class PaData extends SavedData {
             for (String k : wp.getAllKeys()) { r.waypoints.put(k, BlockPos.of(wp.getCompound(k).getLong("P"))); r.waypointDims.put(k, wp.getCompound(k).getString("D")); }
             for (net.minecraft.nbt.Tag k : t.getList("Keep", net.minecraft.nbt.Tag.TAG_STRING)) r.keep.add(k.getAsString());
             r.leftAt = t.getLong("LeftAt");
+            r.xp = t.getLong("Xp");
             r.spend = t.contains("Spend") ? t.getInt("Spend") : 64;
             if (t.contains("Spawner")) { r.spawner = BlockPos.of(t.getLong("Spawner")); r.spawnerDim = t.getString("SpawnerDim"); }
             r.deadUntil = t.getLong("DeadUntil");
