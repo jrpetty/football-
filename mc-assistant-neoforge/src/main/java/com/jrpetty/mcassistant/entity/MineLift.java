@@ -80,6 +80,8 @@ public final class MineLift {
     static final int MOST = 4;
     /** The display tag the cage's parts carry (cleared and drawn afresh when the lift is first looked at after a load). */
     static final String TAG = "mca_lift_cage";
+    /** Ticks the cage waits at a stop before it goes back up to the pithead. */
+    static final int IDLE = 100;
 
     public enum State { NONE, WAITING, RIDING, ARRIVED }
 
@@ -104,6 +106,7 @@ public final class MineLift {
         final Deque<Ask> queue = new ArrayDeque<>();
         final List<UUID> cage = new ArrayList<>();
         boolean fresh = true;
+        int idle;
         long trips, carried;
         Lift(UUID village) { this.village = village; }
 
@@ -338,7 +341,13 @@ public final class MineLift {
         if (l.phase == 0) {
             l.queue.removeIf(a -> STATE.get(a.who) != State.WAITING);
             Ask first = l.queue.peek();
-            if (first == null) { drawCage(level, l); return; }
+            if (first == null) {
+                // Idle a while: back up to the pithead, where most rides begin (and where it hangs in the headframe to be seen).
+                if (++l.idle > IDLE && l.cageY != l.top) toward(l, l.top);
+                drawCage(level, l);
+                return;
+            }
+            l.idle = 0;
             l.from = first.from;
             l.to = first.to;
             l.riding.clear();
