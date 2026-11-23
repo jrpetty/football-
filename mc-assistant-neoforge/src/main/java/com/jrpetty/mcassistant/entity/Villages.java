@@ -1659,6 +1659,7 @@ public final class Villages {
         if (!"colony".equals(structure) && !"guesthouse".equals(structure)) tell(villageId, gameTime / 24000L, spoken(structure) + " went up");
         LAST_PROJECT.put(villageId, gameTime);
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
+        AgeSites.forget(villageId, structure);                        // [econ32c] up: its ground's note let go
         Council.built(villageId, structure);
         Map<String, Site> pending = SITES.get(villageId);
         Site raised = pending == null ? null : pending.get(structure);
@@ -2614,6 +2615,12 @@ public final class Villages {
         BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).putIfAbsent(structure, at.immutable());
     }
 
+    /** [econ32c] Tests: the sites of the buildings going up forgotten, as a restart forgets them. */
+    public static void forgetSitesForTests(UUID villageId) {
+        SITES.remove(villageId);
+        LOT_TAKEN.remove(villageId);
+    }
+
     /** Tests: say where a building stands. */
     public static void builtAtForTests(UUID villageId, String structure, BlockPos at) {
         BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).put(structure, at.immutable());
@@ -3016,6 +3023,12 @@ public final class Villages {
         Map<String, Site> pending = SITES.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>());
         Site have = pending.get(project);
         if (have != null) return have;
+        // [econ32c] An age's building begun before a restart: its ground again, not a new lot.
+        Site kept = AgeSites.kept(villageId, project);
+        if (kept != null && built(villageId, project) < 1) {
+            holdPrivateSite(villageId, project, kept);
+            return kept;
+        }
         // [city26] No lot is chosen while the founding is still making the town's ground: a site claimed then stood on the
         // ground as it was (its floor measured from it), and the way in to its door kept the levelling off that street.
         if (Founding.shaping(level, v.centre(), 16)) return null;
@@ -3160,6 +3173,7 @@ public final class Villages {
             }
         }
         if (site != null) pending.put(project, site);
+        if (site != null) AgeSites.keep(villageId, project, site);   // [econ32c] kept over a restart
         return site;
     }
 
@@ -3295,6 +3309,7 @@ public final class Villages {
     public static void rejectSite(UUID villageId, String project, long gameTime) {
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);
+        AgeSites.forget(villageId, project);                          // [econ32c] its ground given up
         if (gone != null) {
             Restore.abandoned(villageId, new com.jrpetty.mcassistant.village.Ledger.Building(project, gone.anchor(), gone.facing()), gameTime);   // [integrity] what was laid of it comes down
             why(whyNot(villageId), TAKEN);

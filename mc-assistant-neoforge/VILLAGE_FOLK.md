@@ -15472,3 +15472,27 @@ works' round, instead of only when a load will not go in (then the load went on 
 - **The picks for the diamonds are made in measure:** no more iron picks for the diamonds in a day than the rack keeps.
 - **After the Diamond Age** comes the Nether Age, which asks for the gateway: ten obsidian (cut by a diamond pick out of the
   town's diamonds, from lava with a bucket of water), twice the Diamond Age's diamonds, the gateway itself and food.
+
+### The mine's cage (econ-32, round three)
+- **The cage.** Once the works are forty blocks deep and the headframe is up, the town cuts a well one block across down
+  the middle of the shaft's pillar, from the pithead to its deepest landing, and hangs a cage in it. The well's top is
+  capped with a trapdoor under the headframe, a chain hangs from the headframe's beam, the pillar round the well is made
+  good wherever a cave broke into it, and there is a pool of water at its foot. Every stop (the pithead, and the corner
+  landing of each level opened) has a window of iron bars onto the well and a lever on the landing's floor. A mine dug
+  before the cage gets one within seconds of its works being loaded.
+- **Riding it.** The cage (a trapdoor floor and roof with iron bars round, drawn as block displays) carries up to four at a
+  time from stop to stop at a block and a half a tick: the whole shaft in about five seconds. The chain rattles as it sets
+  off and a bell rings when it stops. Miners going to and from their level queue at the stop and ride. A miner who has
+  waited half a minute takes the stair, which is still there for when the cage is busy or the well is blocked.
+- **A player rides it by its levers, with no commands.** Pulling a stop's lever takes the cage down to the next stop (from
+  the deepest stop, back up to the pithead). Sneaking while pulling takes it up to the pithead.
+- **Safety.** Nobody is let into the well except riders in the cage. Anybody found in it outside the cage (a server stopped
+  mid-ride, a chunk unloaded under it) is put out at the nearest stop's landing; a fall down the well lands in the pool.
+- **The landings' cache.** While the works have a cage and the town has a hauler, the hauler sends each landing's chest
+  what it lacks of twelve meals and sixteen torches down the cage every morning. A miner at the end of a stint by daylight
+  (unhurt, its pack not full) walks to its level's landing, rests there a few seconds, takes a few meals and torches from
+  the chest and starts another stint, twice a shift at most, instead of climbing out.
+- **The age's buildings keep their ground.** The lot an age's building was set out on is kept with the town, so after a
+  restart the half-raised building is finished where it stands instead of being begun again on another lot.
+- The mine's report has a line for the cage (runs, riders) and for the cache, and the shifts line says where the works'
+  time goes: at the face, walking, in the cage, on the way out.

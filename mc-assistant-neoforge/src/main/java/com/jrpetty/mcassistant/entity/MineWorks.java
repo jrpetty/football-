@@ -1420,6 +1420,7 @@ public final class MineWorks {
             }
         }
         if (w.sunk >= 2) rail(level, v, w);
+        MineLift.upkeep(level, w);                           // [econ32c] the cage, once the works are deep enough
         int want = Math.min(60, w.dug / 96);
         for (int n = 0; w.heap < want && n < 8; n++) {
             if (!heap(level, v, w, w.heap)) { w.heap = want; break; }
@@ -1635,6 +1636,10 @@ public final class MineWorks {
         for (Lvl l : plan) if (w.sunk > l.corner()) open++;
         out.add("The works: the main shaft at " + w.sx + ", " + w.sz + ", sunk " + (w.top - deepest) + " blocks to Y" + deepest + " (" + w.sunk
             + " steps); " + open + " of " + plan.size() + " levels open" + (w.head ? "; the headframe over it" : "") + ".");
+        String cage = MineLift.report(village);                                                      // [econ32c]
+        if (cage != null) out.add(cage);
+        String cache = MineCache.report(village);
+        if (cache != null) out.add(cache);
         if (MineSites.oldMines(village) > 0 || MineSites.pending(village) != null)                     // [econ32]
             out.add("Old mines worked out and left: " + MineSites.oldMines(village)
                 + (MineSites.pending(village) != null ? "; a new mine wanted for the " + MineSites.pending(village) : "") + ".");
@@ -1758,6 +1763,14 @@ public final class MineWorks {
             if (a != null) dressStep(level, w, a, i);
         }
         w.sunk = Math.max(w.sunk, steps);
+        save(w);
+    }
+
+    /** [econ32c] Tests: the headframe taken as up (an old mine's, from before the cage). */
+    public static void headForTests(ServerLevel level, UUID village) {
+        Works w = works(level, village);
+        if (w == null) return;
+        w.head = true;
         save(w);
     }
 

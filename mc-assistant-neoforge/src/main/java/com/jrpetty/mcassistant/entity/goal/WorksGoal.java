@@ -35,7 +35,7 @@ import java.util.Set;
  */
 public class WorksGoal extends Goal {
 
-    private enum Phase { NEXT, WALK, CUT, OUT }
+    private enum Phase { NEXT, WALK, CUT, OUT, BREAK }
 
     private final AssistantEntity a;
     @Nullable private Job job;
@@ -44,6 +44,14 @@ public class WorksGoal extends Goal {
     @Nullable private MineWorks.Task task;
     private List<BlockPos> route = List.of();
     private int ri;
+    /** [econ32c] The walk by the stair, kept for when the cage is busy; and each ride in the walk: {from stop, to stop, the
+     *  from stop's index in the stair walk, the to stop's}, by the index in the walk of the stop it rides to. */
+    private List<BlockPos> stairs = List.of();
+    private final java.util.Map<Integer, int[]> rides = new java.util.HashMap<>();
+    private long rideAsked;
+    private int rideAsks;
+    /** [econ32c] Ticks a folk waits at a stop for the cage before it takes the stair. */
+    private static final long LIFT_WAIT = 600L;
     private int ci;
     private final ArrayDeque<BlockPos> blocks = new ArrayDeque<>();
     private final ArrayDeque<BlockPos> vein = new ArrayDeque<>();
@@ -103,6 +111,8 @@ public class WorksGoal extends Goal {
         // (where it was walking kept: a restart does not forget a walk that is stuck)
         tasks = 0;
         shiftTicks = 0;
+        breaks = 0;                                              // [econ32c]
+        breakAt = null;
         oreTaken = 0;
         broke = 0;
         saidSealed = false;
@@ -129,6 +139,7 @@ public class WorksGoal extends Goal {
 
     @Override
     public void stop() {
+        com.jrpetty.mcassistant.entity.MineLift.cancel(a.getUUID());   // [econ32c] no longer waiting at a stop (a ride under way is finished)
         if (job != null && phase == Phase.OUT && MineWorks.below(a)) {   // [econ32b] a climb cut short below, and by what
             com.jrpetty.mcassistant.entity.Job nj = a.peekJob();
             com.jrpetty.mcassistant.entity.MineWhy.note(a, "climb cut short (" + (a.getTarget() != null ? "a target" : nj == null ? "no job"
@@ -151,6 +162,13 @@ public class WorksGoal extends Goal {
     public void tick() {
         if (!(a.level() instanceof ServerLevel level) || job == null) return;
         shiftTicks++;
+        {                                                        // [econ32c] where the shift's time goes
+            com.jrpetty.mcassistant.entity.MineLift.State ls = com.jrpetty.mcassistant.entity.MineLift.state(a.getUUID());
+            if (ls == com.jrpetty.mcassistant.entity.MineLift.State.RIDING || ls == com.jrpetty.mcassistant.entity.MineLift.State.WAITING) T_CAGE++;
+            else if (phase == Phase.CUT) T_FACE++;
+            else if (phase == Phase.OUT) T_OUT++;
+            else T_WALK++;
+        }
         if (shiftTicks % 20 == 0) STATE.put(a.getUUID(), phase + " " + (task == null ? "-" : task.kind + " cell " + ci + "/" + task.cells.size())
             + " blocks " + blocks.size() + " vein " + vein.size() + " walking " + (walking == null ? "-" : walking.toShortString())
             + " digging " + (digging == null ? "-" : digging.toShortString()) + " route " + ri + "/" + route.size());
@@ -168,6 +186,7 @@ public class WorksGoal extends Goal {
                 }
             }
             case CUT -> cut(level);
+            case BREAK -> breather(level);                       // [econ32c] at the landing a while
             case OUT -> {
                 long began = CLIMBING.getOrDefault(a.getUUID(), level.getGameTime());
                 if (follow()) {
@@ -205,8 +224,7 @@ public class WorksGoal extends Goal {
             else finish(tasks == 0 ? "Nothing free to cut in the works just now." : "That's my stint at the works.");
             return;
         }
-        route = MineWorks.route(level, a, task);
-        ri = 0;
+        setRoute(level, MineWorks.route(level, a, task));        // [econ32c] the cage where it saves the stair
         walking = null;
         phase = Phase.WALK;
     }
@@ -224,10 +242,58 @@ public class WorksGoal extends Goal {
         }
         long t = level.getDayTime() % 24000L;
         if (t >= 12000L && t < 23500L) return "That's the day's shift done.";
-        if (tasks >= SHIFT_TASKS || shiftTicks > SHIFT_TICKS) return "That's my stint at the works.";
+        if (tasks >= SHIFT_TASKS || shiftTicks > SHIFT_TICKS) {
+            // [econ32c] With the cage and a cache at the landing: a breather there and another stint, not the climb home.
+            if (breaks < BREAKS && t < 10000L && a.getHealth() >= a.getMaxHealth() * 0.75F && freeSlots() > 6 && beginBreak(level)) return null;
+            return "That's my stint at the works.";
+        }
         if (a.getHealth() < a.getMaxHealth() * 0.5F) return "Up out of it — I'm hurt.";
         return null;
     }
+
+    /** [econ32c] Breathers a shift at the landing's cache, and how long each. */
+    private static final int BREAKS = 2, BREAK_TICKS = 200;
+    private int breaks, breakTicks;
+    @Nullable private com.jrpetty.mcassistant.entity.MineLift.Stop breakAt;
+
+    /** [econ32c] Off to its level's landing for a breather, if it has a cache: true if it went. */
+    private boolean beginBreak(ServerLevel level) {
+        com.jrpetty.mcassistant.entity.MineLift.Stop s = com.jrpetty.mcassistant.entity.MineCache.near(level, a);
+        if (s == null) return false;
+        List<BlockPos> up = MineWorks.wayUp(level, a);
+        List<BlockPos> to = new ArrayList<>();
+        if (up != null) for (BlockPos p : up) { to.add(p); if (p.equals(s.board())) break; }
+        if (to.isEmpty() || !to.get(to.size() - 1).equals(s.board())) to = new ArrayList<>(List.of(a.blockPosition(), s.board()));
+        if (task != null) { report("stopped"); task = null; }
+        rides.clear();
+        stairs = to;
+        route = to;
+        ri = 0;
+        walking = null;
+        breakAt = s;
+        breakTicks = 0;
+        phase = Phase.BREAK;
+        return true;
+    }
+
+    private void breather(ServerLevel level) {
+        if (breakAt == null) { phase = Phase.NEXT; return; }
+        if (!follow()) return;
+        if (breakTicks++ == 0) {
+            String took = com.jrpetty.mcassistant.entity.MineCache.take(level, a, breakAt);
+            a.getNavigation().stop();
+            BREATHERS++;
+            com.jrpetty.mcassistant.entity.MineWorks.event(a, "a breather at the landing" + (took.isEmpty() ? "" : ": " + took));
+        }
+        if (breakTicks < BREAK_TICKS) return;
+        breaks++;
+        tasks = 0;
+        shiftTicks = 0;
+        breakAt = null;
+        phase = Phase.NEXT;
+    }
+
+    public static volatile int BREATHERS;
 
     private int freeSlots() {
         int n = 0;
@@ -256,8 +322,8 @@ public class WorksGoal extends Goal {
         if (since == null || now - since > 6000 || now < since) CLIMBING.put(a.getUUID(), now);   // [econ32b]
         if (task != null) { report(why.isEmpty() ? "" : "stopped"); }
         List<BlockPos> up = a.level() instanceof ServerLevel sl ? MineWorks.wayUp(sl, a) : null;
-        route = up == null ? List.of() : up;
-        ri = 0;
+        if (a.level() instanceof ServerLevel sl2) setRoute(sl2, up == null ? List.of() : up);   // [econ32c] up in the cage
+        else { route = List.of(); ri = 0; }
         if (phase != Phase.OUT) outTicks = 0;
         // (where it was walking kept: a restart does not forget a walk that is stuck)
         phase = Phase.OUT;
@@ -288,9 +354,10 @@ public class WorksGoal extends Goal {
      */
     private boolean follow() {
         if (ri >= route.size()) return true;
+        if (rides.containsKey(ri)) return ride();                // [econ32c] at a stop of the cage
         int j = ri;
         BlockPos p0 = route.get(ri);
-        while (j + 1 < route.size() && j - ri < 6) {
+        while (j + 1 < route.size() && j - ri < 6 && !rides.containsKey(j + 1)) {
             BlockPos q = route.get(j + 1);
             if (q.getY() != p0.getY() || (q.getX() != p0.getX() && q.getZ() != p0.getZ())) break;
             j++;
@@ -303,6 +370,58 @@ public class WorksGoal extends Goal {
         }
         if (walk(dest)) { ri = j + 1; walking = null; }
         return ri >= route.size();
+    }
+
+    /** [econ32c] A walk set going, with the cage in it where the town has one. */
+    private void setRoute(ServerLevel level, List<BlockPos> r) {
+        rides.clear();
+        rideAsks = 0;
+        stairs = r;
+        route = r;
+        ri = 0;
+        if (a instanceof VillageFolkEntity f && f.ownerId() != null) {
+            List<BlockPos> s = com.jrpetty.mcassistant.entity.MineLift.shorten(level, f.ownerId(), r, rides);
+            if (s != null) route = s;
+        }
+    }
+
+    /** [econ32c] At a stop: the cage asked for, waited for, ridden. True when the walk is over (never: the stop it rides to is next). */
+    private boolean ride() {
+        int[] r = rides.get(ri);
+        java.util.UUID id = a.getUUID();
+        long now = a.level().getGameTime();
+        switch (com.jrpetty.mcassistant.entity.MineLift.state(id)) {
+            case NONE -> {
+                if (++rideAsks > 3 || !(a instanceof VillageFolkEntity f)
+                        || !com.jrpetty.mcassistant.entity.MineLift.ask(a, f.ownerId(), r[0], r[1])) { toStairs(r); return false; }
+                rideAsked = now;
+                a.getNavigation().stop();
+            }
+            case WAITING -> {
+                if (now - rideAsked > LIFT_WAIT) {                // the cage busy: the stair
+                    com.jrpetty.mcassistant.entity.MineLift.cancel(id);
+                    LIFT_GAVE_UP++;
+                    toStairs(r);
+                } else a.getNavigation().stop();
+            }
+            case RIDING -> { }
+            case ARRIVED -> {
+                com.jrpetty.mcassistant.entity.MineLift.done(id);
+                RIDES++;
+                ri++;
+                walking = null;
+                stuck = 0;
+                return ri >= route.size();
+            }
+        }
+        return false;
+    }
+
+    private void toStairs(int[] r) {
+        route = stairs;
+        ri = Math.min(r[2], route.size());
+        rides.clear();
+        walking = null;
     }
 
     private boolean at(BlockPos p) {
@@ -437,10 +556,9 @@ public class WorksGoal extends Goal {
         // turns, and the miner was put there.)
         double far = a.distanceToSqr(Vec3.atBottomCenterOf(stand));
         if ((far > 256 || far > 12 && !straight(stand)) && a.level() instanceof ServerLevel sl0) {
-            route = MineWorks.route(sl0, a, t);
-            route = new ArrayList<>(route);
-            route.add(stand);
-            ri = 0;
+            List<BlockPos> back = new ArrayList<>(MineWorks.route(sl0, a, t));
+            back.add(stand);
+            setRoute(sl0, back);                                // [econ32c]
             walking = null;
             vein.clear();
             resumeAt = ci;
@@ -740,6 +858,7 @@ public class WorksGoal extends Goal {
         StringBuilder sb = new StringBuilder("Shifts: " + SHIFTS + ", " + (SHIFT_BLOCKS / SHIFTS) + " blocks and " + (SHIFT_TICKS_ALL / SHIFTS / 1200)
             + " minutes a shift; ended:");
         for (int i = 0; i < Math.min(5, e.size()); i++) sb.append(i == 0 ? " " : ", ").append(e.get(i).getKey()).append(" ").append(e.get(i).getValue());
+        sb.append(". ").append(timeLine());                      // [econ32c]
         return sb.toString();
     }
     private static final java.util.concurrent.ConcurrentLinkedDeque<String> HOPS = new java.util.concurrent.ConcurrentLinkedDeque<>();
@@ -762,7 +881,19 @@ public class WorksGoal extends Goal {
         while (HOPS.size() > 60) HOPS.pollFirst();
     }
 
+    /** [econ32c] The time of the town's shifts in the works: at the face, walking to it, in the cage (and waiting for it), climbing out. */
+    public static volatile long T_FACE, T_WALK, T_CAGE, T_OUT;
+    public static volatile int RIDES, LIFT_GAVE_UP;
+
+    public static String timeLine() {
+        long all = Math.max(1, T_FACE + T_WALK + T_CAGE + T_OUT);
+        return "Time in the works: at the face " + (100 * T_FACE / all) + "%, walking " + (100 * T_WALK / all) + "%, in the cage "
+            + (100 * T_CAGE / all) + "%, on the way out " + (100 * T_OUT / all) + "% (" + RIDES + " rides, " + LIFT_GAVE_UP + " took the stair, "
+            + BREATHERS + " breathers at a landing)";
+    }
+
     public static void resetCountsForTests() {
+        T_FACE = 0; T_WALK = 0; T_CAGE = 0; T_OUT = 0; RIDES = 0; LIFT_GAVE_UP = 0; BREATHERS = 0;
         SHIFTS = 0;
         SHIFT_BLOCKS = 0;
         SHIFT_TICKS_ALL = 0;

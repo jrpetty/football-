@@ -69,4 +69,38 @@ public final class AgeSites {
         if (found) MISSES.remove(k);
         else if (passedOver) MISSES.merge(k, 1, Integer::sum);
     }
+
+    // ------------------------------------------------------------------ [econ32c] the age's building's ground kept
+
+    private static final String SITE = "age.site.";
+
+    /**
+     * The ground an age's building was set out on, kept with the town (a restart forgot the sites of the buildings going
+     * up, and a Diamond Age town's chapel, 523 blocks of it laid, was begun again on another lot, and again after the next).
+     */
+    static void keep(UUID village, String project, Villages.Site site) {
+        if (!ASKED.contains(project) || project.equals("house")) return;
+        com.jrpetty.mcassistant.village.Ledger.note(village, SITE + project, site.anchor().getX() + "," + site.anchor().getY() + "," + site.anchor().getZ()
+            + "," + site.facing().get3DDataValue() + "," + site.radius());
+    }
+
+    /** The ground kept for this building, or null. */
+    @javax.annotation.Nullable
+    static Villages.Site kept(UUID village, String project) {
+        if (!ASKED.contains(project)) return null;
+        String raw = com.jrpetty.mcassistant.village.Ledger.note(village, SITE + project);
+        if (raw == null || raw.isEmpty()) return null;
+        try {
+            String[] p = raw.split(",");
+            return new Villages.Site(new net.minecraft.core.BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2])),
+                net.minecraft.core.Direction.from3DDataValue(Integer.parseInt(p[3])), Integer.parseInt(p[4]));
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** Built, or its ground given up: the note let go. */
+    static void forget(UUID village, String project) {
+        com.jrpetty.mcassistant.village.Ledger.forget(village, SITE + project);
+    }
 }
