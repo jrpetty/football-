@@ -1586,9 +1586,10 @@ public final class MineWorks {
         if (!level.hasChunk(site.getX() >> 4, site.getZ() >> 4)) return null;
         // [econ32d] The pithead's floor, not the top of the headframe over it (MineRoof.floor): the heightmap's top over the
         // shaft was the headframe's beams, and the miners' plot, and the miners, stood up there.
+        BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, site);
         Works w = works(level, village);
-        if (w != null && w.top != Integer.MAX_VALUE && Math.abs(w.sx - site.getX()) <= 1 && Math.abs(w.sz - site.getZ()) <= 1) return MineRoof.floor(level, w);
-        return level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, site);
+        if (w != null && w.head && top.getY() >= w.top + 2 && Math.abs(w.sx - site.getX()) <= 1 && Math.abs(w.sz - site.getZ()) <= 1) return MineRoof.floor(level, w);
+        return top;
     }
 
     /** The station's turn for a miner of the works: to the pithead, then down for a shift. Whether it did anything. */
