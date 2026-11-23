@@ -285,6 +285,22 @@ public final class Enterprise {
     /** A firm's shelf: so many of a ware at the most, whatever the want. */
     static final int MOST_ON_SHELF = 12;
 
+    /** [biz30d] A cheap ware's shelf holds up to so many coins' worth of its makings, and never more than this many. */
+    static final double SHELF_COINS = 30.0;
+    static final int MOST_ON_SHELF_CHEAP = 32;
+
+    /**
+     * [biz30d] The most a firm keeps of a ware: twelve, or for a cheap one (a loaf) thirty coins' worth of its makings, to
+     * thirty-two. A bakery with the town's call for forty loaves a day kept twelve: sold out by mid-morning, its baker at the
+     * town's tables or its works till its shelf was short again, and the town's folk ate raw potatoes meanwhile.
+     */
+    static int shelfMost(ServerLevel level, UUID village, String key) {
+        ItemStack one = Stockroom.sampleOf(key);
+        double each = one.isEmpty() ? 0 : CostBook.atMarket(level, village, one);
+        if (each <= 0.01) return MOST_ON_SHELF;
+        return (int) Math.max(MOST_ON_SHELF, Math.min(MOST_ON_SHELF_CHEAP, Math.floor(SHELF_COINS / each)));
+    }
+
     /**
      * What a firm's shelf should hold of each of its wares, set each morning: three days of the week's want of it (what sold
      * at every counter and every firm, what was asked for and not there, refused as too dear, and the households' shopping
@@ -300,7 +316,7 @@ public final class Enterprise {
             int[] w = Stockroom.week7(level, village, key);
             double want = w[0] + w[1] + refused7(village, key) + lists.getOrDefault(key, 0) + firmsSold7(level, village, key);
             if (want <= 0) continue;
-            int n = (int) Math.min(MOST_ON_SHELF, Math.ceil(want * 3 / 7.0) + 1);
+            int n = (int) Math.min(shelfMost(level, village, key), Math.ceil(want * 3 / 7.0) + 1);
             tg.putInt(key, n);
             any = true;
         }
