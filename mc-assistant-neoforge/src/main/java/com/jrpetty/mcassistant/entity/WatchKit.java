@@ -523,7 +523,9 @@ public final class WatchKit {
                 // [econ32] Not while the age asks for diamonds: a local run's Diamond Age town mined its seven of the eleven the
                 // age asked, and the watch's kit took ten in a day (a sword and a chestplate), back down to two.
                 if (DeepPicks.wanted(level, v.id())) return ItemStack.EMPTY;
-                if (Crafts.stock(level, v, s -> s.is(Items.DIAMOND)) < k.takes + DIAMONDS_KEPT) return ItemStack.EMPTY;
+                // [econ32d] Past the diamonds the town keeps for its age and the next (AgeOres): the watch's diamond kit took
+                // five the morning the Diamond Age's eight were in, and the age was four short again.
+                if (Crafts.stock(level, v, s -> s.is(Items.DIAMOND)) < k.takes + Math.max(DIAMONDS_KEPT, AgeOres.diamondsKept(v.id()))) return ItemStack.EMPTY;
                 if (k == Kind.SWORD && !stick(level, v)) return ItemStack.EMPTY;
                 if (!Crafts.take(level, v, s -> s.is(Items.DIAMOND), k.takes)) return ItemStack.EMPTY;
                 ItemStack piece = Craftsmanship.finish(level, new ItemStack(it), hand(skill, it), f.displayNameCap());
