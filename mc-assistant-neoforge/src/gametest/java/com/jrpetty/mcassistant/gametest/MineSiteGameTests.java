@@ -603,7 +603,9 @@ public class MineSiteGameTests {
         }
         VillageFolkEntity m = miners.get(0);
         BlockPos at = m.workZone().center();
-        boolean run = TownDigs.mayRunFrom(m, at), cut = TownDigs.mayCut(m, GatherGoal.Kind.STONE, at.below(2));
+        // [econ32d] (Under a plot at a works' pithead floor, the stone is the works' to cut, by its levels: MineWorks.keepsOff.)
+        boolean run = TownDigs.mayRunFrom(m, at), cut = TownDigs.mayCut(m, GatherGoal.Kind.STONE, at.below(2))
+            || com.jrpetty.mcassistant.entity.MineWorks.keepsOff(level, at.below(2));
         boolean kept = !m.seekTheSeamForTests() || m.workZone().center().equals(at);
         Kit.log("[VT] ms08 grown to reach " + Villages.townReach(v) + ": the mine at " + site + ", " + handed + " faces handed out (" + inPlan
             + " inside the plan); may run " + run + ", may cut " + cut + ", kept on its face " + kept);

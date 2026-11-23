@@ -401,6 +401,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // Lost underground with no way up it can walk (a mine run cut short, a fall into a cave): sent up
         // the nearest stairs, or to cut its own (MineStairs).
         if (tickCount % 100 == 71 && level() instanceof net.minecraft.server.level.ServerLevel below) MineStairs.lookForAWayUp(this, below);
+        if (tickCount % 20 == 7 && level() instanceof net.minecraft.server.level.ServerLevel roof) MineRoof.check(this, roof);   // [econ32d] off the headframe
         if (tickCount % 20 == 17) Footholds.passBy(this);      // [mines] its own steps and pillars taken down as it passes
         Park.tick(this);                                       // sat on a park bench, or on its way round the park
         Seats.tick(this);                                      // [townlife] sat down on its break or at a gathering (Seats)
@@ -4414,7 +4415,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 && !TownMine.onALead(village, zone.center(), worksLevel.getDayTime() / 24000L)) {
             BlockPos site = TownMine.siteOf(village);
             BlockPos head = site == null ? null : MineWorks.pithead(worksLevel, village, site);
-            if (head != null && (Math.abs(zone.center().getX() - head.getX()) > 1 || Math.abs(zone.center().getZ() - head.getZ()) > 1)) {
+            if (head != null && (Math.abs(zone.center().getX() - head.getX()) > 1 || Math.abs(zone.center().getZ() - head.getZ()) > 1
+                    || Math.abs(zone.center().getY() - head.getY()) > 2)) {   // [econ32d] a plot on the headframe's top brought down to the pithead's floor
                 assignPlot(WorkZone.around(head, radiusFor(StationTask.MINE), zone.depth()), patchNameFor(StationTask.MINE));
                 setAutonomous(true);
                 brain("to the pithead of the town's mine: the works");
