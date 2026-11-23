@@ -38,15 +38,17 @@ public final class PaFind {
     private static BlockPos column(ServerLevel level, PlayerAssistantEntity a, GatherGoal.Kind kind, int x, int z) {
         if (!level.hasChunk(x >> 4, z >> 4)) return null;
         int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+        BlockPos lowest = null;                                           // [pa33d] the lowest of a run (a trunk's foot, not its crown)
         for (int y = top; y >= top - 12 && y > level.getMinBuildHeight(); y--) {
+            if (lowest != null && !kind.matches(level.getBlockState(new BlockPos(x, y, z)))) return lowest;
             BlockPos p = new BlockPos(x, y, z);
             var st = level.getBlockState(p);
             if (y > a.getBlockY() + 3) continue;                          // [pa33c-2b] the top of a cliff it can't climb: lower down the face
             if (!kind.matches(st) || PaSafety.offLimits(a, p) || a.isUnreachable(p)) continue;
             if (a.sparesBuilds() && (st.is(net.minecraft.world.level.block.Blocks.COBBLESTONE) || kind == GatherGoal.Kind.LOGS && !tree(level, p) || a.partOfBuild(p))) continue;
-            return p;
+            lowest = p;
         }
-        return null;
+        return lowest;
     }
 
     /** A log with a crown of leaves over it: a tree, not a beam in somebody's house. */

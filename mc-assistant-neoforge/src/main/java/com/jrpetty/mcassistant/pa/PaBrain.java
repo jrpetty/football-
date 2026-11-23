@@ -293,12 +293,30 @@ public final class PaBrain {
         cur.retools++;
         rearm(a, cur);
         cur.centre = found;
-        cur.jobs.add(0, Job.goTo(found.getX() + " " + found.getY() + " " + found.getZ()));
+        BlockPos stand = beside(a, found);                                 // [pa33d] beside it, not inside the trunk
+        cur.jobs.add(0, Job.goTo(stand.getX() + " " + stand.getY() + " " + stand.getZ()));
         a.plan.steps.add(0, cur);
         int far = (int) Math.sqrt(a.blockPosition().distSqr(found));
         PaTalk.reply(a, "There's none right here, but I can see " + kind.label + " about " + far + " blocks "
             + PaOrders.bearing(a.position(), Vec3.atCenterOf(found)) + ". Heading there.");
         return true;
+    }
+
+    /** [pa33d] Somewhere to stand beside a block (the side nearest it): open, with ground under it. */
+    static BlockPos beside(PlayerAssistantEntity a, BlockPos b) {
+        BlockPos best = b;
+        double bd = Double.MAX_VALUE;
+        for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            for (int dy = 0; dy >= -3; dy--) {
+                BlockPos q = b.relative(dir).above(dy);
+                if (!a.level().getBlockState(q).getCollisionShape(a.level(), q).isEmpty()) break;
+                if (a.level().getBlockState(q.below()).getCollisionShape(a.level(), q.below()).isEmpty()) continue;
+                double d = q.distSqr(a.blockPosition());
+                if (d < bd) { bd = d; best = q.immutable(); }
+                break;
+            }
+        }
+        return best;
     }
 
     /** Ready a step to run again, planning only what is still missing and keeping the progress counted so far. */
@@ -348,7 +366,11 @@ public final class PaBrain {
             line = "Fighting a " + a.getTarget().getName().getString().toLowerCase();
         } else if (a.plan.paused) {
             icon = "paused";
-            line = "Paused (" + a.plan.total() + " waiting)";
+            PaChallenge.Game game = a.getOwnerId() == null ? null : PaChallenge.GAMES.get(a.getOwnerId());
+            line = a.isSleeping() ? "Asleep" : a.sleepWanted ? "Off to bed"
+                : game != null ? (game.kind.equals("race") ? "Racing you" : game.kind.equals("mine") ? "Mining contest: " + game.mineScore + " to your " + game.ownerScore
+                    : "Shooting contest: " + game.mineScore + " to your " + game.ownerScore)
+                : "Paused (" + a.plan.total() + " waiting)";   // [pa33d]
         } else if (cur != null) {
             icon = cur.kind.toLowerCase();
             String tally = cur.tally(a);

@@ -588,14 +588,23 @@ public final class PaOrders {
                 if (k == GatherGoal.Kind.OBSIDIAN && !hasDiamondPick(a)) return "Obsidian needs a diamond pickaxe, and I haven't one.";
                 int amount = n > 0 ? n : 16;
                 // [pa33c-2b] "chop that" at a tree you point at or pinged: it walks there and fells that one
-                if (i.place() == PaIntent.Place.LOOKED && look.block() != null && k == GatherGoal.Kind.LOGS && kindAt(a, look.block()) == k) {
+                BlockPos lookedLog = look.block() == null ? null : treeLog(a, look.block());   // [pa33d] the leaves mean their tree
+                if (i.place() == PaIntent.Place.LOOKED && lookedLog != null && k == GatherGoal.Kind.LOGS) {
                     int logs = 0;
-                    BlockPos b = look.block();
+                    BlockPos b = lookedLog;
                     while (logs < 32 && a.level().getBlockState(b.below()).is(net.minecraft.tags.BlockTags.LOGS)) b = b.below();
                     for (BlockPos c = b; logs < 32 && a.level().getBlockState(c).is(net.minecraft.tags.BlockTags.LOGS); c = c.above()) logs++;
                     amount = n > 0 ? n : Math.max(3, logs);
                     PaPlan.Step s = step("chop that tree", Kind.GATHER, eta(k, amount) + 10);
-                    s.jobs.add(Job.goTo(b.getX() + " " + b.getY() + " " + b.getZ()));
+                    BlockPos stand = b;                                         // beside the trunk, not in it
+                    double sd = Double.MAX_VALUE;
+                    for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                        BlockPos q = b.relative(dir);
+                        if (!a.level().getBlockState(q).getCollisionShape(a.level(), q).isEmpty()) continue;
+                        double d = q.distSqr(a.blockPosition());
+                        if (d < sd) { sd = d; stand = q; }
+                    }
+                    s.jobs.add(Job.goTo(stand.getX() + " " + stand.getY() + " " + stand.getZ()));
                     s.jobs.add(Job.gather(k, amount));
                     s.count = what;
                     s.target = amount;
@@ -1238,6 +1247,21 @@ public final class PaOrders {
             case BUILD -> 180;
             default -> 30;
         };
+    }
+
+    /** The log a look at a tree means: the block itself, or (looking at its leaves) the nearest log below them. */
+    @Nullable
+    static BlockPos treeLog(AssistantEntity a, BlockPos b) {
+        if (a.level().getBlockState(b).is(net.minecraft.tags.BlockTags.LOGS)) return b;
+        if (!a.level().getBlockState(b).is(net.minecraft.tags.BlockTags.LEAVES)) return null;
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (BlockPos q : BlockPos.betweenClosed(b.offset(-3, -5, -3), b.offset(3, 1, 3))) {
+            if (!a.level().getBlockState(q).is(net.minecraft.tags.BlockTags.LOGS)) continue;
+            double d = q.distSqr(b);
+            if (d < bd) { bd = d; best = q.immutable(); }
+        }
+        return best;
     }
 
     @Nullable
