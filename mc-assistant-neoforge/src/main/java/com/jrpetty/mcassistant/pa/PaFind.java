@@ -43,7 +43,7 @@ public final class PaFind {
             var st = level.getBlockState(p);
             if (y > a.getBlockY() + 3) continue;                          // [pa33c-2b] the top of a cliff it can't climb: lower down the face
             if (!kind.matches(st) || PaSafety.offLimits(a, p) || a.isUnreachable(p)) continue;
-            if (a.sparesBuilds() && (st.is(net.minecraft.world.level.block.Blocks.COBBLESTONE) || kind == GatherGoal.Kind.LOGS && !tree(level, p))) continue;
+            if (a.sparesBuilds() && (st.is(net.minecraft.world.level.block.Blocks.COBBLESTONE) || kind == GatherGoal.Kind.LOGS && !tree(level, p) || a.partOfBuild(p))) continue;
             return p;
         }
         return null;

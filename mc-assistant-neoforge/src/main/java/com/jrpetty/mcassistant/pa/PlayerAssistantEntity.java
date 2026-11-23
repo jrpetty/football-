@@ -215,6 +215,23 @@ public class PlayerAssistantEntity extends AssistantEntity {
             || target instanceof net.minecraft.world.entity.TamableAnimal t && t.isTame());
     }
 
+    /** [pa33c-2b] A build: planks, glass, a door, stairs, slabs, bricks, a bed, a chest or a table within two blocks (a stone hill has none). */
+    @Override
+    public boolean partOfBuild(BlockPos pos) {
+        for (BlockPos q : BlockPos.betweenClosed(pos.offset(-2, -2, -2), pos.offset(2, 2, 2))) {
+            net.minecraft.world.level.block.state.BlockState st = level().getBlockState(q);
+            if (st.isAir()) continue;
+            net.minecraft.world.level.block.Block b = st.getBlock();
+            if (st.is(net.minecraft.tags.BlockTags.PLANKS) || st.is(net.minecraft.tags.BlockTags.DOORS) || st.is(net.minecraft.tags.BlockTags.STAIRS)
+                || st.is(net.minecraft.tags.BlockTags.SLABS) || st.is(net.minecraft.tags.BlockTags.STONE_BRICKS) || st.is(net.minecraft.tags.BlockTags.BEDS)
+                || b instanceof net.minecraft.world.level.block.TransparentBlock || b instanceof net.minecraft.world.level.block.IronBarsBlock
+                || b instanceof net.minecraft.world.level.block.ChestBlock || b instanceof net.minecraft.world.level.block.CraftingTableBlock
+                || b instanceof net.minecraft.world.level.block.AbstractFurnaceBlock || st.is(net.minecraft.world.level.block.Blocks.SMOOTH_STONE)
+                || st.is(net.minecraft.world.level.block.Blocks.BRICKS)) return true;
+        }
+        return false;
+    }
+
     /** Its player's "Break near your builds" setting, off by default: then it fells trees, not house beams. */
     @Override
     public boolean sparesBuilds() {

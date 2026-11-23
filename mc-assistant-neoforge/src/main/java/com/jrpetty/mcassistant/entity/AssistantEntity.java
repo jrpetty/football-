@@ -4664,6 +4664,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [pa33] Does it leave builds alone when it gathers (only trees for logs, never laid cobblestone)? */
     public boolean sparesBuilds() { return false; }
 
+    /** [pa33c-2b] Is this block part of somebody's build (made things about it)? Only asked when it spares builds. */
+    public boolean partOfBuild(BlockPos pos) { return false; }
+
     /** Does this one talk to the player at all? An assistant does — it is
      *  yours, and its needs are your business. Village Folk do not, ever:
      *  they are a settlement getting on with its own life in the background,

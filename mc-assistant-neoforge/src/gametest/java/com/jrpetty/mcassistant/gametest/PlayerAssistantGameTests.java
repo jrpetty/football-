@@ -1481,4 +1481,34 @@ public class PlayerAssistantGameTests {
         if (key != null) t.putInt(key, v);
         PaServer.act(p, "packop", t);
     }
+
+    /** pai44: gestures with its words: a hello waves, an owned bad joke shrugs, a tagged line plays its own; each wears off;
+     *  quiet, none. [pa33c-2b] */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pai44_gestures")
+    public static void pai44_gestures(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_129_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        helper.runAfterDelay(5, () -> {
+            com.jrpetty.mcassistant.pa.PaTalk.reply(a, "Hello again.");
+            int wave = com.jrpetty.mcassistant.entity.FolkAction.Act.WAVE.ordinal();
+            helper.assertTrue((a.animValue() & 0xFF) == wave, "a hello waves: " + (a.animValue() & 0xFF));
+            String bad = null;
+            for (String l : com.jrpetty.mcassistant.pa.PaLines.get("comeback.joke")) if (com.jrpetty.mcassistant.pa.PaLines.bad(l) && !l.contains("{")) { bad = l; break; }
+            helper.assertTrue(bad != null, "an owned bad joke to tell");
+            int turn = a.animValue() >> 8;
+            com.jrpetty.mcassistant.pa.PaTalk.reply(a, bad);
+            helper.assertTrue((a.animValue() & 0xFF) == com.jrpetty.mcassistant.entity.FolkAction.Act.SHRUG.ordinal() && (a.animValue() >> 8) != turn, "a bad joke shrugs");
+            helper.runAfterDelay(80, () -> {
+                helper.assertTrue((a.animValue() & 0xFF) == 0, "it wears off: " + (a.animValue() & 0xFF));
+                a.setMute(2);
+                com.jrpetty.mcassistant.pa.PaTalk.reply(a, "Hello again.");
+                helper.assertTrue((a.animValue() & 0xFF) == 0, "quiet: no flourish");
+                a.setMute(0);
+                Kit.log("pai44 gestures: wave, shrug, wore off, none when quiet");
+                helper.succeed();
+            });
+        });
+    }
 }
