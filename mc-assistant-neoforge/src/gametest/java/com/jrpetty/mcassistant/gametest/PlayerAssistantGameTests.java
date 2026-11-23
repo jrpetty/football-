@@ -156,7 +156,7 @@ public class PlayerAssistantGameTests {
         helper.assertTrue(a.ownerName().equals(p.getGameProfile().getName()), "shows its owner's name");
         helper.assertTrue(a.distanceTo(p) < 6, "beside its player");
         helper.assertTrue(!(((Object) a) instanceof VillageFolkEntity) && a.getType() == McAssistantMod.PLAYER_ASSISTANT.get(), "its own entity type");
-        helper.assertTrue(allWords(a).contains("I'm"), "it introduced itself: " + allWords(a));
+        helper.assertTrue(allWords(a).contains(a.displayNameCap()), "it introduced itself by name: " + allWords(a));   // [pa33b] the intro lines vary
         PaServer.act(p, "summon", new CompoundTag());
         helper.assertTrue(PaData.of(p.getUUID()).size() == 1, "the button again calls it; it makes no second one");
         helper.succeed();
