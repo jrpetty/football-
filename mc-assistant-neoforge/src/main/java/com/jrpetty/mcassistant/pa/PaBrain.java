@@ -511,7 +511,7 @@ public final class PaBrain {
         PaData.Rec r = a.rec();
         if (r != null && r.chatty <= 0) return;
         if (a.tickCount - a.mind.lastSaid < 200) return;
-        PaTalk.reply(a, PaPhrases.line("autohelp", a.personality(), a.getRandom()::nextInt, "what", what),
+        PaTalk.reply(a, PaPhrases.line(key.equals("fight") ? "threat" : "autohelp", a.personality(), a.getRandom()::nextInt, "what", what),
             List.of(new Choice("Thanks", "thanks"), new Choice("Don't do that", "#veto " + key)));
     }
 }

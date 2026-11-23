@@ -158,6 +158,11 @@ public final class PaPhrases {
             new String[]{"I'll {what}, since nothing else is going on.", "Spotted something useful: I'll {what}."},
             new String[]{"Bored, so I'll {what}.", "Nothing to do, so I'll {what}."},
             new String[]{"I'll {what} while it's quiet.", "While I wait, I'll {what}."});
+        // a monster near its player: it steps in (with a veto, like any help it gives unasked)
+        put("threat",
+            new String[]{"Look out! I'll {what}.", "I've got this one: I'll {what}!"},
+            new String[]{"Company. I'll {what}.", "Oh good, a fight. I'll {what}."},
+            new String[]{"Stay back, I'll {what}.", "I'll {what}. Keep behind me."});
         put("not_owner",
             new String[]{"Sorry, I only take orders from {owner}!"},
             new String[]{"Nice try. I work for {owner}."},

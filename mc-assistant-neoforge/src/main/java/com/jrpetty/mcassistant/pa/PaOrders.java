@@ -138,7 +138,10 @@ public final class PaOrders {
 
     private static boolean confirmable(PaPlan.Step s) {
         try {
-            return Kind.valueOf(s.kind).confirmable() || (Kind.valueOf(s.kind) == Kind.GATHER && s.target >= 64);
+            Kind k = Kind.valueOf(s.kind);
+            // long or far-reaching jobs ask first; a minute's dig at the vein you point at just starts
+            boolean big = k == Kind.BUILD || k == Kind.CLEAR_AREA || k == Kind.TRADE_BUY || k == Kind.TRADE_SELL || s.eta >= 150;
+            return (k.confirmable() && big) || (k == Kind.GATHER && s.target >= 64);
         } catch (Exception e) {
             return false;
         }
