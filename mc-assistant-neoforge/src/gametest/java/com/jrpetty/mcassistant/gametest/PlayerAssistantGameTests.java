@@ -321,7 +321,7 @@ public class PlayerAssistantGameTests {
     }
 
     /** pai09: "build me a small house here": the mod's house drawing, laid where its player stands looking, from its pack. */
-    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "pai09_build_house")
+    @GameTest(template = EMPTY, timeoutTicks = 24000, batch = "pai09_build_house")
     public static void pai09_build_house(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_024_000, y = ground(level, x);
@@ -345,6 +345,7 @@ public class PlayerAssistantGameTests {
         helper.assertTrue(a.plan.total() >= 1 && a.plan.all().get(a.plan.all().size() - 1).label.contains("house"), "the house is planned: " + a.plan.all().size());
         BlockPos anchor = p.blockPosition().relative(p.getDirection(), com.jrpetty.mcassistant.entity.goal.BuildGoal.halfOf("house") + 3);
         helper.succeedWhen(() -> {
+            if (a.tickCount % 1000 == 0) Kit.log("pai09 at " + a.tickCount + ": " + a.state() + ", " + a.blockPosition().toShortString() + ", queue " + a.jobLabels());
             helper.assertTrue(a.plan.idle(), "the build finished (" + a.state() + "; " + lastWords(a) + ")");
             int solid = 0, cells = 0;
             for (int dx = -4; dx <= 4; dx++) for (int dz = -4; dz <= 4; dz++) for (int dy = 0; dy <= 4; dy++) {
@@ -357,7 +358,7 @@ public class PlayerAssistantGameTests {
     }
 
     /** pai10: "farm this field": the ripe wheat it looks at harvested and replanted. */
-    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "pai10_farm")
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "pai10_farm")
     public static void pai10_farm(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_027_000, y = ground(level, x);

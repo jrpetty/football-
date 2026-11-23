@@ -130,6 +130,17 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     protected boolean plainNameTag() { return true; }
 
+    /** It works at a player's pace, not a town hand's day-long one: a good third quicker at everything. */
+    public static final int PLAYER_PACE = 40;
+
+    @Override
+    protected int skillWorkPercent() { return PLAYER_PACE; }
+
+    @Override
+    protected void skillPaceParts(java.util.List<PacePart> parts) {
+        addPacePart(parts, "a player's pace", PLAYER_PACE);
+    }
+
     @Override
     protected boolean speaksInChat() { return false; }
 

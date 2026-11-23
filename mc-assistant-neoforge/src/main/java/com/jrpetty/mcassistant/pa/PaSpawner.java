@@ -28,6 +28,8 @@ public final class PaSpawner {
         PaData.Rec r = PaData.first(p.getUUID());
         if (r == null) {
             PlayerAssistantEntity a = PaLife.create(p, pos.above(), "spawner");
+            PaData.Rec made = PaData.first(p.getUUID());
+            if (made != null) bind(p, made, pos);
             if (a != null) a.setHome(pos);
             return;
         }
