@@ -339,6 +339,7 @@ public final class PaPingClient {
         if (eh != null) {
             Entity e = eh.getEntity();
             PaPings.Target t = e instanceof PlayerAssistantEntity ? PaPings.Target.ASSISTANT : e instanceof Player ? PaPings.Target.PLAYER
+                : e instanceof net.minecraft.world.entity.npc.AbstractVillager ? PaPings.Target.VILLAGER
                 : e instanceof Enemy ? PaPings.Target.MOB : e instanceof Animal ? PaPings.Target.ANIMAL : PaPings.Target.MOB;
             return new Aim(t, e.blockPosition(), e.getId(), e.position().add(0, e.getBbHeight() / 2, 0), e.getName().getString());
         }
@@ -372,6 +373,7 @@ public final class PaPingClient {
         String path = BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath();
         if (path.endsWith("_ore") || path.equals("ancient_debris")) return PaPings.Target.ORE;
         if (s.getBlock() instanceof net.minecraft.world.level.block.BedBlock) return PaPings.Target.BED;
+        if (s.getBlock() instanceof net.minecraft.world.level.block.EnchantingTableBlock) return PaPings.Target.TABLE;   // [pa33d]
         if (s.getBlock() instanceof net.minecraft.world.level.block.AbstractFurnaceBlock) return PaPings.Target.FURNACE;
         if (s.getBlock() instanceof net.minecraft.world.level.block.ChestBlock || s.getBlock() instanceof net.minecraft.world.level.block.BarrelBlock)
             return PaPings.Target.CHEST;

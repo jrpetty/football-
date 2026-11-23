@@ -40,6 +40,11 @@ public final class PaBrain {
         /** [pa33d] Told to go to bed (till morning); when it last talked in its sleep; was its player asleep. */
         public boolean bedtime, ownerWasAsleep;
         public int sleepTalkAt;
+        /** [pa33d] Moves: the shield up (till when), the clutch's water (and when), the last pearl and how stuck it is. */
+        public boolean blocking;
+        public int blockUntil, clutchTick, pearlAt = -100000, pearlStuck;
+        public double pearlDist;
+        @Nullable public BlockPos clutchAt;
         int ownerHurtTick = -100000, meHurtTick = -100000, lastTip, lastAuto, stuckFor, sortedAt = -100000;
         int lastDiamonds = -1, threatTick = -100000;
         @Nullable Vec3 lastPos;
@@ -119,6 +124,8 @@ public final class PaBrain {
         if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
         if (t % 20 == 5) sleptIn(a);                              // [pa33c-2b] the bed it sleeps in is its spawn
         if (t % 10 == 3) PaSleep.tick(a);                         // [pa33d] bedtime
+        PaMoves.tick(a);                                          // [pa33d] shield, clutch, sprint, pearl by level
+        if (t % 2 == 0) PaChallenge.tick(a);                      // [pa33d] a race, a mining minute, a shooting match
         if (t % 10 == 0) boat(a);                                 // [pa33b] along with its player on the water
         if (t % 40 == 0) {
             safety(a);

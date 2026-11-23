@@ -134,4 +134,12 @@ public final class PaEvents {
             }
         }
     }
+
+    /** [pa33d] A player's arrow on a target block: a point in a shooting contest with its assistant. */
+    @SubscribeEvent
+    public static void onImpact(net.neoforged.neoforge.event.entity.ProjectileImpactEvent e) {
+        if (e.getProjectile().level().isClientSide || !(e.getProjectile().getOwner() instanceof ServerPlayer p)) return;
+        if (e.getRayTraceResult() instanceof net.minecraft.world.phys.BlockHitResult bh
+            && e.getProjectile().level().getBlockState(bh.getBlockPos()).is(net.minecraft.world.level.block.Blocks.TARGET)) PaChallenge.ownerHit(p, bh.getBlockPos());
+    }
 }

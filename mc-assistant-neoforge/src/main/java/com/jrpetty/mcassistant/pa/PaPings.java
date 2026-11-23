@@ -15,7 +15,7 @@ public final class PaPings {
     private PaPings() {}
 
     /** What a ping lands on. */
-    public enum Target { GROUND, TREE, ORE, STONE, MOB, ANIMAL, CHEST, CROP, BED, FURNACE, PLAYER, ASSISTANT, WATER, LAVA, AREA }
+    public enum Target { GROUND, TREE, ORE, STONE, MOB, ANIMAL, CHEST, CROP, BED, FURNACE, PLAYER, ASSISTANT, WATER, LAVA, AREA, VILLAGER, TABLE }
 
     /** The kind of thing an option is, for its colour and shape (colour-blind safe: each has its own shape too). */
     public enum Sort {
@@ -54,6 +54,7 @@ public final class PaPings {
                 o.add(new Option("farmhere", "Make a field here", Sort.BUILD, "build a farm there"));
                 o.add(new Option("light", "Light it up", Sort.GATHER, "light up the area"));
                 o.add(new Option("down", "Dig down here", Sort.GATHER, "go there, then dig down"));
+                o.add(new Option("trick", "Trick shot at it", Sort.ATTACK, "shoot that spot"));      // [pa33d]
                 o.add(new Option("area", "Mark an area", Sort.BUILD, ""));
             }
             case TREE -> {
@@ -76,6 +77,7 @@ public final class PaPings {
             case ANIMAL -> {
                 o.add(new Option("hunt", "Hunt it", Sort.ATTACK, "attack that"));
                 o.add(new Option("breed", "Breed them", Sort.GATHER, "breed them"));
+                o.add(new Option("tame", "Tame it for me", Sort.GATHER, "tame that"));               // [pa33d]
                 o.add(new Option("leave", "Leave it alone", Sort.LOOK, ""));
             }
             case CHEST -> {
@@ -104,6 +106,14 @@ public final class PaPings {
             case LAVA -> {
                 o.add(new Option("danger", "Danger here", Sort.DANGER, ""));
                 o.add(new Option("bridge", "Bridge over", Sort.BUILD, "build a bridge"));
+            }
+            case VILLAGER -> {                                                                         // [pa33d]
+                o.add(new Option("trade", "Trade with them", Sort.GATHER, "trade with that villager"));
+                o.add(new Option("hi", "Say hi", Sort.LOOK, ""));
+            }
+            case TABLE -> {
+                o.add(new Option("enchant", "Enchant my gear here", Sort.BUILD, "enchant your gear"));
+                o.add(new Option("go", "Go there", Sort.MOVE, "go there"));
             }
             case AREA -> {
                 o.add(new Option("clear", "Clear this area", Sort.GATHER, "clear this area"));

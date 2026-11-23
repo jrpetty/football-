@@ -373,7 +373,7 @@ class PaPersonaTest {
         for (String s : allLines()) {
             String f = PaPersona.fill(s, Map.ofEntries(Map.entry("owner", "Alex"), Map.entry("name", "Pip"), Map.entry("did", "Built a small house"),
                 Map.entry("what", "I'm out of coal."), Map.entry("item", "iron"), Map.entry("thing", "wheat"), Map.entry("player", "Sam"),
-                Map.entry("x", "1"), Map.entry("y", "64"), Map.entry("z", "2"), Map.entry("dist", "12"), Map.entry("dir", "north"), Map.entry("job", "chop that tree"), Map.entry("level", "4"), Map.entry("skill", "blocking with a shield")));
+                Map.entry("x", "1"), Map.entry("y", "64"), Map.entry("z", "2"), Map.entry("dist", "12"), Map.entry("dir", "north"), Map.entry("job", "chop that tree"), Map.entry("level", "4"), Map.entry("skill", "blocking with a shield"), Map.entry("need", "6"), Map.entry("score", "5 to 3")));
             assertFalse(f.contains("{") || f.contains("}"), "a blank left in: " + f);
         }
         assertNotNull(PaLines.get("say.ok"));

@@ -103,6 +103,12 @@ public class PaTaskGoal extends Goal {
             case PLACE -> place();
             case FIELD -> field();
             case BUY, SELL -> trade();
+            case TAME -> tame();                                 // [pa33d]
+            case VTRADE -> villagerTrade();
+            case EQUIP -> { PaPack.equipBest(a); finish("Kitted out.", false); }
+            case MAP -> map();
+            case PILLAR -> pillar();
+            case SHOOT -> shoot();
         }
     }
 
@@ -177,6 +183,13 @@ public class PaTaskGoal extends Goal {
         if (st.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)) {
             Direction face = Direction.getNearest(a.getX() - spot.getX(), 0, a.getZ() - spot.getZ());
             if (face.getAxis().isHorizontal()) st = st.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, face);
+        }
+        // [pa33d] a lever or a button stands on the floor it's put on; a door is two blocks high
+        if (st.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE))
+            st = st.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE, net.minecraft.world.level.block.state.properties.AttachFace.FLOOR);
+        if (bi.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
+            if (!a.level().getBlockState(spot.above()).canBeReplaced()) { finish("There's no room for a door there.", true); return; }
+            a.level().setBlock(spot.above(), st.setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 3);
         }
         a.level().setBlock(spot, st, 3);
         a.getInventoryItems().get(slot).shrink(1);
@@ -459,5 +472,219 @@ public class PaTaskGoal extends Goal {
     private static int countIn(String said) {
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)").matcher(said);
         return m.find() ? Integer.parseInt(m.group(1)) : 1;
+    }
+
+    // ------------------------------------------------------------------ [pa33d] taming an animal for its player
+
+    private net.minecraft.world.entity.Entity aimed;
+
+    private static Item tameFood(net.minecraft.world.entity.Entity e) {
+        if (e instanceof net.minecraft.world.entity.animal.Wolf) return Items.BONE;
+        if (e instanceof net.minecraft.world.entity.animal.Cat || e instanceof net.minecraft.world.entity.animal.Ocelot) return Items.COD;
+        if (e instanceof net.minecraft.world.entity.animal.Parrot) return Items.WHEAT_SEEDS;
+        return Items.AIR;
+    }
+
+    private void tame() {
+        if (t.stage == 0) {
+            net.minecraft.world.entity.Entity e = t.amount >= 0 ? a.level().getEntity(t.amount) : null;
+            if (!(e instanceof net.minecraft.world.entity.TamableAnimal ta) || ta.isTame()) {
+                BlockPos at = t.pos != null ? t.pos : a.blockPosition();
+                e = null;
+                double bd = 12 * 12;
+                for (net.minecraft.world.entity.TamableAnimal c : a.level().getEntitiesOfClass(net.minecraft.world.entity.TamableAnimal.class, new net.minecraft.world.phys.AABB(at).inflate(12))) {
+                    if (c.isTame() || tameFood(c) == Items.AIR) continue;
+                    String word = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(c.getType()).getPath();
+                    if (!t.item.equals("any") && !word.equals(t.item)) continue;
+                    double d = c.distanceToSqr(at.getX(), at.getY(), at.getZ());
+                    if (d < bd) { bd = d; e = c; }
+                }
+            }
+            if (e == null) {
+                boolean horse = a.level().getEntitiesOfClass(net.minecraft.world.entity.animal.horse.AbstractHorse.class, a.getBoundingBox().inflate(12), h -> !h.isTamed()).size() > 0;
+                finish(horse && (t.item.equals("horse") || t.item.equals("any")) ? "A horse is tamed by riding it till it settles. That's one for you, not me." : "I can't see an animal to tame there (a wolf, a cat or a parrot).", true);
+                return;
+            }
+            aimed = e;
+            t.stage = 1;
+        }
+        if (!(aimed instanceof net.minecraft.world.entity.TamableAnimal ta) || !aimed.isAlive()) { finish("It got away.", true); return; }
+        if (ta.isTame()) { finish("Tamed. It's yours now.", false); return; }
+        Item food = tameFood(ta);
+        Item use = food == Items.COD && a.countMatching(st -> st.is(Items.COD)) == 0 ? Items.SALMON : food;
+        if (a.countMatching(st -> st.is(use)) == 0) { finish("I've run out of " + (food == Items.BONE ? "bones" : food == Items.COD ? "raw fish" : "seeds") + ". It isn't tame yet.", true); return; }
+        BlockPos at = aimed.blockPosition();
+        if (!reach(at, 2.5)) { if (gaveUpWalking()) finish("I couldn't get close enough to it.", true); return; }
+        if (cool > 0) return;
+        cool = 20;
+        a.removeMatching(st -> st.is(use), 1);
+        a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        if (a.getRandom().nextInt(3) == 0 && a.getOwnerPlayer() instanceof net.minecraft.world.entity.player.Player owner) {
+            ta.tame(owner);                                            // its player's pet, not its own
+            ta.setOrderedToSit(false);
+            a.level().broadcastEntityEvent(ta, (byte) 7);              // hearts
+            a.earn("tame");
+            finish("Tamed. It's yours now.", false);
+        } else {
+            a.level().broadcastEntityEvent(ta, (byte) 6);              // smoke: not yet
+        }
+    }
+
+    // ------------------------------------------------------------------ [pa33d] trading with a villager (its player's emeralds)
+
+    private void villagerTrade() {
+        String[] bs = t.item.split(":", 2);
+        boolean sell = bs[0].equals("sell");
+        String word = bs.length > 1 ? bs[1] : "anything";
+        if (t.stage == 0) {
+            net.minecraft.world.entity.npc.Villager best = null;
+            BlockPos at = t.pos != null ? t.pos : a.blockPosition();
+            double bd = 10 * 10;
+            for (net.minecraft.world.entity.npc.Villager v : a.level().getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class, new net.minecraft.world.phys.AABB(at).inflate(10))) {
+                if (v.isBaby() || v.isSleeping()) continue;
+                double d = v.distanceToSqr(at.getX(), at.getY(), at.getZ());
+                if (d < bd) { bd = d; best = v; }
+            }
+            if (best == null) { finish("I can't see a villager there to trade with.", true); return; }
+            aimed = best;
+            t.stage = 1;
+        }
+        if (!(aimed instanceof net.minecraft.world.entity.npc.Villager v) || !v.isAlive()) { finish("The villager wandered off.", true); return; }
+        if (!reach(v.blockPosition(), 2.5)) { if (gaveUpWalking()) finish("I couldn't get to the villager.", true); return; }
+        Item want = word.equals("anything") ? Items.AIR : itemFor(word);
+        net.minecraft.world.item.trading.MerchantOffer offer = null;
+        for (net.minecraft.world.item.trading.MerchantOffer o : v.getOffers()) {
+            if (o.isOutOfStock()) continue;
+            boolean match = sell ? o.getResult().is(Items.EMERALD) && (want == Items.AIR || o.getCostA().is(want))
+                : !o.getResult().is(Items.EMERALD) && (want == Items.AIR || o.getResult().is(want));
+            if (match) { offer = o; break; }
+        }
+        if (offer == null) { finish("That villager doesn't " + (sell ? "buy " : "sell ") + (want == Items.AIR ? "anything I can do" : word) + ".", true); return; }
+        int deals = 0, spent = 0, got = 0;
+        int wantCount = t.amount > 0 ? t.amount : sell ? 64 : offer.getResult().getCount();
+        while (!offer.isOutOfStock() && deals < 12 && got < wantCount) {
+            ItemStack ca = offer.getCostA(), cb = offer.getCostB();
+            if (a.countMatching(st -> st.is(ca.getItem())) < ca.getCount() || !cb.isEmpty() && a.countMatching(st -> st.is(cb.getItem())) < cb.getCount()) break;
+            a.removeMatching(st -> st.is(ca.getItem()), ca.getCount());
+            if (!cb.isEmpty()) a.removeMatching(st -> st.is(cb.getItem()), cb.getCount());
+            ItemStack res = offer.getResult().copy();
+            ItemStack left = a.insertGiven(res);
+            if (!left.isEmpty()) a.spawnAtLocation(left);
+            v.notifyTrade(offer);
+            deals++;
+            spent += ca.is(Items.EMERALD) ? ca.getCount() : 0;
+            got += sell ? ca.getCount() : res.getCount();
+        }
+        if (deals == 0) {
+            ItemStack ca = offer.getCostA();
+            finish("I haven't enough to trade: it wants " + ca.getCount() + " " + ca.getHoverName().getString().toLowerCase() + ". Give me some and ask again.", true);
+            return;
+        }
+        a.level().playSound(null, v.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
+        a.earn("trade");
+        finish(sell ? "Sold " + got + " " + word + " for " + deals * offer.getResult().getCount() + " emeralds."
+            : "Bought " + got + " " + offer.getResult().getHoverName().getString().toLowerCase() + " for " + spent + " emerald" + (spent == 1 ? "" : "s") + ".", false);
+    }
+
+    // ------------------------------------------------------------------ [pa33d] mapping the area for its player
+
+    private void map() {
+        if (t.stage == 0) {
+            boolean blank = a.countMatching(st -> st.is(Items.MAP)) > 0;
+            boolean makings = a.countMatching(st -> st.is(Items.PAPER)) >= 8 && a.countMatching(st -> st.is(Items.COMPASS)) > 0;
+            if (!blank && !makings) { finish("I need an empty map, or eight paper and a compass, to draw one.", true); return; }
+            BlockPos c = t.pos != null ? t.pos : a.blockPosition();
+            int r = 40;
+            work.add(c.offset(r, 0, r)); work.add(c.offset(r, 0, -r)); work.add(c.offset(-r, 0, -r)); work.add(c.offset(-r, 0, r)); work.add(c);
+            t.stage = 1;
+        }
+        if (idx < work.size()) {
+            BlockPos p = work.get(idx);
+            BlockPos g = a.level().getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p);
+            if (reach(g, 4.0) || gaveUpWalking()) { idx++; walkTicks = 0; t.progress = idx * 100 / (work.size() + 1); }
+            return;
+        }
+        if (a.countMatching(st -> st.is(Items.MAP)) > 0) a.removeMatching(st -> st.is(Items.MAP), 1);
+        else { a.removeMatching(st -> st.is(Items.PAPER), 8); a.removeMatching(st -> st.is(Items.COMPASS), 1); }
+        BlockPos c = t.pos != null ? t.pos : a.blockPosition();
+        ItemStack m = net.minecraft.world.item.MapItem.create(a.level(), c.getX(), c.getZ(), (byte) 1, true, true);
+        if (a.level() instanceof ServerLevel sl) net.minecraft.world.item.MapItem.renderBiomePreviewMap(sl, m);
+        if (a.getOwnerPlayer() instanceof net.minecraft.world.entity.player.Player owner && owner.distanceToSqr(a) < 8 * 8) {
+            if (!owner.getInventory().add(m)) owner.drop(m, false);
+        } else {
+            ItemStack left = a.insertGiven(m);
+            if (!left.isEmpty()) a.spawnAtLocation(left);
+        }
+        a.earn("explore");
+        finish("Mapped the area round here. " + (a.getOwnerPlayer() != null && a.getOwnerPlayer().distanceToSqr(a) < 64 ? "It's in your pack." : "I've got the map for you."), false);
+    }
+
+    // ------------------------------------------------------------------ [pa33d] pillaring up, as a player does
+
+    private static boolean pillarBlock(ItemStack s) {
+        return s.getItem() instanceof BlockItem bi && (s.is(Items.COBBLESTONE) || s.is(Items.DIRT) || s.is(Items.NETHERRACK) || s.is(net.minecraft.tags.ItemTags.PLANKS)
+            || s.is(Items.COBBLED_DEEPSLATE) || s.is(Items.STONE));
+    }
+
+    private int pillarStart;
+
+    private void pillar() {
+        if (t.stage == 0) {
+            if (a.countMatching(PaTaskGoal::pillarBlock) < t.amount) { finish("I need " + t.amount + " blocks to stand on: cobblestone, dirt or planks.", true); return; }
+            pillarStart = a.getBlockY();
+            a.getNavigation().stop();
+            t.stage = 1;
+        }
+        int done = a.getBlockY() - pillarStart;
+        t.progress = done * 100 / Math.max(1, t.amount);
+        if (done >= t.amount) { a.earn("trick"); finish("Up " + t.amount + " blocks. Nice view.", false); return; }
+        if (!a.level().getBlockState(a.blockPosition().above(2)).isAir()) { finish("There's a ceiling in the way.", true); return; }
+        if (a.onGround() && cool == 0 && jumpFrom == null) { jumpFrom = a.blockPosition(); a.jumpFromGround(); return; }
+        if (jumpFrom != null && a.getY() >= jumpFrom.getY() + 1.05) {          // risen clear: the block goes where its feet were
+            if (a.level().getBlockState(jumpFrom).canBeReplaced()) {
+                for (int i = 0; i < a.getInventoryItems().size(); i++) {
+                    ItemStack s = a.getInventoryItems().get(i);
+                    if (!pillarBlock(s)) continue;
+                    a.level().setBlock(jumpFrom, ((BlockItem) s.getItem()).getBlock().defaultBlockState(), 3);
+                    s.shrink(1);
+                    a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                    a.placeSound(jumpFrom);
+                    break;
+                }
+            }
+            jumpFrom = null;
+            cool = 4;
+        } else if (jumpFrom != null && a.onGround() && a.getBlockY() <= jumpFrom.getY() && t.ticks % 20 == 0) {
+            jumpFrom = null;                                                      // came down without rising: again
+        }
+    }
+
+    @javax.annotation.Nullable private BlockPos jumpFrom;
+
+    // ------------------------------------------------------------------ [pa33d] a trick shot at a block (a ping, a target, a bell)
+
+    private void shoot() {
+        if (!a.hasBow() || a.countMatching(st -> st.is(Items.ARROW)) == 0) { finish(PaTalk.line(a, "need_bow"), true); return; }
+        BlockPos at = t.pos;
+        if (at == null) { finish("Point at what to hit.", true); return; }
+        if (!PaShots.canShoot(a, at)) {
+            if (!reach(at, Math.max(6, PaLevels.range(a.veteranLevel()) - 4))) { if (gaveUpWalking()) finish("I can't get a clear shot at it.", true); return; }
+            if (!PaShots.canShoot(a, at)) { finish("I can't get a clear shot at it from anywhere near.", true); return; }
+        }
+        a.getNavigation().stop();
+        a.getLookControl().setLookAt(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
+        if (cool > 0) return;
+        cool = 25;
+        boolean hit = PaShots.shootAt(a, at);
+        t.stage++;
+        int dist = (int) Math.round(Math.sqrt(a.blockPosition().distSqr(at)));
+        if (hit) {
+            a.earn("trick");
+            a.playAnim(dist >= 20 ? "bow" : "cheer");
+            finish(PaTalk.line(a, dist >= 20 ? "trick_long" : "trick_hit", "dist", String.valueOf(dist)), false);
+        } else if (t.stage >= Math.max(1, t.amount)) {
+            a.playAnim("shrug");
+            finish(PaTalk.line(a, "trick_miss", "dist", String.valueOf(dist)), false);
+        }
     }
 }
