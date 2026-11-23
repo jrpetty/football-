@@ -376,7 +376,7 @@ public final class PaOrders {
                 if (found == null) return PaTalk.line(a, "find_none", "what", PaSeek.label(i.item()));
                 double dx = found.getX() + 0.5 - p.getX(), dz = found.getZ() + 0.5 - p.getZ();
                 int dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
-                PaNet.ping(p, found, PaSeek.label(i.item()), "GATHER", "found");
+                PaNet.ping(p, found, PaNet.cap(PaSeek.label(i.item())), "GATHER", "found");
                 return PaTalk.line(a, "find_found", "what", PaSeek.label(i.item()), "dist", com.jrpetty.mcassistant.pa.voice.PaSpeech.words(dist),
                     "dir", com.jrpetty.mcassistant.pa.voice.PaSpeech.bearing(dx, dz));
             }

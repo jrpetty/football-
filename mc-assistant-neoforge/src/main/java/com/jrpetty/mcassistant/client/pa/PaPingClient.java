@@ -345,8 +345,24 @@ public final class PaPingClient {
         if (bh.getType() == HitResult.Type.MISS) return null;
         BlockPos p = bh.getBlockPos();
         BlockState s = mc.level.getBlockState(p);
+        if (s.is(BlockTags.LEAVES)) {                                // the crown: the tree it belongs to (its nearest log)
+            BlockPos log = nearestLog(mc, p);
+            if (log != null) { p = log; s = mc.level.getBlockState(log); }
+        }
         PaPings.Target t = classify(s);
         return new Aim(t, p, -1, bh.getLocation(), label(mc, p, s, t));
+    }
+
+    @Nullable
+    private static BlockPos nearestLog(Minecraft mc, BlockPos leaf) {
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (BlockPos q : BlockPos.betweenClosed(leaf.offset(-3, -4, -3), leaf.offset(3, 1, 3))) {
+            if (!mc.level.getBlockState(q).is(BlockTags.LOGS)) continue;
+            double d = q.distSqr(leaf);
+            if (d < bd) { bd = d; best = q.immutable(); }
+        }
+        return best;
     }
 
     static PaPings.Target classify(BlockState s) {

@@ -699,7 +699,7 @@ public class PaScreen extends Screen {
         }
         // yours
         int py = y + 13 + 54 + 6;
-        UiStyle.heading(g, font, near ? "Your inventory" : "Your inventory  (come within 8 blocks to hand over)", bx, py, Math.max(9 * 18, iw - 84));
+        UiStyle.heading(g, font, "Your inventory", bx, py, 9 * 18);
         py += 13;
         for (int j = 9; j < 36; j++) slot(g, s, new Slot('p', j, null, bx + ((j - 9) % 9) * 18, py + ((j - 9) / 9) * 18), false, "", mx, my);
         for (int j = 0; j < 9; j++) slot(g, s, new Slot('p', j, null, bx + j * 18, py + 58), false, "", mx, my);
@@ -729,9 +729,9 @@ public class PaScreen extends Screen {
         }
         int buttonsEnd = beside ? cyb + b.length * 18 - y : cyb + 36 - y;
         int infoY = y + Math.max(Math.max(leftH, midEnd), buttonsEnd) + 4;
-        g.drawString(font, UiStyle.clip(font, "In its hand: " + s.getString("held") + "   ·   drag between the grids, click to hand over, right-click to keep", iw),
-            x, infoY, faint(), false);
-        return infoY + 12 - y;
+        if (!near) { g.drawString(font, UiStyle.clip(font, "Come within 8 blocks to hand things over (" + dist + " away).", iw), x, infoY, UiStyle.DANGER, false); infoY += 12; }
+        infoY = para(g, "Drag between its pack, its gear and yours; click a thing to hand it over; right-click to keep it.", x, infoY, iw, faint());
+        return infoY - y;
     }
 
     private void packOp(String op, int i, int j, String e, String extra) {
@@ -921,7 +921,7 @@ public class PaScreen extends Screen {
         String acc = PaClientConfig.get(PaClientConfig.ACCENT, "auto");
         com.jrpetty.mcassistant.pa.voice.PaAccent accNow = PaVoice.accent();
         g.drawString(font, "Accent", sx, cy + 3, muted(), false);
-        button(g, UiStyle.clip(font, com.jrpetty.mcassistant.pa.voice.PaAccent.settingLabel(acc, accNow), 90), sx + 60, cy, 96, 13, mx, my, true, false,
+        button(g, com.jrpetty.mcassistant.pa.voice.PaAccent.settingLabel(acc, accNow), sx + 60, cy, Math.max(96, Math.min(200, half - 64)), 13, mx, my, true, false,
             "Which English it listens for and speaks: English (UK), English (US), or Auto (your game's language, then your computer's)",
             () -> { PaClientConfig.set(PaClientConfig.ACCENT, com.jrpetty.mcassistant.pa.voice.PaAccent.next(acc)); PaVoice.speak("Hello, this is my voice."); });
         cy += 15;
@@ -930,7 +930,7 @@ public class PaScreen extends Screen {
         List<com.jrpetty.mcassistant.pa.voice.PaTts.VoiceInfo> cat = PaVoice.tts().catalogue();
         String cur = vkey.isEmpty() ? "Auto: " + PaVoice.tts().voiceInUse(0) : vkey.substring(vkey.indexOf(':') + 1);
         g.drawString(font, "Voice", sx, cy + 3, muted(), false);
-        button(g, UiStyle.clip(font, cur + (voicesOpen ? "  \u25B4" : "  \u25BE"), 90), sx + 60, cy, 96, 13, mx, my, true, false,
+        button(g, cur + (voicesOpen ? "  \u25B4" : "  \u25BE"), sx + 60, cy, Math.max(96, Math.min(200, half - 64)), 13, mx, my, true, false,
             "Choose its voice (the list shows every voice on your computer)", () -> voicesOpen = !voicesOpen);
         cy += 15;
         String sug = PaVoice.suggestFor(Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length), cat);

@@ -71,7 +71,7 @@ public final class PaPingWheel extends Screen {
             int x0 = x - bw[i] / 2, y0 = y - BOX_H / 2;
             g.fill(x0 - 1, y0 - 1, x0 + bw[i] + 1, y0 + BOX_H + 1, lit ? o.sort().colour : RIM);
             g.fill(x0, y0, x0 + bw[i], y0 + BOX_H, lit ? (o.sort().colour & 0x00FFFFFF) | 0xF0000000 : PANEL);
-            PaPingClient.shape(g, o.sort().shape, x0 + 10, y, o.sort().colour);
+            PaPingClient.shape(g, o.sort().shape, x0 + 10, y, lit ? 0xFFFFFFFF : o.sort().colour);
             g.drawString(font, (i + 1) + "  " + o.label(), x0 + 20, y - 4, lit ? 0xFFFFFFFF : INK, false);
         }
         String mid = hovered >= 0 ? options.get(hovered).label() : aim.label();
