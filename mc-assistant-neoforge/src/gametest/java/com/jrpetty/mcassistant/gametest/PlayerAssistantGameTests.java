@@ -872,7 +872,7 @@ public class PlayerAssistantGameTests {
             a.rec().spend = price * 2 + price / 2;                 // room for two lots, not three
             int before = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
             Kit.log("pai31 market stock of cobblestone " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)));
-            say(p, a, "buy 64 cobblestone");
+            say(p, a, "buy 256 cobblestone");                      // four lots asked for; the limit allows two
             int[] phase = {0}, mark = {0, 0, 0};
             helper.succeedWhen(() -> {
                 if (phase[0] == 0) {
