@@ -143,6 +143,11 @@ final class PaTriangle {
     }
 
     /** Arrow keys nudge the dot (once it has been clicked). */
+    /** [pa33c-2b] Keys go back to the panel (a tab or section changed). */
+    void blur() {
+        focused = false;
+    }
+
     boolean key(int key) {
         if (!focused) return false;
         double[] p = PaPersona.toPoint(tri(), ax, ay, bx, by, cx, cy);

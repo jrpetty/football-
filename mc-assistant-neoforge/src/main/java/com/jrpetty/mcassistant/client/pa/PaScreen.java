@@ -858,7 +858,7 @@ public class PaScreen extends Screen {
             if (on) g.fill(x + 2, cy, x + 4, cy + 16, BRAND_LIGHT);
             g.drawString(font, UiStyle.clip(font, SECTIONS[i], sw - 14), x + 8, cy + 4, on ? 0xFFFFFFFF : UiStyle.TEXT, false);
             final int k = i;
-            zone(x + 2, cy, sw - 4, 16, () -> { section = k; scroll = 0; confirmDismiss = false; confirmReset = false; }, SECTION_TIPS[i]);
+            zone(x + 2, cy, sw - 4, 16, () -> { section = k; scroll = 0; confirmDismiss = false; confirmReset = false; triangle.blur(); }, SECTION_TIPS[i]);
             cy += 18;
         }
     }
@@ -882,7 +882,7 @@ public class PaScreen extends Screen {
     private int secPersonality(GuiGraphics g, CompoundTag s, int x, int cy, int half, int mx, int my) {
         // [pa33b] personality: the triangle, its presets, its region and a sample line
         triangle.sync(s.getCompound("set"));
-        int tsize = Math.max(80, Math.min(130, half - font.width("Professional") - 26));
+        int tsize = Math.max(80, Math.min(Math.min(130, h - 128), half - font.width("Professional") - 26));   // [pa33c-2b] the mix line in view on a short panel
         int tb = triangle.draw(g, font, x + 4, cy, tsize, mx, my);
         int px = x + tsize + 14, pyy = cy + 6, pw = font.width("Professional") + 10;
         for (String pr : com.jrpetty.mcassistant.pa.PaPersona.PRESETS) {
@@ -1434,6 +1434,12 @@ public class PaScreen extends Screen {
             if (key != GLFW.GLFW_KEY_ESCAPE) return input.keyPressed(key, scan, mods) || true;
         }
         if (nameBox.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) return nameBox.keyPressed(key, scan, mods) || true;
+        if (tab.equals("settings") && (mods & GLFW.GLFW_MOD_CONTROL) != 0 && (key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_DOWN)) {
+            section = Math.floorMod(section + (key == GLFW.GLFW_KEY_UP ? -1 : 1), SECTIONS.length);   // [pa33c-2b] always, even with the triangle in hand
+            scroll = 0;
+            triangle.blur();
+            return true;
+        }
         if (tab.equals("settings") && section == 0 && triangle.key(key)) return true;
         if (PaClient.PANEL.matches(key, scan) && !input.isFocused()) { onClose(); return true; }
         if (nameBox.isFocused()) return super.keyPressed(key, scan, mods);
@@ -1444,6 +1450,7 @@ public class PaScreen extends Screen {
             int step = key == GLFW.GLFW_KEY_LEFT || (ctrlTab && (mods & GLFW.GLFW_MOD_SHIFT) != 0) ? -1 : 1;
             tab = TABS[Math.floorMod(i + step, TABS.length)];
             scroll = 0;
+            triangle.blur();
             PaClientConfig.set(PaClientConfig.LASTTAB, tab);
             if (tab.equals("talk")) setFocused(input);
             UiStyle.click();
