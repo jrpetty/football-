@@ -2955,6 +2955,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Something eaten: told to whoever keeps the meals (a village folk's Meals). */
     protected void ateFood(ItemStack meal) {}
 
+    /** [pa33c-2b] Does it keep its own hunger bar (the Player AI Assistant: player rules), not this eat-to-heal? */
+    protected boolean ownHunger() { return false; }
+
     /** The eating itself: the sound, the swing, one of the stack gone, the pace it sets. */
     private void eatSlot(int bestSlot, int bestScore) {
         ItemStack meal = inventory.get(bestSlot);
@@ -4660,6 +4663,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** [pa33] Does it leave builds alone when it gathers (only trees for logs, never laid cobblestone)? */
     public boolean sparesBuilds() { return false; }
+
+    /** [pa33c-2b] Is this block part of somebody's build (made things about it)? Only asked when it spares builds. */
+    public boolean partOfBuild(BlockPos pos) { return false; }
 
     /** Does this one talk to the player at all? An assistant does — it is
      *  yours, and its needs are your business. Village Folk do not, ever:
@@ -9908,7 +9914,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Eat to heal (player rules: no free lunch). Slow fallback regen when
         // starving so it's never permanently crippled.
         if (eatCooldown > 0) eatCooldown--;
-        if (isAlive() && getHealth() < getMaxHealth() && tickCount - lastDamageTick > 100) {
+        if (!ownHunger() && isAlive() && getHealth() < getMaxHealth() && tickCount - lastDamageTick > 100) {   // [pa33c-2b] unless it keeps a hunger bar
             if (eatCooldown == 0) {
                 int slot = findFoodSlot();
                 if (slot >= 0) {

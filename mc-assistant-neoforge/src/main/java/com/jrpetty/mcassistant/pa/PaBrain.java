@@ -52,6 +52,7 @@ public final class PaBrain {
         public final PaPersona.Recent recent = new PaPersona.Recent(400);
         /** [pa33b] Its player's last death: where, which world, how, when (game time). */
         @Nullable public BlockPos deathPos;
+        @Nullable public BlockPos danger;                         // [pa33c-2b] a spot its player marked as dangerous
         public String deathDim = "", deathCause = "";
         public long deathAt = -1, prevDeathAt = -1;
         public int deathsRecent, respawnQuipAt, lastJoke = -100000, lastHit = -100000, slowQuipped, jmNext;
@@ -113,6 +114,7 @@ public final class PaBrain {
         }
         if (t % 20 == 0) personalSpace(a);
         if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
+        if (t % 20 == 5) sleptIn(a);                              // [pa33c-2b] the bed it sleeps in is its spawn
         if (t % 10 == 0) boat(a);                                 // [pa33b] along with its player on the water
         if (t % 40 == 0) {
             safety(a);
@@ -478,6 +480,19 @@ public final class PaBrain {
         if (a.plan.idle() && a.tickCount - m.lastSaid > 6000 && a.tickCount - m.lastComment > 6000) PaBanter.quip(a, "quip.idle", 2, null);
     }
 
+    /** [pa33c-2b] Like a player: the last bed it slept in is where it comes back after a fall. */
+    static void sleptIn(PlayerAssistantEntity a) {
+        PaData.Rec r = a.rec();
+        if (r == null || !a.isSleeping()) return;
+        a.getSleepingPos().ifPresent(p -> {
+            BlockPos head = PaOrders.bedHead(a.level(), p);
+            if (head == null || head.equals(r.lastBed)) return;
+            r.lastBed = head;
+            r.lastBedDim = a.level().dimension().location().toString();
+            PaData.touch();
+        });
+    }
+
     /** [pa33b] Joke Machine: a remark on something its player just did (mined, placed, jumped, ate, opened a chest). */
     public static void ownerDid(PlayerAssistantEntity a, String what) {
         if (!PaBanter.jokeMachine(a) || a.tickCount < a.mind.jmNext) return;
@@ -532,7 +547,7 @@ public final class PaBrain {
             PaBanter.after(a, "quip.low_health", null);                  // after the warning, never instead
         }
         // [pa33b] hurt with nothing to eat: it says so and asks, with ways to fix it (it heals by eating, like a player)
-        if (a.getHealth() < a.getMaxHealth() * 0.5F && a.countFood() == 0 && a.getTarget() == null
+        if ((a.getHealth() < a.getMaxHealth() * 0.5F || a.hunger.food() <= 6) && a.countFood() == 0 && a.getTarget() == null   // [pa33c-2b] or starving
                 && a.tickCount - a.mind.askedFoodTick > 1200) {
             a.mind.askedFoodTick = a.tickCount;
             PaTalk.reply(a, PaTalk.line(a, "no_food", "owner", on),

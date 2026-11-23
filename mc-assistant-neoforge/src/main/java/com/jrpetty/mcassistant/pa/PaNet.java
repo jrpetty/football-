@@ -2,6 +2,7 @@ package com.jrpetty.mcassistant.pa;
 
 import com.jrpetty.mcassistant.McAssistantMod;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -65,6 +66,16 @@ public final class PaNet {
         send(p, PaPayload.OPEN, t);
     }
 
+    /** [pa33c-2b] A ping marker for this player (found, saved, shared, or "clear"/"unlast"). Tiny: a spot, a word, a sort. */
+    public static void ping(ServerPlayer p, @Nullable BlockPos at, String label, String sort, String op) {
+        CompoundTag t = new CompoundTag();
+        if (at != null) { t.putInt("x", at.getX()); t.putInt("y", at.getY()); t.putInt("z", at.getZ()); }
+        t.putString("label", label);
+        t.putString("sort", sort);
+        t.putString("op", op);
+        send(p, PaPayload.PING, t);
+    }
+
     /** [pa33b] Someone else's assistant, right-clicked: a little chat box (no orders, no pack, no settings). */
     public static void openStranger(ServerPlayer p, PlayerAssistantEntity a) {
         CompoundTag t = new CompoundTag();
@@ -78,6 +89,14 @@ public final class PaNet {
     /** The panel's state, sent when something changed while it is open (and on open). */
     public static void refresh(ServerPlayer p, @Nullable PlayerAssistantEntity a) {
         send(p, PaPayload.STATE, state(p, a));
+    }
+
+    /** [pa33c-2b] A short note on the panel's foot (not its words): "Come closer to hand things over". */
+    public static void note(ServerPlayer p, String text) {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("note", true);
+        t.putString("text", text);
+        send(p, PaPayload.SAY, t);
     }
 
     /** A line said: to its owner (logged, spoken, with choices when it asks), and as a bubble to everyone in sight. */
@@ -184,6 +203,7 @@ public final class PaNet {
             t.putInt("level", a.veteranLevel());
             t.putInt("xp", a.lifetimeXp());
             t.putInt("food", a.countFood());
+            t.putInt("hunger", a.hunger.food());                  // [pa33c-2b] its hunger bar
             t.putString("mode", a.getMode().name().toLowerCase());
             t.putString("state", a.state() == null ? "" : a.state());
             t.putBoolean("paused", a.plan.paused);
@@ -217,6 +237,13 @@ public final class PaNet {
                 .forEach(e -> pl.add(StringTag.valueOf(e.getValue() + " " + e.getKey())));
             t.put("pack", pl);
             t.putInt("packUsed", (int) a.getInventoryItems().stream().filter(s -> !s.isEmpty()).count());
+            PaPack.state(t, a, r);
+            BlockPos bedAt = r.lastBed != null ? r.lastBed : r.bed;           // [pa33c-2b] Settings, Advanced
+            if (bedAt != null) t.putString("bed", bedAt.getX() + " " + bedAt.getY() + " " + bedAt.getZ());
+            BlockPos home = PaOrders.homeOf(a);
+            if (home != null) t.putString("home", home.getX() + " " + home.getY() + " " + home.getZ());
+            t.putInt("xpNext", AssistantEntity.xpForLevel(a.veteranLevel() + 1));
+            t.putInt("xpHere", AssistantEntity.xpForLevel(a.veteranLevel()));                                   // [pa33c-2b] the Pack tab's slots, gear, open rows, locks
             t.putString("held", a.getMainHandItem().isEmpty() ? "nothing" : a.getMainHandItem().getHoverName().getString());
             t.putString("dim", a.level().dimension().location().getPath());
             t.putInt("dist", (int) Math.sqrt(a.distanceToSqr(p)));

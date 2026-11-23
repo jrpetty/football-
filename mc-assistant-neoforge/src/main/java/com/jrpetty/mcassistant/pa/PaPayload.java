@@ -11,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
  *  to answer from the Guide ({@link #GUIDE}), or "open the panel" ({@link #OPEN}). Each a tag the client reads as is. */
 public record PaPayload(int kind, CompoundTag data) implements CustomPacketPayload {
 
-    public static final int STATE = 0, SAY = 1, GUIDE = 2, OPEN = 3, HUD = 4;
+    public static final int STATE = 0, SAY = 1, GUIDE = 2, OPEN = 3, HUD = 4, PING = 5;   // [pa33c-2b] a ping marker
 
     public static final CustomPacketPayload.Type<PaPayload> TYPE =
         new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "pa"));

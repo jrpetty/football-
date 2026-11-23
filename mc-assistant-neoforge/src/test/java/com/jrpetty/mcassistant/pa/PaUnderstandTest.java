@@ -140,4 +140,17 @@ class PaUnderstandTest {
         assertEquals("125", PaWords.numbers("one hundred and twenty five"));
         assertEquals("32 logs", PaWords.numbers("half a stack logs"));
     }
+
+    /** [pa33c-2b] Its bed: use this one, put one down, where is it; and "go to bed" is still bedtime. */
+    @org.junit.jupiter.api.Test
+    void bedOrders() {
+        String[][] c = {{"use this bed", "BED_USE"}, {"sleep in this bed", "BED_USE"}, {"that's your bed", "BED_USE"}, {"make this your spawn", "BED_USE"},
+            {"set your spawn at this bed", "BED_USE"}, {"place a bed here", "BED_PLACE"}, {"put your bed by mine", "BED_PLACE"}, {"put your bed down", "BED_PLACE"},
+            {"make yourself a bed", "BED_PLACE"}, {"where's your bed", "BED_WHERE"}, {"where is your bed", "BED_WHERE"}, {"where do you sleep", "BED_WHERE"},
+            {"go to bed", "SLEEP"}};
+        for (String[] t : c) {
+            PaUnderstand.Reading r = PaUnderstand.read(t[0], "pip");
+            org.junit.jupiter.api.Assertions.assertTrue(!r.steps().isEmpty() && r.steps().get(0).kind().name().equals(t[1]), t[0] + " -> " + r.brief());
+        }
+    }
 }

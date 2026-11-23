@@ -1,21 +1,21 @@
 # [pa33b] When its player gives it some lip (or a kind word): it answers in kind, never sulks, and still does the job.
 
 == comeback.insult
-Useless. Says the person who walked into a cactus.
+[anim:point] Useless. Says the person who walked into a cactus.
 Rubbish, am I. I'll remember that when you need a bridge.
 Harsh. Fair, but harsh.
-I'd be offended, but I'm too busy being brilliant.
+[anim:bow] I'd be offended, but I'm too busy being brilliant.
 Noted. Filed under "lies".
 I'm not useless. I'm differently useful.
 Bold words from someone with a dirt collection.
-Careful, I know where you keep your diamonds.
+[anim:point] Careful, I know where you keep your diamonds.
 You're lucky I'm the forgiving type.
-Takes one to know one, you muppet.
+[anim:protest] Takes one to know one, you muppet.
 == comeback.insult@gloomy
 I know. I've always known.
 Useless. Yes. Me and the rain both.
 That's fair. Most things are pointless.
-I'd argue, but what's the point.
+[anim:shrug] I'd argue, but what's the point.
 Rubbish. I've been called worse. By myself, mostly.
 Quite right. I'll carry on regardless. It's all I do.
 == comeback.insult@serious

@@ -285,7 +285,28 @@ public final class PaLife {
         r.deadUntil = -1;
         ServerLevel level = owner.serverLevel();
         BlockPos at = owner.blockPosition();
-        if (r.spawner != null) {
+        // [pa33c-2b] its bed first (the last it slept in, then the one it was given), as a player's spawn; then its spawner; then its player
+        boolean bedGone = false, onBed = false;
+        for (int k = 0; k < 2 && !onBed; k++) {
+            BlockPos b = k == 0 ? r.lastBed : r.bed;
+            String bd = k == 0 ? r.lastBedDim : r.bedDim;
+            if (b == null) continue;
+            ResourceLocation dim = ResourceLocation.tryParse(bd);
+            for (ServerLevel l : server.getAllLevels()) {
+                if (dim == null || !l.dimension().location().equals(dim)) continue;
+                net.minecraft.world.level.block.state.BlockState s = l.getBlockState(b);
+                if (l.isLoaded(b) && s.getBlock() instanceof net.minecraft.world.level.block.BedBlock && !s.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) {
+                    level = l;
+                    at = net.minecraft.world.level.block.BedBlock.findStandUpPosition(McAssistantMod.PLAYER_ASSISTANT.get(), l, b,
+                        s.getValue(net.minecraft.world.level.block.BedBlock.FACING), 0.0F).map(BlockPos::containing).orElse(b.above());
+                    onBed = true;
+                } else if (l.isLoaded(b) && !(s.getBlock() instanceof net.minecraft.world.level.block.BedBlock)) {
+                    bedGone = true;                                       // broken: forget it, fall back
+                    if (k == 0) r.lastBed = null; else r.bed = null;
+                }
+            }
+        }
+        if (!onBed && r.spawner != null) {
             ResourceLocation dim = ResourceLocation.tryParse(r.spawnerDim);
             for (ServerLevel l : server.getAllLevels()) {
                 if (dim != null && l.dimension().location().equals(dim) && l.isLoaded(r.spawner)
@@ -299,7 +320,8 @@ public final class PaLife {
         if (a != null) {
             if (r.spawner != null && level.dimension().location().toString().equals(r.spawnerDim)) a.setHome(r.spawner);
             a.setMode(AssistantEntity.Mode.FOLLOW);
-            PaTalk.reply(a, PaTalk.line(a, "respawn", "owner", owner.getGameProfile().getName()));
+            if (bedGone) PaTalk.reply(a, PaTalk.line(a, "bed_gone"));
+            PaTalk.reply(a, PaTalk.line(a, onBed ? "respawn_bed" : "respawn", "owner", owner.getGameProfile().getName()));
         }
         PaData.touch();
         return a;

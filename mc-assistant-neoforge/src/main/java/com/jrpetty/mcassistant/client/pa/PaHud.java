@@ -19,6 +19,40 @@ final class PaHud {
 
     static final int BRAND = 0xFF2BB5A0, BRAND_DARK = 0xE0102A2E, INK = 0xFFF2F7F6, SOFT = 0xFFA9C9C4;
 
+    private static final net.minecraft.resources.ResourceLocation HEART = net.minecraft.resources.ResourceLocation.withDefaultNamespace("hud/heart/full"),
+        HEART_HALF = net.minecraft.resources.ResourceLocation.withDefaultNamespace("hud/heart/half"),
+        HEART_BOX = net.minecraft.resources.ResourceLocation.withDefaultNamespace("hud/heart/container"),
+        FOOD = net.minecraft.resources.ResourceLocation.withDefaultNamespace("hud/food_full"),
+        FOOD_HALF = net.minecraft.resources.ResourceLocation.withDefaultNamespace("hud/food_half"),
+        FOOD_BOX = net.minecraft.resources.ResourceLocation.withDefaultNamespace("hud/food_empty");
+
+    /** [pa33c-2b] Its hearts as a player's, right-aligned to {@code right}: one container per two health. Returns the left edge. */
+    static int hearts(GuiGraphics g, int right, int y, float hp, float max) {
+        int n = Math.max(1, (int) Math.ceil(max / 2.0F)), step = n > 10 ? 6 : 8;
+        int x0 = right - (n - 1) * step - 9;
+        for (int i = 0; i < n; i++) {
+            int x = x0 + i * step;
+            g.blitSprite(HEART_BOX, x, y, 9, 9);
+            float v = hp - i * 2;
+            if (v >= 2) g.blitSprite(HEART, x, y, 9, 9);
+            else if (v >= 1) g.blitSprite(HEART_HALF, x, y, 9, 9);
+        }
+        return x0;
+    }
+
+    /** [pa33c-2b] Its hunger as a player's: ten drumsticks, right-aligned. */
+    static int food(GuiGraphics g, int right, int y, int food) {
+        int x0 = right - 9 * 8 - 9;
+        for (int i = 0; i < 10; i++) {
+            int x = right - 9 - i * 8;                       // fills from the right, as the player's does
+            g.blitSprite(FOOD_BOX, x, y, 9, 9);
+            int v = food - i * 2;
+            if (v >= 2) g.blitSprite(FOOD, x, y, 9, 9);
+            else if (v >= 1) g.blitSprite(FOOD_HALF, x, y, 9, 9);
+        }
+        return x0;
+    }
+
     static void draw(GuiGraphics g, Minecraft mc) {
         Font font = mc.font;
         int w = g.guiWidth(), h = g.guiHeight();
@@ -43,6 +77,10 @@ final class PaHud {
                     g.fill(x, y, x + 2, y + (pct >= 0 ? 17 : 14), dead ? 0xFFC2452F : BRAND);
                     PaIcons.draw(g, f[0], x + 4, y + 2);
                     g.drawString(font, com.jrpetty.mcassistant.client.UiStyle.clip(font, text, 200), x + 17, y + 3, INK, false);
+                    if (a != null && PaClientConfig.get(PaClientConfig.HUD, true)) {          // [pa33c-2b] its hearts and food under the line
+                        int hx = x + 4 + (bw - 8);
+                        hearts(g, hx, y + (pct >= 0 ? 19 : 16), a.getHealth(), a.getMaxHealth());
+                    }
                     if (pct >= 0) {
                         g.fill(x + 17, y + 13, x + bw - 4, y + 15, 0xFF33494C);
                         g.fill(x + 17, y + 13, x + 17 + (bw - 21) * Math.min(100, pct) / 100, y + 15, BRAND);
@@ -85,7 +123,8 @@ final class PaHud {
         // what it said, when it is out of sight
         if (ms < PaClient.subtitleUntil) {
             PlayerAssistantEntity a = PaClient.mine();
-            boolean seen = a != null && a.distanceTo(mc.player) < 14 && mc.player.hasLineOfSight(a);
+            boolean seen = a != null && a.distanceTo(mc.player) < 14 && mc.player.hasLineOfSight(a)
+                && !com.jrpetty.mcassistant.pa.PaClientConfig.get(com.jrpetty.mcassistant.pa.PaClientConfig.SUBTITLES, false);   // [pa33c-2b] subtitles always
             if (!seen) {
                 var lines = font.split(net.minecraft.network.chat.Component.literal(PaClient.subtitle), Math.min(320, w - 40));
                 int n = Math.min(3, lines.size());

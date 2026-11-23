@@ -74,4 +74,22 @@ class PaPhrasesTest {
         }
         System.out.printf("[pa33b] variants: smallest list %d (%s), %d lists, %d lines%n", min, smallest, PaLines.keys().size(), total);
     }
+
+    /** [pa33c-2b] A speech bubble is always wholly on screen; close up it sits beside the head, never cut off at the top. */
+    @org.junit.jupiter.api.Test
+    void bubblesStayOnScreen() {
+        int w = 427, h = 240;                                   // 1280x720 at GUI 3
+        float[][] heads = {{213, 120}, {5, 5}, {420, 2}, {213, -40}, {-30, 300}, {430, 120}, {213, 10}};
+        for (float[] hd : heads) for (double d : new double[]{1.5, 3, 8, 30}) {
+            int[] b = PaLayout.bubble(hd[0], hd[1], 180, 66, d, w, h);
+            org.junit.jupiter.api.Assertions.assertTrue(b[0] >= 4 && b[1] >= 4 && b[0] + b[2] <= w - 4 && b[1] + b[3] <= h - 4,
+                java.util.Arrays.toString(hd) + " at " + d + ": " + java.util.Arrays.toString(b));
+        }
+        int[] near = PaLayout.bubble(213, 30, 180, 66, 2.0, w, h);
+        org.junit.jupiter.api.Assertions.assertTrue(near[0] >= 213 + 18 || near[0] + near[2] <= 213 - 18, "close up: beside the head, not over it");
+        int[] far = PaLayout.bubble(213, 150, 100, 40, 12.0, w, h);
+        org.junit.jupiter.api.Assertions.assertTrue(far[1] + far[3] <= 150 && Math.abs(far[0] + far[2] / 2 - 213) <= 1, "far: centred above the head");
+        int[] wide = PaLayout.bubble(213, 120, 600, 400, 8.0, w, h);
+        org.junit.jupiter.api.Assertions.assertTrue(wide[2] <= w - 8 && wide[3] <= h - 8, "never bigger than the screen");
+    }
 }

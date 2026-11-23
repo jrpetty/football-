@@ -44,8 +44,18 @@ public final class PaOrders {
     }
 
     /** Where the player was looking when they spoke (sent with every order): a block, an entity, or nothing. */
-    public record Look(@Nullable BlockPos block, int entity) {
+    public record Look(@Nullable BlockPos block, int entity, List<BlockPos> more) {
         public static final Look NONE = new Look(null, -1);
+
+        public Look(@Nullable BlockPos block, int entity) {
+            this(block, entity, List.of());
+        }
+
+        /** [pa33c-2b] The k-th place pointed at while it was said ("that, and that": one look each), else this one. */
+        public Look nth(int k) {
+            if (more.isEmpty() || k == 0) return this;
+            return new Look(more.get(Math.min(k, more.size() - 1)), -1, List.of());
+        }
     }
 
     // ------------------------------------------------------------------ hearing
@@ -125,7 +135,9 @@ public final class PaOrders {
             return;
         }
         // [pa33b] the same order again so soon: done again, with a remark
-        boolean twice = text.equalsIgnoreCase(a.mind.lastOrder) && a.tickCount - a.mind.lastOrderAt < 2400 && !reading.steps().isEmpty();
+        // [pa33c-2b] only a job asked for again counts ("stop", "stay", "follow me" twice just do it, with a plain reply)
+        boolean twice = text.equalsIgnoreCase(a.mind.lastOrder) && a.tickCount - a.mind.lastOrderAt < 2400 && !reading.steps().isEmpty()
+            && reading.steps().stream().allMatch(st -> st.kind().queued());
         a.mind.lastOrder = text;
         a.mind.lastOrderAt = a.tickCount;
         a.mind.askedTwice = twice;                       // remarked on after the reply (PaBrain)
@@ -142,6 +154,67 @@ public final class PaOrders {
             return;
         }
         run(p, a, reading.steps(), look, text);
+    }
+
+    /** [pa33c-2b] Where a GOTO goes: the look/ping, where its player fell, its bed, or a named place. */
+    @Nullable
+    static BlockPos placeFor(ServerPlayer p, PlayerAssistantEntity a, PaIntent i, Look look) {
+        PaData.Rec r = a.rec();
+        String it = i.item();
+        if (it.isEmpty()) return look.block() != null ? look.block().above() : null;
+        if (it.equals("death")) return a.mind.deathPos;
+        if (it.equals("bed")) return r == null ? null : r.lastBed != null ? r.lastBed : r.bed;
+        if (it.startsWith("@") && r != null) {
+            String name = it.substring(1);
+            BlockPos b = r.waypoints.get(name);
+            if (b == null) for (var e : r.waypoints.entrySet()) if (e.getKey().contains(name) || name.contains(e.getKey())) b = e.getValue();
+            return b == null ? null : b.above();
+        }
+        return null;
+    }
+
+    /** [pa33c-2b] The head block of the bed at (or beside) this spot, or null. */
+    @Nullable
+    static BlockPos bedHead(net.minecraft.world.level.Level level, @Nullable BlockPos at) {
+        if (at == null) return null;
+        for (BlockPos p : new BlockPos[]{at, at.below(), at.above()}) {
+            net.minecraft.world.level.block.state.BlockState s = level.getBlockState(p);
+            if (!(s.getBlock() instanceof net.minecraft.world.level.block.BedBlock)) continue;
+            if (s.getValue(net.minecraft.world.level.block.BedBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.HEAD) return p.immutable();
+            return p.relative(s.getValue(net.minecraft.world.level.block.BedBlock.FACING)).immutable();
+        }
+        return null;
+    }
+
+    /** [pa33c-2b] Is someone else sleeping in it, or is it a player's own spawn bed near them? It never takes a used bed. */
+    static boolean bedBusy(PlayerAssistantEntity a, BlockPos head) {
+        net.minecraft.world.level.block.state.BlockState s = a.level().getBlockState(head);
+        if (s.getBlock() instanceof net.minecraft.world.level.block.BedBlock && s.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)
+            && !(a.isSleeping() && a.getSleepingPos().map(head::equals).orElse(false))) return true;
+        if (a.level() instanceof net.minecraft.server.level.ServerLevel sl) for (ServerPlayer pl : sl.players()) {
+            if (a.isOwner(pl)) continue;                      // its own player may share theirs
+            BlockPos sp = pl.getRespawnPosition();
+            if (sp != null && pl.getRespawnDimension() == sl.dimension() && (sp.equals(head) || sp.closerThan(head, 1.5))) return true;
+        }
+        return false;
+    }
+
+    /** [pa33c-2b] This bed is its bed, and where it comes back after a fall. */
+    static void setBed(PlayerAssistantEntity a, BlockPos head) {
+        PaData.Rec r = a.rec();
+        if (r != null) {
+            r.bed = head;
+            r.bedDim = a.level().dimension().location().toString();
+            r.lastBed = head;
+            r.lastBedDim = r.bedDim;
+            PaData.touch();
+        }
+        a.useBed(head);
+    }
+
+    static boolean hasBed(PlayerAssistantEntity a) {
+        for (net.minecraft.world.item.ItemStack s : a.getInventoryItems()) if (s.is(net.minecraft.tags.ItemTags.BEDS)) return true;
+        return false;
     }
 
     /** [pa33b] What it was sent for, for "your {thing}": the first order's thing, else "that". */
@@ -165,7 +238,10 @@ public final class PaOrders {
     static void run(ServerPlayer p, PlayerAssistantEntity a, List<PaIntent> steps, Look look, String said) {
         List<PaPlan.Step> work = new ArrayList<>();
         List<String> replies = new ArrayList<>();
+        int pointed = 0;
+        Look whole = look;
         for (PaIntent i : steps) {
+            look = i.place() == PaIntent.Place.LOOKED ? whole.nth(pointed++) : whole;   // [pa33c-2b] each "that" its own look
             if (i.kind().queued()) {
                 List<PaPlan.Step> made = new ArrayList<>();
                 String why = plan(p, a, i, look, made, said);
@@ -277,6 +353,82 @@ public final class PaOrders {
                 a.equipBestWeapon();
                 a.setTarget(target);
                 return "Going after the " + target.getName().getString().toLowerCase() + "!";
+            }
+            case WAYPOINT -> {                                     // [pa33c-2b] "remember this spot as the mine"
+                BlockPos at = look.block() != null ? look.block() : p.blockPosition();
+                PaData.Rec r = a.rec();
+                if (r == null) return null;
+                if (r.waypoints.size() >= 32 && !r.waypoints.containsKey(i.item())) return "I can only remember 32 places. Forget one first.";
+                r.waypoints.put(i.item(), at.immutable());
+                r.waypointDims.put(i.item(), p.level().dimension().location().toString());
+                PaData.touch();
+                PaNet.ping(p, at, i.item(), "MOVE", "waypoint");
+                return PaTalk.line(a, "waypoint_saved", "name", i.item());
+            }
+            case MARK -> {                                         // "ping that": a marker, no order
+                BlockPos at = look.block();
+                if (at == null) return "Look at something and say it again.";
+                PaNet.ping(p, at, "Look here", "LOOK", "mark");
+                return null;
+            }
+            case FIND -> {                                         // "ping the nearest iron", "find me a tree"
+                BlockPos found = PaSeek.nearest(p.serverLevel(), p.blockPosition(), i.item());
+                if (found == null) return PaTalk.line(a, "find_none", "what", PaSeek.label(i.item()));
+                double dx = found.getX() + 0.5 - p.getX(), dz = found.getZ() + 0.5 - p.getZ();
+                int dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
+                PaNet.ping(p, found, PaNet.cap(PaSeek.label(i.item())), "GATHER", "found");
+                return PaTalk.line(a, "find_found", "what", PaSeek.label(i.item()), "dist", com.jrpetty.mcassistant.pa.voice.PaSpeech.words(dist),
+                    "dir", com.jrpetty.mcassistant.pa.voice.PaSpeech.bearing(dx, dz));
+            }
+            case PING_EDIT -> {                                    // cancel, clear, skip, do one first
+                String op = i.item();
+                if (op.equals("clear")) { PaNet.ping(p, null, "", "", "clear"); return PaTalk.line(a, "pings_cleared"); }
+                if (op.equals("cancel")) {                         // the last ping's marker and the job it made, if still waiting
+                    PaNet.ping(p, null, "", "", "unlast");
+                    if (!a.plan.steps.isEmpty()) a.plan.steps.remove(a.plan.steps.size() - 1);
+                    else if (a.plan.current != null && !a.plan.current.auto) { a.plan.current = null; a.clearQueue(); a.task = null; }
+                    return PaTalk.line(a, "ping_cancelled");
+                }
+                if (op.equals("skip")) {                           // the job under way (or the next) is dropped
+                    if (a.plan.current != null && !a.plan.current.auto) { a.plan.current = null; a.clearQueue(); a.task = null; }
+                    else if (!a.plan.steps.isEmpty()) a.plan.steps.remove(0);
+                    else return "There's nothing to skip.";
+                    return PaTalk.line(a, "ping_skipped");
+                }
+                if (op.startsWith("first:")) {                     // that one next; the one under way waits behind it
+                    String w = op.substring(6);
+                    String also = w.matches("trees?|wood|logs?") ? "log" : w.matches("ores?") ? "mine" : w;
+                    for (int k = 0; k < a.plan.steps.size(); k++) {
+                        PaPlan.Step st = a.plan.steps.get(k);
+                        String l = st.label.toLowerCase(java.util.Locale.ROOT);
+                        if (l.contains(w) || l.contains(also) || (also.equals("log") && (l.contains("chop") || l.contains("tree")))) {
+                            if (k == 0 && a.plan.current == null) return PaTalk.line(a, "ping_reordered", "job", st.label);
+                            a.plan.steps.remove(k);
+                            PaPlan.Step cur = a.plan.current;
+                            if (cur != null && !cur.auto) { a.plan.current = null; a.clearQueue(); a.task = null; cur.fed = false; cur.started = -1; a.plan.steps.add(0, cur); }
+                            a.plan.steps.add(0, st);
+                            return PaTalk.line(a, "ping_reordered", "job", st.label);
+                        }
+                    }
+                    return "I haven't got a job like that in my list.";
+                }
+                return null;
+            }
+            case BED_USE -> {                                      // [pa33c-2b] "use this bed": its spawn from now on
+                BlockPos head = bedHead(a.level(), look.block());
+                if (head == null) return PaTalk.line(a, "bed_point");
+                if (bedBusy(a, head)) return PaTalk.line(a, "bed_busy");
+                setBed(a, head);
+                return PaTalk.line(a, "bed_set");
+            }
+            case BED_WHERE -> {
+                PaData.Rec r = a.rec();
+                BlockPos b = r == null ? null : r.lastBed != null ? r.lastBed : r.bed;
+                if (b == null) return PaTalk.line(a, "bed_none");
+                double dx = b.getX() + 0.5 - p.getX(), dz = b.getZ() + 0.5 - p.getZ();
+                int dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
+                return PaTalk.line(a, "bed_where", "x", "" + b.getX(), "y", "" + b.getY(), "z", "" + b.getZ(), "dist", "" + dist,
+                    "dir", com.jrpetty.mcassistant.pa.voice.PaSpeech.bearing(dx, dz));
             }
             case SET_HOME -> {
                 BlockPos at = where(p, a, Kind.SET_HOME == i.kind() ? PaIntent.Place.HERE : i.place(), look);
@@ -435,6 +587,21 @@ public final class PaOrders {
                 if (k.needsProperTool() && !PaItems.hasPickaxe(a)) needPickaxe(a, out);
                 if (k == GatherGoal.Kind.OBSIDIAN && !hasDiamondPick(a)) return "Obsidian needs a diamond pickaxe, and I haven't one.";
                 int amount = n > 0 ? n : 16;
+                // [pa33c-2b] "chop that" at a tree you point at or pinged: it walks there and fells that one
+                if (i.place() == PaIntent.Place.LOOKED && look.block() != null && k == GatherGoal.Kind.LOGS && kindAt(a, look.block()) == k) {
+                    int logs = 0;
+                    BlockPos b = look.block();
+                    while (logs < 32 && a.level().getBlockState(b.below()).is(net.minecraft.tags.BlockTags.LOGS)) b = b.below();
+                    for (BlockPos c = b; logs < 32 && a.level().getBlockState(c).is(net.minecraft.tags.BlockTags.LOGS); c = c.above()) logs++;
+                    amount = n > 0 ? n : Math.max(3, logs);
+                    PaPlan.Step s = step("chop that tree", Kind.GATHER, eta(k, amount) + 10);
+                    s.jobs.add(Job.goTo(b.getX() + " " + b.getY() + " " + b.getZ()));
+                    s.jobs.add(Job.gather(k, amount));
+                    s.count = what;
+                    s.target = amount;
+                    out.add(s);
+                    return null;
+                }
                 PaPlan.Step s = step("gather " + amount + " " + k.label, Kind.GATHER, eta(k, amount));
                 s.jobs.add(Job.gather(k, amount));
                 s.count = what;
@@ -594,6 +761,36 @@ public final class PaOrders {
                 out.add(s);
                 return null;
             }
+            case GOTO -> {                                         // [pa33c-2b] a ping, a waypoint, where it died, its bed
+                BlockPos to = placeFor(p, a, i, look);
+                if (to == null) return i.item().startsWith("@") ? "I don't know a place called \"" + i.item().substring(1) + "\". Say \"remember this spot as "
+                    + i.item().substring(1) + "\" there first." : i.item().equals("death") ? "I don't know where you fell." : i.item().equals("bed") ? PaTalk.line(a, "bed_none")
+                    : "Where? Look at the spot, or ping it, and say it again.";
+                String name = i.item().isEmpty() ? "there" : i.item().equals("death") ? "where you fell" : i.item().equals("bed") ? "my bed" : i.item().substring(1);
+                PaPlan.Step s = step("go to " + name, Kind.GOTO, 30);
+                s.jobs.add(Job.goTo(to.getX() + " " + to.getY() + " " + to.getZ()));
+                out.add(s);
+                return null;
+            }
+            case BRIDGE -> {
+                PaPlan.Step s = step("build a bridge", Kind.BRIDGE, 90);
+                BlockPos at = where(p, a, i.place(), look);
+                if (at != null) s.jobs.add(Job.goTo(at.getX() + " " + at.getY() + " " + at.getZ()));
+                s.jobs.add(Job.bridge());
+                out.add(s);
+                return null;
+            }
+            case BED_PLACE -> {                                    // [pa33c-2b] "place a bed here": one from its pack, or made first
+                BlockPos at = where(p, a, i.place() == PaIntent.Place.NONE ? PaIntent.Place.HERE : i.place(), look);
+                if (!hasBed(a)) {                                   // made from scratch, as "craft a white bed" would be
+                    String why = plan(p, a, new PaIntent(Kind.CRAFT, "white bed", 1, PaIntent.Place.NONE, said), look, out, said);
+                    if (why != null) return "I've no bed and can't make one: " + why;
+                }
+                PaPlan.Step put = step("put my bed down", Kind.BED_PLACE, 20);
+                put.task = new PaTask(PaTask.Kind.PLACE, at, "bed", 1);
+                out.add(put);
+                return null;
+            }
             case GIVE -> {
                 String what = i.item().equals("it") ? lastThing(a, out) : i.item();
                 int amount = n > 0 ? n : (a.countMatching(PaItems.of(what)) > 0 ? Math.min(64, a.countMatching(PaItems.of(what))) : 16);
@@ -686,6 +883,17 @@ public final class PaOrders {
                 return null;
             }
             case CLEAR_AREA -> {
+                if (look.more().size() >= 2) {                     // [pa33c-2b] two corners pinged or looked at ("from here... to here")
+                    BlockPos c1 = look.more().get(0), c2 = look.more().get(look.more().size() - 1);
+                    if (PaSafety.offLimits(a, c1) || PaSafety.offLimits(a, c2)) return "That's someone's ground. I won't clear it without leave.";
+                    int w = Math.max(2, Math.min(32, Math.abs(c1.getX() - c2.getX()) + 1)), d = Math.max(2, Math.min(32, Math.abs(c1.getZ() - c2.getZ()) + 1));
+                    BlockPos mid = new BlockPos((c1.getX() + c2.getX()) / 2, Math.min(c1.getY(), c2.getY()), (c1.getZ() + c2.getZ()) / 2);
+                    PaPlan.Step s = step("clear the " + w + "x" + d + " area", Kind.CLEAR_AREA, 120);
+                    s.jobs.add(Job.goTo(mid.getX() + " " + mid.getY() + " " + mid.getZ()));
+                    s.jobs.add(Job.clear(w + "x" + d));
+                    out.add(s);
+                    return null;
+                }
                 BlockPos at = where(p, a, i.place(), look);
                 if (PaSafety.offLimits(a, at)) return "That's " + PaSafety.whose(a, at) + "'s ground. I won't clear it without leave.";
                 PaPlan.Step s = step("clear a " + i.item() + " area", Kind.CLEAR_AREA, 120);

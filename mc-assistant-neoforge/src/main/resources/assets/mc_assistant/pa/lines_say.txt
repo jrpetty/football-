@@ -903,3 +903,385 @@ Undone, {owner}.
 I've undone that.
 == say.mute_all@gloomy
 Quiet, then. I'll keep my opinions where the rain can't get them.
+
+# [pa33c-2b] its bed: where it comes back after a fall
+== say.bed_set
+That's my bed now. If I fall, I'll wake up here.
+Bed claimed. My spawn point, my rules.
+Lovely. My very own rectangle of sleep. That's where I'll come back.
+This is my bed now. Don't let anyone else drool on it.
+Noted. If anything kills me, I'll be back right here.
+My bed. My spawn. My one luxury.
+== say.bed_set@gloomy
+My bed, then. Where I'll come back after the next disaster.
+Fine. I'll respawn here. It's as good a place as any to start again.
+That's my bed now. I'll be seeing a lot of it, I expect.
+A bed. Somewhere to wake up after it all goes wrong.
+My spawn's here now. Ready for the inevitable.
+Bed set. I'll be back here. Repeatedly, knowing my luck.
+== say.bed_set@serious
+That's my bed now. I'll respawn here.
+Bed set. This is my spawn point.
+Done. If I fall, I'll come back here.
+This bed is mine now. My spawn is here.
+Spawn set to this bed.
+Understood. I'll respawn at this bed.
+== say.bed_busy
+Someone's already using that one. I'm not that rude.
+That bed's taken. I'll find my own, thanks.
+That's somebody's bed. I don't steal beds. Much.
+Occupied. I'm not climbing in with anyone.
+That one's spoken for. Point me at a free one.
+Not that one. It's somebody else's spawn.
+== say.bed_busy@gloomy
+That bed's taken. Of course it is.
+Someone else sleeps there. I'll do without.
+Taken. Even the beds are against me.
+That's somebody's bed. Story of my life.
+Not mine to take. Nothing ever is.
+Occupied. I'll sleep standing up, then.
+== say.bed_busy@serious
+That bed's in use.
+Someone else uses that bed.
+That's another player's bed.
+That one's taken. Point me at a free bed.
+I won't take that bed: it's someone's spawn.
+Occupied. I need a free one.
+== say.bed_point
+Point me at a bed first. Look at it and say it again.
+Which bed? Look at one and tell me again.
+I'll need you to look at the bed you mean.
+Show me the bed: look at it, then say "use this bed".
+I can't see a bed where you're looking.
+No bed there. Look right at one and ask again.
+== say.bed_point@gloomy
+Which bed. Look at one. I'll wait. I'm good at waiting.
+No bed there. Just floor. Like my expectations.
+Look at a bed and say it again. Please.
+I can't see a bed. I can barely see the point.
+There's no bed where you're looking.
+Point me at an actual bed, then.
+== say.bed_point@serious
+Look at a bed and say it again.
+I can't see a bed there.
+Which bed? Look at it first.
+No bed where you're looking.
+Point me at the bed you mean.
+Show me the bed first.
+== say.bed_none
+I haven't got a bed. Say "place a bed here" and I'll sort one out.
+No bed yet. I sleep wherever I fall over. Say "place a bed here".
+I'm bedless. Give me one, or say "place a bed here".
+No bed. Tell me "use this bed" while you look at one.
+I've not got a bed. If I fall, I'll come back by my spawner or you.
+Bed? Never had one. "Place a bed here" would change that.
+== say.bed_none@gloomy
+No bed. I just sort of stand there all night. Say "place a bed here".
+I haven't got a bed. Nobody's ever offered.
+Bedless. Like a sad wandering knight. "Place a bed here" if you like.
+No bed. If I fall I'll turn up near you, I suppose.
+I've no bed. "Use this bed" on one would be nice.
+No bed. I'll manage. I always manage.
+== say.bed_none@serious
+I don't have a bed. Say "place a bed here".
+No bed yet. Look at one and say "use this bed".
+I haven't got a bed. I'll respawn at my spawner or near you.
+No bed. "Place a bed here" sets one up.
+I have no bed at the moment.
+No bed assigned yet.
+== say.bed_where
+My bed's at {x} {y} {z}, about {dist} blocks {dir}. Very comfy. Very square.
+Over there: {x} {y} {z}. About {dist} blocks {dir}. It's the one with my dent in it.
+{x} {y} {z}, roughly {dist} blocks {dir}. Don't sit on it.
+About {dist} blocks {dir}, at {x} {y} {z}. That's where I wake up after you get me killed.
+At {x} {y} {z}. {dist} blocks {dir}, give or take a creeper.
+My bed: {x} {y} {z}, {dist} blocks {dir}. Feel free to tuck me in.
+== say.bed_where@gloomy
+My bed's at {x} {y} {z}, about {dist} blocks {dir}. Where I go to start over.
+{x} {y} {z}. About {dist} blocks {dir}. It's not much, but it's where I come back.
+About {dist} blocks {dir}: {x} {y} {z}. Lumpy, but mine.
+At {x} {y} {z}, {dist} blocks {dir}. I'll be seeing it again soon, I expect.
+My bed is {dist} blocks {dir}, at {x} {y} {z}.
+{x} {y} {z}, {dist} blocks {dir}. My little square of hope.
+== say.bed_where@serious
+My bed is at {x} {y} {z}, about {dist} blocks {dir}.
+At {x} {y} {z}: {dist} blocks {dir}.
+{dist} blocks {dir}, at {x} {y} {z}.
+My bed: {x} {y} {z}, about {dist} blocks {dir}.
+It's at {x} {y} {z}, {dist} blocks {dir} of you.
+{x} {y} {z}, roughly {dist} blocks {dir}.
+== say.bed_gone
+My bed's gone. I'll sleep wherever, I suppose.
+Someone broke my bed. Rude. I'll make do.
+My bed's vanished. I've come back here instead.
+No bed to come back to. Somebody owes me a bed.
+My bed's gone, so I've turned up here. Bedless and brave.
+Bed's broken. Spawned somewhere else. Not thrilled.
+== say.bed_gone@gloomy
+My bed's gone. I'll sleep wherever, I suppose.
+My bed's gone. Of course it is.
+No bed. Someone broke it. Nothing lasts.
+My bed's been taken from me. I'll cope. Barely.
+The bed's gone. I came back here instead. Lovely.
+Bedless again. It was nice while it lasted.
+== say.bed_gone@serious
+My bed's gone, so I came back here.
+My bed was broken. I've respawned elsewhere.
+No bed to return to. Respawned here instead.
+My bed is missing. I'm back here instead.
+The bed's gone; I used my next spawn point.
+Bed broken. Respawned at the fallback.
+== say.respawn_bed
+Morning. Well, not morning. Back from the dead, in my own bed.
+Up again, fresh from my bed. Did I miss anything.
+Back. I woke up in my bed. Like it was all a bad dream.
+Respawned in bed. Best way to come back from a disaster.
+Back in my bed, back on my feet. Where were we.
+Woke up in my bed. Bit embarrassing. Coming.
+== say.respawn_bed@gloomy
+Back. In my bed. Again.
+Woke up in my bed. The nightmare continues.
+Respawned in bed. As if nothing happened. Something did.
+Back at my bed. Let's try not to do that again.
+Up from my bed. Ready to fall over again.
+In my bed again. It's always my bed.
+== say.respawn_bed@serious
+I'm back, at my bed.
+Respawned at my bed.
+Back on my feet at my bed.
+Returned to my bed. Coming to you.
+I've respawned at my bed.
+Back, at my bed. What's next?
+
+# [pa33c-2b] pings and places
+== say.waypoint_saved
+Saved this spot as {name}. I'll remember it. Probably better than you will.
+{name}, noted. Say "go to {name}" and I'll walk you there.
+This is {name} now. I've written it on my brain.
+Got it: {name}. Very official.
+{name}, saved. A place with a name. Fancy.
+Remembered as {name}. Like a pin on a map, but in my head.
+== say.waypoint_saved@gloomy
+{name}. Saved. One more place to come back to.
+This spot is {name} now. I'll remember it. I remember everything.
+{name}, noted. It won't change much.
+Saved as {name}. Places last longer than people.
+Fine. {name}. I'll find it again. Eventually.
+{name}. On the list. It's a long list.
+== say.waypoint_saved@serious
+Saved as {name}.
+This spot is {name} now.
+Got it: {name}.
+{name} saved.
+Waypoint {name} saved.
+I'll remember this as {name}.
+== say.find_found
+Found {what}: {dist} blocks {dir}. Marked it for you.
+{what}, {dist} blocks {dir}. Pinged. Off you go. Or off I go.
+There's {what} {dist} blocks {dir}. Marker's up.
+{what}, about {dist} blocks {dir}. I've stuck a pin in it.
+{dist} blocks {dir}: {what}. Shall I go and get it?
+Got one. {what}, {dist} blocks {dir}. Marked.
+== say.find_found@gloomy
+{what}, {dist} blocks {dir}. Marked. Don't get too excited.
+Found {what}. {dist} blocks {dir}. It'll still be there. Probably.
+{dist} blocks {dir}: {what}. I've marked it, for what it's worth.
+{what}, {dist} blocks {dir}. A long walk, but what isn't.
+There's {what} {dist} blocks {dir}. Pinged.
+{what}. {dist} blocks {dir}. Marked.
+== say.find_found@serious
+{what}: {dist} blocks {dir}. Marked.
+Found {what}, {dist} blocks {dir}.
+{what} is {dist} blocks {dir}. I've pinged it.
+Nearest {what}: {dist} blocks {dir}.
+{dist} blocks {dir}: {what}. Marker placed.
+{what}, {dist} blocks {dir}.
+== say.find_none
+I can't see any {what} round here. I've looked. Thoroughly. Mostly.
+No {what} nearby. It's hiding, or it isn't here.
+Not a scrap of {what} in sight.
+No {what} anywhere near. We'll have to go exploring.
+I looked for {what}. I found ground. Lots of ground.
+None. Not a single {what} close by.
+== say.find_none@gloomy
+No {what} here. Of course there isn't.
+I looked for {what}. Nothing. As expected.
+No {what} nearby. The world's like that.
+Not a trace of {what}. Typical.
+No {what}. We'll have to wander. Wander and suffer.
+Nothing. No {what} in reach.
+== say.find_none@serious
+I can't find any {what} nearby.
+No {what} within reach.
+None found nearby.
+There's no {what} close by.
+I couldn't find {what} here.
+No {what} in the loaded area.
+== say.pings_cleared
+All pings cleared. Clean slate.
+Markers gone. Tidy.
+Cleared the pings. Very minimalist.
+All gone. Like they were never there.
+Pings cleared. Fresh map, fresh start.
+Done. No more markers cluttering the place.
+== say.pings_cleared@gloomy
+Cleared. Nothing left to point at.
+All the pings are gone. Like everything, in the end.
+Markers cleared. The world's emptier now.
+Gone. All of them.
+Cleared. Blank. How fitting.
+Pings cleared. Back to wandering blind.
+== say.pings_cleared@serious
+Pings cleared.
+All markers removed.
+Cleared all pings.
+Markers gone.
+Done. Pings cleared.
+All pings removed.
+== say.ping_cancelled
+Cancelled that one. Never happened.
+That ping's gone. Changed your mind, I see.
+Scrapped the last one.
+Dropped it. I wasn't keen anyway.
+Last ping cancelled.
+Gone. We'll pretend you never pointed.
+== say.ping_cancelled@gloomy
+Cancelled. Another plan abandoned.
+The last one's gone. Like most of my plans.
+Dropped it. It wasn't going to work.
+Cancelled. Probably wise.
+Fine. Last one scrapped.
+Gone. As if it never mattered.
+== say.ping_cancelled@serious
+Last ping cancelled.
+Cancelled that one.
+Removed the last ping.
+That one's cancelled.
+Dropped the last job.
+Cancelled.
+== say.ping_skipped
+Skipped that one. On to the next.
+Fine, skipping. It looked boring anyway.
+Skipped. Next.
+That one's off the list.
+Skipping it. Life's too short.
+Moving on to the next job.
+== say.ping_skipped@gloomy
+Skipped. It'll still be there. Waiting. Judging.
+Skipping it. Another thing left undone.
+Fine. Next one. They never end.
+Skipped. On to the next disappointment.
+That one's gone. More to come.
+Skipped.
+== say.ping_skipped@serious
+Skipped.
+Skipping that one.
+Moving to the next job.
+That job's skipped.
+Next job.
+Skipped it.
+== say.ping_reordered
+{job} first, then. Rearranged.
+Fine, {job} jumps the queue.
+Right, {job} first. The others can wait.
+Moved {job} to the front.
+{job}, now. Priorities.
+Doing {job} first.
+== say.ping_reordered@gloomy
+{job} first. The rest can wait. They always do.
+Fine. {job} first.
+Rearranged. {job} now.
+{job} jumps ahead. Lucky {job}.
+Moved {job} up. Not that it matters.
+{job} first, then.
+== say.ping_reordered@serious
+{job} first.
+Moved {job} to the front.
+Doing {job} next.
+{job} is first now.
+Reordered: {job} first.
+{job} next.
+== say.ping_danger
+Danger at {what}. Noted. I'll steer clear and shout if you go near.
+Right, {what} is dangerous. I'm giving it a wide berth.
+Marked {what} as danger. My caution levels have risen.
+Danger there. I'll keep away and keep you away.
+Noted: {what} is bad news. I'll avoid it.
+{what}, danger. I was already scared of it, now it's official.
+== say.ping_danger@gloomy
+Danger at {what}. Of course there is.
+{what} is dangerous. Most things are.
+Noted. Danger. I'll stay away. Not that it helps.
+Marked as danger. One more thing that wants us dead.
+Danger, {what}. I'll keep clear.
+{what}. Dangerous. I'll avoid it.
+== say.ping_danger@serious
+Danger noted at {what}. I'll avoid it.
+Marked {what} as dangerous.
+Understood: danger at {what}.
+I'll stay clear of {what}.
+Danger marked.
+Noted. Avoiding {what}.
+== say.ping_leave
+Leaving it alone. It can live. For now.
+Fine. Hands off.
+I'll leave it. We're both happier.
+Not touching it. Promise.
+Leaving it be.
+Right, no. It's safe from me.
+== say.ping_leave@gloomy
+Leaving it. Nothing changes.
+Fine. It can carry on, like everything does.
+Left alone. Lucky thing.
+I'll leave it. Easier that way.
+Not touching it.
+Leaving it be.
+== say.ping_leave@serious
+Leaving it alone.
+I won't touch it.
+Understood. Leaving it.
+Hands off.
+I'll leave it.
+Leaving it be.
+== say.ping_hi
+Hello, {player}.
+Hi there, {player}. Lovely to see you.
+Afternoon, {player}.
+Hello, {player}. Don't mind me, I'm with {owner}.
+Hiya, {player}.
+Hello, {player}. Nice day for it.
+== say.ping_hi@gloomy
+Hello, {player}. Still alive, then.
+Hi, {player}. Don't mind me.
+Hello. {player}, isn't it.
+Oh. Hi, {player}.
+Hello, {player}. Grim out, isn't it.
+Hi, {player}.
+== say.ping_hi@serious
+Hello, {player}.
+Hi, {player}.
+Good to see you, {player}.
+Hello there, {player}.
+Hi there, {player}.
+Hello, {player}. I'm {owner}'s assistant.
+== say.not_yours_to_follow
+I only follow you, {owner}. It's a loyalty thing.
+Follow them? I'm yours. Strictly one player per assistant.
+Nice idea, but I follow you and nobody else.
+Sorry, I'm a one-player assistant.
+I'm with you. They'll have to get their own.
+Follow them? I'd get lost. Emotionally.
+== say.not_yours_to_follow@gloomy
+I only follow you. Somebody has to.
+I'm yours. Nobody else would have me anyway.
+No. Just you. That's the deal.
+I follow you. Only you. For better or worse.
+Sorry. You're stuck with me, and I with you.
+Only you, {owner}.
+== say.not_yours_to_follow@serious
+I only follow you, {owner}.
+I can't follow other players.
+I stay with you.
+Sorry, only you.
+I follow my owner only.
+I'll stay with you, {owner}.

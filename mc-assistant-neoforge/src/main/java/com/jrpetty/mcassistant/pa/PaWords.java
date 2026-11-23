@@ -87,7 +87,8 @@ public final class PaWords {
         "doing", "status", "health", "hungry", "need", "needs", "what", "where", "how", "why", "when", "thanks",
         "hello", "goodbye", "bye", "yes", "no", "ok", "night", "dark", "torch", "small", "big", "little", "tiny",
         "quick", "simple", "basic", "nice", "everything", "anything", "something", "auto", "yourself", "own",
-        "market", "shop", "coins", "money"));
+        "market", "shop", "coins", "money",
+        "ping", "pings", "mark", "marker", "bridge", "waypoint", "route", "skip", "closest", "nearest", "died"));   // [pa33c-2b]
 
     /** Plain English the assistant must not "correct" into an order word ("mind" is not "mine", "your" is not "you"). */
     public static final Set<String> COMMON = new java.util.HashSet<>(List.of(("that this those these them they their there then than with have want need some when "
