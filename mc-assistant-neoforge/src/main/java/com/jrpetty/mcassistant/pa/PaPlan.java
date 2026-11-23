@@ -46,6 +46,8 @@ public final class PaPlan {
         public boolean keepBase;
         /** What CraftPlanner makes for this step ("planks", "chest"), so a retry plans only what is still missing. */
         public String make = "";
+        /** A nice-to-have (a house's torch or door): if it can't be done, it says so and the plan carries on. */
+        public boolean optional;
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -61,6 +63,7 @@ public final class PaPlan {
             t.putBoolean("Stop", stopAtTarget);
             t.putString("Said", said);
             t.putString("Mk", make);
+            t.putBoolean("Opt", optional);
             t.putBoolean("Auto", auto);
             return t;
         }
@@ -80,6 +83,7 @@ public final class PaPlan {
             s.stopAtTarget = t.getBoolean("Stop");
             s.said = t.getString("Said");
             s.make = t.getString("Mk");
+            s.optional = t.getBoolean("Opt");
             s.auto = t.getBoolean("Auto");
             return s;
         }

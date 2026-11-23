@@ -122,7 +122,8 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
         pose.pushPose();
         pose.translate(0.0F, a.getBbHeight() + 0.55F, 0.0F);
         pose.mulPose(this.entityRenderDispatcher.cameraOrientation());
-        pose.scale(0.025F, -0.025F, 0.025F);
+        float near = (float) Math.max(0.5, Math.min(1.0, Math.sqrt(d2) / 5.0));   // smaller right up close, never filling the view
+        pose.scale(0.025F * near, -0.025F * near, 0.025F * near);
         Matrix4f mx = pose.last().pose();
         float nw = font.width(name);
         float x = -nw / 2.0F + 6;

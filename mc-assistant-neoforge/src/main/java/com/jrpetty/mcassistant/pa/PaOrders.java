@@ -744,6 +744,7 @@ public final class PaOrders {
             m.count = PaItems.itemKey(key);
             m.target = m.count.isEmpty() ? 0 : want - got;
             m.make = key;
+            m.optional = true;                                                     // the house goes up without it if need be
             out.add(m);
         }
         PaPlan.Step s = step("build a " + (structure.equals("house") ? "small house" : structure), Kind.BUILD, Math.max(60, blocks * 2));

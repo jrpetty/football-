@@ -42,6 +42,7 @@ public final class PaBrain {
         int lastPct = -1, sameFor;
         /** Beats left of climbing out of a hole (PaClimb). */
         public int climbing;
+        int tips;
     }
 
     // ------------------------------------------------------------------ the budget
@@ -88,6 +89,7 @@ public final class PaBrain {
         }
         if (!spare) return;
         if (t % 10 == 0) state(a);
+        if (t % 20 == 0) personalSpace(a);
         if (t % 40 == 0) {
             safety(a);
             companion(a);
@@ -163,6 +165,11 @@ public final class PaBrain {
         }
         PaData.Rec r = a.rec();
         if (!cur.fail.isEmpty() && (retool(a, cur) || unstick(a, cur))) return;
+        if (!cur.fail.isEmpty() && cur.optional && plan.steps.stream().anyMatch(s -> !s.auto)) {
+            // a finishing touch it can't make: it says so plainly and gets on with the rest
+            PaTalk.reply(a, "I couldn't " + cur.label + ": " + lower(trimEnd(shortReason(cur.fail))) + " I'll do without it.");
+            return;
+        }
         if (!cur.fail.isEmpty()) {
             boolean more = plan.steps.stream().anyMatch(s -> !s.auto);
             if (cur.auto) { plan.dropAuto(); return; }
@@ -241,6 +248,18 @@ public final class PaBrain {
         s.fed = false;
         s.started = -1;
         s.keepBase = s.base >= 0;
+    }
+
+    /** The first sentence of the engine's reason ("I can't make torch, I'm missing 1 coal. It's not in..." -> the first part). */
+    static String shortReason(String why) {
+        String w = why.replaceFirst("(?i)^i can'?t make [^,—-]*[,—-]\\s*", "").trim();
+        int dot = w.indexOf(". ");
+        return dot > 0 ? w.substring(0, dot + 1) : w;
+    }
+
+    private static String lower(String s) {
+        if (s.isEmpty() || s.matches("^I[ '’].*") || (s.length() > 1 && Character.isUpperCase(s.charAt(1)))) return s;
+        return Character.toLowerCase(s.charAt(0)) + s.substring(1);
     }
 
     private static String trimEnd(String s) {
@@ -334,6 +353,18 @@ public final class PaBrain {
         }
     }
 
+    /** Idle, it never stands in its player's face: it steps back to a couple of blocks off, as a friend would. */
+    private static void personalSpace(PlayerAssistantEntity a) {
+        if (!(a.getOwnerPlayer() instanceof ServerPlayer owner) || owner.level() != a.level()) return;
+        if (!a.plan.idle() || a.getTarget() != null || a.mind.climbing > 0 || a.isPassenger()) return;
+        double d2 = a.distanceToSqr(owner);
+        if (d2 > 1.8 * 1.8) return;
+        Vec3 away = a.position().subtract(owner.position()).multiply(1, 0, 1);
+        if (away.lengthSqr() < 0.01) away = Vec3.directionFromRotation(0, owner.getYRot()).multiply(1, 0, 1);
+        Vec3 to = owner.position().add(away.normalize().scale(2.8));
+        a.getNavigation().moveTo(to.x, to.y, to.z, 0.8D);
+    }
+
     private static void post(PlayerAssistantEntity a) {
         BlockPos p = a.mind.post;
         if (p == null || a.getTarget() != null || !a.plan.idle()) return;
@@ -374,8 +405,9 @@ public final class PaBrain {
         int dia = PaItems.count(a, "diamond");
         if (a.mind.lastDiamonds >= 0 && dia > a.mind.lastDiamonds) PaTalk.comment(a, 0, PaPhrases.line("diamonds", pers, rnd, "owner", on));
         a.mind.lastDiamonds = dia;
-        if (near && a.plan.idle() && a.tickCount - a.mind.lastTip > 12000 && a.tickCount - a.mind.lastSaid > 2400) {
+        if (near && a.plan.idle() && a.mind.tips < 3 && a.tickCount - a.mind.lastTip > 12000 && a.tickCount - a.mind.lastSaid > 2400) {
             a.mind.lastTip = a.tickCount;
+            a.mind.tips++;                                      // a few tips a session, then it trusts you to know
             PaTalk.comment(a, 2, PaPhrases.line("tip", pers, rnd, "owner", on));
         }
     }
