@@ -1126,6 +1126,7 @@ public final class MineWorks {
         if (t.level >= 0 && t.level < w.oreWeek.length) {                       // [growth24] further levels counted too
             w.oreWeek[t.level] += t.ore;
             w.oreAll[t.level] += t.ore;
+            IronPace.cut(level, w.village, t.level, t.ore);                     // [econ32d] the iron levels' pace, day by day
         }
         List<Lvl> plan = plan(level, w);
         switch (t.kind) {
@@ -1428,6 +1429,7 @@ public final class MineWorks {
         }
         if (w.sunk >= 2) rail(level, v, w);
         MineLift.upkeep(level, w);                           // [econ32c] the cage, once the works are deep enough
+        IronPace.tick(level, w);                             // [econ32d] poor iron levels left for the next, while the age waits on iron
         int want = Math.min(60, w.dug / 96);
         for (int n = 0; w.heap < want && n < 8; n++) {
             if (!heap(level, v, w, w.heap)) { w.heap = want; break; }
@@ -1643,6 +1645,8 @@ public final class MineWorks {
         for (Lvl l : plan) if (w.sunk > l.corner()) open++;
         out.add("The works: the main shaft at " + w.sx + ", " + w.sz + ", sunk " + (w.top - deepest) + " blocks to Y" + deepest + " (" + w.sunk
             + " steps); " + open + " of " + plan.size() + " levels open" + (w.head ? "; the headframe over it" : "") + ".");
+        String pace = level == null ? null : IronPace.report(level, village);                       // [econ32d] why the works moved on
+        if (pace != null) out.add(pace);
         String cage = MineLift.report(village);                                                      // [econ32c]
         if (cage != null) out.add(cage);
         String cache = MineCache.report(village);
@@ -1770,6 +1774,14 @@ public final class MineWorks {
             if (a != null) dressStep(level, w, a, i);
         }
         w.sunk = Math.max(w.sunk, steps);
+        save(w);
+    }
+
+    /** [econ32d] Tests: so much ore taken out of this level, in all. */
+    public static void oreForTests(ServerLevel level, UUID village, int id, int n) {
+        Works w = works(level, village);
+        if (w == null || id < 0 || id >= w.oreAll.length) return;
+        w.oreAll[id] += n;
         save(w);
     }
 

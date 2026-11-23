@@ -1308,8 +1308,11 @@ public final class Villages {
                 // Enough metal to put the watch in armour and a decent tool in
                 // every hand — which is what "the Iron Age" is FOR, rather
                 // than a round number somebody picked.
+                // [econ32d] Sized to a town of AGE_FOLK, as the timber and the stone are: the watch of a town of twenty-four in
+                // armour and the smith's stock (sixty-four bars at most). Sized to the whole town it climbed away from the
+                // miners as the town grew (a Diamond Age town of fifty-five wanted 208, of sixty-two 234).
                 need(wants, level, v, "iron", Task.IRON,
-                    com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk));
+                    com.jrpetty.mcassistant.village.VillageMath.ironWanted(ageFolk));
                 if (built(villageId, "workshop") < 1) wants.add(new Need("a workshop", Task.BUILD, 1));
                 if (built(villageId, "watchtower") < 1) wants.add(new Need("a watchtower", Task.BUILD, 1));
                 if (built(villageId, "market") < 1) wants.add(new Need("a market", Task.BUILD, 1));
@@ -1322,7 +1325,7 @@ public final class Villages {
                 // a head, nine hundred and sixty for a village of forty), which is a wall and
                 // not a goal: the best real-terrain village held nine.
                 need(wants, level, v, "iron", Task.IRON,
-                    2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk));
+                    2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(ageFolk));   // [econ32d] 128 bars at most
                 if (built(villageId, "lighthouse") < 1) wants.add(new Need("a lighthouse", Task.BUILD, 1));
                 if (built(villageId, "chapel") < 1) wants.add(new Need("a chapel", Task.BUILD, 1));
                 need(wants, level, v, "food in the stores", Task.FOOD, foodNow);

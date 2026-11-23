@@ -1438,4 +1438,55 @@ public class SupplyChainGameTests {
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
+
+    // ============================================================ [econ32d] the age's iron
+
+    /**
+     * [econ32d] The age's iron: a Diamond Age town of forty asks twice the Iron Age's iron of a town of twenty-four, not of
+     * forty (128 bars, not 160), however it grows. And its iron level, worked a few days for five ore while the age waits
+     * on iron, is left for the next iron level without waiting to be cut out; the mine's report says why. A rich week does
+     * not move it on.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "sc23_iron_pace")
+    public static void sc23_iron_pace(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6684000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0);
+        Kit.Expect ok = new Kit.Expect();
+        // The target capped.
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        clearStores(level, v);
+        Villages.forgetStock();
+        int cap = 2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(Villages.AGE_FOLK);
+        int iron = 0;
+        for (Villages.Need n : Villages.needs(level, v)) if (n.task() == Villages.Task.IRON) iron = n.amount();
+        Kit.log("[VT] sc23 the Diamond Age asks " + iron + " iron (the cap " + cap + ", a town of " + Villages.headcount(v) + ")");
+        ok.that(iron > 0 && iron <= cap, "the age's iron within the cap: " + iron + " of " + cap);
+        // The iron levels' pace.
+        int y = MineWorks.levelY(level, v, MineWorks.IRON);
+        MineWorksGameTests.tower(r, y - 3);
+        MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - y) / 3) + 1, null);
+        MineWorks.roomForTests(level, v, MineWorks.IRON);
+        MineWorks.oreForTests(level, v, MineWorks.IRON, 60);
+        long today = level.getDayTime() / 24000L;
+        com.jrpetty.mcassistant.entity.IronPace.daysForTests(v, (today - 2) + ":30;" + (today - 1) + ":30");
+        com.jrpetty.mcassistant.entity.IronPace.sinceForTests(v, today - 3);
+        boolean richMoved = com.jrpetty.mcassistant.entity.IronPace.tickForTests(level, v);
+        com.jrpetty.mcassistant.entity.IronPace.daysForTests(v, (today - 2) + ":3;" + (today - 1) + ":2");
+        com.jrpetty.mcassistant.entity.IronPace.sinceForTests(v, today - 3);
+        boolean poorMoved = com.jrpetty.mcassistant.entity.IronPace.tickForTests(level, v);
+        boolean spent = MineLevels.spentForTests(level, v, MineWorks.IRON);
+        List<String> plan = MineWorks.planForTests(level, v);
+        List<String> report = MineWorks.report(level, v);
+        String line = report.stream().filter(x -> x.startsWith("Iron from the iron levels")).findFirst().orElse("-");
+        Kit.log("[VT] sc23 a rich week (60 ore in 3 days): moved on " + richMoved + "; a poor one (5): moved on " + poorMoved + ", the iron level worked out " + spent
+            + "; plan " + plan + "; report: " + line);
+        ok.that(!richMoved, "a rich week stays");
+        ok.that(poorMoved && spent, "a poor week moves on to the next iron level");
+        ok.that(plan.stream().anyMatch(x -> x.contains("second iron")), "the second iron level planned: " + plan);
+        ok.that(line.contains("left for the next iron level"), "the report says why: " + line);
+        helper.assertTrue(ok.clean(), ok.summary());
+        MineWorksGameTests.done(helper);
+    }
 }
