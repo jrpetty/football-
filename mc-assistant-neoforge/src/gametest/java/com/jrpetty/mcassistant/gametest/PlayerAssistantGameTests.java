@@ -909,17 +909,20 @@ public class PlayerAssistantGameTests {
         PlayerAssistantEntity a = assistant(helper, p);
         a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
         a.insertGiven(new ItemStack(Items.BREAD, 4));
-        a.setHealth(8.0F);
+        a.hunger.set(12, 0, 0);                                   // [pa33c-2b] peckish (player rules: a full bar heals without eating)
+        float low = 3.0F;                                         // of its three hearts at level 1
+        a.setHealth(low);
         helper.runAfterDelay(400, () -> {
             int bread = a.countMatching(st -> st.is(Items.BREAD));
-            helper.assertTrue(a.getHealth() > 8.0F && bread < 4, "it ate and healed: hp " + a.getHealth() + ", bread left " + bread);
+            helper.assertTrue(a.getHealth() > low && bread < 4, "it ate and healed: hp " + a.getHealth() + " (from " + low + "), bread left " + bread);
             float healed = a.getHealth();
             a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
-            a.setHealth(6.0F);
+            a.hunger.set(4, 0, 0);                                // hungry too: no healing on its own
+            a.setHealth(Math.max(1.0F, a.getMaxHealth() * 0.4F));
             helper.succeedWhen(() -> {
                 helper.assertTrue(allWords(a).contains("nothing to eat") || allWords(a).contains("out of food") || allWords(a).contains("pantry is empty"),
                     "with no food it asks: " + lastWords(a));
-                Kit.log("pai32 ate (hp 8 -> " + healed + ", bread " + bread + "/4); with none: \"" + lastWords(a) + "\"");
+                Kit.log("pai32 ate (hp " + low + " -> " + healed + ", bread " + bread + "/4); with none: \"" + lastWords(a) + "\"");
             });
         });
     }
@@ -1238,6 +1241,43 @@ public class PlayerAssistantGameTests {
                             helper.succeed();
                         });
                     });
+                });
+            });
+        });
+    }
+
+    /** pai41: hearts and hunger: three hearts at level 1, a hunger bar that work drains, eating the best food for the moment
+     *  (never rotten flesh when there's better, golden apples kept), healing only while fed, kept over a save. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pai41_hunger")
+    public static void pai41_hunger(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_120_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
+        helper.runAfterDelay(25, () -> {
+            helper.assertTrue(Math.abs(a.getMaxHealth() - 6.0F) < 0.01F, "three hearts at level 1: " + a.getMaxHealth());
+            int before = a.hunger.food();
+            for (int i = 0; i < 40; i++) a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            a.hunger.exhaust(30F);                                // a hard stint
+            helper.runAfterDelay(10, () -> {
+                helper.assertTrue(a.hunger.food() < before || a.hunger.saturation() < 5.0F, "work drains it: food " + a.hunger.food() + ", saturation " + a.hunger.saturation());
+                a.hunger.set(10, 0, 0);
+                a.setHealth(3.0F);
+                a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ROTTEN_FLESH, 4));
+                a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 2));
+                a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 1));
+                a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE, 1));
+                helper.runAfterDelay(30, () -> {
+                    int beef = a.countMatching(st -> st.is(net.minecraft.world.item.Items.COOKED_BEEF)),
+                        flesh = a.countMatching(st -> st.is(net.minecraft.world.item.Items.ROTTEN_FLESH)),
+                        apple = a.countMatching(st -> st.is(net.minecraft.world.item.Items.GOLDEN_APPLE));
+                    helper.assertTrue(beef == 0 && flesh == 4 && apple == 1, "hurt and hungry: the steak first, no rotten flesh, the golden apple kept (beef " + beef + ", flesh " + flesh + ", apple " + apple + ")");
+                    helper.assertTrue(a.hunger.food() > 10, "fed: " + a.hunger.food());
+                    CompoundTag t = a.saveWithoutId(new CompoundTag());
+                    helper.assertTrue(t.getInt("PaFood") == a.hunger.food(), "kept over a save: " + t.getInt("PaFood"));
+                    Kit.log("pai41 hunger: max " + a.getMaxHealth() + " HP at level 1; ate the steak (food now " + a.hunger.food() + ", saturation " + a.hunger.saturation() + ")");
+                    helper.succeed();
                 });
             });
         });

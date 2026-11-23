@@ -165,9 +165,13 @@ public class PaScreen extends Screen {
         g.drawString(font, UiStyle.clip(font, sub, w - 150), left + 30, top + 15, 0xFF9FD8CE, false);
         // health
         float hp = a != null ? a.getHealth() : s.getFloat("hp"), max = a != null ? a.getMaxHealth() : Math.max(1, s.getFloat("maxHp"));
-        int bx = left + w - 102;
-        g.drawString(font, (int) Math.ceil(hp) + "/" + (int) max + " ❤", bx, top + 4, 0xFFEFEFEF, false);
-        UiStyle.bar(g, bx, top + 15, 60, 4, hp / max, hp / max > 0.6F ? UiStyle.SUCCESS_FILL : hp / max > 0.3F ? UiStyle.WARNING_FILL : UiStyle.DANGER_FILL);
+        // [pa33c-2b] hearts and hunger as a player's, from its right
+        int food = a != null ? a.food() : s.getInt("hunger");
+        int bx = left + w - 24;
+        PaHud.hearts(g, bx, top + 4, hp, max);
+        PaHud.food(g, bx, top + 15, food);
+        if (in(mx, my, bx - 80, top + 3, 80, 22))
+            g.renderTooltip(font, net.minecraft.network.chat.Component.literal((int) Math.ceil(hp) + " of " + (int) max + " health, food " + food + " of 20"), mx, my);
         button(g, "✕", left + w - 20, top + 6, 14, 14, mx, my, true, false, "Close (Esc)", this::onClose);
         // tabs
         int tx = left + 6;

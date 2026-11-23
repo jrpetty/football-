@@ -36,6 +36,10 @@ public class PlayerAssistantEntity extends AssistantEntity {
     /** What it is doing, for the plate, the HUD and the panel: "icon|line|percent". */
     private static final EntityDataAccessor<String> DATA_STATE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> DATA_PERS = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_FOOD = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);   // [pa33c-2b] its hunger bar, for the HUD
+    /** [pa33c-2b] Its hunger bar (player rules) and where it was a tick ago (for what its walking costs). */
+    public final PaHunger hunger = new PaHunger();
+    @Nullable net.minecraft.world.phys.Vec3 lastPos;
     private static final EntityDataAccessor<Integer> DATA_MUTE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);   // [pa33b] for its nameplate
     private static final EntityDataAccessor<String> DATA_SHOWN = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
 
@@ -61,6 +65,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         builder.define(DATA_STATE, "");
         builder.define(DATA_PERS, 0);
         builder.define(DATA_MUTE, 0);
+        builder.define(DATA_FOOD, 20);
         builder.define(DATA_SHOWN, "");
     }
 
@@ -175,7 +180,9 @@ public class PlayerAssistantEntity extends AssistantEntity {
             return false;
         }
         if (source.getEntity() instanceof ServerPlayer sp && !level().isClientSide) PaBanter.stranger(this, sp, "", true);   // [pa33b] "Steady on."
-        return super.hurt(source, amount);
+        boolean hit = super.hurt(source, amount);
+        if (hit && !level().isClientSide) hunger.exhaust(0.1F);              // [pa33c-2b] a hit taken tires it, as a player
+        return hit;
     }
 
     @Override
@@ -277,7 +284,10 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!level().isClientSide && isAlive()) PaBrain.tick(this);
+        if (!level().isClientSide && isAlive()) {
+            PaVitals.tick(this);                                     // [pa33c-2b] hearts and hunger, as a player's
+            PaBrain.tick(this);
+        }
     }
 
     // ------------------------------------------------------------------ the player's hand on it
@@ -309,9 +319,47 @@ public class PlayerAssistantEntity extends AssistantEntity {
 
     // ------------------------------------------------------------------ falling and coming back
 
-    /** It keeps its pack when it falls: what you gave it is not left on the ground. */
+    /** It keeps its pack when it falls (the server's choice, by default): what you gave it is not left on the ground. */
     @Override
     protected void dropAllDeathLoot(ServerLevel level, DamageSource source) {
+        if (PaConfig.keepPack()) return;
+        for (int i = 0; i < getInventoryItems().size(); i++) {                     // [pa33c-2b] or dropped where it fell, like a player
+            ItemStack s = getInventoryItems().get(i);
+            if (!s.isEmpty()) spawnAtLocation(s.copy());
+            getInventoryItems().set(i, ItemStack.EMPTY);
+        }
+    }
+
+    // ------------------------------------------------------------------ [pa33c-2b] hunger: player rules
+
+    @Override
+    protected boolean ownHunger() { return true; }
+
+    /** Its food level on the client (HUD, panel). */
+    public int food() {
+        return level().isClientSide ? this.entityData.get(DATA_FOOD) : hunger.food();
+    }
+
+    void syncFood() {
+        this.entityData.set(DATA_FOOD, hunger.food());
+    }
+
+    @Override
+    public boolean doHurtTarget(net.minecraft.world.entity.Entity target) {
+        hunger.exhaust(0.1F);
+        return super.doHurtTarget(target);
+    }
+
+    @Override
+    public void jumpFromGround() {
+        super.jumpFromGround();
+        if (!level().isClientSide) hunger.exhaust(0.05F);
+    }
+
+    @Override
+    public void swing(InteractionHand hand) {
+        super.swing(hand);
+        if (!level().isClientSide) hunger.exhaust(0.02F);                // work: digging, chopping, building
     }
 
     @Override
@@ -331,6 +379,9 @@ public class PlayerAssistantEntity extends AssistantEntity {
         tag.putInt("PaLook", look());
         tag.putInt("PaPers", this.entityData.get(DATA_PERS));
         tag.put("PaPlan", plan.save());
+        tag.putInt("PaFood", hunger.food());
+        tag.putFloat("PaSat", hunger.saturation());
+        tag.putFloat("PaExh", hunger.exhaustion());
     }
 
     @Override
@@ -343,6 +394,8 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.entityData.set(DATA_LOOK, tag.getInt("PaLook"));
         this.entityData.set(DATA_PERS, tag.getInt("PaPers"));
         plan.load(tag.getCompound("PaPlan"));
+        if (tag.contains("PaFood")) hunger.set(tag.getInt("PaFood"), tag.getFloat("PaSat"), tag.getFloat("PaExh"));
+        this.entityData.set(DATA_FOOD, hunger.food());
         this.entityData.set(DATA_SHOWN, displayNameCap());
     }
 

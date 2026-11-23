@@ -184,6 +184,7 @@ public final class PaNet {
             t.putInt("level", a.veteranLevel());
             t.putInt("xp", a.lifetimeXp());
             t.putInt("food", a.countFood());
+            t.putInt("hunger", a.hunger.food());                  // [pa33c-2b] its hunger bar
             t.putString("mode", a.getMode().name().toLowerCase());
             t.putString("state", a.state() == null ? "" : a.state());
             t.putBoolean("paused", a.plan.paused);

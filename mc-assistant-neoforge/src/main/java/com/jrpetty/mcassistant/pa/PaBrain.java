@@ -546,7 +546,7 @@ public final class PaBrain {
             PaBanter.after(a, "quip.low_health", null);                  // after the warning, never instead
         }
         // [pa33b] hurt with nothing to eat: it says so and asks, with ways to fix it (it heals by eating, like a player)
-        if (a.getHealth() < a.getMaxHealth() * 0.5F && a.countFood() == 0 && a.getTarget() == null
+        if ((a.getHealth() < a.getMaxHealth() * 0.5F || a.hunger.food() <= 6) && a.countFood() == 0 && a.getTarget() == null   // [pa33c-2b] or starving
                 && a.tickCount - a.mind.askedFoodTick > 1200) {
             a.mind.askedFoodTick = a.tickCount;
             PaTalk.reply(a, PaTalk.line(a, "no_food", "owner", on),
