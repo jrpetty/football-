@@ -15504,3 +15504,26 @@ works' round, instead of only when a load will not go in (then the load went on 
   few minutes and tried again (five times at most). A building with nothing laid takes another lot, as before.
 - The mine's report has a line for the cage (runs, riders) and for the cache, and the shifts line says where the works'
   time goes: at the face, walking, in the cage, on the way out.
+
+### The Diamond Age finished (econ-32, round four)
+- **The age's iron stops climbing as the town grows.** What the Iron Age asks for in iron is sized to a town of
+  twenty-four (64 bars at most), like everything else the age asks for, and the Diamond Age asks twice that (128 bars at
+  most). It used to be sized to the whole town: a Diamond Age town of seventy was asked for over two hundred.
+- **A poor iron level is left for the next one sooner.** While the age is waiting on iron, the mine keeps count of the iron
+  ore cut on its iron levels day by day. Once a day, if the last seven days brought fewer than forty, the deepest iron
+  level being worked is counted worked out and the next iron level down is opened (or, with none left in the shaft's
+  reach, a new mine is looked for). A level just opened gets five days before it is judged. The mine's report says how
+  much iron the iron levels gave in the last seven days and why the works last moved on.
+- **The trapdoor over the well opens for the cage** as it comes up to the pithead and closes behind it when it goes down.
+- **The miners are kept while the age waits on the mine.** While the age asks for iron or diamonds, a fifth of the town
+  (sixteen at most) is the mine's share of hands, so the infirmary, the diving, the kitchens and the other trades that
+  take a hand from whichever trade has one to spare no longer take them from the mine. (A Diamond Age town went from
+  twelve miners to two in a fortnight that way, and its iron came in at ten a day.)
+- **The diamonds the next age asks for stay in the stores**: the market's morning sale, the watch's diamond kit and the
+  smith's diamond sword leave them be.
+- **An age's building finds its ground.** An age's building that has missed four looks for a lot on the walked streets
+  may take one whose street is walked dry (it was twelve looks, and a restart began the count again). If no lot of the
+  town's plan will take it at all after six looks (too big for every lot on its streets, its great lots under the fields,
+  the mine's ground or the wall's ring, across the river or on a cliff), it goes up at the town's edge instead: on level,
+  dry ground past the town's furthest building, its door to the town, off the fields, the mine, the wall's ring and the
+  railways, as a knight's manor is.
