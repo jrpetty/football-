@@ -144,7 +144,9 @@ public class PlayerAssistantEntity extends AssistantEntity {
 
     @Override
     public void setTarget(@Nullable net.minecraft.world.entity.LivingEntity target) {
+        boolean fresh = target != null && fairGame(target) && target != getTarget();
         super.setTarget(fairGame(target) ? target : null);
+        if (fresh && !level().isClientSide) equipBestWeapon();      // [pa33b] sword out for a fight, as a player would
     }
 
     @Override
