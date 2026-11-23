@@ -146,7 +146,7 @@ public final class PaLife {
         if (!level.addFreshEntity(a)) { LOG.info("[pa33] the world would not take the assistant at {}", spot); return null; }
         r.entity = a.getUUID();
         r.away = false;
-        r.snapshot = null;
+        r.snapshot = a.saveWithoutId(new CompoundTag());                     // [pa33d] a copy from the start: lost before the next keep, it comes back as itself, not a blank
         PaData.touch();
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, spot.x, spot.y + 1, spot.z, 16, 0.4, 0.6, 0.4, 0.02);
         level.playSound(null, a.blockPosition(), net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_CHIME, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.2F);
