@@ -46,17 +46,45 @@ public final class PaTalk {
         PaNet.say(a, text, true, choices, bubbleTicks(text));
     }
 
+    /** [pa33b] A hello (on login, on coming back): one in the log however often its player reconnects. */
+    public static void greet(PlayerAssistantEntity a, String text) {
+        PaData.Rec r = a.rec();
+        if (r != null) {
+            r.say(1, text, a.level().getGameTime(), true);
+            PaData.touch();
+        }
+        a.mind.lastSaid = a.tickCount;
+        PaNet.say(a, text, true, null, bubbleTicks(text), true);
+    }
+
     /** Something it says unasked (a comment, a tip, a job done), at this chattiness or above (0 quiet .. 3 chatty). */
     public static boolean comment(PlayerAssistantEntity a, int least, String text) {
+        return comment(a, least, text, false);
+    }
+
+    /** As comment; an event (something just happened) may come a little sooner than idle chatter. */
+    public static boolean comment(PlayerAssistantEntity a, int least, String text, boolean event) {
         PaData.Rec r = a.rec();
         int chatty = r == null ? 2 : r.chatty;
         if (chatty < least) return false;
-        // rate limit: chattier means sooner; a quiet one waits a good while between remarks
-        int gap = switch (chatty) { case 3 -> 100; case 2 -> 400; case 1 -> 1200; default -> 2400; };
+        if (r != null && r.mute >= 2 && least > 0) return false;   // [pa33b] told to be quiet: nothing unasked
+        // rate limit: [pa33b] at the usual chattiness one remark every few minutes (sooner around events); only "Won't shut up" keeps on
+        int gap = PaQuips.gap(chatty, event);
         if (a.tickCount - a.mind.lastComment < gap && least > 0) return false;
         a.mind.lastComment = a.tickCount;
         reply(a, text);
         return true;
+    }
+
+    /** [pa33b] Its line for a situation, at its place in the personality triangle, with its player's and its own names. */
+    public static String line(PlayerAssistantEntity a, String key, String... kv) {
+        String[] all = new String[kv.length + 4];
+        all[0] = "owner";
+        all[1] = a.ownerName().isEmpty() ? "you" : a.ownerName();
+        all[2] = "name";
+        all[3] = a.displayNameCap();
+        System.arraycopy(kv, 0, all, 4, kv.length);              // the caller's own blanks after, so they win
+        return PaPhrases.line(key, a.tri(), a.getRandom()::nextInt, a.mind.recent, all);
     }
 
     /** A line for a non-owner (only they see it). */

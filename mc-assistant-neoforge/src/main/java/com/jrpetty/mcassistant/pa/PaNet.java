@@ -65,6 +65,16 @@ public final class PaNet {
         send(p, PaPayload.OPEN, t);
     }
 
+    /** [pa33b] Someone else's assistant, right-clicked: a little chat box (no orders, no pack, no settings). */
+    public static void openStranger(ServerPlayer p, PlayerAssistantEntity a) {
+        CompoundTag t = new CompoundTag();
+        t.putString("tab", "stranger");
+        t.putInt("id", a.getId());
+        t.putString("name", a.displayNameCap());
+        t.putString("owner", a.ownerName());
+        send(p, PaPayload.OPEN, t);
+    }
+
     /** The panel's state, sent when something changed while it is open (and on open). */
     public static void refresh(ServerPlayer p, @Nullable PlayerAssistantEntity a) {
         send(p, PaPayload.STATE, state(p, a));
@@ -72,12 +82,19 @@ public final class PaNet {
 
     /** A line said: to its owner (logged, spoken, with choices when it asks), and as a bubble to everyone in sight. */
     public static void say(PlayerAssistantEntity a, String text, boolean speak, @Nullable List<PaUnderstand.Choice> choices, int ticks) {
+        say(a, text, speak, choices, ticks, false);
+    }
+
+    public static void say(PlayerAssistantEntity a, String text, boolean speak, @Nullable List<PaUnderstand.Choice> choices, int ticks, boolean greet) {
         CompoundTag t = new CompoundTag();
+        if (greet) t.putBoolean("greet", true);
         t.putInt("id", a.getId());
         t.putString("name", a.displayNameCap());
         t.putString("text", text);
         t.putInt("ticks", ticks);
         t.putInt("voice", a.rec() == null ? 0 : a.rec().voice);
+        t.putFloat("gloom", (float) a.tri().gloomy());           // [pa33b] slower and lower when gloomy
+        t.putFloat("fun", (float) a.tri().funny());
         if (choices != null && !choices.isEmpty()) t.put("choices", choices(choices));
         if (a.level() instanceof net.minecraft.server.level.ServerLevel) {
             for (ServerPlayer viewer : ((net.minecraft.server.level.ServerLevel) a.level()).players()) {
@@ -135,6 +152,14 @@ public final class PaNet {
         set.putBoolean("sleep", r.sleepAtNight);
         set.putInt("roam", r.roam);
         set.putInt("chatty", r.chatty);
+        set.putFloat("funny", r.funny);                          // [pa33b]
+        set.putFloat("gloomy", r.gloomy);
+        set.putInt("mute", r.mute);
+        set.putInt("language", r.language);
+        set.putInt("langCap", PaConfig.maxLanguage());
+        set.putInt("roastBack", r.roastBack);
+        set.putBoolean("defend", r.defend);
+        set.putBoolean("roastAllowed", PaConfig.allowRoastOthers());                               // [pa33b] 0 talking, 1 no jokes, 2 quiet
         set.putInt("spend", r.spend);
         set.putInt("roamMax", PaConfig.roamMax());
         set.putInt("spendMax", PaConfig.spendMax());
@@ -146,6 +171,8 @@ public final class PaNet {
             CompoundTag c = new CompoundTag();
             c.putInt("w", l.who());
             c.putString("t", l.text());
+            if (l.times() > 1) c.putInt("n", l.times());       // [pa33b] said again: "×2"
+            if (l.greet()) c.putBoolean("g", true);
             log.add(c);
         }
         t.put("log", log);

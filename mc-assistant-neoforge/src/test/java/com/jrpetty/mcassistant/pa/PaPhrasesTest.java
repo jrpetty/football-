@@ -44,4 +44,34 @@ class PaPhrasesTest {
         String s = PaPhrases.line("step", PaPhrases.Personality.CALM, new Random(2)::nextInt, "did", PaPhrases.did("get 129 planks for the house"));
         assertTrue(s.startsWith("Got 129 planks"), s);
     }
+
+    /** [pa33b] Six or more ways to say every reply, at every corner it is said from, so it never feels repetitive. */
+    @org.junit.jupiter.api.Test
+    void sixOrMoreVariantsEverywhere() {
+        int min = Integer.MAX_VALUE, total = 0;
+        String smallest = "";
+        for (String k : PaLines.keys()) {
+            int n = PaLines.get(k).size();
+            total += n;
+            if (n < min) { min = n; smallest = k; }
+            org.junit.jupiter.api.Assertions.assertTrue(n >= 6, "only " + n + " ways to say " + k);
+        }
+        for (String k : PaLines.keys()) {
+            if (!k.startsWith("say.") || k.contains("@")) continue;
+            for (String c : new String[]{"@gloomy", "@serious"})
+                org.junit.jupiter.api.Assertions.assertTrue(PaLines.get(k + c).size() >= 6, k + c + ": " + PaLines.get(k + c).size());
+        }
+        for (String k : PaPhrases.DANGER)
+            org.junit.jupiter.api.Assertions.assertTrue(PaPhrases.plainCount(k) >= 6, "warning " + k + ": " + PaPhrases.plainCount(k));
+        // the same reply never twice running: a short run of picks from one list has no immediate repeat
+        PaPersona.Recent recent = new PaPersona.Recent(400);
+        java.util.Random r = new java.util.Random(3);
+        String last = null;
+        for (int i = 0; i < 60; i++) {
+            String s = PaPersona.from(PaLines.get("say.done@serious"), r::nextInt, recent);
+            org.junit.jupiter.api.Assertions.assertNotEquals(last, s, "the same reply twice running");
+            last = s;
+        }
+        System.out.printf("[pa33b] variants: smallest list %d (%s), %d lists, %d lines%n", min, smallest, PaLines.keys().size(), total);
+    }
 }

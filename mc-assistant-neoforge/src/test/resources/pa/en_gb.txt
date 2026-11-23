@@ -1,0 +1,58 @@
+# [pa33b] British English: words and phrasings a player in the UK uses, typed or said. Written before the reader was
+# tuned for them; the first-pass score is reported in the notes. Same format as phrasings.txt.
+fetch us some logs || GATHER:logs
+grab us 16 logs || GATHER:logs:16
+fetch us sixteen logs please || GATHER:logs:16
+get us some stone || GATHER:stone
+chuck it in the chest || DEPOSIT
+pop it in the chest || DEPOSIT
+bung it in the chest || DEPOSIT
+chuck everything in that chest || DEPOSIT@LOOKED
+pop your stuff in the chest || DEPOSIT
+nip over here || COME
+come here mate || COME
+come here then || COME
+oi come here || COME
+cheers || THANKS
+cheers mate || THANKS
+ta || THANKS
+ta very much || THANKS
+nice one || THANKS
+sorted || THANKS
+hang on || PAUSE
+hold on a sec || PAUSE
+hang on a minute || PAUSE
+half a mo || PAUSE
+have a go at mining || MINE_DOWN
+have a go at mining iron || MINE_ORE:iron
+go and get some logs || GATHER:logs
+go and fetch some coal || GATHER:coal
+right follow me || FOLLOW
+right then follow me || FOLLOW
+right come here || COME
+follow me mate || FOLLOW
+stay put || STAY
+wait there || STAY
+stop there || STAY
+crack on || RESUME
+carry on mate || RESUME
+pack it in || STOP
+leave it || STOP
+knock it off || STOP
+make me some armour || CRAFT:armor
+craft iron armour || CRAFT:iron armor
+build a two storey house || BUILD:house
+build a house ten metres away || BUILD:house
+light up the area with torches || LIGHT_AREA
+sort out the chests || SORT
+tidy the chests || SORT
+are you alright || STATUS
+you alright || STATUS
+what are you up to || DOING
+whereabouts are you || WHERE
+have a look for diamonds || MINE_ORE:diamond
+fancy getting some wood || GATHER:logs
+could you be a love and fetch me some bread || GIVE:bread
+go on then, get me 16 logs || GATHER:logs:16
+right then, build a small house here || BUILD:house@HERE
+come on then follow me || FOLLOW

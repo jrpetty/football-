@@ -1283,6 +1283,20 @@ public final class Market {
         return buy(level, v, p, shown, Stockroom.Seller.MARKET);
     }
 
+    /** [pa33b] Asking the price without buying (a player's assistant keeping to its spending limit). */
+    private static final ThreadLocal<Boolean> QUOTE = ThreadLocal.withInitial(() -> false);
+
+    /** [pa33b] What a lot of this would cost this player now, or -1 when it can't be bought (none to spare, not sold). */
+    public static int quoteFor(ServerLevel level, Villages.Village v, Player p, ItemStack shown) {
+        QUOTE.set(true);
+        try {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile(": (\\d+) ").matcher(buy(level, v, p, shown));
+            return m.find() ? Integer.parseInt(m.group(1)) : -1;
+        } finally {
+            QUOTE.set(false);
+        }
+    }
+
     /** A player buys a lot of what is on a counter, with coin from their pack. Returns what to tell them. */
     public static String buy(ServerLevel level, Villages.Village v, Player p, ItemStack shown) {
         return buy(level, v, p, shown, Stockroom.sellerFor(shown));
@@ -1303,7 +1317,7 @@ public final class Market {
         String lot = lotName(g, shown);
         int stock = stock(level, id, same);
         if (stock < g.bundle()) {
-            if (!p.isShiftKeyDown()) Stockroom.missed(level, id, seller, shown);       // a sale the shelf had not got
+            if (!p.isShiftKeyDown() && !QUOTE.get()) Stockroom.missed(level, id, seller, shown);       // a sale the shelf had not got  [pa33b] not for a quote
             return "They've not got " + lot + " to spare just now.";
         }
         // Its own needs first: the guards' swords and the larder's bread are not for sale (Budget).
@@ -1314,7 +1328,7 @@ public final class Market {
         if (Citizens.is(id, p.getUUID())) price = Math.max(1, price - Math.max(1, price / 10));   // a citizen's ten off
         price = Dealings.haggled(id, p.getUUID(), level.getDayTime() / 24000L, price);           // talked down today
         price = Math.max(price, leastLot(level, id, shown, g.bundle()));   // [market] never under the least: no buying to sell back
-        if (p.isShiftKeyDown()) return lot + ": " + price + coinWord(price) + ". Right-click to buy.";
+        if (p.isShiftKeyDown() || QUOTE.get()) return lot + ": " + price + coinWord(price) + ". Right-click to buy.";   // [pa33b] or a quote
         int coins = coinsHeld(p);
         if (coins < price) {
             return lot + " for " + price + coinWord(price) + ". You have " + coins + ".";

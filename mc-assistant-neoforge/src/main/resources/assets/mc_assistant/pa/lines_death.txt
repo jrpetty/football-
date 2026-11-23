@@ -1,0 +1,270 @@
+# [pa33b] When its player dies: one line by the cause, then (always, in plain words) where the things are.
+# Funny is the default corner; @gloomy and edges as in lines_say.txt. The Serious corner says only the useful part.
+
+== death.lava
+Bold choice. I'll fetch a bucket for what's left.
+Lava. It's orange for a reason.
+In fairness, it did look warm.
+That was less of a swim and more of a statement.
+You've been rendered. Literally.
+I'd fetch your things, but they've gone where you went. Into the lava.
+You went in. The lava didn't come out to meet you halfway.
+Ten out of ten for commitment. Nought for survival.
+The lava wasn't going to jump into itself, was it.
+Hot tip: don't.
+== death.fall
+Gravity: still undefeated.
+That last step was a big one.
+The ground came up to say hello. Firmly.
+I've seen that done gracefully. That wasn't it.
+You found the bottom. Well done.
+Turns out the quick way down is very quick.
+Good news, it's flatter down there now.
+You did land. I'll give you that.
+That's one way to save time.
+Falling's easy. It's the stopping.
+== death.drown
+You do know you need air. Just checking.
+Swimming lessons. I'll book them.
+The fish send their regards.
+Deep water. Deep thoughts. Deep trouble.
+Turns out breathing is important. Who knew.
+You were in there a long time. I assumed you'd grown gills.
+That's a lot of water to have opinions about.
+Next time, perhaps the surface.
+You and the ocean. It wasn't meant to be.
+The bubbles ran out before the swim did.
+== death.creeper
+In fairness, it did hiss first.
+That hiss wasn't a compliment.
+Well, that's a new crater.
+The green chap with no arms. Classic.
+Creeper one, {owner} nil.
+You were the punchline there.
+Lovely bit of landscaping, that.
+It came over for a hug. Wouldn't have, personally.
+Boom. And I mean that with respect.
+That's what we call a silent approach. Until it wasn't.
+== death.skeleton
+Out-shot by something with no eyeballs.
+The bony one had better aim. Awkward.
+Skeletons: no muscles, perfect aim. Unfair, really.
+You were a pincushion for a moment there.
+That was an arrow. Several, in fact.
+Beaten by a coat-hanger with a bow.
+Some advice: duck.
+I'd blame the lighting, but that one could see fine.
+It had nothing to lose. Literally nothing. It's bones.
+You've been archery practice.
+== death.zombie
+Caught by something that walks at a leisurely stroll.
+The slowest monster in the game. Took you anyway.
+It was groaning. That's the warning.
+Out-paced by a zombie. Write that down. Actually, don't.
+You've been eaten. Partially, I'd hope.
+Zombies don't run. You didn't either.
+It said it wanted brains. It was being optimistic.
+Ambushed by a shuffle.
+That one had been dead for ages. Still won.
+Undead one, alive nil.
+== death.enderman
+You looked at it. I did say not to look at it.
+Tall, dark and very cross.
+Eye contact. Rookie error.
+It just wanted its block back.
+That's the thing about Endermen. They're shy, and then they're not.
+Tall chap. Long arms. Short temper.
+It teleported. You didn't.
+Staring contest lost.
+== death.starve
+You starved. I've been carrying bread this whole time.
+Next time, eat something. Anything. Even the rotten stuff.
+Died of hunger with a farm next door.
+Food. It's not optional.
+You forgot to eat. I didn't remind you. We both learnt something.
+Peckish, then dead. Quite the escalation.
+I'd have shared my lunch. I don't eat, but I'd have shared it.
+Hunger bar: empty. You: same.
+== death.suffocate
+Stuck in a wall. Classic indoor accident.
+You became part of the architecture.
+Head in the sand. Literally.
+Squashed. Not a flattering look.
+That wall didn't want company.
+You tried to go through it. It said no.
+Sand fell. You didn't move. Rules are rules.
+Wedged. Firmly. Fatally.
+== death.fire
+On fire, and then not much else.
+You were warm for a bit.
+Fire's lovely in a hearth. Less so on your head.
+Stop, drop and roll. In that order.
+You've been flambéed.
+That's what we call over-cooked.
+It's a campfire, not a sauna.
+Lit up like a torch. Less useful.
+== death.cactus
+Killed by a plant. I'll be putting that on the headstone.
+It's a cactus. It doesn't even move.
+The cactus won. The cactus always wins.
+You hugged a cactus. Why.
+Defeated by gardening.
+That plant has never moved and still got you.
+I'll tell everyone it was a bear.
+Prickly end.
+== death.berry
+Killed by a berry bush. A berry bush.
+You fought the shrubbery, and the shrubbery won.
+Death by fruit. Nutritious, though.
+It's a bush. With berries. You lost to it.
+I'll be telling everyone that was a wolf.
+The berries were not worth it.
+Scratched to death by breakfast.
+Even the foxes know to go round it.
+== death.void
+You've gone right off the edge of everything.
+Into the void. No refunds.
+That's not a shortcut. That's the void.
+Down, and down, and then just down.
+You found the bottom of the world. There isn't one.
+Bye. Properly bye.
+The void's never given anything back. I'll not hold my breath.
+That was a long way to fall into nothing.
+== death.warden
+You woke the Warden. I did whisper.
+It can't see. It didn't need to.
+That's the loudest you've ever been. Last, too.
+Quiet is the whole point of down here.
+Big, blind, very unhappy. You met it.
+You sneezed, didn't you.
+The Warden doesn't do second chances.
+Tiptoe next time. Or don't go at all.
+== death.villager
+Taken out by a villager. They'll be insufferable now.
+Lost a fight to someone who mostly sells carrots.
+That's the gentlest folk in the world. Not to you, apparently.
+You'll want to apologise to the village.
+Beaten by a farmer. With bread.
+Somebody's been bothering the locals.
+Village one, adventurer nil.
+They looked so harmless.
+== death.golem
+The iron golem wasn't joking.
+Never annoy the big metal one.
+That's what you get for hitting villagers. Probably.
+Flung by a golem. Graceful, though.
+He was holding a flower earlier. Mood swings.
+You were thrown. A long way.
+Big. Iron. Unimpressed.
+He hugs the children. Not you.
+== death.diamonds
+I'll look after the diamonds. Purely to honour your memory.
+You died holding diamonds. Ambitious.
+The diamonds were nice. Were.
+Don't worry, I remember exactly where the diamonds are. Lying there.
+Rich and dead. Poetic.
+All that mining, for this.
+Diamonds, scattered. Like your dignity.
+The diamonds will outlive us all. They just did.
+Shall I fetch the diamonds. Asking for a friend.
+Died with diamonds. That's a tragedy in two parts.
+== death.repeat
+Same time tomorrow, then.
+Again. Brilliant.
+You're getting good at that. The dying, I mean.
+That's twice. I'm keeping count. Someone should.
+Back so soon. And gone so soon.
+Is this a speedrun.
+At this rate I'll need a bigger notebook.
+We've been here. Recently.
+You do know it doesn't get easier.
+Practice makes perfect. You've had plenty.
+== death.bed
+You died right next to your bed. Ever so close.
+Three blocks from bed. So near.
+You could see the bed from there.
+You were nearly home. Nearly.
+The bed is right there. Just saying.
+Died on the doorstep. Very dramatic.
+Sleep was an option. Apparently not the chosen one.
+Short commute, at least.
+== death.generic
+Well, that went badly.
+And down you go.
+That's one way to end the day.
+I'd call that a learning experience.
+Dead, but stylishly.
+That didn't go to plan. Was there a plan.
+You've had better moments.
+I'll say this: it was memorable.
+Nobody saw that. Except me. I saw it.
+I've noted it in the logbook, under "oops".
+That was a choice.
+You'll want to walk that one off. After respawning.
+== death.generic@gloomy
+And there it is. I knew it.
+Dead again. The world remains unimpressed.
+Everything ends. You just went first.
+That's how it goes. That's how it always goes.
+Well. Nobody lasts forever. You lasted about four minutes.
+I'd say I'm surprised. I'm not.
+Gone. Like summer. Like hope. Like your stuff.
+Another day, another death.
+== death.lava@gloomy
+Lava. Of course. It was always going to be lava.
+The lava wins again. It always wins.
+Melted. As we all will, in the end. Metaphorically.
+Your things are gone. Lava doesn't give things back.
+== death.fall@gloomy
+Down you went. Everything goes down eventually.
+Gravity. The one thing you can count on.
+A long way down. Most things are.
+And the ground was waiting. As it always is.
+== death.generic@fg
+Splendid. Another chapter in the book of things that went wrong.
+Well, that's a lovely bit of mortality.
+Dead again. I'd send flowers, but they'd only wilt.
+You died. Don't worry, it happens to everyone. Mostly you.
+That was tragic. Funny, but tragic.
+Marvellous. Shall I start the tradition of the solemn nod.
+== death.generic@sg
+You died. It happens. Let's get your things.
+Down again. Right, let's sort it out.
+That's a death. Let's be practical about it.
+Gone. Your things are still there, for now.
+Dead. I'll do what I can.
+That's unfortunate. Moving on.
+== death.generic@sf
+You died. Statistically, that was coming.
+Down you go. I'll make a note to be supportive.
+That's a death. I'll file it under avoidable.
+And you're out. Five stars for effort.
+You died. Very decisively, I'll give you that.
+Gone. We'll call that research.
+
+== respawn.follow
+Welcome back. Your stuff's where you left it. Well, where you left you.
+You're alive again. Congratulations on your recovery.
+There you are. Bit pale. You'll be fine.
+Back from the beyond. Don't touch anything.
+Fresh as a daisy. A slightly embarrassed daisy.
+Welcome back. I kept the funeral short.
+Ah, you've respawned. Let's never speak of it.
+Back again. You look exactly the same. Suspicious.
+You're up. Shall we pretend that went to plan.
+Respawned. Welcome to the second attempt.
+== respawn.follow@gloomy
+You're back. For now.
+Respawned. Round and round we go.
+Welcome back. Nothing's changed. It never does.
+Back again. Brace yourself.
+Alive again. Lucky you, I suppose.
+Up you get. The world awaits. Unenthusiastically.
+
+# [pa33b] six or more at every corner
+== death.fall@gloomy
+Gravity wins again. It always does.
+Down you went. Everything goes down eventually.
+== death.lava@gloomy
+Lava. The end of so many things. And now your things.
+Into the fire. Your belongings are with the lava now. Lucky lava.

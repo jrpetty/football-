@@ -36,6 +36,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
     /** What it is doing, for the plate, the HUD and the panel: "icon|line|percent". */
     private static final EntityDataAccessor<String> DATA_STATE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> DATA_PERS = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_MUTE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);   // [pa33b] for its nameplate
     private static final EntityDataAccessor<String> DATA_SHOWN = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
 
     private int slot;
@@ -59,6 +60,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         builder.define(DATA_OWNER, "");
         builder.define(DATA_STATE, "");
         builder.define(DATA_PERS, 0);
+        builder.define(DATA_MUTE, 0);
         builder.define(DATA_SHOWN, "");
     }
 
@@ -81,6 +83,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.entityData.set(DATA_OWNER, r.ownerName);
         this.entityData.set(DATA_LOOK, r.look);
         this.entityData.set(DATA_PERS, r.personality);
+        this.entityData.set(DATA_MUTE, r.mute);
         if (!r.name.isEmpty() && !r.name.equalsIgnoreCase(getAssistantName())) rename(r.name);
         this.entityData.set(DATA_SHOWN, displayNameCap());
     }
@@ -115,7 +118,28 @@ public class PlayerAssistantEntity extends AssistantEntity {
 
     public PaPhrases.Personality personality() { return PaPhrases.Personality.of(this.entityData.get(DATA_PERS)); }
 
+    /** [pa33b] Its place in the personality triangle (from its record; Banter when it has none). */
+    public PaPersona.Tri tri() {
+        PaData.Rec r = rec();
+        if (r != null && r.mute > 0) return PaPersona.Tri.of(0, 0);          // [pa33b] hushed: the Serious corner's plain words
+        return r == null ? PaPersona.Tri.of(PaPersona.DEFAULT_FUNNY, PaPersona.DEFAULT_GLOOMY) : r.tri();
+    }
+
     public void setPersonality(int p) { this.entityData.set(DATA_PERS, p); }
+
+    /** [pa33b] How hushed it is (0 talking, 1 no jokes, 2 quiet): its record on the server, its nameplate's copy on the client. */
+    public int mute() {
+        PaData.Rec r = rec();
+        return r != null ? r.mute : this.entityData.get(DATA_MUTE);
+    }
+
+    /** [pa33b] Hush it, or lift it: kept in its record (saved) and shown on its nameplate. */
+    public void setMute(int m) {
+        PaData.Rec r = rec();
+        int v = Math.max(0, Math.min(2, m));
+        if (r != null) { r.mute = v; PaData.touch(); }
+        this.entityData.set(DATA_MUTE, v);
+    }
 
     /** "icon|line|percent": what it is doing, synced for the plate and the HUD. */
     public String state() { return this.entityData.get(DATA_STATE); }
@@ -138,18 +162,36 @@ public class PlayerAssistantEntity extends AssistantEntity {
      */
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (source.getEntity() instanceof Player p && isOwner(p)) return false;
+        if (source.getEntity() instanceof Player p && isOwner(p)) {
+            if (!level().isClientSide && tickCount - mind.lastHit > 400) {   // [pa33b] "Rude."
+                mind.lastHit = tickCount;
+                PaBanter.after(this, "quip.hit", null);
+            }
+            return false;
+        }
+        if (source.getEntity() instanceof ServerPlayer sp && !level().isClientSide) PaBanter.stranger(this, sp, "", true);   // [pa33b] "Steady on."
         return super.hurt(source, amount);
     }
 
     @Override
     public void setTarget(@Nullable net.minecraft.world.entity.LivingEntity target) {
+        boolean fresh = target != null && fairGame(target) && target != getTarget();
         super.setTarget(fairGame(target) ? target : null);
+        if (fresh && !level().isClientSide) equipBestWeapon();      // [pa33b] sword out for a fight, as a player would
     }
 
     @Override
     public boolean canAttack(net.minecraft.world.entity.LivingEntity target) {
         return fairGame(target) && super.canAttack(target);
+    }
+
+    /**
+     * [pa33b] Whatever its player hands it, it uses, as a player would: the crew's rank gating on iron and diamond
+     * tools is not for it (it was fighting with a pickaxe while an iron sword sat in its pack).
+     */
+    @Override
+    public boolean mayUseTier(ItemStack s) {
+        return true;
     }
 
     /** May it fight this? Monsters and the like yes; people, assistants, crews and folk no. */
@@ -244,7 +286,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         if (level().isClientSide) return InteractionResult.SUCCESS;
         if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
         if (!obeys(sp)) {
-            PaTalk.to(this, sp, PaPhrases.line("not_owner", personality(), getRandom()::nextInt, "owner", ownerName));
+            PaNet.openStranger(sp, this);                               // [pa33b] a little chat box: talk to it, never order it
             return InteractionResult.CONSUME;
         }
         // Food in the hand: a meal for it.

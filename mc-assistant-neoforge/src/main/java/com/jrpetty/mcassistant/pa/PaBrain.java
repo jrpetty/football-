@@ -32,6 +32,8 @@ public final class PaBrain {
     /** The brain's scratch, per assistant. */
     public static final class Mind {
         public int lastSaid = -100000, lastComment = -100000;
+        public final PaTone.Heat toneHeat = new PaTone.Heat();          // [pa33b] its player's recent tone
+        public final PaStrangers.Limit strangers = new PaStrangers.Limit();   // [pa33b] other players: rate and heat, per player
         @Nullable public BlockPos post;
         @Nullable public BlockPos roamCentre;
         long nightWarnedDay = -1;
@@ -45,6 +47,20 @@ public final class PaBrain {
         int tips;
         /** When to open its player's panel after it first arrives (0: not pending). */
         public int openPanelAt;
+        int askedFoodTick = -100000;
+        /** [pa33b] Lines said lately (a long memory: no repeats within a long session). */
+        public final PaPersona.Recent recent = new PaPersona.Recent(400);
+        /** [pa33b] Its player's last death: where, which world, how, when (game time). */
+        @Nullable public BlockPos deathPos;
+        public String deathDim = "", deathCause = "";
+        public long deathAt = -1, prevDeathAt = -1;
+        public int deathsRecent, respawnQuipAt, lastJoke = -100000, lastHit = -100000, slowQuipped, jmNext;
+        public boolean askedTwice;
+        public boolean wasRaining, sawDirt;
+        @Nullable public java.util.UUID lastTown;
+        public String lastOrder = "";
+        public int lastOrderAt = -100000, ownerStillFor;
+        @Nullable public net.minecraft.world.phys.Vec3 ownerLast;
     }
 
     // ------------------------------------------------------------------ the budget
@@ -96,6 +112,8 @@ public final class PaBrain {
             if (a.getOwnerPlayer() instanceof ServerPlayer owner) PaNet.open(owner, a, "talk");
         }
         if (t % 20 == 0) personalSpace(a);
+        if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
+        if (t % 10 == 0) boat(a);                                 // [pa33b] along with its player on the water
         if (t % 40 == 0) {
             safety(a);
             companion(a);
@@ -187,7 +205,7 @@ public final class PaBrain {
                 fixes = new java.util.ArrayList<>(fixes);
                 fixes.add(0, new Choice("Skip it, carry on", "resume"));
             }
-            PaTalk.reply(a, PaPhrases.line("cant", a.personality(), a.getRandom()::nextInt, "what", trimEnd(cur.fail)), fixes);
+            PaTalk.reply(a, PaTalk.line(a, "cant", "what", trimEnd(cur.fail)), fixes);
             return;
         }
         if (r != null && !cur.auto) { r.jobsDone++; PaData.touch(); }
@@ -197,7 +215,7 @@ public final class PaBrain {
             if (!res.isEmpty()) PaTalk.comment(a, 2, res);
             return;
         }
-        String line = PaPhrases.line(last ? "done" : "step", a.personality(), a.getRandom()::nextInt, "did", PaPhrases.did(cur.label), "job", cur.label);
+        String line = PaTalk.line(a, last ? "done" : "step", "did", PaPhrases.did(cur.label), "job", cur.label);
         if (!res.isEmpty()) line = res + " " + (last ? "That's everything." : "");
         if (last) PaTalk.reply(a, line.trim());
         else PaTalk.comment(a, 1, line.trim());
@@ -380,8 +398,91 @@ public final class PaBrain {
                 a.clearQueue();
                 a.task = null;
             }
-            if (PaLife.bringTo(a, owner)) PaTalk.comment(a, 0, PaPhrases.line("stuck", a.personality(), a.getRandom()::nextInt, "owner", owner.getGameProfile().getName()));
+            if (PaLife.bringTo(a, owner)) PaTalk.comment(a, 0, PaTalk.line(a, "stuck", "owner", owner.getGameProfile().getName()));
         }
+    }
+
+    /**
+     * [pa33b] Boats. Its player gets into a boat: it hops into the free seat beside them (a boat seats two), so it goes
+     * where they row. No seat (a chest boat, or someone else aboard): it keeps up along the shore, and its follow
+     * catches up if it falls far behind. Its player steps out: so does it.
+     */
+    static void boat(PlayerAssistantEntity a) {
+        if (!(a.getOwnerPlayer() instanceof ServerPlayer owner) || owner.level() != a.level()) return;
+        net.minecraft.world.entity.Entity ride = owner.getVehicle();
+        if (ride instanceof net.minecraft.world.entity.vehicle.Boat b) {
+            if (a.getVehicle() == b) return;
+            if (a.getMode() != AssistantEntity.Mode.FOLLOW || !a.plan.idle() || a.getTarget() != null) return;
+            if (a.distanceToSqr(b) < 8 * 8 && b.getPassengers().size() < 2) {
+                if (a.isPassenger()) a.stopRiding();
+                a.getNavigation().stop();
+                if (a.startRiding(b)) PaTalk.comment(a, 2, "Room for two!");
+            } else if (a.getNavigation().isDone()) {
+                a.getNavigation().moveTo(b, 1.2D);          // to the water's edge nearest them
+            }
+        } else if (a.getVehicle() instanceof net.minecraft.world.entity.vehicle.Boat) {
+            a.stopRiding();                                   // they got out: so does it
+        }
+    }
+
+    /**
+     * [pa33b] Remarks on what's going on, at its place in the triangle: after its player respawns, an order asked twice,
+     * rain, a creeper by its player (after the warning), a village, a dirt hoard, a question left hanging, a long idle,
+     * and in Joke Machine mode a running commentary every 10 to 20 seconds. All held to chattiness and rate limits.
+     */
+    static void banter(PlayerAssistantEntity a) {
+        if (!(a.getOwnerPlayer() instanceof ServerPlayer owner) || owner.level() != a.level()) return;
+        Mind m = a.mind;
+        if (m.respawnQuipAt > 0 && a.tickCount >= m.respawnQuipAt) { m.respawnQuipAt = 0; PaBanter.respawned(a); return; }
+        if (m.askedTwice) { m.askedTwice = false; PaBanter.quip(a, "quip.asked_twice", 1, null); return; }
+        boolean raining = a.level().isRaining() && a.level().canSeeSky(owner.blockPosition());
+        if (raining && !m.wasRaining) { m.wasRaining = true; PaBanter.quip(a, "quip.rain", 1, null); return; }
+        if (!a.level().isRaining()) m.wasRaining = false;
+        if (a.getTarget() == null) {
+            for (net.minecraft.world.entity.monster.Creeper c : a.level().getEntitiesOfClass(net.minecraft.world.entity.monster.Creeper.class, owner.getBoundingBox().inflate(10))) {
+                if (c.isAlive() && a.tickCount - m.threatTick > 600) {
+                    m.threatTick = a.tickCount;
+                    PaTalk.reply(a, "Creeper near you, " + owner.getGameProfile().getName() + ". Back away from it.");   // the warning, plainly
+                    PaBanter.after(a, "quip.creeper", "creeper");                                                        // then, maybe, a remark
+                    return;
+                }
+            }
+        }
+        var town = com.jrpetty.mcassistant.entity.TownBlocks.townAt((net.minecraft.server.level.ServerLevel) a.level(), owner.blockPosition());
+        java.util.UUID tid = town == null ? null : town.id();
+        if (tid != null && !tid.equals(m.lastTown)) { m.lastTown = tid; PaBanter.quip(a, "quip.village", 1, null); return; }
+        if (tid == null) m.lastTown = null;
+        if (!m.sawDirt && owner.getInventory().countItem(net.minecraft.world.item.Items.DIRT) >= 192) { m.sawDirt = true; PaBanter.quip(a, "quip.dirt", 1, null); return; }
+        PaOrders.Pending pend = PaOrders.pending(owner.getUUID());
+        if (pend != null && pend.at() > 0 && a.level().getGameTime() - pend.at() > 45 * 20 && m.slowQuipped != pend.hashCode()) {
+            m.slowQuipped = pend.hashCode();
+            PaBanter.quip(a, "quip.slow_answer", 1, null);
+            return;
+        }
+        if (a.distanceToSqr(owner) > 48 * 48 && a.getMode() == AssistantEntity.Mode.STAY && a.tickCount - m.lastComment > 12000) {
+            PaBanter.quip(a, "quip.wandered", 2, null);
+            return;
+        }
+        // its player standing still a while, for the commentary
+        net.minecraft.world.phys.Vec3 op = owner.position();
+        m.ownerStillFor = m.ownerLast != null && op.distanceToSqr(m.ownerLast) < 0.01 ? m.ownerStillFor + 20 : 0;
+        m.ownerLast = op;
+        if (PaBanter.jokeMachine(a)) {
+            if (a.tickCount < m.jmNext) return;
+            m.jmNext = a.tickCount + 200 + a.getRandom().nextInt(200);       // 10 to 20 seconds
+            String what = m.ownerStillFor > 300 ? "jm.idle" : !a.plan.idle() ? "jm.progress" : a.getRandom().nextBoolean() ? "jm.weather" : "jm.idle";
+            if (raining && what.equals("jm.weather")) what = "quip.rain";
+            PaBanter.quip(a, what, 4, null);
+            return;
+        }
+        if (a.plan.idle() && a.tickCount - m.lastSaid > 6000 && a.tickCount - m.lastComment > 6000) PaBanter.quip(a, "quip.idle", 2, null);
+    }
+
+    /** [pa33b] Joke Machine: a remark on something its player just did (mined, placed, jumped, ate, opened a chest). */
+    public static void ownerDid(PlayerAssistantEntity a, String what) {
+        if (!PaBanter.jokeMachine(a) || a.tickCount < a.mind.jmNext) return;
+        a.mind.jmNext = a.tickCount + 200 + a.getRandom().nextInt(200);
+        PaBanter.quip(a, what, 4, null);
     }
 
     /** Idle, it never stands in its player's face: it steps back to a couple of blocks off, as a friend would. */
@@ -423,23 +524,32 @@ public final class PaBrain {
         boolean near = a.distanceToSqr(owner) < 48 * 48;
         if (near && time >= 12300 && time < 13000 && a.mind.nightWarnedDay != day && a.level().dimension() == net.minecraft.world.level.Level.OVERWORLD) {
             a.mind.nightWarnedDay = day;
-            PaTalk.comment(a, 1, PaPhrases.line("night", pers, rnd, "owner", on));
+            PaTalk.comment(a, 1, PaTalk.line(a, "night", "owner", on));
         }
         if (near && owner.getHealth() <= 6 && owner.getHealth() > 0 && a.tickCount - a.mind.ownerHurtTick > 900) {
             a.mind.ownerHurtTick = a.tickCount;
-            PaTalk.comment(a, 1, PaPhrases.line("owner_hurt", pers, rnd, "owner", on));
+            PaTalk.comment(a, 1, PaTalk.line(a, "owner_hurt", "owner", on));
+            PaBanter.after(a, "quip.low_health", null);                  // after the warning, never instead
+        }
+        // [pa33b] hurt with nothing to eat: it says so and asks, with ways to fix it (it heals by eating, like a player)
+        if (a.getHealth() < a.getMaxHealth() * 0.5F && a.countFood() == 0 && a.getTarget() == null
+                && a.tickCount - a.mind.askedFoodTick > 1200) {
+            a.mind.askedFoodTick = a.tickCount;
+            PaTalk.reply(a, PaTalk.line(a, "no_food", "owner", on),
+                List.of(new Choice("Go hunting", "hunt for food"), new Choice("I'll give you some", "#pack")));
+            return;
         }
         if (a.getHealth() < a.getMaxHealth() * 0.3F && a.tickCount - a.mind.meHurtTick > 900) {
             a.mind.meHurtTick = a.tickCount;
-            PaTalk.comment(a, 1, PaPhrases.line("me_hurt", pers, rnd, "owner", on));
+            PaTalk.comment(a, 1, PaTalk.line(a, "me_hurt", "owner", on));
         }
         int dia = PaItems.count(a, "diamond");
-        if (a.mind.lastDiamonds >= 0 && dia > a.mind.lastDiamonds) PaTalk.comment(a, 0, PaPhrases.line("diamonds", pers, rnd, "owner", on));
+        if (a.mind.lastDiamonds >= 0 && dia > a.mind.lastDiamonds) PaTalk.comment(a, 0, PaTalk.line(a, "diamonds", "owner", on));
         a.mind.lastDiamonds = dia;
         if (near && a.plan.idle() && a.mind.tips < 3 && a.tickCount - a.mind.lastTip > 12000 && a.tickCount - a.mind.lastSaid > 2400) {
             a.mind.lastTip = a.tickCount;
             a.mind.tips++;                                      // a few tips a session, then it trusts you to know
-            PaTalk.comment(a, 2, PaPhrases.line("tip", pers, rnd, "owner", on));
+            PaTalk.comment(a, 2, PaTalk.line(a, "tip", "owner", on));
         }
     }
 
@@ -542,7 +652,7 @@ public final class PaBrain {
         PaData.Rec r = a.rec();
         if (r != null && r.chatty <= 0) return;
         if (a.tickCount - a.mind.lastSaid < 200) return;
-        PaTalk.reply(a, PaPhrases.line(key.equals("fight") ? "threat" : "autohelp", a.personality(), a.getRandom()::nextInt, "what", what),
+        PaTalk.reply(a, PaTalk.line(a, key.equals("fight") ? "threat" : "autohelp", "what", what),
             List.of(new Choice("Thanks", "thanks"), new Choice("Don't do that", "#veto " + key)));
     }
 }

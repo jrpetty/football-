@@ -42,8 +42,19 @@ public final class PaStt {
         return t;
     });
     private volatile PaVosk.Session held, free;
+    /** [pa33b] Which English to listen for (the About tab's Accent), asked each time so a change takes at once. */
+    private final java.util.function.Supplier<PaAccent> accent;
+    /** [pa33b] Windows: the recogniser in use (a culture, "en-GB") and all installed, once it has been asked. */
+    private volatile String winCulture = "";
+    private volatile List<String> winInstalled;
+    private volatile boolean probing;
 
     public PaStt(Path dir, String preference, String osName, Predicate<String> onPath) {
+        this(dir, preference, osName, onPath, () -> PaAccent.US);
+    }
+
+    public PaStt(Path dir, String preference, String osName, Predicate<String> onPath, java.util.function.Supplier<PaAccent> accent) {
+        this.accent = accent == null ? () -> PaAccent.US : accent;
         this.dir = dir;
         this.preference = preference == null ? "auto" : preference.toLowerCase(Locale.ROOT);
         this.windowsHere = (osName == null ? "" : osName.toLowerCase(Locale.ROOT)).contains("win") && onPath.test("powershell");
@@ -67,7 +78,11 @@ public final class PaStt {
 
     public String status() {
         return switch (engine()) {
-            case WINDOWS -> "Listening with Windows' own speech recognition (offline).";
+            case WINDOWS -> {
+                if (winInstalled == null) probe();
+                yield winInstalled == null ? "Listening with Windows' own speech recognition (offline)."
+                    : PaAccent.windowsAdvice(accent.get(), winCulture, winInstalled);
+            }
             case VOSK -> "Listening with the offline speech model.";
             case NONE -> windowsHere ? "Windows' speech recognition isn't available here." : "No speech model yet: in your assistant's About tab, turn Listen on and click \"I agree: download it\" (about 40 MB, once).";
         };
@@ -149,9 +164,9 @@ public final class PaStt {
     public static String choose(String held, String free) {
         held = held == null ? "" : held.trim();
         free = free == null ? "" : free.trim();
-        PaUnderstand.Reading f = free.isEmpty() ? null : PaUnderstand.read(free, "");
+        PaUnderstand.Reading f = free.isEmpty() ? null : PaUnderstand.read(PaWords.voiceFix(free), "");   // [pa33b] read as the server will
         if (f != null && f.understood() && f.steps().get(0).kind() == com.jrpetty.mcassistant.pa.PaIntent.Kind.QUESTION) return free;
-        PaUnderstand.Reading h = held.isEmpty() ? null : PaUnderstand.read(held, "");
+        PaUnderstand.Reading h = held.isEmpty() ? null : PaUnderstand.read(PaWords.voiceFix(held), "");
         if (h != null && h.understood()) return held;
         if (f != null && f.understood()) return free;
         return !free.isEmpty() ? free : held;
@@ -162,13 +177,15 @@ public final class PaStt {
         Set<String> w = new LinkedHashSet<>();
         w.addAll(PaWords.VOCAB);
         w.addAll(PaWords.COMMON);
-        for (String e : PaUnderstand.EXAMPLES) for (String s : e.split(" ")) w.add(s);
+        for (String e : PaUnderstand.grammar()) for (String s : e.split(" ")) w.add(s);   // [pa33b] with the British sayings
         for (String n : List.of("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
             "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty", "thirty", "forty", "fifty",
             "sixty", "seventy", "eighty", "ninety", "hundred", "a", "an", "the", "of", "to", "in", "on", "at", "by", "my", "me", "i",
             "it", "is", "please", "hey", "some", "stack", "stacks", "half", "dozen", "couple", "few", "them", "all", "for", "up", "out",
             "iron", "pip", "assistant", "small", "house", "chest", "your", "are", "do", "can", "you", "what", "how", "until", "have",
-            "level", "minus", "negative", "x", "area", "logs", "wood", "stone", "cobblestone")) w.add(n);
+            "level", "minus", "negative", "x", "area", "logs", "wood", "stone", "cobblestone",
+            "us", "mate", "cheers", "ta", "nip", "bung", "chuck", "pop", "hang", "sorted", "crack", "oi", "right", "then", "alright",
+            "whereabouts", "armour", "colour", "storey", "metres", "fetch", "grab", "go", "and")) w.add(n);
         w.removeIf(s -> s.isEmpty() || !s.matches("[a-z']+"));
         return w;
     }
@@ -180,14 +197,14 @@ public final class PaStt {
         Path wav = dir.resolve("heard.wav");
         Files.write(wav, PaWav.wav(pcm, 16000));
         Path phrases = dir.resolve("phrases.txt");
-        List<String> lines = new ArrayList<>(PaUnderstand.EXAMPLES);
+        List<String> lines = new ArrayList<>(PaUnderstand.grammar());   // [pa33b] with the British sayings
         Files.write(phrases, lines, StandardCharsets.UTF_8);
         String script = "Add-Type -AssemblyName System.Speech;"
-            + "$r=New-Object System.Speech.Recognition.SpeechRecognitionEngine;"
+            + recognizerFor(accent.get())
             + "$r.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar));"
             + "$c=New-Object System.Speech.Recognition.Choices;"
             + "foreach($p in Get-Content -LiteralPath '" + phrases.toAbsolutePath().toString().replace("'", "''") + "'){if($p){$c.Add($p)}};"
-            + "$g=New-Object System.Speech.Recognition.GrammarBuilder;$g.Append($c);"
+            + "$g=New-Object System.Speech.Recognition.GrammarBuilder;$g.Culture=$r.RecognizerInfo.Culture;$g.Append($c);"
             + "$r.LoadGrammar((New-Object System.Speech.Recognition.Grammar($g)));"
             + "$r.SetInputToWaveFile('" + wav.toAbsolutePath().toString().replace("'", "''") + "');"
             + "$t=@();while($x=$r.Recognize()){$t+=$x.Text};[Console]::Out.WriteLine('HEARD:'+($t -join ' '))";
@@ -196,9 +213,65 @@ public final class PaStt {
         String heard = "";
         try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
             String l;
-            while ((l = r.readLine()) != null) if (l.startsWith("HEARD:")) heard = l.substring(6).trim();
+            while ((l = r.readLine()) != null) {
+                if (l.startsWith("HEARD:")) heard = l.substring(6).trim();
+                else readInfo(l);
+            }
         }
         if (!p.waitFor(20, TimeUnit.SECONDS)) p.destroyForcibly();
         return heard.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * [pa33b] PowerShell that makes $r, Windows' recogniser for the accent: of the installed recognisers
+     * (SpeechRecognitionEngine.InstalledRecognizers()), the wanted culture's (en-GB for UK), else en-US, else any English,
+     * else the default; and says which ("CULTURE:en-GB", "INSTALLED:en-GB|en-US").
+     */
+    static String recognizerFor(PaAccent a) {
+        String other = a == PaAccent.UK ? "en-US" : "en-GB";
+        return "$all=@([System.Speech.Recognition.SpeechRecognitionEngine]::InstalledRecognizers());"
+            + "[Console]::Out.WriteLine('INSTALLED:'+(($all|%{$_.Culture.Name}) -join '|'));"
+            + "$ri=$all|?{$_.Culture.Name -eq '" + a.culture + "'}|select -First 1;"
+            + "if(-not $ri){$ri=$all|?{$_.Culture.Name -eq '" + other + "'}|select -First 1};"
+            + "if(-not $ri){$ri=$all|?{$_.Culture.TwoLetterISOLanguageName -eq 'en'}|select -First 1};"
+            + "if($ri){$r=New-Object System.Speech.Recognition.SpeechRecognitionEngine($ri)}"
+            + "else{$r=New-Object System.Speech.Recognition.SpeechRecognitionEngine};"
+            + "[Console]::Out.WriteLine('CULTURE:'+$r.RecognizerInfo.Culture.Name);";
+    }
+
+    /** [pa33b] A line of the script's report (which recogniser, which are installed). */
+    void readInfo(String l) {
+        if (l.startsWith("CULTURE:")) winCulture = l.substring(8).trim();
+        else if (l.startsWith("INSTALLED:")) {
+            String s = l.substring(10).trim();
+            winInstalled = s.isEmpty() ? List.of() : List.of(s.split("\\|"));
+        }
+    }
+
+    /** [pa33b] Ask Windows which recognisers it has (once, off the game thread), for the About tab's line. */
+    public void probe() {
+        if (!windowsHere || probing) return;
+        probing = true;
+        worker.submit(() -> {
+            try {
+                String script = "Add-Type -AssemblyName System.Speech;" + recognizerFor(accent.get());
+                Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script)
+                    .redirectErrorStream(true).start();
+                try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+                    String l;
+                    while ((l = r.readLine()) != null) readInfo(l);
+                }
+                if (!p.waitFor(20, TimeUnit.SECONDS)) p.destroyForcibly();
+            } catch (Throwable ignored) {
+                // the plain line stays
+            } finally {
+                probing = false;
+            }
+        });
+    }
+
+    /** [pa33b] The accent asked for now (forget the probe when it changes, so the line is about the right one). */
+    public PaAccent accent() {
+        return accent.get();
     }
 }

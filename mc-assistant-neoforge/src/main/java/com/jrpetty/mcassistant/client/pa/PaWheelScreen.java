@@ -85,6 +85,8 @@ public final class PaWheelScreen extends Screen {
         add("Stay", "stay here", "stay");
         add("Light it up", "light up the area", "light_area");
         add("Bring me food", "bring me food", "bring_food");
+        boolean hushed = PaClient.state.getCompound("set").getInt("mute") > 0;   // [pa33b] hush it, or let it talk again
+        add(hushed ? "Talk again" : "Quiet", hushed ? "you can talk again" : "be quiet", "paused");
         add("Stop", "stop", "paused");
         add("Open the panel", "#panel", "craft");
         while (items.size() > 12) items.remove(items.size() - 2);

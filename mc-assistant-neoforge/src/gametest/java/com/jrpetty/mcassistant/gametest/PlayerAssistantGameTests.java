@@ -156,7 +156,7 @@ public class PlayerAssistantGameTests {
         helper.assertTrue(a.ownerName().equals(p.getGameProfile().getName()), "shows its owner's name");
         helper.assertTrue(a.distanceTo(p) < 6, "beside its player");
         helper.assertTrue(!(((Object) a) instanceof VillageFolkEntity) && a.getType() == McAssistantMod.PLAYER_ASSISTANT.get(), "its own entity type");
-        helper.assertTrue(allWords(a).contains("I'm"), "it introduced itself: " + allWords(a));
+        helper.assertTrue(allWords(a).contains(a.displayNameCap()), "it introduced itself by name: " + allWords(a));   // [pa33b] the intro lines vary
         PaServer.act(p, "summon", new CompoundTag());
         helper.assertTrue(PaData.of(p.getUUID()).size() == 1, "the button again calls it; it makes no second one");
         helper.succeed();
@@ -838,6 +838,391 @@ public class PlayerAssistantGameTests {
             helper.assertTrue(ingots >= 4, "four iron ingots: " + ingots + " (" + a.state() + ": " + lastWords(a) + ")");
             Kit.log("pai30 smelted " + ingots + " iron ingots (" + lastWords(a) + ")");
         });
+    }
+
+    // ================================================================== round 2 [pa33b]
+
+    /** pai31: at a live town market it buys for its player, never past its spending limit, and sells from its pack for them. */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "pai31_trade")
+    public static void pai31_trade(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_090_000, y = ground(level, x);
+        level.setDayTime(24000L * 3 + 8000);
+        VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x, Z), 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a town");
+        java.util.UUID id = f.ownerId();
+        helper.runAfterDelay(10, () -> {
+            Villages.Village v = Villages.get(id);
+            BlockPos heart = v.centre();
+            f.setJob(AssistantEntity.StationTask.FARM);           // its founder farms: nobody builds with the town's stone meanwhile
+            for (int k = 0; k < 6; k++) {                         // a fed town with a glut of cobblestone to sell
+                BlockPos at = Kit.surface(level, heart.getX() - 6 + 2 * k, heart.getZ() - 5);
+                level.setBlock(at, Blocks.CHEST.defaultBlockState(), 3);
+                com.jrpetty.mcassistant.entity.ZoneChests.mark(level, at);
+                if (level.getBlockEntity(at) instanceof Container c) for (int i = 0; i < 27; i++) c.setItem(i, new ItemStack(k == 0 ? Items.BREAD : Items.COBBLESTONE, 64));
+            }
+            Villages.forgetStores(id);
+            com.jrpetty.mcassistant.entity.Budget.forget(id);
+            com.jrpetty.mcassistant.village.Ledger.addCoins(id, 500);
+            ServerPlayer p = player(helper, level, heart.offset(2, 0, 2));
+            p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 60));
+            PlayerAssistantEntity a = assistant(helper, p);
+            int price = com.jrpetty.mcassistant.entity.Market.quoteFor(level, v, p, new ItemStack(Items.COBBLESTONE));
+            helper.assertTrue(price > 0, "the market sells cobblestone: " + price);
+            a.rec().spend = price * 2 + price / 2;                 // room for two lots, not three
+            int before = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+            Kit.log("pai31 market stock of cobblestone " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)));
+            say(p, a, "buy 256 cobblestone");                      // four lots asked for; the limit allows two
+            int[] phase = {0}, mark = {0, 0, 0};
+            helper.succeedWhen(() -> {
+                if (phase[0] == 0) {
+                    helper.assertTrue(a.plan.idle(), "the shopping is done (" + a.state() + ")");
+                    int paid = before - com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+                    int got = p.getInventory().countItem(Items.COBBLESTONE);
+                    helper.assertTrue(got > 0 && paid > 0, "it bought cobblestone with its player's coin: " + got + " for " + paid + " (" + allWords(a)
+                        + "; stock " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)) + ")");
+                    helper.assertTrue(paid <= a.rec().spend, "never past the limit: paid " + paid + " of " + a.rec().spend);
+                    helper.assertTrue(allWords(a).contains("spending limit"), "and said why it stopped: " + lastWords(a));
+                    mark[0] = paid;
+                    mark[1] = got;
+                    mark[2] = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+                    phase[0] = 1;
+                    a.insertGiven(new ItemStack(Items.COBBLESTONE, 64));
+                    say(p, a, "sell 64 cobblestone");
+                    helper.fail("now selling");                    // and wait for the sale
+                }
+                helper.assertTrue(a.plan.idle() && com.jrpetty.mcassistant.entity.Market.coinsHeld(p) > mark[2],
+                    "sold its cobblestone and its player was paid (" + lastWords(a) + "; stock "
+                    + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)) + ")");
+                Kit.log("pai31 quote " + price + ", limit " + a.rec().spend + ", paid " + mark[0] + " for " + mark[1] + " cobblestone; sold: +"
+                    + (com.jrpetty.mcassistant.entity.Market.coinsHeld(p) - mark[2]) + " coins (" + allWords(a) + ")");
+            });
+        });
+    }
+
+    /** pai32: self-care: hurt with bread in its pack, it eats and heals; hurt with nothing to eat, it says so and asks. */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pai32_self_care")
+    public static void pai32_self_care(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_093_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
+        a.insertGiven(new ItemStack(Items.BREAD, 4));
+        a.setHealth(8.0F);
+        helper.runAfterDelay(400, () -> {
+            int bread = a.countMatching(st -> st.is(Items.BREAD));
+            helper.assertTrue(a.getHealth() > 8.0F && bread < 4, "it ate and healed: hp " + a.getHealth() + ", bread left " + bread);
+            float healed = a.getHealth();
+            a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
+            a.setHealth(6.0F);
+            helper.succeedWhen(() -> {
+                helper.assertTrue(allWords(a).contains("nothing to eat") || allWords(a).contains("out of food") || allWords(a).contains("pantry is empty"),
+                    "with no food it asks: " + lastWords(a));
+                Kit.log("pai32 ate (hp 8 -> " + healed + ", bread " + bread + "/4); with none: \"" + lastWords(a) + "\"");
+            });
+        });
+    }
+
+    /** pai33: its player gets into a boat: it takes the seat beside them and goes with them; they step out, it steps out. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pai33_boat")
+    public static void pai33_boat(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_096_000, y = ground(level, x);
+        for (int dx = 2; dx <= 14; dx++) for (int dz = -4; dz <= 4; dz++) {
+            level.setBlock(new BlockPos(x + dx, y - 1, Z + dz), Blocks.WATER.defaultBlockState(), 2);
+            level.setBlock(new BlockPos(x + dx, y - 2, Z + dz), Blocks.STONE.defaultBlockState(), 2);
+        }
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        say(p, a, "follow me");
+        net.minecraft.world.entity.vehicle.Boat boat = EntityType.BOAT.create(level);
+        boat.moveTo(x + 4.5, y - 0.6, Z + 0.5, 0.0F, 0.0F);
+        level.addFreshEntity(boat);
+        p.startRiding(boat, true);
+        int[] phase = {0};
+        helper.succeedWhen(() -> {
+            if (phase[0] == 0) {
+                helper.assertTrue(a.getVehicle() == boat, "it got into the boat with its player: " + a.getVehicle());
+                phase[0] = 1;
+                boat.setPos(x + 10.5, y - 0.6, Z + 0.5);           // rowed across: both aboard go with it
+                helper.fail("rowing");
+            }
+            if (phase[0] == 1) {
+                helper.assertTrue(a.getVehicle() == boat && a.distanceToSqr(boat) < 4, "it went along: " + String.format("%.1f", a.distanceTo(boat)));
+                phase[0] = 2;
+                p.stopRiding();
+                helper.fail("stepping out");
+            }
+            helper.assertTrue(!a.isPassenger(), "its player stepped out, so did it");
+            Kit.log("pai33 into the boat, across the water, and out with its player");
+        });
+    }
+
+    /** pai34: its player goes to another dimension: it comes along and stands beside them there. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pai34_dimension")
+    public static void pai34_dimension(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_099_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        say(p, a, "follow me");
+        ServerLevel nether = level.getServer().getLevel(net.minecraft.world.level.Level.NETHER);
+        helper.assertTrue(nether != null, "a nether to go to");
+        int nx = x / 8, nz = Z / 8, ny = 100;
+        nether.getChunkAt(new BlockPos(nx, ny, nz));
+        for (int dx = -4; dx <= 4; dx++) for (int dz = -4; dz <= 4; dz++) {
+            nether.setBlock(new BlockPos(nx + dx, ny - 1, nz + dz), Blocks.OBSIDIAN.defaultBlockState(), 2);
+            for (int dy = 0; dy < 3; dy++) nether.setBlock(new BlockPos(nx + dx, ny + dy, nz + dz), Blocks.AIR.defaultBlockState(), 2);
+        }
+        p.teleportTo(nether, nx + 0.5, ny, nz + 0.5, Set.of(), 0.0F, 0.0F);
+        helper.succeedWhen(() -> {
+            PlayerAssistantEntity there = PaLife.find(p);
+            helper.assertTrue(there != null && there.level() == nether && there.distanceTo(p) < 8,
+                "it came through to the nether beside its player: " + (there == null ? "none" : there.level().dimension().location() + " " + String.format("%.1f", there.distanceTo(p))));
+            Kit.log("pai34 followed its player to the nether: " + String.format("%.1f", there.distanceTo(p)) + " blocks away");
+        });
+    }
+
+    /** pai35: two players: each has their own assistant and their own limit; B can't direct it, open it, or turn it on anyone. */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pai35_two_players")
+    public static void pai35_two_players(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_102_000, y = ground(level, x);
+        ServerPlayer pa = player(helper, level, new BlockPos(x, y, Z));
+        ServerPlayer pb = player(helper, level, new BlockPos(x + 6, y, Z));
+        PlayerAssistantEntity a = assistant(helper, pa);
+        say(pa, a, "stay here");
+        // B: words, the panel, the job list, dismissing: nothing reaches A's assistant
+        CompoundTag t = new CompoundTag();
+        t.putString("text", "follow me");
+        PaServer.act(pb, "talk", t);
+        PaServer.act(pb, "dismiss", new CompoundTag());
+        CompoundTag bState = com.jrpetty.mcassistant.pa.PaNet.state(pb, PaLife.find(pb));
+        helper.assertTrue(a.getMode() == AssistantEntity.Mode.STAY && a.isAlive() && !bState.getBoolean("has"),
+            "B's words and panel reach nothing of A's: mode " + a.getMode() + ", B sees one: " + bState.getBoolean("has"));
+        // B hits it: no harm done to B, and it turns on nobody
+        a.hurt(level.damageSources().playerAttack(pb), 2.0F);
+        // each their own: B gets one of their own, A's limit is A's
+        PaServer.act(pb, "summon", new CompoundTag());
+        PlayerAssistantEntity b = PaLife.find(pb);
+        helper.assertTrue(b != null && b != a && b.isOwner(pb) && !b.obeys(pa) && !a.obeys(pb), "B has their own, each obeys its own player");
+        int aBefore = PaData.of(pa.getUUID()).size();
+        PaServer.act(pa, "summon", new CompoundTag());
+        helper.assertTrue(PaData.of(pa.getUUID()).size() == aBefore && PaData.of(pb.getUUID()).size() == 1, "one each: A's second call made none, B has one");
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(a.getTarget() == null && b.getTarget() == null && pb.getHealth() == pb.getMaxHealth(), "nobody turned on anybody");
+            Kit.log("pai35 two players: own assistants (" + a.shownName() + ", " + b.shownName() + "), own limits, B can't direct or open A's");
+            helper.succeed();
+        });
+    }
+
+    /** pai36: the talk log keeps tidy: the same line again shows once with a count; a second hello replaces the first. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pai36_talk_log")
+    public static void pai36_talk_log(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_105_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        int n = a.rec().log.size();
+        com.jrpetty.mcassistant.pa.PaTalk.greet(a, "Welcome back!");
+        com.jrpetty.mcassistant.pa.PaTalk.greet(a, "Good to see you again.");
+        com.jrpetty.mcassistant.pa.PaTalk.reply(a, "Heading there.");
+        com.jrpetty.mcassistant.pa.PaTalk.reply(a, "Heading there.");
+        var log = a.rec().log;
+        helper.assertTrue(log.size() == n + 2, "two lines, not four: " + (log.size() - n));
+        helper.assertTrue(log.peekLast().times() == 2 && log.peekLast().text().equals("Heading there."), "the repeat counted: x" + log.peekLast().times());
+        Kit.log("pai36 log tidy: one hello, \"Heading there.\" x2");
+        helper.succeed();
+    }
+
+    /** pai37: its personality (the triangle), its look and its chattiness save with it and come back after a save. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pai37_persona_saves")
+    public static void pai37_persona_saves(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_108_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        helper.assertTrue(a.rec().tri().label().equals("Banter"), "a new one starts at Banter: " + a.rec().tri().label());
+        CompoundTag t = new CompoundTag();
+        t.putFloat("funny", 0.25F);
+        t.putFloat("gloomy", 0.6F);
+        t.putInt("chatty", 4);
+        PaServer.act(p, "settings", t);
+        CompoundTag lk = new CompoundTag();
+        lk.putInt("look", 14);
+        PaServer.act(p, "look", lk);
+        PaData.Rec back = PaData.Rec.loadForTests(a.rec().saveForTests());
+        helper.assertTrue(Math.abs(back.funny - 0.25F) < 1e-4 && Math.abs(back.gloomy - 0.6F) < 1e-4 && back.chatty == 4 && back.look == 14,
+            "saved and loaded: " + back.funny + ", " + back.gloomy + ", " + back.chatty + ", " + back.look);
+        helper.assertTrue(a.look() == 14, "its body shows the skeleton look: " + a.look());
+        Kit.log("pai37 triangle (0.25 funny, 0.6 gloomy = " + back.tri().label() + "), look 14 and chattiness 4 saved and loaded");
+        helper.succeed();
+    }
+
+    /** pai38: "shut up" quiets it (answers and warnings only), "no more jokes" leaves plain words, "you can talk again" lifts it; kept over a save. */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "pai38_mute")
+    public static void pai38_mute(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_111_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.rec().chatty = 4;                                       // Won't shut up, at the Joker corner: the Joke Machine
+        a.rec().funny = 1.0F;
+        a.rec().gloomy = 0.0F;
+        helper.assertTrue(com.jrpetty.mcassistant.pa.PaBanter.jokeMachine(a), "Joke Machine on to start");
+        say(p, a, "oi, shut up");
+        helper.assertTrue(a.rec().mute == 2 && a.mute() == 2, "quiet: " + a.rec().mute);
+        String ack = lastWords(a);
+        helper.assertTrue(!ack.isEmpty() && ack.length() < 80, "one short acknowledgement: " + ack);
+        helper.assertTrue(!com.jrpetty.mcassistant.pa.PaBanter.jokeMachine(a), "no Joke Machine while quiet");
+        int[] start = {said(a)}, tick = {0};
+        helper.onEachTick(() -> {
+            tick[0]++;
+            if (tick[0] % 10 == 0) {                              // its player mining, placing, jumping, eating, opening chests, standing about
+                String[] did = {"jm.mine", "jm.place", "jm.jump", "jm.eat", "jm.chest"};
+                com.jrpetty.mcassistant.pa.PaBrain.ownerDid(a, did[(tick[0] / 10) % did.length]);
+                com.jrpetty.mcassistant.pa.PaBanter.quip(a, "quip.idle", 1, null);
+                com.jrpetty.mcassistant.pa.PaBanter.quip(a, "quip.rain", 1, null);
+            }
+        });
+        helper.runAfterDelay(1000, () -> {
+            int unasked = said(a) - start[0];
+            helper.assertTrue(unasked == 0, "nothing unasked in 1000 ticks of a Won't-shut-up Joker: " + unasked + " (" + lastWords(a) + ")");
+            int before = said(a);
+            say(p, a, "follow me");
+            helper.assertTrue(said(a) > before, "orders still answered: " + lastWords(a));
+            String plain = lastWords(a);
+            net.minecraft.world.entity.monster.Creeper c = EntityType.CREEPER.create(level);
+            c.moveTo(x + 5.5, y, Z + 0.5, 0, 0);
+            c.setNoAi(true);
+            level.addFreshEntity(c);
+            int[] w = {said(a)};
+            helper.runAfterDelay(60, () -> {
+                helper.assertTrue(allWords(a).contains("Creeper near you"), "warnings still come through: " + lastWords(a));
+                c.discard();
+                PaData.Rec back = PaData.Rec.loadForTests(a.rec().saveForTests());
+                helper.assertTrue(back.mute == 2, "quiet is kept over a save: " + back.mute);
+                say(p, a, "no more jokes");
+                helper.assertTrue(a.rec().mute == 1 && a.tri().serious() > 0.99, "no jokes: plain words (" + a.tri().label() + ")");
+                say(p, a, "you can talk again");
+                helper.assertTrue(a.rec().mute == 0 && a.tri().funny() > 0.99, "talking again, its own self: " + a.rec().mute + " " + a.tri().label());
+                helper.assertTrue(com.jrpetty.mcassistant.pa.PaBanter.jokeMachine(a), "Joke Machine back");
+                Kit.log("pai38 quiet: ack \"" + ack + "\"; 0 unasked in 1000 ticks; order answered \"" + plain + "\"; creeper warned; kept over a save; "
+                    + "no-jokes then back: \"" + lastWords(a) + "\"");
+                helper.succeed();
+            });
+        });
+    }
+
+    /** pai39: match my energy: a rude order is done and answered in kind at its player's Language (never past the server cap,
+     *  never while hushed); someone else is answered by name in kind, never ordered, defended against, rate-limited. */
+    @GameTest(template = EMPTY, timeoutTicks = 1400, batch = "pai39_energy")
+    public static void pai39_energy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_114_000, y = ground(level, x);
+        ServerPlayer pa = player(helper, level, new BlockPos(x, y, Z));
+        ServerPlayer pb = player(helper, level, new BlockPos(x + 4, y, Z));
+        PlayerAssistantEntity a = assistant(helper, pa);
+        int cap = com.jrpetty.mcassistant.pa.PaConfig.maxLanguage();
+        a.rec().language = 2;                                         // Unfiltered asked for; the server's cap rules
+        say(pa, a, "go get my wheat you fucking loser");
+        String first = lastWords(a);
+        helper.assertTrue(!a.plan.idle(), "the wheat is being fetched: " + a.state());
+        String lv = cap >= 2 ? "unfiltered" : cap == 1 ? "cheeky" : "clean";
+        helper.assertTrue(fromLists(first, "tone.rude." + lv, "tone.rude_again." + lv), "answered in kind at " + lv + " (cap " + cap + "): " + first);
+        for (String w : first.split("[^A-Za-z*$']+")) helper.assertTrue(cap >= 2 || !com.jrpetty.mcassistant.pa.PaTone.strong(w), "never past the cap: " + first);
+        say(pa, a, "stop");
+        a.rec().language = 0;                                         // Clean
+        say(pa, a, "get me 16 logs you useless idiot");
+        String clean = lastWords(a);
+        helper.assertTrue(fromLists(clean, "tone.rude.clean", "tone.rude_again.clean"), "a clean comeback: " + clean);
+        for (String w : clean.split("[^A-Za-z*$']+")) helper.assertTrue(!com.jrpetty.mcassistant.pa.PaTone.swear(w) || w.equalsIgnoreCase("hell"), "Clean never swears: " + clean);
+        say(pa, a, "stop");
+        a.setMute(1);
+        int before = said(a);
+        say(pa, a, "get me 16 logs you useless idiot");
+        String hushed = lastWords(a);
+        helper.assertTrue(!fromLists(hushed, "tone.rude.clean", "tone.rude_again.clean") && said(a) - before == 1 && !a.plan.idle(),
+            "hushed: the job and a plain reply, no roast: " + hushed);
+        say(pa, a, "stop");
+        a.setMute(0);
+        a.rec().language = 2;
+        // someone else
+        String[] got = new String[6];
+        int n0 = said(a);
+        stranger(pb, a, "Hello");
+        got[0] = since(a, n0);
+        helper.assertTrue(fromLists(got[0], "stranger.polite") && got[0].contains(pb.getGameProfile().getName()), "friendly, by name: " + got[0]);
+        helper.runAfterDelay(170, () -> {
+            AssistantEntity.Mode m0 = a.getMode();
+            int planned = a.plan.steps.size();
+            int n1 = said(a);
+            stranger(pb, a, "guard me");
+            got[1] = since(a, n1);
+            helper.assertTrue(fromLists(got[1], "stranger.order") && a.getMode() == m0 && a.plan.steps.size() == planned, "no orders from strangers: " + got[1] + " (" + a.getMode() + ")");
+            helper.runAfterDelay(170, () -> {
+                int n2 = said(a);
+                stranger(pb, a, "You're useless");
+                got[2] = since(a, n2);
+                helper.assertTrue(fromLists(got[2].replaceAll(" " + java.util.regex.Pattern.quote(pa.getGameProfile().getName()) + ",.*$", ""), "stranger.roast." + lv)
+                    || fromLists(got[2], "stranger.roast." + lv), "roasted back at " + lv + ": " + got[2]);
+                helper.runAfterDelay(170, () -> {
+                    int n3 = said(a);
+                    stranger(pb, a, "Your owner's rubbish");
+                    got[3] = since(a, n3);
+                    helper.assertTrue(got[3].contains(pa.getGameProfile().getName()), "sticks up for its player: " + got[3]);
+                    int n = said(a);
+                    stranger(pb, a, "you're rubbish");                // within eight seconds
+                    helper.assertTrue(said(a) == n, "one reply in eight seconds to the same player");
+                    helper.runAfterDelay(170, () -> {
+                        a.setMute(2);
+                        int m = said(a);
+                        stranger(pb, a, "You're useless");
+                        helper.assertTrue(said(a) == m, "quiet: not a word to anyone");
+                        a.setMute(0);
+                        Kit.log("pai39 owner rude at " + lv + ": \"" + first + "\"; clean: \"" + clean + "\"; hushed: \"" + hushed + "\"; stranger: \"" + got[0]
+                            + "\" / \"" + got[1] + "\" / \"" + got[2] + "\" / \"" + got[3] + "\"; rate-limited; quiet silences");
+                        helper.succeed();
+                    });
+                });
+            });
+        });
+    }
+
+    private static void stranger(ServerPlayer p, PlayerAssistantEntity a, String text) {
+        CompoundTag t = new CompoundTag();
+        t.putInt("id", a.getId());
+        t.putString("text", text);
+        PaServer.act(p, "stranger", t);
+    }
+
+    /** Is this said line one of these lists' lines (blanks filled with anything)? */
+    private static boolean fromLists(String said, String... keys) {
+        for (String k : keys) for (String c : new String[]{"", "@gloomy", "@serious", "@sf", "@sg", "@fg"})
+            for (String l : com.jrpetty.mcassistant.pa.PaLines.get(k + c)) {
+                String re = java.util.regex.Pattern.quote(l).replaceAll("\\{[a-z]+\\}", "\\\\E.*\\\\Q");
+                if (said.matches(re + ".*")) return true;
+            }
+        return false;
+    }
+
+    /** The first line it said after it had said so many (or "" if none). */
+    private static String since(PlayerAssistantEntity a, int n) {
+        int k = 0;
+        for (PaData.Line l : a.rec().log) {
+            if (l.who() != 1) continue;
+            k += Math.max(1, l.times());
+            if (k > n) return l.text();
+        }
+        return "";
+    }
+
+    /** How many lines it has said (a line said again counts again). */
+    private static int said(PlayerAssistantEntity a) {
+        int n = 0;
+        for (PaData.Line l : a.rec().log) if (l.who() == 1) n += Math.max(1, l.times());
+        return n;
     }
 
     /** A small oak: a five-log trunk and a crown of leaves that stay. */

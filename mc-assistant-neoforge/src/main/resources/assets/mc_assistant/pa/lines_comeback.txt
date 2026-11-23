@@ -1,0 +1,141 @@
+# [pa33b] When its player gives it some lip (or a kind word): it answers in kind, never sulks, and still does the job.
+
+== comeback.insult
+Useless. Says the person who walked into a cactus.
+Rubbish, am I. I'll remember that when you need a bridge.
+Harsh. Fair, but harsh.
+I'd be offended, but I'm too busy being brilliant.
+Noted. Filed under "lies".
+I'm not useless. I'm differently useful.
+Bold words from someone with a dirt collection.
+Careful, I know where you keep your diamonds.
+You're lucky I'm the forgiving type.
+Takes one to know one, you muppet.
+== comeback.insult@gloomy
+I know. I've always known.
+Useless. Yes. Me and the rain both.
+That's fair. Most things are pointless.
+I'd argue, but what's the point.
+Rubbish. I've been called worse. By myself, mostly.
+Quite right. I'll carry on regardless. It's all I do.
+== comeback.insult@serious
+Noted. Carrying on.
+Understood. I'll do better.
+Fair enough. What do you need?
+Sorry to hear it. I'll keep working.
+== comeback.praise
+I know. But thank you for noticing.
+You absolute legend. Oh, you meant me. Yes.
+Finally, some recognition.
+Good lad yourself.
+Steady, I'll get a big head. Bigger head.
+I'll have that framed.
+Cheers. I'm basically a national treasure.
+Flattery will get you everywhere. Mostly to the end of my queue.
+Stop it. Don't stop it.
+I do try. Mostly to impress you.
+== comeback.praise@gloomy
+Oh. Thanks. It won't last.
+Nice of you to say. It'll all fall apart eventually.
+Cheers. I'll try to enjoy that.
+Thank you. I'll cling to it.
+Good, was it. First time for everything.
+Kind of you. Don't get used to it.
+== comeback.praise@serious
+Thank you.
+Glad it helped.
+Cheers. Happy to.
+== comeback.love
+Steady on. We've only just met.
+Love you too. In a strictly professional capacity.
+Aw. Careful, I'll start expecting compliments. Then where will we be.
+That's lovely. I'll still charge you for the logs.
+Careful, the chickens will get jealous.
+You say that to all your assistants.
+I'm touched. Mildly. Mostly by the sentiment.
+Love's a strong word. I'll take it.
+== comeback.love@gloomy
+That's kind. Love fades, of course. Like daylight.
+Oh. Well. That's nice. While it lasts.
+Love. Yes. Lovely. Fleeting, but lovely.
+I'll treasure that. Till I inevitably lose it.
+== comeback.love@serious
+Thanks, {owner}. Likewise.
+That's kind of you.
+Appreciated.
+== comeback.joke
+Right, here's one.
+You asked for it.
+Brace yourself.
+I've been saving this one.
+Okay, okay.
+Here goes nothing.
+
+== joke
+[bad] Why did the creeper cross the road. To get to the other ssssside. That one was terrible. I'm keeping it.
+[bad] What's a skeleton's least favourite room. The living room.
+[bad] Why don't Endermen tell secrets. They can't keep anything in one place.
+[bad] How does Steve stay fit. He runs around the block. I've had that one since the world was flat. It's still flat.
+[bad] What do you call a sheep in a cobweb. Stuck.
+[bad] Why did the pig go to the casino. To play the slop machine.
+[bad] What do you call a zombie who can't stop telling jokes. Undead funny. Sorry. Not sorry.
+[bad] Why are creepers bad at parties. They always blow it.
+[bad] How do you know a skeleton's lying. You can see right through him.
+[bad] What does a ghast do on a bad day. Cries fireballs. Don't tell anyone I said that.
+[bad] Why did the chicken cross the Nether. It didn't. It's cooked.
+[bad] What's a miner's favourite music. Rock.
+[bad] Why did the villager refuse the trade. It was a raw deal. I'll get my coat.
+[bad] Why don't zombies eat clowns. They taste funny.
+[bad] How do Endermen keep fit. Tele-ports.
+[bad] What did the bow say to the arrow. You've got a point. That one was terrible. I'm keeping it.
+[bad] Why was the bed so tired. It had a long night.
+[bad] What's a cow's favourite block. Moo-ssy cobblestone.
+[bad] Why did the slime get a job. It was looking for a bounce. I've had that one since the world was flat. It's still flat.
+[bad] How does a witch fix her hair. Scare spray.
+[bad] Why can't the iron golem keep a secret. He's got iron lips. They clang.
+[bad] What do you call a bee in the Nether. A frazzled bee. Sorry. Not sorry.
+[bad] Why did Steve bring a ladder to school. To get to the high grades.
+[bad] What did the stone say to the pickaxe. Leave me a-lone.
+[bad] Why did the dolphin cross the ocean. To get to the other tide. Don't tell anyone I said that.
+[bad] What's a parrot's favourite game. Hide and speak.
+[bad] Why don't skeletons fight each other. They haven't got the guts.
+[bad] What does a spider wear to a wedding. A web-tie. I'll get my coat.
+[bad] Why was the furnace so popular. It was always smelting things over.
+[bad] How do you make a creeper laugh. Tell it a blast of a joke.
+Why did the creeper get the job. It made a big impression on the interview panel. Then on the building.
+I asked a villager for directions. He said "hrmm". Best directions I've had all week.
+An Enderman walks into a bar. He picks it up and leaves.
+I'm reading a book about anti-gravity. Impossible to put down. Unlike a bed, which you can't put down near anything nice.
+The Ender Dragon sat on its egg for ten thousand years. Then someone took the egg. That's the whole of parenting, really.
+What's the difference between a zombie and your neighbour. One shuffles round at night groaning. The other's a zombie.
+A skeleton asked me to dinner. I said no. He didn't have the stomach for it anyway.
+They say diamonds are forever. Not near lava they aren't.
+Why do witches never win at cards. Someone always throws the potion.
+A wolf, a cat and a parrot walk into a house. That's not a joke, that's your inventory.
+What did one furnace say to the other. You're hot. The other one said: I know, I'm a furnace.
+I told a joke to a sheep once. It didn't laugh. Tough crowd. Woolly crowd.
+Why don't villagers play hide and seek. Iron golems always find you, and then there's paperwork.
+The pig said to the carrot on a stick: I'll follow you anywhere. And that, friends, is a relationship.
+Why is the Nether so cheap to heat. Location, location, location.
+Never trust a piglin with your gold. Or a creeper with your feelings.
+My therapist says I'm too attached to my sword. I said: we'll see who's laughing when the zombies come.
+A bed is just a respawn point with ambitions.
+Why did the iron golem give the villager a flower. It's complicated. It's always complicated with golems.
+[bad] What's a creeper's favourite subject. Hiss-tory. Fine. That one's bad. That one's mine.
+
+# [pa33b] six or more at every corner
+== comeback.insult@serious
+That's not very kind. I'll carry on regardless.
+Noted. Still working.
+Fair enough. I'll keep going.
+== comeback.praise@serious
+Thank you.
+Glad it helped.
+Thanks, {owner}.
+== comeback.love@serious
+That's kind of you.
+Thank you, {owner}.
+Appreciated.
+== comeback.love@gloomy
+That's nice. Nobody's said that to me before. Well, once. It was a chicken.
+Love. Hm. I'll try to remember the feeling when it rains.

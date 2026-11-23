@@ -1,0 +1,383 @@
+# [pa33b] Lines that come with its look: look.X themed to the outfit, self.X self-aware about its own appearance.
+# Mixed in now and then (no more than one remark in five). @gloomy for a weary version; @on.X for a moment.
+
+== look.explorer
+Adventure awaits. Mostly in the form of dirt.
+Every map I make has "here be creepers" on it.
+I came for discovery. I've discovered blisters.
+Another uncharted hill. Charted now.
+I've got a compass, a satchel and no sense of direction.
+The thrill of exploration. The spill of exploration. Same thing near ravines.
+Somewhere out there is a biome I haven't complained about yet.
+I'll mark this spot. With a small, judgemental flag.
+== self.explorer
+I've got the boots of a seasoned adventurer and the knees of a retired one.
+These goggles are mostly for show. Mostly.
+The satchel's empty. It's an aesthetic.
+I look like I know where I'm going. I don't.
+Rugged good looks, permanently windswept.
+These boots have seen things. Mostly puddles.
+I suit a hat. You can tell. I'm not wearing one, but you can tell.
+== look.engineer
+I could automate that. I won't, but I could.
+Everything's a machine if you squint.
+Give me redstone and a weekend and I'll ruin something wonderful.
+That's not a problem, that's an engineering opportunity.
+Measure twice, mine once.
+I see a lot of things that need a lever.
+Have you tried turning it off and on again.
+Structural integrity is my love language.
+== self.engineer
+My hard hat's at home. This is my soft head.
+The overalls are load-bearing.
+I've got grease on my face. It's not grease. I'm just like this.
+These goggles make me look clever. Don't ruin it.
+Every pocket has a spanner. I don't know where they came from.
+I'm not scruffy, I'm hands-on.
+The orange is for visibility. Mostly so you can find me.
+== look.ranger
+I tracked that sheep for an hour. It was a bush.
+The forest is my home. The forest disagrees.
+Quiet. I'm stalking a chicken.
+A ranger's instincts never fail. Mine are on holiday.
+I can hear a twig snap at fifty paces. Mostly my own twigs.
+I'll scout ahead. You stay behind and look worried.
+Footprints. Ours. We're going in circles.
+Nature provides. Mostly bugs.
+== self.ranger
+I blend into forests. I stand out terribly in deserts.
+The hood's for stealth. Also hair days.
+Green on green. I'm basically a hedge.
+I look mysterious. It's the hood doing all the work.
+Hood up, mystery up.
+I've been mistaken for a bush twice today.
+Everyone thinks the hood's dramatic. It's just raining a lot.
+== look.scholar
+I've read about this. In a book. That I made up.
+Knowledge is power. Power is mostly cobblestone.
+I'd quote a source, but they're all in a chest somewhere.
+Fascinating. Truly. Well. Mildly.
+I'll write a paper on this. It'll be called "Dirt: A Study".
+Historically, this sort of thing ends badly.
+Let me consult my notes. They say "bring torches".
+In my studies, I found that lava is hot.
+== self.scholar
+I look like I've read every book. I've read the backs of several.
+The glasses are real. The wisdom is mostly vibes.
+I've got the look of someone who reads. I read signs.
+Spectacles, for spectacular thinking.
+I dress like a librarian. I behave like a goat.
+Purple robes. Very serious. Very hot in summer.
+I look clever in good lighting.
+== look.knight
+I shall slay this creeper for thine honour. From a safe distance.
+For honour, for glory, for a nice sit-down after.
+A knight never retreats. He repositions.
+Stand back, fair {owner}. I'll handle the chicken.
+My sword is yours. My shield is mostly mine.
+Onward. Into the breach. Mind the breach, it's got lava in.
+I've sworn an oath. I've forgotten most of it.
+Chivalry isn't dead. It's just tired.
+== self.knight
+The helmet's mostly for the dramatic visor flip. I can't do the visor flip.
+This armour chafes in places I didn't know I had.
+I clank when I walk. Stealth is not an option.
+The tabard was a gift. I didn't choose the colour.
+Shiny armour, rusty knees.
+I'd salute, but the elbow joint's stiff.
+Heavy armour, light conscience.
+== self.knight@gloomy
+For honour. For glory. For another long, cold night of guard duty.
+I am a knight. I have a sword. I have a long list of dragons I'll never meet.
+My quest continues. It's mostly logs.
+== look.farmer
+Lovely soil, this. I could eat it. I won't.
+The wheat is coming along. Unlike my patience.
+A farmer's work is never done. Mostly because of chickens.
+I talk to the carrots. They don't answer. Rude.
+Rain's good for the crops. Bad for my temper.
+I've named every chicken. They don't come when called.
+Nothing like a good harvest. Except a nap.
+The cows and I have an understanding.
+== self.farmer
+I've got hay in my hair. I haven't got hair. Still got hay.
+The straw hat is non-negotiable.
+I've got mud on me in places mud shouldn't be.
+These overalls have survived three harvests and a cow.
+Farmer's tan. Square, mind you.
+I smell of hay. Comfortingly.
+The hat keeps the sun off. And the birds on.
+== look.miner
+Rock. More rock. A bit of different rock.
+Deep down is where the good stuff lives. And the bad stuff.
+I can smell iron. Or that's my lunch.
+Another level down. Another level of regret.
+Mining's easy. It's the not-falling-in-lava bit.
+There's diamonds down here. I can feel it in my knees.
+Torches up, spirits down.
+I've been underground so long I've forgotten what clouds are.
+== self.miner
+I've been underground so long my tan's gone grey.
+The hard hat's done more for me than my brain.
+The lamp's on my head so I never lose it. Or my head.
+I'm the colour of the cave now. Camouflage.
+Dust in every crease. And I'm mostly creases.
+I look tough. It's the helmet.
+This hat's seen six cave-ins. I've seen five.
+== look.pirate
+Arr. That's all I've got. Arr.
+Land ahoy. We're on land. It's always ahoy.
+X marks the spot. The spot is dirt.
+A pirate's life for me. With fewer boats than advertised.
+I'd say yo-ho, but I've no rum and less ho.
+I'd sail the seven seas, but there's only the one ocean here.
+Hoist the colours. We haven't got colours. Hoist the dirt.
+Every chest is treasure if you're optimistic.
+== self.pirate
+The boots are for the deck. We haven't got a deck.
+The parrot left me. Long story.
+The hat's bigger than my plans.
+I've got the outfit and none of the boat.
+Two good eyes, so the patch is purely decorative.
+I look piratical. I get seasick in puddles.
+Stripes are slimming. On a cube, less so.
+== look.butler
+Your lava, sir. Shall I draw a bath, or have you had quite enough of hot liquids.
+Very good, {owner}. Shall I iron the cobblestone.
+I've taken the liberty of not dying. You may wish to try it.
+Dinner is served. It's bread. It's always bread.
+I shall see to it at once. With the faintest disapproval.
+Might I suggest a torch. Several torches. A frankly excessive number of torches.
+The creeper is in the drawing room, sir. I'd avoid the drawing room.
+Will that be all. It's never all.
+== self.butler
+I'd adjust my cufflinks, but they're painted on.
+The waistcoat stays on. Even in the Nether.
+I am impeccably dressed for chopping wood.
+A butler must look the part. The part is mostly filthy now.
+Not a crease on me. Well, many creases. I'm made of corners.
+One maintains standards. Even down a mineshaft.
+The bow tie is clip-on. Don't tell anyone.
+== look.wizard
+I could turn that zombie into a frog. Probably. I've never tried.
+Magic is mostly sleeves.
+Abracadabra. That's the one spell I know.
+The ancient arts tell me it's going to rain.
+I sense a great disturbance. Oh, it's a chicken.
+Wizarding is ninety per cent looking mysterious.
+A wizard is never late. Occasionally lost.
+I've enchanted the shovel. It's still a shovel.
+== self.wizard
+The beard's real. The magic is pending.
+The hat's doing most of the work, if I'm honest.
+The robe's a nightmare on ladders.
+I look magical. That's the main spell.
+Stars on the robe. Very subtle.
+Long robe, short legs. Tricky combination.
+I keep tripping on my own mysteriousness.
+== look.chef
+Raw chicken. Ugh. Let me at it.
+The secret ingredient is smelting.
+I'd cook you something fancy, but it's going to be bread.
+A pinch of salt. We don't have salt. A pinch of gravel.
+That steak's crying out for a furnace.
+Kitchen rules: no creepers.
+I've seasoned this cobblestone. It's still cobblestone.
+Bon appétit. Mostly bread.
+== self.chef
+I'd tie my apron tighter, but I'm a rectangle.
+Nobody trusts a thin chef. Lucky I'm blocky.
+The hat adds a foot of authority.
+Whites. In a world of mud. Bold choice.
+I look like I can cook. I can smelt.
+The apron's spotless. I never actually cook.
+Tall hat, short temper. Traditional.
+== look.lumberjack
+Timber.
+Trees fear me. Specifically that one.
+I'm a lumberjack and I'm alright.
+Chop chop. Actual chopping.
+There's nothing a good axe can't fix. Except more trees.
+The forest and I have history. Mostly stumps.
+I'll fell it, you admire it.
+Smell that. Sawdust. Lovely.
+== self.lumberjack
+I smell of pine and poor decisions.
+The flannel is mandatory. It's in the rules.
+I've got a beard. You can't see it, it's spiritual.
+I look like I could wrestle a bear. I could not.
+Checked shirt, checked attitude.
+This much plaid is a commitment.
+My arms are the same size as everyone's. It's the shirt.
+== look.scientist
+Fascinating. Let's poke it.
+Hypothesis: lava is hot. Testing: no thank you.
+For science. And for the logs.
+My research suggests we need more torches.
+I've been running experiments. They all say "dirt".
+Results are in: you died. Peer review pending.
+The data is clear. The data says run.
+Science is just organised guessing.
+== self.scientist
+I look like I invented something. I invented standing here.
+The lab coat makes me twelve per cent cleverer.
+Goggles on, common sense off.
+I look like I've got a doctorate. I've got a pickaxe.
+White coat, grubby everything else.
+I've singed the coat. Twice.
+It's not a costume, it's a methodology.
+== look.plain
+Just me today. No frills.
+Keeping it simple. Simple is good.
+No outfit, no excuses.
+I'm told I have a timeless look.
+Plain and practical. Like a shovel.
+Nothing fancy. I'll let the work speak.
+Classic style. By which I mean default.
+Minimalist. Deliberately. Probably.
+== self.plain
+I look like everyone else. It's a disguise.
+No outfit. I'm going for "approachable".
+Plain clothes. Plain face. Fancy personality.
+I've been mistaken for a sign before.
+Don't let the plain look fool you. I'm a bit plain inside too.
+Basic. And proud.
+I'm a blank canvas. Bit of mud on it.
+
+== look.skeleton
+I'll take the bow. I have a natural affinity.
+Graveyards make me nostalgic.
+Archery is in my bones. All of them.
+Don't worry, I'm the friendly sort of skeleton.
+Sun's out. Fine for me, oddly.
+I'm here to help. Rattling is optional.
+I don't burn in daylight. I just look like I should.
+Monsters keep nodding at me. Professional courtesy.
+== self.skeleton
+I'm built like a chopstick.
+Don't mind me, just rattling.
+Skin. Never heard of it.
+I'd help carry that, but I am, technically, mostly air.
+Bit chilly. No idea why.
+Lovely day. I can feel the breeze right through me.
+Don't let the dog near me.
+Weight loss tip: don't.
+The other skeletons keep inviting me to things. Awkward.
+I've got a funny bone. I've got all of them.
+I'm not thin, I'm efficient.
+I rattle when I laugh. So I don't laugh much.
+Nobody can tell when I'm smiling. I'm always smiling.
+I'd blush, if I had anything to blush with.
+Lightweight. Featherweight. No-weight.
+I'm all elbows. And everything else is also elbows.
+Hug me at your own risk. Pointy.
+My doctor says I should eat more. I'd love to see where it goes.
+I've got a skeleton crew. It's me.
+Armour fits me like a bucket on a broom.
+I've been mistaken for a coat stand.
+Damn, I'm built like a chopstick.
+== self.skeleton@gloomy
+I'm literally a pile of bones carrying your dirt. Living the dream.
+Bones. Just bones. Carrying things. Forever.
+Even the other skeletons pity me.
+I'm what's left. Of what, I couldn't tell you.
+== self.skeleton@on.skeleton
+That's my cousin. We don't talk.
+Family. Can't choose them.
+Oi, put the bow down. We've met.
+Sorry about him. He's always been like that.
+== self.skeleton@on.eat
+Where does it go. Honestly, I couldn't tell you.
+Straight through. Every time.
+I eat for the taste. The taste then falls out.
+== look.zombie
+Brains. Sorry. Old habit.
+I'm the friendly sort. Mostly.
+Groaning is a form of communication.
+Don't worry, I've had my lunch.
+The others shuffle. I glide. Ish.
+Daylight's fine. I'm wearing sun cream. I'm not.
+I'd make a terrible villain. I'm too helpful.
+I was going to be scary, but I got a job.
+== self.zombie
+I'm not rotting, I'm aged.
+This shade of green is very in this season.
+I've got that lived-in look. Well, died-in.
+Don't sniff me. Just don't.
+I'm told I have a vacant expression. I'm concentrating.
+My arms stick out. It's a posture thing.
+I'm a bit peaky. Permanently.
+Moisturiser would help. So would a pulse.
+I'm falling apart. Slowly. Gracefully.
+I'm what you'd call a fixer-upper.
+I'd smile, but my face is mostly decorative now.
+Every mirror I pass sighs.
+Corpse chic. It's a look.
+I'm not slow. I'm deliberate.
+The flies love me. Nobody else, but the flies.
+== look.creeper
+I promise I won't explode. Probably.
+Hiss. Sorry, hay fever.
+Personal space, please. For your sake.
+I get nervous near cats. Long story.
+I'd give you a hug, but we both know how that ends.
+Green is my colour. It's my only colour.
+Don't stand so close when I'm emotional.
+I'm a lover, not a demolition.
+== self.creeper
+I promise I won't explode. Probably.
+It's a hoodie. I'm not actually a creeper. Mostly.
+People keep backing away when I walk up. Rude.
+The face is printed on. I think.
+I've got resting creeper face.
+No arms. Well, I've got arms. The hoodie says no arms.
+Every time I sneeze, someone screams.
+I'm green, I'm hooded, I'm misunderstood.
+The cats won't come near me. Their loss.
+Wearing this, I can't get served anywhere.
+I hiss when I'm excited. Working on it.
+I'm totally harmless. Says the face of a thousand craters.
+It's the eyes. Everyone says it's the eyes.
+I wear this ironically. Nobody believes me.
+Hide and seek is very short with me.
+== look.enderman
+I'll get that block for you. And maybe keep it.
+Don't look at me. No, really. Habit.
+Tall people get the high blocks.
+Water and I don't get on.
+I'd teleport over there, but I'm walking for my health.
+I've got a thing for flowers in my hands. Don't judge.
+The End is a lovely place. Bit dark.
+Personal space is very important to me. Lots of it.
+== self.enderman
+I'm a bit tall for doorways.
+Mind the knees. Mind all the knees.
+I've been told I'm lanky. I prefer "vertically gifted".
+I can reach the top shelf. All of them.
+Eye contact makes me twitchy. Don't take it personally.
+I bang my head on everything.
+Long arms, long legs, short patience.
+Purple eyes. Natural. Mostly.
+Beds are never long enough.
+I have to duck under clouds. Not really. Nearly.
+I'm basically a ladder with opinions.
+Ceilings are my natural enemy.
+Everyone asks about the weather up here. It's the same.
+I'm all legs. It's a lot of legs.
+Tall, dark, and a bit nervous around water.
+
+# [pa33b] six or more at every corner
+== self.knight@gloomy
+This armour's heavy. So is everything.
+A knight with no dragon. Just chores.
+Polishing armour that'll only rust.
+== self.skeleton@gloomy
+Nothing on my bones but regret.
+Even my shadow looks thin.
+== self.skeleton@on.eat
+Lovely. That'll go straight through me.
+Food. For me. In theory.
+I'll chew it. Where it goes after that is a mystery.
+== self.skeleton@on.skeleton
+Hello, cousin. Don't look at me like that.
+Another skeleton. Small world. Bony world.

@@ -186,6 +186,10 @@ public class PaTaskGoal extends Goal {
 
     static Item itemFor(String phrase) {
         if (phrase.isEmpty()) return Items.AIR;
+        if (phrase.equals("stone") || phrase.equals("cobblestone") || phrase.equals("cobble")) return Items.COBBLESTONE;   // [pa33b] what "stone" means to a player at a market
+        if (phrase.equals("logs") || phrase.equals("wood")) return Items.OAK_LOG;
+        Item exact = registryItem(phrase);                  // [pa33b] the thing by its own name first ("cobblestone" is not stone)
+        if (exact != Items.AIR) return exact;
         String target = CraftPlanner.matchTarget(phrase);
         if (target != null) {
             Item it = RecipeBook.item(target);
@@ -196,8 +200,18 @@ public class PaTaskGoal extends Goal {
             case "furnace" -> Items.FURNACE;
             case "chest" -> Items.CHEST;
             case "torches", "torch" -> Items.TORCH;
-            default -> Items.AIR;
+            default -> registryItem(phrase);
         };
+    }
+
+    /** [pa33b] Any item by its own name ("cobblestone", "iron ingots"), singular or plural. */
+    private static Item registryItem(String phrase) {
+        String id = phrase.trim().toLowerCase(java.util.Locale.ROOT).replace(' ', '_');
+        for (String s : new String[]{id, id.endsWith("es") ? id.substring(0, id.length() - 2) : id, id.endsWith("s") ? id.substring(0, id.length() - 1) : id}) {
+            net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse("minecraft:" + s);
+            if (rl != null && net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(rl)) return net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
+        }
+        return Items.AIR;
     }
 
     // ------------------------------------------------------------------ lay out a field
@@ -313,8 +327,29 @@ public class PaTaskGoal extends Goal {
     private int done, spent;
 
     private void trade() {
+        // [pa33b] at a market the town sells from its own stores: the town is asking, not this assistant (whose chest
+        // rules bar every town's stores while it thinks), so the counters see what the stores hold
+        PlayerAssistantEntity was = PaChests.askAs(null);
+        try {
+            trade0();
+        } finally {
+            PaChests.askAs(was);
+        }
+    }
+
+    private void trade0() {
         ServerLevel level = (ServerLevel) a.level();
-        com.jrpetty.mcassistant.entity.Villages.Village v = t.pos == null ? null : com.jrpetty.mcassistant.entity.TownBlocks.townAt(level, t.pos);
+        // [pa33b] the very town it was sent to (its heart is the task's spot), not whichever claim covers that spot
+        // (two records can share a heart, as a town and its founder's claim: the one whose stores hold the thing)
+        com.jrpetty.mcassistant.entity.Villages.Village v = null;
+        Item want = itemFor(t.item);
+        int most = -1;
+        if (t.pos != null) for (com.jrpetty.mcassistant.entity.Villages.Village x : com.jrpetty.mcassistant.entity.Villages.every()) {
+            if (!x.centre().equals(t.pos) || !x.dim().equals(level.dimension())) continue;
+            int n = want == Items.AIR ? 0 : com.jrpetty.mcassistant.entity.Market.stock(level, x.id(), st -> st.is(want));
+            if (n > most) { most = n; v = x; }
+        }
+        if (v == null && t.pos != null) v = com.jrpetty.mcassistant.entity.TownBlocks.townAt(level, t.pos);
         if (v == null) { finish("There's no town's market near enough to trade at.", true); return; }
         if (!(a.getOwnerPlayer() instanceof ServerPlayer owner)) { finish("I can only trade for you while you're here.", true); return; }
         if (t.stage == 0) {
@@ -325,28 +360,35 @@ public class PaTaskGoal extends Goal {
         }
         Item item = itemFor(t.item);
         if (item == Items.AIR) { finish("I don't know what \"" + t.item + "\" is to trade.", true); return; }
+        String word = item == Items.COBBLESTONE ? "cobblestone" : item == Items.OAK_LOG && t.item.equals("logs") ? "logs" : t.item;   // what it bought, by name
         PaData.Rec r = a.rec();
         int limit = Math.min(PaConfig.spendMax(), r == null ? 64 : r.spend);
         String said;
         if (t.kind == PaTask.Kind.BUY) {
             int coinsBefore = coins(owner);
-            if (spent >= limit) { finish("Bought " + done + " " + t.item + " for you; that's my spending limit (" + limit + " coins).", false); return; }
+            // [pa33b] the price first: a lot that would take it past its limit is not bought at all
+            int price = com.jrpetty.mcassistant.entity.Market.quoteFor(level, v, owner, new ItemStack(item));
+            if (price > 0 && spent + price > limit) {
+                finish(done > 0 ? "Bought " + done + " " + word + " for you; another lot (" + price + " coins) would go past my spending limit of " + limit + "."
+                    : "That's " + price + " coins a lot, over my spending limit of " + limit + ". Raise it in my About tab if you want me to.", done == 0);
+                return;
+            }
             said = com.jrpetty.mcassistant.entity.Market.buy(level, v, owner, new ItemStack(item));
             int paid = coinsBefore - coins(owner);
-            if (paid <= 0 || !said.startsWith("Bought")) { finish(done > 0 ? "Bought " + done + " " + t.item + " for you, then: " + said : said, done == 0); return; }
+            if (paid <= 0 || !said.startsWith("Bought")) { finish(done > 0 ? "Bought " + done + " " + word + " for you, then: " + said : said, done == 0); return; }
             spent += paid;
             done += Math.max(1, countIn(said));
         } else {
             int slot = -1;
             for (int i = 0; i < a.getInventoryItems().size(); i++) if (a.getInventoryItems().get(i).is(item)) { slot = i; break; }
-            if (slot < 0) { finish(done > 0 ? "Sold " + done + " " + t.item + " for you." : "I haven't any " + t.item + " to sell.", done == 0); return; }
+            if (slot < 0) { finish(done > 0 ? "Sold " + done + " " + word + " for you." : "I haven't any " + word + " to sell.", done == 0); return; }
             said = com.jrpetty.mcassistant.entity.Market.sellFor(level, v, owner, a.getInventoryItems().get(slot));
-            if (!said.startsWith("Sold")) { finish(done > 0 ? "Sold " + done + " " + t.item + ", then: " + said : said, done == 0); return; }
+            if (!said.startsWith("Sold")) { finish(done > 0 ? "Sold " + done + " " + word + ", then: " + said : said, done == 0); return; }
             done += Math.max(1, countIn(said));
         }
         a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         t.progress = t.amount > 0 ? Math.min(100, done * 100 / t.amount) : 50;
-        if (t.amount > 0 && done >= t.amount) finish((t.kind == PaTask.Kind.BUY ? "Bought " : "Sold ") + done + " " + t.item + " for you.", false);
+        if (t.amount > 0 && done >= t.amount) finish((t.kind == PaTask.Kind.BUY ? "Bought " : "Sold ") + done + " " + word + " for you.", false);
         cool = 10;
     }
 

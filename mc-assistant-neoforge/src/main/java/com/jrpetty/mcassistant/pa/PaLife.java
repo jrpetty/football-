@@ -35,7 +35,7 @@ public final class PaLife {
         "Wren", "Clover", "Fern", "Orbit", "Bramble", "Comet", "Hazel", "Basil", "Indigo", "Pixel", "Tansy");
 
     /** How many looks there are to choose from (PaRenderer has the pictures). */
-    public static final int LOOKS = 8;
+    public static final int LOOKS = PaPersona.LOOK_KEYS.length;   // [pa33b] 18 looks
 
     // ------------------------------------------------------------------ finding it
 
@@ -86,7 +86,7 @@ public final class PaLife {
         ServerLevel level = p.serverLevel();
         PaData.Rec r = PaData.create(p.getUUID(), p.getGameProfile().getName(), level.getGameTime());
         r.name = NAMES.get(Math.floorMod(p.getUUID().hashCode() + r.slot * 7, NAMES.size())).toLowerCase();
-        r.look = Math.floorMod(p.getUUID().hashCode() >> 3, LOOKS);
+        r.look = Math.floorMod(p.getUUID().hashCode() >> 3, 14);   // a person's outfit to start; the mob looks are a choice
         r.personality = 0;
         if ("spawner".equals(how) && at != null) {
             r.spawner = at.immutable();
@@ -101,7 +101,7 @@ public final class PaLife {
         if (r.spawner != null) a.setHome(r.spawner);
         // the first hello, and the three things to try
         r.introduced = true;
-        PaTalk.reply(a, PaPhrases.line("intro", a.personality(), a.getRandom()::nextInt, "owner", p.getGameProfile().getName(), "name", a.displayNameCap()),
+        PaTalk.reply(a, PaTalk.line(a, "intro", "owner", p.getGameProfile().getName(), "name", a.displayNameCap()),
             List.of(new Choice("Take the tour", "#tour"), new Choice("Follow me", "follow me"), new Choice("Get me 16 logs", "get me 16 logs"),
                 new Choice("Build a small house here", "build a small house here")));
         PaData.touch();
@@ -197,9 +197,23 @@ public final class PaLife {
         if (r == null) return;
         r.snapshot = a.saveWithoutId(new CompoundTag());
         r.away = true;
+        r.leftAt = System.currentTimeMillis();                 // [pa33b] for "you've been gone ages"
         r.entity = null;
         PaData.touch();
         a.discard();
+    }
+
+    /** [pa33b] The hello: by how long its player was away and the time of day, at its place in the triangle. */
+    static String greeting(PlayerAssistantEntity a, PaData.Rec r, ServerPlayer p) {
+        long mins = r.leftAt <= 0 ? -1 : (System.currentTimeMillis() - r.leftAt) / 60000L;
+        long time = a.level().getDayTime() % 24000L;
+        String key = mins >= 0 && mins < 10 ? "quip.back_short" : mins >= 180 ? "quip.back_long"
+            : time < 2000 ? "quip.morning" : time > 13000 && time < 23000 ? "quip.nightlogin" : null;
+        if (key != null && r.mute == 0 && a.getRandom().nextInt(100) < PaBanter.chance(r.tri())) {
+            String raw = PaPersona.remark(key, r.tri(), r.look, null, a.getRandom()::nextInt, a.mind.recent);
+            if (raw != null) return PaBanter.fill(a, raw, "owner", p.getGameProfile().getName());
+        }
+        return PaTalk.line(a, "greet", "owner", p.getGameProfile().getName());
     }
 
     /** Its player is back: every assistant they took away with them stands up beside them. */
@@ -208,8 +222,8 @@ public final class PaLife {
             r.ownerName = p.getGameProfile().getName();
             if (!r.away || r.dead(p.serverLevel().getGameTime())) continue;
             PlayerAssistantEntity a = spawn(p.serverLevel(), r, p.blockPosition().relative(p.getDirection(), 3), p);
-            if (a != null) {
-                PaTalk.reply(a, PaPhrases.line("greet", a.personality(), a.getRandom()::nextInt, "owner", p.getGameProfile().getName()));
+            if (a != null && r.mute < 2) {                 // [pa33b] told to be quiet: it stands up without a word
+                PaTalk.greet(a, greeting(a, r, p));   // [pa33b] by how long they were away and the time of day
             }
         }
     }
@@ -235,7 +249,7 @@ public final class PaLife {
         Entity killer = source.getEntity();
         r.lastDeath = "Knocked out by " + (killer != null ? killer.getName().getString().toLowerCase() : source.getMsgId()) + " on day " + (a.level().getDayTime() / 24000L) + ".";
         a.plan.clear();
-        PaTalk.reply(a, PaPhrases.line("died", a.personality(), a.getRandom()::nextInt, "owner", r.ownerName)
+        PaTalk.reply(a, PaTalk.line(a, "died", "owner", r.ownerName)
             + " (back in " + PaConfig.respawnSeconds() + "s" + (r.spawner != null ? " at my spawner" : "") + ")");
         PaData.touch();
     }
@@ -285,7 +299,7 @@ public final class PaLife {
         if (a != null) {
             if (r.spawner != null && level.dimension().location().toString().equals(r.spawnerDim)) a.setHome(r.spawner);
             a.setMode(AssistantEntity.Mode.FOLLOW);
-            PaTalk.reply(a, PaPhrases.line("respawn", a.personality(), a.getRandom()::nextInt, "owner", owner.getGameProfile().getName()));
+            PaTalk.reply(a, PaTalk.line(a, "respawn", "owner", owner.getGameProfile().getName()));
         }
         PaData.touch();
         return a;
@@ -335,7 +349,7 @@ public final class PaLife {
         }
         if (a != null) {
             a.setMode(AssistantEntity.Mode.FOLLOW);
-            PaTalk.reply(a, PaPhrases.line("come", a.personality(), a.getRandom()::nextInt));
+            PaTalk.reply(a, PaTalk.line(a, "come"));
         }
         PaData.touch();
     }

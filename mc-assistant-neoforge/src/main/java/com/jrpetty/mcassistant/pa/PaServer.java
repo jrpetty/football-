@@ -42,6 +42,10 @@ public final class PaServer {
                 if (r != null) PaLife.dismiss(p, r);
             }
             case "talk" -> talk(p, r, a, args);
+            case "stranger" -> {                                    // [pa33b] someone else's assistant, from its little chat box
+                if (p.level().getEntity(args.getInt("id")) instanceof PlayerAssistantEntity other && !other.isOwner(p) && other.distanceToSqr(p) < 16 * 16)
+                    PaBanter.stranger(other, p, args.getString("text"), false);
+            }
             case "settings" -> {
                 if (r == null) return;
                 if (args.contains("auto")) r.autoHelp = args.getBoolean("auto");
@@ -53,7 +57,17 @@ public final class PaServer {
                     if (a != null) a.setNightHome(r.sleepAtNight);
                 }
                 if (args.contains("roam")) r.roam = Math.max(8, Math.min(PaConfig.roamMax(), args.getInt("roam")));
-                if (args.contains("chatty")) r.chatty = Math.max(0, Math.min(3, args.getInt("chatty")));
+                if (args.contains("chatty")) r.chatty = Math.max(0, Math.min(4, args.getInt("chatty")));
+                if (args.contains("funny")) {                       // [pa33b] the personality triangle
+                    PaPersona.Tri t = PaPersona.Tri.of(args.getFloat("funny"), args.getFloat("gloomy"));
+                    r.funny = (float) t.funny();
+                    r.gloomy = (float) t.gloomy();
+                }
+                if (args.contains("mute") && a != null && args.getInt("mute") != r.mute) PaOrders.hush(a, args.getInt("mute"));   // [pa33b] About, Orders, wheel
+                else if (args.contains("mute")) r.mute = Math.max(0, Math.min(2, args.getInt("mute")));
+                if (args.contains("language")) r.language = Math.max(0, Math.min(2, args.getInt("language")));     // [pa33b] match my energy
+                if (args.contains("roastBack")) r.roastBack = Math.max(0, Math.min(2, args.getInt("roastBack")));
+                if (args.contains("defend")) r.defend = args.getBoolean("defend");
                 if (args.contains("spend")) r.spend = Math.max(0, Math.min(PaConfig.spendMax(), args.getInt("spend")));
                 PaData.touch();
                 PaNet.refresh(p, a);
@@ -125,6 +139,8 @@ public final class PaServer {
     private static void hash(ServerPlayer p, PaData.Rec r, PlayerAssistantEntity a, String text) {
         String[] w = text.substring(1).split(" ");
         switch (w[0]) {
+            case "fetchdeath" -> PaBanter.fetchDeath(a);           // [pa33b]
+            case "nofetch" -> PaTalk.reply(a, "Right you are. Mind, they'll vanish in about five minutes.");
             case "veto" -> {
                 if (w.length > 1) {
                     a.mind.vetoed.add(w[1]);
@@ -145,6 +161,10 @@ public final class PaServer {
                 a.plan.steps.add(0, f);
                 a.plan.paused = false;
                 PaTalk.reply(a, "Trying again: " + f.label + ".");
+            }
+            case "pack" -> {                                          // [pa33b] "I'll give you some": its pack, to put food in
+                a.openManagementScreen(p);
+                return;
             }
             case "tour" -> {
                 CompoundTag t = PaNet.state(p, a);

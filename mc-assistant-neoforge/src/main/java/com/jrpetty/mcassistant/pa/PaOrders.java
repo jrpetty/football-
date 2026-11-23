@@ -34,7 +34,7 @@ public final class PaOrders {
     private PaOrders() {}
 
     /** A plan waiting for its player's OK. */
-    public record Pending(String question, List<Choice> choices, List<PaPlan.Step> steps, String said) {}
+    public record Pending(String question, List<Choice> choices, List<PaPlan.Step> steps, String said, long at) {}
 
     private static final Map<UUID, Pending> PENDING = new ConcurrentHashMap<>();
 
@@ -62,7 +62,7 @@ public final class PaOrders {
         }
         PlayerAssistantEntity before = PaChests.askAs(a);
         try {
-            hear0(p, a, text, look);
+            hear0(p, a, voice ? PaWords.voiceFix(text) : text, look);   // [pa33b] a spoken order: the recogniser's slips put right
         } finally {
             PaChests.askAs(before);
         }
@@ -70,7 +70,9 @@ public final class PaOrders {
     }
 
     private static void hear0(ServerPlayer p, PlayerAssistantEntity a, String text, Look look) {
-        PaUnderstand.Reading reading = PaUnderstand.read(text, a.getAssistantName());
+        // [pa33b] match my energy: the attitude comes off before the order is read ("go get my wheat you fucking loser" fetches wheat)
+        PaTone.Read tone = PaTone.read(text);
+        PaUnderstand.Reading reading = PaUnderstand.read(tone.tone() == PaTone.Tone.RUDE || tone.polite() ? tone.order() : text, a.getAssistantName());
         Pending pend = PENDING.get(p.getUUID());
         if (pend != null) {
             Kind first = reading.steps().isEmpty() ? null : reading.steps().get(0).kind();
@@ -81,16 +83,57 @@ public final class PaOrders {
             }
             if (first == Kind.NO || first == Kind.STOP) {
                 PENDING.remove(p.getUUID());
-                PaTalk.reply(a, PaPhrases.line("cancelled", a.personality(), a.getRandom()::nextInt));
+                PaTalk.reply(a, PaTalk.line(a, "cancelled"));
                 return;
             }
             PENDING.remove(p.getUUID());                // anything else is a new order: the old question lapses
         }
+        // [pa33b] "shut up" (quiet: answers and warnings only), "no more jokes" (plain words), "you can talk again" (itself)
+        PaData.Rec mr = a.rec();
+        PaQuips.Mute mu = mr == null ? null : PaQuips.mute(text, mr.mute > 0);
+        if (mu != null) {
+            boolean order = reading.clarify() == null && reading.steps().stream().anyMatch(st -> st.kind().queued()
+                || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);
+            hush(a, mu == PaQuips.Mute.ON ? 0 : mu == PaQuips.Mute.JOKES ? 1 : 2);
+            if (order) run(p, a, reading.steps(), look, text);
+            return;
+        }
+        // [pa33b] an order said rudely, politely or bluntly: done straight away, then a word back in kind (never while hushed)
+        if (mr != null && tone.tone() != PaTone.Tone.NEUTRAL) {
+            int before = a.mind.toneHeat.take(tone, a.level().getGameTime());
+            boolean order = reading.clarify() == null && reading.steps().stream().anyMatch(st -> st.kind().queued()
+                || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);
+            if (order) {
+                run(p, a, reading.steps(), look, text);
+                String key = PaTone.key(tone, before, a.mind.toneHeat.heat(), PaTone.level(mr.language, PaConfig.maxLanguage()), mr.mute);
+                String back = key == null ? null : PaBanter.toneLine(a, key, thing(reading));
+                if (back != null) PaTalk.reply(a, back);
+                return;
+            }
+        }
+        // [pa33b] lip, a kind word, or "tell me a joke": answered in kind. With a real order in it, the order first.
+        PaQuips.Comeback cb = PaBanter.comeback(text);
+        if (cb != null) {
+            boolean order = reading.clarify() == null && reading.steps().stream().anyMatch(st -> st.kind().queued()
+                || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);
+            if (!order) {
+                PaTalk.reply(a, PaBanter.answer(a, cb));
+                return;
+            }
+            run(p, a, reading.steps(), look, text);
+            PaTalk.comment(a, 0, PaBanter.answer(a, cb));
+            return;
+        }
+        // [pa33b] the same order again so soon: done again, with a remark
+        boolean twice = text.equalsIgnoreCase(a.mind.lastOrder) && a.tickCount - a.mind.lastOrderAt < 2400 && !reading.steps().isEmpty();
+        a.mind.lastOrder = text;
+        a.mind.lastOrderAt = a.tickCount;
+        a.mind.askedTwice = twice;                       // remarked on after the reply (PaBrain)
         if (reading.clarify() != null) {
             // Before asking back: the old chat reader may know it ("tend the farm every 20 minutes", "patrol between...").
             if (reading.steps().isEmpty() && reading.clarify().question().startsWith("I'm not sure")
                     && com.jrpetty.mcassistant.ChatControl.understood(a, p, text)) {
-                PaTalk.reply(a, PaPhrases.line("ok", a.personality(), a.getRandom()::nextInt));
+                PaTalk.reply(a, PaTalk.line(a, "ok"));
                 return;
             }
             // Steps read before the unclear part still run; then the question.
@@ -99,6 +142,23 @@ public final class PaOrders {
             return;
         }
         run(p, a, reading.steps(), look, text);
+    }
+
+    /** [pa33b] What it was sent for, for "your {thing}": the first order's thing, else "that". */
+    static String thing(PaUnderstand.Reading reading) {
+        for (PaIntent i : reading.steps()) if (i.item() != null && !i.item().isBlank()) return i.item();
+        return "that";
+    }
+
+    /** [pa33b] Hush it (1 no jokes, 2 quiet) or lift it (0), with one short line in its own voice; never a sulk. */
+    public static void hush(PlayerAssistantEntity a, int level) {
+        PaData.Rec r = a.rec();
+        if (r == null) return;
+        PaPersona.Tri own = r.tri();                       // its own corner, not the muted one, for the acknowledgement
+        String key = level == 0 ? "mute_on" : level == 1 ? "mute_jokes" : "mute_all";
+        a.setMute(level);
+        PaTalk.reply(a, PaPhrases.line(key, own, a.getRandom()::nextInt, a.mind.recent, "owner", a.ownerName().isEmpty() ? "you" : a.ownerName(),
+            "name", a.displayNameCap()));
     }
 
     /** Carry out what was read: answers now, work into the plan. */
@@ -129,8 +189,8 @@ public final class PaOrders {
         if (ask && big) {
             String q = summary(work) + ". About " + time(work.stream().mapToInt(s -> s.eta).sum());
             List<Choice> choices = List.of(new Choice("OK", "yes"), new Choice("Change", "#change " + said), new Choice("Cancel", "no"));
-            PENDING.put(p.getUUID(), new Pending(q, choices, work, said));
-            PaTalk.reply(a, PaPhrases.line("confirm", a.personality(), a.getRandom()::nextInt, "what", q), choices);
+            PENDING.put(p.getUUID(), new Pending(q, choices, work, said, a.level().getGameTime()));
+            PaTalk.reply(a, PaTalk.line(a, "confirm", "what", q), choices);
             return;
         }
         start(p, a, work, said);
@@ -159,7 +219,7 @@ public final class PaOrders {
         a.plan.paused = false;
         if (a.getMode() == AssistantEntity.Mode.STAY) a.setMode(AssistantEntity.Mode.FOLLOW);   // it has work: it is not standing still
         String what = work.size() == 1 ? cap(work.get(0).label) : work.size() + " steps, starting with: " + work.get(0).label;
-        PaTalk.reply(a, PaPhrases.line("ok", a.personality(), a.getRandom()::nextInt) + " " + what + ".");
+        PaTalk.reply(a, PaTalk.line(a, "ok") + " " + what + ".");
     }
 
     // ------------------------------------------------------------------ answers at once
@@ -172,26 +232,26 @@ public final class PaOrders {
             case FOLLOW -> {
                 a.mind.post = null;
                 a.setMode(AssistantEntity.Mode.FOLLOW);
-                return PaPhrases.line("follow", pers, rnd);
+                return PaTalk.line(a, "follow");
             }
             case STAY -> {
                 a.mind.post = null;
                 a.getNavigation().stop();
                 a.setMode(AssistantEntity.Mode.STAY);
-                return PaPhrases.line("stay", pers, rnd);
+                return PaTalk.line(a, "stay");
             }
             case COME -> {
                 a.mind.post = null;
                 a.setMode(AssistantEntity.Mode.FOLLOW);
                 if (a.level() == p.level() && a.distanceToSqr(p) > 40 * 40) PaLife.bringTo(a, p);
                 else a.getNavigation().moveTo(p, 1.3D);
-                return PaPhrases.line("come", pers, rnd);
+                return PaTalk.line(a, "come");
             }
             case GUARD_ME -> {
                 a.mind.post = null;
                 a.setMode(AssistantEntity.Mode.GUARD);
                 a.equipBestWeapon();
-                return PaPhrases.line("guard", pers, rnd);
+                return PaTalk.line(a, "guard");
             }
             case GUARD_HERE -> {
                 BlockPos at = where(p, a, i.place(), look);
@@ -225,12 +285,12 @@ public final class PaOrders {
             }
             case STOP -> {
                 stopAll(a);
-                return PaPhrases.line("stop", pers, rnd);
+                return PaTalk.line(a, "stop");
             }
             case UNDO -> {
                 a.clearQueue();
                 a.task = null;
-                if (a.plan.undo()) return PaPhrases.line("undo", pers, rnd);
+                if (a.plan.undo()) return PaTalk.line(a, "undo");
                 return "There's nothing to undo.";
             }
             case PAUSE -> {
@@ -238,12 +298,12 @@ public final class PaOrders {
                 a.clearQueue();
                 if (a.plan.current != null) { a.plan.current.fed = false; a.plan.steps.add(0, a.plan.current); a.plan.current = null; }
                 a.getNavigation().stop();
-                return PaPhrases.line("pause", pers, rnd);
+                return PaTalk.line(a, "pause");
             }
             case RESUME -> {
                 if (!a.plan.paused && a.plan.idle()) return "I've nothing to get back to. What next?";
                 a.plan.paused = false;
-                return PaPhrases.line("resume", pers, rnd);
+                return PaTalk.line(a, "resume");
             }
             case AUTO_ON, AUTO_OFF -> {
                 PaData.Rec r = a.rec();
@@ -304,13 +364,13 @@ public final class PaOrders {
                 return "";
             }
             case GREETING -> {
-                return PaPhrases.line("hello", pers, rnd, "owner", p.getGameProfile().getName());
+                return PaTalk.line(a, "hello", "owner", p.getGameProfile().getName());
             }
             case THANKS -> {
-                return PaPhrases.line("thanks", pers, rnd, "owner", p.getGameProfile().getName());
+                return PaTalk.line(a, "thanks", "owner", p.getGameProfile().getName());
             }
             case BYE -> {
-                return PaPhrases.line("bye", pers, rnd, "owner", p.getGameProfile().getName());
+                return PaTalk.line(a, "bye", "owner", p.getGameProfile().getName());
             }
             case YES -> {
                 return "Yes? Tell me what you'd like.";

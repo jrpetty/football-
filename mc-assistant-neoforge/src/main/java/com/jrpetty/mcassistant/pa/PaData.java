@@ -29,7 +29,10 @@ public final class PaData extends SavedData {
     public static final String ID = "mc_assistant_assistants";
 
     /** One line of the conversation: who said it (0 the player, 1 the assistant, 2 a note), and when. */
-    public record Line(int who, String text, long time) {}
+    /** A line of talk; times is how often it was said running (shown "×2"); greet marks a hello. [pa33b] */
+    public record Line(int who, String text, long time, int times, boolean greet) {
+        public Line(int who, String text, long time) { this(who, text, time, 1, false); }
+    }
 
     public static final class Rec {
         public UUID owner;
@@ -43,6 +46,19 @@ public final class PaData extends SavedData {
         // the owner's settings
         public boolean autoHelp = true, useChests = true, breakNearBuilds = false, confirm = true, sleepAtNight = false;
         public int roam = 32, chatty = 2, spend = 64;
+        /** [pa33b] Its place in the personality triangle (funny, gloomy; serious is the rest): Banter to start. */
+        public float funny = (float) PaPersona.DEFAULT_FUNNY, gloomy = (float) PaPersona.DEFAULT_GLOOMY;
+        /** [pa33b] Told to hush: 0 talking, 1 no jokes (plain words), 2 quiet (answers and warnings only). Kept until lifted. */
+        public int mute;
+        /** [pa33b] Match my energy: its language back (0 Clean, 1 Cheeky, 2 Unfiltered; never past the server cap), roasting others back (0 On, 1 only when they insult it, 2 Off), defending its player. */
+        public int language, roastBack;
+        public boolean defend = true;
+        /** [pa33b] When its player last left (wall clock), for "you've been gone ages". */
+        public long leftAt;
+
+        public PaPersona.Tri tri() {
+            return PaPersona.Tri.of(funny, gloomy);
+        }
         // places
         @Nullable public BlockPos spawner;
         public String spawnerDim = "";
@@ -62,9 +78,29 @@ public final class PaData extends SavedData {
         }
 
         public void say(int who, String text, long now) {
-            log.addLast(new Line(who, text, now));
+            say(who, text, now, false);
+        }
+
+        /**
+         * [pa33b] Logged without the clutter of a reconnect or a re-sent order: the same line again straight after
+         * itself becomes "×2" on the one line; a hello straight after a hello replaces it (one greeting per login).
+         */
+        public void say(int who, String text, long now, boolean greet) {
+            Line last = log.peekLast();
+            if (last != null && last.who() == who && last.text().equals(text)) {
+                log.removeLast();
+                log.addLast(new Line(who, text, now, last.times() + 1, last.greet()));
+                return;
+            }
+            if (greet && last != null && last.greet()) log.removeLast();
+            log.addLast(new Line(who, text, now, 1, greet));
             while (log.size() > 80) log.removeFirst();
         }
+
+        /** [pa33b] Tests: its record as saved, and back. */
+        public CompoundTag saveForTests() { return save(); }
+
+        public static Rec loadForTests(CompoundTag t) { return load(t); }
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -84,6 +120,13 @@ public final class PaData extends SavedData {
             t.putBoolean("Sleep", sleepAtNight);
             t.putInt("Roam", roam);
             t.putInt("Chatty", chatty);
+            t.putFloat("Funny", funny);
+            t.putFloat("Gloomy", gloomy);
+            t.putInt("Mute", mute);
+            t.putInt("Lang", language);
+            t.putInt("RoastBack", roastBack);
+            t.putBoolean("Defend", defend);
+            t.putLong("LeftAt", leftAt);
             t.putInt("Spend", spend);
             if (spawner != null) { t.putLong("Spawner", spawner.asLong()); t.putString("SpawnerDim", spawnerDim); }
             t.putLong("DeadUntil", deadUntil);
@@ -101,6 +144,8 @@ public final class PaData extends SavedData {
                 c.putInt("W", l.who());
                 c.putString("T", l.text());
                 c.putLong("At", l.time());
+                if (l.times() > 1) c.putInt("N", l.times());
+                if (l.greet()) c.putBoolean("G", true);
                 lines.add(c);
             }
             t.put("Log", lines);
@@ -126,6 +171,12 @@ public final class PaData extends SavedData {
             r.sleepAtNight = t.getBoolean("Sleep");
             r.roam = t.contains("Roam") ? t.getInt("Roam") : 32;
             r.chatty = t.contains("Chatty") ? t.getInt("Chatty") : 2;
+            if (t.contains("Funny")) { r.funny = t.getFloat("Funny"); r.gloomy = t.getFloat("Gloomy"); }
+            r.mute = Math.max(0, Math.min(2, t.getInt("Mute")));
+            r.language = Math.max(0, Math.min(2, t.getInt("Lang")));
+            r.roastBack = Math.max(0, Math.min(2, t.getInt("RoastBack")));
+            r.defend = !t.contains("Defend") || t.getBoolean("Defend");
+            r.leftAt = t.getLong("LeftAt");
             r.spend = t.contains("Spend") ? t.getInt("Spend") : 64;
             if (t.contains("Spawner")) { r.spawner = BlockPos.of(t.getLong("Spawner")); r.spawnerDim = t.getString("SpawnerDim"); }
             r.deadUntil = t.getLong("DeadUntil");
@@ -139,7 +190,7 @@ public final class PaData extends SavedData {
             r.jobsDone = t.getInt("Done");
             for (Tag e : t.getList("Log", Tag.TAG_COMPOUND)) {
                 CompoundTag c = (CompoundTag) e;
-                r.log.addLast(new Line(c.getInt("W"), c.getString("T"), c.getLong("At")));
+                r.log.addLast(new Line(c.getInt("W"), c.getString("T"), c.getLong("At"), Math.max(1, c.getInt("N")), c.getBoolean("G")));
             }
             for (long p : t.getLongArray("Pointed")) r.pointed.add(p);
             return r;
