@@ -32,6 +32,25 @@ build/libs/mc-assistant-neoforge-<version>.jar   (0.<build>.0, e.g. 0.266.0 for 
 Drop it in your `mods/` folder (client for single player; server **and**
 client for multiplayer, since it adds an entity).
 
+## Player AI Assistant (no commands needed)
+
+A personal companion of your own, apart from the village folk. Get one by a click (press **Y**, or the
+**Assistant** button on the U page: the first is free), by using a crafted **Assistant Whistle** (4 iron,
+4 redstone, a gold ingot) on the ground, or by placing an **Assistant Spawner** and clicking it (its home
+and respawn point; a sneak-click still hires a crew hand).
+
+- **Talk**: press **Y** (or right-click it) and type plain words in its panel: "follow me", "get me 16
+  logs", "build me a small house here", "chop 64 logs, then make planks and sticks". It answers in words,
+  aloud (your computer's own voice) and in a bubble; unclear orders get a question with choices.
+- **Voice**: switch Listen on in its About tab, then hold **Z** and speak (Windows' own offline
+  recogniser, or a small offline model downloaded once with your agreement).
+- **Orders, Jobs, Pack, About** tabs: one-click orders with pickers, the live job list with progress
+  (reorder, cancel, pause, undo), its pack and gear, its record and every setting.
+- **Action wheel**: look at something and press **X** (mine this vein, use that chest, attack that...).
+- One per player by default (`serverconfig/mc_assistant-assistant-server.toml`), saved with its owner,
+  follows through logouts and dimensions, comes back after a fall, and never works a town's ground or
+  someone else's land unless the server allows it.
+
 ## Use in game
 
 | Command | What happens |
