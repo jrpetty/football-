@@ -328,7 +328,12 @@ public class PaTaskGoal extends Goal {
 
     private void trade() {
         ServerLevel level = (ServerLevel) a.level();
-        com.jrpetty.mcassistant.entity.Villages.Village v = t.pos == null ? null : com.jrpetty.mcassistant.entity.TownBlocks.townAt(level, t.pos);
+        // [pa33b] the very town it was sent to (its heart is the task's spot), not whichever claim covers that spot
+        com.jrpetty.mcassistant.entity.Villages.Village v = null;
+        if (t.pos != null) for (com.jrpetty.mcassistant.entity.Villages.Village x : com.jrpetty.mcassistant.entity.Villages.every()) {
+            if (x.centre().equals(t.pos) && x.dim().equals(level.dimension())) { v = x; break; }
+        }
+        if (v == null && t.pos != null) v = com.jrpetty.mcassistant.entity.TownBlocks.townAt(level, t.pos);
         if (v == null) { finish("There's no town's market near enough to trade at.", true); return; }
         if (!(a.getOwnerPlayer() instanceof ServerPlayer owner)) { finish("I can only trade for you while you're here.", true); return; }
         if (t.stage == 0) {

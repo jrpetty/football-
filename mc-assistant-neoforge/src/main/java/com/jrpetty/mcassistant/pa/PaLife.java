@@ -101,7 +101,7 @@ public final class PaLife {
         if (r.spawner != null) a.setHome(r.spawner);
         // the first hello, and the three things to try
         r.introduced = true;
-        PaTalk.reply(a, PaPhrases.line("intro", a.personality(), a.getRandom()::nextInt, "owner", p.getGameProfile().getName(), "name", a.displayNameCap()),
+        PaTalk.reply(a, PaTalk.line(a, "intro", "owner", p.getGameProfile().getName(), "name", a.displayNameCap()),
             List.of(new Choice("Take the tour", "#tour"), new Choice("Follow me", "follow me"), new Choice("Get me 16 logs", "get me 16 logs"),
                 new Choice("Build a small house here", "build a small house here")));
         PaData.touch();
@@ -209,7 +209,7 @@ public final class PaLife {
             if (!r.away || r.dead(p.serverLevel().getGameTime())) continue;
             PlayerAssistantEntity a = spawn(p.serverLevel(), r, p.blockPosition().relative(p.getDirection(), 3), p);
             if (a != null) {
-                PaTalk.greet(a, PaPhrases.line("greet", a.personality(), a.getRandom()::nextInt, "owner", p.getGameProfile().getName()));   // [pa33b]
+                PaTalk.greet(a, PaTalk.line(a, "greet", "owner", p.getGameProfile().getName()));   // [pa33b]
             }
         }
     }
@@ -235,7 +235,7 @@ public final class PaLife {
         Entity killer = source.getEntity();
         r.lastDeath = "Knocked out by " + (killer != null ? killer.getName().getString().toLowerCase() : source.getMsgId()) + " on day " + (a.level().getDayTime() / 24000L) + ".";
         a.plan.clear();
-        PaTalk.reply(a, PaPhrases.line("died", a.personality(), a.getRandom()::nextInt, "owner", r.ownerName)
+        PaTalk.reply(a, PaTalk.line(a, "died", "owner", r.ownerName)
             + " (back in " + PaConfig.respawnSeconds() + "s" + (r.spawner != null ? " at my spawner" : "") + ")");
         PaData.touch();
     }
@@ -285,7 +285,7 @@ public final class PaLife {
         if (a != null) {
             if (r.spawner != null && level.dimension().location().toString().equals(r.spawnerDim)) a.setHome(r.spawner);
             a.setMode(AssistantEntity.Mode.FOLLOW);
-            PaTalk.reply(a, PaPhrases.line("respawn", a.personality(), a.getRandom()::nextInt, "owner", owner.getGameProfile().getName()));
+            PaTalk.reply(a, PaTalk.line(a, "respawn", "owner", owner.getGameProfile().getName()));
         }
         PaData.touch();
         return a;
@@ -335,7 +335,7 @@ public final class PaLife {
         }
         if (a != null) {
             a.setMode(AssistantEntity.Mode.FOLLOW);
-            PaTalk.reply(a, PaPhrases.line("come", a.personality(), a.getRandom()::nextInt));
+            PaTalk.reply(a, PaTalk.line(a, "come"));
         }
         PaData.touch();
     }

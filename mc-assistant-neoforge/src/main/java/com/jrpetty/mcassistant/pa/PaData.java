@@ -46,6 +46,14 @@ public final class PaData extends SavedData {
         // the owner's settings
         public boolean autoHelp = true, useChests = true, breakNearBuilds = false, confirm = true, sleepAtNight = false;
         public int roam = 32, chatty = 2, spend = 64;
+        /** [pa33b] Its place in the personality triangle (funny, gloomy; serious is the rest): Banter to start. */
+        public float funny = (float) PaPersona.DEFAULT_FUNNY, gloomy = (float) PaPersona.DEFAULT_GLOOMY;
+        /** [pa33b] When its player last left (wall clock), for "you've been gone ages". */
+        public long leftAt;
+
+        public PaPersona.Tri tri() {
+            return PaPersona.Tri.of(funny, gloomy);
+        }
         // places
         @Nullable public BlockPos spawner;
         public String spawnerDim = "";
@@ -102,6 +110,9 @@ public final class PaData extends SavedData {
             t.putBoolean("Sleep", sleepAtNight);
             t.putInt("Roam", roam);
             t.putInt("Chatty", chatty);
+            t.putFloat("Funny", funny);
+            t.putFloat("Gloomy", gloomy);
+            t.putLong("LeftAt", leftAt);
             t.putInt("Spend", spend);
             if (spawner != null) { t.putLong("Spawner", spawner.asLong()); t.putString("SpawnerDim", spawnerDim); }
             t.putLong("DeadUntil", deadUntil);
@@ -146,6 +157,8 @@ public final class PaData extends SavedData {
             r.sleepAtNight = t.getBoolean("Sleep");
             r.roam = t.contains("Roam") ? t.getInt("Roam") : 32;
             r.chatty = t.contains("Chatty") ? t.getInt("Chatty") : 2;
+            if (t.contains("Funny")) { r.funny = t.getFloat("Funny"); r.gloomy = t.getFloat("Gloomy"); }
+            r.leftAt = t.getLong("LeftAt");
             r.spend = t.contains("Spend") ? t.getInt("Spend") : 64;
             if (t.contains("Spawner")) { r.spawner = BlockPos.of(t.getLong("Spawner")); r.spawnerDim = t.getString("SpawnerDim"); }
             r.deadUntil = t.getLong("DeadUntil");

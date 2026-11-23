@@ -1,0 +1,122 @@
+# [pa33b] When its player gives it some lip (or a kind word): it answers in kind, never sulks, and still does the job.
+
+== comeback.insult
+Useless. Says the person who walked into a cactus.
+Rubbish, am I. I'll remember that when you need a bridge.
+Harsh. Fair, but harsh.
+I'd be offended, but I'm too busy being brilliant.
+Noted. Filed under "lies".
+I'm not useless. I'm differently useful.
+Bold words from someone with a dirt collection.
+Careful, I know where you keep your diamonds.
+You're lucky I'm the forgiving type.
+Takes one to know one, you muppet.
+== comeback.insult@gloomy
+I know. I've always known.
+Useless. Yes. Me and the rain both.
+That's fair. Most things are pointless.
+I'd argue, but what's the point.
+Rubbish. I've been called worse. By myself, mostly.
+Quite right. I'll carry on regardless. It's all I do.
+== comeback.insult@serious
+Noted. Carrying on.
+Understood. I'll do better.
+Fair enough. What do you need?
+Sorry to hear it. I'll keep working.
+== comeback.shutup
+Charming. Quieter mode, then.
+Fine. I'll sulk silently. Professionally.
+Rude. But I'll keep it down.
+Shutting up. Mostly.
+Silence it is. Enjoy it while it lasts.
+I'll whisper my opinions from now on.
+Fine, I'll talk less. You'll miss me.
+Zipping it. Reluctantly.
+== comeback.shutup@gloomy
+Fine. I'll be quiet. I'm used to it.
+Quiet it is. Not much worth saying anyway.
+I'll stop. Nobody listens anyway.
+Silence. My natural state.
+== comeback.shutup@serious
+Understood. I'll talk less.
+Going quiet.
+Less chatter. Got it.
+== comeback.praise
+I know. But thank you for noticing.
+You absolute legend. Oh, you meant me. Yes.
+Finally, some recognition.
+Good lad yourself.
+Steady, I'll get a big head. Bigger head.
+I'll have that framed.
+Cheers. I'm basically a national treasure.
+Flattery will get you everywhere. Mostly to the end of my queue.
+Stop it. Don't stop it.
+I do try. Mostly to impress you.
+== comeback.praise@gloomy
+Oh. Thanks. It won't last.
+Nice of you to say. It'll all fall apart eventually.
+Cheers. I'll try to enjoy that.
+Thank you. I'll cling to it.
+Good, was it. First time for everything.
+Kind of you. Don't get used to it.
+== comeback.praise@serious
+Thank you.
+Glad it helped.
+Cheers. Happy to.
+== comeback.love
+Steady on. We've only just met.
+Love you too. In a strictly professional capacity.
+Aw. I'd blush, but I'm made of pixels.
+That's lovely. I'll still charge you for the logs.
+Careful, the chickens will get jealous.
+You say that to all your assistants.
+I'm touched. Mildly. Mostly by the sentiment.
+Love's a strong word. I'll take it.
+== comeback.love@gloomy
+That's kind. Love fades, of course. Like daylight.
+Oh. Well. That's nice. While it lasts.
+Love. Yes. Lovely. Fleeting, but lovely.
+I'll treasure that. Till I inevitably lose it.
+== comeback.love@serious
+Thanks, {owner}. Likewise.
+That's kind of you.
+Appreciated.
+== comeback.joke
+Right, here's one.
+You asked for it.
+Brace yourself.
+I've been saving this one.
+Okay, okay.
+Here goes nothing.
+
+== joke
+Why did the creeper cross the road. To get to the other ssssside.
+What's a skeleton's least favourite room. The living room.
+Why don't Endermen tell secrets. They can't keep anything in one place.
+How does Steve stay fit. He runs around the block.
+What do you call a sheep in a cobweb. Stuck.
+Why did the pig go to the casino. To play the slop machine.
+What do you call a zombie who can't stop telling jokes. Undead funny.
+Why are creepers bad at parties. They always blow it.
+How do you know a skeleton's lying. You can see right through him.
+What does a ghast do on a bad day. Cries fireballs.
+Why did the chicken cross the Nether. It didn't. It's cooked.
+What's a miner's favourite music. Rock.
+Why did the villager refuse the trade. It was a raw deal.
+Why don't zombies eat clowns. They taste funny.
+How do Endermen keep fit. Tele-ports.
+What did the bow say to the arrow. You've got a point.
+Why was the bed so tired. It had a long night.
+What's a cow's favourite block. Moo-ssy cobblestone.
+Why did the slime get a job. It was looking for a bounce.
+How does a witch fix her hair. Scare spray.
+Why can't the iron golem keep a secret. He's got iron lips. They clang.
+What do you call a bee in the Nether. A frazzled bee.
+Why did Steve bring a ladder to school. To get to the high grades.
+What did the stone say to the pickaxe. Leave me a-lone.
+Why did the dolphin cross the ocean. To get to the other tide.
+What's a parrot's favourite game. Hide and speak.
+Why don't skeletons fight each other. They haven't got the guts.
+What does a spider wear to a wedding. A web-tie.
+Why was the furnace so popular. It was always smelting things over.
+How do you make a creeper laugh. Tell it a blast of a joke.

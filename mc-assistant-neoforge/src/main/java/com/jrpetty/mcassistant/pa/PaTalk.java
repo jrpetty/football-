@@ -63,11 +63,22 @@ public final class PaTalk {
         int chatty = r == null ? 2 : r.chatty;
         if (chatty < least) return false;
         // rate limit: chattier means sooner; a quiet one waits a good while between remarks
-        int gap = switch (chatty) { case 3 -> 100; case 2 -> 400; case 1 -> 1200; default -> 2400; };
+        int gap = switch (chatty) { case 4 -> 60; case 3 -> 100; case 2 -> 400; case 1 -> 1200; default -> 2400; };
         if (a.tickCount - a.mind.lastComment < gap && least > 0) return false;
         a.mind.lastComment = a.tickCount;
         reply(a, text);
         return true;
+    }
+
+    /** [pa33b] Its line for a situation, at its place in the personality triangle, with its player's and its own names. */
+    public static String line(PlayerAssistantEntity a, String key, String... kv) {
+        String[] all = new String[kv.length + 4];
+        all[0] = "owner";
+        all[1] = a.ownerName().isEmpty() ? "you" : a.ownerName();
+        all[2] = "name";
+        all[3] = a.displayNameCap();
+        System.arraycopy(kv, 0, all, 4, kv.length);              // the caller's own blanks after, so they win
+        return PaPhrases.line(key, a.tri(), a.getRandom()::nextInt, a.mind.recent, all);
     }
 
     /** A line for a non-owner (only they see it). */

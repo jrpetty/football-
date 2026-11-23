@@ -200,6 +200,23 @@ public final class PaPhrases {
             .replace("{job}", "the job").replace("{did}", "Done").replace("{what}", "").replaceAll("\\s+", " ").trim();
     }
 
+    /** [pa33b] Warnings: always said plainly, whatever the personality; a remark may follow, never replace them. */
+    public static final java.util.Set<String> DANGER = java.util.Set.of("owner_hurt", "me_hurt", "threat", "stuck", "no_food");
+
+    /**
+     * [pa33b] A line at a point of the personality triangle: its corner drawn by the weights (or an edge's own lines),
+     * not one said lately. The Serious corner, a warning, or a corner with nothing written says the plain line.
+     */
+    public static String line(String key, PaPersona.Tri t, Dice random, PaPersona.Recent recent, String... kv) {
+        Map<String, String> fill = new HashMap<>();
+        for (int i = 0; i + 1 < kv.length; i += 2) fill.put(kv[i], kv[i + 1]);
+        if (!DANGER.contains(key) && BANK.containsKey(key)) {
+            String raw = PaPersona.from(PaPersona.linesFor("say." + key, t, random), random, recent);
+            if (raw != null) return PaPersona.fill(raw, fill);
+        }
+        return line(key, Personality.CALM, random, fill);
+    }
+
     public static String line(String key, Personality p, Dice random, String... kv) {
         Map<String, String> fill = new HashMap<>();
         for (int i = 0; i + 1 < kv.length; i += 2) fill.put(kv[i], kv[i + 1]);

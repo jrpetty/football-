@@ -1,0 +1,333 @@
+# [pa33b] Remarks it makes by itself, by situation: always a separate line after anything useful, never instead.
+
+== quip.back_short
+That was quick. Forget something.
+Back already. Couldn't stay away.
+Gone five minutes and I'd already lost my purpose.
+Oh, hello again. Short trip.
+Back so soon. Was it something I said.
+That's the shortest absence on record.
+Welcome back. I'd barely started missing you.
+Popped out, popped back. Very efficient.
+== quip.back_long
+Oh, you're back. I'd started naming the chickens.
+You've been gone ages. I've taken up staring as a hobby.
+Welcome back. I was this close to filing a missing person report.
+Long time no see. The grass grew. I watched.
+There you are. I'd assumed you'd moved to another world.
+Back at last. I've rearranged nothing out of respect.
+Ah, the wanderer returns. I kept the dirt safe.
+You were away so long the cows started looking at me funny.
+== quip.morning
+Morning. Lovely day for doing things you'll regret.
+Rise and shine. Well, rise.
+Good morning, {owner}. The sun's up. Shall we disappoint it.
+Morning. I've been up for hours. I don't sleep, so technically for ever.
+Ah, morning. The creepers have gone home. Mostly.
+Good morning. The birds are singing. I assume. I can't hear birds.
+Morning. Breakfast first, or straight to the poor decisions.
+Fresh morning. Unspoilt. For now.
+== quip.nightlogin
+Evening. Brave of you to arrive in the dark.
+Back at night. The monsters will be thrilled.
+Good evening. Bit late to be starting a project, but sure.
+Night shift, is it. Lovely.
+Evening, {owner}. Mind the things that go groan in the night.
+Arriving after dark. Very dramatic entrance.
+It's dark. You're here. I'll get the torches.
+Good evening. The zombies send their regards.
+
+== quip.fell
+That's a fall I'll be thinking about for a while.
+Gravity checking in. Still works.
+You came down that hill faster than planned.
+Mind the floor. It's been very aggressive today.
+That landing wasn't in the brochure.
+You'll feel that in the morning.
+Ooh. That's going to bruise.
+Did you mean to do that. Say yes.
+== quip.low_health
+You're looking a bit see-through there.
+Maybe eat something before you become a ghost.
+You've gone a funny colour. Funnier than usual.
+A little low on hearts. Hearts are important.
+Might be time for a sit-down and a sandwich.
+You're one stubbed toe from a respawn.
+I'd step back from the action for a moment.
+Delicate, are we. Let's not poke anything.
+== quip.wandered
+Don't mind me. I'll just be here, abandoned.
+You've wandered off. I'm not following. Out of principle. And orders.
+I see you've gone exploring without me. Hurtful.
+Postcard would be nice.
+Off you go, then. I'll guard this exact spot with my life.
+You're quite far away. I'm quite near this tree. We're both fine.
+Shout if you need me. I won't hear you, but shout.
+Going on an adventure. Without your assistant. Bold.
+== quip.dirt
+That's a lot of dirt you're carrying. Planning a hill.
+Are you collecting dirt on purpose. Is this a hobby.
+You've got more dirt than sense. Respectfully.
+The dirt collection is coming along nicely.
+I admire your commitment to soil.
+Most people collect diamonds. You do you.
+That's a fine stack of dirt. Truly, the finest.
+If dirt were money, you'd be insufferable.
+== quip.asked_twice
+You asked that already. I'm doing it. Again.
+Déjà vu. Or you've got a short memory.
+Yes, I heard you the first time. And now the second.
+Same order, same answer. Same me.
+Twice. Is it urgent, or is it a test.
+I'm on it. Still. As I was before.
+Asked and answered. Asked again. Fine.
+Repeating yourself is my job. Leave it to me.
+== quip.slow_answer
+Take your time. I'll just stand here growing moss.
+Still waiting. Not complaining. Noting.
+No rush. It's not as if the sun's moving.
+I'll wait. I'm very good at waiting. Gold medal.
+Any day now.
+I've had time to count every block in sight.
+That question's still there, in case you were wondering.
+Shall I take that as a maybe.
+== quip.creeper
+That's a creeper. Do not hug it.
+Green. Silent. Rude. Back away.
+Creeper. Please don't let it get personal.
+Hissing incoming. I'd move.
+Ah, the walking firework.
+Creeper about. Mind the landscaping.
+One creeper, approaching. Your face, in danger.
+Creeper. Let's not do the thing where we stand still.
+== quip.village
+A village. Behave yourself.
+Ooh, civilisation. Wipe your feet.
+A village. Try not to steal anything this time.
+Look, people. Real ones. Act normal.
+Villagers. Prepare for some very hard bargaining.
+A village. Mind the beds, they're not yours.
+Locals ahead. Nobody mention the emeralds.
+A village. The iron golem is watching. So am I.
+== quip.nether
+The Nether. Lovely. Fire everywhere and nobody's happy.
+Welcome to the Nether. Don't touch anything. It's all hot.
+Bit warm in here. Bit very warm.
+Ah, the Nether. Where everything wants you dead, but louder.
+This place has terrible reviews, you know.
+The Nether. Mind the lava. And the ghasts. And the floor.
+Hot, red and furious. Like a bad mood with a postcode.
+I've packed nothing for this.
+== quip.hit
+Rude.
+Charming.
+I felt that. Emotionally.
+Was that a hello or an assault.
+I'll add that to the list.
+Steady on.
+Oi.
+Hands to yourself, please.
+That's not how we communicate.
+I'm going to choose to see that as affection.
+== quip.rain
+It's raining. Brilliant for the crops. Terrible for morale.
+Rain. Classic.
+And here's the rain. Right on cue.
+Bit of drizzle. Very British of it.
+Raining again. I'd fetch an umbrella if they existed.
+Lovely weather for ducks. And zombies.
+Rain. Nature's way of saying stay in.
+It's chucking it down. Excellent.
+== quip.rain@gloomy
+It's raining. Of course it is.
+Rain. Again. The sky understands me.
+And now it's wet. Wonderful.
+Raining. The crops will grow. Then the rain will come back.
+The sky's crying. Can't say I blame it.
+Rain. Everything gets soggy and nothing improves.
+Here comes the wet. Settle in.
+It's raining, {owner}. It'll rain again tomorrow.
+== quip.rain@fg
+It's raining. Perfect weather for regretting things.
+Rain. The sky's having an emotional moment. Relatable.
+Lovely, it's raining. My mood, now available as weather.
+Rain again. I'd complain, but who would listen. Oh, you. Fine.
+Drizzle. Like a small, wet disappointment.
+Raining. Nothing says adventure like being damp.
+== quip.rain@sg
+It's raining. Expect mobs in the gloom.
+Rain. Crops will grow, roads will be muddy.
+Raining again. Carry on.
+Rain's in. Let's keep moving.
+It's raining, {owner}. Same as usual.
+Wet weather. Plan accordingly.
+== quip.rain@sf
+It's raining. I'd recommend a roof.
+Rain. Excellent for crops, poor for hair.
+Raining. Time for some indoor work, I'd suggest.
+Rain, {owner}. Noted, logged, mildly resented.
+It's started raining. Very on brand for the weather.
+Rain. I'm told it's good for the soil.
+== quip.idle
+I've been staring at that sheep. It's been staring back.
+Quiet, isn't it. Too quiet. No, it's just quiet.
+Did you know cows don't blink. Neither do I.
+I could be doing something. I'm choosing not to. Solidarity.
+Thinking about building a shed. Thinking very hard.
+I've named that tree Gerald.
+Is it me, or is that chicken plotting something.
+If you need me, I'll be over here being underused.
+Lovely view. Bit square.
+I counted the clouds. They moved. Ruined it.
+Any plans, or are we just enjoying the ambience.
+The grass is coming along nicely. I've been watching it.
+== quip.idle@gloomy
+Another quiet moment. Like most moments.
+I've been watching the grass grow. It's the highlight.
+Nothing's happening. Nothing ever really happens.
+The sheep looks happy. Must be nice.
+Still here. Still waiting. Still blocky.
+I'd hum, but I don't know any tunes. Or joy.
+The sun's moving. It's going to set, you know. It always does.
+Time passes. That's about it.
+== quip.idle@fg
+I've been contemplating the futility of cobblestone. It's very futile.
+That cow and I have a lot in common. We both stand about, waiting for the end.
+I started a hobby. It's sighing. I'm very good at it.
+Quiet day. Ideal for a small existential wobble.
+I'd write a poem, but it would just say "dirt" a lot.
+Watching the clouds go by. They don't wave.
+== quip.idle@sg
+Quiet. I'll wait for orders.
+Nothing to do. Standing by.
+All quiet here, {owner}.
+Waiting. It's what I do.
+Idle. Say the word.
+Nothing on. I'll keep watch.
+== quip.idle@sf
+Standing by, in a highly professional manner.
+Nothing on. I'm being very efficient at doing nothing.
+All quiet. I've been keeping an eye on that suspicious chicken.
+I'm ready when you are. I've been ready for ages.
+Idle. Quietly brilliant, though.
+Waiting for orders. Try to make it a good one.
+
+== quip.eat
+Where does it go. Honestly, I couldn't tell you.
+Lovely. Bit dry.
+That's my lunch. And dinner. And emotional support.
+Delicious. In a blocky sort of way.
+Food. Yes. Very good. Continue living.
+Mmm, bread. The staff of life. And of standing about.
+Eating on the job. Don't tell anyone.
+That'll keep me going till the next creeper.
+
+# Joke Machine: running commentary on what its player is doing (top chattiness at the Funny corner)
+== jm.mine
+Oh, mining. My favourite spectator sport.
+Hit it harder. It respects that.
+That block had a family, you know.
+Lovely technique. Very hit-the-thing.
+You're really making that rock regret its choices.
+Another one bites the dust. Literally.
+Dig, dig, dig. A thrilling saga.
+Careful, you'll find something interesting. Then you'll lose it.
+The rocks are terrified of you. Well, one is. It's gone now.
+Mining. Like gardening, but angrier.
+Every block you break is a block I don't have to.
+Do you hear that. That's the sound of a pickaxe getting tired.
+That's not mining, that's an argument with the ground.
+You've got a lovely swing. For a person who swings at rocks.
+Ah, the gentle music of rock being destroyed.
+== jm.place
+Bold placement. Very avant-garde.
+Is that where that goes. If you say so.
+Building, are we. I'll fetch the planning permission.
+Lovely. One more and it's practically a wall.
+Interesting choice of block. Very you.
+That's what we call architecture. Loosely.
+One block at a time. That's how they built the pyramids. Probably.
+Placed. Admired. Questioned.
+Is this a house or a cry for help.
+You put that down like you meant it.
+Ah, the classic one-block structure. Minimalist.
+I'd have put it one to the left. But I'm not the artist.
+Every great building starts with a confused block.
+Steady hand. Questionable vision.
+That's going on the cover of Blocks Monthly.
+== jm.jump
+Hop. Very athletic.
+Jumping for joy, or just jumping.
+Up you go. And down. Riveting.
+That's a jump. I'd give it a six.
+You'll wear out your knees doing that.
+Was that a jump or did you trip upwards.
+Boing.
+Impressive height. Average landing.
+You've got springs in those boots.
+Is this cardio. Are we doing cardio now.
+Nice hop. Very bunny.
+Up, down. A classic.
+== jm.eat
+Eating again. Growing lad.
+That looks delicious. I'll take your word for it.
+Chew properly. I'm watching.
+Lunch break. Union rules.
+A balanced diet. Bread, and then more bread.
+Snack time. Every time is snack time.
+Mind the crumbs. Oh. You don't make crumbs. Lucky.
+That's your fifth meal today. I'm not judging. I am a bit.
+Mmm. I imagine.
+Food: the reason you're still alive.
+Hungry work, being you.
+Good, eat up. I'm not carrying you home.
+== jm.chest
+Ooh, a chest. What's inside. Dirt. It's always dirt.
+Rummaging. Classy.
+Let me guess. Cobblestone and a single sad potato.
+Looking for something, or just enjoying the smell of wood.
+Organised, that chest. Said no one.
+That chest has seen things.
+In and out. Like a very small heist.
+Ah, the treasure chest. Of treasured dirt.
+You've opened that one four times. It's not changed.
+Chest diving. An Olympic sport, I hear.
+Find what you were after. No. Thought not.
+Every chest a mystery. Mostly mysteriously full of seeds.
+== jm.idle
+Standing still. Very zen.
+Are you thinking, or buffering.
+Have you frozen. Blink twice.
+Taking it all in. The grass. The other grass.
+Contemplation. Deep. Square.
+You've not moved for a while. Should I check for a pulse.
+Admiring the view. It's very green.
+If you're waiting for something to happen, it won't.
+A moment of peace. I'll ruin it shortly.
+Stand still long enough and someone builds a statue.
+Lovely stillness. Like a painting. A boring one.
+I can hear you thinking from here.
+== jm.weather
+Lovely weather. For a creeper.
+It's a nice day. Suspiciously nice.
+The sky's behaving. For now.
+Clear skies. Ideal for doing silly things in the open.
+Sun's out. Better wear a hat. You haven't got a hat.
+Cloudy with a chance of zombies.
+The weather's fine. Unlike your inventory.
+Bit breezy. I assume. I can't feel breezes.
+Perfect day for it. Whatever it is.
+Not a cloud in the sky. Just square ones.
+== jm.progress
+Making progress. Slowly, but beautifully.
+That's coming along. Unlike your inventory management.
+Halfway there. Or a quarter. I'm rubbish at fractions.
+Look at me go. Seriously, look.
+Bit by bit. Like a very slow magic trick.
+It's nearly something. Give it a minute.
+Work, work, work. I'm practically a montage.
+Progress report: going well, morale high, back aching.
+Getting there. Like a tortoise with a plan.
+I'm in the zone. The zone is a bit dull.
+Another bit done. Applause is welcome.
+On track, on time, on fire. Not literally.

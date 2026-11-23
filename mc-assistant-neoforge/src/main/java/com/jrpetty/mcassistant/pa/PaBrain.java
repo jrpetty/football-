@@ -46,6 +46,18 @@ public final class PaBrain {
         /** When to open its player's panel after it first arrives (0: not pending). */
         public int openPanelAt;
         int askedFoodTick = -100000;
+        /** [pa33b] Lines said lately (a long memory: no repeats within a long session). */
+        public final PaPersona.Recent recent = new PaPersona.Recent(400);
+        /** [pa33b] Its player's last death: where, which world, how, when (game time). */
+        @Nullable public BlockPos deathPos;
+        public String deathDim = "", deathCause = "";
+        public long deathAt = -1, prevDeathAt = -1;
+        public int deathsRecent, respawnQuipAt, lastJoke = -100000, lastHit = -100000;
+        public boolean wasRaining, sawDirt;
+        @Nullable public java.util.UUID lastTown;
+        public String lastOrder = "";
+        public int lastOrderAt = -100000, ownerStillFor;
+        @Nullable public net.minecraft.world.phys.Vec3 ownerLast;
     }
 
     // ------------------------------------------------------------------ the budget
@@ -189,7 +201,7 @@ public final class PaBrain {
                 fixes = new java.util.ArrayList<>(fixes);
                 fixes.add(0, new Choice("Skip it, carry on", "resume"));
             }
-            PaTalk.reply(a, PaPhrases.line("cant", a.personality(), a.getRandom()::nextInt, "what", trimEnd(cur.fail)), fixes);
+            PaTalk.reply(a, PaTalk.line(a, "cant", "what", trimEnd(cur.fail)), fixes);
             return;
         }
         if (r != null && !cur.auto) { r.jobsDone++; PaData.touch(); }
@@ -382,7 +394,7 @@ public final class PaBrain {
                 a.clearQueue();
                 a.task = null;
             }
-            if (PaLife.bringTo(a, owner)) PaTalk.comment(a, 0, PaPhrases.line("stuck", a.personality(), a.getRandom()::nextInt, "owner", owner.getGameProfile().getName()));
+            if (PaLife.bringTo(a, owner)) PaTalk.comment(a, 0, PaTalk.line(a, "stuck", "owner", owner.getGameProfile().getName()));
         }
     }
 
@@ -448,31 +460,31 @@ public final class PaBrain {
         boolean near = a.distanceToSqr(owner) < 48 * 48;
         if (near && time >= 12300 && time < 13000 && a.mind.nightWarnedDay != day && a.level().dimension() == net.minecraft.world.level.Level.OVERWORLD) {
             a.mind.nightWarnedDay = day;
-            PaTalk.comment(a, 1, PaPhrases.line("night", pers, rnd, "owner", on));
+            PaTalk.comment(a, 1, PaTalk.line(a, "night", "owner", on));
         }
         if (near && owner.getHealth() <= 6 && owner.getHealth() > 0 && a.tickCount - a.mind.ownerHurtTick > 900) {
             a.mind.ownerHurtTick = a.tickCount;
-            PaTalk.comment(a, 1, PaPhrases.line("owner_hurt", pers, rnd, "owner", on));
+            PaTalk.comment(a, 1, PaTalk.line(a, "owner_hurt", "owner", on));
         }
         // [pa33b] hurt with nothing to eat: it says so and asks, with ways to fix it (it heals by eating, like a player)
         if (a.getHealth() < a.getMaxHealth() * 0.5F && a.countFood() == 0 && a.getTarget() == null
                 && a.tickCount - a.mind.askedFoodTick > 1200) {
             a.mind.askedFoodTick = a.tickCount;
-            PaTalk.reply(a, PaPhrases.line("no_food", pers, rnd, "owner", on),
+            PaTalk.reply(a, PaTalk.line(a, "no_food", "owner", on),
                 List.of(new Choice("Go hunting", "hunt for food"), new Choice("I'll give you some", "#pack")));
             return;
         }
         if (a.getHealth() < a.getMaxHealth() * 0.3F && a.tickCount - a.mind.meHurtTick > 900) {
             a.mind.meHurtTick = a.tickCount;
-            PaTalk.comment(a, 1, PaPhrases.line("me_hurt", pers, rnd, "owner", on));
+            PaTalk.comment(a, 1, PaTalk.line(a, "me_hurt", "owner", on));
         }
         int dia = PaItems.count(a, "diamond");
-        if (a.mind.lastDiamonds >= 0 && dia > a.mind.lastDiamonds) PaTalk.comment(a, 0, PaPhrases.line("diamonds", pers, rnd, "owner", on));
+        if (a.mind.lastDiamonds >= 0 && dia > a.mind.lastDiamonds) PaTalk.comment(a, 0, PaTalk.line(a, "diamonds", "owner", on));
         a.mind.lastDiamonds = dia;
         if (near && a.plan.idle() && a.mind.tips < 3 && a.tickCount - a.mind.lastTip > 12000 && a.tickCount - a.mind.lastSaid > 2400) {
             a.mind.lastTip = a.tickCount;
             a.mind.tips++;                                      // a few tips a session, then it trusts you to know
-            PaTalk.comment(a, 2, PaPhrases.line("tip", pers, rnd, "owner", on));
+            PaTalk.comment(a, 2, PaTalk.line(a, "tip", "owner", on));
         }
     }
 

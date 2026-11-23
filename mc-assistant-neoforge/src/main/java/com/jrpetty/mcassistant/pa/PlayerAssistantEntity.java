@@ -115,6 +115,12 @@ public class PlayerAssistantEntity extends AssistantEntity {
 
     public PaPhrases.Personality personality() { return PaPhrases.Personality.of(this.entityData.get(DATA_PERS)); }
 
+    /** [pa33b] Its place in the personality triangle (from its record; Banter when it has none). */
+    public PaPersona.Tri tri() {
+        PaData.Rec r = rec();
+        return r == null ? PaPersona.Tri.of(PaPersona.DEFAULT_FUNNY, PaPersona.DEFAULT_GLOOMY) : r.tri();
+    }
+
     public void setPersonality(int p) { this.entityData.set(DATA_PERS, p); }
 
     /** "icon|line|percent": what it is doing, synced for the plate and the HUD. */
@@ -255,7 +261,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         if (level().isClientSide) return InteractionResult.SUCCESS;
         if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
         if (!obeys(sp)) {
-            PaTalk.to(this, sp, PaPhrases.line("not_owner", personality(), getRandom()::nextInt, "owner", ownerName));
+            PaTalk.to(this, sp, PaTalk.line(this, "not_owner", "owner", ownerName));
             return InteractionResult.CONSUME;
         }
         // Food in the hand: a meal for it.
