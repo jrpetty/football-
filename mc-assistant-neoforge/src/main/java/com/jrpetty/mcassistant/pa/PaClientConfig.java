@@ -16,6 +16,10 @@ public final class PaClientConfig {
     public static final ModConfigSpec.IntValue RATE, VOLUME, VOICE, PITCH;
     public static final ModConfigSpec.ConfigValue<String> ENGINE, ACCENT, VOICEKEY, CLOUDKEY, CLOUDURL;
     public static final ModConfigSpec.BooleanValue CLOUD;
+    /** [pa33c-2b] Talk mode and voice activation; pings; the panel's look; the heart bar over its head. */
+    public static final ModConfigSpec.ConfigValue<String> TALKMODE, PINGMODE, UISCALE, LASTTAB;
+    public static final ModConfigSpec.IntValue VASENS;
+    public static final ModConfigSpec.BooleanValue SHAREPINGS, ACTQUICK, VOICEPING, CONTRAST, SUBTITLES, HEARTBAR;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -34,8 +38,24 @@ public final class PaClientConfig {
         CLOUDURL = b.comment("[pa33b] The online voice service's address.").define("cloudEndpoint", "");
         ACCENT = b.comment("[pa33b] Which English it listens for and speaks: auto (the game's language, then your computer's), uk, or us.")
             .define("accent", "auto");
+        TALKMODE = b.comment("[pa33c-2b] The talk key: hold (hold to talk), toggle (press to start, again to send), or voice (voice activation).")
+            .define("talkMode", "hold");
+        VASENS = b.comment("[pa33c-2b] Voice activation sensitivity, 0..100 (higher hears quieter speech).").defineInRange("voiceSensitivity", 50, 0, 100);
+        VOICEPING = b.comment("[pa33c-2b] Speaking pings what you're looking at when you start, so \"mine that\" means that.").define("voicePings", true);
+        b.pop();
+        b.push("pings");
+        PINGMODE = b.comment("[pa33c-2b] The middle mouse button: both (tap pings when you have an assistant; sneak for pick block), ping, or pick (pick block only).")
+            .define("middleMouse", "both");
+        SHAREPINGS = b.comment("[pa33c-2b] Let other players see your ping markers.").define("sharePings", false);
+        ACTQUICK = b.comment("[pa33c-2b] A quick tap ping is an order (its default action). Off: a tap is just a marker until you choose or say something.")
+            .define("actOnQuickPings", false);
         b.pop();
         b.push("display");
+        UISCALE = b.comment("[pa33c-2b] The panel's size: s, m or l (on top of the game's GUI scale).").define("panelScale", "m");
+        CONTRAST = b.comment("[pa33c-2b] High-contrast panel colours.").define("highContrast", false);
+        SUBTITLES = b.comment("[pa33c-2b] Show what it says as a subtitle too (text-only voice).").define("subtitles", false);
+        HEARTBAR = b.comment("[pa33c-2b] A small heart bar over its head (only you see it).").define("heartBar", false);
+        LASTTAB = b.comment("[pa33c-2b] The panel tab you last had open.").define("lastTab", "talk");
         HUD = b.comment("A small line on screen saying what your assistant is doing.").define("hud", true);
         TOURED = b.comment("You have seen the assistant's tour.").define("toured", false);
         b.pop();

@@ -767,6 +767,33 @@ public class PaScreen extends Screen {
             "When someone else says you're rubbish, it sticks up for you", () -> setting("defend", !(!set.contains("defend") || set.getBoolean("defend"))));
         int spend = set.getInt("spend");
         cy = stepper(g, "Spend limit", spend + " coins", sx, cy, mx, my, () -> settingInt("spend", spend - 16), () -> settingInt("spend", spend + 16));
+        // [pa33c-2b] talk mode and the keys (live bindings; Controls to change them)
+        UiStyle.heading(g, font, "Keys", sx, cy + 4, half);
+        cy += 18;
+        String tm = PaClientConfig.get(PaClientConfig.TALKMODE, "hold");
+        com.jrpetty.mcassistant.pa.PaTalkMode.Mode mode = com.jrpetty.mcassistant.pa.PaTalkMode.of(tm);
+        g.drawString(font, "Talk mode", sx, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, UiStyle.clip(font, com.jrpetty.mcassistant.pa.PaTalkMode.label(mode), 110), sx + 60, cy, 112, 13, mx, my, true, false,
+            "Hold the talk key to speak, press once to start and again to send, or voice activation (always listening; sends after a pause)",
+            () -> PaClientConfig.set(PaClientConfig.TALKMODE, mode == com.jrpetty.mcassistant.pa.PaTalkMode.Mode.HOLD ? "toggle"
+                : mode == com.jrpetty.mcassistant.pa.PaTalkMode.Mode.TOGGLE ? "voice" : "hold"));
+        cy += 15;
+        if (mode == com.jrpetty.mcassistant.pa.PaTalkMode.Mode.VOICE) {
+            int sens = PaClientConfig.get(PaClientConfig.VASENS, 50);
+            cy = stepper(g, "Sensitivity", sens + "%", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.VASENS, Math.max(0, sens - 10)),
+                () -> PaClientConfig.set(PaClientConfig.VASENS, Math.min(100, sens + 10)));
+        }
+        net.minecraft.client.KeyMapping[] keys = {PaClient.TALK, PaClient.PANEL, PaClient.PING, PaClient.WHEEL, PaClient.QUIET, PaClient.COME, PaClient.CANCEL_PING};
+        for (net.minecraft.client.KeyMapping k : keys) {
+            String what = net.minecraft.network.chat.Component.translatable(k.getName()).getString().replace("Player AI Assistant: ", "");
+            String bound = k.isUnbound() ? "not set" : k.getTranslatedKeyMessage().getString();
+            g.drawString(font, UiStyle.clip(font, what, half - 70), sx, cy + 2, UiStyle.TEXT_MUTED, false);
+            g.drawString(font, bound, sx + half - 8 - font.width(bound), cy + 2, k.isUnbound() ? UiStyle.TEXT_FAINT : UiStyle.TEXT, false);
+            cy += 11;
+        }
+        button(g, "Change keys...", sx, cy + 2, 100, 14, mx, my, true, false, "Opens Controls: the assistant's keys are under \"Player AI Assistant\"",
+            () -> minecraft.setScreen(new net.minecraft.client.gui.screens.options.controls.KeyBindsScreen(this, minecraft.options)));
+        cy += 20;
         return Math.max(leftEnd, cy) - y + 4;
     }
 

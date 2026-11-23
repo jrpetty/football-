@@ -44,12 +44,16 @@ public final class PaClient {
 
     private PaClient() {}
 
-    public static final KeyMapping PANEL = new KeyMapping("key.mc_assistant.pa_panel", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Y,
-        "key.categories.mc_assistant");
-    public static final KeyMapping TALK = new KeyMapping("key.mc_assistant.pa_talk", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z,
-        "key.categories.mc_assistant");
-    public static final KeyMapping WHEEL = new KeyMapping("key.mc_assistant.pa_wheel", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X,
-        "key.categories.mc_assistant");
+    /** [pa33c-2b] Every assistant key in its own category in Options > Controls, rebindable to any key or mouse button. */
+    public static final String CATEGORY = "key.categories.mc_assistant_pa";
+    public static final KeyMapping PANEL = new KeyMapping("key.mc_assistant.pa_panel", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Y, CATEGORY);
+    public static final KeyMapping TALK = new KeyMapping("key.mc_assistant.pa_talk", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z, CATEGORY);
+    public static final KeyMapping WHEEL = new KeyMapping("key.mc_assistant.pa_wheel", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, CATEGORY);
+    public static final KeyMapping PING = new KeyMapping("key.mc_assistant.pa_ping", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_MIDDLE, CATEGORY);
+    public static final KeyMapping QUIET = new KeyMapping("key.mc_assistant.pa_quiet", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
+    public static final KeyMapping COME = new KeyMapping("key.mc_assistant.pa_come", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
+    public static final KeyMapping CANCEL_PING = new KeyMapping("key.mc_assistant.pa_unping", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
+    private static final com.jrpetty.mcassistant.pa.PaTalkMode TALK_MODE = new com.jrpetty.mcassistant.pa.PaTalkMode();
 
     @EventBusSubscriber(modid = McAssistantMod.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
     public static final class Keys {
@@ -60,6 +64,10 @@ public final class PaClient {
             event.register(PANEL);
             event.register(TALK);
             event.register(WHEEL);
+            event.register(PING);
+            event.register(QUIET);
+            event.register(COME);
+            event.register(CANCEL_PING);
         }
     }
 
@@ -253,11 +261,23 @@ public final class PaClient {
         while (WHEEL.consumeClick()) {
             if (mc.screen == null) mc.setScreen(new PaWheelScreen());
         }
-        // hold to talk: only while no screen is open (the panel's own mic button does the same inside it)
+        // [pa33c-2b] the talk key by the Talk mode: hold to talk, press to start and again to send, or voice activation
+        com.jrpetty.mcassistant.pa.PaTalkMode.Mode mode = com.jrpetty.mcassistant.pa.PaTalkMode.of(com.jrpetty.mcassistant.pa.PaClientConfig.get(com.jrpetty.mcassistant.pa.PaClientConfig.TALKMODE, "hold"));
         boolean down = mc.screen == null && TALK.isDown();
-        if (down && !talkDown) PaVoice.startListening();
-        if (!down && talkDown) PaVoice.stopListening();
+        com.jrpetty.mcassistant.pa.PaTalkMode.Act act = mode == com.jrpetty.mcassistant.pa.PaTalkMode.Mode.VOICE
+            ? (com.jrpetty.mcassistant.pa.PaClientConfig.get(com.jrpetty.mcassistant.pa.PaClientConfig.LISTEN, false) && mc.screen == null
+                ? TALK_MODE.voice(PaVoice.level(), com.jrpetty.mcassistant.pa.PaClientConfig.get(com.jrpetty.mcassistant.pa.PaClientConfig.VASENS, 50) / 100F, System.currentTimeMillis())
+                : com.jrpetty.mcassistant.pa.PaTalkMode.Act.NONE)
+            : TALK_MODE.key(mode, down);
+        if (act == com.jrpetty.mcassistant.pa.PaTalkMode.Act.START) PaVoice.startListening();
+        if (act == com.jrpetty.mcassistant.pa.PaTalkMode.Act.STOP) PaVoice.stopListening();
         talkDown = down;
+        while (QUIET.consumeClick()) {                               // quiet, or talking again
+            CompoundTag q = new CompoundTag();
+            q.putInt("mute", state.getCompound("set").getInt("mute") > 0 ? 0 : 2);
+            send("settings", q);
+        }
+        while (COME.consumeClick()) talk("come here", false);
         PaVoice.tick();
     }
 
