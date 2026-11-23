@@ -271,23 +271,6 @@ public final class TerraceRows {
         });
     }
 
-    /**
-     * TownBlocks: a row's ground as the gate keeps it, from its own cells. A drawing twenty-two across runs dx -10 to +11, so
-     * the half-widths every other building is kept by (eleven each way) took a column past its left end for the row's,
-     * and the street beside it was refused there ("refused ROAD ... BUILDING of the terrace3").
-     */
-    static void bounds(TownBlocks.Owner o, List<BuildGoal.Placement> plan, BlockPos a) {
-        int x0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, z0 = Integer.MAX_VALUE, z1 = Integer.MIN_VALUE;
-        for (BuildGoal.Placement p : plan) {
-            if (p.part() == BuildGoal.Part.CLEAR) continue;
-            x0 = Math.min(x0, p.pos().getX()); x1 = Math.max(x1, p.pos().getX());
-            z0 = Math.min(z0, p.pos().getZ()); z1 = Math.max(z1, p.pos().getZ());
-        }
-        if (x0 > x1) return;
-        o.gx0 = o.fx0 = x0; o.gx1 = o.fx1 = x1;
-        o.gz0 = o.fz0 = z0; o.gz1 = o.fz1 = z1;
-    }
-
     /** BuildGoal.layout: a row laid out at its anchor with its houses' steps. */
     public static void layout(String drawing, BlockPos anchor, Direction facing, List<BuildGoal.Placement> out) {
         Direction right = facing.getClockWise();

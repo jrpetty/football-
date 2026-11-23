@@ -116,11 +116,9 @@ public final class Retiring {
         UUID village = a.ownerId();
         if (village == null) return false;
         for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(village)) {
-            int[] half = com.jrpetty.mcassistant.entity.goal.Blueprints.fullHalf(b.structure());
-            boolean turned = b.facing().getAxis() == Direction.Axis.X;
-            int hx = turned ? half[1] : half[0], hz = turned ? half[0] : half[1];
+            int[] box = com.jrpetty.mcassistant.entity.goal.BuildGoal.box(b.structure(), b.anchor(), b.facing(), true);   // [house34b] its own ground, not one past an even drawing's end
             int dy = pos.getY() - b.anchor().getY();
-            if (Math.abs(pos.getX() - b.anchor().getX()) <= hx && Math.abs(pos.getZ() - b.anchor().getZ()) <= hz
+            if (pos.getX() >= box[0] && pos.getX() <= box[1] && pos.getZ() >= box[2] && pos.getZ() <= box[3]
                     && dy >= -2 && dy <= 16) {
                 return true;
             }

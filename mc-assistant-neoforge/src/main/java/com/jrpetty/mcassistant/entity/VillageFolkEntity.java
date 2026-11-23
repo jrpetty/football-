@@ -7543,8 +7543,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (still != null && !project.equals("fortify") && drawn == 0) return 0;
         int blocks = drawn + drawn / 10 + 2;                    // a margin for the cells that are lost
         if (!project.equals("fortify")) {                       // and the ground to build up
-            int[] g = BuildGoal.footprint(project);
-            blocks += BuildGoal.fillCells(level(), site.anchor(), site.facing(), g[0], g[1]).size();
+            blocks += BuildGoal.fillCells(level(), site.anchor(), BuildGoal.box(project, site.anchor(), site.facing(), false)).size();   // [house34b] its own ground, not one past an even drawing's end
         }
         return blocks;
     }

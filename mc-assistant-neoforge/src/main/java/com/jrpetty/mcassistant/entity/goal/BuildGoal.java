@@ -339,11 +339,11 @@ public class BuildGoal extends Goal {
             planned.add(p.pos());
             top = Math.max(top, p.pos().getY() - anchor.getY());
         }
-        int[] g = footprint(structure);
+        int[] g = span(structure, false);                                    // [house34b] its own ground, not one past an even drawing's end
         Direction right = facing.getClockWise();
         int n = 0;
-        for (int dx = -g[0]; dx <= g[0]; dx++) {
-            for (int dz = -g[1]; dz <= g[1]; dz++) {
+        for (int dx = g[0]; dx <= g[1]; dx++) {
+            for (int dz = g[2]; dz <= g[3]; dz++) {
                 for (int dy = 0; dy <= top; dy++) {
                     BlockPos c = cell(anchor, right, facing, dx, dz).above(dy);
                     if (planned.contains(c) || !level.isLoaded(c) || !isWildPlant(level.getBlockState(c))) continue;
@@ -677,15 +677,14 @@ public class BuildGoal extends Goal {
             com.jrpetty.mcassistant.entity.TerraceRows.terrainWork(assistant.level(), base, facing, structure, plan);
             return;
         }
-        int[] g = footprint(structure);
+        int[] g = span(structure, false);                                    // [house34b] its own ground, not one past an even drawing's end
+        int[] ground = Blueprints.turn(g, base.getX(), base.getZ(), facing);
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (Placement p : plan) taken.add(p.pos());
         // [integrity] The fill under the floor is earth where earth will do (it is never seen), its stone footing above it.
-        boolean turnedFill = facing.getAxis() == Direction.Axis.X;
-        int fwx = turnedFill ? g[1] : g[0], fwz = turnedFill ? g[0] : g[1];
-        for (BlockPos c : fillCells(assistant.level(), base, facing, g[0], g[1])) {
+        for (BlockPos c : fillCells(assistant.level(), base, ground)) {
             // [build5] Except its outer face, which is seen from downhill: a stone footing there, not a cliff of dirt.
-            boolean face = Math.abs(c.getX() - base.getX()) == fwx || Math.abs(c.getZ() - base.getZ()) == fwz;
+            boolean face = c.getX() == ground[0] || c.getX() == ground[1] || c.getZ() == ground[2] || c.getZ() == ground[3];
             if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, face ? Blueprints.Style.FOUNDATION : Blueprints.Style.SOIL, Blueprints.Way.UP));
         }
         Direction right = facing.getClockWise();
@@ -693,8 +692,8 @@ public class BuildGoal extends Goal {
         for (BlockPos c : treeOnLot(assistant.level(), structure, base, facing)) plan.add(new Placement(c, Part.CLEAR));
         // [econ-store] And what grows wild inside its walls, in the cells the drawing leaves empty: grass and ferns
         // stood on the floor of every building put up over a meadow (a part's own cell is laid over them anyway).
-        for (int dx = -g[0]; dx <= g[0]; dx++) {
-            for (int dz = -g[1]; dz <= g[1]; dz++) {
+        for (int dx = g[0]; dx <= g[1]; dx++) {
+            for (int dz = g[2]; dz <= g[3]; dz++) {
                 for (int dy = 0; dy <= top; dy++) {
                     BlockPos c = cell(base, right, facing, dx, dz).above(dy);
                     if (taken.contains(c)) continue;
@@ -709,7 +708,7 @@ public class BuildGoal extends Goal {
         // [build5] And the hillside cut back from its walls, a step out for a step up (SiteWork.cutBack): the bank stood
         // against the uphill wall of every building set into a slope. Not a park's (its own ground work, below).
         if (!com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(structure)) {
-            for (BlockPos c : com.jrpetty.mcassistant.entity.SiteWork.cutBack(assistant.level(), base, facing, g[0], g[1])) {
+            for (BlockPos c : com.jrpetty.mcassistant.entity.SiteWork.cutBack(assistant.level(), base, ground)) {
                 if (taken.add(c)) plan.add(new Placement(c, Part.CLEAR, Blueprints.Style.SOIL, Blueprints.Way.UP));
             }
         }
@@ -869,14 +868,13 @@ public class BuildGoal extends Goal {
      * first. Bottom first.
      */
     public static List<BlockPos> treeOnLot(net.minecraft.world.level.Level level, String structure, BlockPos base, Direction facing) {
-        int[] g = footprint(structure);
-        int[] all = Blueprints.has(structure) ? Blueprints.fullHalf(structure) : new int[]{ g[0], g[1] };
+        int[] all = span(structure, true);                                   // [house34b] its own extent, not one past an even drawing's end
         Direction right = facing.getClockWise();
         int top = lotTop(structure);
         List<BlockPos> out = new ArrayList<>();
         for (int dy = 0; dy <= top; dy++) {
-            for (int dx = -all[0] - 1; dx <= all[0] + 1; dx++) {
-                for (int dz = -all[1] - 1; dz <= all[1] + 1; dz++) {
+            for (int dx = all[0] - 1; dx <= all[1] + 1; dx++) {
+                for (int dz = all[2] - 1; dz <= all[3] + 1; dz++) {
                     BlockPos c = cell(base, right, facing, dx, dz).above(dy);
                     if (level.isLoaded(c) && isInTheWay(level, c, level.getBlockState(c))) out.add(c);
                 }
@@ -916,16 +914,35 @@ public class BuildGoal extends Goal {
         return new int[]{ h, h };
     }
 
+    /**
+     * [house34b] A structure's footing ({@code full} false) or all of it, in its own terms: {least dx, most dx, least dz,
+     * most dz}. Its drawing's own extent (Blueprints.extent: one drawn an even number across runs a block further right
+     * than left), or the old square each way.
+     */
+    public static int[] span(String structure, boolean full) {
+        if (Blueprints.has(structure)) return Blueprints.extent(structure, full);
+        int[] g = footprint(structure);
+        return new int[]{ -g[0], g[0], -g[1], g[1] };
+    }
+
+    /** [house34b] As span, turned to its facing and set at its anchor: {minX, maxX, minZ, maxZ} in the world. */
+    public static int[] box(String structure, BlockPos anchor, Direction facing, boolean full) {
+        return Blueprints.turn(span(structure, full), anchor.getX(), anchor.getZ(), facing);
+    }
+
     /** As fillCells, for a footprint {@code hw} across and {@code hd} deep, turned to face {@code facing}. */
     public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor, Direction facing,
                                            int hw, int hd) {
         boolean turned = facing.getAxis() == Direction.Axis.X;
         int wx = turned ? hd : hw, wz = turned ? hw : hd;
+        return fillCells(level, anchor, new int[]{ anchor.getX() - wx, anchor.getX() + wx, anchor.getZ() - wz, anchor.getZ() + wz });
+    }
+
+    /** [house34b] As fillCells, for this ground in the world ({minX, maxX, minZ, maxZ}: box). */
+    public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor, int[] box) {
         List<BlockPos> out = new ArrayList<>();
-        for (int dx = -wx; dx <= wx; dx++) {
-            for (int dz = -wz; dz <= wz; dz++) {
-                int x = anchor.getX() + dx;
-                int z = anchor.getZ() + dz;
+        for (int x = box[0]; x <= box[1]; x++) {
+            for (int z = box[2]; z <= box[3]; z++) {
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 int top = groundTop(level, x, z);
                 for (int y = Math.max(top, anchor.getY() - 8); y < anchor.getY(); y++) {

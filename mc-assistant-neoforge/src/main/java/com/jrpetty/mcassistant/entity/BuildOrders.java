@@ -259,17 +259,16 @@ public final class BuildOrders {
         java.util.Set<Long> own = new java.util.HashSet<>();
         int top = anchor.getY();
         for (Cell c : cells) { own.add(c.pos().asLong()); top = Math.max(top, c.pos().getY()); }
-        boolean turned = facing.getAxis() == Direction.Axis.X;
-        int wx = turned ? half[1] : half[0], wz = turned ? half[0] : half[1];
-        for (int dx = -wx; dx <= wx; dx++) for (int dz = -wz; dz <= wz; dz++) {
+        int[] box = BuildGoal.box(drawing, anchor, facing, false);           // [house34b] its own ground, not one past an even drawing's end
+        for (int x = box[0]; x <= box[1]; x++) for (int z = box[2]; z <= box[3]; z++) {
             for (int y = anchor.getY(); y <= Math.min(top, anchor.getY() + 12); y++) {
-                BlockPos p = new BlockPos(anchor.getX() + dx, y, anchor.getZ() + dz);
+                BlockPos p = new BlockPos(x, y, z);
                 if (own.contains(p.asLong())) continue;
                 BlockState st = level.getBlockState(p);
                 if (!st.isAir() && !BuildGoal.soft(st) && st.getFluidState().isEmpty() && !st.hasBlockEntity()) out[0].add(p);
             }
         }
-        out[1].addAll(BuildGoal.fillCells(level, anchor, facing, half[0], half[1]));
+        out[1].addAll(BuildGoal.fillCells(level, anchor, box));
         return out;
     }
 
@@ -390,28 +389,27 @@ public final class BuildOrders {
 
     /** Is the plot one a building may go on? "" if so, else why not. */
     static String plotProblem(ServerLevel level, Villages.Village v, String drawing, BlockPos anchor, Direction facing, @Nullable BlockPos ignore) {
-        int[] half = BuildGoal.footprint(drawing);
-        boolean turned = facing.getAxis() == Direction.Axis.X;
-        int wx = turned ? half[1] : half[0], wz = turned ? half[0] : half[1];
+        int[] box = BuildGoal.box(drawing, anchor, facing, false);           // [house34b] its own ground, not one past an even drawing's end
         BlockPos c = v.centre();
         if (Math.max(Math.abs(anchor.getX() - c.getX()), Math.abs(anchor.getZ() - c.getZ())) > Villages.VILLAGE_RANGE) {
             return "outside the town";
         }
-        for (int dx = -wx; dx <= wx; dx++) for (int dz = -wz; dz <= wz; dz++) {
-            int ox = anchor.getX() + dx - c.getX(), oz = anchor.getZ() + dz - c.getZ();
+        for (int x = box[0]; x <= box[1]; x++) for (int z = box[2]; z <= box[3]; z++) {
+            int ox = x - c.getX(), oz = z - c.getZ();
             if (TownPlan.isSquare(ox, oz)) return "on the square";
             if (TownPlan.isStreet(ox, oz)) return "on a street";
         }
-        if (MineGround.meets(v.id(), anchor.getX() - wx, anchor.getZ() - wz, anchor.getX() + wx, anchor.getZ() + wz)) return "on the mine's ground";
+        if (MineGround.meets(v.id(), box[0], box[2], box[1], box[3])) return "on the mine's ground";
         for (Ledger.Building b : Ledger.buildings(v.id())) {
             if (ignore != null && b.anchor().equals(ignore)) continue;
-            if (overlaps(b.structure(), b.anchor(), b.facing(), anchor, wx, wz)) return "on " + b.structure() + " ground";
+            if (overlaps(b.structure(), b.anchor(), b.facing(), box)) return "on " + b.structure() + " ground";
         }
         for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(v.id()).entrySet()) {
             Villages.Site s = e.getValue();
             if (ignore != null && s.anchor().equals(ignore)) continue;
-            if (Blueprints.has(e.getKey()) && overlaps(e.getKey(), s.anchor(), s.facing(), anchor, wx, wz)) return "where the town is building its " + e.getKey();
+            if (Blueprints.has(e.getKey()) && overlaps(e.getKey(), s.anchor(), s.facing(), box)) return "where the town is building its " + e.getKey();
         }
+        int wx = Math.max(anchor.getX() - box[0], box[1] - anchor.getX()), wz = Math.max(anchor.getZ() - box[2], box[3] - anchor.getZ());
         String taken = PropertyMarket.overlapping(v.id(), anchor, wx, wz, ignore);
         if (taken != null) return "on " + taken;
         for (CompoundTag o : open(v.id())) {
@@ -419,7 +417,7 @@ public final class BuildOrders {
             if (ignore != null && at.equals(ignore)) continue;
             if (!"build".equals(o.getString("kind"))) continue;
             Direction f = Direction.from2DDataValue(o.getInt("facing"));
-            if (overlaps(o.getString("drawing"), at, f, anchor, wx, wz)) return "where another order is going up";
+            if (overlaps(o.getString("drawing"), at, f, box)) return "where another order is going up";
         }
         return "";
     }
@@ -440,6 +438,11 @@ public final class BuildOrders {
             }
         }
         return null;
+    }
+
+    /** [house34b] Does this building's ground (its own, BuildGoal.box) touch or overlap this ground, with no block between? */
+    static boolean overlaps(String structure, BlockPos at, Direction f, int[] box) {
+        return Footways.gap(BuildGoal.box(structure, at, f, false), box) < 1;
     }
 
     static boolean overlaps(String structure, BlockPos at, Direction f, BlockPos anchor, int wx, int wz) {

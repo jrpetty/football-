@@ -136,10 +136,8 @@ public final class Rebuilding {
         double bd = Double.MAX_VALUE;
         for (Ledger.Building b : Ledger.buildings(village)) {
             if (b.structure().equals("fortify") || b.structure().equals("wall")) continue;
-            int[] half = BuildGoal.footprint(b.structure());
-            boolean turned = b.facing().getAxis() == net.minecraft.core.Direction.Axis.X;
-            int wx = (turned ? half[1] : half[0]) + margin, wz = (turned ? half[0] : half[1]) + margin;
-            if (Math.abs(p.getX() - b.anchor().getX()) > wx || Math.abs(p.getZ() - b.anchor().getZ()) > wz) continue;
+            int[] box = BuildGoal.box(b.structure(), b.anchor(), b.facing(), false);   // [house34b] its own ground, not one past an even drawing's end
+            if (p.getX() < box[0] - margin || p.getX() > box[1] + margin || p.getZ() < box[2] - margin || p.getZ() > box[3] + margin) continue;
             if (p.getY() < b.anchor().getY() - 2 || p.getY() > b.anchor().getY() + 40) continue;
             double d = b.anchor().distSqr(p);
             if (d < bd) { bd = d; best = b; }

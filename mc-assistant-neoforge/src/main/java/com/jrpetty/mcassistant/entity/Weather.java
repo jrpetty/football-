@@ -108,14 +108,12 @@ public final class Weather {
      */
     @Nullable
     static BlockPos roofTop(ServerLevel level, Ledger.Building b, UUID id, String name) {
-        int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(b.structure());
-        boolean turned = b.facing().getAxis() == Direction.Axis.X;
-        int wx = turned ? half[1] : half[0], wz = turned ? half[0] : half[1];
+        int[] box = com.jrpetty.mcassistant.entity.goal.BuildGoal.box(b.structure(), b.anchor(), b.facing(), false);   // [house34b] its own ground, not one past an even drawing's end
         BlockPos a = b.anchor();
         BlockPos best = null;
         double bestMid = Double.MAX_VALUE;
-        for (int x = a.getX() - wx; x <= a.getX() + wx; x++) {
-            for (int z = a.getZ() - wz; z <= a.getZ() + wz; z++) {
+        for (int x = box[0]; x <= box[1]; x++) {
+            for (int z = box[2]; z <= box[3]; z++) {
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
                 if (y > a.getY() + 48) continue;                       // not the building's

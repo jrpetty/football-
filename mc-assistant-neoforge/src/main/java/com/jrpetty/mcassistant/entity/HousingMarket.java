@@ -503,15 +503,12 @@ public final class HousingMarket {
      * footing goes in, which are laid as the house.
      */
     static List<BlockPos> groundCells(ServerLevel level, BlockPos anchor, Direction facing, Design d) {
-        int[] half = BuildGoal.footprint(d.drawing);
-        boolean turned = facing.getAxis() == Direction.Axis.X;
-        int wx = turned ? half[1] : half[0], wz = turned ? half[0] : half[1];
+        int[] box = BuildGoal.box(d.drawing, anchor, facing, false);           // [house34b] its own ground, not one past an even drawing's end
         java.util.Set<BlockPos> footing = new java.util.HashSet<>();
         for (BuildGoal.Placement p : BuildGoal.plan(d.drawing, anchor, facing, 13)) if (p.pos().getY() < anchor.getY()) footing.add(p.pos());
         List<BlockPos> out = new ArrayList<>();
-        for (int dx = -wx; dx <= wx; dx++) {
-            for (int dz = -wz; dz <= wz; dz++) {
-                int x = anchor.getX() + dx, z = anchor.getZ() + dz;
+        for (int x = box[0]; x <= box[1]; x++) {
+            for (int z = box[2]; z <= box[3]; z++) {
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 int top = BuildGoal.groundTop(level, x, z);
                 while (top > anchor.getY() - 8 && !level.getBlockState(new BlockPos(x, top - 1, z)).getFluidState().isEmpty()) top--;
@@ -561,13 +558,11 @@ public final class HousingMarket {
             Villages.Village town = Villages.get(id);                                         // [city9] on a street the town walks
             if (town != null && level.hasChunk(x >> 4, z >> 4) && !CityPlan.reaches(level, town, lot)) continue;
             Direction back = Villages.direction(lot.back());
-            boolean turned = back.getAxis() == Direction.Axis.X;
-            int hx = turned ? half[1] : half[0], hz = turned ? half[0] : half[1];
+            int[] box = BuildGoal.box(d.drawing, new BlockPos(x, 0, z), back, false);   // [house34b] its own ground, not one past an even drawing's end
             int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE, wet = 0, deep = 0;
             boolean ok = true;
-            for (int dx = -hx; dx <= hx && ok; dx++) {
-                for (int dz = -hz; dz <= hz; dz++) {
-                    int cx = x + dx, cz = z + dz;
+            for (int cx = box[0]; cx <= box[1] && ok; cx++) {
+                for (int cz = box[2]; cz <= box[3]; cz++) {
                     if (!level.hasChunk(cx >> 4, cz >> 4)) { ok = false; break; }
                     int h = BuildGoal.groundTop(level, cx, cz);
                     BlockState top = level.getBlockState(new BlockPos(cx, h - 1, cz));
@@ -584,15 +579,15 @@ public final class HousingMarket {
                     hi = Math.max(hi, h);
                 }
             }
-            int area = (2 * hx + 1) * (2 * hz + 1);
+            int area = (box[1] - box[0] + 1) * (box[3] - box[2] + 1);
             if (!ok || wet * 3 > area || hi - lo > PRIVATE_SLOPE) continue;
             if (heartY != Integer.MIN_VALUE && Math.abs(hi - heartY) > 20) continue;
             BlockPos at = new BlockPos(x, hi, z);
             int blocked = 0;
-            for (int dx = -hx; dx <= hx; dx++) {
-                for (int dz = -hz; dz <= hz; dz++) {
+            for (int bx = box[0]; bx <= box[1]; bx++) {
+                for (int bz = box[2]; bz <= box[3]; bz++) {
                     for (int dy = 0; dy <= 1; dy++) {
-                        BlockPos c = at.offset(dx, dy, dz);
+                        BlockPos c = new BlockPos(bx, at.getY() + dy, bz);
                         BlockState st = level.getBlockState(c);
                         if (BuildGoal.soft(st) || st.is(BlockTags.LEAVES) || st.is(BlockTags.LOGS) && BuildGoal.isTreeLog(level, c)) continue;
                         blocked++;

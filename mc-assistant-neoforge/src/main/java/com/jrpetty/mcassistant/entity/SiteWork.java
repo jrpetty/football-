@@ -57,13 +57,17 @@ public final class SiteWork {
     public static java.util.List<BlockPos> cutBack(Level level, BlockPos anchor, net.minecraft.core.Direction facing, int hw, int hd) {
         boolean turned = facing.getAxis() == net.minecraft.core.Direction.Axis.X;
         int wx = turned ? hd : hw, wz = turned ? hw : hd;
+        return cutBack(level, anchor, new int[]{ anchor.getX() - wx, anchor.getX() + wx, anchor.getZ() - wz, anchor.getZ() + wz });
+    }
+
+    /** [house34b] As cutBack, round this footing in the world ({minX, maxX, minZ, maxZ}: BuildGoal.box). */
+    public static java.util.List<BlockPos> cutBack(Level level, BlockPos anchor, int[] box) {
         int floor = anchor.getY();                                   // the first cell of air over the floor
         java.util.List<BlockPos> out = new java.util.ArrayList<>();
-        for (int dx = -wx - CUT_RINGS; dx <= wx + CUT_RINGS; dx++) {
-            for (int dz = -wz - CUT_RINGS; dz <= wz + CUT_RINGS; dz++) {
-                int ring = Math.max(Math.max(Math.abs(dx) - wx, Math.abs(dz) - wz), 0);
+        for (int x = box[0] - CUT_RINGS; x <= box[1] + CUT_RINGS; x++) {
+            for (int z = box[2] - CUT_RINGS; z <= box[3] + CUT_RINGS; z++) {
+                int ring = Math.max(Math.max(Math.max(box[0] - x, x - box[1]), Math.max(box[2] - z, z - box[3])), 0);
                 if (ring == 0) continue;                             // the footing itself: the builders' own (groundInside)
-                int x = anchor.getX() + dx, z = anchor.getZ() + dz;
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 int keep = floor + ring - 1;                         // the highest the ground may stand here: its top cell below this
                 for (int y = floor + CUT_HIGH; y >= keep; y--) {

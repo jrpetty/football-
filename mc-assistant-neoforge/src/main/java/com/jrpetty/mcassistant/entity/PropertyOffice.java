@@ -395,8 +395,8 @@ public final class PropertyOffice {
         List<String> ds = BuildOrders.drawings(v.id()), ss = BuildOrders.styles(v.id());
         String drawing = ds.get(Math.floorMod(f.drawing, ds.size()));
         String style = ss.get(Math.floorMod(f.style, ss.size()));
-        int[] half = BuildGoal.footprint(drawing);
-        rows.add(row(List.of("Building: " + BuildOrders.title(drawing) + " (" + (2 * half[0] + 1) + " by " + (2 * half[1] + 1) + ")", "Style: " + style
+        int[] across = BuildDesk.size(drawing);                              // [house34b] its true size
+        rows.add(row(List.of("Building: " + BuildOrders.title(drawing) + " (" + across[0] + " by " + across[1] + ")", "Style: " + style
                 + "; door " + (f.turn < 0 ? "toward you" : "turned " + (f.turn * 90) + " degrees"),
                 "Priority: " + (f.priority ? "yes" : "no") + "; land: " + (f.lease ? "a ground lease" : "bought") + "; your own materials: " + (f.bring ? "what you carry" : "none"),
                 "The plot is the ground in front of you; stand where you want it and ask again."),

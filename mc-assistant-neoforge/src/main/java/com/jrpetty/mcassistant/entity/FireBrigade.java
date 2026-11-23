@@ -285,10 +285,8 @@ public final class FireBrigade {
     /** Is this on the ground of one of the town's buildings (and this much round it)? */
     private static boolean onABuilding(UUID id, BlockPos p, int margin) {
         for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
-            int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(b.structure());
-            boolean turned = b.facing().getAxis() == Direction.Axis.X;
-            int wx = (turned ? half[1] : half[0]) + margin, wz = (turned ? half[0] : half[1]) + margin;
-            if (Math.abs(p.getX() - b.anchor().getX()) <= wx && Math.abs(p.getZ() - b.anchor().getZ()) <= wz
+            int[] box = com.jrpetty.mcassistant.entity.goal.BuildGoal.box(b.structure(), b.anchor(), b.facing(), false);   // [house34b] its own ground, not one past an even drawing's end
+            if (p.getX() >= box[0] - margin && p.getX() <= box[1] + margin && p.getZ() >= box[2] - margin && p.getZ() <= box[3] + margin
                     && p.getY() >= b.anchor().getY() - 2 && p.getY() <= b.anchor().getY() + 40) return true;
         }
         return false;

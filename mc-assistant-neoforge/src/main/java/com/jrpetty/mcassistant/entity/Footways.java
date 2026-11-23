@@ -160,6 +160,14 @@ public final class Footways {
 
     /** As above, for a building of this kind with its middle here and its back toward {@code back}. */
     public static int[] footprint(String structure, BlockPos anchor, Direction back, boolean eaves) {
+        // [house34b] A drawing's own extent: one drawn an even number across runs a block further right than left.
+        if (Blueprints.has(structure)) {
+            try {
+                return BuildGoal.box(structure, anchor, back, eaves);
+            } catch (RuntimeException e) {
+                // a drawing that will not read: as below
+            }
+        }
         int[] h = half(structure, eaves);
         boolean turned = back.getAxis() == Direction.Axis.X;
         int hx = turned ? h[1] : h[0], hz = turned ? h[0] : h[1];

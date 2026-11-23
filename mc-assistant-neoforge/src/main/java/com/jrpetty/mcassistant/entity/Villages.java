@@ -3158,7 +3158,8 @@ public final class Villages {
                 // [districts] A park's lawn at the middle height of its lot, cut and filled to it (ParkGround).
                 ground = ParkGround.floorFor(level, project, ground);
                 valid++;
-                int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground, back, half[0], half[1]).size()
+                int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground,
+                        com.jrpetty.mcassistant.entity.goal.BuildGoal.box(project, ground, back, false)).size()   // [house34b] its own ground, not one past an even drawing's end
                     + 6 * index + Quarters.misfit(villageId, project, lot)      // out of its own quarter: the worse
                     + ParkGround.roughness(level, project, ground)              // [districts] a park: earth to cut, a drop's edge
                     - AgeSites.shore(level, project, x, z);                     // [econ32b] the lighthouse by the water where there is any

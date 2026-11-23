@@ -932,12 +932,12 @@ public final class TownWonders extends SavedData {
     static BlockPos groundwork(ServerLevel level, CompoundTag w, boolean[] dig) {
         Ledger.Building b = site(w);
         String s = b.structure();
-        int[] g = Blueprints.groundHalf(s);
-        int[] full = Blueprints.fullHalf(s);
+        int[] g = Blueprints.extent(s, false);                               // [house34b] its own ground, not one past an even drawing's end
+        int[] full = Blueprints.extent(s, true);
         java.util.Set<Long> mine = new java.util.HashSet<>();
         for (BuildGoal.Placement p : BuildGoal.plan(s, b.anchor(), b.facing(), 13)) mine.add(p.pos().asLong());
-        for (int dz = -full[1]; dz <= full[1]; dz++) {
-            for (int dx = -full[0]; dx <= full[0]; dx++) {
+        for (int dz = full[2]; dz <= full[3]; dz++) {
+            for (int dx = full[0]; dx <= full[1]; dx++) {
                 for (int h = 0; h <= 6; h++) {
                     BlockPos p = Culture.at(b, dx, h, dz);
                     if (!level.isLoaded(p) || mine.contains(p.asLong())) continue;
@@ -947,7 +947,7 @@ public final class TownWonders extends SavedData {
                     dig[0] = true;
                     return p;
                 }
-                if (Math.abs(dx) > g[0] || Math.abs(dz) > g[1]) continue;
+                if (dx < g[0] || dx > g[1] || dz < g[2] || dz > g[3]) continue;
                 BlockPos under = Culture.at(b, dx, -2, dz);
                 if (level.isLoaded(under) && (level.getBlockState(under).isAir() || !level.getFluidState(under).isEmpty())) {
                     dig[0] = false;
