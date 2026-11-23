@@ -210,6 +210,22 @@ public final class MineLift {
                     .setValue(LeverBlock.FACING, o[0] < 0 ? Direction.EAST : Direction.WEST), 3);
                 put++;
             }
+            if (!(level.getBlockState(lv).getBlock() instanceof LeverBlock)) {
+                // Its corner taken (a furnace set down on it): the lever on another cell of the landing, kept as the stop's.
+                for (BlockPos c : new BlockPos[]{ new BlockPos(w.sx + 3 * o[0], s.y(), w.sz + 3 * o[1]), new BlockPos(w.sx + 2 * o[0], s.y(), w.sz + 3 * o[1]),
+                        new BlockPos(w.sx + 4 * o[0], s.y(), w.sz + 2 * o[1]), new BlockPos(w.sx + 2 * o[0], s.y(), w.sz + 4 * o[1]) }) {
+                    if (level.getBlockState(c).getBlock() instanceof LeverBlock) { lv = c; break; }
+                    if (level.getBlockState(c).canBeReplaced() && level.getBlockState(c.above()).getCollisionShape(level, c.above()).isEmpty()
+                            && level.getBlockState(c.below()).isFaceSturdy(level, c.below(), Direction.UP)) {
+                        level.setBlock(c, Blocks.LEVER.defaultBlockState().setValue(LeverBlock.FACE, AttachFace.FLOOR)
+                            .setValue(LeverBlock.FACING, o[0] < 0 ? Direction.EAST : Direction.WEST), 3);
+                        put++;
+                        lv = c;
+                        break;
+                    }
+                }
+                if (!lv.equals(s.lever())) stops.set(stops.indexOf(s), new Stop(s.index(), s.y(), s.board(), lv, s.name()));
+            }
         }
         // The chain from the headframe's beam down to the cap.
         for (int y = w.top + 3; y < w.top + 8; y++) {
@@ -367,7 +383,7 @@ public final class MineLift {
                 for (Iterator<Ask> it = l.riding.iterator(); it.hasNext(); ) {
                     Ask a = it.next();
                     Entity e = level.getEntity(a.who);
-                    double near = e instanceof ServerPlayer ? 36.0 : 9.0;
+                    double near = e instanceof ServerPlayer ? 36.0 : 25.0;
                     if (e == null || !e.isAlive() || e.isPassenger() || e.distanceToSqr(Vec3.atBottomCenterOf(from.board())) > near) {
                         STATE.remove(a.who);
                         it.remove();
@@ -391,7 +407,8 @@ public final class MineLift {
                 for (Ask a : l.riding) {
                     Entity e = level.getEntity(a.who);
                     if (e != null && e.isAlive()) {
-                        place(e, to.board().getX() + 0.5, to.board().getY(), to.board().getZ() + 0.5);
+                        BlockPos out = exit(level, l, to);
+                        place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
                         STATE.put(a.who, State.ARRIVED);
                         l.carried++;
                         if (e instanceof ServerPlayer p) p.displayClientMessage(Component.literal("The cage: " + to.name() + " (Y" + to.y() + ")"), true);
@@ -432,6 +449,35 @@ public final class MineLift {
         }
     }
 
+    /**
+     * Where a rider steps out at a stop: the stop's own corner if it is open two high on a floor, else the next open cell
+     * of the corner landing, else round it, else on top of the ground there. (A town's smelter set a furnace on the
+     * pithead's corner, and a rider put out there stood in it.)
+     */
+    static BlockPos exit(ServerLevel level, Lift l, Stop s) {
+        List<BlockPos> tries = new ArrayList<>();
+        tries.add(s.board());
+        int[] o = MineWorks.diag((s.index() / 4) % 4);
+        tries.add(new BlockPos(l.sx + 3 * o[0], s.y(), l.sz + 3 * o[1]));
+        tries.add(new BlockPos(l.sx + 2 * o[0], s.y(), l.sz + 3 * o[1]));
+        tries.add(s.lever());
+        if (s.index() == 0) tries.add(new BlockPos(l.sx - 4, s.y(), l.sz - 2));
+        for (int r = 1; r <= 3; r++)
+            for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++)
+                if (Math.max(Math.abs(dx), Math.abs(dz)) == r) for (int dy = 0; dy <= 1; dy++) tries.add(s.board().offset(dx, dy, dz));
+        for (BlockPos p : tries) {
+            if (Math.max(Math.abs(p.getX() - l.sx), Math.abs(p.getZ() - l.sz)) <= 1) continue;      // never the pillar or the well
+            if (standable(level, p)) return p;
+        }
+        return level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, s.board());
+    }
+
+    private static boolean standable(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).getCollisionShape(level, p).isEmpty() && !level.getBlockState(p).liquid()
+            && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
+            && level.getBlockState(p.below()).isFaceSturdy(level, p.below(), Direction.UP);
+    }
+
     /** Anybody in the well who is not riding the cage (a server stopped mid-ride, a chunk unloaded): out at the nearest stop. */
     private static void watch(ServerLevel level, Lift l) {
         // A part of the cage drawn twice (its chunk's entities read in after the cage was drawn afresh): the stray let go.
@@ -445,7 +491,8 @@ public final class MineLift {
             Stop best = null;
             for (Stop s : l.stops) if (best == null || Math.abs(s.y() - e.getY()) < Math.abs(best.y() - e.getY())) best = s;
             if (best == null) continue;
-            place(e, best.board().getX() + 0.5, best.board().getY(), best.board().getZ() + 0.5);
+            BlockPos out = exit(level, l, best);
+            place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
             STATE.remove(e.getUUID());
             com.mojang.logging.LogUtils.getLogger().info("[MCA-LIFT] {}: {} found in the well at Y{}, put out at {}", Villages.name(l.village),
                 e.getName().getString(), (int) e.getY(), best.name());
