@@ -587,6 +587,28 @@ public final class FoundingPlan {
                 if (g.heldFirst.isEmpty()) g.heldFirst = why + " at " + dx + "," + dz + " (y=" + (int) Math.round(was) + " kept at " + g.target[i] + ")";
             }
         }
+        // [econ32d] ---- no terrace column left a pillar: one standing two or more over three or four of the columns beside it
+        // (the next terraces, or the edge where it meets the land) comes down to the highest of them. A lot's corner or a
+        // street's end at the square's edge with lower ground on three sides was left a stub a block across and three to ten
+        // high: the hillside's audit found one on a street now and then, as the plan's seed fell.
+        if (g.terrace != null) {
+            int[] nbr = new int[4];
+            for (int pass = 0; pass < 4; pass++) {
+                boolean moved = false;
+                for (int i = 0; i < n; i++) {
+                    if (g.terrace[i] == Terraces.NONE || g.target[i] != g.terrace[i] || g.target[i] == level) continue;
+                    int c = Terraces.neighbours(i, side, nbr), under = 0, top = Integer.MIN_VALUE;
+                    for (int k = 0; k < c; k++) {
+                        int j = nbr[k];
+                        if (reach(g.dx(j), g.dz(j)) > g.outer || g.target[i] - g.target[j] < 2) continue;
+                        under++;
+                        top = Math.max(top, g.target[j]);
+                    }
+                    if (under >= 3) { g.target[i] = top; g.terrace[i] = top; moved = true; }
+                }
+                if (!moved) break;
+            }
+        }
         // ---- the order: nearest the heart first, so the camp is level first.
         long[] keys = new long[n];
         int m = 0;
