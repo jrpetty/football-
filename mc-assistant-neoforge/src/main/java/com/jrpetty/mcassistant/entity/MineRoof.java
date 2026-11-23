@@ -53,11 +53,12 @@ public final class MineRoof {
     }
 
     /**
-     * The pithead's floor for the miners' plot: a cell beside the well (within a block of the shaft's middle, as the plot must
-     * be) at the pithead's height, open two high on solid ground; the well's cap itself if none is.
+     * The pithead's floor for the miners' plot: the shaft's middle at the pithead's height if it is open two high on solid
+     * ground (a mine with no cage yet), else a cell beside the well (within a block of the middle, as the plot must be); the
+     * well's cap itself if none is.
      */
     static BlockPos floor(ServerLevel level, MineWorks.Works w) {
-        for (int[] o : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 } }) {
+        for (int[] o : new int[][]{ { 0, 0 }, { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 } }) {
             for (int dy = 0; dy >= -1; dy--) {
                 BlockPos p = new BlockPos(w.sx + o[0], w.top + dy, w.sz + o[1]);
                 if (standable(level, p)) return p;
@@ -81,6 +82,21 @@ public final class MineRoof {
                 if (Math.max(Math.abs(dx), Math.abs(dz)) == r) for (int dy = 1; dy >= -3; dy--) tries.add(new BlockPos(w.sx + dx, w.top + dy, w.sz + dz));
         for (BlockPos p : tries) if (!onHeadframe(w, p) && standable(level, p)) return p;
         return MineWorks.approach(w);
+    }
+
+    /**
+     * Where a folk put on its plot stands, if the plot's middle is at a mine's pithead and the ground's top there (the
+     * heightmap's, {@code y}) is the headframe over it: the pithead's floor, or the ground round it. Null otherwise.
+     */
+    @Nullable
+    static BlockPos stand(ServerLevel level, @Nullable UUID village, BlockPos c, int y) {
+        if (village == null) return null;
+        BlockPos site = TownMine.siteOf(village);
+        if (site == null || Math.abs(c.getX() - site.getX()) > 2 || Math.abs(c.getZ() - site.getZ()) > 2) return null;
+        MineWorks.Works w = MineWorks.works(level, village);
+        if (w == null || !w.head || y < w.top + 2) return null;
+        BlockPos f = floor(level, w);
+        return standable(level, f) ? f : down(level, w);
     }
 
     /** Every second, for a folk near the works: on the headframe a few seconds, it is put down on the pithead's floor. */

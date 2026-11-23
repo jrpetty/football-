@@ -6903,6 +6903,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (level().getChunkSource().getChunkNow(c.getX() >> 4, c.getZ() >> 4) == null) return false;
         int y = level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
             c.getX(), c.getZ());
+        // [econ32d] A plot at a mine's pithead: its floor, not the top of the headframe over it (MineRoof.stand).
+        BlockPos pit = level() instanceof net.minecraft.server.level.ServerLevel sl ? MineRoof.stand(sl, ownerId, c, y) : null;
+        if (pit != null) { c = pit; y = pit.getY(); }
         moveTo(c.getX() + 0.5, y, c.getZ() + 0.5, getYRot(), getXRot());
         getNavigation().stop();
         brain("could not walk to the plot — put there");
