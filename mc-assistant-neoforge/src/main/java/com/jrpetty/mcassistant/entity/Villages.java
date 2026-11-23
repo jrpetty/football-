@@ -3156,7 +3156,9 @@ public final class Villages {
             }
             SiteWhy.end(villageId, project, site != null, places.size());     // [econ32b]
             CityPlan.looked(villageId, site != null, offWalk && !waiting);     // [city9]
-            AgeSites.looked(villageId, project, site != null, offWalk && !waiting);   // [econ32b] an age's building keeps its own count
+            // [econ32b] an age's building keeps its own count; [econ32d] a look with a lot still loading counts all the same (a
+            // Diamond Age town's far lots were forever loading, and its chapel looked forty times without its count moving)
+            AgeSites.looked(villageId, project, site != null, offWalk);
             CityGrowth.looked(level, v, project, site != null, waiting);       // [city26] full: the next ring laid out
             if (site != null) {
                 for (long cell : best.cells()) taken.add(cell);
