@@ -267,6 +267,7 @@ public final class Masonry {
 
     /** Carry a plan out: what it takes out of the stores, and what was left of its batches back in. */
     private static boolean settle(ServerLevel level, Villages.Village v, Plan p) {
+        if (onTheWorksAtItsEnd(v, p)) return false;
         List<Map.Entry<Item, Integer>> got = new ArrayList<>();
         for (Map.Entry<Item, Integer> e : p.taken.entrySet()) {
             if (e.getValue() <= 0) continue;
@@ -281,6 +282,19 @@ public final class Masonry {
             if (e.getValue() > 0) Crafts.giveBack(level, v, e.getKey(), e.getValue());
         }
         return true;
+    }
+
+    /**
+     * [biz30d] A town at its borrowing's end (TownBudget.halted) buys no dressed stone, brick or lantern on a department's
+     * account: the caller lays the plain block, or waits, till its revenue brings its IOUs down. Its builders already wait
+     * then; the gates, the storeys and the lamps did not, and wrote the town's market a hundred and sixty coins and more of
+     * IOUs a day for bricks while it owed it twice what it could carry (ent15: 1,366c against 470c).
+     */
+    private static boolean onTheWorksAtItsEnd(Villages.Village v, Plan p) {
+        if (p.taken.isEmpty() || !TownBudget.halted(v.id())) return false;
+        Item first = p.taken.keySet().iterator().next();
+        Accounts.Resolved r = Accounts.resolve(v.id(), new net.minecraft.world.item.ItemStack(first));
+        return r.account() != null && r.account().kind() == Accounts.Kind.DEPT;
     }
 
     /** Could the stores pay for so many blocks of the land's own walling (Homeland): in itself, in what it
