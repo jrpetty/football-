@@ -97,7 +97,8 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
         if (mc.options.hideGui || a.isInvisible() || PaScreen.drawingPortrait) return;
         double d2 = this.entityRenderDispatcher.distanceToSqr(a);
         String said = PaClient.bubble(a.getId(), a.level().getGameTime());
-        if (said != null && d2 < 32 * 32) bubble(a, said, pose, buffer);
+        // its words are in the open panel already: no bubble filling the view behind it
+        if (said != null && d2 < 32 * 32 && !(mc.screen instanceof PaScreen)) bubble(a, said, pose, buffer, d2);
         else if (d2 < 24 * 24) plate(a, pose, buffer, light, d2);
     }
 
@@ -167,14 +168,16 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
     }
 
     /** What it said, over its head: dark glass, white words, wrapped, its name first. */
-    private void bubble(PlayerAssistantEntity a, String text, PoseStack pose, MultiBufferSource buffer) {
+    private void bubble(PlayerAssistantEntity a, String text, PoseStack pose, MultiBufferSource buffer, double d2) {
         Font font = getFont();
         List<FormattedCharSequence> lines = TextCache.splitPlain(font, text, 170);
         if (lines.size() > 5) lines = lines.subList(0, 5);
         pose.pushPose();
         pose.translate(0.0F, a.getBbHeight() + 0.6F + lines.size() * 0.25F, 0.0F);
         pose.mulPose(this.entityRenderDispatcher.cameraOrientation());
-        pose.scale(0.025F, -0.025F, 0.025F);
+        // right up close it shrinks a little, so it never fills the camera
+        float near = (float) Math.max(0.55, Math.min(1.0, Math.sqrt(d2) / 5.0));
+        pose.scale(0.025F * near, -0.025F * near, 0.025F * near);
         Matrix4f mx = pose.last().pose();
         int widest = 0;
         for (FormattedCharSequence l : lines) widest = Math.max(widest, font.width(l));

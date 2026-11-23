@@ -44,6 +44,8 @@ public final class PaPlan {
         public int retools;
         /** Keep the progress counted so far when the step starts again after a new tool. */
         public boolean keepBase;
+        /** What CraftPlanner makes for this step ("planks", "chest"), so a retry plans only what is still missing. */
+        public String make = "";
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -58,6 +60,7 @@ public final class PaPlan {
             t.putInt("Tg", target);
             t.putBoolean("Stop", stopAtTarget);
             t.putString("Said", said);
+            t.putString("Mk", make);
             t.putBoolean("Auto", auto);
             return t;
         }
@@ -76,6 +79,7 @@ public final class PaPlan {
             s.target = t.getInt("Tg");
             s.stopAtTarget = t.getBoolean("Stop");
             s.said = t.getString("Said");
+            s.make = t.getString("Mk");
             s.auto = t.getBoolean("Auto");
             return s;
         }
@@ -102,6 +106,8 @@ public final class PaPlan {
     public final List<Step> steps = new ArrayList<>();
     @Nullable public Step current;
     public boolean paused;
+    /** The step that last failed and paused the plan, for its "Try again" choice. Not saved. */
+    @Nullable public Step failed;
     /** What the list was before the last order: "undo" puts it back. */
     @Nullable private List<Step> before;
     @Nullable private Step beforeCurrent;

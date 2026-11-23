@@ -714,6 +714,9 @@ public final class PaOrders {
                 CraftPlanner.Result cr = CraftPlanner.plan(a, "planks", planks);
                 PaPlan.Step w = step("get " + planks + " planks for the " + structure, Kind.CRAFT, Math.max(20, planks * 2));
                 w.jobs.addAll(cr.jobs());
+                w.count = "planks";
+                w.target = planks;
+                w.make = "planks";
                 if (!w.jobs.isEmpty()) out.add(w);
             }
         }
@@ -738,6 +741,9 @@ public final class PaOrders {
             PaPlan.Step m = step("make " + (want - got) + " " + CraftPlanner.pretty(key) + " for the " + structure, Kind.CRAFT,
                 Math.max(15, cr.jobs().stream().mapToInt(PaOrders::jobEta).sum()));
             m.jobs.addAll(cr.jobs());
+            m.count = PaItems.itemKey(key);
+            m.target = m.count.isEmpty() ? 0 : want - got;
+            m.make = key;
             out.add(m);
         }
         PaPlan.Step s = step("build a " + (structure.equals("house") ? "small house" : structure), Kind.BUILD, Math.max(60, blocks * 2));
@@ -773,6 +779,7 @@ public final class PaOrders {
         s.jobs.addAll(cr.jobs());
         s.count = PaItems.itemKey(target);
         s.target = 1;
+        s.make = target;
         return s;
     }
 
@@ -941,7 +948,8 @@ public final class PaOrders {
         if (w.contains("still need") || w.contains("building blocks")) c.add(new Choice("Gather blocks", "gather 32 stone then get 32 logs"));
         if (w.contains("home")) c.add(new Choice("Set home here", "set home here"));
         if (w.contains("chest") && c.isEmpty()) c.add(new Choice("Use my chests", "#settings chests on"));
-        if (said != null && !said.isEmpty() && !said.startsWith("#")) c.add(new Choice("Try again", said));
+        if ("#retry".equals(said)) c.add(new Choice("Try again", "#retry"));
+        else if (said != null && !said.isEmpty() && !said.startsWith("#")) c.add(new Choice("Try again", said));
         c.add(new Choice("Never mind", "stop"));
         return c;
     }

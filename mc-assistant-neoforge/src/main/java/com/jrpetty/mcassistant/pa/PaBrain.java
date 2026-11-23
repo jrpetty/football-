@@ -161,7 +161,8 @@ public final class PaBrain {
         if (!cur.fail.isEmpty()) {
             boolean more = plan.steps.stream().anyMatch(s -> !s.auto);
             if (cur.auto) { plan.dropAuto(); return; }
-            List<Choice> fixes = PaOrders.fixesFor(cur.fail, cur.said);
+            plan.failed = cur;
+            List<Choice> fixes = PaOrders.fixesFor(cur.fail, "#retry");
             if (more) {
                 plan.paused = true;
                 fixes = new java.util.ArrayList<>(fixes);
@@ -177,7 +178,7 @@ public final class PaBrain {
             if (!res.isEmpty()) PaTalk.comment(a, 2, res);
             return;
         }
-        String line = PaPhrases.line("done", a.personality(), a.getRandom()::nextInt, "job", cur.label);
+        String line = PaPhrases.line(last ? "done" : "step", a.personality(), a.getRandom()::nextInt, "did", PaPhrases.did(cur.label), "job", cur.label);
         if (!res.isEmpty()) line = res + " " + (last ? "That's everything." : "");
         if (last) PaTalk.reply(a, line.trim());
         else PaTalk.comment(a, 1, line.trim());
@@ -194,19 +195,30 @@ public final class PaBrain {
         PaPlan.Step pick = PaOrders.pickaxeStep(a);
         if (pick == null) return false;
         cur.retools++;
-        int left = cur.target > 0 && cur.base >= 0 ? Math.max(1, cur.target - Math.max(0, PaItems.count(a, cur.count) - cur.base)) : 0;
-        java.util.List<Job> again = new java.util.ArrayList<>();
-        for (Job j : cur.jobs) again.add(j.type() == Job.Type.GATHER && left > 0 ? Job.gather(j.kind(), left + 3) : j);
-        cur.jobs.clear();
-        cur.jobs.addAll(again);
-        cur.fail = "";
-        cur.fed = false;
-        cur.started = -1;
-        cur.keepBase = true;
+        rearm(a, cur);
         a.plan.steps.add(0, cur);
         a.plan.steps.add(0, pick);
         PaTalk.comment(a, 1, "My pickaxe wore out. Making a new one, then back to it.");
         return true;
+    }
+
+    /** Ready a step to run again, planning only what is still missing and keeping the progress counted so far. */
+    static void rearm(PlayerAssistantEntity a, PaPlan.Step s) {
+        int left = s.target > 0 && s.base >= 0 && !s.count.isEmpty()
+            ? Math.max(1, s.target - Math.max(0, PaItems.count(a, s.count) - s.base)) : 0;
+        if (left > 0 && !s.make.isEmpty()) {
+            com.jrpetty.mcassistant.entity.CraftPlanner.Result cr = com.jrpetty.mcassistant.entity.CraftPlanner.plan(a, s.make, left);
+            if (!cr.jobs().isEmpty()) { s.jobs.clear(); s.jobs.addAll(cr.jobs()); }
+        } else if (left > 0) {
+            java.util.List<Job> again = new java.util.ArrayList<>();
+            for (Job j : s.jobs) again.add(j.type() == Job.Type.GATHER ? Job.gather(j.kind(), left + 3) : j);
+            s.jobs.clear();
+            s.jobs.addAll(again);
+        }
+        s.fail = "";
+        s.fed = false;
+        s.started = -1;
+        s.keepBase = s.base >= 0;
     }
 
     private static String trimEnd(String s) {

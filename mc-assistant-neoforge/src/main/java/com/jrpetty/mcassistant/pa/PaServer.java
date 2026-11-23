@@ -137,6 +137,15 @@ public final class PaServer {
             case "settings" -> {
                 if (w.length > 2 && w[1].equals("chests")) { r.useChests = w[2].equals("on"); PaData.touch(); PaTalk.reply(a, r.useChests ? "Thanks, I'll use your chests." : "I'll leave your chests alone."); }
             }
+            case "retry" -> {
+                PaPlan.Step f = a.plan.failed;
+                a.plan.failed = null;
+                if (f == null) { PaTalk.reply(a, "There's nothing to try again just now."); break; }
+                PaBrain.rearm(a, f);
+                a.plan.steps.add(0, f);
+                a.plan.paused = false;
+                PaTalk.reply(a, "Trying again: " + f.label + ".");
+            }
             case "tour" -> {
                 CompoundTag t = PaNet.state(p, a);
                 t.putString("tab", "talk");

@@ -35,4 +35,13 @@ class PaPhrasesTest {
         String s = PaPhrases.line("intro", PaPhrases.Personality.CHEERFUL, new Random(1)::nextInt, "name", "Pip", "owner", "Alex");
         assertTrue(s.contains("Pip") && s.contains("Alex"), s);
     }
+
+    @Test
+    void finishedStepsReadAsDone() {
+        org.junit.jupiter.api.Assertions.assertEquals("Made a stone pickaxe", PaPhrases.did("make a stone pickaxe first"));
+        org.junit.jupiter.api.Assertions.assertEquals("Gathered 87 stone for the house", PaPhrases.did("gather 87 stone for the house"));
+        org.junit.jupiter.api.Assertions.assertEquals("Built a small house", PaPhrases.did("build a small house"));
+        String s = PaPhrases.line("step", PaPhrases.Personality.CALM, new Random(2)::nextInt, "did", PaPhrases.did("get 129 planks for the house"));
+        assertTrue(s.startsWith("Got 129 planks"), s);
+    }
 }
