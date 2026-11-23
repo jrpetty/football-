@@ -484,6 +484,7 @@ public final class Crafts {
             // the age's iron, waits on no saving either (WatchKit.ironForTheWatch).
             if (!Craftsmanship.canMake(skill, it) && !WatchKit.forTheWatch(level, v, it)) continue;   // not the hand for it yet
             boolean diamond = w.metal() == Items.DIAMOND;
+            if (diamond && stock(level, v, s -> s.is(Items.DIAMOND)) - w.bars() < AgeOres.diamondsKept(v.id())) continue;   // [econ32d] the age's diamonds first
             if (diamond ? savingDiamonds : saving && it != Items.IRON_PICKAXE && it != Items.IRON_SWORD
                     && !WatchKit.ironForTheWatch(level, v, it)) continue;
             if (stock(level, v, s -> s.is(it)) >= w.keep()) continue;

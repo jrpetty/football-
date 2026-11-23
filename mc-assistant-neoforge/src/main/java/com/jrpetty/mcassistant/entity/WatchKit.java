@@ -266,6 +266,7 @@ public final class WatchKit {
         MADE.clear();
         MADE_DAY.clear();
         IRON_SHARE.clear();
+        IRON_PEAK.clear();
     }
 
     /** Is there a tailor in the town (the watch's leather is its work)? */
@@ -414,12 +415,20 @@ public final class WatchKit {
     /** The iron the watch's armour holds, counted toward what the age asks for (Villages.needs), up to the watch's
      *  share: looked at once in ten seconds. */
     private static final Map<UUID, long[]> IRON_SHARE = new ConcurrentHashMap<>();
+    /** [econ32d] The day the watch's iron last came to its most, and that most. */
+    private static final Map<UUID, long[]> IRON_PEAK = new ConcurrentHashMap<>();
 
     public static int ironCredit(ServerLevel level, UUID village) {
         long now = level.getGameTime();
         long[] c = IRON_SHARE.get(village);
         if (c != null && now - c[0] < 200L && now >= c[0]) return (int) c[1];
         int credit = Math.min(watchIron(level, village), watchShare(village));
+        // [econ32d] The most it came to in the last day or so stands while the cave team is out of reach: a Diamond Age town's
+        // iron went from 38 short to 83 the hour its cave team walked off with forty-five bars on its backs, and back.
+        long day = now / 24000L;
+        long[] peak = IRON_PEAK.get(village);
+        if (peak == null || day - peak[0] > 1 || day < peak[0] || credit >= peak[1]) IRON_PEAK.put(village, peak = new long[]{ day, credit });
+        credit = (int) Math.max(credit, peak[1]);
         IRON_SHARE.put(village, new long[]{ now, credit });
         return credit;
     }
@@ -523,7 +532,9 @@ public final class WatchKit {
                 // [econ32] Not while the age asks for diamonds: a local run's Diamond Age town mined its seven of the eleven the
                 // age asked, and the watch's kit took ten in a day (a sword and a chestplate), back down to two.
                 if (DeepPicks.wanted(level, v.id())) return ItemStack.EMPTY;
-                if (Crafts.stock(level, v, s -> s.is(Items.DIAMOND)) < k.takes + DIAMONDS_KEPT) return ItemStack.EMPTY;
+                // [econ32d] Past the diamonds the town keeps for its age and the next (AgeOres): the watch's diamond kit took
+                // five the morning the Diamond Age's eight were in, and the age was four short again.
+                if (Crafts.stock(level, v, s -> s.is(Items.DIAMOND)) < k.takes + Math.max(DIAMONDS_KEPT, AgeOres.diamondsKept(v.id()))) return ItemStack.EMPTY;
                 if (k == Kind.SWORD && !stick(level, v)) return ItemStack.EMPTY;
                 if (!Crafts.take(level, v, s -> s.is(Items.DIAMOND), k.takes)) return ItemStack.EMPTY;
                 ItemStack piece = Craftsmanship.finish(level, new ItemStack(it), hand(skill, it), f.displayNameCap());

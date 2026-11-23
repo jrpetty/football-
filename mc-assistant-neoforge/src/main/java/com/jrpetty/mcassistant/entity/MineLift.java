@@ -107,6 +107,7 @@ public final class MineLift {
         final List<UUID> cage = new ArrayList<>();
         boolean fresh = true;
         int idle;
+        double lastY = Double.NaN;
         long trips, carried;
         Lift(UUID village) { this.village = village; }
 
@@ -544,7 +545,26 @@ public final class MineLift {
         l.cage.clear();
     }
 
+    /**
+     * [econ32d] The trapdoor over the well opens as the cage comes up to it or goes down through it, and shuts behind it (the
+     * cage seen coming up into the headframe through an open hatch, not through a shut one). Shut whenever the cage stands
+     * still, so nobody walks into an open well.
+     */
+    private static void hatch(ServerLevel level, Lift l) {
+        BlockPos cap = new BlockPos(l.sx, l.top - 1, l.sz);
+        BlockState st = level.getBlockState(cap);
+        if (!(st.getBlock() instanceof TrapDoorBlock)) return;
+        boolean moving = l.cageY != l.lastY;
+        l.lastY = l.cageY;
+        boolean open = moving && l.cageY >= l.top - 5;
+        if (st.getValue(TrapDoorBlock.OPEN) != open) {
+            level.setBlock(cap, st.setValue(TrapDoorBlock.OPEN, open), 3);
+            level.playSound(null, cap, open ? SoundEvents.WOODEN_TRAPDOOR_OPEN : SoundEvents.WOODEN_TRAPDOOR_CLOSE, SoundSource.BLOCKS, 0.7F, 1.0F);
+        }
+    }
+
     private static void drawCage(ServerLevel level, Lift l) {
+        hatch(level, l);
         if (l.cage.size() == 6) {
             boolean all = true;
             for (UUID id : l.cage) if (!(level.getEntity(id) instanceof Display.BlockDisplay)) { all = false; break; }

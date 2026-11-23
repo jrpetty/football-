@@ -222,12 +222,13 @@ public class CityGrowGameTests {
             TerraformAudit.Done d = TerraformAudit.near(heart, 40);
             if (d == null) { helper.fail("the founding finished with no plan kept"); return; }
             Map<String, Integer> c = TerraformAudit.scan(level, d);
-            if (TerraformAudit.FIRST.containsKey("offLevel")) {
-                String[] q = TerraformAudit.FIRST.get("offLevel").split("[, ]");
+            for (String fk : new String[]{ "offLevel", "streetPillars" }) if (TerraformAudit.FIRST.containsKey(fk)) {
+                String[] q = TerraformAudit.FIRST.get(fk).split("[, ]");
                 BlockPos at = new BlockPos(Integer.parseInt(q[0]), Integer.parseInt(q[1]), Integer.parseInt(q[2]));
                 StringBuilder tr = new StringBuilder();
-                for (int dy = -2; dy <= 2; dy++) tr.append(" ").append(dy).append(":").append(com.jrpetty.mcassistant.entity.TownBlocks.setBy(at.above(dy)));
-                Kit.log("[VT] cg02 who touched the first off-level column:" + tr);
+                for (int dy = -2; dy <= 3; dy++) tr.append(" ").append(dy).append(":").append(level.getBlockState(at.above(dy)).getBlock().getDescriptionId().replace("block.minecraft.", ""))
+                    .append("/").append(com.jrpetty.mcassistant.entity.TownBlocks.setBy(at.above(dy)));
+                Kit.log("[VT] cg02 who touched the first " + fk + " column " + at.toShortString() + ":" + tr);
             }
             com.jrpetty.mcassistant.entity.TownBlocks.traceForTests(false);
             Kit.log("[VT] cg02 AUDIT y=" + d.level() + " " + TerraformAudit.line(c) + (TerraformAudit.FIRST.isEmpty() ? "" : " | first: " + TerraformAudit.FIRST));

@@ -1071,6 +1071,11 @@ public final class Villages {
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
             : CraftScale.most(villageId, slot.trade(), total, slot.max())       // [roles-b] the crafts grow with the town
                 + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade()) + (int) Math.ceil(ways);
+        // [econ32d] While the age waits on the mine, a fifth of the town at it (MineHands.share): never spare for another trade.
+        if (slot.trade() == AssistantEntity.StationTask.MINE) {
+            double kept = MineHands.share(villageId, total);
+            if (kept > t) { t = kept; max = Math.max(max, (int) Math.ceil(kept)); }
+        }
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
         double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null
             ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId)        // [econ-store] and its assistants and stock keeper
@@ -1308,8 +1313,11 @@ public final class Villages {
                 // Enough metal to put the watch in armour and a decent tool in
                 // every hand — which is what "the Iron Age" is FOR, rather
                 // than a round number somebody picked.
+                // [econ32d] Sized to a town of AGE_FOLK, as the timber and the stone are: the watch of a town of twenty-four in
+                // armour and the smith's stock (sixty-four bars at most). Sized to the whole town it climbed away from the
+                // miners as the town grew (a Diamond Age town of fifty-five wanted 208, of sixty-two 234).
                 need(wants, level, v, "iron", Task.IRON,
-                    com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk));
+                    com.jrpetty.mcassistant.village.VillageMath.ironWanted(ageFolk));
                 if (built(villageId, "workshop") < 1) wants.add(new Need("a workshop", Task.BUILD, 1));
                 if (built(villageId, "watchtower") < 1) wants.add(new Need("a watchtower", Task.BUILD, 1));
                 if (built(villageId, "market") < 1) wants.add(new Need("a market", Task.BUILD, 1));
@@ -1322,7 +1330,7 @@ public final class Villages {
                 // a head, nine hundred and sixty for a village of forty), which is a wall and
                 // not a goal: the best real-terrain village held nine.
                 need(wants, level, v, "iron", Task.IRON,
-                    2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk));
+                    2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(ageFolk));   // [econ32d] 128 bars at most
                 if (built(villageId, "lighthouse") < 1) wants.add(new Need("a lighthouse", Task.BUILD, 1));
                 if (built(villageId, "chapel") < 1) wants.add(new Need("a chapel", Task.BUILD, 1));
                 need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
@@ -3093,6 +3101,7 @@ public final class Villages {
             int enough = project.equals("lighthouse") ? 24 : 6;         // [econ32b] the lighthouse looks further for the water's edge
             for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : places) {
                 if (valid >= enough) break;
+                SiteWhy.lot(half[0] <= lot.halfAcross() && half[1] <= lot.halfDeep());   // [econ32d] the big enough lots' reasons too
                 if (!CityGrowth.laidOut(villageId, lot)) { SiteWhy.count("ring not laid out"); continue; }     // [city26] only the rings of the plan laid out so far
                 index++;
                 boolean spoken = false;
@@ -3153,13 +3162,18 @@ public final class Villages {
             }
             SiteWhy.end(villageId, project, site != null, places.size());     // [econ32b]
             CityPlan.looked(villageId, site != null, offWalk && !waiting);     // [city9]
-            AgeSites.looked(villageId, project, site != null, offWalk && !waiting);   // [econ32b] an age's building keeps its own count
+            // [econ32b] an age's building keeps its own count; [econ32d] a look with a lot still loading counts all the same (a
+            // Diamond Age town's far lots were forever loading, and its chapel looked forty times without its count moving)
+            AgeSites.looked(villageId, project, site != null, offWalk);
             CityGrowth.looked(level, v, project, site != null, waiting);       // [city26] full: the next ring laid out
             if (site != null) {
                 for (long cell : best.cells()) taken.add(cell);
             } else if (!waiting && free > 0) {
                 LAPS.merge(villageId, 1, Integer::sum);         // a whole look and nothing: less particular next time
             }
+            // [econ32d] An age's building no lot of the plan will take (too big for the lots on its streets, the great lots under
+            // fields, the mine, the wall's ring or over the water) goes up at the town's edge after a while (AgeSites.edge).
+            if (site == null && valid == 0 && !waiting) site = AgeSites.edge(level, v, project);
         }
         // [mine7] Nothing goes up on a mine's ground (a manor's land, a shed or an office by the water, out past the plan).
         if (site != null && !project.equals("fortify")) {

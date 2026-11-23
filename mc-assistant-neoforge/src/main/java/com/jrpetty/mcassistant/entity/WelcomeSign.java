@@ -56,6 +56,10 @@ public final class WelcomeSign {
         UUID id = v.id();
         long dt = level.getDayTime(), day = Math.floorDiv(dt, 24000L), t = Math.floorMod(dt, 24000L);
         if (t >= 12500L || Villages.headcount(id) < TownJobs.SETTLED) return;   // a young town has no hand to spare for it yet
+        // [econ32d] Nor while the town's ground is still being made: the post went up on the edge of a street the founding had
+        // not levelled yet, and held the column at the land's height under it, a stub two high on the street (cg02, when an
+        // earlier test's village turned the sign toward its avenue).
+        if (Founding.settling(level, v.centre(), 96)) return;
         Long done = UPDATED.get(id);
         if (done != null && done == day) return;
         if (put(level, v) != null) UPDATED.put(id, day);
