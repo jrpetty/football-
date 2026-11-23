@@ -285,13 +285,13 @@ public final class Masonry {
     }
 
     /**
-     * [biz30d] A town at its borrowing's end (TownBudget.halted) buys no dressed stone, brick or lantern on a department's
-     * account: the caller lays the plain block, or waits, till its revenue brings its IOUs down. Its builders already wait
-     * then; the gates, the storeys and the lamps did not, and wrote the town's market a hundred and sixty coins and more of
-     * IOUs a day for bricks while it owed it twice what it could carry (ent15: 1,366c against 470c).
+     * [biz30d] A town short (owing its market more than it can carry: TownBudget.pressure 2, "its buildings plain") buys no
+     * dressed stone, brick or lantern on a department's account: the caller lays the plain block, or waits, till its revenue
+     * brings its IOUs down. Its budget said "its buildings plain" while its works wrote the market three hundred coins of
+     * IOUs a day for bricks (ent15: 1,366c and 1,600c owed against 470c and 596c it could carry).
      */
     private static boolean onTheWorksAtItsEnd(Villages.Village v, Plan p) {
-        if (p.taken.isEmpty() || !TownBudget.halted(v.id())) return false;
+        if (p.taken.isEmpty() || TownBudget.pressure(v.id()) < 2) return false;
         Item first = p.taken.keySet().iterator().next();
         Accounts.Resolved r = Accounts.resolve(v.id(), new net.minecraft.world.item.ItemStack(first));
         return r.account() != null && r.account().kind() == Accounts.Kind.DEPT;
