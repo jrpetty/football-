@@ -384,7 +384,7 @@ def grand():
             for h in (12, 13):
                 H.put(c, h, BACK, 'G')
         # the steps up to the door over the area, the railings along the street and up the steps, a lamp at the gate
-        H.put(5, 0, -3, 'S'); H.put(5, 1, -3, 'S'); H.put(5, 0, -4, 'k')
+        H.put(5, 0, -3, 'S'); H.put(5, 1, -3, 'k'); H.put(5, 0, -4, 'k')
         H.put(0, 0, RAIL, 'S')                                   # the lamp's stone pier
         for c in range(1, 5):
             H.put(c, 0, RAIL, 'P')

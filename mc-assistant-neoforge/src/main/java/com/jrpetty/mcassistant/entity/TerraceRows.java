@@ -271,6 +271,23 @@ public final class TerraceRows {
         });
     }
 
+    /**
+     * TownBlocks: a row's ground as the gate keeps it, from its own cells. A drawing twenty-two across runs dx -10 to +11, so
+     * the half-widths every other building is kept by (eleven each way) took a column past its left end for the row's,
+     * and the street beside it was refused there ("refused ROAD ... BUILDING of the terrace3").
+     */
+    static void bounds(TownBlocks.Owner o, List<BuildGoal.Placement> plan, BlockPos a) {
+        int x0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, z0 = Integer.MAX_VALUE, z1 = Integer.MIN_VALUE;
+        for (BuildGoal.Placement p : plan) {
+            if (p.part() == BuildGoal.Part.CLEAR) continue;
+            x0 = Math.min(x0, p.pos().getX()); x1 = Math.max(x1, p.pos().getX());
+            z0 = Math.min(z0, p.pos().getZ()); z1 = Math.max(z1, p.pos().getZ());
+        }
+        if (x0 > x1) return;
+        o.gx0 = o.fx0 = x0; o.gx1 = o.fx1 = x1;
+        o.gz0 = o.fz0 = z0; o.gz1 = o.fz1 = z1;
+    }
+
     /** BuildGoal.layout: a row laid out at its anchor with its houses' steps. */
     public static void layout(String drawing, BlockPos anchor, Direction facing, List<BuildGoal.Placement> out) {
         Direction right = facing.getClockWise();
@@ -921,6 +938,12 @@ public final class TerraceRows {
     /** The rows' own crew (TownJobs): not the walls crew, which the age's make-over of every building keeps at one spot
      *  after another for days, while the rows stood half in cobble and timber waiting on it. */
     static final String ROWS_WORK = "terraces";
+    /** A whole block where a slab was drawn, and the slab it is cut down to. */
+    private static final Map<Block, Block> SLAB_OF = Map.of(
+        Blocks.COBBLESTONE, Blocks.COBBLESTONE_SLAB, Blocks.STONE_BRICKS, Blocks.STONE_BRICK_SLAB, Blocks.STONE, Blocks.STONE_SLAB,
+        Blocks.MOSSY_COBBLESTONE, Blocks.MOSSY_COBBLESTONE_SLAB, Blocks.BRICKS, Blocks.BRICK_SLAB, Blocks.SMOOTH_STONE, Blocks.SMOOTH_STONE_SLAB,
+        Blocks.ANDESITE, Blocks.ANDESITE_SLAB, Blocks.DEEPSLATE_TILES, Blocks.DEEPSLATE_TILE_SLAB, Blocks.COBBLED_DEEPSLATE, Blocks.COBBLED_DEEPSLATE_SLAB,
+        Blocks.SANDSTONE, Blocks.SANDSTONE_SLAB);
 
     /** Each house's own colour, by where it stands: never the same as the house beside it. */
     static Paint paint(Ledger.Building b, int i) {
@@ -964,7 +987,7 @@ public final class TerraceRows {
             if (!free) return done;
         }
         // the roofs slated (the Iron Age's make-over of the town's roofs): the wood of every roof, porch and privy in slate
-        if (free || id != null && Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal()) {
+        if (id == null || Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal()) {
             int slated = 0;
             for (BuildGoal.Placement pl : plan(id, b)) {
                 if (pl.part() != BuildGoal.Part.BLOCK || !BuildGoal.isRoof(pl.style())) continue;
@@ -992,6 +1015,22 @@ public final class TerraceRows {
                 done += slated;
                 if (!free) return done;
             }
+        }
+        // the copings and steps that went up as whole blocks (stone to hand when there were no slabs) cut down to slabs
+        int cut = 0;
+        for (BuildGoal.Placement pl : plan(id, b)) {
+            if (pl.part() != BuildGoal.Part.BLOCK || pl.style() != Blueprints.Style.STONE_SLAB) continue;
+            BlockState there = level.getBlockState(pl.pos());
+            Block slab = SLAB_OF.get(there.getBlock());
+            if (slab == null) continue;
+            if (!free && cut == 0 && !TownJobs.atWork(level, v, ROWS_WORK, pl.pos(), "cutting the copings of " + name(id, b))) break;
+            level.setBlock(pl.pos(), slab.defaultBlockState(), 3);
+            cut++;
+            if (!free && cut >= REFACE) break;
+        }
+        if (cut > 0) {
+            done += cut;
+            if (!free) return done;
         }
         for (Spot s : spots(b)) {
             int i = s.index(), st = step(steps, i);

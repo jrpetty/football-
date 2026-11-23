@@ -38,7 +38,7 @@ SffffffSffffffSffffffS
 SffffffSffffffSffffffS
 SffffffSffffffSffffffS
 SSSSSSSSSSSSSSSSSSSSSS
-......S......S......S.
+......k......k......k.
 .....P......P......P..
 Sl.....Sl.....Sl.....S
 layer 2
