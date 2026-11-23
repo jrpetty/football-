@@ -159,6 +159,8 @@ public final class TownJobs {
             f.clearQueue();
             f.getNavigation().stop();
             f.brain("called to the town's work: " + what);
+            Business firm = Enterprise.employerOf(id, f);               // [biz30d] the log: a firm's hand called off its bench
+            if (firm != null) LOG_LIFE.info("[MCA-TOWNJOBS] {}: {}, a hand of {}, called to the town's work: {}", Villages.name(id), f.displayNameCap(), firm.name, what);
         }
         if (now - c.since > (works.startsWith("road/") ? ROAD_SHIFT : SHIFT)) {
             // Its turn is done: back to its own work, and the next call sends somebody else.

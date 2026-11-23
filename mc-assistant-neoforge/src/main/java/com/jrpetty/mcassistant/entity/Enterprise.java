@@ -2080,6 +2080,24 @@ public final class Enterprise {
                 CostBook.atMarket(level, village, one), ValueAdded.worth(village, one) * MarketMaker.priceLevel(village), l == null || l.qty <= 0 ? 0 : l.each() / 100.0,
                 b.allTime.lines.containsKey(key) ? b.allTime.lines.get(key).units : 0));
         }
+        // [biz30d] Its week's books, line by line, its last orders, and each hand's pay as made up: where its money went.
+        Business.Day wk = b.last(Businesses.today(level) - 1, 7);
+        sb.append(String.format(Locale.ROOT, "; WEEK rev %s cogs %s wages %s rent %s other %s taxes %s interest %s losses %s bought %s",
+            Businesses.pence(wk.revenue), Businesses.pence(wk.cogs), Businesses.pence(wk.wages), Businesses.pence(wk.rent), Businesses.pence(wk.other),
+            Businesses.pence(wk.taxes), Businesses.pence(wk.interest), Businesses.pence(wk.losses), Businesses.pence(wk.bought)));
+        for (Map.Entry<String, Business.Line> e : wk.lines.entrySet()) {
+            Business.Line l = e.getValue();
+            sb.append(String.format(Locale.ROOT, " [%s u%d rev %s cogs %s made %d in %d missed %d]", e.getKey().replace("minecraft:", ""), l.units,
+                Businesses.pence(l.revenue), Businesses.pence(l.cogs), l.made, l.in, l.missed));
+        }
+        StringBuilder ob = new StringBuilder();
+        for (int i = Math.max(0, b.orders.size() - 4); i < b.orders.size(); i++) {
+            Business.Order o = b.orders.get(i);
+            ob.append(' ').append(o.day()).append(':').append(o.qty()).append(' ').append(o.item().replace("minecraft:", "")).append(" of ").append(o.supplier())
+                .append(' ').append(Businesses.pence(o.total()));
+        }
+        if (ob.length() > 0) sb.append("; ORDERS").append(ob);
+        for (VillageFolkEntity f : hands(village, b)) sb.append("; PAY ").append(f.displayNameCap()).append(' ').append(Wealth.breakdown(f));
         for (VillageFolkEntity f : hands(village, b)) {
             sb.append("; hand ").append(f.displayNameCap()).append(' ').append(f.stationTask().name().toLowerCase(Locale.ROOT)).append(" lv")
                 .append(f.tradeLevel(f.stationTask())).append(benchFirst(f) ? " bench-first" : "").append(f.stationTask() == StationTask.COOK ? " role " + Hospitality.role(f) : "")

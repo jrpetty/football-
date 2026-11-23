@@ -6810,6 +6810,8 @@ public class VillageFolkEntity extends AssistantEntity {
         assignPlot(WorkZone.around(site, radiusFor(StationTask.FARM), depthFor(StationTask.FARM, site)), patchNameFor(StationTask.FARM));
         setAutonomous(true);
         brain("gave up a field that never took at " + c.toShortString() + " for " + site.toShortString());
+        com.mojang.logging.LogUtils.getLogger().info("[MCA-FARM] {}: {} gave up a field that never took at {} for {}",   // [biz30d] the log
+            Villages.name(ownerId()), displayNameCap(), c.toShortString(), site.toShortString());
         return true;
     }
 
