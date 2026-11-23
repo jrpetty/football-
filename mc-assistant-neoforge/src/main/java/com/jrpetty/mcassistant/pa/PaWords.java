@@ -135,6 +135,7 @@ public final class PaWords {
         {"\\bhave a (?:look|nose|dig|hunt) for\\b", "look for"},
         {"\\bfancy (?:getting|grabbing|fetching)\\b", "get"},
         {"\\bfancy (\\w+)ing\\b", "$1"},
+        {"^(?:go on then|go on|come on then|ok then|okay then|alright then|right then|right|well then|so)\\s*,?\\s+(?=\\S)", ""},
         {"\\bright then\\b", "right"},
         {"\\bstop there\\b", "stay there"},
         {"\\bstay put\\b", "stay here"},

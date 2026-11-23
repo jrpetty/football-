@@ -62,8 +62,10 @@ final class PaTriangle {
         g.fill(dx - 2, dy - 2, dx + 3, dy + 3, focused ? 0xFFFFFFFF : 0xFFF2E8B0);
         int under = by + 14;
         PaPersona.Tri t = tri();
-        String label = t.label() + "  (" + pct(t.serious()) + " serious, " + pct(t.funny()) + " funny, " + pct(t.gloomy()) + " gloomy)";
-        g.drawString(font, UiStyle.clip(font, label, size + 60), x, under, UiStyle.TEXT, false);
+        g.drawString(font, t.label(), x, under, UiStyle.TEXT, false);
+        under += 10;
+        String mix = pct(t.serious()) + " serious · " + pct(t.funny()) + " funny · " + pct(t.gloomy()) + " gloomy";
+        g.drawString(font, UiStyle.clip(font, mix, size + 60), x, under, UiStyle.TEXT_FAINT, false);
         under += 11;
         int bucket = (int) (funny * 20) * 100 + (int) (gloomy * 20);
         if (bucket != sampleBucket) {

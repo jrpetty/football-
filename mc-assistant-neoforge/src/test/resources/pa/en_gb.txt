@@ -53,3 +53,6 @@ whereabouts are you || WHERE
 have a look for diamonds || MINE_ORE:diamond
 fancy getting some wood || GATHER:logs
 could you be a love and fetch me some bread || GIVE:bread
+go on then, get me 16 logs || GATHER:logs:16
+right then, build a small house here || BUILD:house@HERE
+come on then follow me || FOLLOW

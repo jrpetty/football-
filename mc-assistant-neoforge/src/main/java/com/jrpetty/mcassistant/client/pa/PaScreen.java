@@ -599,13 +599,13 @@ public class PaScreen extends Screen {
         UiStyle.heading(g, font, "Personality", x, cy, half);
         cy += 12;
         triangle.sync(s.getCompound("set"));
-        int tsize = Math.max(90, Math.min(130, half - 70));
+        int tsize = Math.max(80, Math.min(130, half - font.width("Professional") - 26));
         int tb = triangle.draw(g, font, x + 4, cy, tsize, mx, my);
-        int px = x + tsize + 14, pyy = cy + 6;
+        int px = x + tsize + 14, pyy = cy + 6, pw = font.width("Professional") + 10;
         for (String pr : com.jrpetty.mcassistant.pa.PaPersona.PRESETS) {
-            if (px + 56 > x + half) break;
+            if (px + pw > x + half + 2) break;
             final String name = pr;
-            button(g, pr, px, pyy, 56, 13, mx, my, true, false, "Snap the dot to " + pr, () -> triangle.preset(name));
+            button(g, pr, px, pyy, pw, 13, mx, my, true, false, "Snap the dot to " + pr, () -> triangle.preset(name));
             pyy += 15;
         }
         cy = Math.max(tb, pyy) + 2;
@@ -773,7 +773,8 @@ public class PaScreen extends Screen {
             try {
                 float oy = a.yBodyRot, oyh = a.yHeadRot, oyr = a.getYRot(), ox = a.getXRot();
                 a.yBodyRot = 180 + lookYaw; a.setYRot(180 + lookYaw); a.yHeadRot = a.getYRot(); a.yHeadRotO = a.yHeadRot; a.setXRot(0);
-                InventoryScreen.renderEntityInInventory(g, x + pw / 2F, y + ph - 12, Math.min(pw, ph) * 0.42F,
+                float tall = lk == 17 ? 0.6F : 1F;                  // the enderman is a good deal taller
+                InventoryScreen.renderEntityInInventory(g, x + pw / 2F, y + ph - 12, Math.min(pw, ph) * 0.42F * tall,
                     new org.joml.Vector3f(), new org.joml.Quaternionf().rotateZ((float) Math.PI), null, a);
                 a.yBodyRot = oy; a.yHeadRot = oyh; a.setYRot(oyr); a.setXRot(ox);
             } finally {
