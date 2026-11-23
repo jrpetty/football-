@@ -186,6 +186,8 @@ public class PaTaskGoal extends Goal {
 
     static Item itemFor(String phrase) {
         if (phrase.isEmpty()) return Items.AIR;
+        Item exact = registryItem(phrase);                  // [pa33b] the thing by its own name first ("cobblestone" is not stone)
+        if (exact != Items.AIR) return exact;
         String target = CraftPlanner.matchTarget(phrase);
         if (target != null) {
             Item it = RecipeBook.item(target);

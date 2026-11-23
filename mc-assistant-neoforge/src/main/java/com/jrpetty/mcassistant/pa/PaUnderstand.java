@@ -495,6 +495,8 @@ public final class PaUnderstand {
                 return new PaIntent(Kind.GATHER, r, amount, place, raw);
             }
             String made = craftable(c);
+            // [pa33b] "fetch me some bread": a thing brought to you (made first if need be), not just made
+            if (!made.isEmpty() && c.matches("^(?:fetch|bring|grab|get) (?:me|us) .*")) return new PaIntent(Kind.GIVE, made, amount, Place.ME, raw);
             if (!made.isEmpty()) return new PaIntent(Kind.CRAFT, made, amount, place, raw);
             if (findIn(c, ANIMALS).length() > 0) return new PaIntent(Kind.HUNT, findIn(c, ANIMALS), amount, Place.NONE, raw);
             return new PaIntent(Kind.UNKNOWN, "gather", 0, place, raw);
@@ -697,6 +699,25 @@ public final class PaUnderstand {
     }
 
     /** Orders a player might mean, for "did you mean" and for the talk box's autocomplete. */
+    /**
+     * [pa33b] British ways of saying the everyday orders, for the recognisers' phrase grammar (a phrase list is what
+     * makes recognition hold up across accents) alongside the examples. Each is itself understood (tests).
+     */
+    public static final List<String> BRITISH_SAYINGS = List.of(
+        "fetch us some logs", "grab us sixteen logs", "get us some stone", "chuck it in the chest", "pop it in the chest",
+        "bung it in the chest", "nip over here", "come here mate", "right follow me", "follow me mate", "cheers", "cheers mate",
+        "ta", "sorted", "nice one", "hang on", "hold on a sec", "half a mo", "crack on", "carry on", "pack it in", "leave it",
+        "stay put", "wait there", "have a go at mining", "have a go at mining iron", "go and get some logs", "go and fetch some coal",
+        "you alright", "what are you up to", "whereabouts are you", "have a look for diamonds", "make me some armour",
+        "light up the area with torches", "sort out the chests", "guard me", "farm this field", "build me a small house here");
+
+    /** [pa33b] Every phrase the recognisers are told to listen for: the examples and the British sayings. */
+    public static List<String> grammar() {
+        List<String> all = new java.util.ArrayList<>(EXAMPLES);
+        for (String b : BRITISH_SAYINGS) if (!all.contains(b)) all.add(b);
+        return all;
+    }
+
     public static final List<String> EXAMPLES = List.of(
         "follow me", "stay here", "come here", "guard me", "guard the farm", "go home", "set home here",
         "get me 16 logs", "chop 64 logs", "gather 32 stone", "mine iron until you have 20", "mine for diamonds",

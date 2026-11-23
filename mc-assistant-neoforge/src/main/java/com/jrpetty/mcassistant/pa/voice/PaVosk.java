@@ -30,6 +30,17 @@ import java.util.zip.ZipInputStream;
  */
 public final class PaVosk {
 
+    /*
+     * [pa33b] The model, for British speakers. The Vosk project publishes English models for US English (small 0.15,
+     * about 40 MB; the "lgraph" 0.22, about 128 MB; the large 0.22 and GigaSpeech 0.42, 1.8-2.3 GB) and Indian
+     * English, all Apache 2.0 as far as we know (the list could not be re-checked from here: alphacephei.com is not
+     * reachable in this build's network). There is no British English model. So the small US model stays the
+     * download, and for a British accent the assistant leans on the held recogniser: Vosk's phrase-list grammar, set to
+     * the assistant's own words and the British sayings (PaStt.words(), PaUnderstand.grammar()), which copes with an
+     * accent far better than free dictation; the recogniser's usual slips on British vowels are put right after
+     * (PaWords.voiceFix). The small and lgraph models take a runtime grammar; the large ones do not.
+     */
+
     public static final String MODEL = "vosk-model-small-en-us-0.15";
     public static final String MODEL_URL = "https://alphacephei.com/vosk/models/" + MODEL + ".zip";
     public static final String LIB_URL = "https://repo1.maven.org/maven2/com/alphacephei/vosk/0.3.45/vosk-0.3.45.jar";

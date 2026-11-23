@@ -630,7 +630,16 @@ public class PaScreen extends Screen {
         cy = toggle(g, "Speak replies aloud", speak, sx, cy, half, mx, my, PaVoice.tts().status(), () -> PaClientConfig.set(PaClientConfig.SPEAK, !speak));
         List<String> voices = PaVoice.tts().voices();
         int vi = PaClientConfig.get(PaClientConfig.VOICE, 0);
-        String vname = voices.isEmpty() ? "Default" : voices.get(Math.min(vi, voices.size() - 1));
+        String vname = voices.isEmpty() || vi <= 0 ? "Default" : voices.get(Math.min(vi, voices.size() - 1));
+        // [pa33b] the accent it listens for and speaks in: English (UK), English (US), or Auto
+        String acc = PaClientConfig.get(PaClientConfig.ACCENT, "auto");
+        com.jrpetty.mcassistant.pa.voice.PaAccent accNow = PaVoice.accent();
+        g.drawString(font, "Accent", sx, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, UiStyle.clip(font, com.jrpetty.mcassistant.pa.voice.PaAccent.settingLabel(acc, accNow), 90), sx + 60, cy, 96, 13, mx, my, true, false,
+            "Which English it listens for and speaks: English (UK), English (US), or Auto (your game's language, then your computer's)",
+            () -> { PaClientConfig.set(PaClientConfig.ACCENT, com.jrpetty.mcassistant.pa.voice.PaAccent.next(acc)); PaVoice.speak("Hello, this is my voice."); });
+        cy += 15;
+        if (vi <= 0) vname = "Default: " + PaVoice.tts().voiceInUse(0);
         g.drawString(font, "Voice", sx, cy + 3, UiStyle.TEXT_MUTED, false);
         button(g, UiStyle.clip(font, vname, 90), sx + 60, cy, 96, 13, mx, my, voices.size() > 1, false, "Your computer's voices: click for the next",
             () -> { PaClientConfig.set(PaClientConfig.VOICE, voices.isEmpty() ? 0 : (vi + 1) % voices.size()); PaVoice.speak("Hello, this is my voice."); });

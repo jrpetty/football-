@@ -69,6 +69,22 @@ class PaUnderstandTest {
         assertTrue(acc >= 90.0, "held-out accuracy " + acc + ": " + misses);
     }
 
+    /** [pa33b] British English phrasings (first, untuned pass 29/53 = 54.7%). */
+    @Test
+    void britishPhrasingsAreRead() throws IOException {
+        List<String> misses = new ArrayList<>();
+        double acc = score("en_gb.txt", misses);
+        assertTrue(acc >= 95.0, "British phrasings accuracy " + acc + ": " + misses);
+    }
+
+    /** [pa33b] Every British saying in the recognisers' phrase list is itself understood. */
+    @Test
+    void britishSayingsInTheGrammarAreUnderstood() {
+        for (String b : PaUnderstand.BRITISH_SAYINGS) {
+            assertTrue(PaUnderstand.read(b, "pip").understood(), "British saying not understood: " + b + " -> " + PaUnderstand.read(b, "pip").brief());
+        }
+    }
+
     @Test
     void neverSilent() {
         for (String s : List.of("", "   ", "?", "blargh", "the", "and then", "zzzz zzzz", "build", "mine", "gather unobtainium")) {

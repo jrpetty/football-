@@ -46,6 +46,79 @@ class PaVoiceTest {
         assertTrue(ok >= HEARD.length - 1, "voice text to order: " + ok + "/" + HEARD.length + " " + miss);
     }
 
+    /** [pa33b] What a recogniser hears from a British speaker: the slips on British vowels, and British phrasings. */
+    static final String[][] BRITISH_HEARD = {
+        {"get me sixteen lugs", "GATHER:logs:16"}, {"chop thirty two lags", "GATHER:logs:32"}, {"fallow me", "FOLLOW"},
+        {"fellow me mate", "FOLLOW"}, {"gather sixteen stun", "GATHER:stone:16"}, {"mine ion until you have ten", "MINE_ORE:iron:10"},
+        {"mind iron", "MINE_ORE:iron"}, {"god me", "GUARD_ME"}, {"gourd me", "GUARD_ME"}, {"fam this field", "FARM"},
+        {"build a fam here", "FARM"}, {"put everything in the chess", "DEPOSIT"}, {"get some would", "GATHER:logs"},
+        {"stay hair", "STAY"}, {"come hair", "COME"}, {"fetch us some lugs", "GATHER:logs"}, {"bung it in the chess", "DEPOSIT"},
+        {"nip over here", "COME"}, {"cheers mate", "THANKS"}, {"ta", "THANKS"}, {"hang on a sec", "PAUSE"}, {"crack on", "RESUME"},
+        {"right fallow me", "FOLLOW"}, {"have a go at mining ion", "MINE_ORE:iron"}, {"go and get sixteen lugs", "GATHER:logs:16"},
+        {"pop it in the chest", "DEPOSIT"}, {"what are you up to", "DOING"}, {"you alright", "STATUS"}, {"pack it in", "STOP"},
+        {"grab us thirty two stun", "GATHER:stone:32"},
+    };
+
+    @Test
+    void britishSpeechBecomesOrders() {
+        int ok = 0;
+        StringBuilder miss = new StringBuilder();
+        for (String[] h : BRITISH_HEARD) {
+            String text = com.jrpetty.mcassistant.pa.PaWords.voiceFix(PaStt.choose(h[0], h[0]));
+            PaUnderstand.Reading r = PaUnderstand.read(text, "pip");
+            if (r.understood() && r.brief().startsWith(h[1])) ok++;
+            else miss.append(h[0]).append(" -> ").append(r.brief()).append("; ");
+        }
+        System.out.printf("[pa33b] British speech to order: %d/%d%n", ok, BRITISH_HEARD.length);
+        assertTrue(ok >= BRITISH_HEARD.length - 1, "British speech to order: " + ok + "/" + BRITISH_HEARD.length + " " + miss);
+    }
+
+    @Test
+    void misHearsOnlyWhereSafe() {
+        // typed words are left alone; a real word in another sense is not turned into an order
+        assertEquals("thanks fam", com.jrpetty.mcassistant.pa.PaWords.voiceFix("thanks fam"));
+        assertEquals("i would like that", com.jrpetty.mcassistant.pa.PaWords.voiceFix("i would like that"));
+        assertEquals("oh my god", com.jrpetty.mcassistant.pa.PaWords.voiceFix("oh my god"));
+        assertEquals("mind the lava", com.jrpetty.mcassistant.pa.PaWords.voiceFix("mind the lava"));
+    }
+
+    @Test
+    void accentFollowsTheSettingTheGameAndTheComputer() {
+        assertEquals(PaAccent.UK, PaAccent.resolve("auto", "en_gb", java.util.Locale.US));
+        assertEquals(PaAccent.UK, PaAccent.resolve("auto", "en_us", java.util.Locale.UK));
+        assertEquals(PaAccent.US, PaAccent.resolve("auto", "en_us", java.util.Locale.US));
+        assertEquals(PaAccent.UK, PaAccent.resolve("uk", "en_us", java.util.Locale.US));
+        assertEquals(PaAccent.US, PaAccent.resolve("us", "en_gb", java.util.Locale.UK));
+        assertEquals("uk", PaAccent.next("auto"));
+        assertEquals("auto", PaAccent.next("us"));
+    }
+
+    @Test
+    void aBritishVoiceWhenThereIsOne() {
+        assertEquals("Microsoft Hazel Desktop", PaAccent.preferredVoice(PaAccent.UK, List.of("Microsoft David Desktop", "Microsoft Hazel Desktop", "Microsoft Zira Desktop")));
+        assertEquals("Daniel", PaAccent.preferredVoice(PaAccent.UK, List.of("Default", "Alex", "Daniel", "Samantha")));
+        assertEquals(null, PaAccent.preferredVoice(PaAccent.UK, List.of("Default", "Microsoft David Desktop")));
+        assertEquals("en-gb", PaAccent.UK.espeakVoice());
+    }
+
+    @Test
+    void windowsSaysWhichRecogniserAndHowToAddTheUkOne() {
+        String withUk = PaAccent.windowsAdvice(PaAccent.UK, "en-GB", List.of("en-GB", "en-US"));
+        assertTrue(withUk.contains("United Kingdom") && !withUk.contains("add"), withUk);
+        String noUk = PaAccent.windowsAdvice(PaAccent.UK, "en-US", List.of("en-US"));
+        assertTrue(noUk.contains("United States") && noUk.contains("Time & language > Speech") && noUk.contains("English (United Kingdom)"), noUk);
+        String none = PaAccent.windowsAdvice(PaAccent.UK, "", List.of());
+        assertTrue(none.contains("no speech recogniser"), none);
+        // the script asks for en-GB first, then en-US, then any English
+        String ps = PaStt.recognizerFor(PaAccent.UK);
+        assertTrue(ps.indexOf("'en-GB'") < ps.indexOf("'en-US'") && ps.contains("InstalledRecognizers()"), ps);
+    }
+
+    @Test
+    void theGrammarHasTheBritishSayings() {
+        assertTrue(PaUnderstand.grammar().contains("bung it in the chest") && PaStt.words().contains("cheers") && PaStt.words().contains("us"));
+    }
+
     @Test
     void chooseKeepsTheReadingThatMakesAnOrder() {
         assertEquals("get me sixteen logs", PaStt.choose("get me sixteen logs", "get me sixty logs dog"));

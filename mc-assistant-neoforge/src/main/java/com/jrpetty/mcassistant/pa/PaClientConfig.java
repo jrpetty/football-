@@ -14,7 +14,7 @@ public final class PaClientConfig {
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.BooleanValue SPEAK, LISTEN, AGREED, HUD, TOURED;
     public static final ModConfigSpec.IntValue RATE, VOLUME, VOICE;
-    public static final ModConfigSpec.ConfigValue<String> ENGINE;
+    public static final ModConfigSpec.ConfigValue<String> ENGINE, ACCENT;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -26,6 +26,8 @@ public final class PaClientConfig {
         LISTEN = b.comment("Push-to-talk: hold the talk key and speak. Off until you turn it on in the About tab.").define("listen", false);
         AGREED = b.comment("You agreed to download the offline speech model (about 40 MB, once) into this config folder.").define("modelAgreed", false);
         ENGINE = b.comment("Speech recognition: auto (Windows' own if present, else the offline model), windows, or vosk.").define("engine", "auto");
+        ACCENT = b.comment("[pa33b] Which English it listens for and speaks: auto (the game's language, then your computer's), uk, or us.")
+            .define("accent", "auto");
         b.pop();
         b.push("display");
         HUD = b.comment("A small line on screen saying what your assistant is doing.").define("hud", true);

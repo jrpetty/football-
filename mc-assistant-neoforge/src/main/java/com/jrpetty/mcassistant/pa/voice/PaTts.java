@@ -34,6 +34,24 @@ public final class PaTts {
     private Process windows;
     private Writer windowsIn;
     private Process current;
+    /** [pa33b] Which English to speak (a British voice for UK when the player hasn't picked one). */
+    private volatile java.util.function.Supplier<PaAccent> accent = () -> PaAccent.US;
+    /** [pa33b] The voice Windows is actually using, as it reports it. */
+    private volatile String speaking = "";
+
+    public void accent(java.util.function.Supplier<PaAccent> a) {
+        if (a != null) accent = a;
+    }
+
+    /** [pa33b] The voice it speaks in: the one picked, else the accent's own when the computer has one. */
+    public String voiceInUse(int picked) {
+        if (kind == Kind.WINDOWS && !speaking.isEmpty()) return speaking;
+        String n = voiceName(picked);
+        if (n != null) return n;
+        if (kind == Kind.ESPEAK || kind == Kind.ESPEAK_NG) return accent.get().espeakVoice();
+        String pref = PaAccent.preferredVoice(accent.get(), voices);
+        return pref == null ? "the computer's default" : pref;
+    }
 
     private PaTts(Kind kind, String status) {
         this.kind = kind;
@@ -137,12 +155,16 @@ public final class PaTts {
         try {
             switch (kind) {
                 case WINDOWS -> windows(line, voice, rate, volume);
-                case MAC -> run(voiceName(voice) == null ? List.of("say", "-r", Integer.toString(175 + rate * 25), line)
-                    : List.of("say", "-v", voiceName(voice), "-r", Integer.toString(175 + rate * 25), line));
+                case MAC -> {
+                    String v = voiceName(voice) != null ? voiceName(voice) : PaAccent.preferredVoice(accent.get(), voices);   // [pa33b] Daniel/Kate for UK
+                    run(v == null ? List.of("say", "-r", Integer.toString(175 + rate * 25), line)
+                        : List.of("say", "-v", v, "-r", Integer.toString(175 + rate * 25), line));
+                }
                 case ESPEAK_NG, ESPEAK -> {
                     List<String> cmd = new ArrayList<>(List.of(kind == Kind.ESPEAK_NG ? "espeak-ng" : "espeak", "-s", Integer.toString(165 + rate * 20),
                         "-a", Integer.toString(Math.max(0, Math.min(200, volume * 2)))));
-                    if (voiceName(voice) != null) { cmd.add("-v"); cmd.add(voiceName(voice)); }
+                    cmd.add("-v");
+                    cmd.add(voiceName(voice) != null ? voiceName(voice) : accent.get().espeakVoice());   // [pa33b] en-gb for UK
                     cmd.add(line);
                     run(cmd);
                 }
@@ -187,6 +209,8 @@ public final class PaTts {
                 + "while(($l=[Console]::In.ReadLine()) -ne $null){"
                 + "if($l -eq '#stop'){$s.SpeakAsyncCancelAll();continue};"
                 + "if($l.StartsWith('#voice ')){$i=[int]$l.Substring(7);if($i -gt 0 -and $i -lt $v.Count){try{$s.SelectVoice($v[$i])}catch{}};continue};"
+                + "if($l.StartsWith('#culture ')){$c=$l.Substring(9);$m=$s.GetInstalledVoices()|?{$_.VoiceInfo.Culture.Name -eq $c}|select -First 1;"
+                + "if($m){try{$s.SelectVoice($m.VoiceInfo.Name)}catch{}};[Console]::Out.WriteLine('VOICE:'+$s.Voice.Name);[Console]::Out.Flush();continue};"
                 + "if($l.StartsWith('#rate ')){$s.Rate=[int]$l.Substring(6);continue};"
                 + "if($l.StartsWith('#volume ')){$s.Volume=[int]$l.Substring(8);continue};"
                 + "$s.SpeakAsyncCancelAll();$null=$s.SpeakAsync($l)}";
@@ -199,6 +223,7 @@ public final class PaTts {
                     String l;
                     while ((l = out.readLine()) != null) {
                         if (l.startsWith("VOICES:")) voices = List.of(l.substring(7).split("\\|"));
+                        else if (l.startsWith("VOICE:")) speaking = l.substring(6).trim();
                     }
                 } catch (Exception ignored) {
                     // it has gone
@@ -207,6 +232,8 @@ public final class PaTts {
             reader.setDaemon(true);
             reader.start();
         }
+        // [pa33b] no voice picked: the accent's own culture (Hazel or George for en-GB), else Windows' default stays
+        if (voice <= 0) windowsIn.write("#culture " + accent.get().culture + "\n");
         windowsIn.write("#voice " + voice + "\n#rate " + Math.max(-10, Math.min(10, rate * 2)) + "\n#volume " + Math.max(0, Math.min(100, volume)) + "\n");
         windowsIn.write(line + "\n");
         windowsIn.flush();

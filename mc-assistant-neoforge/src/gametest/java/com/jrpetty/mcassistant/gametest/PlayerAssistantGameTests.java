@@ -854,7 +854,8 @@ public class PlayerAssistantGameTests {
         helper.runAfterDelay(10, () -> {
             Villages.Village v = Villages.get(id);
             BlockPos heart = v.centre();
-            for (int k = 0; k < 3; k++) {                         // a fed town with a glut of cobblestone to sell
+            f.setJob(AssistantEntity.StationTask.FARM);           // its founder farms: nobody builds with the town's stone meanwhile
+            for (int k = 0; k < 6; k++) {                         // a fed town with a glut of cobblestone to sell
                 BlockPos at = Kit.surface(level, heart.getX() - 6 + 2 * k, heart.getZ() - 5);
                 level.setBlock(at, Blocks.CHEST.defaultBlockState(), 3);
                 com.jrpetty.mcassistant.entity.ZoneChests.mark(level, at);
@@ -870,6 +871,7 @@ public class PlayerAssistantGameTests {
             helper.assertTrue(price > 0, "the market sells cobblestone: " + price);
             a.rec().spend = price * 2 + price / 2;                 // room for two lots, not three
             int before = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+            Kit.log("pai31 market stock of cobblestone " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)));
             say(p, a, "buy 64 cobblestone");
             int[] phase = {0}, mark = {0, 0, 0};
             helper.succeedWhen(() -> {
@@ -877,7 +879,8 @@ public class PlayerAssistantGameTests {
                     helper.assertTrue(a.plan.idle(), "the shopping is done (" + a.state() + ")");
                     int paid = before - com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
                     int got = p.getInventory().countItem(Items.COBBLESTONE);
-                    helper.assertTrue(got > 0 && paid > 0, "it bought cobblestone with its player's coin: " + got + " for " + paid + " (" + lastWords(a) + ")");
+                    helper.assertTrue(got > 0 && paid > 0, "it bought cobblestone with its player's coin: " + got + " for " + paid + " (" + lastWords(a)
+                        + "; stock " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)) + ")");
                     helper.assertTrue(paid <= a.rec().spend, "never past the limit: paid " + paid + " of " + a.rec().spend);
                     helper.assertTrue(allWords(a).contains("spending limit"), "and said why it stopped: " + lastWords(a));
                     mark[0] = paid;
@@ -889,7 +892,8 @@ public class PlayerAssistantGameTests {
                     helper.fail("now selling");                    // and wait for the sale
                 }
                 helper.assertTrue(a.plan.idle() && com.jrpetty.mcassistant.entity.Market.coinsHeld(p) > mark[2],
-                    "sold its cobblestone and its player was paid (" + lastWords(a) + ")");
+                    "sold its cobblestone and its player was paid (" + lastWords(a) + "; stock "
+                    + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)) + ")");
                 Kit.log("pai31 quote " + price + ", limit " + a.rec().spend + ", paid " + mark[0] + " for " + mark[1] + " cobblestone; sold: +"
                     + (com.jrpetty.mcassistant.entity.Market.coinsHeld(p) - mark[2]) + " coins (" + allWords(a) + ")");
             });

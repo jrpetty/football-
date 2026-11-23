@@ -116,9 +116,77 @@ public final class PaWords {
         return b.toString().replaceAll("\\s+", " ").trim();
     }
 
+    /**
+     * [pa33b] British English, said or typed: phrasings opened out into the reader's own ("bung it in the chest" is
+     * "put it in the chest", "nip over here" is "come here", "ta" is "thanks"). Whole phrases, in order.
+     */
+    private static final String[][] BRITISH = {
+        {"\\b(?:be a (?:love|dear|star|pal|gem)|do us a favour) and ", ""},
+        {"\\b(?:pop|bung|chuck|shove|stick|lob) (it|them|everything|it all|them all|all of it|your stuff|your things|your items|all your stuff|the lot) (?:all )?(in|into)\\b", "put $1 $2"},
+        {"\\bnip (?:over |back )?(?:here|to me)\\b", "come here"},
+        {"\\bnip back\\b", "come back"},
+        {"^oi\\b", "hey"},
+        {"^(?:ta|ta very much|ta muchly|ta mate|ta love|sorted|lovely|lovely stuff|brilliant|brill|champion|nice one|nice one mate|cheers then|smashing|ace)$", "thanks"},
+        {"\\b(?:hang on|hold on|hold up|half a mo|just a mo|wait a mo|wait a tick|hang about)(?: a (?:sec|second|minute|min|mo|moment|tick|bit))?\\b", "hold on"},
+        {"\\bhave a go at mining$", "dig a mine"},
+        {"\\bhave a go at mining\\b", "mine"},
+        {"\\bhave a go at (\\w+)ing\\b", "$1"},
+        {"\\bhave a (?:look|nose|scout) (?:round|around)\\b", "look around"},
+        {"\\bhave a (?:look|nose|dig|hunt) for\\b", "look for"},
+        {"\\bfancy (?:getting|grabbing|fetching)\\b", "get"},
+        {"\\bfancy (\\w+)ing\\b", "$1"},
+        {"\\bright then\\b", "right"},
+        {"\\bstop there\\b", "stay there"},
+        {"\\bstay put\\b", "stay here"},
+        {"^(?:crack on|crack on then|get on with it|get cracking|on you go|off you go then)$", "carry on"},
+        {"^(?:pack it in|leave it|leave it out|knock it off|give over|that'll do|that will do|enough|that's enough|thats enough)$", "stop"},
+        {"^(?:you alright|you all right|are you alright|are you all right|you ok|alright mate|how's it going|hows it going|how you doing)$", "how are you"},
+        {"\\bwhereabouts\\b", "where"},
+        {"\\bgo and (get|fetch|grab|chop|mine|find|bring)\\b", "$1"},
+        {"\\b(?:colour|color)\\b", "colour"},
+        {"\\bstoreys?\\b", "storey"},
+        {"\\b(\\d+|one|two|three|four|five|six|seven|eight|nine|ten) metres? (?:away|off|over)\\b", "over there"},
+    };
+
+    /**
+     * [pa33b] What a speech recogniser tends to hear for British vowels, put right. Only for spoken orders (a typed
+     * "stun" stays a typo for the reader's own fixer), and only where the slip can't be a real order of its own.
+     */
+    private static final String[][] MISHEARD = {
+        {"\\b(?:lugs|lags|logues|lodges)\\b", "logs"},
+        {"\\b(?:fallow|fellow|hollow|follo)( me| us|$)", "follow$1"},
+        {"\\b(?:stun|stoan|stern)\\b", "stone"},
+        {"\\b(?:ion|ions|irony|iran)\\b", "iron"},
+        {"\\b(?:god|gourd|gaud)( me| us| here| this| that| the| my| it)\\b", "guard$1"},
+        {"(?<!thanks |cheers |ta )\\b(?:fam|firm|fan)( this| the| that| here| some| wheat| for)\\b", "farm$1"},
+        {"\\b(?:build|make|plant) (?:a )?(?:fam|firm)\\b", "build a farm"},
+        {"\\b(?:parth|pars|paths)\\b", "path"},
+        {"\\b(?:the|that|this|a) chess\\b", "the chest"},
+        {"\\b(some|more|the|\\d+|sixteen|thirty two|sixty four) would\\b", "$1 wood"},
+        {"^mind (iron|coal|gold|diamonds?|for|some)\\b", "mine $1"},
+        {"\\b(?:coal ore|cole|kohl)\\b", "coal"},
+        {"\\bstay hair\\b", "stay here"},
+        {"\\bcome hair\\b", "come here"},
+    };
+
+    /** [pa33b] A spoken order with the recogniser's usual British-vowel slips put right (see MISHEARD). */
+    public static String voiceFix(String heard) {
+        if (heard == null) return "";
+        String c = heard.toLowerCase(java.util.Locale.ROOT).trim();
+        for (String[] r : MISHEARD) c = c.replaceAll(r[0], r[1]);
+        return c.replaceAll("\\s+", " ").trim();
+    }
+
+    /** [pa33b] The British phrasings opened out (see BRITISH). */
+    public static String british(String cleaned) {
+        String c = cleaned;
+        for (String[] r : BRITISH) c = c.replaceAll(r[0], r[1]);
+        return c.replaceAll("\\s+", " ").trim();
+    }
+
     /** The whole pass: clean, slang, typos, numbers. Commas survive as " , " so the clause splitter can see them. */
     public static String normalise(String text) {
-        String c = clean(text);
+        String c = british(clean(text));
         if (c.isEmpty()) return c;
         List<String> out = new ArrayList<>();
         String[] words = c.split(" ");

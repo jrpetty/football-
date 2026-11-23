@@ -62,7 +62,7 @@ public final class PaOrders {
         }
         PlayerAssistantEntity before = PaChests.askAs(a);
         try {
-            hear0(p, a, text, look);
+            hear0(p, a, voice ? PaWords.voiceFix(text) : text, look);   // [pa33b] a spoken order: the recogniser's slips put right
         } finally {
             PaChests.askAs(before);
         }

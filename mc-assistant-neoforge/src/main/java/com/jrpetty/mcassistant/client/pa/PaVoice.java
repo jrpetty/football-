@@ -31,13 +31,28 @@ public final class PaVoice {
     }
 
     public static PaTts tts() {
-        if (tts == null) tts = PaTts.create();
+        if (tts == null) {
+            tts = PaTts.create();
+            tts.accent(PaVoice::accent);                        // [pa33b] a British voice for UK
+        }
         return tts;
     }
 
     public static PaStt stt() {
-        if (stt == null) stt = new PaStt(dir(), PaClientConfig.get(PaClientConfig.ENGINE, "auto"), System.getProperty("os.name"), PaTts::onPath);
+        if (stt == null) stt = new PaStt(dir(), PaClientConfig.get(PaClientConfig.ENGINE, "auto"), System.getProperty("os.name"), PaTts::onPath,
+            PaVoice::accent);                                   // [pa33b] en-GB recogniser for UK
         return stt;
+    }
+
+    /** [pa33b] The English it listens for and speaks: the About tab's Accent (Auto follows the game's language, then the computer's). */
+    public static com.jrpetty.mcassistant.pa.voice.PaAccent accent() {
+        String lang = "";
+        try {
+            lang = Minecraft.getInstance().options.languageCode;
+        } catch (Throwable ignored) {
+            // too early: the computer's own then
+        }
+        return com.jrpetty.mcassistant.pa.voice.PaAccent.resolve(PaClientConfig.get(PaClientConfig.ACCENT, "auto"), lang, java.util.Locale.getDefault());
     }
 
     public static void speak(String text) {
