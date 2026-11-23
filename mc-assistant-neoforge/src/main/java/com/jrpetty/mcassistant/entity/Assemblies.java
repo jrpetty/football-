@@ -504,6 +504,9 @@ public final class Assemblies {
         UUID me = f.getUUID();
         if (a.phase == Phase.DISPERSE) return linger(f, level, a, now);
         if (!invited(a, f)) return false;
+        // [econ32b] Down the works it climbs out first (the bell cleared its climb, and it walked for the hall through the
+        // caves): called when it is up.
+        if (!a.called.contains(me) && MineWorks.below(f)) return false;
         if (a.called.add(me)) {
             // The bell: what it was doing waits.
             f.clearQueue();

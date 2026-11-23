@@ -236,6 +236,26 @@ public final class WatchKit {
         return worse - have;
     }
 
+    /** [econ32b] Who wants a better piece of this kind than they wear, in words (the forge's log): name, trade, what it wears. */
+    static String wantingWho(ServerLevel level, Villages.Village v, Item item) {
+        ItemStack one = new ItemStack(item);
+        Kind kind = null;
+        for (Kind k : SUIT) if (fits(k, one)) kind = k;
+        if (kind == null) return "";
+        int want = worth(kind, one);
+        List<String> out = new ArrayList<>();
+        List<VillageFolkEntity> all = new ArrayList<>(watch(v.id()));
+        all.addAll(CaveDwellers.dwellers(v.id()));
+        all.addAll(NetherRunners.runners(v.id()));
+        for (VillageFolkEntity g : all) {
+            if (wears(g, kind) >= want) continue;
+            ItemStack w = g.getItemBySlot(kind.slot);
+            out.add(g.displayNameCap() + " (" + g.stationTask().name().toLowerCase(java.util.Locale.ROOT) + ", " + (w.isEmpty() ? "nothing" : w.getItem().toString())
+                + ", age " + g.tickCount / 20 + "s)");
+        }
+        return String.join(", ", out);
+    }
+
     // ------------------------------------------------------------------ the makers
 
     /** What the town's makers have made for the watch today (by village): who, and what of what. */
@@ -572,7 +592,7 @@ public final class WatchKit {
             Workshop.Found f = Workshop.bestInStores(level, id, st -> fits(k, st), st -> score(k, st), held(k, worn));
             if (f == null) continue;
             ItemStack got = mark(Workshop.takeOut(level, id, f, who));
-            if (!worn.isEmpty()) Workshop.backIntoStores(level, v, unmarked(worn.copy()), who);   // for the next guard, or the militia
+            if (!worn.isEmpty()) Workshop.backIntoStores(level, v, issued(worn) ? worn.copy() : unmarked(worn.copy()), who);   // for the next guard, or the militia ([econ32b] the town's mark kept)
             g.setItemSlot(k.slot, got);
             given.add(got.copy());
         }
@@ -683,7 +703,12 @@ public final class WatchKit {
             ItemStack s = f.getItemBySlot(slot);
             if (!issued(s)) continue;
             back.add(Bench.words(s.getItem(), s.getCount()));
-            Workshop.backIntoStores(level, v, unmarked(s.copy()), who);
+            // [econ32b] Armour goes back with the town's mark on it: the next to wear it hands it back in turn. Unmarked in the
+            // stores, it was the next guard's for good once it put it on (a guard bought it at the counter rather than being
+            // fitted), and went with it to the fields, the map room or the infirmary when it left the watch; fourteen iron
+            // helmets of a town of fifty were on folk who had left its watch, and the smith forged the new guards' out of the
+            // age's iron.
+            Workshop.backIntoStores(level, v, s.getItem() instanceof net.minecraft.world.item.ArmorItem ? s.copy() : unmarked(s.copy()), who);
             f.setItemSlot(slot, ItemStack.EMPTY);
         }
         NonNullList<ItemStack> pack = f.getInventoryItems();

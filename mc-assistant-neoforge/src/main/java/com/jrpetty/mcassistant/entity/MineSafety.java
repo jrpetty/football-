@@ -83,7 +83,13 @@ public final class MineSafety {
      */
     public static boolean below(ServerLevel level, @Nullable UUID village, BlockPos feet) {
         if (village == null || TownMine.siteOf(village) == null || !dug(level, village, feet)) return false;
-        return MineStairs.underground(level, feet) || inAHole(level, feet);
+        if (MineStairs.underground(level, feet)) return true;
+        // [econ32b] Not a hole: the floors of one of the town's buildings, walls and storeys standing higher round its feet
+        // than a hole's sides. A hauler on the ground floor of the academy, on the mine's way in, was "below ground in the
+        // mine" and sent climbing out of it fifteen times in three days ("Can't find my way to the pithead").
+        Villages.Village v = Villages.get(village);
+        if (v != null && TownMine.underTheTown(TownMine.builtGround(village, v.centre(), level.getGameTime()), feet, 0)) return false;
+        return inAHole(level, feet);
     }
 
     /** In a face of the mine with stairs cut, or next to one. */
@@ -141,6 +147,7 @@ public final class MineSafety {
             if (!climbing) f.interject(null);
             return true;
         }
+        MineWhy.note(f, "climbing out instead of a rescue");     // [econ32b]
         f.interject(Job.mine(feet.getY(), MineStairs.OUT));
         f.brain("below ground in the mine: climbing out");
         return true;

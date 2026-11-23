@@ -129,6 +129,11 @@ public class WorksGoal extends Goal {
 
     @Override
     public void stop() {
+        if (job != null && phase == Phase.OUT && MineWorks.below(a)) {   // [econ32b] a climb cut short below, and by what
+            com.jrpetty.mcassistant.entity.Job nj = a.peekJob();
+            com.jrpetty.mcassistant.entity.MineWhy.note(a, "climb cut short (" + (a.getTarget() != null ? "a target" : nj == null ? "no job"
+                : nj == job ? "gen " + a.taskGen() + "/" + myGen : nj.type() + ":" + nj.arg()) + ")");
+        }
         if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
         task = null;
         job = null;
@@ -149,6 +154,8 @@ public class WorksGoal extends Goal {
         if (shiftTicks % 20 == 0) STATE.put(a.getUUID(), phase + " " + (task == null ? "-" : task.kind + " cell " + ci + "/" + task.cells.size())
             + " blocks " + blocks.size() + " vein " + vein.size() + " walking " + (walking == null ? "-" : walking.toShortString())
             + " digging " + (digging == null ? "-" : digging.toShortString()) + " route " + ri + "/" + route.size());
+        if (shiftTicks % 1200 == 0) com.jrpetty.mcassistant.entity.MineWhy.note(a, "on a shift: " + STATE.get(a.getUUID())
+            + " stuck " + stuck + " out " + outTicks + " tasks " + tasks + " broke " + broke);   // [econ32b] minewhy only
         switch (phase) {
             case NEXT -> next(level);
             case WALK -> {
@@ -162,8 +169,25 @@ public class WorksGoal extends Goal {
             }
             case CUT -> cut(level);
             case OUT -> {
-                if (follow()) finish(bye);
-                else if (++outTicks > 3000) finish(bye);    // no way up it can walk: the town's rescues see to it
+                long began = CLIMBING.getOrDefault(a.getUUID(), level.getGameTime());
+                if (follow()) {
+                    // At the end of its way up and still below (the way cut off, a step gone): after a while of trying, at the top.
+                    // [econ32b] Whenever it ends there: a stuck walk hops on along the way whether or not the hop was made, and a
+                    // climb that "ended" short of the top left it below with no job, sent climbing again by the next look.
+                    if (MineWorks.below(a)) putAtTheTop(level);
+                    if (!MineWorks.below(a)) CLIMBING.remove(a.getUUID());
+                    finish(bye);
+                }
+                else if (++outTicks > 3000 || level.getGameTime() - began > 3000) {
+                    CLIMBING.remove(a.getUUID());
+                    // [econ32b] The climb out of a long drift and up the stair ran out of time on the way (stuck at a lip, a
+                    // turn of the stair): it is put at the top, as the hops along the way would have got it there. Left
+                    // below, its leash walked it for the pithead a hundred blocks through the rock, "lost underground" a
+                    // quarter of a minute later, and the climb began again: thirty-seven to a hundred and nineteen climbs a
+                    // day in a town of ten miners.
+                    putAtTheTop(level);
+                    finish(bye);
+                }
             }
         }
     }
@@ -211,8 +235,25 @@ public class WorksGoal extends Goal {
         return n;
     }
 
+    /** [econ32b] A climb that got nowhere: put at the top of the works (the way in), if it is below and the top is open. */
+    private void putAtTheTop(ServerLevel level) {
+        BlockPos top = MineWorks.below(a) ? MineWorks.topFor(level, a) : null;
+        if (top != null && open(top)) {
+            a.getNavigation().stop();
+            a.teleportTo(top.getX() + 0.5, top.getY(), top.getZ() + 0.5);
+            teleports++;
+            TELEPORTS++;
+        }
+    }
+
+    /** [econ32b] When each folk's climb out of the works began (a rescue's fresh way up does not start the clock again). */
+    private static final java.util.Map<java.util.UUID, Long> CLIMBING = new java.util.concurrent.ConcurrentHashMap<>();
+
     private void beginOut(String why) {
         bye = why;
+        long now = a.level().getGameTime();
+        Long since = CLIMBING.get(a.getUUID());
+        if (since == null || now - since > 6000 || now < since) CLIMBING.put(a.getUUID(), now);   // [econ32b]
         if (task != null) { report(why.isEmpty() ? "" : "stopped"); }
         List<BlockPos> up = a.level() instanceof ServerLevel sl ? MineWorks.wayUp(sl, a) : null;
         route = up == null ? List.of() : up;
@@ -223,6 +264,7 @@ public class WorksGoal extends Goal {
     }
 
     private void finish(String message) {
+        if (MineWorks.below(a)) com.jrpetty.mcassistant.entity.MineWhy.note(a, "shift over below: " + message);   // [econ32b]
         if (!outJob && tasks > 0) SHIFTS++;                      // [fixes14]
         ENDS.merge(message.isEmpty() ? "-" : message, 1, Integer::sum);
         if (!outJob && tasks > 0) { SHIFT_BLOCKS += broke; SHIFT_TICKS_ALL += shiftTicks; }   // [growth22] the books' averages
@@ -303,6 +345,11 @@ public class WorksGoal extends Goal {
                 walking = null;
                 if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
                 task = null;
+                com.jrpetty.mcassistant.entity.MineWhy.note(a, "no way to " + dest.toShortString() + " (" + (int) Math.sqrt(d) + " off)");   // [econ32b]
+                // [econ32b] On its way out, a long walk that got nowhere ends at the top, not where it stood below.
+                if (phase == Phase.OUT && a.level() instanceof ServerLevel sl) { CLIMBING.remove(a.getUUID()); putAtTheTop(sl); finish(bye); return false; }
+                // [econ32b] Down in the works on its way to a face it cannot reach: it climbs out, not left standing below.
+                if (phase != Phase.OUT && MineWorks.below(a)) { beginOut("Can't find my way to my face — out of the works."); return false; }
                 finish("Can't find my way to the pithead.");
             }
             return false;

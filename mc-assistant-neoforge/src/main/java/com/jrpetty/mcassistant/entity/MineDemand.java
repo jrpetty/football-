@@ -103,6 +103,7 @@ public final class MineDemand {
         int folk = Math.max(1, Math.min(Villages.headcount(village), Villages.AGE_FOLK));
         Villages.Age age = Villages.ageOf(village);
         boolean iron = age.ordinal() >= Villages.Age.IRON.ordinal(), diamond = age.ordinal() >= Villages.Age.DIAMOND.ordinal();
+        java.util.Set<Ore> ages = java.util.EnumSet.noneOf(Ore.class);   // [econ32b] the ores the age itself asks for
         for (Ore o : Ore.values()) {
             int stock = stock(level, village, o);
             int need = switch (o) {
@@ -121,9 +122,16 @@ public final class MineDemand {
             };
             // The age itself asking for it (Villages.needs): short whatever the sums say.
             Villages.Task t = o == Ore.COAL ? Villages.Task.COAL : o == Ore.IRON ? Villages.Task.IRON : o == Ore.DIAMOND ? Villages.Task.DIAMOND : null;
-            if (t != null && !STOCK_FOR_TESTS.containsKey(village) && Fuel.ageWants(level, village, t)) need = Math.max(need, stock + Math.max(8, need / 2));
+            if (t != null && !STOCK_FOR_TESTS.containsKey(village) && Fuel.ageWants(level, village, t)) {
+                need = Math.max(need, stock + Math.max(8, need / 2));
+                // [econ32b] What the age still asks for, whole: the Diamond Age asks twice the Iron Age's iron, and the works
+                // reckoned the Iron Age's (86 wanted, 54 in) while the age waited on 140 more.
+                need = Math.max(need, stock + AgeOres.missing(level, village, t));
+                ages.add(o);
+            }
             w.put(o, new Want(stock, need));
         }
+        AgeOres.put(village, ages);                                  // [econ32b]
         WANTS.put(village, w);
         WANTS_AT.put(village, now);
         return w;
@@ -196,6 +204,7 @@ public final class MineDemand {
         Map<Ore, Want> wants = wants(level, v);
         Map<Ore, Double> left = new EnumMap<>(Ore.class);
         for (Ore o : Ore.values()) left.put(o, wants.get(o).shortage());
+        for (Ore o : AgeOres.of(v)) left.put(o, 1.0);                 // [econ32b] the age's own ore first, then the trades'
         boolean mountain = MineWorks.mountain(level, w), badlands = MineWorks.badlands(level, w);
         List<VillageFolkEntity> miners = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v)) {
@@ -272,6 +281,7 @@ public final class MineDemand {
         FOR.remove(village);
         TOLD.remove(village);
         STOCK_FOR_TESTS.remove(village);
+        AgeOres.forgetForTests(village);                             // [econ32b]
     }
 
     /** Each ore's stock against its need, the level it lies richest in of those planned, and who works there. */

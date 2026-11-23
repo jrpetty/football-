@@ -632,8 +632,9 @@ public final class ItemUses {
                 case LEGS -> "leggings";
                 default -> "boots";
             };
+            boolean watch = f.stationTask() != StationTask.HUNT;                 // [econ32b] the watch's kit is not the hunter's
             out.add(new Need(Kind.ARMOUR, s -> s.getItem() instanceof ArmorItem a && a.getEquipmentSlot() == slot && a.getDefense() > has
-                && f.mayUseTier(s), new ItemStack(slot == EquipmentSlot.HEAD ? Items.IRON_HELMET : slot == EquipmentSlot.CHEST ? Items.IRON_CHESTPLATE
+                && f.mayUseTier(s) && (watch || !WatchKit.issued(s)), new ItemStack(slot == EquipmentSlot.HEAD ? Items.IRON_HELMET : slot == EquipmentSlot.CHEST ? Items.IRON_CHESTPLATE
                 : slot == EquipmentSlot.LEGS ? Items.IRON_LEGGINGS : Items.IRON_BOOTS), 1, 0.6,
                 has > 0 ? "its " + piece + " is nearly worn through" : "it goes on its rounds with no " + piece, Payer.OWN, null, null, "armour." + piece));
         }

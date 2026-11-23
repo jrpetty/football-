@@ -233,6 +233,7 @@ public final class Auctions {
         // [econ32] Every diamond while the age asks for diamonds: a local run's Diamond Age town, four short of the twelve its
         // age asked, put six under the hammer in a morning.
         if (s.is(Items.DIAMOND) && DeepPicks.wanted(level, village)) keep = Integer.MAX_VALUE / 4;
+        if (s.is(Items.DIAMOND)) keep = Math.max(keep, AgeOres.diamondsKept(village));   // [econ32b] and what the next age will ask
         else if (s.is(Items.SADDLE)) keep = 2;
         else if (s.is(Items.GOLDEN_APPLE) || s.is(Items.NAME_TAG)) keep = 1;
         Museum.Kind k = Museum.Kind.inStores(s);
