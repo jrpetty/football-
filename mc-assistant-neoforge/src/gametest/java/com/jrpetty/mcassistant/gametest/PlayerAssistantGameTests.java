@@ -782,7 +782,7 @@ public class PlayerAssistantGameTests {
         int x = 7_081_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
-        for (int t = 0; t < 3; t++) for (int dy = 0; dy < 4; dy++) level.setBlock(new BlockPos(x + 34 + t * 2, y + dy, Z + 1), Blocks.OAK_LOG.defaultBlockState(), 2);
+        for (int t = 0; t < 3; t++) tree(level, new BlockPos(x + 34 + t * 3, y, Z + 1));
         say(p, a, "get me 8 logs");
         helper.succeedWhen(() -> {
             int logs = a.countMatching(st -> st.is(net.minecraft.tags.ItemTags.LOGS)) + p.getInventory().countItem(Items.OAK_LOG);
@@ -805,13 +805,8 @@ public class PlayerAssistantGameTests {
             level.setBlock(new BlockPos(x + 4, y + dy, Z + 2), Blocks.OAK_LOG.defaultBlockState(), 2);
             level.setBlock(new BlockPos(x + 3, y + dy, Z + 2), Blocks.COBBLESTONE.defaultBlockState(), 2);
         }
-        // a tree a little further off: trunk and crown
-        BlockPos t = new BlockPos(x + 9, y, Z - 3);
-        for (int dy = 0; dy < 5; dy++) level.setBlock(t.above(dy), Blocks.OAK_LOG.defaultBlockState(), 2);
-        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int dy = 4; dy <= 6; dy++) {
-            BlockPos l = t.offset(dx, dy, dz);
-            if (level.getBlockState(l).isAir()) level.setBlock(l, Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true), 2);
-        }
+        // a tree further off (its crown well clear of the build)
+        tree(level, new BlockPos(x + 14, y, Z - 6));
         say(p, a, "chop 4 logs");
         helper.succeedWhen(() -> {
             helper.assertTrue(a.plan.idle(), "the chopping is over (" + a.state() + ")");
@@ -825,5 +820,14 @@ public class PlayerAssistantGameTests {
             helper.assertTrue(a.countMatching(st -> st.is(Items.OAK_LOG)) >= 4, "and it got its logs from the tree (" + lastWords(a) + ")");
             Kit.log("pai29 spared the build (6 beams, 3 cobble); logs from the tree");
         });
+    }
+
+    /** A small oak: a five-log trunk and a crown of leaves that stay. */
+    private static void tree(ServerLevel level, BlockPos t) {
+        for (int dy = 0; dy < 5; dy++) level.setBlock(t.above(dy), Blocks.OAK_LOG.defaultBlockState(), 2);
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int dy = 4; dy <= 6; dy++) {
+            BlockPos l = t.offset(dx, dy, dz);
+            if (level.getBlockState(l).isAir()) level.setBlock(l, Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true), 2);
+        }
     }
 }

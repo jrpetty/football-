@@ -140,7 +140,7 @@ public final class PaOrders {
         try {
             Kind k = Kind.valueOf(s.kind);
             // long or far-reaching jobs ask first; a minute's dig at the vein you point at just starts
-            boolean big = k == Kind.BUILD || k == Kind.CLEAR_AREA || k == Kind.TRADE_BUY || k == Kind.TRADE_SELL || s.eta >= 150;
+            boolean big = k == Kind.BUILD || k == Kind.CLEAR_AREA || k == Kind.MINE_DOWN || k == Kind.TRADE_BUY || k == Kind.TRADE_SELL || s.eta >= 150;
             return (k.confirmable() && big) || (k == Kind.GATHER && s.target >= 64);
         } catch (Exception e) {
             return false;
