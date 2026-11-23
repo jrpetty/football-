@@ -15484,14 +15484,20 @@ works' round, instead of only when a load will not go in (then the load went on 
   time from stop to stop at a block and a half a tick: the whole shaft in about five seconds. The chain rattles as it sets
   off and a bell rings when it stops. Miners going to and from their level queue at the stop and ride. A miner who has
   waited half a minute takes the stair, which is still there for when the cage is busy or the well is blocked.
-- **A player rides it by its levers, with no commands.** Pulling a stop's lever takes the cage down to the next stop (from
-  the deepest stop, back up to the pithead). Sneaking while pulling takes it up to the pithead.
+- **A player rides it by its levers and buttons, with no commands.** Pulling a stop's lever takes the cage down to the next
+  stop (from the deepest stop, back up to the pithead). The stone button beside the lever takes it up to the pithead (at
+  the pithead, down to the deepest stop). While the cage carries a player they are let fly, so the server does not kick
+  them for floating.
+- If something stands on a stop's own corner (a smelter's furnace), riders step out on the next clear cell of the landing,
+  and the lever and button are set on a clear cell of it. Idle for five seconds, the cage goes back up to the pithead.
 - **Safety.** Nobody is let into the well except riders in the cage. Anybody found in it outside the cage (a server stopped
   mid-ride, a chunk unloaded under it) is put out at the nearest stop's landing; a fall down the well lands in the pool.
 - **The landings' cache.** While the works have a cage and the town has a hauler, the hauler sends each landing's chest
   what it lacks of twelve meals and sixteen torches down the cage every morning. A miner at the end of a stint by daylight
   (unhurt, its pack not full) walks to its level's landing, rests there a few seconds, takes a few meals and torches from
   the chest and starts another stint, twice a shift at most, instead of climbing out.
+- **Shifts at the face.** Along the works' own tunnels a miner goes at a jog. The ore the age is waiting on takes more than
+  one miner in the works' share-out.
 - **The age's buildings keep their ground.** The lot an age's building was set out on is kept with the town, so after a
   restart the half-raised building is finished where it stands instead of being begun again on another lot.
 - The mine's report has a line for the cage (runs, riders) and for the cache, and the shifts line says where the works'
