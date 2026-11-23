@@ -354,6 +354,7 @@ public class VillageFolkEntity extends AssistantEntity {
     public void aiStep() {
         super.aiStep();
         if (level().isClientSide) return;
+        if (tickCount % 1200 == 611) Enterprise.idleHandLog(this);   // [biz30d] the log: a firm's hand kept off its bench
         FolkAction.tick(this);                                 // [anim] what its body is doing, for the client
         if (showcase) return;
         Elbowroom.tick(this);                                  // [vision27] not stood in another folk
@@ -7263,6 +7264,9 @@ public class VillageFolkEntity extends AssistantEntity {
      * was wired through, a folk on a break carried on working and the break
      * was a thing you could only see in the code.
      */
+    /** [biz30d] Tests and the log: on a break now? */
+    boolean onBreakNow() { return onBreak(); }
+
     @Override
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.

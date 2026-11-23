@@ -2106,6 +2106,26 @@ public final class Enterprise {
         return sb.toString();
     }
 
+    /**
+     * [biz30d] The log, once a minute by day: a firm's hand that has had no turn at its bench for two minutes, and what it
+     * is at instead (a bakery whose one baker baked nothing for a week went to the court with its shelf bare).
+     */
+    static void idleHandLog(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null || !(f.level() instanceof ServerLevel level)) return;
+        long t = level.getDayTime() % 24000L;
+        if (t < 1000L || t > 11000L) return;
+        Business b = employerOf(village, f);
+        if (b == null) return;
+        int since = Crafts.sinceTurn(f);
+        if (since >= 0 && since < 2400) return;
+        WorkZone z = f.workZone();
+        com.mojang.logging.LogUtils.getLogger().info("[MCA-FIRMHAND] {}: {} of {}: no turn at its bench for {}s: {}; missing {}; zone {}, {} blocks off; break {}; lent {}",
+            Villages.name(village), f.displayNameCap(), b.name, since < 0 ? "ever" : since / 20, f.brainNoteForBooks(), f.missingEssentials(),
+            z == null ? "none" : z.containsColumn(f.blockPosition()) ? "in" : "out", z == null ? -1 : (int) Math.sqrt(z.center().distSqr(f.blockPosition())),
+            f.onBreakNow(), f.lentZone() != null);
+    }
+
     /** Tests: a hand taken on now. */
     @Nullable
     public static VillageFolkEntity hireForTests(ServerLevel level, Villages.Village v, Business b) {
