@@ -495,17 +495,21 @@ public final class MineLift {
         for (int r = 1; r <= 3; r++)
             for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++)
                 if (Math.max(Math.abs(dx), Math.abs(dz)) == r) for (int dy = 0; dy <= 1; dy++) tries.add(s.board().offset(dx, dy, dz));
+        // [econ32d] Further round the stop, a step up or down at most; never the top of the ground there by the heightmap (at the
+        // pithead that was the headframe's beams, and riders were put out on them).
+        for (int r = 4; r <= 6; r++)
+            for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++)
+                if (Math.max(Math.abs(dx), Math.abs(dz)) == r) for (int dy = 1; dy >= -2; dy--) tries.add(s.board().offset(dx, dy, dz));
         for (BlockPos p : tries) {
             if (Math.max(Math.abs(p.getX() - l.sx), Math.abs(p.getZ() - l.sz)) <= 1) continue;      // never the pillar or the well
             if (standable(level, p)) return p;
         }
-        return level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, s.board());
+        return s.board();
     }
 
-    private static boolean standable(ServerLevel level, BlockPos p) {
-        return level.getBlockState(p).getCollisionShape(level, p).isEmpty() && !level.getBlockState(p).liquid()
-            && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
-            && level.getBlockState(p.below()).isFaceSturdy(level, p.below(), Direction.UP);
+    /** [econ32d] On ground: never on a roof, a beam, a fence or leaves (MineRoof.standable). */
+    static boolean standable(ServerLevel level, BlockPos p) {
+        return MineRoof.standable(level, p);
     }
 
     /** Anybody in the well who is not riding the cage (a server stopped mid-ride, a chunk unloaded): out at the nearest stop. */
