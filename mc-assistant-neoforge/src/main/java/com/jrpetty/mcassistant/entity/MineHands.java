@@ -42,6 +42,24 @@ public final class MineHands {
         return on;
     }
 
+    /** [econ32d] Of the town, the share kept at the mine while the age waits on it; and the most. */
+    static final double SHARE = 0.2;
+    static final int MOST = 16;
+
+    /**
+     * [econ32d] The miners' share while the town's age waits on the mine (as last looked at: kept): a fifth of the town, at
+     * most {@link #MOST}; 0 otherwise. A Diamond Age town of fifty-nine had twelve miners, over the share the town's shape gave
+     * the mine (two, and the elder's order's one or two): the infirmary, the diving, the cook's kitchen, the smeltery and the
+     * couriers each took the hand they wanted from the mine, the trade with most to spare, and a fortnight later it had two,
+     * the iron came in at ten a day, and the age waited on it.
+     */
+    public static double share(@Nullable UUID village, int folk) {
+        if (village == null) return 0.0;
+        long[] k = KEPT.get(village);
+        if (k == null || k[1] == 0) return 0.0;
+        return Math.min(MOST, Math.ceil(folk * SHARE));
+    }
+
     /** Tests: look afresh at the next asking. */
     public static void forgetForTests() {
         KEPT.clear();

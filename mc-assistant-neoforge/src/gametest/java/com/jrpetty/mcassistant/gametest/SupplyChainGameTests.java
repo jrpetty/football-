@@ -1489,4 +1489,73 @@ public class SupplyChainGameTests {
         helper.assertTrue(ok.clean(), ok.summary());
         MineWorksGameTests.done(helper);
     }
+
+    // ============================================================ [econ32d] the age's building at the town's edge
+
+    /**
+     * [econ32d] An age's building no lot of the plan will take goes up at the town's edge once it has missed six looks:
+     * past the town's buildings, its door to the town, off the fields; never before.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc24_chapel_edge")
+    public static void sc24_chapel_edge(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        com.jrpetty.mcassistant.entity.AgeSites.resetForTests();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6688000, 150, 12, StationTask.FARM);
+        helper.assertTrue(!folk.isEmpty(), "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        Villages.Village vil = Villages.get(v);
+        Villages.Site early = com.jrpetty.mcassistant.entity.AgeSites.edgeForTests(level, vil, "chapel");
+        com.jrpetty.mcassistant.entity.AgeSites.bareForTests(v, "chapel", 5);
+        Villages.Site at = com.jrpetty.mcassistant.entity.AgeSites.edgeForTests(level, vil, "chapel");
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(early == null, "not at the first look with no lot");
+        ok.that(at != null, "at the town's edge after six looks with no lot");
+        if (at != null) {
+            BlockPos c = vil.centre();
+            int dx = at.anchor().getX() - c.getX(), dz = at.anchor().getZ() - c.getZ();
+            int far = 0;
+            for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(v))
+                if (!b.structure().equals("fortify")) far = Math.max(far, (int) Math.sqrt(b.anchor().distSqr(new BlockPos(c.getX(), b.anchor().getY(), c.getZ()))));
+            net.minecraft.core.Direction out = Math.abs(dx) >= Math.abs(dz) ? (dx > 0 ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST)
+                : (dz > 0 ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH);
+            Kit.log("[VT] sc24 the chapel at the town's edge: " + at.anchor().toShortString() + " (" + dx + ", " + dz + " from the heart, the furthest building "
+                + far + " out), its back " + at.facing() + ", on the fields " + Villages.onFarmland(v, dx, dz, 5, 11));
+            ok.that(Math.sqrt(dx * dx + dz * dz) > far, "past the town's buildings");
+            ok.that(at.facing() == out, "its back to the wilds, its door to the town: " + at.facing() + " vs " + out);
+            ok.that(!Villages.onFarmland(v, dx, dz, 5, 11), "off the fields");
+        }
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
+    /**
+     * [econ32d] While the age waits on the mine, a fifth of the town is kept at it (at most sixteen): the miners are not the
+     * trade with hands to spare for the infirmary, the diving or the kitchens. Not once the age asks nothing of the mine.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "sc25_miners_share")
+    public static void sc25_miners_share(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        com.jrpetty.mcassistant.entity.MineHands.forgetForTests();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6692000, 60, 10, StationTask.FARM);
+        helper.assertTrue(!folk.isEmpty(), "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        boolean kept = com.jrpetty.mcassistant.entity.MineHands.kept(level, v);
+        double at60 = com.jrpetty.mcassistant.entity.MineHands.share(v, 60), at200 = com.jrpetty.mcassistant.entity.MineHands.share(v, 200);
+        for (int i = 0; i < folk.size(); i++) folk.get(i).setJob(i < 1 ? StationTask.MINE : StationTask.FARM);
+        double short1 = Villages.share(v, StationTask.MINE);
+        com.jrpetty.mcassistant.entity.MineHands.forgetForTests();
+        Villages.ageForTests(v, Villages.Age.WOOD);
+        boolean keptWood = com.jrpetty.mcassistant.entity.MineHands.kept(level, v);
+        double wood = com.jrpetty.mcassistant.entity.MineHands.share(v, 60);
+        Kit.log("[VT] sc25 the Diamond Age waits on the mine " + kept + ": the miners' share of 60 folk " + at60 + ", of 200 " + at200
+            + "; one miner of " + folk.size() + ": " + short1 + " over its share; the Wood Age kept " + keptWood + ", share " + wood);
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(kept && at60 == 12 && at200 == 16, "a fifth of the town at the mine, sixteen at most");
+        ok.that(short1 <= -0.5, "one miner is short of the mine's share: " + short1);
+        ok.that(!keptWood && wood == 0, "nothing kept once the age asks nothing of the mine");
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
 }

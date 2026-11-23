@@ -1071,6 +1071,11 @@ public final class Villages {
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
             : CraftScale.most(villageId, slot.trade(), total, slot.max())       // [roles-b] the crafts grow with the town
                 + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade()) + (int) Math.ceil(ways);
+        // [econ32d] While the age waits on the mine, a fifth of the town at it (MineHands.share): never spare for another trade.
+        if (slot.trade() == AssistantEntity.StationTask.MINE) {
+            double kept = MineHands.share(villageId, total);
+            if (kept > t) { t = kept; max = Math.max(max, (int) Math.ceil(kept)); }
+        }
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
         double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null
             ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId)        // [econ-store] and its assistants and stock keeper
