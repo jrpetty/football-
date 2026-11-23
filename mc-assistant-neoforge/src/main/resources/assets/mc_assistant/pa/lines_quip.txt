@@ -218,7 +218,7 @@ Lovely. Bit dry.
 That's my lunch. And dinner. And emotional support.
 Delicious. In a blocky sort of way.
 Food. Yes. Very good. Continue living.
-Mmm, bread. The staff of life. And of standing about.
+Bread again. The menu is not ambitious.
 Eating on the job. Don't tell anyone.
 That'll keep me going till the next creeper.
 
@@ -256,17 +256,17 @@ Every great building starts with a confused block.
 Steady hand. Questionable vision.
 That's going on the cover of Blocks Monthly.
 == jm.jump
-Hop. Very athletic.
+A jump. Bold of you.
 Jumping for joy, or just jumping.
 Up you go. And down. Riveting.
 That's a jump. I'd give it a six.
 You'll wear out your knees doing that.
 Was that a jump or did you trip upwards.
-Boing.
+You've jumped more today than you've worked.
 Impressive height. Average landing.
 You've got springs in those boots.
 Is this cardio. Are we doing cardio now.
-Nice hop. Very bunny.
+That jump achieved nothing. Inspiring.
 Up, down. A classic.
 == jm.eat
 Eating again. Growing lad.
@@ -404,12 +404,12 @@ Spring in your step. Literally.
 Jumping won't make the creepers go away. Worth a go, though.
 Higher. No. That's fine. That's high enough.
 A hop for every occasion.
-Up you go, like a very square kangaroo.
+Up you go. The ground will still be there.
 Showing off for the chickens, are we.
 That was nearly a backflip. Nearly.
 Gravity's taking notes.
 You jump like a person with places to be. Up, mostly.
-Bounce. Bounce. Bounce. I'm getting dizzy.
+Keep jumping. Something might happen eventually.
 That's an Olympic sport where I come from. Where I come from is a spawn egg.
 == jm.eat@more
 Eat your greens. Or your browns. Bread's brown.
@@ -430,7 +430,7 @@ Meals on legs, that's you.
 Take your time. The zombies will wait. They won't, actually.
 Tasty. Bit square, but tasty.
 You'd think bread would get boring. Apparently not.
-Gobble gobble. Very dignified.
+You eat like the food's going to run off.
 I've seen cows eat with more decorum. Not many.
 Chewing's half the fun. The other half's not dying.
 A full belly and an empty head. Perfect for mining.
