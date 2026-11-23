@@ -525,6 +525,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
         if (!level().isClientSide) hunger.exhaust(0.02F);                // work: digging, chopping, building
     }
 
+
+    /** [pa33e] It never walks through a portal on its own: it crosses with its player (carried across beside them the
+     *  moment they arrive), so it can neither run ahead into the Nether alone nor bounce back out of the portal it came by. */
+    @Override
+    public boolean canUsePortal(boolean allowPassengers) {
+        return false;
+    }
     @Override
     public void die(DamageSource source) {
         super.die(source);
