@@ -1065,8 +1065,15 @@ public final class MineWorks {
         // Deep under the rock it is below however far out (a vein followed into a cave a hundred and thirty blocks off
         // the shaft is still the works' to get it out of: at eighty, such a miner's way up was refused, and it was sent
         // up forty-eight times where it stood).
-        return p.getY() < w.top - 2 && (ground || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 256
-            && p.getY() < w.top - 12 && !level.canSeeSky(p));
+        // [econ32c] Off its ground, under the rock as the world made it (MineStairs.underground), and never in the town's own
+        // buildings: a miner in a cellar under the square, eleven blocks under the pithead's height and roofed, was "below in
+        // the works" and sent up a way that was never there, every second.
+        if (p.getY() >= w.top - 2) return false;
+        if (ground) return true;
+        if (Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) > 256 || p.getY() >= w.top - 12 || level.canSeeSky(p)) return false;
+        if (!MineStairs.underground(level, p)) return false;
+        Villages.Village vv = Villages.get(v);
+        return vv == null || !MineStairs.indoors(level, v, vv.centre(), p);
     }
 
     /** [mine8] Is this column in the ground of a town's mine whose works are laid out (no hand cuts stone or earth there)? */
@@ -1119,6 +1126,7 @@ public final class MineWorks {
         if (t.level >= 0 && t.level < w.oreWeek.length) {                       // [growth24] further levels counted too
             w.oreWeek[t.level] += t.ore;
             w.oreAll[t.level] += t.ore;
+            IronPace.cut(level, w.village, t.level, t.ore);                     // [econ32d] the iron levels' pace, day by day
         }
         List<Lvl> plan = plan(level, w);
         switch (t.kind) {
@@ -1420,6 +1428,8 @@ public final class MineWorks {
             }
         }
         if (w.sunk >= 2) rail(level, v, w);
+        MineLift.upkeep(level, w);                           // [econ32c] the cage, once the works are deep enough
+        IronPace.tick(level, w);                             // [econ32d] poor iron levels left for the next, while the age waits on iron
         int want = Math.min(60, w.dug / 96);
         for (int n = 0; w.heap < want && n < 8; n++) {
             if (!heap(level, v, w, w.heap)) { w.heap = want; break; }
@@ -1576,7 +1586,12 @@ public final class MineWorks {
     @Nullable
     public static BlockPos pithead(ServerLevel level, UUID village, BlockPos site) {
         if (!level.hasChunk(site.getX() >> 4, site.getZ() >> 4)) return null;
-        return level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, site);
+        // [econ32d] The pithead's floor, not the top of the headframe over it (MineRoof.floor): the heightmap's top over the
+        // shaft was the headframe's beams, and the miners' plot, and the miners, stood up there.
+        BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, site);
+        Works w = works(level, village);
+        if (w != null && w.head && top.getY() >= w.top + 2 && Math.abs(w.sx - site.getX()) <= 1 && Math.abs(w.sz - site.getZ()) <= 1) return MineRoof.floor(level, w);
+        return top;
     }
 
     /** The station's turn for a miner of the works: to the pithead, then down for a shift. Whether it did anything. */
@@ -1635,6 +1650,12 @@ public final class MineWorks {
         for (Lvl l : plan) if (w.sunk > l.corner()) open++;
         out.add("The works: the main shaft at " + w.sx + ", " + w.sz + ", sunk " + (w.top - deepest) + " blocks to Y" + deepest + " (" + w.sunk
             + " steps); " + open + " of " + plan.size() + " levels open" + (w.head ? "; the headframe over it" : "") + ".");
+        String pace = level == null ? null : IronPace.report(level, village);                       // [econ32d] why the works moved on
+        if (pace != null) out.add(pace);
+        String cage = MineLift.report(village);                                                      // [econ32c]
+        if (cage != null) out.add(cage);
+        String cache = MineCache.report(village);
+        if (cache != null) out.add(cache);
         if (MineSites.oldMines(village) > 0 || MineSites.pending(village) != null)                     // [econ32]
             out.add("Old mines worked out and left: " + MineSites.oldMines(village)
                 + (MineSites.pending(village) != null ? "; a new mine wanted for the " + MineSites.pending(village) : "") + ".");
@@ -1758,6 +1779,22 @@ public final class MineWorks {
             if (a != null) dressStep(level, w, a, i);
         }
         w.sunk = Math.max(w.sunk, steps);
+        save(w);
+    }
+
+    /** [econ32d] Tests: so much ore taken out of this level, in all. */
+    public static void oreForTests(ServerLevel level, UUID village, int id, int n) {
+        Works w = works(level, village);
+        if (w == null || id < 0 || id >= w.oreAll.length) return;
+        w.oreAll[id] += n;
+        save(w);
+    }
+
+    /** [econ32c] Tests: the headframe taken as up (an old mine's, from before the cage). */
+    public static void headForTests(ServerLevel level, UUID village) {
+        Works w = works(level, village);
+        if (w == null) return;
+        w.head = true;
         save(w);
     }
 

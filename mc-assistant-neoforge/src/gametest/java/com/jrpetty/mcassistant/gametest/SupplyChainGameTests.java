@@ -384,7 +384,13 @@ public class SupplyChainGameTests {
             stores(level, id, x, new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.STICK, 32),   // [econ32] the age's iron in hand: no iron pick while it saves (Picks.ironFor)
                 new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW));
             int picksBefore = stock(level, id, pick);
+            // [econ32c] The founder with a smith's hand of its own. A founder without the skill must take the town's smith
+            // on as its hand (Enterprise.skilledHand), and after some tests (Growth24's trade on credit ran just before it
+            // each time it failed) the smith was not free to be taken on: no toolshop, one run in three. What this test is
+            // about is the smith stepping back for a toolshop, not who can be hired into one.
+            folk.get(1).tradeXpForTests(StationTask.SMITH, 20000);
             Business shop = Enterprise.foundForTests(level, v, "toolsmith", folk.get(1));
+            if (shop == null) Kit.log("[VT] sc2_06 no toolshop opened: elder " + Villages.elder(id) + "; the founder " + folk.get(1).debugLine() + " | the smith " + smith.debugLine());
             helper.assertTrue(shop != null, "a toolshop opened");
             Business.Lot lot = new Business.Lot();
             lot.qty = 2;
@@ -1139,6 +1145,557 @@ public class SupplyChainGameTests {
         }
         helper.assertTrue(ok.clean(), ok.summary());
         MineWorksGameTests.done(helper);
+        });
+    }
+
+    // ============================================================ [econ32c] the cage
+
+    /** [econ32c] A rig's works sunk to the copper level (51 blocks down), its landings cut, and the works' round run: the cage hung. */
+    static MineWorksGameTests.Rig liftRig(GameTestHelper helper, int x, int miners) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, x, miners);
+        ServerLevel level = r.level();
+        com.jrpetty.mcassistant.entity.MineLift.forgetForTests(r.v());
+        int copper = MineWorks.levelY(level, r.v(), MineWorks.COPPER);
+        MineWorksGameTests.tower(r, copper - 3);
+        MineWorks.sinkForTests(level, r.v(), 4 * ((MineWorksGameTests.TOP - copper) / 3) + 1, null);
+        MineWorks.roomForTests(level, r.v(), MineWorks.COAL);
+        MineWorks.roomForTests(level, r.v(), MineWorks.COPPER);
+        MineWorks.tick(level, Villages.get(r.v()));
+        return r;
+    }
+
+    private static boolean atStop(net.minecraft.world.entity.Entity e, com.jrpetty.mcassistant.entity.MineLift.Stop s) {
+        return e.blockPosition().equals(s.board());
+    }
+
+    /**
+     * [econ32c] The cage: hung in a works fifty-one blocks deep (a well down the pillar, its top capped under the headframe,
+     * water at its foot, a window of bars and a lever at each stop); a miner rides it from the pithead to the copper level
+     * and back up, each run a few seconds, unhurt; and a miner sent to the copper level for a shift takes the cage, not the
+     * stair.
+     */
+    @GameTest(template = "empty", timeoutTicks = 3000, batch = "sc17_lift_ride")
+    public static void sc17_lift_ride(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = liftRig(helper, 6660000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0);
+        Kit.Expect ok = new Kit.Expect();
+        List<com.jrpetty.mcassistant.entity.MineLift.Stop> stops = com.jrpetty.mcassistant.entity.MineLift.stops(v);
+        Kit.log("[VT] sc17 the cage: " + com.jrpetty.mcassistant.entity.MineLift.report(v) + " stops " + stops);
+        helper.assertTrue(stops.size() == 3, "three stops (the pithead, the coal and the copper levels): " + stops);
+        com.jrpetty.mcassistant.entity.MineLift.Stop top = stops.get(0), deep = stops.get(2);
+        int air = 0, rock = 0;
+        for (int y = deep.y() + 1; y < MineWorksGameTests.TOP - 1; y++) if (level.getBlockState(new BlockPos(r.sx(), y, r.sz())).isAir()) air++; else rock++;
+        boolean cap = level.getBlockState(new BlockPos(r.sx(), MineWorksGameTests.TOP - 1, r.sz())).getBlock() instanceof net.minecraft.world.level.block.TrapDoorBlock;
+        boolean water = level.getBlockState(new BlockPos(r.sx(), deep.y(), r.sz())).is(Blocks.WATER);
+        boolean lever = level.getBlockState(deep.lever()).is(Blocks.LEVER);
+        int bars = 0;
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) if (level.getBlockState(new BlockPos(r.sx() + dx, deep.y() + 1, r.sz() + dz)).is(Blocks.IRON_BARS)) bars++;
+        Kit.log("[VT] sc17 the well: " + air + " open, " + rock + " not; cap " + cap + ", water at its foot " + water + ", lever " + lever + ", bars at the copper stop " + bars);
+        ok.that(rock == 0 && cap && water && lever && bars == 3, "the well open, capped, water at its foot, a lever and a window at the stop");
+        // Down and up.
+        m.teleportTo(top.board().getX() + 0.5, top.board().getY(), top.board().getZ() + 0.5);
+        float hp = m.getHealth();
+        ok.that(com.jrpetty.mcassistant.entity.MineLift.ask(m, v, top.index(), deep.index()), "a ride asked for");
+        int down = 0;
+        while (com.jrpetty.mcassistant.entity.MineLift.state(m.getUUID()) != com.jrpetty.mcassistant.entity.MineLift.State.ARRIVED && down < 400) {
+            com.jrpetty.mcassistant.entity.MineLift.runForTests(level, v, 1);
+            down++;
+        }
+        boolean there = atStop(m, deep);
+        com.jrpetty.mcassistant.entity.MineLift.done(m.getUUID());
+        ok.that(com.jrpetty.mcassistant.entity.MineLift.ask(m, v, deep.index(), top.index()), "the ride up asked for");
+        int up = 0;
+        while (com.jrpetty.mcassistant.entity.MineLift.state(m.getUUID()) != com.jrpetty.mcassistant.entity.MineLift.State.ARRIVED && up < 400) {
+            com.jrpetty.mcassistant.entity.MineLift.runForTests(level, v, 1);
+            up++;
+        }
+        boolean back = atStop(m, top);
+        com.jrpetty.mcassistant.entity.MineLift.done(m.getUUID());
+        Kit.log("[VT] sc17 down in " + down + " ticks (at the copper stop " + there + "), up in " + up + " ticks (at the pithead " + back + "); health " + hp + " -> " + m.getHealth());
+        ok.that(there && back, "carried down to the copper level and back up");
+        ok.that(down < 100 && up < 100, "each run a few seconds: " + down + ", " + up + " ticks");
+        ok.that(m.getHealth() >= hp, "unhurt");
+        // A shift on the copper level: by the cage.
+        com.jrpetty.mcassistant.entity.MineDemand.stockForTests(v, MineWorksGameTests.plenty());
+        MineWorksGameTests.kit(m, Items.IRON_PICKAXE);
+        MineWorksGameTests.zone(r, m, deep.y());
+        com.jrpetty.mcassistant.entity.goal.WorksGoal.resetCountsForTests();
+        MineWorksGameTests.fast(level);
+        helper.assertTrue(ok.clean(), ok.summary());
+        final int[] tick = { 0 };
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            MineWorksGameTests.keepAtIt(r, m);
+            boolean deepNow = m.getY() <= deep.y() + 2;
+            if ((!deepNow || com.jrpetty.mcassistant.entity.goal.WorksGoal.RIDES < 1) && tick[0] < 2400) {
+                if (tick[0] % 400 == 0) Kit.log("[VT] sc17 @" + tick[0] + " at " + m.blockPosition().toShortString() + ": " + com.jrpetty.mcassistant.entity.goal.WorksGoal.stateForTests(m));
+                return false;
+            }
+            Kit.log("[VT] sc17 on a shift after " + tick[0] + " ticks: at " + m.blockPosition().toShortString() + ", rides " + com.jrpetty.mcassistant.entity.goal.WorksGoal.RIDES
+                + "; " + com.jrpetty.mcassistant.entity.goal.WorksGoal.timeLine());
+            helper.assertTrue(deepNow && com.jrpetty.mcassistant.entity.goal.WorksGoal.RIDES >= 1, "down to the copper level for its shift by the cage");
+            MineWorksGameTests.done(helper);
+            return true;
+        });
+    }
+
+    /**
+     * [econ32c] A server stopped mid-ride: the cage forgotten with its rider halfway down the well. The rider falls into the
+     * water at the well's foot, unhurt, and when the lift is next looked at it is put out at the nearest stop's landing.
+     */
+    @GameTest(template = "empty", timeoutTicks = 1200, batch = "sc18_lift_restart")
+    public static void sc18_lift_restart(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = liftRig(helper, 6664000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0);
+        List<com.jrpetty.mcassistant.entity.MineLift.Stop> stops = com.jrpetty.mcassistant.entity.MineLift.stops(v);
+        helper.assertTrue(stops.size() == 3, "the cage");
+        com.jrpetty.mcassistant.entity.MineLift.Stop top = stops.get(0), deep = stops.get(2);
+        m.teleportTo(top.board().getX() + 0.5, top.board().getY(), top.board().getZ() + 0.5);
+        float hp = m.getHealth();
+        com.jrpetty.mcassistant.entity.MineLift.ask(m, v, top.index(), deep.index());
+        for (int i = 0; i < 200 && com.jrpetty.mcassistant.entity.MineLift.cageYForTests(v) > (top.y() + deep.y()) / 2.0; i++)
+            com.jrpetty.mcassistant.entity.MineLift.runForTests(level, v, 1);
+        double midway = m.getY();
+        com.jrpetty.mcassistant.entity.MineLift.forgetForTests(v);          // the server stopped
+        Kit.log("[VT] sc18 the cage forgotten with its rider at Y" + (int) midway + " in the well");
+        helper.runAtTickTime(300, () -> {
+            double fell = m.getY();
+            MineWorks.tick(level, Villages.get(v));                         // the works looked at again
+            com.jrpetty.mcassistant.entity.MineLift.watchForTests(level, v);
+            com.jrpetty.mcassistant.entity.MineLift.Stop near = null;
+            for (com.jrpetty.mcassistant.entity.MineLift.Stop s : stops) if (atStop(m, s)) near = s;
+            Kit.log("[VT] sc18 after: fell to Y" + (int) fell + ", then at " + m.blockPosition().toShortString() + " (a stop " + (near == null ? "none" : near.name())
+                + "); health " + hp + " -> " + m.getHealth());
+            helper.assertTrue(m.isAlive() && m.getHealth() >= hp - 0.01F, "unhurt: " + m.getHealth());
+            helper.assertTrue(near != null, "put out at a stop's landing: " + m.blockPosition().toShortString());
+            MineWorksGameTests.done(helper);
+        });
+    }
+
+    /**
+     * [econ32c] A player rides the cage by its levers and buttons: the pithead's lever takes it down to the next stop, and the
+     * button by the coal level's lever takes it back up to the pithead. No command.
+     */
+    @GameTest(template = "empty", timeoutTicks = 1200, batch = "sc19_lift_player")
+    public static void sc19_lift_player(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = liftRig(helper, 6668000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        List<com.jrpetty.mcassistant.entity.MineLift.Stop> stops = com.jrpetty.mcassistant.entity.MineLift.stops(v);
+        helper.assertTrue(stops.size() == 3, "the cage");
+        com.jrpetty.mcassistant.entity.MineLift.Stop top = stops.get(0), coal = stops.get(1);
+        net.minecraft.server.level.ServerPlayer p = helper.makeMockServerPlayerInLevel();
+        p.teleportTo(level, top.board().getX() + 0.5, top.board().getY(), top.board().getZ() + 0.5, 0, 0);
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(com.jrpetty.mcassistant.entity.MineLift.pull(level, p, top.lever()), "the pithead's lever is the cage's");
+        p.gameMode.changeGameModeForPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.getAbilities().mayfly = false;
+        p.getAbilities().flying = false;
+        Kit.log("[VT] sc19 the player's mode " + p.gameMode.getGameModeForPlayer() + ", creative " + p.isCreative() + ", may fly " + p.getAbilities().mayfly);
+        int t = 0;
+        boolean flew = false;
+        while (com.jrpetty.mcassistant.entity.MineLift.state(p.getUUID()) != com.jrpetty.mcassistant.entity.MineLift.State.ARRIVED && t < 300) {
+            com.jrpetty.mcassistant.entity.MineLift.runForTests(level, v, 1);
+            if (com.jrpetty.mcassistant.entity.MineLift.state(p.getUUID()) == com.jrpetty.mcassistant.entity.MineLift.State.RIDING) flew |= p.getAbilities().mayfly;
+            t++;
+        }
+        boolean down = atStop(p, coal);
+        ok.that(flew && !p.getAbilities().mayfly, "let fly in the cage (not kicked for floating), and not after: " + flew + ", " + p.getAbilities().mayfly);
+        boolean button = level.getBlockState(coal.button()).getBlock() instanceof net.minecraft.world.level.block.ButtonBlock;
+        ok.that(button, "a button by the coal level's lever");
+        ok.that(com.jrpetty.mcassistant.entity.MineLift.pull(level, p, coal.button()), "the coal level's button is the cage's");
+        int u = 0;
+        while (com.jrpetty.mcassistant.entity.MineLift.state(p.getUUID()) != com.jrpetty.mcassistant.entity.MineLift.State.ARRIVED && u < 300) {
+            com.jrpetty.mcassistant.entity.MineLift.runForTests(level, v, 1);
+            u++;
+        }
+        boolean up = atStop(p, top);
+        Kit.log("[VT] sc19 the player: down to the coal level " + down + " (" + t + " ticks), up to the pithead " + up + " (" + u + " ticks) at " + p.blockPosition().toShortString());
+        ok.that(down && up, "down by the lever, up by the button");
+        helper.assertTrue(ok.clean(), ok.summary());
+        MineWorksGameTests.done(helper);
+    }
+
+    /**
+     * [econ32c] A mine dug before the cage: its works deep and its landings cut, nothing in the pillar; once the server has
+     * the works loaded, the cage is hung in it within ten seconds, without the works' half-minute round.
+     */
+    @GameTest(template = "empty", timeoutTicks = 800, batch = "sc20_lift_retrofit")
+    public static void sc20_lift_retrofit(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6672000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        com.jrpetty.mcassistant.entity.MineLift.forgetForTests(v);
+        int copper = MineWorks.levelY(level, v, MineWorks.COPPER);
+        MineWorksGameTests.tower(r, copper - 3);
+        MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - copper) / 3) + 1, null);
+        MineWorks.roomForTests(level, v, MineWorks.COAL);
+        MineWorks.roomForTests(level, v, MineWorks.COPPER);
+        MineWorks.headForTests(level, v);
+        boolean before = com.jrpetty.mcassistant.entity.MineLift.has(v) || level.getBlockState(new BlockPos(r.sx(), copper + 5, r.sz())).isAir();
+        Kit.log("[VT] sc20 the old mine: a cage " + before);
+        final int[] tick = { 0 };
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            if (!com.jrpetty.mcassistant.entity.MineLift.has(v) && tick[0] < 600) return false;
+            boolean well = level.getBlockState(new BlockPos(r.sx(), copper + 5, r.sz())).isAir();
+            Kit.log("[VT] sc20 after " + tick[0] + " ticks: " + com.jrpetty.mcassistant.entity.MineLift.report(v) + "; the well open " + well);
+            helper.assertTrue(!before && com.jrpetty.mcassistant.entity.MineLift.has(v) && well, "the cage hung in the old mine");
+            MineWorksGameTests.done(helper);
+            return true;
+        });
+    }
+
+    /**
+     * [econ32c] The landings' cache: with the cage and a hauler, the chests of the coal and copper landings are topped up
+     * from the stores (twelve meals, sixteen torches each), and a miner at the copper landing takes its breather's share.
+     */
+    @GameTest(template = "empty", timeoutTicks = 600, batch = "sc21_landing_cache")
+    public static void sc21_landing_cache(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = liftRig(helper, 6676000, 2);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0), hauler = r.miners().get(1);
+        hauler.setJob(StationTask.HAUL);
+        com.jrpetty.mcassistant.entity.MineCache.resetForTests();
+        Market.intoStoresForTests(level, v, new ItemStack(Items.BREAD, 64));
+        Market.intoStoresForTests(level, v, new ItemStack(Items.TORCH, 64));
+        Villages.forgetStock();
+        List<com.jrpetty.mcassistant.entity.MineLift.Stop> stops = com.jrpetty.mcassistant.entity.MineLift.stops(v);
+        helper.assertTrue(stops.size() == 3, "the cage");
+        com.jrpetty.mcassistant.entity.MineLift.Stop coal = stops.get(1), deep = stops.get(2);
+        com.jrpetty.mcassistant.entity.MineCache.restockForTests(level, v);
+        int cf = com.jrpetty.mcassistant.entity.MineCache.countForTests(level, v, coal, true), ct = com.jrpetty.mcassistant.entity.MineCache.countForTests(level, v, coal, false);
+        int df = com.jrpetty.mcassistant.entity.MineCache.countForTests(level, v, deep, true), dt = com.jrpetty.mcassistant.entity.MineCache.countForTests(level, v, deep, false);
+        Kit.log("[VT] sc21 sent down: the coal landing " + cf + " meals, " + ct + " torches; the copper landing " + df + " meals, " + dt + " torches");
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(cf == 12 && ct == 16 && df == 12 && dt == 16, "each landing's chest topped up: 12 meals, 16 torches");
+        m.removeMatching(st -> st.is(Items.BREAD) || st.is(Items.TORCH), 999);
+        java.util.function.Predicate<ItemStack> meal = st -> st.is(Items.BREAD) || st.is(Items.BAKED_POTATO) || st.is(Items.CARROT) || st.is(Items.APPLE)
+            || st.is(Items.COOKED_BEEF) || st.is(Items.COOKED_PORKCHOP) || st.is(Items.COOKED_MUTTON) || st.is(Items.COOKED_CHICKEN)
+            || st.is(Items.COOKED_COD) || st.is(Items.COOKED_SALMON) || st.is(Items.COOKED_RABBIT);
+        int mealsBefore = m.countCarried(meal);
+        m.teleportTo(deep.board().getX() + 0.5, deep.board().getY(), deep.board().getZ() + 0.5);
+        com.jrpetty.mcassistant.entity.MineLift.Stop near = com.jrpetty.mcassistant.entity.MineCache.near(level, m);
+        String took = near == null ? "-" : com.jrpetty.mcassistant.entity.MineCache.take(level, m, near);
+        int bread = m.countCarried(meal), torches = m.countCarried(st -> st.is(Items.TORCH));
+        Kit.log("[VT] sc21 the miner at the copper landing: cache " + (near == null ? "none" : near.name()) + "; took " + took + "; carries " + bread + " bread, " + torches + " torches");
+        ok.that(near != null && near.index() == deep.index(), "the copper landing's cache by it");
+        int fromChest = 12 - com.jrpetty.mcassistant.entity.MineCache.countForTests(level, v, deep, true);
+        ok.that(bread >= 4 && torches == 8, "a breather's share taken: meals " + mealsBefore + " -> " + bread + ", " + torches + " torches");
+        ok.that(fromChest == Math.max(0, 4 - mealsBefore), "the chest the less for it: " + fromChest + " meals out of it");
+        helper.assertTrue(ok.clean(), ok.summary());
+        MineWorksGameTests.done(helper);
+    }
+
+    /**
+     * [econ32c] The chapel's ground kept over a restart: a Diamond Age town sets the chapel out; the server stops (the sites
+     * of the buildings going up forgotten); the town's next look for the chapel's ground comes back to the same lot, not a
+     * new one, so the half-raised chapel is finished where it stands; and once it is up the age asks for it no more.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc22_chapel_kept")
+    public static void sc22_chapel_kept(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        com.jrpetty.mcassistant.entity.AgeSites.resetForTests();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6680000, 150, 12, StationTask.FARM);
+        helper.assertTrue(!folk.isEmpty(), "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        Villages.Site first = Villages.siteFor(level, v, "chapel");
+        helper.assertTrue(first != null, "the chapel set out");
+        // Half of it raised.
+        BlockPos at = first.anchor();
+        final int[] n = { 0 };
+        int laid = com.jrpetty.mcassistant.entity.goal.BuildGoal.stampOnly(level, "chapel", at, first.facing(), 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK), pl -> (n[0]++ % 2) == 0);
+        Villages.forgetSitesForTests(v);                                            // the server stopped and started
+        Villages.Site again = Villages.siteFor(level, v, "chapel");
+        Kit.log("[VT] sc22 the chapel set out at " + at.toShortString() + " (" + laid + " blocks laid); after a restart its ground "
+            + (again == null ? "none" : again.anchor().toShortString()));
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(again != null && again.anchor().equals(at) && again.facing() == first.facing(), "its own ground again after a restart");
+        // A builder that could not get to it: the half-raised chapel keeps its ground; a hall with nothing laid gives its lot up.
+        Villages.rejectSite(v, "chapel", level.getGameTime());
+        Villages.Site still1 = Villages.siteFor(level, v, "chapel");
+        Villages.Site hall = Villages.siteFor(level, v, "hall");
+        Villages.rejectSite(v, "hall", level.getGameTime());
+        boolean hallNote = com.jrpetty.mcassistant.village.Ledger.note(v, "age.site.hall") != null;
+        Kit.log("[VT] sc22 a builder could not get to them: the chapel's ground " + (still1 == null ? "none" : still1.anchor().toShortString())
+            + "; the hall (nothing laid) at " + (hall == null ? "none" : hall.anchor().toShortString()) + ", its note kept " + hallNote);
+        ok.that(still1 != null && still1.anchor().equals(at), "the half-raised chapel keeps its ground");
+        ok.that(hall != null && !hallNote, "a hall with nothing laid gives its lot up");
+        boolean asked = Villages.needs(level, v).stream().anyMatch(x -> x.what().contains("chapel"));
+        Villages.noteProject(v, "chapel", level.getGameTime());
+        boolean still = Villages.needs(level, v).stream().anyMatch(x -> x.what().contains("chapel"));
+        Villages.forgetSitesForTests(v);
+        boolean note = com.jrpetty.mcassistant.village.Ledger.note(v, "age.site.chapel") != null;
+        Kit.log("[VT] sc22 the age asks for a chapel: " + asked + " before, " + still + " once it is up; its ground's note kept " + note);
+        ok.that(asked && !still && !note, "up: asked for no more, its note let go");
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
+    // ============================================================ [econ32d] the age's iron
+
+    /**
+     * [econ32d] The age's iron: a Diamond Age town of forty asks twice the Iron Age's iron of a town of twenty-four, not of
+     * forty (128 bars, not 160), however it grows. And its iron level, worked a few days for five ore while the age waits
+     * on iron, is left for the next iron level without waiting to be cut out; the mine's report says why. A rich week does
+     * not move it on.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "sc23_iron_pace")
+    public static void sc23_iron_pace(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, 6684000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0);
+        Kit.Expect ok = new Kit.Expect();
+        // The target capped.
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        clearStores(level, v);
+        Villages.forgetStock();
+        int cap = 2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(Villages.AGE_FOLK);
+        int iron = 0;
+        for (Villages.Need n : Villages.needs(level, v)) if (n.task() == Villages.Task.IRON) iron = n.amount();
+        Kit.log("[VT] sc23 the Diamond Age asks " + iron + " iron (the cap " + cap + ", a town of " + Villages.headcount(v) + ")");
+        ok.that(iron > 0 && iron <= cap, "the age's iron within the cap: " + iron + " of " + cap);
+        // The iron levels' pace.
+        int y = MineWorks.levelY(level, v, MineWorks.IRON);
+        MineWorksGameTests.tower(r, y - 3);
+        MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - y) / 3) + 1, null);
+        MineWorks.roomForTests(level, v, MineWorks.IRON);
+        MineWorks.oreForTests(level, v, MineWorks.IRON, 60);
+        long today = level.getDayTime() / 24000L;
+        com.jrpetty.mcassistant.entity.IronPace.daysForTests(v, (today - 2) + ":30;" + (today - 1) + ":30");
+        com.jrpetty.mcassistant.entity.IronPace.sinceForTests(v, today - 3);
+        boolean richMoved = com.jrpetty.mcassistant.entity.IronPace.tickForTests(level, v);
+        com.jrpetty.mcassistant.entity.IronPace.daysForTests(v, (today - 2) + ":3;" + (today - 1) + ":2");
+        com.jrpetty.mcassistant.entity.IronPace.sinceForTests(v, today - 3);
+        boolean poorMoved = com.jrpetty.mcassistant.entity.IronPace.tickForTests(level, v);
+        boolean spent = MineLevels.spentForTests(level, v, MineWorks.IRON);
+        List<String> plan = MineWorks.planForTests(level, v);
+        List<String> report = MineWorks.report(level, v);
+        String line = report.stream().filter(x -> x.startsWith("Iron from the iron levels")).findFirst().orElse("-");
+        Kit.log("[VT] sc23 a rich week (60 ore in 3 days): moved on " + richMoved + "; a poor one (5): moved on " + poorMoved + ", the iron level worked out " + spent
+            + "; plan " + plan + "; report: " + line);
+        ok.that(!richMoved, "a rich week stays");
+        ok.that(poorMoved && spent, "a poor week moves on to the next iron level");
+        ok.that(plan.stream().anyMatch(x -> x.contains("second iron")), "the second iron level planned: " + plan);
+        ok.that(line.contains("left for the next iron level"), "the report says why: " + line);
+        helper.assertTrue(ok.clean(), ok.summary());
+        MineWorksGameTests.done(helper);
+    }
+
+    // ============================================================ [econ32d] the age's building at the town's edge
+
+    /**
+     * [econ32d] An age's building no lot of the plan will take goes up at the town's edge once it has missed six looks:
+     * past the town's buildings, its door to the town, off the fields; never before.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc24_chapel_edge")
+    public static void sc24_chapel_edge(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        com.jrpetty.mcassistant.entity.AgeSites.resetForTests();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6688000, 150, 12, StationTask.FARM);
+        helper.assertTrue(!folk.isEmpty(), "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        Villages.Village vil = Villages.get(v);
+        Villages.Site early = com.jrpetty.mcassistant.entity.AgeSites.edgeForTests(level, vil, "chapel");
+        com.jrpetty.mcassistant.entity.AgeSites.bareForTests(v, "chapel", 5);
+        Villages.Site at = com.jrpetty.mcassistant.entity.AgeSites.edgeForTests(level, vil, "chapel");
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(early == null, "not at the first look with no lot");
+        ok.that(at != null, "at the town's edge after six looks with no lot");
+        if (at != null) {
+            BlockPos c = vil.centre();
+            int dx = at.anchor().getX() - c.getX(), dz = at.anchor().getZ() - c.getZ();
+            int far = 0;
+            for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(v))
+                if (!b.structure().equals("fortify")) far = Math.max(far, (int) Math.sqrt(b.anchor().distSqr(new BlockPos(c.getX(), b.anchor().getY(), c.getZ()))));
+            net.minecraft.core.Direction out = Math.abs(dx) >= Math.abs(dz) ? (dx > 0 ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST)
+                : (dz > 0 ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH);
+            Kit.log("[VT] sc24 the chapel at the town's edge: " + at.anchor().toShortString() + " (" + dx + ", " + dz + " from the heart, the furthest building "
+                + far + " out), its back " + at.facing() + ", on the fields " + Villages.onFarmland(v, dx, dz, 5, 11));
+            ok.that(Math.sqrt(dx * dx + dz * dz) > far, "past the town's buildings");
+            ok.that(at.facing() == out, "its back to the wilds, its door to the town: " + at.facing() + " vs " + out);
+            ok.that(!Villages.onFarmland(v, dx, dz, 5, 11), "off the fields");
+        }
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
+    /**
+     * [econ32d] While the age waits on the mine, a fifth of the town is kept at it (at most sixteen): the miners are not the
+     * trade with hands to spare for the infirmary, the diving or the kitchens. Not once the age asks nothing of the mine.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "sc25_miners_share")
+    public static void sc25_miners_share(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        com.jrpetty.mcassistant.entity.MineHands.forgetForTests();
+        List<VillageFolkEntity> folk = MineSiteGameTests.town(level, 6692000, 60, 10, StationTask.FARM);
+        helper.assertTrue(!folk.isEmpty(), "the town");
+        UUID v = folk.get(0).ownerId();
+        Villages.ageForTests(v, Villages.Age.DIAMOND);
+        boolean kept = com.jrpetty.mcassistant.entity.MineHands.kept(level, v);
+        double at60 = com.jrpetty.mcassistant.entity.MineHands.share(v, 60), at200 = com.jrpetty.mcassistant.entity.MineHands.share(v, 200);
+        for (int i = 0; i < folk.size(); i++) folk.get(i).setJob(i < 1 ? StationTask.MINE : StationTask.FARM);
+        double short1 = Villages.share(v, StationTask.MINE);
+        com.jrpetty.mcassistant.entity.MineHands.forgetForTests();
+        Villages.ageForTests(v, Villages.Age.WOOD);
+        boolean keptWood = com.jrpetty.mcassistant.entity.MineHands.kept(level, v);
+        double wood = com.jrpetty.mcassistant.entity.MineHands.share(v, 60);
+        Kit.log("[VT] sc25 the Diamond Age waits on the mine " + kept + ": the miners' share of 60 folk " + at60 + ", of 200 " + at200
+            + "; one miner of " + folk.size() + ": " + short1 + " over its share; the Wood Age kept " + keptWood + ", share " + wood);
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(kept && at60 == 12 && at200 == 16, "a fifth of the town at the mine, sixteen at most");
+        ok.that(short1 <= -0.5, "one miner is short of the mine's share: " + short1);
+        ok.that(!keptWood && wood == 0, "nothing kept once the age asks nothing of the mine");
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
+    /**
+     * [econ32d] The morning's traders leave the diamonds the next age asks for in the stores: a Diamond Age town with its
+     * own eight diamonds and eight more, and an empty treasury, sells none of them (the market's check compared the good's
+     * test with the diamond item, never true, and sold eight a morning down to the age's own count).
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc26_diamonds_kept")
+    public static void sc26_diamonds_kept(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        final int x = 6696000;
+        Kit.hold(level, x, Z, 24);
+        Kit.prepare(level, x, Z, 24);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        UUID id = v.id();
+        Villages.ageForTests(id, Villages.Age.DIAMOND);
+        List<BlockPos> stores = Villages.storeChests(level, id);
+        helper.assertTrue(!stores.isEmpty(), "the village has its stores");
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(stores.get(0));
+        int slot = -1;
+        for (int i = 0; i < box.getContainerSize() && slot < 0; i++) if (box.getItem(i).isEmpty()) slot = i;
+        helper.assertTrue(slot >= 0, "room in the stores");
+        box.setItem(slot, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND, 16));
+        Villages.forgetStock();
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        int kept = com.jrpetty.mcassistant.entity.AgeOres.diamondsKept(id);
+        int in = com.jrpetty.mcassistant.entity.Market.trade(level, v);
+        int left = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(net.minecraft.world.item.Items.DIAMOND));
+        Kit.log("[VT] sc26 the traders paid " + in + " coin; diamonds kept for the next age " + kept + ", left " + left + " of 16");
+        helper.assertTrue(kept >= 16 && left == 16, "the next age's diamonds stay in the stores: " + left + " of 16 (kept " + kept + ")");
+        helper.succeed();
+    }
+
+    // ============================================================ [econ32d] nobody on the headframe
+
+    /** Ground a folk stands on, a block or so from the pithead's floor, off the headframe, with a way to the works' way in. */
+    private static String ground(MineWorksGameTests.Rig r, VillageFolkEntity m, BlockPos p) {
+        ServerLevel level = r.level();
+        if (com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, r.v(), p)) return "on the headframe";
+        if (p.getY() > MineWorksGameTests.TOP + 1) return "above the pithead's floor (Y" + p.getY() + ")";
+        net.minecraft.world.level.block.state.BlockState under = level.getBlockState(p.below());
+        if (under.is(net.minecraft.tags.BlockTags.LOGS) || under.is(net.minecraft.tags.BlockTags.LEAVES) || under.is(net.minecraft.tags.BlockTags.FENCES)
+            || !under.isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) return "not on ground (" + under.getBlock() + ")";
+        // A way from it to the works' way in, the walk to the town (the rig's pithead stands on a tower over the flat).
+        BlockPos in = com.jrpetty.mcassistant.entity.MineRoof.cellsForTests(level, r.v())[3];
+        m.teleportTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
+        m.setOnGround(true);                                    // (as its next tick would find it: a path is only made from the ground)
+        net.minecraft.world.level.pathfinder.Path way = m.getNavigation().createPath(in, 1);
+        if (!p.equals(in) && (way == null || !way.canReach())) return "no way to the works' way in at " + in.toShortString();
+        return null;
+    }
+
+    /**
+     * [econ32d] The headframe: the miners' plot is the pithead's floor, not the top of the headframe's beams (where the
+     * heightmap put it); a miner put on the beams is put down on the pithead's floor within ten seconds by its own ticks; a
+     * miner found in the well is put out on ground; and with every cell round the pithead's stop blocked, a rider still
+     * steps out on ground further round, never on the headframe. Every cell a block or so from the floor, with a way to the
+     * works' way in (the walk to the town).
+     */
+    @GameTest(template = "empty", timeoutTicks = 1200, batch = "sc27_off_the_headframe")
+    public static void sc27_off_the_headframe(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = liftRig(helper, 6700000, 1);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        VillageFolkEntity m = r.miners().get(0);
+        com.jrpetty.mcassistant.entity.MineRoof.resetForTests();
+        Kit.Expect ok = new Kit.Expect();
+        BlockPos[] cells = com.jrpetty.mcassistant.entity.MineRoof.cellsForTests(level, v);
+        helper.assertTrue(cells != null, "the works");
+        int beams = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, r.sx(), r.sz());
+        BlockPos plot = MineWorks.pithead(level, v, new BlockPos(r.sx(), 0, r.sz()));
+        String floorWhy = ground(r, m, cells[0]), downWhy = ground(r, m, cells[1]);
+        Kit.log("[VT] sc27 the headframe's top at Y" + beams + "; the miners' plot " + (plot == null ? "none" : plot.toShortString()) + ", the pithead's floor "
+            + cells[0].toShortString() + " (" + (floorWhy == null ? "ground" : floorWhy) + "), put down at " + cells[1].toShortString() + " (" + (downWhy == null ? "ground" : downWhy) + ")");
+        ok.that(beams >= MineWorksGameTests.TOP + 3, "a headframe over the shaft: its top at Y" + beams);
+        ok.that(plot != null && plot.equals(cells[0]) && Math.abs(plot.getX() - r.sx()) <= 1 && Math.abs(plot.getZ() - r.sz()) <= 1, "the miners' plot is the pithead's floor: " + plot);
+        ok.that(floorWhy == null, "the pithead's floor is ground: " + floorWhy);
+        ok.that(downWhy == null, "the put-down cell is ground: " + downWhy);
+        // In the well, not riding: put out at the pithead, on ground.
+        com.jrpetty.mcassistant.entity.MineLift.done(m.getUUID());
+        m.teleportTo(r.sx() + 0.5, MineWorksGameTests.TOP - 3, r.sz() + 0.5);
+        com.jrpetty.mcassistant.entity.MineLift.watchForTests(level, v);
+        BlockPos out = m.blockPosition();
+        String outWhy = ground(r, m, out);
+        // Every cell round the pithead's stop fenced off: still out on ground further round.
+        com.jrpetty.mcassistant.entity.MineLift.Stop top = com.jrpetty.mcassistant.entity.MineLift.stops(v).get(0);
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) for (int dy = 0; dy <= 1; dy++) {
+            BlockPos p = top.board().offset(dx, dy, dz);
+            if (Math.max(Math.abs(p.getX() - r.sx()), Math.abs(p.getZ() - r.sz())) <= 1) continue;
+            if (level.getBlockState(p).isAir()) level.setBlock(p, Blocks.OAK_FENCE.defaultBlockState(), 2);
+        }
+        m.teleportTo(r.sx() + 0.5, MineWorksGameTests.TOP - 3, r.sz() + 0.5);
+        com.jrpetty.mcassistant.entity.MineLift.watchForTests(level, v);
+        BlockPos out2 = m.blockPosition();
+        boolean out2Head = com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, v, out2);
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) for (int dy = 0; dy <= 1; dy++) {
+            BlockPos p = top.board().offset(dx, dy, dz);
+            if (level.getBlockState(p).is(Blocks.OAK_FENCE)) level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+        }
+        String out2Why = out2Head ? "on the headframe" : ground(r, m, out2);    // (its way checked with the fences taken down again)
+        Kit.log("[VT] sc27 found in the well: put out at " + out.toShortString() + " (" + (outWhy == null ? "ground" : outWhy) + "); with the pithead fenced round, at "
+            + out2.toShortString() + " (" + (out2Why == null ? "ground" : out2Why) + ")");
+        ok.that(outWhy == null, "out of the well on ground: " + outWhy);
+        ok.that(out2Why == null, "out of the well on ground with the pithead's cells taken: " + out2Why);
+        // Stuck on the beams (its legs not its own): the guard's looks, a second apart, put it down on the third.
+        m.teleportTo(r.sx() + 0.5, beams, r.sz() + 0.5);
+        boolean first = false, second = false;
+        com.jrpetty.mcassistant.entity.MineRoof.checkForTests(m, level);
+        first = com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, v, m.blockPosition());
+        com.jrpetty.mcassistant.entity.MineRoof.checkForTests(m, level);
+        second = com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, v, m.blockPosition());
+        com.jrpetty.mcassistant.entity.MineRoof.checkForTests(m, level);
+        BlockPos put = m.blockPosition();
+        String putWhy = ground(r, m, put);
+        Kit.log("[VT] sc27 held on the beams: still up after one look " + first + ", two " + second + "; after three at " + put.toShortString()
+            + " (" + (putWhy == null ? "ground" : putWhy) + "), put down " + com.jrpetty.mcassistant.entity.MineRoof.DOWNS);
+        ok.that(first && second && com.jrpetty.mcassistant.entity.MineRoof.DOWNS == 1, "put down on the third look, not before");
+        ok.that(putWhy == null, "put down on ground: " + putWhy);
+        helper.assertTrue(ok.clean(), ok.summary());
+        // On the beams: down within ten seconds, by its own ticks.
+        m.teleportTo(r.sx() + 0.5, beams, r.sz() + 0.5);
+        final int[] tick = { 0 };
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            boolean up = com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, v, m.blockPosition())
+                || m.getBlockY() > MineWorksGameTests.TOP + 1 || !m.onGround();
+            if (up && tick[0] < 200) return false;
+            String why = up ? "still on the headframe" : ground(r, m, m.blockPosition());
+            Kit.log("[VT] sc27 put on the beams at Y" + beams + ": after " + tick[0] + " ticks at " + m.blockPosition().toShortString() + " ("
+                + (why == null ? "ground" : why) + "), put down " + com.jrpetty.mcassistant.entity.MineRoof.DOWNS);
+            helper.assertTrue(!up && tick[0] <= 200, "down off the headframe onto the pithead's ground within ten seconds: " + tick[0] + " ticks");
+            helper.assertTrue(why == null, "down on ground: " + why);
+            MineWorksGameTests.done(helper);
+            return true;
         });
     }
 }

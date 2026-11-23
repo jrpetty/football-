@@ -67,6 +67,12 @@ public final class Crafts {
 
     public static void resetForTests() { LAST.clear(); }
 
+    /** [biz30d] Ticks since this folk's last turn at its craft (-1 if it has had none yet). */
+    static int sinceTurn(VillageFolkEntity f) {
+        Integer t = LAST.get(f.getUUID());
+        return t == null ? -1 : f.tickCount - t;
+    }
+
     /** One piece of the craft's work, if one is due. Returns whether it did any. */
     public static boolean work(VillageFolkEntity f, ServerLevel level) {
         UUID village = f.ownerId();
@@ -478,6 +484,7 @@ public final class Crafts {
             // the age's iron, waits on no saving either (WatchKit.ironForTheWatch).
             if (!Craftsmanship.canMake(skill, it) && !WatchKit.forTheWatch(level, v, it)) continue;   // not the hand for it yet
             boolean diamond = w.metal() == Items.DIAMOND;
+            if (diamond && stock(level, v, s -> s.is(Items.DIAMOND)) - w.bars() < AgeOres.diamondsKept(v.id())) continue;   // [econ32d] the age's diamonds first
             if (diamond ? savingDiamonds : saving && it != Items.IRON_PICKAXE && it != Items.IRON_SWORD
                     && !WatchKit.ironForTheWatch(level, v, it)) continue;
             if (stock(level, v, s -> s.is(it)) >= w.keep()) continue;

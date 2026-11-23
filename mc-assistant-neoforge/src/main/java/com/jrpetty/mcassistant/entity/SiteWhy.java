@@ -31,19 +31,31 @@ public final class SiteWhy {
         now = new TreeMap<>();
     }
 
+    /** [econ32d] Is the lot being looked at big enough for the building? Its reasons are counted again under "big enough". */
+    private static boolean big;
+    private static Map<String, Integer> bigNow = new TreeMap<>();
+
     /** A look begins. */
     static void begin() {
         now = new TreeMap<>();
+        bigNow = new TreeMap<>();
+        big = false;
+    }
+
+    /** [econ32d] The next lot looked at, and whether the building fits it (Villages.siteFor). */
+    static void lot(boolean fits) {
+        big = fits;
     }
 
     /** A lot passed over, for this reason. */
     static void count(String why) {
         now.merge(why, 1, Integer::sum);
+        if (big) bigNow.merge(why, 1, Integer::sum);
     }
 
     /** The look is over: kept (and logged) if it found nothing. */
     static void end(UUID village, String project, boolean found, int candidates) {
-        String line = "of " + candidates + " lots: " + now;
+        String line = "of " + candidates + " lots: " + now + (bigNow.isEmpty() ? "" : "; of the lots big enough for it: " + bigNow);
         if (found) {
             Map<String, String> m = LAST.get(village);
             if (m != null) m.remove(project);

@@ -3646,6 +3646,84 @@ three storeys of two-room homes on one long lot.
   lists every block, every flat, who lives there and on what terms. (`/village flats stage` sets a
   furnished block out on a stage, for the pictures.)
 
+
+### Terraces
+
+A town that wants homes builds them the British way: **rows of houses that touch**, sharing their
+side walls along a street, one long front of brick with a continuous roof and a chimney stack on
+every party wall. There are three kinds, so a town's streets show who lives where.
+
+* **The workers' terrace** (from the Stone Age): four two-up two-down cottages in a row, in
+  mirrored pairs with their front doors side by side. Each has its front door straight onto the
+  street with a fanlight over it, the parlour's window beside it, a stone string course between the
+  storeys; inside, the hall and a straight stair up beside the party wall, the front parlour (an
+  armchair at a table with a cloth on it, a dresser, a rug) and through a doorway the back kitchen
+  (the range on the chimney wall, the bench, the copper under the stair, the chest under the
+  landing) with the back door to the yard; upstairs the front bedroom (the parents' pair of beds, a
+  chest) and the back bedroom (the children's two, a chest), a banister at the stairhead. Behind
+  each, a brick yard walled from its neighbours', with a coal bunker, a privy, a water butt and a
+  gate to the back lane. The end houses have windows in their end walls.
+* **The bay-fronted terrace** (from the Iron Age): three taller houses, each with a square bay
+  window under a lean-to slate roof that runs on over its porch, a front garden of flowers behind a
+  low brick wall and a gate, a hall up the side from the front door to the back door, the stair
+  beside it, the parlour in front (a table in the bay with an armchair either side, shelves, a
+  carpet) and the kitchen behind, two bedrooms upstairs and a dormer in the roof.
+* **The grand terrace** (in a town: the Iron Age and thirty folk): three Georgian town houses four
+  storeys high. Iron railings along the street round a flagged area with a lamp on a stone pier,
+  steps up to the front door under a tall fanlight, tall windows in three bays, a stone ground floor
+  and brick above, a stone band at every floor, iron balconettes before the first floor's windows,
+  a stone cornice and parapet with a low slate roof behind it, and the stacks up the party walls.
+  Inside: the hall up the side and the stair in two flights up the back, the dining room (a long
+  table under a chandelier, four chairs, shelves) and the kitchen on the raised ground floor, the
+  master bedroom on the first floor, and the children's and a servant's room on the second.
+* **Where.** A row needs a long street front: one of the long lots out along the avenues, turned
+  to face the avenue (its front doors on the avenue, its yards on the street behind), or two home
+  lots side by side facing the same street (every block of homes has a pair on its outer street).
+  So the avenues and streets fill with rows facing one another across the road.
+* **When, and which.** Whenever the town would build its next house, it weighs who is short of a
+  home of their standing (Wealth: a household's best-off grown folk): the homeless, and tenants
+  living below their standing. If well-off households want a town house and the place is a town, a
+  grand terrace goes on the builders' list ahead of the house; if comfortable households want a
+  better house and the town is in the Iron Age, a bay-fronted terrace; and if two or more
+  households want a home, a workers' terrace: four homes on the ground of two houses. One row at a
+  time. The status line says why ("a grand terrace of three homes on one lot ...: 3 well-off
+  households want a town house of its standing").
+* **On a hill.** Where the street climbs, every house steps with it: each stands level with the
+  street before its own door (at most two blocks above its neighbour), its party walls carried
+  down to the lower house's footing and up to the higher house's eaves, the lower roof running into
+  the higher house's wall and its gable showing above, the ground under each house made up or dug
+  out to its own floor. A row on a hill is a flight of houses, not one floor cut into the slope.
+* **Built honestly.** The builders raise a row like anything else, every block out of the stores,
+  a load at a time from the footing up. Once it stands the town's hands finish it house by house,
+  out of the stores: the brickwork faced in brick where the builders had to make do with stone (a
+  stretch at a time, the stone back into the stores), each front door painted its own colour (red,
+  black, green, teal, yellow, plum... a dye from the stores; never the same as the house next
+  door), the grand row's railings and balconettes in iron (the smith's bars), a chimney pot on each
+  house's flues (a flower pot or a decorated pot) and its hearth fire lit on the stack while
+  somebody lives there, and the number and name by every door ("No. 2 / Mill Lane / Cottages /
+  Tansy").
+* **Its name.** Each row is named for its street and its kind: Mill Lane Cottages, Mill Lane
+  Terrace, Mill Lane Place (and a second of a kind on the same street Row, Villas or Parade). Each
+  house has its number: "No. 3, Mill Lane Cottages" on a folk's card, the homes' book and the city
+  screen's Buildings page ("Mill Lane Cottages (workers' terrace): 3 of 4 houses lived in").
+* **Who lives where.** Every house of a row is a home on the books, let and sold like any house,
+  its rent by its size: a cottage a house's rent, a bay-fronted house a two-storey house's, a town
+  house a villa's. A household waiting for a home is offered a house in the row of its standing
+  first: the poor and those getting by a workers' cottage, the comfortable a bay-fronted house, the
+  well-off and wealthy a town house. A town house is only ever let to the well-off; a bay-fronted
+  house to anybody who can pay its rent; a cottage to anybody. A household renting below its
+  standing (a cottage, or a plain house, while it is well off) moves up into an empty house of its
+  kind's row, what it had put by toward its old house given back to it ("Tansy and Rook moved up
+  from No. 2, Mill Lane Cottages to No. 1, Elm Row Place, a grand terrace").
+* **Worth.** A house of a row is worth its share of what its row costs to build today (its blocks
+  at the town's prices and its builders' hours, reckoned each day), as the housing market prices
+  every house.
+* **Every bed counts.** Sixteen beds a workers' terrace, twelve a bay-fronted, fifteen a grand:
+  counted in the room the town has and the houses it plans.
+* **For the pictures** (operators): `/village terrace stage` sets the three rows out dressed on a
+  flat stage at your feet beside a paved street; `/village terrace stage slope` a workers' and a
+  bay-fronted row stepping up a street that climbs. (The drawings are made by
+  `tools/terrace_design.py`.)
 ### Knacks: what each folk chooses for itself
 
 As a folk grows in experience it earns **knack points**, one at each fifth level of the trade it is
@@ -15472,3 +15550,71 @@ works' round, instead of only when a load will not go in (then the load went on 
 - **The picks for the diamonds are made in measure:** no more iron picks for the diamonds in a day than the rack keeps.
 - **After the Diamond Age** comes the Nether Age, which asks for the gateway: ten obsidian (cut by a diamond pick out of the
   town's diamonds, from lava with a bucket of water), twice the Diamond Age's diamonds, the gateway itself and food.
+
+### The mine's cage (econ-32, round three)
+- **The cage.** Once the works are forty blocks deep and the headframe is up, the town cuts a well one block across down
+  the middle of the shaft's pillar, from the pithead to its deepest landing, and hangs a cage in it. The well's top is
+  capped with a trapdoor under the headframe, a chain hangs from the headframe's beam, the pillar round the well is made
+  good wherever a cave broke into it, and there is a pool of water at its foot. Every stop (the pithead, and the corner
+  landing of each level opened) has a window of iron bars onto the well and a lever on the landing's floor. A mine dug
+  before the cage gets one within seconds of its works being loaded.
+- **Riding it.** The cage (a trapdoor floor and roof with iron bars round, drawn as block displays) carries up to four at a
+  time from stop to stop at a block and a half a tick: the whole shaft in about five seconds. The chain rattles as it sets
+  off and a bell rings when it stops. Miners going to and from their level queue at the stop and ride. A miner who has
+  waited half a minute takes the stair, which is still there for when the cage is busy or the well is blocked.
+- **A player rides it by its levers and buttons, with no commands.** Pulling a stop's lever takes the cage down to the next
+  stop (from the deepest stop, back up to the pithead). The stone button beside the lever takes it up to the pithead (at
+  the pithead, down to the deepest stop). While the cage carries a player they are let fly, so the server does not kick
+  them for floating.
+- If something stands on a stop's own corner (a smelter's furnace), riders step out on the next clear cell of the landing,
+  and the lever and button are set on a clear cell of it. Idle for five seconds, the cage goes back up to the pithead.
+- **Safety.** Nobody is let into the well except riders in the cage. Anybody found in it outside the cage (a server stopped
+  mid-ride, a chunk unloaded under it) is put out at the nearest stop's landing; a fall down the well lands in the pool.
+- **The landings' cache.** While the works have a cage and the town has a hauler, the hauler sends each landing's chest
+  what it lacks of twelve meals and sixteen torches down the cage every morning. A miner at the end of a stint by daylight
+  (unhurt, its pack not full) walks to its level's landing, rests there a few seconds, takes a few meals and torches from
+  the chest and starts another stint, twice a shift at most, instead of climbing out.
+- **Shifts at the face.** Along the works' own tunnels a miner goes at a jog. The ore the age is waiting on takes more than
+  one miner in the works' share-out.
+- **The age's buildings keep their ground.** The lot an age's building was set out on is kept with the town, so after a
+  restart the half-raised building is finished where it stands instead of being begun again on another lot. Once a score
+  of its wall blocks stand there, a builder that cannot get to it does not give the lot up: the building is set aside a
+  few minutes and tried again (five times at most). A building with nothing laid takes another lot, as before.
+- The mine's report has a line for the cage (runs, riders) and for the cache, and the shifts line says where the works'
+  time goes: at the face, walking, in the cage, on the way out.
+
+### The Diamond Age finished (econ-32, round four)
+- **The age's iron stops climbing as the town grows.** What the Iron Age asks for in iron is sized to a town of
+  twenty-four (64 bars at most), like everything else the age asks for, and the Diamond Age asks twice that (128 bars at
+  most). It used to be sized to the whole town: a Diamond Age town of seventy was asked for over two hundred.
+- **A poor iron level is left for the next one sooner.** While the age is waiting on iron, the mine keeps count of the iron
+  ore cut on its iron levels day by day. Once a day, if the last seven days brought fewer than forty, the deepest iron
+  level being worked is counted worked out and the next iron level down is opened (or, with none left in the shaft's
+  reach, a new mine is looked for). A level just opened gets five days before it is judged. The mine's report says how
+  much iron the iron levels gave in the last seven days and why the works last moved on.
+- **The trapdoor over the well opens for the cage** as it comes up to the pithead and closes behind it when it goes down.
+- **The miners are kept while the age waits on the mine.** While the age asks for iron or diamonds, a fifth of the town
+  (sixteen at most) is the mine's share of hands, so the infirmary, the diving, the kitchens and the other trades that
+  take a hand from whichever trade has one to spare no longer take them from the mine. (A Diamond Age town went from
+  twelve miners to two in a fortnight that way, and its iron came in at ten a day.)
+- **The diamonds the next age asks for stay in the stores**: the market's morning sale, the watch's diamond kit and the
+  smith's diamond sword leave them be.
+- **An age's building finds its ground.** An age's building that has missed four looks for a lot on the walked streets
+  may take one whose street is walked dry (it was twelve looks, and a restart began the count again). If no lot of the
+  town's plan will take it at all after six looks (too big for every lot on its streets, its great lots under the fields,
+  the mine's ground or the wall's ring, across the river or on a cliff), it goes up at the town's edge instead: on level,
+  dry ground past the town's furthest building, its door to the town, off the fields, the mine, the wall's ring and the
+  railways, as a knight's manor is.
+- **The diamonds stay for the age.** A town famous for its gems holds its fair without the diamonds the age asks for, and
+  the morning's traders count the diamonds as the age does before they buy any (they used to buy eight a morning down to
+  the age's own count).
+- **The watch's armour keeps counting while the cave team is away.** The iron on the watch's and the cave team's backs
+  counts toward what the age asks for; while the cave team is out of reach, the most it came to in the last day or so
+  still counts, so the age's iron does not jump by forty bars every time they set off.
+- **Nobody stands on the mine's headframe.** The miners' place at the mine is the pithead's floor, not the top of the
+  headframe's beams. A folk put back on its plot stands on the floor; a rider stepping out of the cage, or anybody found
+  in the well, is put on solid ground (never on a log, a fence or leaves); and anybody found standing on the headframe
+  for a few seconds is put down on the pithead's floor.
+- **No terrace stub.** On a hillside town, no column of a terrace is left standing two or more blocks over three of the
+  columns beside it (a lot's corner at the square's edge was sometimes left as a stub a block across); it comes down to
+  the highest of them.

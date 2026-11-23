@@ -377,6 +377,13 @@ public final class BusinessBooks {
             .then(Commands.literal("books").then(Commands.argument("id", StringArgumentType.string()).executes(c -> booksCmd(c, false))))
             .then(Commands.literal("text").then(Commands.argument("id", StringArgumentType.string()).executes(c -> booksCmd(c, true))))
             // [biz30] a business's sales and costs dashboard (its owner's, an operator's; the public summary to others), or your first
+            .then(Commands.literal("stageshop").requires(src -> src.hasPermission(2))          // [biz30c] for the camera: a shop's weeks
+                .then(Commands.argument("days", IntegerArgumentType.integer(1, 60)).executes(c -> {
+                    if (!(c.getSource().getEntity() instanceof ServerPlayer sp)) return 0;
+                    String said = BizData.stageShop(sp, IntegerArgumentType.getInteger(c, "days"));
+                    c.getSource().sendSuccess(() -> Component.literal(said), true);
+                    return 1;
+                })))
             .then(Commands.literal("data").executes(c -> dataCmd(c, ""))
                 .then(Commands.argument("id", StringArgumentType.string()).executes(c -> dataCmd(c, StringArgumentType.getString(c, "id")))))
             .then(Commands.literal("audit").requires(s -> s.hasPermission(2)).executes(BusinessBooks::auditCmd))

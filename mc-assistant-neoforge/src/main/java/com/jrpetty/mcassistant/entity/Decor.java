@@ -295,8 +295,37 @@ public final class Decor {
     private static final Map<String, Room> ROOMS = new ConcurrentHashMap<>();
 
     static Room room(UUID village, Ledger.Building b) {
+        if (TerraceRows.HOUSE.equals(b.structure())) {               // [house34] a house of a terrace: its own part of its row's rooms
+            Ledger.Building row = TerraceRows.rowOf(village, b.anchor());
+            if (row != null) {
+                String rd = Ages.drawing(village, row);
+                return ROOMS.computeIfAbsent(b.anchor().asLong() + ":" + rd + ":" + row.facing() + ":house",
+                    k -> within(draw(rd, row), p -> TerraceRows.decorInside(village, b.anchor(), p), TerraceRows.frontDoor(village, b.anchor()), row.facing()));
+            }
+        }
         String drawing = Ages.drawing(village, b);
         return ROOMS.computeIfAbsent(b.anchor().asLong() + ":" + drawing + ":" + b.facing(), k -> draw(drawing, b));
+    }
+
+    /** [house34] A row's rooms cut down to one house's: what lies inside it, its own front door and the way in from it. */
+    private static Room within(Room r, java.util.function.Predicate<BlockPos> in, @Nullable BlockPos door, Direction facing) {
+        List<BlockPos> floor = new ArrayList<>();
+        for (BlockPos p : r.floor()) if (in.test(p)) floor.add(p);
+        Map<BlockPos, List<Direction>> walls = new HashMap<>();
+        for (Map.Entry<BlockPos, List<Direction>> e : r.walls().entrySet()) if (in.test(e.getKey())) walls.put(e.getKey(), e.getValue());
+        Set<BlockPos> clear = new HashSet<>(r.clear());
+        if (door != null) for (int k = 0; k <= 12; k++) clear.add(door.relative(facing, k));
+        List<BlockPos> windows = new ArrayList<>();
+        Map<BlockPos, BlockPos> sills = new HashMap<>();
+        for (BlockPos w : r.windows()) {
+            BlockPos sill = r.sills().get(w);
+            if (sill != null && in.test(sill)) { windows.add(w); sills.put(w, sill); }
+        }
+        List<BlockPos> chests = new ArrayList<>(), furniture = new ArrayList<>();
+        for (BlockPos c : r.chests()) if (in.test(c)) chests.add(c);
+        for (BlockPos f : r.furniture()) if (in.test(f)) furniture.add(f);
+        return new Room(List.copyOf(floor), Set.copyOf(floor), walls, clear, List.copyOf(windows), sills, door, List.copyOf(chests),
+            List.copyOf(furniture));
     }
 
     private static Room draw(String drawing, Ledger.Building b) {

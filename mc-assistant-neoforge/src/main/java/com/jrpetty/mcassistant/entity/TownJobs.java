@@ -87,6 +87,7 @@ public final class TownJobs {
         if (id == null || !fit(f, "") || busy(f) || PostStints.busy(f)) return false;
         if (f.stationTask() == AssistantEntity.StationTask.NONE && f.workZone() == null) return false;
         if (SmelterFuel.kept(level, f)) return false;                 // [econ32] the age's iron raw at its smelters
+        if (Enterprise.benchFirst(f)) return false;                   // [biz30d] its firm's shelf short: its bench first
         return !(f.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, id));
     }
 
@@ -159,6 +160,8 @@ public final class TownJobs {
             f.clearQueue();
             f.getNavigation().stop();
             f.brain("called to the town's work: " + what);
+            Business firm = Enterprise.employerOf(id, f);               // [biz30d] the log: a firm's hand called off its bench
+            if (firm != null) LOG_LIFE.info("[MCA-TOWNJOBS] {}: {}, a hand of {}, called to the town's work: {}", Villages.name(id), f.displayNameCap(), firm.name, what);
         }
         if (now - c.since > (works.startsWith("road/") ? ROAD_SHIFT : SHIFT)) {
             // Its turn is done: back to its own work, and the next call sends somebody else.
@@ -353,6 +356,7 @@ public final class TownJobs {
                 String why = !fit(g, works) ? "unfit" : ON.containsKey(g.getUUID()) && busy(g) ? "on other works"
                     : PostStints.busy(g) ? "post" : g.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id()) ? "mine kept"
                     : SmelterFuel.kept(level, g) ? "furnaces kept"                                        // [econ32]
+                    : Enterprise.benchFirst(g) ? "its firm's shelf short"                                // [biz30d]
                     : g.stationTask() == AssistantEntity.StationTask.NONE && g.workZone() == null ? "no trade yet" : "";
                 if (!why.isEmpty()) passed.merge(why, 1, Integer::sum);
             }
@@ -368,6 +372,10 @@ public final class TownJobs {
             AssistantEntity.StationTask trade = f.stationTask();
             if (trade == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id())) continue;   // [growth24] the age waits on the mine
             if (SmelterFuel.kept(level, f)) continue;                    // [econ32] the age's iron raw at the smelters
+            // [biz30d] A firm's hand whose firm's shelf is short is at its bench (Enterprise.benchFirst), not the town's works:
+            // a bakery's two hands were called out to washing lines, rain barrels and the green on the square eight times in a
+            // morning while its loaves ran out and the town's folk went without (the firm paying their wages all the while).
+            if (Enterprise.benchFirst(f)) continue;
             // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a
             // folk with no ground for it yet is just the hand to spare: see below.)
             if (trade == AssistantEntity.StationTask.NONE && f.workZone() == null) continue;

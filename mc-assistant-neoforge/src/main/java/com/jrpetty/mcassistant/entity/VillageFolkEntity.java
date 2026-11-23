@@ -155,6 +155,13 @@ public class VillageFolkEntity extends AssistantEntity {
      * settlement on top of the one they were already standing in.
      */
     public void joinVillage(UUID village, BlockPos centre) {
+        // [biz30c] Its purse goes with it: out of the town it leaves, into the one it joins (a household moving for work,
+        // a party taken in, a marriage). The census had seen the coin come and go by no booked way (ent15's drift).
+        UUID was = ownerId();
+        if (!village.equals(was) && purse() > 0) {
+            if (was != null) CoinCensus.flow(was, CoinCensus.Flow.MIGRANT_OUT, purse());
+            CoinCensus.flow(village, CoinCensus.Flow.MIGRANT_IN, purse());
+        }
         // [guard-kit] A guard going to live in another town leaves the watch's kit in its old town's stores.
         if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.GUARD) WatchKit.handBack(this, "leaving the town");
         if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.CAVE) CaveDwellers.handBack(this, "leaving the town");   // [caves]
@@ -347,6 +354,7 @@ public class VillageFolkEntity extends AssistantEntity {
     public void aiStep() {
         super.aiStep();
         if (level().isClientSide) return;
+        if (tickCount % 1200 == 611) Enterprise.idleHandLog(this);   // [biz30d] the log: a firm's hand kept off its bench
         FolkAction.tick(this);                                 // [anim] what its body is doing, for the client
         if (showcase) return;
         Elbowroom.tick(this);                                  // [vision27] not stood in another folk
@@ -393,6 +401,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // Lost underground with no way up it can walk (a mine run cut short, a fall into a cave): sent up
         // the nearest stairs, or to cut its own (MineStairs).
         if (tickCount % 100 == 71 && level() instanceof net.minecraft.server.level.ServerLevel below) MineStairs.lookForAWayUp(this, below);
+        if (tickCount % 20 == 7 && level() instanceof net.minecraft.server.level.ServerLevel roof) MineRoof.check(this, roof);   // [econ32d] off the headframe
         if (tickCount % 20 == 17) Footholds.passBy(this);      // [mines] its own steps and pillars taken down as it passes
         Park.tick(this);                                       // sat on a park bench, or on its way round the park
         Seats.tick(this);                                      // [townlife] sat down on its break or at a gathering (Seats)
@@ -3478,6 +3487,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (seekTheSeam()) return;                     // dig where the village's metal is
         growTheField();                                // a full field breaks new ground
         if (turnedToTheFields()) return;               // a hungry village needs farmers (busy or not)
+        if (movedOnFromDeadField()) return;            // [biz30c] a field that never took is given up (busy or not)
         PutAway.look(this);                            // [economy] midday (and the watch at dusk): the work put away, busy or not
         if (peekJob() != null) return;                 // already busy
         if (onShift() && Strays.tend(this)) return;    // [economy] the builders' stock it carries, back to the stores
@@ -4405,7 +4415,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 && !TownMine.onALead(village, zone.center(), worksLevel.getDayTime() / 24000L)) {
             BlockPos site = TownMine.siteOf(village);
             BlockPos head = site == null ? null : MineWorks.pithead(worksLevel, village, site);
-            if (head != null && (Math.abs(zone.center().getX() - head.getX()) > 1 || Math.abs(zone.center().getZ() - head.getZ()) > 1)) {
+            if (head != null && (Math.abs(zone.center().getX() - head.getX()) > 1 || Math.abs(zone.center().getZ() - head.getZ()) > 1
+                    || Math.abs(zone.center().getY() - head.getY()) > 2)) {   // [econ32d] a plot on the headframe's top brought down to the pithead's floor
                 assignPlot(WorkZone.around(head, radiusFor(StationTask.MINE), zone.depth()), patchNameFor(StationTask.MINE));
                 setAutonomous(true);
                 brain("to the pithead of the town's mine: the works");
@@ -5362,6 +5373,7 @@ public class VillageFolkEntity extends AssistantEntity {
         WorkZone mine = WorkZone.around(pos, plotRadius + 2, WorkZone.DEFAULT_DEPTH);
         // Ground we are deliberately leaving counts as somebody else's.
         if (avoidHere != null && mine.overlaps(avoidHere)) return true;
+        if (stationTask() == StationTask.FARM && onDeadField(mine)) return true;   // [biz30c] a field the town gave up as dead
         // [emerald] And a village of the game's villagers, and its margin, is theirs: no field, wood, pen or mine on it.
         if (VanillaVillages.within(level(), pos.getX(), pos.getZ(), plotRadius + VanillaVillages.MARGIN)) return true;
         java.util.List<AssistantEntity> crew =
@@ -6754,6 +6766,72 @@ public class VillageFolkEntity extends AssistantEntity {
      * <p>Only for the trades whose ground genuinely runs out. A field does not
      * run out; it comes round again.
      */
+    /** [biz30c] A farmer's field, when it got it, and when it was last looked over for any tilled ground. */
+    @Nullable private BlockPos deadFieldCentre;
+    private long deadFieldSince = -1;
+    private int deadFieldLook = -100000;
+    /** [biz30c] Fields given up as dead, by town: the field's centre and the game time it may be tried again. */
+    private static final java.util.Map<UUID, java.util.Map<Long, Long>> DEAD_FIELDS = new java.util.concurrent.ConcurrentHashMap<>();
+    /** [biz30c] A dead field is let be for five days. */
+    static final long DEAD_FIELD_REST = 5 * 24000L;
+
+    /**
+     * [biz30c] A field that never took: a farmer's ground with not one block of farmland and not one crop on it a day and a
+     * quarter after it was given it (ent15: three farmers on one 9x9 by the town that was never tilled, its farms with
+     * nothing to sell for days). It is given up (and kept off for five days by every farmer of the town) and the farmer
+     * looks for ground elsewhere, as a miner leaves a worked-out face. Looked at once a minute.
+     */
+    private boolean movedOnFromDeadField() {
+        if (stationTask() != StationTask.FARM || ownerId() == null) return false;
+        WorkZone z = workZone();
+        if (z == null) return false;
+        long now = level().getGameTime();
+        if (deadFieldCentre == null || !deadFieldCentre.equals(z.center())) {
+            deadFieldCentre = z.center();
+            deadFieldSince = now;
+            return false;
+        }
+        // [biz30d] Not while it is short of its kit (no hoe, it tills nothing): the clock starts again once it has it. A farmer
+        // without its hoe gave up field after field it could never have tilled, each new one fenced and given a bucket on the
+        // town's account.
+        if (!missingEssentials().isEmpty()) { deadFieldSince = now; return false; }
+        if (now - deadFieldSince < 30000L || tickCount - deadFieldLook < 1200) return false;
+        deadFieldLook = tickCount;
+        BlockPos c = z.center();
+        for (int x = z.min().getX(); x <= z.max().getX(); x++) {
+            for (int zz = z.min().getZ(); zz <= z.max().getZ(); zz++) {
+                for (int dy = -3; dy <= 3; dy++) {
+                    BlockState bs = level().getBlockState(new BlockPos(x, c.getY() + dy, zz));
+                    if (bs.is(Blocks.FARMLAND) || bs.getBlock() instanceof net.minecraft.world.level.block.CropBlock) return false;
+                }
+            }
+        }
+        DEAD_FIELDS.computeIfAbsent(ownerId(), k -> new java.util.concurrent.ConcurrentHashMap<>()).put(c.asLong(), now + DEAD_FIELD_REST);
+        avoidHere = z;
+        searchBearing++;
+        BlockPos site = findSite(StationTask.FARM, radiusFor(StationTask.FARM));
+        avoidHere = null;
+        deadFieldCentre = null;
+        if (site == null) return false;
+        setStation(site, StationTask.FARM);
+        assignPlot(WorkZone.around(site, radiusFor(StationTask.FARM), depthFor(StationTask.FARM, site)), patchNameFor(StationTask.FARM));
+        setAutonomous(true);
+        brain("gave up a field that never took at " + c.toShortString() + " for " + site.toShortString());
+        com.mojang.logging.LogUtils.getLogger().info("[MCA-FARM] {}: {} gave up a field that never took at {} for {}",   // [biz30d] the log
+            Villages.name(ownerId()), displayNameCap(), c.toShortString(), site.toShortString());
+        return true;
+    }
+
+    /** [biz30c] Is this ground on a field the town gave up as dead (and not yet rested)? */
+    private boolean onDeadField(WorkZone mine) {
+        java.util.Map<Long, Long> dead = ownerId() == null ? null : DEAD_FIELDS.get(ownerId());
+        if (dead == null || dead.isEmpty()) return false;
+        long now = level().getGameTime();
+        dead.values().removeIf(t -> t < now);
+        for (long l : dead.keySet()) if (mine.overlaps(WorkZone.around(BlockPos.of(l), FIELD_FIRST, WorkZone.DEFAULT_DEPTH))) return true;
+        return false;
+    }
+
     private boolean movedOnFromSpentGround() {
         StationTask trade = stationTask();
         if (trade != StationTask.MINE && trade != StationTask.WOOD) return false;
@@ -7188,6 +7266,9 @@ public class VillageFolkEntity extends AssistantEntity {
      * was wired through, a folk on a break carried on working and the break
      * was a thing you could only see in the code.
      */
+    /** [biz30d] Tests and the log: on a break now? */
+    boolean onBreakNow() { return onBreak(); }
+
     @Override
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
@@ -7291,6 +7372,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (peekJob() != null || !getNavigation().isDone()) return;
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         long now = level().getGameTime();
+        // [biz30d] A firm's hand works for its firm, which pays it: it does not take the lead on the town's buildings (a
+        // bakery's owner led the town's house from first load to last block while its shelf stood bare). Not while it holds
+        // a lead already: that it finishes or hands back as before.
+        if (Enterprise.employerOf(village, this) != null && !Villages.holdsTheLead(village, getUUID(), now)) { buildNote("build: at its firm's work"); return; }
         if (!Villages.projectDue(village, now) && !Villages.resuming(village, getUUID(), now)) { buildNote("build: not due yet"); return; }   // [growth22] back at its own: no gap
         // The first building no other crew is raising (a thriving town has two or three going up at once:
         // Villages.crewsAllowed), or the one this hand's crew is already on.

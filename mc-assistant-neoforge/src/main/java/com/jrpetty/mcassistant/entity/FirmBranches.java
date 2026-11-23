@@ -85,19 +85,21 @@ public final class FirmBranches {
         List<Business> mine = owned(village, f.getUUID());
         if (mine.isEmpty()) return null;
         long day = Businesses.today(level);
-        if (mine.size() >= cap(level, village, f.getUUID())) return "already has as many businesses as its success will carry (" + mine.size() + ")";
-        if (!fairShare(village, f.getUUID())) return "already holds its fair share of the town's businesses";
+        int cap = cap(level, village, f.getUUID());                   // [biz30c] the count is of its firms (its own farm or mine is its trade)
+        if (mine.size() >= cap) return "they run " + mine.size() + (mine.size() == 1 ? " firm" : " firms") + ", and their success carries " + cap
+            + " so far (one more for every four good weeks)";
+        if (!fairShare(village, f.getUUID())) return "they already hold a fair share of the town's firms";
         long month = 0;
         for (Business b : mine) {
-            if (day - b.opened < SETTLED) return "its " + b.name + " is still finding its feet";
-            if (b.last(day, 14).net() < 0) return "its " + b.name + " is losing money";
+            if (day - b.opened < SETTLED) return b.name + " is still finding its feet";
+            if (b.last(day, 14).net() < 0) return b.name + " is losing money";
             month += b.last(day, 28).net();
         }
-        if (month <= 0) return "its businesses have not paid their way this month";
+        if (month <= 0) return "their firms have not paid their way this month";
         // [biz30] its books' trade (BizData's): fewer buyers this week than last by a third, it waits to see why
         long now = 0, then = 0;
         for (Business b : mine) { now += b.last(day, 7).customers; then += b.last(day - 7, 7).customers; }
-        if (then >= 6 && now * 3 < then * 2) return "its trade fell off this week (" + now + " customers against " + then + ")";
+        if (then >= 6 && now * 3 < then * 2) return "their trade fell off this week (" + now + " customers against " + then + ")";
         return null;
     }
 

@@ -373,6 +373,9 @@ public final class Villages {
             case "manor" -> "a manor house";
             case "belltower" -> "the bell tower";
             case "flats", "flats4", "flats_old", "flats4_old" -> "a block of flats";   // [flats]
+            case "terrace" -> "a workers' terrace";               // [house34] (TerraceRows)
+            case "terrace2" -> "a bay-fronted terrace";           // [house34]
+            case "terrace3" -> "a grand terrace";                 // [house34]
             case "pitch" -> "the football pitch";                 // [batchC]
             case "range" -> "the archery range";                  // [batchC]
             case "postoffice" -> "the post office";               // [batchF]
@@ -1071,6 +1074,11 @@ public final class Villages {
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
             : CraftScale.most(villageId, slot.trade(), total, slot.max())       // [roles-b] the crafts grow with the town
                 + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade()) + (int) Math.ceil(ways);
+        // [econ32d] While the age waits on the mine, a fifth of the town at it (MineHands.share): never spare for another trade.
+        if (slot.trade() == AssistantEntity.StationTask.MINE) {
+            double kept = MineHands.share(villageId, total);
+            if (kept > t) { t = kept; max = Math.max(max, (int) Math.ceil(kept)); }
+        }
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
         double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null
             ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId)        // [econ-store] and its assistants and stock keeper
@@ -1308,8 +1316,11 @@ public final class Villages {
                 // Enough metal to put the watch in armour and a decent tool in
                 // every hand — which is what "the Iron Age" is FOR, rather
                 // than a round number somebody picked.
+                // [econ32d] Sized to a town of AGE_FOLK, as the timber and the stone are: the watch of a town of twenty-four in
+                // armour and the smith's stock (sixty-four bars at most). Sized to the whole town it climbed away from the
+                // miners as the town grew (a Diamond Age town of fifty-five wanted 208, of sixty-two 234).
                 need(wants, level, v, "iron", Task.IRON,
-                    com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk));
+                    com.jrpetty.mcassistant.village.VillageMath.ironWanted(ageFolk));
                 if (built(villageId, "workshop") < 1) wants.add(new Need("a workshop", Task.BUILD, 1));
                 if (built(villageId, "watchtower") < 1) wants.add(new Need("a watchtower", Task.BUILD, 1));
                 if (built(villageId, "market") < 1) wants.add(new Need("a market", Task.BUILD, 1));
@@ -1322,7 +1333,7 @@ public final class Villages {
                 // a head, nine hundred and sixty for a village of forty), which is a wall and
                 // not a goal: the best real-terrain village held nine.
                 need(wants, level, v, "iron", Task.IRON,
-                    2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk));
+                    2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(ageFolk));   // [econ32d] 128 bars at most
                 if (built(villageId, "lighthouse") < 1) wants.add(new Need("a lighthouse", Task.BUILD, 1));
                 if (built(villageId, "chapel") < 1) wants.add(new Need("a chapel", Task.BUILD, 1));
                 need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
@@ -1659,6 +1670,7 @@ public final class Villages {
         if (!"colony".equals(structure) && !"guesthouse".equals(structure)) tell(villageId, gameTime / 24000L, spoken(structure) + " went up");
         LAST_PROJECT.put(villageId, gameTime);
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
+        AgeSites.forget(villageId, structure);                        // [econ32c] up: its ground's note let go
         Council.built(villageId, structure);
         Map<String, Site> pending = SITES.get(villageId);
         Site raised = pending == null ? null : pending.get(structure);
@@ -1822,7 +1834,8 @@ public final class Villages {
         // [perks] and a wonder whose dues are laid by, before the next great work (Wonders.wanted)
         return requestedFirst(villageId, WarWorks.wanted(villageId,
             KnightManors.wanted(villageId, Civics.wanted(villageId, Wonders.wanted(villageId, Flats.wanted(villageId,   // [civic-land] a knight's manor
-                ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId))))))));
+                TerraceRows.wanted(villageId,                                                                       // [house34] a terrace before the house
+                ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId)))))))));
     }
 
     /** The buildings an age asks for before the next (Villages.needs): the wall, the smeltery and the hall;
@@ -2150,7 +2163,8 @@ public final class Villages {
     public static int bedsPlanned(UUID villageId) {
         return com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE * built(villageId, "house")
             + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor")
-            + Flats.bedsPlanned(villageId);                         // [flats] nine a block of flats
+            + Flats.bedsPlanned(villageId)                          // [flats] nine a block of flats
+            + TerraceRows.bedsPlanned(villageId);                   // [house34] every bed of its terraces
     }
 
     /**
@@ -2258,7 +2272,8 @@ public final class Villages {
         return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall")
             + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor")
             + 2 * com.jrpetty.mcassistant.village.Ledger.grownCount(villageId)
-            + Flats.bedsPlanned(villageId);                         // [flats]
+            + Flats.bedsPlanned(villageId)                          // [flats]
+            + TerraceRows.bedsPlanned(villageId);                   // [house34]
     }
 
     /**
@@ -2354,6 +2369,7 @@ public final class Villages {
                 + folk + " folk";
             case "manor" -> "a manor house, six beds under a slate roof: the best homes a town of the Iron Age has";
             case "flats" -> Flats.why(villageId);                  // [flats]
+            case "terrace", "terrace2", "terrace3" -> TerraceRows.why(villageId, project);   // [house34]
             case "pitch" -> Pitch.why(villageId);                  // [batchC]
             case "range" -> Archery.why(villageId);                // [batchC]
             case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";
@@ -2612,6 +2628,12 @@ public final class Villages {
     /** Put back where a building stands, from what a folk remembers (the first to load wins). */
     public static void rememberBuiltAt(UUID villageId, String structure, BlockPos at) {
         BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).putIfAbsent(structure, at.immutable());
+    }
+
+    /** [econ32c] Tests: the sites of the buildings going up forgotten, as a restart forgets them. */
+    public static void forgetSitesForTests(UUID villageId) {
+        SITES.remove(villageId);
+        LOT_TAKEN.remove(villageId);
     }
 
     /** Tests: say where a building stands. */
@@ -3016,6 +3038,12 @@ public final class Villages {
         Map<String, Site> pending = SITES.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>());
         Site have = pending.get(project);
         if (have != null) return have;
+        // [econ32c] An age's building begun before a restart: its ground again, not a new lot.
+        Site kept = AgeSites.kept(villageId, project);
+        if (kept != null && built(villageId, project) < 1) {
+            holdPrivateSite(villageId, project, kept);
+            return kept;
+        }
         // [city26] No lot is chosen while the founding is still making the town's ground: a site claimed then stood on the
         // ground as it was (its floor measured from it), and the way in to its door kept the levelling off that street.
         if (Founding.shaping(level, v.centre(), 16)) return null;
@@ -3080,6 +3108,7 @@ public final class Villages {
             int enough = project.equals("lighthouse") ? 24 : 6;         // [econ32b] the lighthouse looks further for the water's edge
             for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : places) {
                 if (valid >= enough) break;
+                SiteWhy.lot(half[0] <= lot.halfAcross() && half[1] <= lot.halfDeep());   // [econ32d] the big enough lots' reasons too
                 if (!CityGrowth.laidOut(villageId, lot)) { SiteWhy.count("ring not laid out"); continue; }     // [city26] only the rings of the plan laid out so far
                 index++;
                 boolean spoken = false;
@@ -3120,7 +3149,8 @@ public final class Villages {
                 // [city26] A lot whose street the town walks to is not too high or low for it, however far above the
                 // heart it stands (a hill town's terraces); the height rule is for a plateau nobody walks to.
                 boolean walked = CityPlan.reaches(level, v, lot);
-                BlockPos ground = groundFor(level, x, z, hx, hz, true, walked ? Integer.MIN_VALUE : heartGround, laps,
+                BlockPos ground = TerraceRows.isRow(project) ? TerraceRows.ground(level, villageId, project, x, z, back)   // [house34] each house at its street's height
+                    : groundFor(level, x, z, hx, hz, true, walked ? Integer.MIN_VALUE : heartGround, laps,
                     great ? 4 : 2, whyNot(villageId));
                 if (ground == null) { SiteWhy.count("ground (wet, cliff, height, built)"); continue; }
                 if (Floods.lowGround(villageId, ground)) { SiteWhy.count("flood ground"); continue; }     // [disasters] not on the low ground the river came over
@@ -3140,13 +3170,18 @@ public final class Villages {
             }
             SiteWhy.end(villageId, project, site != null, places.size());     // [econ32b]
             CityPlan.looked(villageId, site != null, offWalk && !waiting);     // [city9]
-            AgeSites.looked(villageId, project, site != null, offWalk && !waiting);   // [econ32b] an age's building keeps its own count
+            // [econ32b] an age's building keeps its own count; [econ32d] a look with a lot still loading counts all the same (a
+            // Diamond Age town's far lots were forever loading, and its chapel looked forty times without its count moving)
+            AgeSites.looked(villageId, project, site != null, offWalk);
             CityGrowth.looked(level, v, project, site != null, waiting);       // [city26] full: the next ring laid out
             if (site != null) {
                 for (long cell : best.cells()) taken.add(cell);
             } else if (!waiting && free > 0) {
                 LAPS.merge(villageId, 1, Integer::sum);         // a whole look and nothing: less particular next time
             }
+            // [econ32d] An age's building no lot of the plan will take (too big for the lots on its streets, the great lots under
+            // fields, the mine, the wall's ring or over the water) goes up at the town's edge after a while (AgeSites.edge).
+            if (site == null && valid == 0 && !waiting) site = AgeSites.edge(level, v, project);
         }
         // [mine7] Nothing goes up on a mine's ground (a manor's land, a shed or an office by the water, out past the plan).
         if (site != null && !project.equals("fortify")) {
@@ -3160,6 +3195,8 @@ public final class Villages {
             }
         }
         if (site != null) pending.put(project, site);
+        if (site != null) TerraceRows.chosen(villageId, project, site);   // [house34] a row's steps kept with its lot
+        if (site != null) AgeSites.keep(villageId, project, site);   // [econ32c] kept over a restart
         return site;
     }
 
@@ -3293,8 +3330,17 @@ public final class Villages {
     /** The builders could not get to this lot: give it up, never pick it again,
      *  and have another look in half a minute. */
     public static void rejectSite(UUID villageId, String project, long gameTime) {
+        // [econ32c] An age's building begun on its ground is not given up for a builder that could not get to it once (its
+        // own walls in the way of a path from where a restart left the builder): set aside a few minutes, its ground kept,
+        // up to a few times.
+        if (AgeSites.holdGround(villageId, project)) {
+            crewDone(villageId, project);
+            defer(villageId, project, gameTime + 2400L, "the builders could not get to its ground just now");
+            return;
+        }
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);
+        AgeSites.forget(villageId, project);                          // [econ32c] its ground given up
         if (gone != null) {
             Restore.abandoned(villageId, new com.jrpetty.mcassistant.village.Ledger.Building(project, gone.anchor(), gone.facing()), gameTime);   // [integrity] what was laid of it comes down
             why(whyNot(villageId), TAKEN);

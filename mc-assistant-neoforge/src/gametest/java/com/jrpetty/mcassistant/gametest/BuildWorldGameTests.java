@@ -853,6 +853,19 @@ public class BuildWorldGameTests {
             return level.getBlockState(q).isCollisionShapeFullBlock(level, q);
         }
 
+        /** [house34] Is this across the drawing's own ground (a drawing twenty-two across runs dx -10 to +11, not -11)? */
+        boolean acrossDrawing(BlockPos q) {
+            int ox = q.getX() - a.getX(), oz = q.getZ() - a.getZ();
+            int dx = ox * right.getStepX() + oz * right.getStepZ();
+            int lo = 0, hi = 0;
+            for (Blueprints.Cell c : Blueprints.cells(name)) {
+                if (c.h() > 0) continue;
+                lo = Math.min(lo, c.dx());
+                hi = Math.max(hi, c.dx());
+            }
+            return dx >= lo && dx <= hi;
+        }
+
         /** Nothing of the lot left inside: no earth, sand, gravel, snow, grass, leaves, wood or water. */
         void inside(List<Seen> out) {
             for (int dx = -gx; dx <= gx; dx++) {
@@ -860,6 +873,7 @@ public class BuildWorldGameTests {
                     for (int dy = 0; dy <= top + 1; dy++) {
                         BlockPos q = a.offset(dx, dy, dz);
                         if (at.containsKey(q)) continue;
+                        if (!acrossDrawing(q)) continue;                    // [house34] an even width: its ground is one off the middle
                         BlockState st = level.getBlockState(q);
                         if (st.isAir()) continue;
                         boolean wild = BuildGoal.isWildPlant(st) || st.is(Blocks.SNOW) || st.is(Blocks.SNOW_BLOCK)

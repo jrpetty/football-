@@ -107,6 +107,8 @@ public final class Visitors {
         long lastSaid;
         /** When it was last seen about (its tick): a visitor killed or lost is let go of after a while. */
         long seen;
+        /** [biz30c] Its purse as last seen: the census counts it while it is out of the loaded world. */
+        int purse;
 
         void save(CompoundTag t) {
             t.putString("kind", kind.name());
@@ -122,6 +124,7 @@ public final class Visitors {
             t.putString("wares", wares);
             t.putBoolean("told", told);
             t.putInt("spent", spent);
+            t.putInt("purse", purse);
         }
 
         @Nullable
@@ -145,6 +148,7 @@ public final class Visitors {
             v.wares = t.getString("wares");
             v.told = t.getBoolean("told");
             v.spent = t.getInt("spent");
+            v.purse = t.getInt("purse");
             return v;
         }
     }
@@ -164,12 +168,15 @@ public final class Visitors {
 
     /** The visitors about, by their ids (filled as they tick: a visitor loaded from disk is read again). */
     private static final Map<UUID, Visit> VISITS = new ConcurrentHashMap<>();
+    /** [biz30c] Visits let go of while out of the loaded world, their purses booked out of the census (booked in again if they come back). */
+    private static final java.util.Set<Visit> LET_GO = ConcurrentHashMap.newKeySet();
     /** Folk who heard the bard, and the day; and folk who had a friend to stay, and the day (their spirits). */
     private static final Map<UUID, Long> HEARD = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> VISITED = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         VISITS.clear();
+        LET_GO.clear();
         HEARD.clear();
         VISITED.clear();
         Bard.resetForTests();
@@ -194,7 +201,14 @@ public final class Visitors {
         // A visitor not seen for a few minutes (killed on the road, or its ground unloaded) is let go of here;
         // one that is only unloaded is read again from its own saved data when it next ticks.
         long now = level.getGameTime();
-        VISITS.values().removeIf(x -> x.town.equals(v.id()) && x.seen > 0 && now - x.seen > 6000L);
+        VISITS.values().removeIf(x -> {
+            boolean go = x.town.equals(v.id()) && x.seen > 0 && now - x.seen > 6000L;
+            if (go && x.purse > 0) {                                     // [biz30c] its purse out of the census with it
+                CoinCensus.flow(x.town, CoinCensus.Flow.VISITOR_OUT, x.purse);
+                LET_GO.add(x);
+            }
+            return go;
+        });
         Bard.consider(level, v, day, t);
         Tourists.consider(level, v, day, t);
         Merchants.consider(level, v, day, t);
@@ -209,7 +223,27 @@ public final class Visitors {
 
     /** [trade-world] A visitor gone with no walk to the edge (a ship's people gone aboard with it): let go of. */
     static void forget(UUID id) {
-        VISITS.remove(id);
+        Visit v = VISITS.remove(id);
+        if (v != null) {                                                // [biz30c] its purse away with it (a ship's crew aboard)
+            net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+            int purse = server != null && server.overworld().getEntity(id) instanceof VillageFolkEntity f ? f.purse() : v.purse;
+            if (purse > 0) CoinCensus.flow(v.town, CoinCensus.Flow.VISITOR_OUT, purse);
+        }
+    }
+
+    /**
+     * [biz30c] The visitors' purses in a town, for the census: each as it is now if it is about, else as last seen (out of
+     * the loaded world its coin is still the town's to count, till it is let go of with its purse booked out).
+     */
+    public static long pursesPence(ServerLevel level, UUID town) {
+        long n = 0;
+        for (Map.Entry<UUID, Visit> e : VISITS.entrySet()) {
+            Visit v = e.getValue();
+            if (!v.town.equals(town)) continue;
+            if (level.getEntity(e.getKey()) instanceof VillageFolkEntity f && f.isAlive()) v.purse = f.purse();
+            n += v.purse * 100L;
+        }
+        return n;
     }
 
     /** Is this folk a visitor (no resident of anywhere)? */
@@ -224,7 +258,13 @@ public final class Visitors {
         if (v != null) return v;
         CompoundTag t = f.getPersistentData().getCompound(DATA);
         v = Visit.load(t);
-        if (v != null) VISITS.put(f.getUUID(), v);
+        if (v != null) {
+            VISITS.put(f.getUUID(), v);
+            v.purse = f.purse();
+            final Visit back = v;
+            boolean wasLetGo = LET_GO.removeIf(x -> x.town != null && x.town.equals(back.town) && x.arrived == back.arrived && x.name.equals(back.name));
+            if (wasLetGo && v.purse > 0) CoinCensus.flow(v.town, CoinCensus.Flow.VISITOR_IN, v.purse);   // [biz30c] back in the census (it was let go of)
+        }
         return v;
     }
 
@@ -301,6 +341,7 @@ public final class Visitors {
         vis.arrived = day;
         vis.leave = day + nights;
         vis.purse0 = purse;
+        vis.purse = purse;
         vis.seen = level.getGameTime();
         VISITS.put(f.getUUID(), vis);
         save(f, vis);

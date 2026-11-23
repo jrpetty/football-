@@ -929,6 +929,7 @@ public final class AdminTools {
     public static int renovate(ServerLevel level, Villages.Village v, Ledger.Building b) {
         int n = Renovation.renovateNow(level, v, b);
         Ages.now(level, v, b, Villages.ageOf(v.id()));
+        if (TerraceRows.isRow(b.structure())) n += TerraceRows.dress(level, v, b, true);   // [house34] a row's finishing, at once
         return n;
     }
 

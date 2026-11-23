@@ -60,11 +60,35 @@ public final class Sellers {
             // [econ-1e] Priced to compete: a little under the town's own counter (which has the better name and the shorter walk,
             // and won every tie: a firm at the going price sold nothing), so long as that pays its makings and a tenth. A firm
             // whose makings cost it more than that (it bought dear) cannot, and sells dear.
-            p = Math.max(going * UNDERCUT, makings * (1 + Math.min(b.markup, Businesses.LEAST_MARKUP)));
+            p = Math.max(alone(level, village, b, one) ? Math.max(going, worth(village, one)) : going * UNDERCUT,
+                makings * (1 + Math.min(b.markup, Businesses.LEAST_MARKUP)));
         }
         p = Math.max(p, going * LEAST_OF_GOING);
         p = Math.min(p, going * Businesses.MOST_OVER_GOING);
         return Math.max(0.01, p);
+    }
+
+    /**
+     * [biz30d] Is this firm the only one with the ware to sell (the town's counter has none of its own, no other firm any)?
+     * Then it has nobody to undercut: it asks the going price, or what a buyer expects a made thing to cost (its makings and
+     * its maker's time, ValueAdded) if that is more. The going price read the bakery's own loaves bonded in the stores as the
+     * market's glut (bread at 0.83 of its worth, three wheat at 0.95c and the loaf at 1.02c): it sold thirty-five loaves a
+     * day a tenth under that, nobody else selling bread, and lost money on every week's wages.
+     */
+    static boolean alone(ServerLevel level, UUID village, Business b, ItemStack one) {
+        String key = Stockroom.key(one);
+        if (Bonded.marketOwn(level, village, key) > 0) return false;
+        for (Business o : Enterprise.open(village)) {
+            if (o == b) continue;
+            Business.Lot l = o.stock.get(key);
+            if (l != null && l.qty > 0) return false;
+        }
+        return true;
+    }
+
+    /** [biz30d] What a buyer expects one of this made thing to cost here (Purchases.expects): its worth at the price level. */
+    static double worth(UUID village, ItemStack one) {
+        return ValueAdded.worth(village, one) * MarketMaker.priceLevel(village);
     }
 
     /**

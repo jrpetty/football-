@@ -236,7 +236,10 @@ public final class MineDemand {
             if (bestOre != null) {
                 why.put(f.getUUID(), bestOre);
                 sent.merge(bestOre, 1, Integer::sum);
-                for (Ore o : Ore.values()) left.put(o, left.get(o) * (1.0 - 0.85 * rich(o, best.y(), mountain, badlands)));
+                // [econ32c] The age's own ore wants more than one miner: each sent takes less of its want off (a Diamond Age
+                // town two hundred iron short had one miner of twelve on the iron and brought in ten a day).
+                java.util.Set<Ore> ageOres = AgeOres.of(v);
+                for (Ore o : Ore.values()) left.put(o, left.get(o) * (1.0 - (ageOres.contains(o) ? 0.3 : 0.85) * rich(o, best.y(), mountain, badlands)));
             }
         }
         FOR.put(v, why);
