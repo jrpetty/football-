@@ -188,7 +188,7 @@ public final class PaPersona {
             if (recent != null) on.removeIf(recent::has);
             if (!on.isEmpty()) return from(on, d, recent);
         }
-        if (t.serious() < 0.9 && d.nextInt(100) < LOOK_SHARE_PERCENT) {
+        if (t.serious() < 0.9 && !key.startsWith("comeback.") && d.nextInt(100) < LOOK_SHARE_PERCENT) {   // an answer answers: no look aside
             boolean gloomy = corner(t, d) == Corner.GLOOMY;
             List<String> pool = new ArrayList<>();
             if (gloomy) {

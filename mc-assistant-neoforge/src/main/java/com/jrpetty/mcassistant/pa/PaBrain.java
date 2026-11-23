@@ -213,7 +213,7 @@ public final class PaBrain {
             if (!res.isEmpty()) PaTalk.comment(a, 2, res);
             return;
         }
-        String line = PaPhrases.line(last ? "done" : "step", a.personality(), a.getRandom()::nextInt, "did", PaPhrases.did(cur.label), "job", cur.label);
+        String line = PaTalk.line(a, last ? "done" : "step", "did", PaPhrases.did(cur.label), "job", cur.label);
         if (!res.isEmpty()) line = res + " " + (last ? "That's everything." : "");
         if (last) PaTalk.reply(a, line.trim());
         else PaTalk.comment(a, 1, line.trim());
@@ -650,7 +650,7 @@ public final class PaBrain {
         PaData.Rec r = a.rec();
         if (r != null && r.chatty <= 0) return;
         if (a.tickCount - a.mind.lastSaid < 200) return;
-        PaTalk.reply(a, PaPhrases.line(key.equals("fight") ? "threat" : "autohelp", a.personality(), a.getRandom()::nextInt, "what", what),
+        PaTalk.reply(a, PaTalk.line(a, key.equals("fight") ? "threat" : "autohelp", "what", what),
             List.of(new Choice("Thanks", "thanks"), new Choice("Don't do that", "#veto " + key)));
     }
 }
