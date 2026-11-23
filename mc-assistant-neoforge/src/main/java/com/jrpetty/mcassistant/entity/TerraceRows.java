@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *     street, a yard behind each with its coal bunker, privy and gate to the back lane, a stack up every party wall.
  *     From the Stone Age, for the working households: the poor and those getting by;</li>
  * <li><b>the bay-fronted terrace</b> ({@code terrace2}): three taller houses with bay windows, porches, front gardens
- *     behind low walls and dormers in the roof, for the comfortable, once the place is a village;</li>
+ *     behind low walls and dormers in the roof, for the comfortable, from the Iron Age;</li>
  * <li><b>the grand terrace</b> ({@code terrace3}): three Georgian town houses four storeys high, steps up to the door,
  *     iron railings round the area, tall windows, a cornice and parapet: for the well-off and the wealthy of a town.</li>
  * </ul>
@@ -712,8 +712,8 @@ public final class TerraceRows {
     /**
      * Villages.projectsWanted: when the town wants a house, the row its households are short of goes ahead of it: a
      * grand terrace in a town (the Iron Age and thirty folk) with well-off households and no town house for them, a
-     * bay-fronted terrace in a village with comfortable households wanting, and otherwise, from the Stone Age, a workers'
-     * terrace: four homes on the ground of two houses. One row at a time.
+     * bay-fronted terrace from the Iron Age with comfortable households wanting, and otherwise, from the Stone Age, a
+     * workers' terrace: four homes on the ground of two houses. One row at a time.
      */
     public static List<String> wanted(UUID village, List<String> projects) {
         int house = projects.indexOf("house");
@@ -761,7 +761,8 @@ public final class TerraceRows {
         if (rank.ordinal() >= Villages.Rank.TOWN.ordinal() && want[2] > free[2]) {
             pick = Tier.GRAND;
             why = want[2] + (want[2] == 1 ? " well-off household wants" : " well-off households want") + " a town house of its standing";
-        } else if (rank.ordinal() >= Villages.Rank.VILLAGE.ordinal() && want[1] > free[1]) {
+        } else if (rank.ordinal() >= Villages.Rank.VILLAGE.ordinal() && Villages.ageOf(village).ordinal() >= Villages.Age.IRON.ordinal()
+                && want[1] > free[1]) {
             pick = Tier.BAY;
             why = want[1] + (want[1] == 1 ? " comfortable household wants" : " comfortable households want") + " a house with a garden";
         } else if (want[0] + want[1] + want[2] - free[0] - free[1] - free[2] >= 2) {
@@ -917,7 +918,7 @@ public final class TerraceRows {
         // the grand row's railings and balconettes, the smith's iron
         if (t == Tier.GRAND) {
             for (BuildGoal.Placement pl : plan(id, b)) {
-                if (pl.part() != BuildGoal.Part.FENCE) continue;
+                if (pl.part() != BuildGoal.Part.FENCE || local(b, pl.pos())[2] >= t.front) continue;   // out front: not the tables, the banisters
                 BlockState there = level.getBlockState(pl.pos());
                 if (!(there.getBlock() instanceof FenceBlock)) continue;
                 if (!free && !take(level, v, Items.IRON_BARS, "putting up the iron railings of " + name(id, b), pl.pos())) break;
@@ -927,7 +928,7 @@ public final class TerraceRows {
                 if (!free) return done;
             }
             if (done > 0) for (BuildGoal.Placement pl : plan(id, b)) {
-                if (pl.part() != BuildGoal.Part.FENCE) continue;
+                if (pl.part() != BuildGoal.Part.FENCE || local(b, pl.pos())[2] >= t.front) continue;
                 BlockState st = level.getBlockState(pl.pos());
                 BlockState joined = Block.updateFromNeighbourShapes(st, level, pl.pos());
                 if (joined != st) level.setBlock(pl.pos(), joined, 2);
@@ -1017,14 +1018,15 @@ public final class TerraceRows {
         return kind.isEmpty() ? new String[]{ "No. " + (s.index() + 1), street, who, "" } : new String[]{ "No. " + (s.index() + 1), street, kind, who };
     }
 
-    /** Where a house's sign hangs, on its front by the door: the pier beside a cottage's door, over a porch, by a town house's. */
+    /** Where a house's sign hangs, on its front by the door: the pier beside a cottage's door, the bay's pier by the path, by a
+     *  town house's door over the area. */
     static BlockPos signSpot(Ledger.Building b, Spot s) {
         Tier t = s.tier();
         int i = s.index(), st = step(steps(b.anchor()), i);
         boolean m = t.houses[i][2] == 1;
         return switch (t) {
             case WORKERS -> cell(b, m ? t.right(i) - 2 : t.left(i) + 2, 1 + st, t.front - 1);
-            case BAY -> cell(b, t.doorDx(i), 3 + st, t.front - 1);
+            case BAY -> cell(b, t.left(i) + 4, 2 + st, t.front - 2);          // on the bay's pier by the path
             case GRAND -> cell(b, t.left(i) + 4, 3 + st, t.front - 1);
         };
     }
@@ -1183,6 +1185,11 @@ public final class TerraceRows {
     /** Tests: the composed drawing with steps (cells). */
     public static List<Blueprints.Cell> steppedForTests(String drawing, int[] steps) {
         return stepped(drawing, steps);
+    }
+
+    /** Tests: a folk with nothing on its back (its clothes count to its standing: Wealth). */
+    public static void undressForTests(VillageFolkEntity f) {
+        Arrays.fill(f.style().worn, ItemStack.EMPTY);
     }
 
     /** Tests: one round of the rows (finishing, moving up), now. */
