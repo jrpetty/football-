@@ -172,6 +172,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         String pace = AssistantEntity.foodLabel(diet) + " " + diet + "%";
 
         String status = a.clientStatus();
+        if (a instanceof com.jrpetty.mcassistant.pa.PlayerAssistantEntity) status = "Shift-click to give or take";   // [pa33]
         int colour = Ui.statusColour(status);
         g.drawString(this.font, Component.literal(
             clipTo(status, imageWidth - 16 - this.font.width(pace) - 6)),

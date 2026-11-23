@@ -130,6 +130,35 @@ public class PlayerAssistantEntity extends AssistantEntity {
         return r != null && r.pointed.contains(pos.asLong());
     }
 
+    // ------------------------------------------------------------------ never turned against people
+
+    /**
+     * Its own player's knocks (a stray click, a swing in a fight) never hurt it and never make it hit back. Fights
+     * are with monsters only: never a player, never anyone's assistant, crew or village folk, whatever hit it.
+     */
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        if (source.getEntity() instanceof Player p && isOwner(p)) return false;
+        return super.hurt(source, amount);
+    }
+
+    @Override
+    public void setTarget(@Nullable net.minecraft.world.entity.LivingEntity target) {
+        super.setTarget(fairGame(target) ? target : null);
+    }
+
+    @Override
+    public boolean canAttack(net.minecraft.world.entity.LivingEntity target) {
+        return fairGame(target) && super.canAttack(target);
+    }
+
+    /** May it fight this? Monsters and the like yes; people, assistants, crews and folk no. */
+    public static boolean fairGame(@Nullable net.minecraft.world.entity.LivingEntity target) {
+        return target == null || !(target instanceof Player || target instanceof AssistantEntity
+            || target instanceof net.minecraft.world.entity.npc.AbstractVillager
+            || target instanceof net.minecraft.world.entity.TamableAnimal t && t.isTame());
+    }
+
     /** May this player give it orders: its owner, or an operator. */
     public boolean obeys(Player p) {
         return isOwner(p) || (p instanceof ServerPlayer sp && sp.hasPermissions(2));

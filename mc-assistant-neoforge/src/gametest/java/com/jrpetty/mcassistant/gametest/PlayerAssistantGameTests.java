@@ -753,4 +753,25 @@ public class PlayerAssistantGameTests {
             Kit.log("pai26 got out of a 5x5 pit three deep from its middle; " + a.countMatching(st -> st.is(Items.COBBLESTONE)) + " cobblestone left");
         });
     }
+
+    /** pai27: its player clicks it by mistake, another player hits it: it is not hurt by its own player and turns on nobody. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pai27_never_turns")
+    public static void pai27_never_turns(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_078_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        ServerPlayer other = player(helper, level, new BlockPos(x + 2, y, Z + 2));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.insertGiven(new ItemStack(Items.IRON_SWORD));
+        float hp = a.getHealth();
+        a.hurt(level.damageSources().playerAttack(p), 4.0F);
+        helper.assertTrue(a.getHealth() == hp, "its own player's knock did no harm");
+        a.hurt(level.damageSources().playerAttack(other), 2.0F);
+        helper.runAfterDelay(100, () -> {
+            helper.assertTrue(a.getTarget() == null, "it turned on nobody: " + a.getTarget());
+            helper.assertTrue(p.getHealth() == p.getMaxHealth() && other.getHealth() == other.getMaxHealth(), "no one was hit back");
+            Kit.log("pai27 owner's knock harmless; hit by another player, it turned on nobody");
+            helper.succeed();
+        });
+    }
 }
