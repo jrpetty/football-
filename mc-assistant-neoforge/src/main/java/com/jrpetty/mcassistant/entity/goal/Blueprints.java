@@ -157,6 +157,8 @@ public final class Blueprints {
         key('5', BuildGoal.Part.LECTERN, Style.NONE, Way.LEFT);
         key('6', BuildGoal.Part.LECTERN, Style.NONE, Way.RIGHT);
         key('7', BuildGoal.Part.DOOR, Style.NONE, Way.LEFT);
+        // [house34] A back door: in a back wall, opening into the room from the yard behind (entity/TerraceRows).
+        key('8', BuildGoal.Part.DOOR, Style.NONE, Way.FRONT);
     }
 
     private static final Map<String, List<Cell>> DRAWINGS = new ConcurrentHashMap<>();

@@ -373,6 +373,9 @@ public final class Villages {
             case "manor" -> "a manor house";
             case "belltower" -> "the bell tower";
             case "flats", "flats4", "flats_old", "flats4_old" -> "a block of flats";   // [flats]
+            case "terrace" -> "a workers' terrace";               // [house34] (TerraceRows)
+            case "terrace2" -> "a bay-fronted terrace";           // [house34]
+            case "terrace3" -> "a grand terrace";                 // [house34]
             case "pitch" -> "the football pitch";                 // [batchC]
             case "range" -> "the archery range";                  // [batchC]
             case "postoffice" -> "the post office";               // [batchF]
@@ -1831,7 +1834,8 @@ public final class Villages {
         // [perks] and a wonder whose dues are laid by, before the next great work (Wonders.wanted)
         return requestedFirst(villageId, WarWorks.wanted(villageId,
             KnightManors.wanted(villageId, Civics.wanted(villageId, Wonders.wanted(villageId, Flats.wanted(villageId,   // [civic-land] a knight's manor
-                ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId))))))));
+                TerraceRows.wanted(villageId,                                                                       // [house34] a terrace before the house
+                ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId)))))))));
     }
 
     /** The buildings an age asks for before the next (Villages.needs): the wall, the smeltery and the hall;
@@ -2159,7 +2163,8 @@ public final class Villages {
     public static int bedsPlanned(UUID villageId) {
         return com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE * built(villageId, "house")
             + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor")
-            + Flats.bedsPlanned(villageId);                         // [flats] nine a block of flats
+            + Flats.bedsPlanned(villageId)                          // [flats] nine a block of flats
+            + TerraceRows.bedsPlanned(villageId);                   // [house34] every bed of its terraces
     }
 
     /**
@@ -2267,7 +2272,8 @@ public final class Villages {
         return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall")
             + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor")
             + 2 * com.jrpetty.mcassistant.village.Ledger.grownCount(villageId)
-            + Flats.bedsPlanned(villageId);                         // [flats]
+            + Flats.bedsPlanned(villageId)                          // [flats]
+            + TerraceRows.bedsPlanned(villageId);                   // [house34]
     }
 
     /**
@@ -2363,6 +2369,7 @@ public final class Villages {
                 + folk + " folk";
             case "manor" -> "a manor house, six beds under a slate roof: the best homes a town of the Iron Age has";
             case "flats" -> Flats.why(villageId);                  // [flats]
+            case "terrace", "terrace2", "terrace3" -> TerraceRows.why(villageId, project);   // [house34]
             case "pitch" -> Pitch.why(villageId);                  // [batchC]
             case "range" -> Archery.why(villageId);                // [batchC]
             case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";
@@ -3142,7 +3149,8 @@ public final class Villages {
                 // [city26] A lot whose street the town walks to is not too high or low for it, however far above the
                 // heart it stands (a hill town's terraces); the height rule is for a plateau nobody walks to.
                 boolean walked = CityPlan.reaches(level, v, lot);
-                BlockPos ground = groundFor(level, x, z, hx, hz, true, walked ? Integer.MIN_VALUE : heartGround, laps,
+                BlockPos ground = TerraceRows.isRow(project) ? TerraceRows.ground(level, villageId, project, x, z, back)   // [house34] each house at its street's height
+                    : groundFor(level, x, z, hx, hz, true, walked ? Integer.MIN_VALUE : heartGround, laps,
                     great ? 4 : 2, whyNot(villageId));
                 if (ground == null) { SiteWhy.count("ground (wet, cliff, height, built)"); continue; }
                 if (Floods.lowGround(villageId, ground)) { SiteWhy.count("flood ground"); continue; }     // [disasters] not on the low ground the river came over
@@ -3187,6 +3195,7 @@ public final class Villages {
             }
         }
         if (site != null) pending.put(project, site);
+        if (site != null) TerraceRows.chosen(villageId, project, site);   // [house34] a row's steps kept with its lot
         if (site != null) AgeSites.keep(villageId, project, site);   // [econ32c] kept over a restart
         return site;
     }

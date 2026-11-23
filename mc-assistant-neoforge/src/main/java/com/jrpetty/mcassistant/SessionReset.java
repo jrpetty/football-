@@ -78,6 +78,7 @@ public final class SessionReset {
         Colonies.reset();
         AssistantEntity.resetRegistryForTests();
         Town.resetAll();
+        com.jrpetty.mcassistant.entity.TerraceRows.resetForTests();   // [house34] the terraces' steps and plans, read afresh
         Requests.resetAll();
         ChunkLoad.reset();
         com.jrpetty.mcassistant.entity.TownLod.reset();

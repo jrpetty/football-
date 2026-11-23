@@ -47,6 +47,7 @@ public final class TownBudget {
      */
     static final Set<String> ESSENTIAL = Set.of(
         "storage", "storehouse", "shelter", "house", "house2", "flats", "well", "granary", "farm", "allotments", "orchard", "windmill",
+        "terrace", "terrace2", "terrace3",                                           // [house34] a terrace is homes
         "watermill", "fortify", "watchtower", "barracks", "gateway", "smeltery", "hall", "workshop", "market", "lighthouse", "chapel",
         "graveyard", "infirmary", "firestation", "stockade", "guesthouse", "dock", "harbour");
 
@@ -274,6 +275,7 @@ public final class TownBudget {
      */
     static final Set<String> CORE = Set.of(
         "storage", "storehouse", "shelter", "house", "house2", "flats", "well", "granary", "farm", "allotments", "orchard", "windmill",
+        "terrace", "terrace2", "terrace3",                                           // [house34]
         "watermill", "fortify", "smeltery", "hall", "workshop", "watchtower", "market", "lighthouse", "chapel", "gateway");
 
     /** [econ-1e] Is this project one a short town still builds every day at its hands' pace (homes, food, its age's)? */

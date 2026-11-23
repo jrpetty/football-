@@ -329,6 +329,7 @@ public final class HousingMarket {
     }
 
     private static double worthBare(UUID village, Homes.Home h) {
+        if (TerraceRows.isHouse(h)) return TerraceRows.worth(village, h);   // [house34] its share of what its row costs to build
         // A flat is never sold: what a household in one saves toward is a house's price (Flats).
         boolean flat = Flats.isFlat(h);
         String drawing = flat ? "house" : Homes.drawing(village, h);

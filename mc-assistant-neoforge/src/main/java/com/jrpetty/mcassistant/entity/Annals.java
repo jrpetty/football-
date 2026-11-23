@@ -1155,6 +1155,7 @@ public final class Annals {
             }
             Quarters.describe(id, v.centre(), b, c);              // its quarter, and the smoke or the park by it
             Flats.annals(id, b, c);            // [flats] a block's name, storeys and flats let and free
+            TerraceRows.annals(id, b, c);      // [house34] a terrace's name and kind, its houses lived in
             out.add(c);
         }
         return out;

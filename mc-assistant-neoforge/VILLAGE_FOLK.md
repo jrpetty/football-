@@ -3646,6 +3646,84 @@ three storeys of two-room homes on one long lot.
   lists every block, every flat, who lives there and on what terms. (`/village flats stage` sets a
   furnished block out on a stage, for the pictures.)
 
+
+### Terraces
+
+A town that wants homes builds them the British way: **rows of houses that touch**, sharing their
+side walls along a street, one long front of brick with a continuous roof and a chimney stack on
+every party wall. There are three kinds, so a town's streets show who lives where.
+
+* **The workers' terrace** (from the Stone Age): four two-up two-down cottages in a row, in
+  mirrored pairs with their front doors side by side. Each has its front door straight onto the
+  street with a fanlight over it, the parlour's window beside it, a stone string course between the
+  storeys; inside, the hall and a straight stair up beside the party wall, the front parlour (an
+  armchair at a table with a cloth on it, a dresser, a rug) and through a doorway the back kitchen
+  (the range on the chimney wall, the bench, the copper under the stair, the chest under the
+  landing) with the back door to the yard; upstairs the front bedroom (the parents' pair of beds, a
+  chest) and the back bedroom (the children's two, a chest), a banister at the stairhead. Behind
+  each, a brick yard walled from its neighbours', with a coal bunker, a privy, a water butt and a
+  gate to the back lane. The end houses have windows in their end walls.
+* **The bay-fronted terrace** (from the Iron Age): three taller houses, each with a square bay
+  window under a lean-to slate roof that runs on over its porch, a front garden of flowers behind a
+  low brick wall and a gate, a hall up the side from the front door to the back door, the stair
+  beside it, the parlour in front (a table in the bay with an armchair either side, shelves, a
+  carpet) and the kitchen behind, two bedrooms upstairs and a dormer in the roof.
+* **The grand terrace** (in a town: the Iron Age and thirty folk): three Georgian town houses four
+  storeys high. Iron railings along the street round a flagged area with a lamp on a stone pier,
+  steps up to the front door under a tall fanlight, tall windows in three bays, a stone ground floor
+  and brick above, a stone band at every floor, iron balconettes before the first floor's windows,
+  a stone cornice and parapet with a low slate roof behind it, and the stacks up the party walls.
+  Inside: the hall up the side and the stair in two flights up the back, the dining room (a long
+  table under a chandelier, four chairs, shelves) and the kitchen on the raised ground floor, the
+  master bedroom on the first floor, and the children's and a servant's room on the second.
+* **Where.** A row needs a long street front: one of the long lots out along the avenues, turned
+  to face the avenue (its front doors on the avenue, its yards on the street behind), or two home
+  lots side by side facing the same street (every block of homes has a pair on its outer street).
+  So the avenues and streets fill with rows facing one another across the road.
+* **When, and which.** Whenever the town would build its next house, it weighs who is short of a
+  home of their standing (Wealth: a household's best-off grown folk): the homeless, and tenants
+  living below their standing. If well-off households want a town house and the place is a town, a
+  grand terrace goes on the builders' list ahead of the house; if comfortable households want a
+  better house and the town is in the Iron Age, a bay-fronted terrace; and if two or more
+  households want a home, a workers' terrace: four homes on the ground of two houses. One row at a
+  time. The status line says why ("a grand terrace of three homes on one lot ...: 3 well-off
+  households want a town house of its standing").
+* **On a hill.** Where the street climbs, every house steps with it: each stands level with the
+  street before its own door (at most two blocks above its neighbour), its party walls carried
+  down to the lower house's footing and up to the higher house's eaves, the lower roof running into
+  the higher house's wall and its gable showing above, the ground under each house made up or dug
+  out to its own floor. A row on a hill is a flight of houses, not one floor cut into the slope.
+* **Built honestly.** The builders raise a row like anything else, every block out of the stores,
+  a load at a time from the footing up. Once it stands the town's hands finish it house by house,
+  out of the stores: the brickwork faced in brick where the builders had to make do with stone (a
+  stretch at a time, the stone back into the stores), each front door painted its own colour (red,
+  black, green, teal, yellow, plum... a dye from the stores; never the same as the house next
+  door), the grand row's railings and balconettes in iron (the smith's bars), a chimney pot on each
+  house's flues (a flower pot or a decorated pot) and its hearth fire lit on the stack while
+  somebody lives there, and the number and name by every door ("No. 2 / Mill Lane / Cottages /
+  Tansy").
+* **Its name.** Each row is named for its street and its kind: Mill Lane Cottages, Mill Lane
+  Terrace, Mill Lane Place (and a second of a kind on the same street Row, Villas or Parade). Each
+  house has its number: "No. 3, Mill Lane Cottages" on a folk's card, the homes' book and the city
+  screen's Buildings page ("Mill Lane Cottages (workers' terrace): 3 of 4 houses lived in").
+* **Who lives where.** Every house of a row is a home on the books, let and sold like any house,
+  its rent by its size: a cottage a house's rent, a bay-fronted house a two-storey house's, a town
+  house a villa's. A household waiting for a home is offered a house in the row of its standing
+  first: the poor and those getting by a workers' cottage, the comfortable a bay-fronted house, the
+  well-off and wealthy a town house. A town house is only ever let to the well-off; a bay-fronted
+  house to anybody who can pay its rent; a cottage to anybody. A household renting below its
+  standing (a cottage, or a plain house, while it is well off) moves up into an empty house of its
+  kind's row, what it had put by toward its old house given back to it ("Tansy and Rook moved up
+  from No. 2, Mill Lane Cottages to No. 1, Elm Row Place, a grand terrace").
+* **Worth.** A house of a row is worth its share of what its row costs to build today (its blocks
+  at the town's prices and its builders' hours, reckoned each day), as the housing market prices
+  every house.
+* **Every bed counts.** Sixteen beds a workers' terrace, twelve a bay-fronted, fifteen a grand:
+  counted in the room the town has and the houses it plans.
+* **For the pictures** (operators): `/village terrace stage` sets the three rows out dressed on a
+  flat stage at your feet beside a paved street; `/village terrace stage slope` a workers' and a
+  bay-fronted row stepping up a street that climbs. (The drawings are made by
+  `tools/terrace_design.py`.)
 ### Knacks: what each folk chooses for itself
 
 As a folk grows in experience it earns **knack points**, one at each fifth level of the trade it is
