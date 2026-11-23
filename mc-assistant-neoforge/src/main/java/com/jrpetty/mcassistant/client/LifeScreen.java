@@ -123,7 +123,7 @@ public class LifeScreen extends Screen {
         UiStyle.headerBand(g, left, top, w, HEAD);
         UiStyle.title(g, font, data.getString("title"), left + PAD, top + 5);
         boolean hasBack = !data.getString("back").isEmpty();                // [vision27] room for the camera's button too
-        UiStyle.text(g, font, data.getString("sub"), left + PAD, top + 18, w - PAD * 2 - (hasBack ? 160 : 112) - 48, UiStyle.TEXT_MUTED);   // [guide31] room for the Guide's button
+        UiStyle.text(g, font, data.getString("sub"), left + PAD, top + 18, w - PAD * 2 - (hasBack ? 160 : 112) - 48 - 60, UiStyle.TEXT_MUTED);   // [guide31] room for the Guide's button [pa33] and the assistant's
         button(g, "Close", left + w - PAD - 44, top + 7, 44, mx, my, true, false, "", this::onClose);
         if (!data.getString("back").isEmpty()) {
             CompoundTag a = data.getCompound("backArgs");
@@ -133,6 +133,8 @@ public class LifeScreen extends Screen {
             "Film the town: an orbit, a fly-through, a folk followed through its day, a time-lapse (or press K).", CameraScreen::open);
         button(g, "Guide", left + w - PAD - (hasBack ? 196 : 148), top + 7, 44, mx, my, true, false,   // [guide31] ask anything
             "The Guide: ask anything about the towns and the folk.", () -> com.jrpetty.mcassistant.client.guide.GuideClient.open(this));
+        button(g, "Assistant", left + w - PAD - (hasBack ? 254 : 206), top + 7, 56, mx, my, true, false,   // [pa33] your Player AI Assistant
+            "Your Player AI Assistant: get one, talk to it, give it orders (or press Y).", com.jrpetty.mcassistant.client.pa.PaScreenOpen::open);
         // the tabs
         int tx = left + PAD;
         for (Tag e : data.getList("tabs", Tag.TAG_COMPOUND)) {

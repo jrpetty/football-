@@ -281,6 +281,7 @@ public final class ZoneChests {
      * a sign is the mark.
      */
     public static boolean isPrivate(Level level, BlockPos chest) {
+        if (com.jrpetty.mcassistant.pa.PaChests.barred(level, chest)) return true;   // [pa33] a Player AI Assistant's chest rules (only while one is thinking)
         for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
             if (d == net.minecraft.core.Direction.DOWN) continue;   // under a chest: not a mark
             BlockPos beside = chest.relative(d);

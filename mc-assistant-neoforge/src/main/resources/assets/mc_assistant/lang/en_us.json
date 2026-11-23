@@ -1,5 +1,7 @@
 {
   "block.mc_assistant.assistant_spawner": "Assistant Spawner",
+  "item.mc_assistant.assistant_whistle": "Assistant Whistle",
+  "entity.mc_assistant.player_assistant": "Player AI Assistant",
   "block.mc_assistant.job_board": "Job Board",
   "item.mc_assistant.place_marker": "Place Marker",
   "item.mc_assistant.memory_core": "Memory Core",
@@ -602,6 +604,9 @@
   "block.mc_assistant.shop_counter": "Shop Counter",
   "block.mc_assistant.shop_sign": "Shop Sign",
   "key.mc_assistant.life": "Your life in town",
+  "key.mc_assistant.pa_panel": "Player AI Assistant: open its panel",
+  "key.mc_assistant.pa_talk": "Player AI Assistant: hold to talk",
+  "key.mc_assistant.pa_wheel": "Player AI Assistant: action wheel",
   "key.mc_assistant.guide": "Guide (ask anything about the towns and the folk)",
   "talk.mc_assistant.start_business": "Start a business",
   "talk.mc_assistant.start_business.tip": "A charter of your own: pick a kind, premises, confirm. The bank lends what you're short",

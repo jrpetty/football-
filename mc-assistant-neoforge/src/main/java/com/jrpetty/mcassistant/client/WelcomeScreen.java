@@ -40,6 +40,10 @@ public class WelcomeScreen extends Screen {
             b -> com.jrpetty.mcassistant.client.guide.GuideClient.openAt(this, "found_after")).bounds(left + PAD, top + h - PAD - 20, 70, 20).build(UiButton::new);
         guide.setTooltip(Tooltip.create(Component.literal(com.jrpetty.mcassistant.client.guide.GuideClient.welcomeTip())));
         this.addRenderableWidget(guide);
+        Button pa = Button.builder(Component.literal("Your assistant"),   // [pa33] a Player AI Assistant of your own, by a click
+            b -> com.jrpetty.mcassistant.client.pa.PaScreenOpen.open()).bounds(left + PAD + 74, top + h - PAD - 20, 86, 20).build(UiButton::new);
+        pa.setTooltip(Tooltip.create(Component.literal("Get your Player AI Assistant: a companion who talks, listens and works like a player (Y)")));
+        this.addRenderableWidget(pa);
     }
 
     private void step(String label, String action, String tip, int x, int y, int w) {

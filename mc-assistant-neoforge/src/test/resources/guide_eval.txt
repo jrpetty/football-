@@ -322,12 +322,12 @@ how do i hide the icons over villagers => keys_hide_labels
 how do i speed up time => admin_time_speed
 
 # companions
-how do i get an assistant => companions_what
+how do i get an assistant => pa_getting
 what does r do => companions_orders
 what does the semicolon key do => companions_crew
 how do i use the plot book => companions_plots
 what is a place marker => companions_place_marker
-my assistant died => companions_memory_core
+my crew hand died => companions_memory_core
 
 # admin
 how do i open the admin panel => admin_panel
@@ -433,3 +433,18 @@ how many bread did i sell per day => biz_data
 show me a chart of my sales => biz_data
 what are my shop's costs => biz_data
 which of my businesses makes most money => biz_data
+
+# [pa33] the Player AI Assistant
+how do i get an ai assistant => pa_getting
+whistle recipe => pa_getting
+how do i make my assistant build a house => pa_orders
+can i talk to my assistant with my voice => pa_voice
+my microphone isnt working => pa_trouble_voice
+my assistant died => pa_fallen
+how do i stop my assistant doing stuff on its own => pa_autohelp
+make my assistant quieter => pa_settings
+is my assistant a villager => pa_not_villager
+what is the player ai assistant => pa_what
+what does x do => pa_wheel
+how do i see what my assistant is doing => pa_jobs
+how do i talk to my assistant => pa_talking

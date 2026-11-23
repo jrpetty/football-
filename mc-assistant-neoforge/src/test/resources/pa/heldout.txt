@@ -1,0 +1,64 @@
+# [pa33] A second set, written after the reader was tuned on phrasings.txt and NOT tuned against: its score is the
+# honest one. Same format as phrasings.txt.
+yo follow me bro || FOLLOW
+ok buddy come over here || COME
+gather like 30 logs || GATHER:logs:30
+go grab me some coal || GATHER:coal
+can u chop a few trees || GATHER:logs:4
+mine some irn || MINE_ORE:iron
+dig for gold pls || MINE_ORE:gold
+i need 10 torches || CRAFT:torches:10
+make me 4 chests || CRAFT:chest:4
+build a lil house right here || BUILD:house@HERE
+build us a cabin over there || BUILD:house@LOOKED
+put a shelter up here || BUILD:shelter@HERE
+craft a diamond pickaxe || CRAFT:diamond pickaxe
+make a stone sword || CRAFT:stone sword
+smelt all the iron || SMELT:iron
+cook my food || SMELT:food
+throw everything in the chest || DEPOSIT
+bring me 5 bread || GIVE:bread:5
+give me your pickaxe || GIVE:pickaxe
+get the iron from the chest || FETCH:iron
+protect the farm || GUARD_HERE:farm
+kill that spider || FIGHT:spider@LOOKED
+attack it || FIGHT@LOOKED
+watch my back || GUARD_ME
+light up my base || LIGHT_AREA
+put some torches down here || LIGHT_AREA
+go to sleep || SLEEP
+head back home || GO_HOME
+wait right there || STAY
+dont follow me || STAY
+stop what youre doing || STOP
+cancel that || STOP
+please stop || STOP
+nvm || ?
+hold up || PAUSE
+keep at it || RESUME
+whats up || GREETING
+how r u doing || STATUS
+whats ur health || STATUS
+what have u got || INVENTORY
+anything you need || NEEDS
+how do i make money || QUESTION
+where do i buy land || QUESTION
+can you mine iron and then smelt it || MINE_ORE:iron > SMELT
+chop 20 logs and make a crafting table || GATHER:logs:20 > CRAFT:crafting table
+get 10 sand then smelt it into glass || GATHER:sand:10 > SMELT
+farm the wheat and bring me bread || FARM:wheat > GIVE:bread
+go mining for diamonds then come back || MINE_ORE:diamond > COME
+collect 64 cobblestone and then deposit it || GATHER:stone:64 > DEPOSIT
+build a smeltery and a storage || BUILD:smeltery > BUILD:storage
+hunt cows and cook the beef || HUNT:cows > SMELT:beef
+fish || FISH
+breed some sheep || BREED:sheep
+shear sheep || SHEAR
+plant wheat || FARM:wheat
+harvest carrots || FARM:carrots
+sort my chests || SORT
+fix your sword || REPAIR
+sell 10 wheat || TRADE_SELL:wheat:10
+buy a stack of torches || TRADE_BUY:torches:64
+be quiet || ?
+dance || ?
