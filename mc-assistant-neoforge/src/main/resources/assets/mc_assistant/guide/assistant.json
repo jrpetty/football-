@@ -180,7 +180,7 @@
       "answer": "A fallen assistant comes back after a minute, at its spawner or beside you, keeping its pack. A whistle brings it back at once.",
       "more": ["It leaves with you when you log out and is beside you when you're back; it follows you through portals unless it is busy or told to stay.",
         "Far away or lost in an unloaded place? The summon button in its panel, or a blown whistle, calls it to you."],
-      "steps": ["Press Y: the panel says when it will be back.", "Blow an Assistant Whistle to bring it back now."],
+      "steps": ["Press Y: the panel says when it will be back.", "Or use an Assistant Whistle: no waiting."],
       "controls": ["[Y] assistant panel", "[Use] Assistant Whistle"],
       "items": ["mc_assistant:assistant_whistle"],
       "tips": ["It gets itself out of trouble too: stuck, in lava or drowning, it comes back to you."],
