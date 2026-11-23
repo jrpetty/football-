@@ -1052,3 +1052,236 @@ Back on my feet at my bed.
 Returned to my bed. Coming to you.
 I've respawned at my bed.
 Back, at my bed. What's next?
+
+# [pa33c-2b] pings and places
+== say.waypoint_saved
+Saved this spot as {name}. I'll remember it. Probably better than you will.
+{name}, noted. Say "go to {name}" and I'll walk you there.
+This is {name} now. I've written it on my brain.
+Got it: {name}. Very official.
+{name}, saved. A place with a name. Fancy.
+Remembered as {name}. Like a pin on a map, but in my head.
+== say.waypoint_saved@gloomy
+{name}. Saved. One more place to come back to.
+This spot is {name} now. I'll remember it. I remember everything.
+{name}, noted. It won't change much.
+Saved as {name}. Places last longer than people.
+Fine. {name}. I'll find it again. Eventually.
+{name}. On the list. It's a long list.
+== say.waypoint_saved@serious
+Saved as {name}.
+This spot is {name} now.
+Got it: {name}.
+{name} saved.
+Waypoint {name} saved.
+I'll remember this as {name}.
+== say.find_found
+Found {what}: {dist} blocks {dir}. Marked it for you.
+{what}, {dist} blocks {dir}. Pinged. Off you go. Or off I go.
+There's {what} {dist} blocks {dir}. Marker's up.
+{what}, about {dist} blocks {dir}. I've stuck a pin in it.
+{dist} blocks {dir}: {what}. Shall I go and get it?
+Got one. {what}, {dist} blocks {dir}. Marked.
+== say.find_found@gloomy
+{what}, {dist} blocks {dir}. Marked. Don't get too excited.
+Found {what}. {dist} blocks {dir}. It'll still be there. Probably.
+{dist} blocks {dir}: {what}. I've marked it, for what it's worth.
+{what}, {dist} blocks {dir}. A long walk, but what isn't.
+There's {what} {dist} blocks {dir}. Pinged.
+{what}. {dist} blocks {dir}. Marked.
+== say.find_found@serious
+{what}: {dist} blocks {dir}. Marked.
+Found {what}, {dist} blocks {dir}.
+{what} is {dist} blocks {dir}. I've pinged it.
+Nearest {what}: {dist} blocks {dir}.
+{dist} blocks {dir}: {what}. Marker placed.
+{what}, {dist} blocks {dir}.
+== say.find_none
+I can't see any {what} round here. I've looked. Thoroughly. Mostly.
+No {what} nearby. It's hiding, or it isn't here.
+Not a scrap of {what} in sight.
+No {what} anywhere near. We'll have to go exploring.
+I looked for {what}. I found ground. Lots of ground.
+None. Not a single {what} close by.
+== say.find_none@gloomy
+No {what} here. Of course there isn't.
+I looked for {what}. Nothing. As expected.
+No {what} nearby. The world's like that.
+Not a trace of {what}. Typical.
+No {what}. We'll have to wander. Wander and suffer.
+Nothing. No {what} in reach.
+== say.find_none@serious
+I can't find any {what} nearby.
+No {what} within reach.
+None found nearby.
+There's no {what} close by.
+I couldn't find {what} here.
+No {what} in the loaded area.
+== say.pings_cleared
+All pings cleared. Clean slate.
+Markers gone. Tidy.
+Cleared the pings. Very minimalist.
+All gone. Like they were never there.
+Pings cleared. Fresh map, fresh start.
+Done. No more markers cluttering the place.
+== say.pings_cleared@gloomy
+Cleared. Nothing left to point at.
+All the pings are gone. Like everything, in the end.
+Markers cleared. The world's emptier now.
+Gone. All of them.
+Cleared. Blank. How fitting.
+Pings cleared. Back to wandering blind.
+== say.pings_cleared@serious
+Pings cleared.
+All markers removed.
+Cleared all pings.
+Markers gone.
+Done. Pings cleared.
+All pings removed.
+== say.ping_cancelled
+Cancelled that one. Never happened.
+That ping's gone. Changed your mind, I see.
+Scrapped the last one.
+Dropped it. I wasn't keen anyway.
+Last ping cancelled.
+Gone. We'll pretend you never pointed.
+== say.ping_cancelled@gloomy
+Cancelled. Another plan abandoned.
+The last one's gone. Like most of my plans.
+Dropped it. It wasn't going to work.
+Cancelled. Probably wise.
+Fine. Last one scrapped.
+Gone. As if it never mattered.
+== say.ping_cancelled@serious
+Last ping cancelled.
+Cancelled that one.
+Removed the last ping.
+That one's cancelled.
+Dropped the last job.
+Cancelled.
+== say.ping_skipped
+Skipped that one. On to the next.
+Fine, skipping. It looked boring anyway.
+Skipped. Next.
+That one's off the list.
+Skipping it. Life's too short.
+Moving on to the next job.
+== say.ping_skipped@gloomy
+Skipped. It'll still be there. Waiting. Judging.
+Skipping it. Another thing left undone.
+Fine. Next one. They never end.
+Skipped. On to the next disappointment.
+That one's gone. More to come.
+Skipped.
+== say.ping_skipped@serious
+Skipped.
+Skipping that one.
+Moving to the next job.
+That job's skipped.
+Next job.
+Skipped it.
+== say.ping_reordered
+{job} first, then. Rearranged.
+Fine, {job} jumps the queue.
+Right, {job} first. The others can wait.
+Moved {job} to the front.
+{job}, now. Priorities.
+Doing {job} first.
+== say.ping_reordered@gloomy
+{job} first. The rest can wait. They always do.
+Fine. {job} first.
+Rearranged. {job} now.
+{job} jumps ahead. Lucky {job}.
+Moved {job} up. Not that it matters.
+{job} first, then.
+== say.ping_reordered@serious
+{job} first.
+Moved {job} to the front.
+Doing {job} next.
+{job} is first now.
+Reordered: {job} first.
+{job} next.
+== say.ping_danger
+Danger at {what}. Noted. I'll steer clear and shout if you go near.
+Right, {what} is dangerous. I'm giving it a wide berth.
+Marked {what} as danger. My caution levels have risen.
+Danger there. I'll keep away and keep you away.
+Noted: {what} is bad news. I'll avoid it.
+{what}, danger. I was already scared of it, now it's official.
+== say.ping_danger@gloomy
+Danger at {what}. Of course there is.
+{what} is dangerous. Most things are.
+Noted. Danger. I'll stay away. Not that it helps.
+Marked as danger. One more thing that wants us dead.
+Danger, {what}. I'll keep clear.
+{what}. Dangerous. I'll avoid it.
+== say.ping_danger@serious
+Danger noted at {what}. I'll avoid it.
+Marked {what} as dangerous.
+Understood: danger at {what}.
+I'll stay clear of {what}.
+Danger marked.
+Noted. Avoiding {what}.
+== say.ping_leave
+Leaving it alone. It can live. For now.
+Fine. Hands off.
+I'll leave it. We're both happier.
+Not touching it. Promise.
+Leaving it be.
+Right, no. It's safe from me.
+== say.ping_leave@gloomy
+Leaving it. Nothing changes.
+Fine. It can carry on, like everything does.
+Left alone. Lucky thing.
+I'll leave it. Easier that way.
+Not touching it.
+Leaving it be.
+== say.ping_leave@serious
+Leaving it alone.
+I won't touch it.
+Understood. Leaving it.
+Hands off.
+I'll leave it.
+Leaving it be.
+== say.ping_hi
+Hello, {player}.
+Hi there, {player}. Lovely to see you.
+Afternoon, {player}.
+Hello, {player}. Don't mind me, I'm with {owner}.
+Hiya, {player}.
+Hello, {player}. Nice day for it.
+== say.ping_hi@gloomy
+Hello, {player}. Still alive, then.
+Hi, {player}. Don't mind me.
+Hello. {player}, isn't it.
+Oh. Hi, {player}.
+Hello, {player}. Grim out, isn't it.
+Hi, {player}.
+== say.ping_hi@serious
+Hello, {player}.
+Hi, {player}.
+Good to see you, {player}.
+Hello there, {player}.
+Hi there, {player}.
+Hello, {player}. I'm {owner}'s assistant.
+== say.not_yours_to_follow
+I only follow you, {owner}. It's a loyalty thing.
+Follow them? I'm yours. Strictly one player per assistant.
+Nice idea, but I follow you and nobody else.
+Sorry, I'm a one-player assistant.
+I'm with you. They'll have to get their own.
+Follow them? I'd get lost. Emotionally.
+== say.not_yours_to_follow@gloomy
+I only follow you. Somebody has to.
+I'm yours. Nobody else would have me anyway.
+No. Just you. That's the deal.
+I follow you. Only you. For better or worse.
+Sorry. You're stuck with me, and I with you.
+Only you, {owner}.
+== say.not_yours_to_follow@serious
+I only follow you, {owner}.
+I can't follow other players.
+I stay with you.
+Sorry, only you.
+I follow my owner only.
+I'll stay with you, {owner}.

@@ -88,7 +88,7 @@ public final class PaSpeech {
         "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"};
     private static final String[] TENS = {"", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"};
 
-    static String words(int n) {
+    public static String words(int n) {
         if (n < 0) return "minus " + words(-n);
         if (n < 20) return ONES[n];
         if (n < 100) return TENS[n / 10] + (n % 10 == 0 ? "" : "-" + ONES[n % 10]);

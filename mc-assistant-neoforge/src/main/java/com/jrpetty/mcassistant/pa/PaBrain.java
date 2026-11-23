@@ -52,6 +52,7 @@ public final class PaBrain {
         public final PaPersona.Recent recent = new PaPersona.Recent(400);
         /** [pa33b] Its player's last death: where, which world, how, when (game time). */
         @Nullable public BlockPos deathPos;
+        @Nullable public BlockPos danger;                         // [pa33c-2b] a spot its player marked as dangerous
         public String deathDim = "", deathCause = "";
         public long deathAt = -1, prevDeathAt = -1;
         public int deathsRecent, respawnQuipAt, lastJoke = -100000, lastHit = -100000, slowQuipped, jmNext;

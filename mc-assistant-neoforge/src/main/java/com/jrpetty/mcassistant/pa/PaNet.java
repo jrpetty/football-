@@ -2,6 +2,7 @@ package com.jrpetty.mcassistant.pa;
 
 import com.jrpetty.mcassistant.McAssistantMod;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -63,6 +64,16 @@ public final class PaNet {
         CompoundTag t = state(p, a);
         t.putString("tab", tab);
         send(p, PaPayload.OPEN, t);
+    }
+
+    /** [pa33c-2b] A ping marker for this player (found, saved, shared, or "clear"/"unlast"). Tiny: a spot, a word, a sort. */
+    public static void ping(ServerPlayer p, @Nullable BlockPos at, String label, String sort, String op) {
+        CompoundTag t = new CompoundTag();
+        if (at != null) { t.putInt("x", at.getX()); t.putInt("y", at.getY()); t.putInt("z", at.getZ()); }
+        t.putString("label", label);
+        t.putString("sort", sort);
+        t.putString("op", op);
+        send(p, PaPayload.PING, t);
     }
 
     /** [pa33b] Someone else's assistant, right-clicked: a little chat box (no orders, no pack, no settings). */

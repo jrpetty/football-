@@ -92,6 +92,7 @@ public final class PaVoice {
             return;
         }
         listening = true;
+        PaPingClient.speechStarted(Minecraft.getInstance());      // [pa33c-2b] "that" is what you look at as you start
         transcript = "";
         say("");
     }

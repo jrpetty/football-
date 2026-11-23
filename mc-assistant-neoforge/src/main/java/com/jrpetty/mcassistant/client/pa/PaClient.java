@@ -113,6 +113,7 @@ public final class PaClient {
             }
             case PaPayload.SAY -> said(mc, data);
             case PaPayload.GUIDE -> PaGuideAnswer.answer(data.getInt("id"), data.getString("q"));
+            case PaPayload.PING -> PaPingClient.fromServer(data);      // [pa33c-2b]
             default -> { }
         }
     }
@@ -186,6 +187,7 @@ public final class PaClient {
         a.putString("text", text.trim());
         a.putBoolean("voice", voice);
         look(a);
+        if (!text.startsWith("#")) PaPingClient.bind(a, voice);     // [pa33c-2b] a fresh ping, or what was looked at while speaking, is "that"
         // shown at once in the log; the server's copy replaces it
         if (!text.startsWith("#")) {
             ListTag log = state.getList("log", Tag.TAG_COMPOUND);
@@ -278,6 +280,7 @@ public final class PaClient {
             send("settings", q);
         }
         while (COME.consumeClick()) talk("come here", false);
+        PaPingClient.tick(mc);                                       // [pa33c-2b] pings
         PaVoice.tick();
     }
 
@@ -289,6 +292,7 @@ public final class PaClient {
         if (mc.player == null || mc.options.hideGui || mc.screen instanceof PaScreen) return;
         GuiGraphics g = event.getGuiGraphics();
         PaHud.draw(g, mc);
+        PaPingClient.draw(g, mc);                                 // [pa33c-2b] ping markers
         PaBubbles.draw(g, mc);                                    // [pa33c-2b] speech, inside the screen
     }
 }

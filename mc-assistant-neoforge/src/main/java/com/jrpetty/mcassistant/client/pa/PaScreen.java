@@ -71,6 +71,7 @@ public class PaScreen extends Screen {
         left = (this.width - w) / 2;
         top = (this.height - h) / 2;
         String keep = input == null ? "" : input.getValue();
+        PaPingClient.holdForTyping();                              // [pa33c-2b] a fresh ping waits while you type
         input = new EditBox(font, left + 10, top + h - 34, w - 104, 16, Component.literal("Talk to your assistant"));
         input.setMaxLength(240);
         input.setHint(Component.literal("Say anything: \"get me 16 logs\", \"build a small house here\"..."));
@@ -302,6 +303,9 @@ public class PaScreen extends Screen {
         input.setX(x + 2);
         input.setY(y + ih - 19);
         input.setWidth(iw - 100);
+        String pinged = PaPingClient.chip(minecraft);             // [pa33c-2b] a ping waiting: "that" in what you type is it
+        input.setHint(pinged != null ? Component.literal(UiStyle.clip(font, pinged, iw - 110)).withStyle(st -> st.withColor(0x2B8A7A))
+            : Component.literal("Say anything: \"get me 16 logs\", \"build a small house here\"..."));
         input.render(g, mx, my, 0);
         String typed = input.getValue();
         if (!typed.isEmpty() && input.isFocused()) {
@@ -794,6 +798,24 @@ public class PaScreen extends Screen {
         button(g, "Change keys...", sx, cy + 2, 100, 14, mx, my, true, false, "Opens Controls: the assistant's keys are under \"Player AI Assistant\"",
             () -> minecraft.setScreen(new net.minecraft.client.gui.screens.options.controls.KeyBindsScreen(this, minecraft.options)));
         cy += 20;
+        // [pa33c-2b] pings: what the middle button does, sharing, quick pings, voice pings
+        UiStyle.heading(g, font, "Pings", sx, cy + 4, half);
+        cy += 18;
+        String pm = PaClientConfig.get(PaClientConfig.PINGMODE, "both");
+        g.drawString(font, "Middle button", sx, cy + 3, UiStyle.TEXT_MUTED, false);
+        button(g, pm.equals("ping") ? "Ping only" : pm.equals("pick") ? "Pick block only" : "Ping (sneak: pick block)", sx + 72, cy, Math.max(100, half - 80), 13, mx, my, true, false,
+            "What the middle mouse button does when the ping key is on it: ping (pick block while sneaking), ping only, or vanilla pick block only",
+            () -> PaClientConfig.set(PaClientConfig.PINGMODE, pm.equals("both") ? "ping" : pm.equals("ping") ? "pick" : "both"));
+        cy += 15;
+        cy = toggle(g, "Act on quick pings", PaClientConfig.get(PaClientConfig.ACTQUICK, false), sx, cy, half, mx, my,
+            "Off: a tap is only a \"look here\" marker until you pick from the wheel, tap again or say an order. On: a tap does the first option at once",
+            () -> PaClientConfig.set(PaClientConfig.ACTQUICK, !PaClientConfig.get(PaClientConfig.ACTQUICK, false)));
+        cy = toggle(g, "Show my pings to players near by", PaClientConfig.get(PaClientConfig.SHAREPINGS, false), sx, cy, half, mx, my,
+            "Your plain markers appear for players within 128 blocks. They never order anyone's assistant",
+            () -> PaClientConfig.set(PaClientConfig.SHAREPINGS, !PaClientConfig.get(PaClientConfig.SHAREPINGS, false)));
+        cy = toggle(g, "Ping what I look at while talking", PaClientConfig.get(PaClientConfig.VOICEPING, true), sx, cy, half, mx, my,
+            "Speaking marks what you look at as you start, and each thing you look at after, so \"chop that, and that\" means those",
+            () -> PaClientConfig.set(PaClientConfig.VOICEPING, !PaClientConfig.get(PaClientConfig.VOICEPING, true)));
         return Math.max(leftEnd, cy) - y + 4;
     }
 

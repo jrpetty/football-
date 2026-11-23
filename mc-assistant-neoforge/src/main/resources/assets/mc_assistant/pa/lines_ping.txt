@@ -1,0 +1,122 @@
+# [pa33c-2b] Pings: what it says when you ping something and pick "Look at this", and its replies to ping orders.
+# Blanks: {what} the thing's name, {name} a waypoint, {dist} {dir} distance and direction, {job} a job, {player} someone.
+
+== ping.look.ground
+That's the ground. You've pinged the ground. Bold.
+Yes. Dirt. Top-quality dirt, mind.
+Lovely bit of floor, that.
+I see it. It's very flat. Congratulations to it.
+Ground. Holding everything up since forever.
+That's a spot. It's got potential. Mostly for standing on.
+== ping.look.tree
+[bad] Wood you look at that. Right, I'll leaf it there. That was terrible. I'm keeping it.
+That's a tree. You've pinged a tree. Bold.
+A tree. Full of logs and opinions.
+Nice tree. Shame if someone chopped it. Hint, hint.
+Yes, that's a tree. I'd know one anywhere.
+A tree. It's been standing there for ages, waiting for this moment.
+Ooh, a tree. Shall I introduce it to my axe?
+== ping.look.ore
+[bad] Ore-some. That's the joke. I've let us both down.
+Ore. Shiny. I approve.
+That's {what}. Don't let it get away.
+Look at that. Free money in a rock.
+Ore. My favourite kind of rock.
+That's {what}. I can hear it calling.
+Ore spotted. My pickaxe just sat up.
+== ping.look.stone
+[bad] Stone. I had a joke about it, but it was a bit rocky. Sorry.
+That's stone. Stone is stone. Reliable, stone.
+A rock. Rocks are underrated.
+Stone. Grey, hard, endlessly useful. Like me.
+Yes, that's stone. It's not going anywhere.
+Lovely rock. Very rocky.
+That's stone. Shall I make it smaller?
+== ping.look.mob
+That's {what}. It looks unfriendly.
+{what}. I've got my eye on it.
+That's {what}. Shall we not.
+I see it. It sees us. Awkward.
+{what}. I'll keep my sword handy.
+That's trouble. Shaped like {what}.
+== ping.look.animal
+That's {what}. Look at its little face.
+{what}. Lunch, or a friend. Your call.
+Aw, {what}. It doesn't know what we do to its cousins.
+That's {what}. Very fluffy. Or not. Depends.
+{what}. It's minding its own business. Unlike us.
+Yes, {what}. It's having a lovely day.
+== ping.look.chest
+A chest. Full of things, or full of disappointment.
+That's a chest. I hope it's tidy.
+Chest. Storage, mystery, and probably cobblestone.
+I see the chest. I'm resisting the urge to sort it.
+A chest. Every adventure's favourite piece of furniture.
+That's a box with a lid. A classic.
+== ping.look.crop
+[bad] I'd make a joke about the crops, but it'd be corny. It was corny. I've done it.
+Crops. Growing slowly, like my patience.
+That's a field. It's doing its best.
+Food, in its early form.
+Lovely crops. Shall I harvest them, or just admire them.
+That's a farm. Very agricultural.
+Crops. Nature's way of making bread eventually.
+== ping.look.bed
+[bad] A bed. I'd say something clever, but I'm tired. Bed-time humour, that. Sorry.
+A bed. Somewhere to fall over on purpose.
+That's a bed. I could use it as my spawn, if you like.
+Bed. The best block.
+I see the bed. It looks comfy. I'm jealous.
+That's a bed. Shall I make it mine?
+A bed. Where adventures go to sleep.
+== ping.look.furnace
+[bad] A furnace. Hot stuff. Like me. That one's on me, sorry.
+A furnace. Warm, honest, always hungry.
+That's a furnace. It looks peckish.
+Furnace. It turns rocks into better rocks.
+I see the furnace. It's glowing with pride.
+That's a furnace. Shall I feed it?
+A furnace. Basically a very angry box.
+== ping.look.player
+That's {what}. Hello, {what}.
+{what}. A person. Rare round here.
+I see {what}. Shall I wave?
+That's {what}. Friend or foe, I wonder.
+{what}. Looking very player-ish today.
+Yes, that's {what}.
+== ping.look.assistant
+That's one of us. Hello, colleague.
+Another assistant. We should form a union.
+That's {what}. Nice outfit. Not as nice as mine.
+A fellow helper. We nod, we move on.
+That's {what}. Its owner's lucky. Not as lucky as you.
+I see {what}. Professional respect.
+== ping.look.water
+[bad] Water you pointing at? Water. It's water. I'm not proud of that one.
+Water. Wet. Very wet.
+That's water. I can't swim fast, so let's not.
+Water. Good for boats, bad for my shoes.
+Yes, that's water. Shall I bridge it?
+Lovely water. Very blue. Very deep. Probably.
+Water. It gets everywhere.
+== ping.look.lava
+That's lava. I'm not mining lava. I've seen how that ends.
+Lava. Absolutely not.
+That's lava. Hot, orange, and a terrible place for your things.
+Lava. Shall I make a bridge, or just stay well away?
+Yes, lava. Keep your distance. I'm keeping mine.
+That's lava. The floor is literally lava.
+== ping.look.area
+That's an area. A big one. Shall I tidy it?
+A patch of ground. Plenty to do there.
+That's quite a space. I see possibilities.
+An area. Clear it, farm it, light it. Your call.
+Lovely patch. It's crying out for a job.
+That's the area. I've measured it with my eyes.
+== ping.look.area@gloomy
+An area. More work. Lovely.
+That's a lot of ground. And it's all mine to deal with.
+An area. Full of jobs nobody else wants.
+That's quite a patch. My back hurts already.
+An area. It'll take forever. Most things do.
+The area. I see it. I see all of it. Sadly.

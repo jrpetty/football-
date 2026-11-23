@@ -1326,4 +1326,81 @@ public class PlayerAssistantGameTests {
             if (level.getBlockState(l).isAir()) level.setBlock(l, Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true), 2);
         }
     }
+
+    /** pai42: pings: a wheel choice is the order ("chop that" at the pinged tree), a plain marker never is, nor is anyone
+     *  else's ping; "remember this spot as the mine" and "go to the mine"; "ping the nearest iron"; "chop that, and that"
+     *  with two looks; "do the tree first", "skip that one", "cancel that ping"; an area's two corners cleared. [pa33c-2b] */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pai42_pings")
+    public static void pai42_pings(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_123_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_AXE));
+        a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_PICKAXE));
+        BlockPos t1 = new BlockPos(x + 12, y, Z + 4), t2 = new BlockPos(x + 12, y, Z - 6);
+        tree(level, t1, 5);
+        tree(level, t2, 4);
+        level.setBlock(new BlockPos(x - 9, y - 3, Z + 2), Blocks.IRON_ORE.defaultBlockState(), 3);
+        // a bare marker, shared: no order, nothing in its list
+        CompoundTag mark = new CompoundTag();
+        mark.putInt("x", t1.getX()); mark.putInt("y", t1.getY()); mark.putInt("z", t1.getZ()); mark.putString("label", "Oak tree");
+        PaServer.act(p, "mark", mark);
+        helper.assertTrue(a.plan.all().isEmpty(), "a bare ping is no order: " + a.plan.all().size());
+        // someone else's ping choice: never an order for this one
+        ServerPlayer other = player(helper, level, new BlockPos(x + 2, y, Z + 2));
+        PaServer.act(other, "ping", pingTag("TREE", "chop", t1, null));
+        helper.assertTrue(a.plan.all().isEmpty(), "another player's ping orders no one's assistant");
+        // the wheel's "Chop that" on the pinged tree
+        PaServer.act(p, "ping", pingTag("TREE", "chop", t1.above(2), null));
+        helper.assertTrue(labels(a).contains("chop that tree"), "wheel choice -> job: " + labels(a) + " (" + lastWords(a) + ")");
+        // a waypoint, and going to it
+        say(p, a, "remember this spot as the mine", new BlockPos(x - 6, y - 1, Z - 6), -1);
+        helper.assertTrue(a.rec().waypoints.containsKey("mine"), "waypoint saved: " + a.rec().waypoints.keySet() + " (" + lastWords(a) + ")");
+        say(p, a, "go to the mine");
+        helper.assertTrue(labels(a).contains("go to mine"), "goes to the mine: " + labels(a));
+        // reordered, skipped, cancelled
+        say(p, a, "do the mine first");
+        helper.assertTrue(a.plan.all().get(0).label.equals("go to mine"), "the mine first: " + labels(a) + " (" + lastWords(a) + ")");
+        int before = a.plan.total();
+        say(p, a, "skip that one");
+        helper.assertTrue(a.plan.total() == before - 1 && !labels(a).contains("go to mine"), "skipped: " + labels(a));
+        say(p, a, "cancel that ping");
+        helper.assertTrue(a.plan.total() == before - 2, "cancelled: " + labels(a) + " (" + lastWords(a) + ")");
+        // the nearest iron, pinged
+        say(p, a, "ping the nearest iron");
+        helper.assertTrue(fromLists(lastWords(a), "say.find_found") && lastWords(a).toLowerCase().contains("iron"), "found iron: " + lastWords(a));
+        // two "that"s with two looks: two trees, in order
+        CompoundTag two = new CompoundTag();
+        two.putString("text", "chop that, and that");
+        two.putInt("bx", t1.getX()); two.putInt("by", t1.getY() + 1); two.putInt("bz", t1.getZ());
+        two.putIntArray("looks", new int[]{t1.getX(), t1.getY() + 1, t1.getZ(), t2.getX(), t2.getY() + 1, t2.getZ()});
+        PaServer.act(p, "talk", two);
+        long chops = a.plan.all().stream().filter(s -> s.label.equals("chop that tree")).count();
+        helper.assertTrue(chops == 2, "two trees for two \"that\"s: " + labels(a) + " (" + lastWords(a) + ")");
+        // an area between two corners (a moment later: pings are held to one a quarter second)
+        say(p, a, "stop");
+        helper.runAfterDelay(10, () -> {
+            PaServer.act(p, "ping", pingTag("AREA", "clear", new BlockPos(x - 4, y, Z + 8), new BlockPos(x + 2, y, Z + 12)));
+            helper.assertTrue(labels(a).toLowerCase().contains("clear"), "area cleared: " + labels(a) + " (" + lastWords(a) + ")");
+            Kit.log("pai42 pings: " + labels(a) + "; waypoints " + a.rec().waypoints.keySet());
+            helper.succeed();
+        });
+    }
+
+    private static CompoundTag pingTag(String target, String opt, BlockPos at, BlockPos corner) {
+        CompoundTag t = new CompoundTag();
+        t.putString("target", target);
+        t.putString("opt", opt);
+        t.putString("label", target.toLowerCase());
+        t.putInt("x", at.getX()); t.putInt("y", at.getY()); t.putInt("z", at.getZ());
+        if (corner != null) { t.putInt("x2", corner.getX()); t.putInt("y2", corner.getY()); t.putInt("z2", corner.getZ()); }
+        return t;
+    }
+
+    private static String labels(PlayerAssistantEntity a) {
+        StringBuilder b = new StringBuilder();
+        for (var s : a.plan.all()) b.append(s.label).append("; ");
+        return b.toString();
+    }
 }

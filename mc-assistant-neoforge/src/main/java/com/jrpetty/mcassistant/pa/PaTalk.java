@@ -84,7 +84,21 @@ public final class PaTalk {
         all[2] = "name";
         all[3] = a.displayNameCap();
         System.arraycopy(kv, 0, all, 4, kv.length);              // the caller's own blanks after, so they win
-        return PaPhrases.line(key, a.tri(), a.getRandom()::nextInt, a.mind.recent, all);
+        return sentences(PaPhrases.line(key, a.tri(), a.getRandom()::nextInt, a.mind.recent, all));
+    }
+
+    /** [pa33c-2b] A blank that opens a sentence ("{what}, nine blocks west") starts it with a capital. */
+    static String sentences(String s) {
+        if (s == null || s.isEmpty()) return s;
+        StringBuilder b = new StringBuilder(s);
+        boolean start = true;
+        for (int i = 0; i < b.length(); i++) {
+            char c = b.charAt(i);
+            if (start && Character.isLetter(c)) { b.setCharAt(i, Character.toUpperCase(c)); start = false; }
+            else if (c == '.' || c == '!' || c == '?') start = i + 1 < b.length() && b.charAt(i + 1) == ' ' && !(i > 0 && b.charAt(i - 1) == '.');
+            else if (c != ' ' && c != '"' && c != '(') start = false;
+        }
+        return b.toString();
     }
 
     /** A line for a non-owner (only they see it). */

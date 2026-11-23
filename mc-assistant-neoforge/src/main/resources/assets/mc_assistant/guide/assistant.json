@@ -74,11 +74,11 @@
       "more": ["Follow, Stay, Come, Guard me, Guard here, Gather wood or stone, Mine ore, Mine down, Farm, Build, Craft, Smelt, Deposit, Fight, Bring food, Light up, Sort chests, Go home, Stop.",
         "It gets what a job needs first, as a player would: a pickaxe before stone, the blocks and the furniture before a house, a hoe and seeds before a field."],
       "steps": ["Press Y and open Orders.", "Click an order; pick the amount and the place if it asks.", "Click Go: its answer shows in Talk."],
-      "controls": ["[Y] assistant panel"],
+      "controls": ["[Y] assistant panel", "[Come here key, unset at first] call it to you (set it in Controls)"],
       "items": [],
       "tips": ["Building uses the same drawings and builder as the towns, so its houses look as good."],
       "related": ["pa_talking", "pa_jobs", "pa_wheel"],
-      "covers": []
+      "covers": ["key:pa_come"]
     },
     {
       "id": "pa_wheel",
@@ -283,7 +283,8 @@
       ],
       "controls": [
         "[X] action wheel",
-        "[Y] assistant panel"
+        "[Y] assistant panel",
+        "[Quiet key, unset at first] hush it or let it talk again (set it in Controls)"
       ],
       "items": [],
       "tips": [
@@ -293,7 +294,7 @@
         "pa_personality",
         "pa_voice"
       ],
-      "covers": []
+      "covers": ["key:pa_quiet"]
     },
     {
       "id": "pa_energy",
@@ -406,6 +407,35 @@
       "tips": ["Mis-hears like \"lugs\" for logs or \"fallow\" for follow are put right for spoken orders."],
       "related": ["pa_voice", "pa_trouble_voice"],
       "covers": []
+    },
+    {
+      "id": "pa_pings",
+      "title": "Pinging orders",
+      "icon": "minecraft:spyglass",
+      "kind": "howto",
+      "q": ["how do i ping", "ping system", "middle mouse ping", "point at something for my assistant", "ping wheel", "mark a spot", "tell my assistant to go there", "waypoints", "remember a place", "find the nearest", "voice ping", "route for my assistant", "mark an area"],
+      "kw": ["ping", "pings", "marker", "wheel", "middle", "mouse", "waypoint", "route", "area", "point"],
+      "answer": "Tap the middle mouse button on something to drop a \"look here\" marker; hold it for a wheel of what your assistant can do with it (chop that, mine the vein, attack that, go there).",
+      "more": ["A tap on its own is only a marker, for you and any friends near by: it never orders your assistant. It becomes an order when you pick from the wheel, tap it again, or say or type an order within five seconds (a ring round the marker counts down). \"That\" and \"there\" then mean the ping.",
+        "Talking works the same way: as you speak, what you look at is pinged, and each \"that\" means the next thing you looked at: \"chop that, and that, then come back\".",
+        "\"Remember this spot as the mine\", then later \"go to the mine\". It also knows \"go back to where I died\" and \"go to my bed\".",
+        "\"Ping the nearest iron\", \"find me a tree\", \"where's the closest village\": it looks in what's loaded round you and marks it.",
+        "\"Cancel that ping\", \"clear all pings\", \"skip that one\" and \"do the tree first\" change its list.",
+        "Pick \"Mark an area\" on the ground, then ping the other corner, for a wheel of things to do with the whole area (clear it, farm it, light it).",
+        "Markers have a colour and a shape for each kind (move: circle, attack: diamond, gather: square, danger: triangle, build: hexagon), so colour is never the only clue."],
+      "steps": ["Aim at a tree, then press and keep holding the ping button.",
+        "Point at \"Chop that\" and let go.",
+        "Or tap the middle button on it and say \"chop that\" within five seconds."],
+      "controls": ["[Middle mouse] tap: marker, hold: ping wheel",
+        "[1-9] pick a wheel option",
+        "[Shift + ping] add a stop to a route (ping key off the middle button, or Ping only)",
+        "[Sneak + middle] pick block, as ever"],
+      "items": [],
+      "tips": ["The ping key, and whether the middle button pings or picks blocks, are in the panel's Settings, Keys.",
+        "Other players' pings never order your assistant.",
+        "\"Act on quick pings\" (off at first) makes a plain tap do the first option at once."],
+      "related": ["pa_wheel", "pa_talking", "pa_voice", "pa_orders"],
+      "covers": ["key:pa_ping", "key:pa_unping", "screen:PaPingWheel"]
     }
   ]
 }

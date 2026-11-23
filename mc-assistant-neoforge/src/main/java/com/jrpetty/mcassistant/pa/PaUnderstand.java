@@ -140,6 +140,9 @@ public final class PaUnderstand {
         }
         norm = (" " + norm + " ").replaceAll(" (?:go|come|run|hurry) and ", " ").replaceAll(" (?:would|do) you mind ", " ").trim();
         String flat = norm.replace(" , ", " ").replace(",", "").trim();
+        // [pa33c-2b] pings and places, read whole (they look like questions or lead-ins otherwise)
+        PaIntent place0 = places(flat, text);
+        if (place0 != null) return new Reading(List.of(place0), null);
         // [pa33c-2b] its bed, read whole ("that's your bed" would lose its lead-in; "where's your bed" is an order, not a question)
         if (flat.matches("^(?:this|that)(?:'s|s| is| one is| one's)? (?:your|ur) (?:bed|spawn)(?: now)?$")) return new Reading(List.of(PaIntent.of(Kind.BED_USE, text).withPlace(Place.LOOKED)), null);
         if (flat.matches("^(?:where(?:'s|s| is| are)? (?:is )?(?:your|ur) (?:bed|spawn)|where do you sleep|which bed is yours|have you got a bed|do you have a bed)(?: .*)?$"))
@@ -153,6 +156,16 @@ public final class PaUnderstand {
         List<PaIntent> steps = new ArrayList<>();
         PaIntent prev = null;
         for (String clause : split(norm)) {
+            String c0 = clause.trim().replaceAll("^(?:and|then|also|after that) ", "").trim();
+            // [pa33c-2b] "go there" before the lead-ins are cut ("go " is one); "..., and that" is the last order again, at the next look
+            PaIntent at = c0.isEmpty() ? null : places(c0, text);
+            if (at != null && at.kind() != Kind.FIND) { steps.add(at); prev = at; continue; }
+            if (prev != null && prev.place() == Place.LOOKED && c0.matches("^(?:and )?(?:that|this|there|it|that 1|this 1|that too|this too|and that)(?: too| as well)?$")) {
+                PaIntent again = new PaIntent(prev.kind(), prev.item(), prev.amount(), Place.LOOKED, text);
+                steps.add(again);
+                prev = again;
+                continue;
+            }
             String c = LEAD.matcher(clause.trim()).replaceFirst("").trim();
             c = c.replaceAll("^(?:and|then|also|after that) ", "").trim();
             if (c.isEmpty()) continue;
@@ -165,6 +178,35 @@ public final class PaUnderstand {
         }
         if (steps.isEmpty()) return new Reading(List.of(), notSure(flat));
         return new Reading(steps, null);
+    }
+
+    /** [pa33c-2b] Places and pings: go there, go back to where I died, go to my bed, the mine; remember this as...; find the nearest...;
+     *  ping/mark that; cancel or clear pings, skip one, do one first. Null when it's none of these (or more than one order). */
+    static PaIntent places(String c, String raw) {
+        if (c.matches("^(?:cancel|remove|delete|forget|drop) (?:that|this|the|my) (?:last )?ping$")) return new PaIntent(Kind.PING_EDIT, "cancel", 0, Place.NONE, raw);
+        if (c.matches("^(?:clear|remove|delete|cancel) (?:all )?(?:the |my |those )?pings$|^clear all$")) return new PaIntent(Kind.PING_EDIT, "clear", 0, Place.NONE, raw);
+        if (c.matches("^skip (?:that|this|the) (?:one|1|job|ping|step)$|^skip it$|^skip that$")) return new PaIntent(Kind.PING_EDIT, "skip", 0, Place.NONE, raw);
+        java.util.regex.Matcher first = Pattern.compile("^do (?:the |that |my )?([a-z]+)(?: one| job)? first$").matcher(c);
+        if (first.find()) return new PaIntent(Kind.PING_EDIT, "first:" + first.group(1), 0, Place.NONE, raw);
+        if (c.matches("^(?:ping|mark|flag|tag) (?:that|this|it|there|here)(?: spot| place)?$")) return PaIntent.of(Kind.MARK, raw).withPlace(Place.LOOKED);
+        java.util.regex.Matcher save = Pattern.compile("^(?:remember|save|mark|call|name|set) (?:this|that|here|this spot|that spot|this place|that place)(?: spot| place)? as (?:the |my |our |a )?([a-z][a-z ]{0,20})$").matcher(c);
+        if (save.find()) return new PaIntent(Kind.WAYPOINT, save.group(1).trim(), 0, Place.LOOKED, raw);
+        java.util.regex.Matcher find = Pattern.compile("^(?:ping|mark|locate|show me)(?: me)? (?:the |a |an )?(?:nearest |closest )?([a-z]+(?: [a-z]+)?)(?: nearby| near here| around here)?$").matcher(c);
+        if (!find.find()) find = Pattern.compile("^(?:find|where(?:'s| is| are)|wheres)(?: me)? (?:the |a |an )?(?:nearest|closest) ([a-z]+(?: [a-z]+)?)(?: nearby| near here| around here)?$").matcher(c);
+        else find.reset();
+        if (!find.find()) find = Pattern.compile("^find (?:me )?an? (tree|logs|village|chest|bed|cave|river|lake|furnace|crafting table)$").matcher(c);
+        else find.reset();
+        if (find.find() && !find.group(1).matches("that|this|it|there|here|your bed|you|me|my things|that spot|this spot")) return new PaIntent(Kind.FIND, find.group(1), 0, Place.NONE, raw);
+        if (c.matches("^(?:go|walk|run|head|move|get|come)(?: back)?(?: over)? (?:there|to (?:that|this|the) (?:spot|place|point|marker|ping)|to it|over to it|that way)$"))
+            return PaIntent.of(Kind.GOTO, raw).withPlace(Place.LOOKED);
+        if (c.matches("^(?:go|walk|run|head|take me|get)(?: back)? to (?:where i died|where i fell|my death spot|my death|my things|my stuff)$"))
+            return new PaIntent(Kind.GOTO, "death", 0, Place.NONE, raw);
+        if (c.matches("^(?:go|walk|run|head)(?: back)? to (?:my|your) bed$")) return new PaIntent(Kind.GOTO, "bed", 0, Place.NONE, raw);
+        java.util.regex.Matcher named = Pattern.compile("^(?:go|walk|run|head|take me)(?: back)? to (?:the |my |our )([a-z][a-z ]{0,20})$").matcher(c);
+        if (named.find() && !named.group(1).matches("home|base|house|bed|village|chest|chests|farm field")) return new PaIntent(Kind.GOTO, "@" + named.group(1).trim(), 0, Place.NONE, raw);
+        if (c.matches("^(?:build|make|put) (?:a |me a )?bridge(?: over (?:that|this|it|there|the water|the lava))?$|^bridge (?:over )?(?:that|this|it|there)$"))
+            return PaIntent.of(Kind.BRIDGE, raw).withPlace(Place.LOOKED);
+        return null;
     }
 
     /** Cut into steps on commas, "then", "after that", "and then"; on "and" only when a new order starts after it. */
@@ -283,6 +325,8 @@ public final class PaUnderstand {
         Map.entry("collecting", "collect"), Map.entry("exploring", "explore"), Map.entry("sorting", "sort"), Map.entry("planting", "plant"));
 
     static PaIntent clause(String c, PaIntent prev, String raw) {
+        PaIntent pl = places(c, raw);                                   // [pa33c-2b] "go there" as one step of several
+        if (pl != null && pl.kind() != Kind.FIND) return pl;
         String g = GERUND.get(c.split(" ")[0]);
         if (g != null) c = g + c.substring(c.indexOf(' ') < 0 ? c.length() : c.indexOf(' '));
         int amount = amount(c);
@@ -496,6 +540,8 @@ public final class PaUnderstand {
 
         // gathering (the commonest order of all)
         if (GATHER_V.contains(first) || first.equals("punch") || c.matches("^(?:go )?(?:get|gather|collect) .*")) {
+            // [pa33c-2b] "chop that" / "chop this tree": the one pointed at (or pinged)
+            if (c.matches("^(?:chop|cut|fell)(?: down)? (?:that|this|it|these|those)(?: logs| 1| one)?$")) return new PaIntent(Kind.GATHER, "logs", amount, Place.LOOKED, raw);
             if ((first.equals("chop") || first.equals("cut") || first.equals("punch")) && findIn(c, RESOURCES.keySet()).isEmpty()) {
                 return new PaIntent(Kind.GATHER, "logs", amount, place, raw);
             }

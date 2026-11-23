@@ -5,6 +5,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * [pa33] Every click, key and word from a player's assistant panel, wheel, talk box or voice, handled on the server.
@@ -42,6 +43,14 @@ public final class PaServer {
                 if (r != null) PaLife.dismiss(p, r);
             }
             case "talk" -> talk(p, r, a, args);
+            case "ping" -> ping(p, r, a, args);                     // [pa33c-2b] a ping wheel choice (a bare ping never reaches here)
+            case "mark" -> {                                        // [pa33c-2b] a bare ping shared with players near by (never an order)
+                if (!MARKS.computeIfAbsent(p.getUUID(), k -> new PaPings.Rate()).allow(System.currentTimeMillis())) return;
+                BlockPos at = new BlockPos(args.getInt("x"), args.getInt("y"), args.getInt("z"));
+                String label = args.getString("label");
+                for (ServerPlayer o : p.serverLevel().players())
+                    if (o != p && o.distanceToSqr(p) < 128 * 128) PaNet.ping(o, at, p.getGameProfile().getName() + ": " + (label.length() > 40 ? label.substring(0, 40) : label), "LOOK", "shared");
+            }
             case "stranger" -> {                                    // [pa33b] someone else's assistant, from its little chat box
                 if (p.level().getEntity(args.getInt("id")) instanceof PlayerAssistantEntity other && !other.isOwner(p) && other.distanceToSqr(p) < 16 * 16)
                     PaBanter.stranger(other, p, args.getString("text"), false);
@@ -107,6 +116,55 @@ public final class PaServer {
         }
     }
 
+    private static final java.util.Map<java.util.UUID, PaPings.Rate> PINGS = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<java.util.UUID, PaPings.Rate> MARKS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * [pa33c-2b] A ping wheel choice: the option's own words, with the ping as what "that" and "there" mean, through the
+     * same reader as anything said; or one of the special ones (look, danger, leave it, say hi). Owner only, rate-limited.
+     */
+    private static void ping(ServerPlayer p, @Nullable PaData.Rec r, @Nullable PlayerAssistantEntity a, CompoundTag args) {
+        if (r == null || a == null || !a.obeys(p)) return;
+        if (!PINGS.computeIfAbsent(p.getUUID(), k -> new PaPings.Rate()).allow(System.currentTimeMillis())) return;
+        PaPings.Target target = PaPings.of(args.getString("target"));
+        PaPings.Option o = PaPings.option(target, args.getString("opt"));
+        if (o == null) return;
+        BlockPos at = args.contains("x") ? new BlockPos(args.getInt("x"), args.getInt("y"), args.getInt("z")) : null;
+        int ent = args.contains("ent") ? args.getInt("ent") : -1;
+        String label = args.getString("label");
+        switch (o.id()) {
+            case "look" -> {
+                String key = "ping.look." + target.name().toLowerCase(java.util.Locale.ROOT);
+                String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt), a.getRandom()::nextInt, a.mind.recent);
+                if (raw == null) raw = PaPersona.from(PaLines.get(key), a.getRandom()::nextInt, a.mind.recent);
+                PaTalk.reply(a, raw == null ? "Yes. I see it." : PaBanter.fill(a, raw, "what", label.isEmpty() ? "that" : label));
+                return;
+            }
+            case "danger" -> {
+                if (at != null) a.mind.danger = at;
+                PaTalk.reply(a, PaTalk.line(a, "ping_danger", "what", label.isEmpty() ? "there" : label));
+                return;
+            }
+            case "leave" -> { PaTalk.reply(a, PaTalk.line(a, "ping_leave")); return; }
+            case "hi" -> {
+                net.minecraft.world.entity.Entity e = ent >= 0 ? p.level().getEntity(ent) : null;
+                String who = e == null ? "there" : e.getName().getString();
+                PaTalk.reply(a, PaTalk.line(a, "ping_hi", "player", who));
+                return;
+            }
+            case "followthem" -> { PaTalk.reply(a, PaTalk.line(a, "not_yours_to_follow")); return; }
+            case "cancel", "area" -> { return; }
+            default -> { }
+        }
+        if (o.says().isEmpty()) return;
+        List<BlockPos> more = new java.util.ArrayList<>();
+        if (args.contains("x2")) {                                   // an area: its two corners
+            more.add(at);
+            more.add(new BlockPos(args.getInt("x2"), args.getInt("y2"), args.getInt("z2")));
+        }
+        PaOrders.hear(p, a, o.says(), new PaOrders.Look(at, ent, more), false);
+    }
+
     private static void talk(ServerPlayer p, @Nullable PaData.Rec r, @Nullable PlayerAssistantEntity a, CompoundTag args) {
         String text = args.getString("text").trim();
         if (text.isEmpty()) return;
@@ -132,7 +190,11 @@ public final class PaServer {
         }
         BlockPos look = args.contains("bx") ? new BlockPos(args.getInt("bx"), args.getInt("by"), args.getInt("bz")) : null;
         int ent = args.contains("ent") ? args.getInt("ent") : -1;
-        PaOrders.hear(p, a, text, new PaOrders.Look(look, ent), args.getBoolean("voice"));
+        // [pa33c-2b] every place pointed at while it was said (a ping first, then each look at "that"), in order
+        List<BlockPos> more = new java.util.ArrayList<>();
+        int[] ls = args.getIntArray("looks");
+        for (int i = 0; i + 2 < ls.length && more.size() < 8; i += 3) more.add(new BlockPos(ls[i], ls[i + 1], ls[i + 2]));
+        PaOrders.hear(p, a, text, new PaOrders.Look(look, ent, more), args.getBoolean("voice"));
     }
 
     /** The choices' own words: "#veto fight", "#settings chests on", "#tour". */
