@@ -1065,8 +1065,15 @@ public final class MineWorks {
         // Deep under the rock it is below however far out (a vein followed into a cave a hundred and thirty blocks off
         // the shaft is still the works' to get it out of: at eighty, such a miner's way up was refused, and it was sent
         // up forty-eight times where it stood).
-        return p.getY() < w.top - 2 && (ground || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 256
-            && p.getY() < w.top - 12 && !level.canSeeSky(p));
+        // [econ32c] Off its ground, under the rock as the world made it (MineStairs.underground), and never in the town's own
+        // buildings: a miner in a cellar under the square, eleven blocks under the pithead's height and roofed, was "below in
+        // the works" and sent up a way that was never there, every second.
+        if (p.getY() >= w.top - 2) return false;
+        if (ground) return true;
+        if (Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) > 256 || p.getY() >= w.top - 12 || level.canSeeSky(p)) return false;
+        if (!MineStairs.underground(level, p)) return false;
+        Villages.Village vv = Villages.get(v);
+        return vv == null || !MineStairs.indoors(level, v, vv.centre(), p);
     }
 
     /** [mine8] Is this column in the ground of a town's mine whose works are laid out (no hand cuts stone or earth there)? */

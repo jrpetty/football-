@@ -496,7 +496,8 @@ public final class TradeDeals {
         int can = item == null ? 0 : Math.min(agreed, Math.max(0, Budget.spare(level, from, new ItemStack(item))));
         boolean sellerLeg = from.equals(d.seller);
         int coinDue = sellerLeg && agreed > 0 ? (int) Math.round(d.coin * Math.min(1.0, can / (double) agreed)) : 0;
-        List<ItemStack> lots = item != null && ToolTrade.isTool(new ItemStack(item)) ? ToolTrade.samples(level, from, item, can) : stacks(item, can);   // [econ32] tools as they are
+        List<ItemStack> lots = item == null ? List.of()                     // [econ32c] a leg that sends nothing (it threw building the stacks)
+            : ToolTrade.isTool(new ItemStack(item)) ? ToolTrade.samples(level, from, item, can) : stacks(item, can);   // [econ32] tools as they are
         Shipments.Shipment s = can <= 0 || lots.isEmpty() ? null : Shipments.dispatch(level, from, to, contract(d), lots, coinDue);
         d.due++;
         d.next = Math.max(d.next + d.every, day + 1);
