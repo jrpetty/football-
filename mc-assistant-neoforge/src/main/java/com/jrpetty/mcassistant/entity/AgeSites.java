@@ -109,7 +109,28 @@ public final class AgeSites {
 
     /** Keep an age's building's ground through a builder's failure to reach it (Villages.rejectSite): true, five times. */
     static boolean holdGround(UUID village, String project) {
-        if (kept(village, project) == null) return false;
+        Villages.Site site = kept(village, project);
+        if (site == null || !begun(project, site)) return false;      // nothing laid yet: another lot, as ever
         return HELD.merge(village + "|" + project, 1, Integer::sum) <= 5;
+    }
+
+    /** Has a good part of it been laid on its ground (a score of its blocks standing where its drawing puts them)? */
+    static boolean begun(String project, Villages.Site site) {
+        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return false;
+        net.minecraft.server.level.ServerLevel level = server.overworld();
+        int laid = 0;
+        for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement p
+                : com.jrpetty.mcassistant.entity.goal.BuildGoal.plan(project, site.anchor(), site.facing(), Math.max(site.radius(), 13))) {
+            if (p.part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.CLEAR || p.pos().getY() <= site.anchor().getY()
+                || !level.hasChunkAt(p.pos())) continue;                // its walls, not the ground it stands on
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p.pos());
+            if (st.isAir() || !st.getFluidState().isEmpty() || st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.DIRT)
+                || st.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD) || st.is(net.minecraft.tags.BlockTags.SAND)
+                || st.is(net.minecraft.tags.BlockTags.LOGS) || st.is(net.minecraft.tags.BlockTags.LEAVES)
+                || st.is(net.minecraft.world.level.block.Blocks.GRAVEL)) continue;   // the world's own, not a wall
+            if (++laid >= 20) return true;
+        }
+        return false;
     }
 }

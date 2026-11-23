@@ -1418,6 +1418,16 @@ public class SupplyChainGameTests {
             + (again == null ? "none" : again.anchor().toShortString()));
         Kit.Expect ok = new Kit.Expect();
         ok.that(again != null && again.anchor().equals(at) && again.facing() == first.facing(), "its own ground again after a restart");
+        // A builder that could not get to it: the half-raised chapel keeps its ground; a hall with nothing laid gives its lot up.
+        Villages.rejectSite(v, "chapel", level.getGameTime());
+        Villages.Site still1 = Villages.siteFor(level, v, "chapel");
+        Villages.Site hall = Villages.siteFor(level, v, "hall");
+        Villages.rejectSite(v, "hall", level.getGameTime());
+        boolean hallNote = com.jrpetty.mcassistant.village.Ledger.note(v, "age.site.hall") != null;
+        Kit.log("[VT] sc22 a builder could not get to them: the chapel's ground " + (still1 == null ? "none" : still1.anchor().toShortString())
+            + "; the hall (nothing laid) at " + (hall == null ? "none" : hall.anchor().toShortString()) + ", its note kept " + hallNote);
+        ok.that(still1 != null && still1.anchor().equals(at), "the half-raised chapel keeps its ground");
+        ok.that(hall != null && !hallNote, "a hall with nothing laid gives its lot up");
         boolean asked = Villages.needs(level, v).stream().anyMatch(x -> x.what().contains("chapel"));
         Villages.noteProject(v, "chapel", level.getGameTime());
         boolean still = Villages.needs(level, v).stream().anyMatch(x -> x.what().contains("chapel"));
