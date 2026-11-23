@@ -276,6 +276,8 @@
       "more": ["Windows: it prefers the modern voices (Hazel, George and Susan for UK English). Add more in Settings > Time & language > Speech. Windows 11's Narrator natural voices are only for Narrator and can't be used by other apps.",
         "Mac: download an Enhanced or Premium voice in System Settings > Accessibility > Spoken Content > System voice > Manage Voices.",
         "Linux uses espeak: it works, but sounds basic.",
+      "The most human voices: click Get natural British voices under Voice. These are Kokoro voices (George, Lewis, Daniel, Fable, Emma, Isabella, Alice, Lily) that run offline. They are only downloaded if you agree: about 213 MB, once, from GitHub and Maven Central (Kokoro is Apache-2.0, ONNX Runtime is MIT). They also need the free program eSpeak NG on your computer.",
+      "With them, each look gets a fitting voice: George for the knight, Fable for the butler, Daniel for the skeleton. Pick a woman's voice (Emma or Isabella) and the suggestions follow.",
         "Speed and pitch are in About too, and a gloomy assistant speaks slower and lower."],
       "steps": ["Press Y, open About, click Voice.", "Press the play button beside a voice to hear it."],
       "controls": ["[Y] assistant panel"],

@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,8 +20,8 @@ import java.util.function.Predicate;
  * the game thread. [pa33b] Windows: the modern voices (Windows.Media.SpeechSynthesis, "OneCore": Hazel, George and
  * Susan for en-GB; Aria, Jenny and Guy where installed) through one long-lived PowerShell, with SSML for pacing and
  * mood; the classic desktop voices (System.Speech) when those aren't there. macOS: {@code say}, the Enhanced and Premium
- * voices first. Linux: {@code espeak-ng}/{@code espeak}/{@code spd-say}, the last resort. Piper (offline neural, PaPiper)
- * when the player has installed it. With none it is silent and says so (the words always show). Plain Java.
+ * voices first. Linux: {@code espeak-ng}/{@code espeak}/{@code spd-say}, the last resort. Kokoro (offline neural,
+ * PaKokoro, first choice) and Piper (PaPiper) when the player has downloaded them. With none it is silent and says so (the words always show). Plain Java.
  */
 public final class PaTts {
 
@@ -32,7 +33,8 @@ public final class PaTts {
 
         public String group() {
             return switch (engine) {
-                case "piper" -> "Natural (neural)";
+                case "kokoro" -> "Natural (Kokoro)";
+                case "piper" -> "Natural (Piper)";
                 case "winrt" -> "Windows (modern)";
                 case "sapi" -> "Windows (classic)";
                 case "mac" -> quality.isEmpty() ? "macOS" : "macOS (" + quality + ")";
@@ -67,6 +69,8 @@ public final class PaTts {
     private volatile java.util.function.Supplier<PaAccent> accent = () -> PaAccent.US;
     private volatile String speaking = "";
     private PaPiper piper;
+    private PaKokoro kokoro;
+    private volatile javax.sound.sampled.Clip clip;
 
     private PaTts(Kind kind, String status) {
         this.kind = kind;
@@ -80,6 +84,18 @@ public final class PaTts {
     /** [pa33b] Where the optional neural voices live (the config folder). */
     public void piper(Path dir) {
         piper = new PaPiper(dir);
+    }
+
+    /** [pa33b] Where the Kokoro voices live, once downloaded (the config folder). */
+    public void kokoro(Path dir) {
+        kokoro = new PaKokoro(dir);
+    }
+
+    public PaKokoro kokoro() { return kokoro; }
+
+    /** [pa33b] Kokoro is ready to speak: downloaded, and espeak-ng there to read the words. */
+    public boolean kokoroReady() {
+        return kokoro != null && kokoro.downloaded() && PaKokoro.espeak(System.getProperty("os.name"), PaTts::onPath, Files::isRegularFile) != null;
     }
 
     public static Kind pick(String osName, Predicate<String> onPath) {
@@ -122,7 +138,7 @@ public final class PaTts {
 
     public Kind kind() { return kind; }
 
-    public boolean available() { return kind != Kind.NONE || (piper != null && !piper.installedVoices(System.getProperty("os.name")).isEmpty()); }
+    public boolean available() { return kind != Kind.NONE || kokoroReady() || (piper != null && !piper.installedVoices(System.getProperty("os.name")).isEmpty()); }
 
     public String status() { return status; }
 
@@ -132,6 +148,7 @@ public final class PaTts {
     /** [pa33b] Every voice the picker can offer, grouped by engine, the most natural first. */
     public List<VoiceInfo> catalogue() {
         List<VoiceInfo> all = new ArrayList<>();
+        if (kokoroReady()) for (PaKokoro.Voice v : PaKokoro.CATALOGUE) all.add(new VoiceInfo("kokoro", v.label(), v.lang(), v.gender(), "natural"));
         if (piper != null) for (PaPiper.Voice v : piper.installedVoices(System.getProperty("os.name")))
             all.add(new VoiceInfo("piper", v.label(), v.id().substring(0, 5), v.gender(), v.quality()));
         all.addAll(catalogue);
@@ -198,7 +215,7 @@ public final class PaTts {
     public VoiceInfo auto(PaAccent a) {
         List<VoiceInfo> all = catalogue();
         String want = a == PaAccent.UK ? "en-gb" : "en-us";
-        String[] order = {"piper", "winrt", "sapi", "mac"};
+        String[] order = {"kokoro", "piper", "winrt", "sapi", "mac"};
         for (String eng : order) {
             VoiceInfo best = null;
             for (VoiceInfo v : all) {
@@ -232,6 +249,7 @@ public final class PaTts {
             String engine = v != null ? v.engine() : kind == Kind.WINDOWS ? "sapi" : kind == Kind.MAC ? "mac" : kind == Kind.NONE ? "" : "espeak";
             int[] p = PaSpeech.prosody(o.gloom(), o.fun());
             switch (engine) {
+                case "kokoro" -> kokoro(line, v, o);
                 case "piper" -> piper(line, v, o);
                 case "winrt" -> winrt(line, v, o);
                 case "sapi" -> sapi(line, v, o);
@@ -261,6 +279,8 @@ public final class PaTts {
     private void stopCurrent() {
         if (current != null && current.isAlive()) current.destroy();
         current = null;
+        javax.sound.sampled.Clip c = clip;
+        if (c != null) { c.stop(); c.close(); clip = null; }
         for (Writer w : new Writer[]{sapiIn, winrtIn}) {
             if (w == null) continue;
             try {
@@ -376,6 +396,38 @@ public final class PaTts {
         if (v != null) in.write("#name " + v.name() + "\n");
         in.write(PaSpeech.ssml(line, v != null && !v.lang().isEmpty() ? v.lang() : o.accent().culture, o.gloom(), o.fun(), o.rate() * 8, o.pitch() * 5) + "\n");
         in.flush();
+    }
+
+    // ------------------------------------------------------------------ Kokoro
+
+    private void kokoro(String line, VoiceInfo v, Opts o) throws Exception {
+        String os = System.getProperty("os.name");
+        PaKokoro.Voice kv = PaKokoro.byLabel(v.name());
+        String espeak = PaKokoro.espeak(os, PaTts::onPath, Files::isRegularFile);
+        if (kokoro == null || kv == null || !kokoro.downloaded()) { status = "That natural voice isn't downloaded."; return; }
+        if (espeak == null) { status = PaKokoro.espeakAdvice(os); return; }
+        if (!kokoro.load()) { status = kokoro.why(); return; }
+        // the words as phonemes, clause by clause, joined by the punctuation Kokoro pauses at; spoken a sentence at a time
+        List<String> chunks = new ArrayList<>();
+        StringBuilder b = new StringBuilder();
+        for (String[] c : PaKokoro.clauses(line)) {
+            String ph = PaKokoro.cleanPhonemes(String.join(" ", lines(PaKokoro.phonemeCommand(espeak, o.accent(), c[0]))));
+            if (ph.isEmpty()) continue;
+            if (b.length() + ph.length() > 400) { chunks.add(b.toString().trim()); b.setLength(0); }
+            b.append(ph).append(c[1]).append(' ');
+        }
+        if (b.length() > 0) chunks.add(b.toString().trim());
+        float speed = PaKokoro.speed(o.gloom(), o.rate());
+        java.io.ByteArrayOutputStream pcm = new java.io.ByteArrayOutputStream();
+        for (String ch : chunks) pcm.write(PaKokoro.pcm16(kokoro.synth(ch, kv, speed), o.volume()));
+        if (pcm.size() == 0) return;
+        stopCurrent();
+        javax.sound.sampled.AudioFormat fmt = new javax.sound.sampled.AudioFormat(PaKokoro.SAMPLE_RATE, 16, 1, true, false);
+        javax.sound.sampled.Clip c = javax.sound.sampled.AudioSystem.getClip();
+        byte[] data = pcm.toByteArray();
+        c.open(fmt, data, 0, data.length);
+        c.start();
+        clip = c;
     }
 
     // ------------------------------------------------------------------ Piper

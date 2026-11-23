@@ -324,14 +324,19 @@ public class PaTaskGoal extends Goal {
 
     // ------------------------------------------------------------------ buy and sell at a market
 
-    private int done, spent;
+    private int done, spent, shortTries;
 
     private void trade() {
         ServerLevel level = (ServerLevel) a.level();
         // [pa33b] the very town it was sent to (its heart is the task's spot), not whichever claim covers that spot
+        // (two records can share a heart, as a town and its founder's claim: the one whose stores hold the thing)
         com.jrpetty.mcassistant.entity.Villages.Village v = null;
+        Item want = itemFor(t.item);
+        int most = -1;
         if (t.pos != null) for (com.jrpetty.mcassistant.entity.Villages.Village x : com.jrpetty.mcassistant.entity.Villages.every()) {
-            if (x.centre().equals(t.pos) && x.dim().equals(level.dimension())) { v = x; break; }
+            if (!x.centre().equals(t.pos) || !x.dim().equals(level.dimension())) continue;
+            int n = want == Items.AIR ? 0 : com.jrpetty.mcassistant.entity.Market.stock(level, x.id(), st -> st.is(want));
+            if (n > most) { most = n; v = x; }
         }
         if (v == null && t.pos != null) v = com.jrpetty.mcassistant.entity.TownBlocks.townAt(level, t.pos);
         if (v == null) { finish("There's no town's market near enough to trade at.", true); return; }
@@ -341,6 +346,7 @@ public class PaTaskGoal extends Goal {
             t.stage = 1;
             done = 0;
             spent = 0;
+            shortTries = 0;
         }
         Item item = itemFor(t.item);
         if (item == Items.AIR) { finish("I don't know what \"" + t.item + "\" is to trade.", true); return; }
@@ -358,6 +364,8 @@ public class PaTaskGoal extends Goal {
             }
             said = com.jrpetty.mcassistant.entity.Market.buy(level, v, owner, new ItemStack(item));
             int paid = coinsBefore - coins(owner);
+            // [pa33b] the stores are counted afresh now and then (a chest being emptied, a courier mid-load): ask again before giving up
+            if (paid <= 0 && said.contains("to spare") && shortTries < 3) { shortTries++; cool = 20; return; }
             if (paid <= 0 || !said.startsWith("Bought")) { finish(done > 0 ? "Bought " + done + " " + t.item + " for you, then: " + said : said, done == 0); return; }
             spent += paid;
             done += Math.max(1, countIn(said));

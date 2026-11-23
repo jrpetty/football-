@@ -35,6 +35,7 @@ public final class PaVoice {
             tts = PaTts.create();
             tts.accent(PaVoice::accent);                        // [pa33b] a British voice for UK
             tts.piper(dir().resolve("piper-voices"));
+            tts.kokoro(dir().resolve("kokoro"));                // [pa33b] the natural voices, once downloaded
         }
         return tts;
     }
@@ -136,8 +137,31 @@ public final class PaVoice {
         t.start();
     }
 
+    static volatile boolean installingVoices;
+
+    /** [pa33b] The player agreed: download the natural (Kokoro) voices, off the game thread. Nothing is fetched before. */
+    static void installVoices() {
+        if (installingVoices || tts().kokoro() == null) return;
+        installingVoices = true;
+        Thread t = new Thread(() -> {
+            boolean ok = tts().kokoro().install(PaVoice::say);
+            installingVoices = false;
+            if (!ok) say(tts().kokoro().why());
+            else if (!tts().kokoroReady()) say(com.jrpetty.mcassistant.pa.voice.PaKokoro.espeakAdvice(System.getProperty("os.name")));
+            else say("The natural voices are ready: pick one under Voice.");
+        }, "mca-assistant-voice-download");
+        t.setDaemon(true);
+        t.start();
+    }
+
     /** [pa33b] A voice that suits the look, of those on this computer (a hint only; the look never forces a voice). */
     static String suggestFor(int look, java.util.List<PaTts.VoiceInfo> cat) {
+        if (tts().kokoroReady()) {                           // the natural voices: George for the knight, Fable for the butler...
+            boolean female = PaClientConfig.get(PaClientConfig.VOICEKEY, "").startsWith("kokoro:")
+                && "female".equals(java.util.Optional.ofNullable(com.jrpetty.mcassistant.pa.voice.PaKokoro.byLabel(PaClientConfig.get(PaClientConfig.VOICEKEY, "").substring(7)))
+                    .map(com.jrpetty.mcassistant.pa.voice.PaKokoro.Voice::gender).orElse(""));
+            return com.jrpetty.mcassistant.pa.voice.PaKokoro.forLook(look, accent(), female).label();
+        }
         String[] want = switch (look) {
             case 4 -> new String[]{"george", "ryan", "alan", "northern", "daniel", "guy", "david"};          // Knight: deep
             case 8 -> new String[]{"george", "alan", "daniel", "semaine", "oliver"};                         // Butler: posh

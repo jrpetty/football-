@@ -677,6 +677,21 @@ public class PaScreen extends Screen {
                 cy += 14;
             }
             if (cat.isEmpty()) cy = para(g, PaVoice.tts().status(), sx, cy, half, UiStyle.TEXT_FAINT);
+            // [pa33b] the natural voices (Kokoro): offered, explained, and fetched only once the player agrees
+            if (!PaVoice.tts().kokoroReady()) {
+                if (!voicesAsk) {
+                    button(g, PaVoice.installingVoices ? "Downloading..." : "Get natural British voices...", sx, cy, half - 22, 13, mx, my, !PaVoice.installingVoices, false,
+                        "George, Lewis, Daniel, Fable, Emma, Isabella, Alice, Lily: very human, offline", () -> voicesAsk = true);
+                    cy += 16;
+                } else {
+                    cy = para(g, "Natural voices (Kokoro, Apache-2.0) run on your computer, offline. This downloads about "
+                        + com.jrpetty.mcassistant.pa.voice.PaKokoro.totalMb() + " MB once into your config folder, from GitHub and Maven Central: the voice model and voices (Apache-2.0) and ONNX Runtime (MIT). "
+                        + "They also need the free program eSpeak NG on your computer to read words. Nothing you say is sent anywhere.", sx, cy, half, UiStyle.TEXT_FAINT);
+                    button(g, "I agree: download", sx, cy, 100, 14, mx, my, true, true, "", () -> { voicesAsk = false; PaVoice.installVoices(); });
+                    button(g, "Not now", sx + 106, cy, 60, 14, mx, my, true, false, "", () -> voicesAsk = false);
+                    cy += 18;
+                }
+            }
             cy = para(g, "More natural voices: on Windows add voices in Settings > Time & language > Speech; on a Mac, System Settings > Accessibility > Spoken Content > System voice > Manage Voices (pick an Enhanced or Premium one).",
                 sx, cy, half, UiStyle.TEXT_FAINT);
         }
@@ -759,6 +774,7 @@ public class PaScreen extends Screen {
     // ------------------------------------------------------------------ [pa33b] the Look tab
 
     private int lookPrevX, lookPrevY, lookPrevW, lookPrevH;
+    private boolean voicesAsk;   // [pa33b] the natural-voices consent showing
     private boolean voicesOpen;
 
     /** A big preview to turn with the mouse, and every look to pick (instant and free). */

@@ -252,4 +252,120 @@ class PaVoiceTest {
         assertTrue(PaTts.cloudStatus(true, "").contains("nothing is sent"));
         assertTrue(PaTts.cloudStatus(true, "key").contains("nothing is sent"));
     }
+
+    // ------------------------------------------------------------------ [pa33b] Kokoro, the natural voices (no download, no native code here)
+
+    @Test
+    void kokoroCatalogueAndLookPicks() {
+        long british = PaKokoro.CATALOGUE.stream().filter(v -> v.lang().equals("en-GB")).count();
+        assertEquals(8, british, "George, Lewis, Daniel, Fable, Emma, Isabella, Alice, Lily");
+        for (String id : new String[]{"bm_george", "bm_lewis", "bm_daniel", "bm_fable", "bf_emma", "bf_isabella", "bf_alice", "bf_lily"})
+            assertTrue(PaKokoro.byId(id) != null, id);
+        assertEquals("George", PaKokoro.forLook(4, PaAccent.UK, false).label());      // knight
+        assertEquals("Fable", PaKokoro.forLook(8, PaAccent.UK, false).label());       // butler
+        assertEquals("Daniel", PaKokoro.forLook(14, PaAccent.UK, false).label());     // skeleton
+        String f = PaKokoro.forLook(0, PaAccent.UK, true).label();
+        assertTrue(f.equals("Emma") || f.equals("Isabella"), f);
+        assertEquals("Isabella", PaKokoro.forLook(8, PaAccent.UK, true).label());
+        assertEquals("en-US", PaKokoro.forLook(4, PaAccent.US, false).lang());
+        for (int look = 0; look < 18; look++) for (boolean fem : new boolean[]{false, true}) {
+            PaKokoro.Voice v = PaKokoro.forLook(look, PaAccent.UK, fem);
+            assertTrue(v != null && v.lang().equals("en-GB") && v.gender().equals(fem ? "female" : "male"), look + " " + fem);
+        }
+    }
+
+    @Test
+    void kokoroDownloadIsSaidAndCheckedAndNothingIsThereYet(@TempDir Path dir) {
+        assertTrue(PaKokoro.totalMb() > 200 && PaKokoro.totalMb() < 230, PaKokoro.totalMb() + " MB");
+        for (PaKokoro.Part p : PaKokoro.PARTS) {
+            assertTrue(p.url().startsWith("https://github.com/") || p.url().startsWith("https://raw.githubusercontent.com/")
+                || p.url().startsWith("https://repo1.maven.org/"), p.url());
+            assertFalse(p.licence().isEmpty());
+        }
+        PaKokoro k = new PaKokoro(dir);
+        assertFalse(k.downloaded());
+        assertFalse(k.load());
+        assertEquals("The natural voices aren't downloaded.", k.why());
+        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+            () -> k.synth("h\u0259lo\u028a", PaKokoro.byId("bm_george"), 1f)).getMessage().contains("downloaded"));
+    }
+
+    @Test
+    void kokoroFindsEspeakAndSaysHowToGetIt() {
+        assertEquals("espeak-ng", PaKokoro.espeak("Linux", c -> c.equals("espeak-ng"), p -> false));
+        assertEquals("C:\\Program Files\\eSpeak NG\\espeak-ng.exe",
+            PaKokoro.espeak("Windows 11", c -> false, p -> p.toString().startsWith("C:\\Program Files\\eSpeak")));
+        assertEquals(null, PaKokoro.espeak("Windows 11", c -> false, p -> false));
+        assertTrue(PaKokoro.espeakAdvice("Windows 11").contains("espeak-ng-X64.msi"));
+        assertTrue(PaKokoro.espeakAdvice("Mac OS X").contains("brew install espeak-ng"));
+        assertTrue(PaKokoro.espeakAdvice("Linux").contains("espeak-ng"));
+        assertEquals(List.of("espeak-ng", "-q", "--ipa", "-b", "1", "-v", "en-gb", "hello there"), PaKokoro.phonemeCommand("espeak-ng", PaAccent.UK, "hello there"));
+        assertEquals("en-us", PaKokoro.phonemeCommand("espeak-ng", PaAccent.US, "hi").get(6));
+        assertEquals("h\u0259l\u02c8\u0259\u028a \u00f0\u02c8e\u0259", PaKokoro.cleanPhonemes(" h\u0259l\u02c8\u0259\u028a_\n\u00f0\u02c8e\u0259\n"));
+    }
+
+    @Test
+    void kokoroTokensStyleSpeedAndSound() throws Exception {
+        String json = "{\"n_token\": 178, \"vocab\": {\";\": 1, \",\": 3, \".\": 4, \" \": 16, \"\\u0303\": 17, \"h\": 50, \"l\": 54, "
+            + "\"\u0259\": 83, \"\u028a\": 135, \"\u02c8\": 156, \"\\\"\": 11}}";
+        java.util.Map<Integer, Integer> v = PaKokoro.vocab(json);
+        assertEquals(11, v.size(), v.toString());
+        assertEquals(17, v.get(0x0303));
+        assertEquals(11, v.get((int) '"'));
+        long[] t = PaKokoro.tokens("h\u0259l\u02c8\u0259\u028a, Q", v);   // Q isn't known: dropped
+        assertEquals("[50, 83, 54, 156, 83, 135, 3, 16]", java.util.Arrays.toString(t));
+        assertEquals("[0, 50, 83, 54, 156, 83, 135, 3, 16, 0]", java.util.Arrays.toString(PaKokoro.padded(t)));
+        assertEquals(PaKokoro.MAX_TOKENS, PaKokoro.tokens("h".repeat(900), v).length);
+        List<String[]> c = PaKokoro.clauses("Right. Fifty blocks north-east, by the lava... Lovely!");
+        assertEquals(4, c.size());
+        assertEquals("Right", c.get(0)[0]);
+        assertEquals(".", c.get(0)[1]);
+        assertEquals("Fifty blocks north-east", c.get(1)[0]);
+        assertEquals(",", c.get(1)[1]);
+        assertTrue(PaKokoro.speed(1, 0) < PaKokoro.speed(0, 0), "gloomy is slower");
+        assertTrue(PaKokoro.speed(0, 5) > 1.2f && PaKokoro.speed(1, -5) >= 0.6f);
+        byte[] pcm = PaKokoro.pcm16(new float[]{0f, 1f, -1f, 2f}, 100);
+        assertEquals(8, pcm.length);
+        assertEquals(32767, (short) ((pcm[3] << 8) | (pcm[2] & 0xff)));
+        assertEquals(-32767, (short) ((pcm[5] << 8) | (pcm[4] & 0xff)));
+        assertEquals(32767, (short) ((pcm[7] << 8) | (pcm[6] & 0xff)), "clipped, not wrapped");
+        assertEquals(0, PaKokoro.pcm16(new float[]{0.5f}, 0)[1]);
+    }
+
+    @Test
+    void kokoroReadsAVoicePack() throws Exception {
+        // a voice pack as kokoro-onnx publishes it: an .npz (zip) of float32 .npy tables shaped (510, 1, 256); here (3, 1, 4)
+        java.io.ByteArrayOutputStream zip = new java.io.ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(zip)) {
+            for (String name : new String[]{"bm_george", "bf_emma"}) {
+                z.putNextEntry(new java.util.zip.ZipEntry(name + ".npy"));
+                z.write(npy(new int[]{3, 1, 4}, name.equals("bm_george") ? 0f : 100f));
+                z.closeEntry();
+            }
+        }
+        java.util.Map<String, float[][]> voices = PaKokoro.readVoices(new java.io.ByteArrayInputStream(zip.toByteArray()));
+        assertEquals(java.util.Set.of("bm_george", "bf_emma"), voices.keySet());
+        float[][] g = voices.get("bm_george");
+        assertEquals(3, g.length);
+        assertEquals(4, g[0].length);
+        assertEquals(5f, g[1][1]);
+        assertEquals(105f, voices.get("bf_emma")[1][1]);
+        assertEquals(g[2], PaKokoro.style(g, 2));
+        assertEquals(g[2], PaKokoro.style(g, 999), "a long sentence takes the last row");
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> PaKokoro.npy(new byte[20]));
+    }
+
+    /** A little-endian float32 .npy (v1.0) holding base + 0, 1, 2, ... */
+    private static byte[] npy(int[] shape, float base) {
+        StringBuilder sh = new StringBuilder();
+        int n = 1;
+        for (int d : shape) { sh.append(d).append(", "); n *= d; }
+        String header = "{'descr': '<f4', 'fortran_order': False, 'shape': (" + sh.toString().replaceAll(", $", shape.length == 1 ? "," : "") + "), }";
+        while ((10 + header.length() + 1) % 64 != 0) header += " ";
+        header += "\n";
+        java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(10 + header.length() + n * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        b.put((byte) 0x93).put("NUMPY".getBytes()).put((byte) 1).put((byte) 0).putShort((short) header.length()).put(header.getBytes());
+        for (int i = 0; i < n; i++) b.putFloat(base + i);
+        return b.array();
+    }
 }

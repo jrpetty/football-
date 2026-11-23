@@ -879,7 +879,7 @@ public class PlayerAssistantGameTests {
                     helper.assertTrue(a.plan.idle(), "the shopping is done (" + a.state() + ")");
                     int paid = before - com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
                     int got = p.getInventory().countItem(Items.COBBLESTONE);
-                    helper.assertTrue(got > 0 && paid > 0, "it bought cobblestone with its player's coin: " + got + " for " + paid + " (" + lastWords(a)
+                    helper.assertTrue(got > 0 && paid > 0, "it bought cobblestone with its player's coin: " + got + " for " + paid + " (" + allWords(a)
                         + "; stock " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.COBBLESTONE)) + ")");
                     helper.assertTrue(paid <= a.rec().spend, "never past the limit: paid " + paid + " of " + a.rec().spend);
                     helper.assertTrue(allWords(a).contains("spending limit"), "and said why it stopped: " + lastWords(a));
