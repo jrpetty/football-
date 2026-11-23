@@ -70,8 +70,8 @@ public class PaScreen extends Screen {
     @Override
     protected void init() {
         String size = PaClientConfig.get(PaClientConfig.UISCALE, "m");                 // [pa33c-2b] Settings, Look: panel size
-        w = Math.min(this.width - 8, size.equals("s") ? 380 : size.equals("l") ? 520 : 420);
-        h = Math.min(this.height - 8, size.equals("s") ? 236 : size.equals("l") ? 330 : 262);
+        w = com.jrpetty.mcassistant.pa.PaLayout.panelW(this.width, size);
+        h = com.jrpetty.mcassistant.pa.PaLayout.panelH(this.height, size);
         left = (this.width - w) / 2;
         top = (this.height - h) / 2;
         String keep = input == null ? "" : input.getValue();
@@ -137,7 +137,7 @@ public class PaScreen extends Screen {
             case "pack" -> scrolled(g, by, bh, mx, my, (y) -> pack(g, s, left + 8, y, w - 22, mx, my));
             case "stats" -> scrolled(g, by, bh, mx, my, (y) -> stats(g, s, left + 8, y, w - 22, mx, my));
             case "settings" -> {
-                int sw = Math.max(70, Math.min(92, w / 5));
+                int sw = com.jrpetty.mcassistant.pa.PaLayout.sectionListW(w);
                 sections(g, left + 6, by, sw, bh, mx, my);
                 scrolledIn(g, left + 8 + sw, by, w - 14 - sw, bh, mx, my, (y) -> settings(g, s, left + 14 + sw, y, w - 30 - sw, mx, my));
             }
@@ -705,10 +705,10 @@ public class PaScreen extends Screen {
         for (int j = 0; j < 9; j++) slot(g, s, new Slot('p', j, null, bx + j * 18, py + 58), false, "", mx, my);
         int midEnd = py + 58 + 18 - y;
         // the quick buttons: beside, or under when narrow
-        int cxb = bx + 9 * 18 + 8, bw = Math.min(118, x + iw - cxb);
-        boolean beside = bw >= 84;
+        int cxb = bx + 9 * 18 + 8, bw = com.jrpetty.mcassistant.pa.PaLayout.packButton(w);
+        boolean beside = bw > 0;
         int cyb = beside ? y + 13 : y + Math.max(leftH, midEnd) + 6;
-        if (!beside) { cxb = x; bw = (iw - 8) / 3; }
+        if (!beside) { cxb = x; bw = -bw; }
         String[][] b = {
             {"Equip best", "Puts on the best armour in its pack, its best weapon in hand and a shield in the other"},
             {"Give me everything", "Hands you everything in its pack but its gear and what it keeps (within 8 blocks)"},
@@ -865,7 +865,7 @@ public class PaScreen extends Screen {
 
     private int settings(GuiGraphics g, CompoundTag s, int x, int y, int iw, int mx, int my) {
         CompoundTag set = s.getCompound("set");
-        int half = Math.min(iw, 320), sx = x, cy = y;
+        int half = Math.min(iw, com.jrpetty.mcassistant.pa.PaLayout.settingsW(w)), sx = x, cy = y;
         UiStyle.heading(g, font, SECTIONS[section], x, cy, half);
         cy += 14;
         switch (section) {
@@ -1071,12 +1071,13 @@ public class PaScreen extends Screen {
         cy += 14;
         cy = line(g, "Bed: " + (s.getString("bed").isEmpty() ? "none (it comes back by its spawner, or you)" : s.getString("bed")), sx, cy, half);
         cy = line(g, "Home: " + (s.getString("home").isEmpty() ? "none" : s.getString("home")), sx, cy, half);
-        int bw = Math.max(80, (half - 8) / 3);
+        int bw = com.jrpetty.mcassistant.pa.PaLayout.halfButton(half);
         button(g, "Use the bed I look at", sx, cy, bw, 14, mx, my, true, false, "Look at a bed first; it comes back there after a fall",
             () -> { onClose(); PaClient.talk("use this bed", false); });
         button(g, "Clear its bed", sx + bw + 4, cy, bw, 14, mx, my, !s.getString("bed").isEmpty(), false, "It forgets its bed (it comes back by its spawner, or you)",
             () -> { CompoundTag t = new CompoundTag(); t.putBoolean("clearBed", true); PaClient.send("settings", t); });
-        button(g, "Set home here", sx + 2 * (bw + 4), cy, bw, 14, mx, my, true, false, "Where you stand becomes its home (it goes there to shelter and sort)",
+        cy += 18;
+        button(g, "Set home here", sx, cy, bw, 14, mx, my, true, false, "Where you stand becomes its home (it goes there to shelter and sort)",
             () -> PaClient.talk("set home here", false));
         cy += 20;
         UiStyle.heading(g, font, "Start over", sx, cy, half);
@@ -1092,9 +1093,9 @@ public class PaScreen extends Screen {
         cy = para(g, "Send " + s.getString("name") + " away for good. It gives back everything it carries first. This can't be undone.", sx, cy, half, faint());
         if (!confirmDismiss) button(g, "Dismiss...", sx, cy, bw, 14, mx, my, true, false, "You'll be asked again", () -> confirmDismiss = true);
         else {
-            button(g, "Really dismiss " + s.getString("name"), sx, cy, Math.min(half, bw * 2), 14, mx, my, true, true, "This can't be undone",
+            button(g, "Yes, dismiss", sx, cy, bw, 14, mx, my, true, true, "This can't be undone",
                 () -> { PaClient.send("dismiss", new CompoundTag()); confirmDismiss = false; });
-            button(g, "Keep them", sx + Math.min(half, bw * 2) + 4, cy, bw, 14, mx, my, true, false, "", () -> confirmDismiss = false);
+            button(g, "Keep them", sx + bw + 4, cy, bw, 14, mx, my, true, false, "", () -> confirmDismiss = false);
         }
         cy += 20;
         return cy;
