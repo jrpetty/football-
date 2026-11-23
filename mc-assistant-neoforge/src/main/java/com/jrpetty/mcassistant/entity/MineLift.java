@@ -419,6 +419,7 @@ public final class MineLift {
             for (Ask a : l.riding) {
                 Entity e = level.getEntity(a.who);
                 if (e == null || !e.isAlive()) continue;
+                afloat(e, true);
                 place(e, l.sx + 0.5, l.cageY, l.sz + 0.5);
             }
             if (there) {
@@ -427,6 +428,7 @@ public final class MineLift {
                     if (e != null && e.isAlive()) {
                         BlockPos out = exit(level, l, to);
                         place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
+                        afloat(e, false);
                         STATE.put(a.who, State.ARRIVED);
                         l.carried++;
                         if (e instanceof ServerPlayer p) p.displayClientMessage(Component.literal("The cage: " + to.name() + " (Y" + to.y() + ")"), true);
@@ -454,6 +456,15 @@ public final class MineLift {
         if (Math.abs(d) <= SPEED) { l.cageY = y; return true; }
         l.cageY += Math.signum(d) * SPEED;
         return false;
+    }
+
+    /** Players let fly while the cage carries them (a player held in the air by the cage was kicked for floating). */
+    private static final java.util.Set<UUID> AFLOAT = ConcurrentHashMap.newKeySet();
+
+    private static void afloat(Entity e, boolean on) {
+        if (!(e instanceof ServerPlayer p) || p.isCreative() || p.isSpectator()) return;
+        if (on && !p.getAbilities().mayfly) { p.getAbilities().mayfly = true; p.onUpdateAbilities(); AFLOAT.add(p.getUUID()); }
+        else if (!on && AFLOAT.remove(p.getUUID())) { p.getAbilities().mayfly = false; p.getAbilities().flying = false; p.onUpdateAbilities(); }
     }
 
     private static void place(Entity e, double x, double y, double z) {
@@ -511,6 +522,10 @@ public final class MineLift {
             if (best == null) continue;
             BlockPos out = exit(level, l, best);
             place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
+            // A player left in the well by a stop mid-ride may have been saved with the cage's leave to fly: taken back.
+            if (e instanceof ServerPlayer pl && !pl.isCreative() && !pl.isSpectator() && pl.getAbilities().mayfly) {
+                pl.getAbilities().mayfly = false; pl.getAbilities().flying = false; pl.onUpdateAbilities(); AFLOAT.remove(pl.getUUID());
+            }
             STATE.remove(e.getUUID());
             com.mojang.logging.LogUtils.getLogger().info("[MCA-LIFT] {}: {} found in the well at Y{}, put out at {}", Villages.name(l.village),
                 e.getName().getString(), (int) e.getY(), best.name());

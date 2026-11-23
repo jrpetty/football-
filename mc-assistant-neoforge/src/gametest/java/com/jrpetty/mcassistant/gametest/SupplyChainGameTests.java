@@ -1287,12 +1287,16 @@ public class SupplyChainGameTests {
         p.teleportTo(level, top.board().getX() + 0.5, top.board().getY(), top.board().getZ() + 0.5, 0, 0);
         Kit.Expect ok = new Kit.Expect();
         ok.that(com.jrpetty.mcassistant.entity.MineLift.pull(level, p, top.lever()), "the pithead's lever is the cage's");
+        p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
         int t = 0;
+        boolean flew = false;
         while (com.jrpetty.mcassistant.entity.MineLift.state(p.getUUID()) != com.jrpetty.mcassistant.entity.MineLift.State.ARRIVED && t < 300) {
             com.jrpetty.mcassistant.entity.MineLift.runForTests(level, v, 1);
+            if (com.jrpetty.mcassistant.entity.MineLift.state(p.getUUID()) == com.jrpetty.mcassistant.entity.MineLift.State.RIDING) flew |= p.getAbilities().mayfly;
             t++;
         }
         boolean down = atStop(p, coal);
+        ok.that(flew && !p.getAbilities().mayfly, "let fly in the cage (not kicked for floating), and not after: " + flew + ", " + p.getAbilities().mayfly);
         boolean button = level.getBlockState(coal.button()).getBlock() instanceof net.minecraft.world.level.block.ButtonBlock;
         ok.that(button, "a button by the coal level's lever");
         ok.that(com.jrpetty.mcassistant.entity.MineLift.pull(level, p, coal.button()), "the coal level's button is the cage's");
