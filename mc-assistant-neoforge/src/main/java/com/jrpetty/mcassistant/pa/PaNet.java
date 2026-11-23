@@ -83,6 +83,8 @@ public final class PaNet {
         t.putString("text", text);
         t.putInt("ticks", ticks);
         t.putInt("voice", a.rec() == null ? 0 : a.rec().voice);
+        t.putFloat("gloom", (float) a.tri().gloomy());           // [pa33b] slower and lower when gloomy
+        t.putFloat("fun", (float) a.tri().funny());
         if (choices != null && !choices.isEmpty()) t.put("choices", choices(choices));
         if (a.level() instanceof net.minecraft.server.level.ServerLevel) {
             for (ServerPlayer viewer : ((net.minecraft.server.level.ServerLevel) a.level()).players()) {
@@ -140,6 +142,8 @@ public final class PaNet {
         set.putBoolean("sleep", r.sleepAtNight);
         set.putInt("roam", r.roam);
         set.putInt("chatty", r.chatty);
+        set.putFloat("funny", r.funny);                          // [pa33b]
+        set.putFloat("gloomy", r.gloomy);
         set.putInt("spend", r.spend);
         set.putInt("roamMax", PaConfig.roamMax());
         set.putInt("spendMax", PaConfig.spendMax());

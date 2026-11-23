@@ -34,7 +34,7 @@ public final class PaOrders {
     private PaOrders() {}
 
     /** A plan waiting for its player's OK. */
-    public record Pending(String question, List<Choice> choices, List<PaPlan.Step> steps, String said) {}
+    public record Pending(String question, List<Choice> choices, List<PaPlan.Step> steps, String said, long at) {}
 
     private static final Map<UUID, Pending> PENDING = new ConcurrentHashMap<>();
 
@@ -86,6 +86,24 @@ public final class PaOrders {
             }
             PENDING.remove(p.getUUID());                // anything else is a new order: the old question lapses
         }
+        // [pa33b] lip, a kind word, or "tell me a joke": answered in kind. With a real order in it, the order first.
+        PaBanter.Comeback cb = PaBanter.comeback(text);
+        if (cb != null) {
+            boolean order = reading.clarify() == null && reading.steps().stream().anyMatch(st -> st.kind().queued()
+                || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);
+            if (!order) {
+                PaTalk.reply(a, PaBanter.answer(a, cb));
+                return;
+            }
+            run(p, a, reading.steps(), look, text);
+            PaTalk.comment(a, 0, PaBanter.answer(a, cb));
+            return;
+        }
+        // [pa33b] the same order again so soon: done again, with a remark
+        boolean twice = text.equalsIgnoreCase(a.mind.lastOrder) && a.tickCount - a.mind.lastOrderAt < 2400 && !reading.steps().isEmpty();
+        a.mind.lastOrder = text;
+        a.mind.lastOrderAt = a.tickCount;
+        a.mind.askedTwice = twice;                       // remarked on after the reply (PaBrain)
         if (reading.clarify() != null) {
             // Before asking back: the old chat reader may know it ("tend the farm every 20 minutes", "patrol between...").
             if (reading.steps().isEmpty() && reading.clarify().question().startsWith("I'm not sure")
@@ -129,7 +147,7 @@ public final class PaOrders {
         if (ask && big) {
             String q = summary(work) + ". About " + time(work.stream().mapToInt(s -> s.eta).sum());
             List<Choice> choices = List.of(new Choice("OK", "yes"), new Choice("Change", "#change " + said), new Choice("Cancel", "no"));
-            PENDING.put(p.getUUID(), new Pending(q, choices, work, said));
+            PENDING.put(p.getUUID(), new Pending(q, choices, work, said, a.level().getGameTime()));
             PaTalk.reply(a, PaTalk.line(a, "confirm", "what", q), choices);
             return;
         }

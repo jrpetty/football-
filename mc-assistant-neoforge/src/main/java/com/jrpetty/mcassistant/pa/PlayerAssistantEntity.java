@@ -144,7 +144,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
      */
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (source.getEntity() instanceof Player p && isOwner(p)) return false;
+        if (source.getEntity() instanceof Player p && isOwner(p)) {
+            if (!level().isClientSide && tickCount - mind.lastHit > 400) {   // [pa33b] "Rude."
+                mind.lastHit = tickCount;
+                PaBanter.after(this, "quip.hit", null);
+            }
+            return false;
+        }
         return super.hurt(source, amount);
     }
 

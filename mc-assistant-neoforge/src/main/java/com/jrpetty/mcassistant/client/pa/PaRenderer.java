@@ -37,16 +37,27 @@ import java.util.List;
  * of its own (its name with the tool of what it is doing, its player's name, a health line) and, when it speaks, a
  * bubble that reads well on camera. Not the folk's model, plates or bubbles: it is not one of them.
  */
-public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<PlayerAssistantEntity>> {
+public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel<PlayerAssistantEntity>> {
 
-    /** The outfits, in look order (textures/entity/assistant/look_N.png). */
-    public static final String[] LOOK_NAMES = {"Explorer", "Engineer", "Ranger", "Scholar", "Knight", "Gardener", "Miner", "Sailor"};
+    /** The outfits, in look order (textures/entity/assistant/look_N.png; the last three wear the game's own mob skins). */
+    public static final String[] LOOK_NAMES = {"Explorer", "Engineer", "Ranger", "Scholar", "Knight", "Farmer", "Miner", "Pirate",
+        "Butler", "Wizard", "Chef", "Lumberjack", "Scientist", "Plain", "Skeleton", "Zombie", "Creeper", "Enderman"};
+    /** [pa33b] One line on each, for the Look tab. */
+    public static final String[] LOOK_BLURBS = {"Goggles and a satchel; no sense of direction", "Overalls and a spanner in every pocket",
+        "Hooded, green, often mistaken for a hedge", "Spectacles and purple robes", "Shining armour, creaky knees", "Straw hat and overalls",
+        "Hard hat and lamp", "Stripes and a hat bigger than its plans", "Waistcoat and impeccable standards", "Robe and a very pointy hat",
+        "Whites and a tall hat", "Flannel, lots of flannel", "Lab coat and goggles", "Just itself", "Built like a chopstick",
+        "Not rotting: aged", "A hoodie. It promises not to explode", "Very tall, a bit nervous of water"};
     private static final ResourceLocation[] LOOKS = new ResourceLocation[LOOK_NAMES.length];
+    static final int SKELETON = 14, ZOMBIE = 15, ENDERMAN = 17;
 
     static {
         for (int i = 0; i < LOOKS.length; i++) {
             LOOKS[i] = ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "textures/entity/assistant/look_" + i + ".png");
         }
+        LOOKS[SKELETON] = ResourceLocation.withDefaultNamespace("textures/entity/skeleton/skeleton.png");
+        LOOKS[ZOMBIE] = ResourceLocation.withDefaultNamespace("textures/entity/zombie/zombie.png");
+        LOOKS[ENDERMAN] = ResourceLocation.withDefaultNamespace("textures/entity/enderman/enderman.png");
     }
 
     public static ResourceLocation look(int i) {
@@ -66,10 +77,16 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
     private static final int PLATE_BG = 0x90102A2E, BUBBLE_BG = 0xD8143238, INK = 0xFFFFFFFF, OWNER_INK = 0xFF8FE3D3;
 
     private final net.minecraft.client.renderer.entity.ItemRenderer items;
+    /** [pa33b] The bodies: a player's shape for the outfits, the game's own for the skeleton, zombie and enderman. */
+    private final HumanoidModel<PlayerAssistantEntity> playerBody, skeletonBody, zombieBody, endermanBody;
 
     public PaRenderer(EntityRendererProvider.Context ctx) {
         super(ctx, new PlayerModel<>(ctx.bakeLayer(ModelLayers.PLAYER), false), 0.5F);
         this.items = ctx.getItemRenderer();
+        this.playerBody = this.model;
+        this.skeletonBody = new HumanoidModel<>(ctx.bakeLayer(ModelLayers.SKELETON));
+        this.zombieBody = new HumanoidModel<>(ctx.bakeLayer(ModelLayers.ZOMBIE));
+        this.endermanBody = new HumanoidModel<>(ctx.bakeLayer(ModelLayers.ENDERMAN));
         this.addLayer(new HumanoidArmorLayer<>(this,
             new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
             new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
@@ -84,7 +101,9 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, PlayerModel<P
 
     @Override
     public void render(PlayerAssistantEntity a, float yaw, float partialTick, PoseStack pose, MultiBufferSource buffer, int light) {
-        PlayerModel<PlayerAssistantEntity> m = getModel();
+        int lk = Math.floorMod(a.look(), LOOKS.length);
+        this.model = lk == SKELETON ? skeletonBody : lk == ZOMBIE ? zombieBody : lk == ENDERMAN ? endermanBody : playerBody;
+        HumanoidModel<PlayerAssistantEntity> m = getModel();
         ItemStack main = a.getMainHandItem(), off = a.getOffhandItem();
         m.rightArmPose = main.isEmpty() ? HumanoidModel.ArmPose.EMPTY
             : main.getItem() instanceof BowItem && a.isAggressive() ? HumanoidModel.ArmPose.BOW_AND_ARROW : HumanoidModel.ArmPose.ITEM;

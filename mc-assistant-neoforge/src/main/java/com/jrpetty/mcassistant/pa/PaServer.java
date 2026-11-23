@@ -53,7 +53,12 @@ public final class PaServer {
                     if (a != null) a.setNightHome(r.sleepAtNight);
                 }
                 if (args.contains("roam")) r.roam = Math.max(8, Math.min(PaConfig.roamMax(), args.getInt("roam")));
-                if (args.contains("chatty")) r.chatty = Math.max(0, Math.min(3, args.getInt("chatty")));
+                if (args.contains("chatty")) r.chatty = Math.max(0, Math.min(4, args.getInt("chatty")));
+                if (args.contains("funny")) {                       // [pa33b] the personality triangle
+                    PaPersona.Tri t = PaPersona.Tri.of(args.getFloat("funny"), args.getFloat("gloomy"));
+                    r.funny = (float) t.funny();
+                    r.gloomy = (float) t.gloomy();
+                }
                 if (args.contains("spend")) r.spend = Math.max(0, Math.min(PaConfig.spendMax(), args.getInt("spend")));
                 PaData.touch();
                 PaNet.refresh(p, a);
@@ -125,6 +130,8 @@ public final class PaServer {
     private static void hash(ServerPlayer p, PaData.Rec r, PlayerAssistantEntity a, String text) {
         String[] w = text.substring(1).split(" ");
         switch (w[0]) {
+            case "fetchdeath" -> PaBanter.fetchDeath(a);           // [pa33b]
+            case "nofetch" -> PaTalk.reply(a, "Right you are. Mind, they'll vanish in about five minutes.");
             case "veto" -> {
                 if (w.length > 1) {
                     a.mind.vetoed.add(w[1]);

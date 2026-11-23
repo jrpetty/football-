@@ -29,8 +29,13 @@ import java.util.List;
 public class PaScreen extends Screen {
 
     static final int BRAND = 0xFF1F8A7A, BRAND_LIGHT = 0xFF2BB5A0, BRAND_WASH = 0xFFD7EEEA, HEADER = 0xFF173B40;
-    private static final String[] TABS = {"talk", "orders", "jobs", "pack", "about"};
-    private static final String[] TAB_LABELS = {"Talk", "Orders", "Jobs", "Pack", "About"};
+    private static final String[] TABS = {"talk", "orders", "jobs", "pack", "look", "about"};
+    private static final String[] TAB_LABELS = {"Talk", "Orders", "Jobs", "Pack", "Look", "About"};
+    /** [pa33b] The personality triangle (About) and the look preview's turn (Look). */
+    private final PaTriangle triangle = new PaTriangle();
+    private float lookYaw;
+    private boolean turning;
+    private double turnFrom;
 
     /** True while the portrait draws (its plate and bubble belong to the world, not the frame). */
     static boolean drawingPortrait;
@@ -126,6 +131,7 @@ public class PaScreen extends Screen {
             case "jobs" -> scrolled(g, by, bh, mx, my, (y) -> jobs(g, s, left + 8, y, w - 22, mx, my));
             case "pack" -> scrolled(g, by, bh, mx, my, (y) -> pack(g, s, left + 8, y, w - 22, mx, my));
             case "about" -> scrolled(g, by, bh, mx, my, (y) -> about(g, s, left + 8, y, w - 22, mx, my));
+            case "look" -> scrolled(g, by, bh, mx, my, (y) -> looks(g, s, left + 8, y, w - 22, mx, my));
             default -> { }
         }
         footer(g, mx, my);
@@ -589,16 +595,23 @@ public class PaScreen extends Screen {
         UiStyle.heading(g, font, "About " + s.getString("name"), x, cy, half);
         cy += 14;
         cy = line(g, "Level " + s.getInt("level") + "  ·  " + s.getInt("xp") + " xp  ·  " + s.getInt("done") + " jobs done for you", x, cy, half);
-        String[] pers = {"Cheerful", "Dry", "Calm"};
-        int p = Math.floorMod(s.getInt("pers"), 3);
-        g.drawString(font, "Personality", x, cy + 3, UiStyle.TEXT_MUTED, false);
-        button(g, pers[p], x + 70, cy, 70, 13, mx, my, true, false, "How it talks: click to change", () -> look("pers", p + 1));
-        cy += 16;
+        // [pa33b] personality: the triangle, its presets, its region and a sample line
+        UiStyle.heading(g, font, "Personality", x, cy, half);
+        cy += 12;
+        triangle.sync(s.getCompound("set"));
+        int tsize = Math.max(90, Math.min(130, half - 70));
+        int tb = triangle.draw(g, font, x + 4, cy, tsize, mx, my);
+        int px = x + tsize + 14, pyy = cy + 6;
+        for (String pr : com.jrpetty.mcassistant.pa.PaPersona.PRESETS) {
+            if (px + 56 > x + half) break;
+            final String name = pr;
+            button(g, pr, px, pyy, 56, 13, mx, my, true, false, "Snap the dot to " + pr, () -> triangle.preset(name));
+            pyy += 15;
+        }
+        cy = Math.max(tb, pyy) + 2;
         int lk = Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length);
         g.drawString(font, "Look", x, cy + 3, UiStyle.TEXT_MUTED, false);
-        button(g, "◀", x + 70, cy, 13, 13, mx, my, true, false, "", () -> look("look", lk - 1));
-        centred(g, PaRenderer.LOOK_NAMES[lk], x + 112, cy + 3, UiStyle.TEXT);
-        button(g, "▶", x + 141, cy, 13, 13, mx, my, true, false, "", () -> look("look", lk + 1));
+        button(g, PaRenderer.LOOK_NAMES[lk] + "  \u203A", x + 70, cy, 90, 13, mx, my, true, false, "Choose its look (Look tab)", () -> { tab = "look"; scroll = 0; });
         cy += 16;
         g.drawString(font, "Name", x, cy + 3, UiStyle.TEXT_MUTED, false);
         nameBox.visible = true;
@@ -639,14 +652,39 @@ public class PaScreen extends Screen {
             "Which English it listens for and speaks: English (UK), English (US), or Auto (your game's language, then your computer's)",
             () -> { PaClientConfig.set(PaClientConfig.ACCENT, com.jrpetty.mcassistant.pa.voice.PaAccent.next(acc)); PaVoice.speak("Hello, this is my voice."); });
         cy += 15;
-        if (vi <= 0) vname = "Default: " + PaVoice.tts().voiceInUse(0);
+        // [pa33b] the voice picker: every voice, grouped by engine (the most natural first), each with a preview
+        String vkey = PaClientConfig.get(PaClientConfig.VOICEKEY, "");
+        List<com.jrpetty.mcassistant.pa.voice.PaTts.VoiceInfo> cat = PaVoice.tts().catalogue();
+        String cur = vkey.isEmpty() ? "Auto: " + PaVoice.tts().voiceInUse(0) : vkey.substring(vkey.indexOf(':') + 1);
         g.drawString(font, "Voice", sx, cy + 3, UiStyle.TEXT_MUTED, false);
-        button(g, UiStyle.clip(font, vname, 90), sx + 60, cy, 96, 13, mx, my, voices.size() > 1, false, "Your computer's voices: click for the next",
-            () -> { PaClientConfig.set(PaClientConfig.VOICE, voices.isEmpty() ? 0 : (vi + 1) % voices.size()); PaVoice.speak("Hello, this is my voice."); });
+        button(g, UiStyle.clip(font, cur + (voicesOpen ? "  \u25B4" : "  \u25BE"), 90), sx + 60, cy, 96, 13, mx, my, true, false,
+            "Choose its voice (the list shows every voice on your computer)", () -> voicesOpen = !voicesOpen);
         cy += 15;
-        int rate = PaClientConfig.get(PaClientConfig.RATE, 0), vol = PaClientConfig.get(PaClientConfig.VOLUME, 80);
+        String sug = PaVoice.suggestFor(Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length), cat);
+        if (sug != null) { g.drawString(font, UiStyle.clip(font, "Suggested for this look: " + sug, half), sx, cy, UiStyle.TEXT_FAINT, false); cy += 11; }
+        if (voicesOpen) {
+            String group = "";
+            button(g, "Auto (most natural)", sx, cy, half - 22, 12, mx, my, true, vkey.isEmpty(), "", () -> PaClientConfig.set(PaClientConfig.VOICEKEY, ""));
+            cy += 14;
+            for (com.jrpetty.mcassistant.pa.voice.PaTts.VoiceInfo v : cat) {
+                if (!v.group().equals(group)) { group = v.group(); g.drawString(font, group, sx, cy + 1, BRAND, false); cy += 11; }
+                final String k = v.key();
+                button(g, UiStyle.clip(font, v.label(), half - 30), sx, cy, half - 22, 12, mx, my, true, k.equals(vkey), "", () -> PaClientConfig.set(PaClientConfig.VOICEKEY, k));
+                button(g, "\u25B6", sx + half - 20, cy, 14, 12, mx, my, true, false, "Preview", () -> {
+                    PaClientConfig.set(PaClientConfig.VOICEKEY, k);
+                    PaVoice.speak(PaVoice.sample(triangle.tri()), triangle.tri().gloomy(), triangle.tri().funny());
+                });
+                cy += 14;
+            }
+            if (cat.isEmpty()) cy = para(g, PaVoice.tts().status(), sx, cy, half, UiStyle.TEXT_FAINT);
+            cy = para(g, "More natural voices: on Windows add voices in Settings > Time & language > Speech; on a Mac, System Settings > Accessibility > Spoken Content > System voice > Manage Voices (pick an Enhanced or Premium one).",
+                sx, cy, half, UiStyle.TEXT_FAINT);
+        }
+        int rate = PaClientConfig.get(PaClientConfig.RATE, 0), vol = PaClientConfig.get(PaClientConfig.VOLUME, 80), pitch = PaClientConfig.get(PaClientConfig.PITCH, 0);
         cy = stepper(g, "Speed", rate + "", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.RATE, Math.max(-5, rate - 1)),
             () -> PaClientConfig.set(PaClientConfig.RATE, Math.min(5, rate + 1)));
+        cy = stepper(g, "Pitch", pitch + "", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.PITCH, Math.max(-5, pitch - 1)),
+            () -> PaClientConfig.set(PaClientConfig.PITCH, Math.min(5, pitch + 1)));
         cy = stepper(g, "Volume", vol + "%", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.VOLUME, Math.max(0, vol - 10)),
             () -> PaClientConfig.set(PaClientConfig.VOLUME, Math.min(100, vol + 10)));
         boolean listen = PaClientConfig.get(PaClientConfig.LISTEN, false);
@@ -672,10 +710,12 @@ public class PaScreen extends Screen {
         cy = toggle(g, "Shelter at night", set.getBoolean("sleep"), sx, cy, half, mx, my, "", () -> setting("sleep", !set.getBoolean("sleep")));
         int roam = set.getInt("roam");
         cy = stepper(g, "Roam", roam + " blocks", sx, cy, mx, my, () -> settingInt("roam", roam - 8), () -> settingInt("roam", roam + 8));
-        String[] chat = {"Quiet", "Low", "Normal", "Chatty"};
-        int ch = Math.max(0, Math.min(3, set.getInt("chatty")));
+        String[] chat = {"Quiet", "Low", "Normal", "Chatty", "Won't shut up"};
+        int ch = Math.max(0, Math.min(4, set.getInt("chatty")));
         g.drawString(font, "Chattiness", sx, cy + 3, UiStyle.TEXT_MUTED, false);
-        button(g, chat[ch], sx + 60, cy, 60, 13, mx, my, true, false, "How much it says unasked (it always answers you)", () -> settingInt("chatty", (ch + 1) % 4));
+        button(g, chat[ch], sx + 60, cy, 76, 13, mx, my, true, false,
+            ch == 4 && triangle.tri().funny() >= 0.8 ? "Joke Machine: a remark on everything you do, every 10 to 20 seconds" : "How much it says unasked (it always answers you)",
+            () -> settingInt("chatty", (ch + 1) % 5));
         cy += 15;
         int spend = set.getInt("spend");
         cy = stepper(g, "Spend limit", spend + " coins", sx, cy, mx, my, () -> settingInt("spend", spend - 16), () -> settingInt("spend", spend + 16));
@@ -714,6 +754,47 @@ public class PaScreen extends Screen {
         CompoundTag a = new CompoundTag();
         a.putBoolean(key, v);
         PaClient.send("settings", a);
+    }
+
+    // ------------------------------------------------------------------ [pa33b] the Look tab
+
+    private int lookPrevX, lookPrevY, lookPrevW, lookPrevH;
+    private boolean voicesOpen;
+
+    /** A big preview to turn with the mouse, and every look to pick (instant and free). */
+    private int looks(GuiGraphics g, CompoundTag s, int x, int y, int iw, int mx, int my) {
+        int lk = Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length);
+        int pw = Math.min(110, iw / 3), ph = Math.max(110, Math.min(150, pw + 40));
+        lookPrevX = x; lookPrevY = y; lookPrevW = pw; lookPrevH = ph;
+        g.fill(x, y, x + pw, y + ph, 0xFF0E2A2E);
+        PlayerAssistantEntity a = PaClient.mine();
+        if (a != null) {
+            drawingPortrait = true;
+            try {
+                float oy = a.yBodyRot, oyh = a.yHeadRot, oyr = a.getYRot(), ox = a.getXRot();
+                a.yBodyRot = 180 + lookYaw; a.setYRot(180 + lookYaw); a.yHeadRot = a.getYRot(); a.yHeadRotO = a.yHeadRot; a.setXRot(0);
+                InventoryScreen.renderEntityInInventory(g, x + pw / 2F, y + ph - 12, Math.min(pw, ph) * 0.42F,
+                    new org.joml.Vector3f(), new org.joml.Quaternionf().rotateZ((float) Math.PI), null, a);
+                a.yBodyRot = oy; a.yHeadRot = oyh; a.setYRot(oyr); a.setXRot(ox);
+            } finally {
+                drawingPortrait = false;
+            }
+        }
+        centred(g, PaRenderer.LOOK_NAMES[lk], x + pw / 2, y + ph + 3, UiStyle.TEXT);
+        g.drawString(font, UiStyle.clip(font, "Drag to turn", pw), x + (pw - font.width("Drag to turn")) / 2, y + ph + 14, UiStyle.TEXT_FAINT, false);
+        int gx = x + pw + 10, gw = iw - pw - 10, cols = Math.max(1, gw / 74), bw = (gw - (cols - 1) * 4) / cols;
+        UiStyle.heading(g, font, "Choose a look", gx, y, gw);
+        int cy = y + 13;
+        for (int i = 0; i < PaRenderer.LOOK_NAMES.length; i++) {
+            int col = i % cols, row = i / cols;
+            final int which = i;
+            button(g, PaRenderer.LOOK_NAMES[i], gx + col * (bw + 4), cy + row * 16, bw, 14, mx, my, true, i == lk,
+                PaRenderer.LOOK_BLURBS[i], () -> look("look", which));
+        }
+        int rows = (PaRenderer.LOOK_NAMES.length + cols - 1) / cols;
+        int after = cy + rows * 16 + 4;
+        after = para(g, "Free and instant; everyone sees it. Each look brings a few remarks of its own (about one in five).", gx, after, gw, UiStyle.TEXT_FAINT);
+        return Math.max(after, y + ph + 26);
     }
 
     private void settingInt(String key, int v) {
@@ -858,7 +939,23 @@ public class PaScreen extends Screen {
     // ------------------------------------------------------------------ input
 
     @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (tab.equals("about") && triangle.drag(mx, my)) return true;
+        if (tab.equals("look") && turning) { lookYaw += (float) dx * 2.5F; return true; }
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        turning = false;
+        if (triangle.release()) return true;
+        return super.mouseReleased(mx, my, button);
+    }
+
+    @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (tab.equals("about") && triangle.click(mx, my)) return true;
+        if (tab.equals("look") && in(mx, my, lookPrevX, lookPrevY, lookPrevW, lookPrevH)) { turning = true; return true; }
         for (int i = zones.size() - 1; i >= 0; i--) {
             Zone z = zones.get(i);
             if (in(mx, my, z.x(), z.y(), z.w(), z.h())) {
@@ -894,6 +991,7 @@ public class PaScreen extends Screen {
             if (key != GLFW.GLFW_KEY_ESCAPE) return input.keyPressed(key, scan, mods) || true;
         }
         if (nameBox.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) return nameBox.keyPressed(key, scan, mods) || true;
+        if (tab.equals("about") && triangle.key(key)) return true;
         if (PaClient.PANEL.matches(key, scan) && !input.isFocused()) { onClose(); return true; }
         return super.keyPressed(key, scan, mods);
     }

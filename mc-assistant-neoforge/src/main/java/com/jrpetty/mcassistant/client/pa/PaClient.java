@@ -149,7 +149,7 @@ public final class PaClient {
         stamp++;
         subtitle = d.getString("name") + ": " + text;
         subtitleUntil = System.currentTimeMillis() + 2500L + text.length() * 60L;
-        if (d.getBoolean("speak")) PaVoice.speak(text);
+        if (d.getBoolean("speak")) PaVoice.speak(text, d.getFloat("gloom"), d.getFloat("fun"));
     }
 
     /** The bubble over this assistant just now, or null. */
