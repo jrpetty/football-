@@ -36,6 +36,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
     /** What it is doing, for the plate, the HUD and the panel: "icon|line|percent". */
     private static final EntityDataAccessor<String> DATA_STATE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> DATA_PERS = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_ANIM = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);   // [pa33c-2b] a gesture: act | turn << 8
     private static final EntityDataAccessor<Integer> DATA_FOOD = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);   // [pa33c-2b] its hunger bar, for the HUD
     /** [pa33c-2b] Its hunger bar (player rules) and where it was a tick ago (for what its walking costs). */
     public final PaHunger hunger = new PaHunger();
@@ -66,6 +67,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         builder.define(DATA_PERS, 0);
         builder.define(DATA_MUTE, 0);
         builder.define(DATA_FOOD, 20);
+        builder.define(DATA_ANIM, 0);
         builder.define(DATA_SHOWN, "");
     }
 
@@ -286,6 +288,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         super.aiStep();
         if (!level().isClientSide && isAlive()) {
             PaVitals.tick(this);                                     // [pa33c-2b] hearts and hunger, as a player's
+            if (animUntil > 0 && tickCount >= animUntil) { animUntil = 0; this.entityData.set(DATA_ANIM, (++animTurn << 8)); }
             PaBrain.tick(this);
         }
     }
@@ -315,6 +318,25 @@ public class PlayerAssistantEntity extends AssistantEntity {
         if (sp.isShiftKeyDown()) openManagementScreen(sp);             // sneak: straight to its pack
         else PaNet.open(sp, this, "last");                             // [pa33c-2b] the tab it was last on
         return InteractionResult.CONSUME;
+    }
+
+    // ------------------------------------------------------------------ [pa33c-2b] gestures (the folk's own animations)
+
+    private int animUntil, animTurn;
+
+    /** A gesture by name ("wave", "shrug", "bow", "cheer", "think"...), for a while; false if there is no such one. */
+    public boolean playAnim(String name) {
+        com.jrpetty.mcassistant.entity.FolkAction.Act act = com.jrpetty.mcassistant.entity.FolkAction.Act.named(name);
+        if (act == null || act == com.jrpetty.mcassistant.entity.FolkAction.Act.NONE || level().isClientSide) return false;
+        animTurn = (animTurn + 1) & 0xFFFFFF;
+        this.entityData.set(DATA_ANIM, act.ordinal() | (animTurn << 8));
+        animUntil = tickCount + (act.loop ? 70 : 45);
+        return true;
+    }
+
+    /** The gesture now (its act in the low byte, a turn count above so the same one twice plays twice). */
+    public int animValue() {
+        return this.entityData.get(DATA_ANIM);
     }
 
     // ------------------------------------------------------------------ [pa33c-2b] its pack: rows open with its level

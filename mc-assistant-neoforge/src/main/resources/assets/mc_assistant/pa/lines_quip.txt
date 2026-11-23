@@ -4,23 +4,23 @@
 That was quick. Forget something.
 Back already. Couldn't stay away.
 Gone five minutes and I'd already lost my purpose.
-Oh, hello again. Short trip.
+[anim:wave] Oh, hello again. Short trip.
 Back so soon. Was it something I said.
 That's the shortest absence on record.
 Welcome back. I'd barely started missing you.
 Popped out, popped back. Very efficient.
 == quip.back_long
 Oh, you're back. I'd started naming the chickens.
-You've been gone ages. I've taken up staring as a hobby.
+[anim:shrug] You've been gone ages. I've taken up staring as a hobby.
 Welcome back. I was this close to filing a missing person report.
 Long time no see. The grass grew. I watched.
 There you are. I'd assumed you'd moved to another world.
 Back at last. I've rearranged nothing out of respect.
-Ah, the wanderer returns. I kept the dirt safe.
+[anim:bow] Ah, the wanderer returns. I kept the dirt safe.
 You were away so long the cows started looking at me funny.
 == quip.morning
 Morning. Lovely day for doing things you'll regret.
-Rise and shine. Well, rise.
+[anim:cheer] Rise and shine. Well, rise.
 Good morning, {owner}. The sun's up. Shall we disappoint it.
 Morning. I've been up for hours. I don't sleep, so technically for ever.
 Ah, morning. The creepers have gone home. Mostly.
@@ -289,13 +289,13 @@ That's going on the cover of Blocks Monthly.
 A jump. Bold of you.
 Jumping for joy, or just jumping.
 Up you go. And down. Riveting.
-That's a jump. I'd give it a six.
+[anim:clap] That's a jump. I'd give it a six.
 You'll wear out your knees doing that.
 Was that a jump or did you trip upwards.
 You've jumped more today than you've worked.
-Impressive height. Average landing.
+[anim:clap] Impressive height. Average landing.
 You've got springs in those boots.
-Is this cardio. Are we doing cardio now.
+[anim:dance] Is this cardio. Are we doing cardio now.
 That jump achieved nothing. Inspiring.
 Up, down. A classic.
 == jm.eat
@@ -343,23 +343,23 @@ Every chest a mystery. Mostly mysteriously full of seeds.
 [bad] Standing still. Bold. Very statuesque. Statue-esque. Ignore me.
 [bad] While we wait, a joke. What's brown and sticky. A stick. That one's older than the world. Keeping it.
 [bad] Waiting for something to happen. Something will. Probably a creeper.
-[bad] Nothing happening. I've rehearsed my reaction to nothing. Here it is: hmm.
+[bad] [anim:think] Nothing happening. I've rehearsed my reaction to nothing. Here it is: hmm.
 [bad] I've counted every block in sight. Twice. The second count was more exciting.
 [bad] Do you think the sun ever gets bored going round. I would. I'd go square.
 [bad] I knew a pig once who was very good at waiting. Well, he was bacon time. I'm so sorry.
 [bad] Thinking about a joke about time. It'll come to me eventually.
 Standing still. Very zen.
-Are you thinking, or buffering.
+[anim:think] Are you thinking, or buffering.
 Have you frozen. Blink twice.
 Taking it all in. The grass. The other grass.
 Contemplation. Deep. Square.
-You've not moved for a while. Should I check for a pulse.
+[anim:beckon] You've not moved for a while. Should I check for a pulse.
 Admiring the view. Someone's really committed to green.
 If you're waiting for something to happen, it won't.
 A moment of peace. I'll ruin it shortly.
 Stand still long enough and someone builds a statue.
 Lovely stillness. Like a painting. A boring one.
-I can hear you thinking from here.
+[anim:think] I can hear you thinking from here.
 == jm.weather
 [bad] Lovely weather for it. For what, I couldn't say. For weather.
 [bad] Bit cloudy. Nothing I can't overcast. Sorry. That's dreadful.

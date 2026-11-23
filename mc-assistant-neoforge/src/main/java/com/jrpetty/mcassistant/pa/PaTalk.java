@@ -43,6 +43,7 @@ public final class PaTalk {
             PaData.touch();
         }
         a.mind.lastSaid = a.tickCount;
+        PaAnim.forLine(a, text);                                     // [pa33c-2b] a gesture with the words ([anim:x] tags)
         PaNet.say(a, text, true, choices, bubbleTicks(text));
     }
 
@@ -54,6 +55,7 @@ public final class PaTalk {
             PaData.touch();
         }
         a.mind.lastSaid = a.tickCount;
+        PaAnim.forLine(a, text);
         PaNet.say(a, text, true, null, bubbleTicks(text), true);
     }
 

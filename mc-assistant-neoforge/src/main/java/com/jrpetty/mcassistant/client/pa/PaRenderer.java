@@ -81,12 +81,12 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
     private final HumanoidModel<PlayerAssistantEntity> playerBody, skeletonBody, zombieBody, endermanBody;
 
     public PaRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx, new PlayerModel<>(ctx.bakeLayer(ModelLayers.PLAYER), false), 0.5F);
+        super(ctx, new PaAnims.Player(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5F);   // [pa33c-2b] with gestures
         this.items = ctx.getItemRenderer();
         this.playerBody = this.model;
-        this.skeletonBody = new HumanoidModel<>(ctx.bakeLayer(ModelLayers.SKELETON));
-        this.zombieBody = new HumanoidModel<>(ctx.bakeLayer(ModelLayers.ZOMBIE));
-        this.endermanBody = new HumanoidModel<>(ctx.bakeLayer(ModelLayers.ENDERMAN));
+        this.skeletonBody = new PaAnims.Body(ctx.bakeLayer(ModelLayers.SKELETON));
+        this.zombieBody = new PaAnims.Body(ctx.bakeLayer(ModelLayers.ZOMBIE));
+        this.endermanBody = new PaAnims.Body(ctx.bakeLayer(ModelLayers.ENDERMAN));
         this.addLayer(new HumanoidArmorLayer<>(this,
             new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
             new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
