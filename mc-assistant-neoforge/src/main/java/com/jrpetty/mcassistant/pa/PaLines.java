@@ -70,6 +70,10 @@ public final class PaLines {
                 // a missing file only means fewer lines: the plain ones still work
             }
         }
+        // "key@more" is more of the same list
+        for (String k : new ArrayList<>(m.keySet())) {
+            if (k.endsWith("@more")) m.computeIfAbsent(k.substring(0, k.length() - 5), x -> new ArrayList<>()).addAll(m.remove(k));
+        }
         m.replaceAll((k, v) -> Collections.unmodifiableList(v));
         return Collections.unmodifiableMap(m);
     }

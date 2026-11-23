@@ -187,4 +187,69 @@ class PaVoiceTest {
         assertDoesNotThrow(mic::stop);
         assertTrue(PaMic.rms(new byte[]{0, 0, 0, 0}, 4) == 0F);
     }
+
+    // ------------------------------------------------------------------ [pa33b] natural voices
+
+    @Test
+    void linesAreShapedToBeSpoken() {
+        String s = PaSpeech.speakable("Your things are at 140 64 -30. They'll vanish in about five minutes.", 100, 0);
+        assertTrue(s.contains("about fifty blocks north-east") && !s.contains("140"), s);
+        assertTrue(PaSpeech.speakable("Heading there.  \u00D72", Double.NaN, Double.NaN).equals("Heading there."));
+        assertEquals("Watch the nether-ite and the ender man", PaSpeech.speakable("Watch the netherite and the Enderman", 0, 0).replace("Watch the nether-ite and the ender man", "Watch the nether-ite and the ender man"));
+        assertTrue(PaSpeech.speakable("Hello Dev_123", 0, 0).contains("Dev 123"));
+        assertEquals(List.of("One.", "Two?", "Three."), PaSpeech.sentences("One. Two? Three."));
+    }
+
+    @Test
+    void ssmlCarriesTheMood() {
+        String gloomy = PaSpeech.ssml("Oh good. More logs.", "en-GB", 1.0, 0.0, 0, 0);
+        assertTrue(gloomy.contains("xml:lang=\"en-GB\"") && gloomy.contains("rate=\"-22%\"") && gloomy.contains("pitch=\"-14%\""), gloomy);
+        String joke = PaSpeech.ssml("Why did the creeper cross the road. To get to the other ssssside.", "en-GB", 0, 1, 0, 0);
+        assertTrue(joke.contains("<break time=\"600ms\"/>To get"), joke);
+        assertTrue(PaSpeech.ssml("Fish & chips <now>", "en-US", 0, 0, 0, 0).contains("Fish &amp; chips &lt;now&gt;"));
+        assertTrue(PaSpeech.ssml("Well... fine.", "en-GB", 0, 0, 0, 0).contains("<break time=\"500ms\"/>"));
+    }
+
+    @Test
+    void voiceListsAreRead() {
+        List<PaTts.VoiceInfo> w = PaTts.parseWindows("winrt", "Microsoft Hazel~en-GB~Female|Microsoft George~en-GB~Male|Microsoft David~en-US~Male");
+        assertEquals(3, w.size());
+        assertEquals("Microsoft Hazel  \u00B7  female, British", w.get(0).label());
+        assertEquals("Windows (modern)", w.get(0).group());
+        List<PaTts.VoiceInfo> m = PaTts.parseMac(List.of("Daniel (Enhanced)  en_GB    # Hello! My name is Daniel.", "Alex                en_US    # Most people recognize me by my voice.",
+            "Thomas              fr_FR    # Bonjour", "Kate (Premium)      en_GB    # Hello"));
+        assertEquals(3, m.size());
+        assertEquals("Enhanced", m.get(0).quality());
+        List<PaTts.VoiceInfo> e = PaTts.parseEspeak(List.of("Pty Language       Age/Gender VoiceName          File                 Other Languages",
+            " 2  en-gb           --/M      English_(Great_Britain) gmw/en               (en 2)"));
+        assertEquals("en-gb", e.get(0).name());
+        assertTrue(PaTts.parseWindows("sapi", "").isEmpty());
+    }
+
+    @Test
+    void piperIsDesignedButNeverRequired(@TempDir Path dir) {
+        assertEquals("piper_windows_amd64.zip", PaPiper.archiveFor("Windows 11", "amd64"));
+        assertEquals("piper_macos_aarch64.tar.gz", PaPiper.archiveFor("Mac OS X", "aarch64"));
+        assertEquals("piper_linux_x86_64.tar.gz", PaPiper.archiveFor("Linux", "amd64"));
+        PaPiper p = new PaPiper(dir);
+        PaPiper.Voice alan = PaPiper.byId("en_GB-alan-medium");
+        assertFalse(p.installed("Linux", alan), "nothing installed: nothing claimed");
+        assertTrue(p.installedVoices("Linux").isEmpty());
+        assertTrue(alan.modelUrl().endsWith("/en/en_GB/alan/medium/en_GB-alan-medium.onnx"), alan.modelUrl());
+        List<String> cmd = p.command("Linux", alan, dir.resolve("o.wav").toFile(), PaPiper.lengthScale(1.0, 0));
+        assertTrue(cmd.contains("--model") && cmd.contains("1.25"), cmd.toString());
+        long british = PaPiper.CATALOGUE.stream().filter(v -> v.id().startsWith("en_GB") && v.offered()).count();
+        assertTrue(british >= 4, "British voices first: " + british);
+    }
+
+    @Test
+    void everyEngineFailsGracefully() {
+        PaTts none = PaTts.none("nothing here");
+        assertDoesNotThrow(() -> none.speak("Hello there", new PaTts.Opts("winrt:Nobody", 0, 0, 80, 0.5, 0.5, PaAccent.UK, 0, 0)));
+        assertDoesNotThrow(() -> none.speak("", new PaTts.Opts("", 0, 0, 80, 0, 0, PaAccent.US, Double.NaN, Double.NaN)));
+        assertTrue(none.catalogue().isEmpty());
+        assertEquals("Cloud voice: off (the default).", PaTts.cloudStatus(false, "abc"));
+        assertTrue(PaTts.cloudStatus(true, "").contains("nothing is sent"));
+        assertTrue(PaTts.cloudStatus(true, "key").contains("nothing is sent"));
+    }
 }

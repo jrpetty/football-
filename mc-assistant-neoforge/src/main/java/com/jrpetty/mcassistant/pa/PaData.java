@@ -92,6 +92,11 @@ public final class PaData extends SavedData {
             while (log.size() > 80) log.removeFirst();
         }
 
+        /** [pa33b] Tests: its record as saved, and back. */
+        public CompoundTag saveForTests() { return save(); }
+
+        public static Rec loadForTests(CompoundTag t) { return load(t); }
+
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
             t.putUUID("Owner", owner);

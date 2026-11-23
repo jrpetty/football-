@@ -184,7 +184,9 @@ public final class PaPersona {
     public static String remark(String key, Tri t, int look, String moment, PaPhrases.Dice d, Recent recent) {
         String lk = lookKey(look);
         if (moment != null && PaLines.has("self." + lk + "@on." + moment) && d.nextInt(100) < 50) {
-            return from(PaLines.get("self." + lk + "@on." + moment), d, recent);
+            List<String> on = new ArrayList<>(PaLines.get("self." + lk + "@on." + moment));
+            if (recent != null) on.removeIf(recent::has);
+            if (!on.isEmpty()) return from(on, d, recent);
         }
         if (t.serious() < 0.9 && d.nextInt(100) < LOOK_SHARE_PERCENT) {
             boolean gloomy = corner(t, d) == Corner.GLOOMY;
@@ -198,9 +200,20 @@ public final class PaPersona {
                 pool.addAll(PaLines.get("self." + lk));
             }
             if (t.funny() < 0.8) pool.removeIf(PaPersona::cheeky);
+            if (recent != null) pool.removeIf(recent::has);      // a look's lines, used up, give way to the situation's
             if (!pool.isEmpty()) return from(pool, d, recent);
         }
-        return from(linesFor(key, t, d), d, recent);
+        List<String> l = linesFor(key, t, d);
+        // the Joke Machine never runs dry: a used-up list gives way to its general commentary
+        if (key.startsWith("jm.") && l != null && recent != null && l.stream().allMatch(recent::has)) {
+            List<String> more = new ArrayList<>(PaLines.get("jm.any"));
+            more.addAll(PaLines.get("look." + lk));
+            more.addAll(PaLines.get("self." + lk));
+            more.addAll(PaLines.get("quip.idle"));
+            if (t.funny() < 0.8) more.removeIf(PaPersona::cheeky);
+            if (more.stream().anyMatch(s -> !recent.has(s))) l = more;
+        }
+        return from(l, d, recent);
     }
 
     /** Fill the blanks; any left over read plainly. */

@@ -11,6 +11,7 @@ The thrill of exploration. The spill of exploration. Same thing near ravines.
 Somewhere out there is a biome I haven't complained about yet.
 I'll mark this spot. With a small, judgemental flag.
 == self.explorer
+I've got the boots of a seasoned adventurer and the knees of a retired one.
 These goggles are mostly for show. Mostly.
 The satchel's empty. It's an aesthetic.
 I look like I know where I'm going. I don't.
@@ -27,6 +28,7 @@ I see a lot of things that need a lever.
 Have you tried turning it off and on again.
 Structural integrity is my love language.
 == self.engineer
+My hard hat's at home. This is my soft head.
 The overalls are load-bearing.
 I've got grease on my face. It's not grease. I'm just like this.
 These goggles make me look clever. Don't ruin it.
@@ -43,6 +45,7 @@ I'll scout ahead. You stay behind and look worried.
 Footprints. Ours. We're going in circles.
 Nature provides. Mostly bugs.
 == self.ranger
+I blend into forests. I stand out terribly in deserts.
 The hood's for stealth. Also hair days.
 Green on green. I'm basically a hedge.
 I look mysterious. It's the hood doing all the work.
@@ -59,6 +62,7 @@ Historically, this sort of thing ends badly.
 Let me consult my notes. They say "bring torches".
 In my studies, I found that lava is hot.
 == self.scholar
+I look like I've read every book. I've read the backs of several.
 The glasses are real. The wisdom is mostly vibes.
 I've got the look of someone who reads. I read signs.
 Spectacles, for spectacular thinking.
@@ -75,6 +79,7 @@ Onward. Into the breach. Mind the breach, it's got lava in.
 I've sworn an oath. I've forgotten most of it.
 Chivalry isn't dead. It's just tired.
 == self.knight
+The helmet's mostly for the dramatic visor flip. I can't do the visor flip.
 This armour chafes in places I didn't know I had.
 I clank when I walk. Stealth is not an option.
 The tabard was a gift. I didn't choose the colour.
@@ -95,6 +100,7 @@ Hoe, hoe, hoe. Seasonal joke. Wrong season.
 Nothing like a good harvest. Except a nap.
 The cows and I have an understanding.
 == self.farmer
+I've got hay in my hair. I haven't got hair. Still got hay.
 The straw hat is non-negotiable.
 I've got mud on me in places mud shouldn't be.
 These overalls have survived three harvests and a cow.
@@ -111,6 +117,7 @@ There's diamonds down here. I can feel it in my knees.
 Torches up, spirits down.
 I've been underground so long I've forgotten what clouds are.
 == self.miner
+I've been underground so long my tan's gone grey.
 The hard hat's done more for me than my brain.
 The lamp's on my head so I never lose it. Or my head.
 I'm the colour of the cave now. Camouflage.
@@ -127,6 +134,7 @@ I'd sail the seven seas, but there's only the one ocean here.
 Hoist the colours. We haven't got colours. Hoist the dirt.
 Every chest is treasure if you're optimistic.
 == self.pirate
+The boots are for the deck. We haven't got a deck.
 The parrot left me. Long story.
 The hat's bigger than my plans.
 I've got the outfit and none of the boat.
@@ -143,6 +151,7 @@ Might I suggest a torch. Several torches. A frankly excessive number of torches.
 The creeper is in the drawing room, sir. I'd avoid the drawing room.
 Will that be all. It's never all.
 == self.butler
+I'd adjust my cufflinks, but they're painted on.
 The waistcoat stays on. Even in the Nether.
 I am impeccably dressed for chopping wood.
 A butler must look the part. The part is mostly filthy now.
@@ -159,6 +168,7 @@ Wizarding is ninety per cent looking mysterious.
 A wizard is never late. Occasionally lost.
 I've enchanted the shovel. It's still a shovel.
 == self.wizard
+The beard's real. The magic is pending.
 The hat's doing most of the work, if I'm honest.
 The robe's a nightmare on ladders.
 I look magical. That's the main spell.
@@ -175,6 +185,7 @@ Kitchen rules: no creepers.
 I've seasoned this cobblestone. It's still cobblestone.
 Bon appétit. Mostly bread.
 == self.chef
+I'd tie my apron tighter, but I'm a rectangle.
 Nobody trusts a thin chef. Lucky I'm blocky.
 The hat adds a foot of authority.
 Whites. In a world of mud. Bold choice.
@@ -191,6 +202,7 @@ The forest and I have history. Mostly stumps.
 I'll fell it, you admire it.
 Smell that. Sawdust. Lovely.
 == self.lumberjack
+I smell of pine and poor decisions.
 The flannel is mandatory. It's in the rules.
 I've got a beard. You can't see it, it's spiritual.
 I look like I could wrestle a bear. I could not.
@@ -207,6 +219,7 @@ Results are in: you died. Peer review pending.
 The data is clear. The data says run.
 Science is just organised guessing.
 == self.scientist
+I look like I invented something. I invented standing here.
 The lab coat makes me twelve per cent cleverer.
 Goggles on, common sense off.
 I look like I've got a doctorate. I've got a pickaxe.

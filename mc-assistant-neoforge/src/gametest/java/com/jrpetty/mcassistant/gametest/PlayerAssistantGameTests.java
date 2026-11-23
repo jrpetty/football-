@@ -1036,6 +1036,30 @@ public class PlayerAssistantGameTests {
         helper.succeed();
     }
 
+    /** pai37: its personality (the triangle), its look and its chattiness save with it and come back after a save. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pai37_persona_saves")
+    public static void pai37_persona_saves(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_108_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        helper.assertTrue(a.rec().tri().label().equals("Banter"), "a new one starts at Banter: " + a.rec().tri().label());
+        CompoundTag t = new CompoundTag();
+        t.putFloat("funny", 0.25F);
+        t.putFloat("gloomy", 0.6F);
+        t.putInt("chatty", 4);
+        PaServer.act(p, "settings", t);
+        CompoundTag lk = new CompoundTag();
+        lk.putInt("look", 14);
+        PaServer.act(p, "look", lk);
+        PaData.Rec back = PaData.Rec.loadForTests(a.rec().saveForTests());
+        helper.assertTrue(Math.abs(back.funny - 0.25F) < 1e-4 && Math.abs(back.gloomy - 0.6F) < 1e-4 && back.chatty == 4 && back.look == 14,
+            "saved and loaded: " + back.funny + ", " + back.gloomy + ", " + back.chatty + ", " + back.look);
+        helper.assertTrue(a.look() == 14, "its body shows the skeleton look: " + a.look());
+        Kit.log("pai37 triangle (0.25 funny, 0.6 gloomy = " + back.tri().label() + "), look 14 and chattiness 4 saved and loaded");
+        helper.succeed();
+    }
+
     /** A small oak: a five-log trunk and a crown of leaves that stay. */
     private static void tree(ServerLevel level, BlockPos t) {
         for (int dy = 0; dy < 5; dy++) level.setBlock(t.above(dy), Blocks.OAK_LOG.defaultBlockState(), 2);
