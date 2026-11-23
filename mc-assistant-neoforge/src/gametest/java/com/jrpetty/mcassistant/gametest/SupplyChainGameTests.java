@@ -1558,4 +1558,40 @@ public class SupplyChainGameTests {
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
+
+    /**
+     * [econ32d] The morning's traders leave the diamonds the next age asks for in the stores: a Diamond Age town with its
+     * own eight diamonds and eight more, and an empty treasury, sells none of them (the market's check compared the good's
+     * test with the diamond item, never true, and sold eight a morning down to the age's own count).
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "sc26_diamonds_kept")
+    public static void sc26_diamonds_kept(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        final int x = 6696000;
+        Kit.hold(level, x, Z, 24);
+        Kit.prepare(level, x, Z, 24);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        UUID id = v.id();
+        Villages.ageForTests(id, Villages.Age.DIAMOND);
+        List<BlockPos> stores = Villages.storeChests(level, id);
+        helper.assertTrue(!stores.isEmpty(), "the village has its stores");
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(stores.get(0));
+        int slot = -1;
+        for (int i = 0; i < box.getContainerSize() && slot < 0; i++) if (box.getItem(i).isEmpty()) slot = i;
+        helper.assertTrue(slot >= 0, "room in the stores");
+        box.setItem(slot, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND, 16));
+        Villages.forgetStock();
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        int kept = com.jrpetty.mcassistant.entity.AgeOres.diamondsKept(id);
+        int in = com.jrpetty.mcassistant.entity.Market.trade(level, v);
+        int left = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(net.minecraft.world.item.Items.DIAMOND));
+        Kit.log("[VT] sc26 the traders paid " + in + " coin; diamonds kept for the next age " + kept + ", left " + left + " of 16");
+        helper.assertTrue(kept >= 16 && left == 16, "the next age's diamonds stay in the stores: " + left + " of 16 (kept " + kept + ")");
+        helper.succeed();
+    }
 }
