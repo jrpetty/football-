@@ -65,7 +65,10 @@ public final class PaChallenge {
             case "race" -> {
                 BlockPos goal = look.block();
                 if (goal == null || goal.distSqr(p.blockPosition()) < 6 * 6) return "Point at somewhere a fair way off (or ping it) and say \"race me to that\".";
-                a.teleportTo(p.getX() + 1.0, p.getY(), p.getZ());    // to the line, beside you
+                double dx = goal.getX() + 0.5 - p.getX(), dz = goal.getZ() + 0.5 - p.getZ(), len = Math.max(0.01, Math.sqrt(dx * dx + dz * dz));
+                a.teleportTo(p.getX() - dz / len * 1.6, p.getY(), p.getZ() + dx / len * 1.6);   // to the line, at your shoulder (not in your way)
+                a.setYRot((float) (Math.atan2(dz, dx) * 180 / Math.PI) - 90F);
+                a.setYHeadRot(a.getYRot());
                 GAMES.put(p.getUUID(), new Game("race", goal.immutable(), now + COUNT, now + COUNT + 20 * 90, 0, 0));
                 PaNet.ping(p, goal, "Finish", "MOVE", "found");
                 a.plan.paused = true;
