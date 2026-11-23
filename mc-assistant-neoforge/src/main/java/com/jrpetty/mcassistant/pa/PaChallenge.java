@@ -26,6 +26,8 @@ public final class PaChallenge {
         final int ownerBase, mineBase;
         int ownerScore, mineScore, shown = -1;
         boolean over, went;
+        /** [pa33e] Its mode before a run (it runs on STAY, so following you doesn't tug it back to the line). */
+        @Nullable com.jrpetty.mcassistant.entity.AssistantEntity.Mode before;
 
         Game(String kind, @Nullable BlockPos goal, long start, long end, int ownerBase, int mineBase) {
             this.kind = kind;
@@ -69,7 +71,10 @@ public final class PaChallenge {
                 a.teleportTo(p.getX() - dz / len * 1.6, p.getY(), p.getZ() + dx / len * 1.6);   // to the line, at your shoulder (not in your way)
                 a.setYRot((float) (Math.atan2(dz, dx) * 180 / Math.PI) - 90F);
                 a.setYHeadRot(a.getYRot());
-                GAMES.put(p.getUUID(), new Game("race", goal.immutable(), now + COUNT, now + COUNT + 20 * 90, 0, 0));
+                Game race = new Game("race", goal.immutable(), now + COUNT, now + COUNT + 20 * 90, 0, 0);
+                race.before = a.getMode();
+                a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.STAY);   // [pa33e] off the lead for the run: following you would walk it back to the line
+                GAMES.put(p.getUUID(), race);
                 PaNet.ping(p, goal, "Finish", "MOVE", "found");
                 a.plan.paused = true;
                 a.clearQueue();
@@ -159,6 +164,7 @@ public final class PaChallenge {
         a.plan.paused = false;
         a.setSprinting(false);
         a.getNavigation().stop();
+        if (g.before != null) a.setMode(g.before);
         String score = g.kind.equals("race") ? "" : " (" + g.ownerScore + " to " + g.mineScore + ")";
         String key = result > 0 ? "challenge_lost" : result < 0 ? "challenge_won" : "challenge_draw";
         PaData.Rec r = a.rec();
