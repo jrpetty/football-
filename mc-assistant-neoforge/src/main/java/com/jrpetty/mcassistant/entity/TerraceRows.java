@@ -77,23 +77,25 @@ public final class TerraceRows {
      */
     public enum Tier {
         WORKERS("terrace", "workers' terrace", "a workers' terrace", new String[]{ "Cottages", "Row", "Yard" },
-            new int[]{ -10, -5, 0, 5, 10 }, new int[][]{ { -9, -6, 0 }, { -4, -1, 1 }, { 1, 4, 0 }, { 6, 9, 1 } }, 3, -5, 0, 1,
+            new int[]{ -10, -5, 0, 5, 10 }, new int[][]{ { -9, -6, 0 }, { -4, -1, 1 }, { 1, 4, 0 }, { 6, 9, 1 } }, 3, -5, 0, 1, 2, 7,
             "two-up two-down cottages in brick, front doors on the street and a yard behind each"),
         BAY("terrace2", "bay-fronted terrace", "a bay-fronted terrace", new String[]{ "Terrace", "Villas", "Gardens" },
-            new int[]{ -10, -3, 4, 11 }, new int[][]{ { -9, -4, 0 }, { -2, 3, 0 }, { 5, 10, 0 } }, 5, -2, 0, 2,
+            new int[]{ -10, -3, 4, 11 }, new int[][]{ { -9, -4, 0 }, { -2, 3, 0 }, { 5, 10, 0 } }, 5, -2, 0, 2, 4, 8,
             "taller houses with bay windows, porches, front gardens and dormers"),
         GRAND("terrace3", "grand terrace", "a grand terrace", new String[]{ "Place", "Parade", "Crescent" },
-            new int[]{ -10, -3, 4, 11 }, new int[][]{ { -9, -4, 0 }, { -2, 3, 0 }, { 5, 10, 0 } }, 5, -2, 2, 3,
+            new int[]{ -10, -3, 4, 11 }, new int[][]{ { -9, -4, 0 }, { -2, 3, 0 }, { 5, 10, 0 } }, 5, -2, 2, 3, 4, 16,
             "Georgian town houses four storeys high, steps up to the door and iron railings round the area");
 
         public final String structure, word, a, looks;
         final String[] names;
         final int[] walls;
         final int[][] houses;
-        final int door, front, stand, size;
+        final int door, front, stand, size, back, eaves;
 
         Tier(String structure, String word, String a, String[] names, int[] walls, int[][] houses, int door, int front, int stand,
-             int size, String looks) {
+             int size, int back, int eaves, String looks) {
+            this.back = back;
+            this.eaves = eaves;
             this.structure = structure;
             this.word = word;
             this.a = a;
@@ -945,6 +947,36 @@ public final class TerraceRows {
         if (laid > 0) {
             done += laid;
             if (!free) return done;
+        }
+        // the roofs slated (the Iron Age's make-over of the town's roofs): the wood of every roof, porch and privy in slate
+        if (free || id != null && Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal()) {
+            int slated = 0;
+            for (BuildGoal.Placement pl : plan(id, b)) {
+                if (pl.part() != BuildGoal.Part.BLOCK || !BuildGoal.isRoof(pl.style())) continue;
+                int[] d = local(b, pl.pos());
+                int[] own = owners(t, d[0]);
+                int st = step(steps, own[0]);
+                if (d[1] - st < t.eaves && d[2] >= t.front && d[2] <= t.back) continue;      // the stairs and chairs indoors stay as they are
+                BlockState there = level.getBlockState(pl.pos());
+                Block slate = there.is(net.minecraft.tags.BlockTags.WOODEN_STAIRS) ? Blocks.DEEPSLATE_TILE_STAIRS
+                    : there.is(net.minecraft.tags.BlockTags.WOODEN_SLABS) ? Blocks.DEEPSLATE_TILE_SLAB
+                    : there.is(net.minecraft.tags.BlockTags.PLANKS) ? Blocks.DEEPSLATE_TILES : null;
+                if (slate == null) continue;
+                if (!free) {
+                    java.util.function.Predicate<ItemStack> tile = it -> it.is(Items.DEEPSLATE_TILES) || it.is(Items.COBBLED_DEEPSLATE);
+                    if (slated == 0 && (Crafts.stock(level, v, tile) < 1
+                            || !TownJobs.atWork(level, v, "walls", pl.pos(), "slating the roof of " + name(id, b)))) break;
+                    if (Crafts.takeOne(level, v, tile).isEmpty()) break;
+                    Crafts.giveBack(level, v, there.getBlock().asItem(), 1);
+                }
+                level.setBlock(pl.pos(), copy(there, slate.defaultBlockState()), 2);
+                slated++;
+                if (!free && slated >= REFACE) break;
+            }
+            if (slated > 0) {
+                done += slated;
+                if (!free) return done;
+            }
         }
         for (Spot s : spots(b)) {
             int i = s.index(), st = step(steps, i);
