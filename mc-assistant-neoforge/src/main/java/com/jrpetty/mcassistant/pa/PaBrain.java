@@ -115,7 +115,8 @@ public final class PaBrain {
             plan.current = cur;
             cur.started = now;
             cur.fail = "";
-            cur.base = cur.count.isEmpty() ? -1 : PaItems.count(a, cur.count);
+            if (!cur.keepBase || cur.base < 0) cur.base = cur.count.isEmpty() ? -1 : PaItems.count(a, cur.count);
+            cur.keepBase = false;
             a.mind.roamCentre = a.blockPosition();
             a.mind.lastPct = -1;
             a.mind.sameFor = 0;
@@ -156,6 +157,7 @@ public final class PaBrain {
             cur.fail = "I found " + cur.tally(a) + " " + cur.count + " before the mine ran out.";
         }
         PaData.Rec r = a.rec();
+        if (!cur.fail.isEmpty() && retool(a, cur)) return;
         if (!cur.fail.isEmpty()) {
             boolean more = plan.steps.stream().anyMatch(s -> !s.auto);
             if (cur.auto) { plan.dropAuto(); return; }
@@ -179,6 +181,32 @@ public final class PaBrain {
         if (!res.isEmpty()) line = res + " " + (last ? "That's everything." : "");
         if (last) PaTalk.reply(a, line.trim());
         else PaTalk.comment(a, 1, line.trim());
+    }
+
+    private static final java.util.regex.Pattern NO_PICK = java.util.regex.Pattern.compile("(?i)(without a pickaxe|no pickaxe|need a pickaxe|pickaxe broke)");
+
+    /**
+     * Its pickaxe wore out half way through a dig: like a player, it makes a new one and carries on from where it got
+     * to, rather than stopping the whole plan. Twice per step at most, then it says so honestly.
+     */
+    static boolean retool(PlayerAssistantEntity a, PaPlan.Step cur) {
+        if (cur.auto || cur.retools >= 2 || !NO_PICK.matcher(cur.fail).find() || PaItems.hasPickaxe(a)) return false;
+        PaPlan.Step pick = PaOrders.pickaxeStep(a);
+        if (pick == null) return false;
+        cur.retools++;
+        int left = cur.target > 0 && cur.base >= 0 ? Math.max(1, cur.target - Math.max(0, PaItems.count(a, cur.count) - cur.base)) : 0;
+        java.util.List<Job> again = new java.util.ArrayList<>();
+        for (Job j : cur.jobs) again.add(j.type() == Job.Type.GATHER && left > 0 ? Job.gather(j.kind(), left + 3) : j);
+        cur.jobs.clear();
+        cur.jobs.addAll(again);
+        cur.fail = "";
+        cur.fed = false;
+        cur.started = -1;
+        cur.keepBase = true;
+        a.plan.steps.add(0, cur);
+        a.plan.steps.add(0, pick);
+        PaTalk.comment(a, 1, "My pickaxe wore out. Making a new one, then back to it.");
+        return true;
     }
 
     private static String trimEnd(String s) {

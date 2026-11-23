@@ -759,14 +759,21 @@ public final class PaOrders {
     private static void needPickaxe(PlayerAssistantEntity a, List<PaPlan.Step> out) {
         for (PaPlan.Step s : out) if (s.label.contains("pickaxe")) return;
         for (PaPlan.Step s : a.plan.all()) if (s.label.contains("pickaxe")) return;
+        PaPlan.Step s = pickaxeStep(a);
+        if (s != null) out.add(s);
+    }
+
+    /** A step to make the best pickaxe it can from what it has (stone if it has cobblestone), or null if it can't. */
+    @Nullable
+    static PaPlan.Step pickaxeStep(PlayerAssistantEntity a) {
         String target = a.countMatching(PaItems.of("stone")) >= 3 ? "stone_pickaxe" : "wooden_pickaxe";
         CraftPlanner.Result cr = CraftPlanner.plan(a, target, 1);
-        if (!cr.blockers().isEmpty() || cr.jobs().isEmpty()) return;
+        if (!cr.blockers().isEmpty() || cr.jobs().isEmpty()) return null;
         PaPlan.Step s = step("make a " + CraftPlanner.pretty(target) + " first", Kind.CRAFT, Math.max(20, cr.jobs().stream().mapToInt(PaOrders::jobEta).sum()));
         s.jobs.addAll(cr.jobs());
         s.count = PaItems.itemKey(target);
         s.target = 1;
-        out.add(s);
+        return s;
     }
 
     private static boolean hasIronPick(AssistantEntity a) {

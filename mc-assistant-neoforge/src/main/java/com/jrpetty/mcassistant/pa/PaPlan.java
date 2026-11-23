@@ -40,6 +40,10 @@ public final class PaPlan {
         /** Something it decided to do by itself (auto-help): any order from its player comes first. */
         public boolean auto;
         public boolean fed;
+        /** Times it has stopped to make a new tool for this step (a pickaxe worn out half way). */
+        public int retools;
+        /** Keep the progress counted so far when the step starts again after a new tool. */
+        public boolean keepBase;
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
