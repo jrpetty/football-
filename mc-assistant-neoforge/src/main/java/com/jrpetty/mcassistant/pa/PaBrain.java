@@ -45,6 +45,7 @@ public final class PaBrain {
         int tips;
         /** When to open its player's panel after it first arrives (0: not pending). */
         public int openPanelAt;
+        int askedFoodTick = -100000;
     }
 
     // ------------------------------------------------------------------ the budget
@@ -96,6 +97,7 @@ public final class PaBrain {
             if (a.getOwnerPlayer() instanceof ServerPlayer owner) PaNet.open(owner, a, "talk");
         }
         if (t % 20 == 0) personalSpace(a);
+        if (t % 10 == 0) boat(a);                                 // [pa33b] along with its player on the water
         if (t % 40 == 0) {
             safety(a);
             companion(a);
@@ -384,6 +386,29 @@ public final class PaBrain {
         }
     }
 
+    /**
+     * [pa33b] Boats. Its player gets into a boat: it hops into the free seat beside them (a boat seats two), so it goes
+     * where they row. No seat (a chest boat, or someone else aboard): it keeps up along the shore, and its follow
+     * catches up if it falls far behind. Its player steps out: so does it.
+     */
+    static void boat(PlayerAssistantEntity a) {
+        if (!(a.getOwnerPlayer() instanceof ServerPlayer owner) || owner.level() != a.level()) return;
+        net.minecraft.world.entity.Entity ride = owner.getVehicle();
+        if (ride instanceof net.minecraft.world.entity.vehicle.Boat b) {
+            if (a.getVehicle() == b) return;
+            if (a.getMode() != AssistantEntity.Mode.FOLLOW || !a.plan.idle() || a.getTarget() != null) return;
+            if (a.distanceToSqr(b) < 8 * 8 && b.getPassengers().size() < 2) {
+                if (a.isPassenger()) a.stopRiding();
+                a.getNavigation().stop();
+                if (a.startRiding(b)) PaTalk.comment(a, 2, "Room for two!");
+            } else if (a.getNavigation().isDone()) {
+                a.getNavigation().moveTo(b, 1.2D);          // to the water's edge nearest them
+            }
+        } else if (a.getVehicle() instanceof net.minecraft.world.entity.vehicle.Boat) {
+            a.stopRiding();                                   // they got out: so does it
+        }
+    }
+
     /** Idle, it never stands in its player's face: it steps back to a couple of blocks off, as a friend would. */
     private static void personalSpace(PlayerAssistantEntity a) {
         if (!(a.getOwnerPlayer() instanceof ServerPlayer owner) || owner.level() != a.level()) return;
@@ -428,6 +453,14 @@ public final class PaBrain {
         if (near && owner.getHealth() <= 6 && owner.getHealth() > 0 && a.tickCount - a.mind.ownerHurtTick > 900) {
             a.mind.ownerHurtTick = a.tickCount;
             PaTalk.comment(a, 1, PaPhrases.line("owner_hurt", pers, rnd, "owner", on));
+        }
+        // [pa33b] hurt with nothing to eat: it says so and asks, with ways to fix it (it heals by eating, like a player)
+        if (a.getHealth() < a.getMaxHealth() * 0.5F && a.countFood() == 0 && a.getTarget() == null
+                && a.tickCount - a.mind.askedFoodTick > 1200) {
+            a.mind.askedFoodTick = a.tickCount;
+            PaTalk.reply(a, PaPhrases.line("no_food", pers, rnd, "owner", on),
+                List.of(new Choice("Go hunting", "hunt for food"), new Choice("I'll give you some", "#pack")));
+            return;
         }
         if (a.getHealth() < a.getMaxHealth() * 0.3F && a.tickCount - a.mind.meHurtTick > 900) {
             a.mind.meHurtTick = a.tickCount;

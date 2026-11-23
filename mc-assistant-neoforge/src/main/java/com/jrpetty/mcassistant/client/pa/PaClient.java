@@ -121,10 +121,18 @@ public final class PaClient {
         if (!d.getBoolean("owner")) return;
         // its owner: the talk log (until the server's own copy arrives), the chips, the subtitle, the voice
         ListTag log = state.getList("log", Tag.TAG_COMPOUND);
-        CompoundTag line = new CompoundTag();
-        line.putInt("w", 1);
-        line.putString("t", text);
-        log.add(line);
+        CompoundTag prev = log.isEmpty() ? null : log.getCompound(log.size() - 1);
+        boolean greet = d.getBoolean("greet");
+        if (prev != null && prev.getInt("w") == 1 && prev.getString("t").equals(text)) {
+            prev.putInt("n", Math.max(1, prev.getInt("n")) + 1);            // [pa33b] the same again: "×2", not a second line
+        } else {
+            if (greet && prev != null && prev.getBoolean("g")) log.remove(log.size() - 1);   // one hello
+            CompoundTag line = new CompoundTag();
+            line.putInt("w", 1);
+            line.putString("t", text);
+            if (greet) line.putBoolean("g", true);
+            log.add(line);
+        }
         state.put("log", log);
         List<String[]> before = choices;
         choices = new ArrayList<>();
@@ -172,10 +180,16 @@ public final class PaClient {
         // shown at once in the log; the server's copy replaces it
         if (!text.startsWith("#")) {
             ListTag log = state.getList("log", Tag.TAG_COMPOUND);
-            CompoundTag line = new CompoundTag();
-            line.putInt("w", 0);
-            line.putString("t", (voice ? "(voice) " : "") + text.trim());
-            log.add(line);
+            String mine = (voice ? "(voice) " : "") + text.trim();
+            CompoundTag prev = log.isEmpty() ? null : log.getCompound(log.size() - 1);
+            if (prev != null && prev.getInt("w") == 0 && prev.getString("t").equals(mine)) {
+                prev.putInt("n", Math.max(1, prev.getInt("n")) + 1);         // [pa33b] said again
+            } else {
+                CompoundTag line = new CompoundTag();
+                line.putInt("w", 0);
+                line.putString("t", mine);
+                log.add(line);
+            }
             state.put("log", log);
         }
         choices = new ArrayList<>();                            // answered: the chips go (a veto's too)

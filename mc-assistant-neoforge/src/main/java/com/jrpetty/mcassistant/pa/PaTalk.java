@@ -46,6 +46,17 @@ public final class PaTalk {
         PaNet.say(a, text, true, choices, bubbleTicks(text));
     }
 
+    /** [pa33b] A hello (on login, on coming back): one in the log however often its player reconnects. */
+    public static void greet(PlayerAssistantEntity a, String text) {
+        PaData.Rec r = a.rec();
+        if (r != null) {
+            r.say(1, text, a.level().getGameTime(), true);
+            PaData.touch();
+        }
+        a.mind.lastSaid = a.tickCount;
+        PaNet.say(a, text, true, null, bubbleTicks(text), true);
+    }
+
     /** Something it says unasked (a comment, a tip, a job done), at this chattiness or above (0 quiet .. 3 chatty). */
     public static boolean comment(PlayerAssistantEntity a, int least, String text) {
         PaData.Rec r = a.rec();

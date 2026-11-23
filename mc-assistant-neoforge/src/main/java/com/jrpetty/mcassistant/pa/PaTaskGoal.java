@@ -196,8 +196,18 @@ public class PaTaskGoal extends Goal {
             case "furnace" -> Items.FURNACE;
             case "chest" -> Items.CHEST;
             case "torches", "torch" -> Items.TORCH;
-            default -> Items.AIR;
+            default -> registryItem(phrase);
         };
+    }
+
+    /** [pa33b] Any item by its own name ("cobblestone", "iron ingots"), singular or plural. */
+    private static Item registryItem(String phrase) {
+        String id = phrase.trim().toLowerCase(java.util.Locale.ROOT).replace(' ', '_');
+        for (String s : new String[]{id, id.endsWith("es") ? id.substring(0, id.length() - 2) : id, id.endsWith("s") ? id.substring(0, id.length() - 1) : id}) {
+            net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse("minecraft:" + s);
+            if (rl != null && net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(rl)) return net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
+        }
+        return Items.AIR;
     }
 
     // ------------------------------------------------------------------ lay out a field
@@ -330,7 +340,13 @@ public class PaTaskGoal extends Goal {
         String said;
         if (t.kind == PaTask.Kind.BUY) {
             int coinsBefore = coins(owner);
-            if (spent >= limit) { finish("Bought " + done + " " + t.item + " for you; that's my spending limit (" + limit + " coins).", false); return; }
+            // [pa33b] the price first: a lot that would take it past its limit is not bought at all
+            int price = com.jrpetty.mcassistant.entity.Market.quoteFor(level, v, owner, new ItemStack(item));
+            if (price > 0 && spent + price > limit) {
+                finish(done > 0 ? "Bought " + done + " " + t.item + " for you; another lot (" + price + " coins) would go past my spending limit of " + limit + "."
+                    : "That's " + price + " coins a lot, over my spending limit of " + limit + ". Raise it in my About tab if you want me to.", done == 0);
+                return;
+            }
             said = com.jrpetty.mcassistant.entity.Market.buy(level, v, owner, new ItemStack(item));
             int paid = coinsBefore - coins(owner);
             if (paid <= 0 || !said.startsWith("Bought")) { finish(done > 0 ? "Bought " + done + " " + t.item + " for you, then: " + said : said, done == 0); return; }

@@ -127,6 +127,11 @@ public final class PaPhrases {
             new String[]{"Ouch! I need to patch up.", "I'm hurt, I'll back off a bit."},
             new String[]{"I've been better. Retreating heroically.", "That hurt. I'm leaving."},
             new String[]{"I'm hurt. I'll fall back.", "I need a moment to heal."});
+        // [pa33b] hurt, and nothing in its pack to eat
+        put("no_food",
+            new String[]{"I'm hurt and I've nothing to eat, {owner}. Could you spare some food? Or I can go hunting."},
+            new String[]{"Injured, and the pantry is empty. Food would be lovely. Or I'll hunt something."},
+            new String[]{"I'm hurt and out of food. Some food would help me heal, or I can hunt."});
         put("diamonds",
             new String[]{"DIAMONDS! {owner}, look!", "Ooh, shiny! I found diamonds!"},
             new String[]{"Diamonds. Try to contain yourself.", "Found diamonds. Yes, really."},

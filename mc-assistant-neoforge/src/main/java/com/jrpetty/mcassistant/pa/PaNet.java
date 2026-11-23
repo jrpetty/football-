@@ -72,7 +72,12 @@ public final class PaNet {
 
     /** A line said: to its owner (logged, spoken, with choices when it asks), and as a bubble to everyone in sight. */
     public static void say(PlayerAssistantEntity a, String text, boolean speak, @Nullable List<PaUnderstand.Choice> choices, int ticks) {
+        say(a, text, speak, choices, ticks, false);
+    }
+
+    public static void say(PlayerAssistantEntity a, String text, boolean speak, @Nullable List<PaUnderstand.Choice> choices, int ticks, boolean greet) {
         CompoundTag t = new CompoundTag();
+        if (greet) t.putBoolean("greet", true);
         t.putInt("id", a.getId());
         t.putString("name", a.displayNameCap());
         t.putString("text", text);
@@ -146,6 +151,8 @@ public final class PaNet {
             CompoundTag c = new CompoundTag();
             c.putInt("w", l.who());
             c.putString("t", l.text());
+            if (l.times() > 1) c.putInt("n", l.times());       // [pa33b] said again: "×2"
+            if (l.greet()) c.putBoolean("g", true);
             log.add(c);
         }
         t.put("log", log);

@@ -29,7 +29,10 @@ public final class PaData extends SavedData {
     public static final String ID = "mc_assistant_assistants";
 
     /** One line of the conversation: who said it (0 the player, 1 the assistant, 2 a note), and when. */
-    public record Line(int who, String text, long time) {}
+    /** A line of talk; times is how often it was said running (shown "×2"); greet marks a hello. [pa33b] */
+    public record Line(int who, String text, long time, int times, boolean greet) {
+        public Line(int who, String text, long time) { this(who, text, time, 1, false); }
+    }
 
     public static final class Rec {
         public UUID owner;
@@ -62,7 +65,22 @@ public final class PaData extends SavedData {
         }
 
         public void say(int who, String text, long now) {
-            log.addLast(new Line(who, text, now));
+            say(who, text, now, false);
+        }
+
+        /**
+         * [pa33b] Logged without the clutter of a reconnect or a re-sent order: the same line again straight after
+         * itself becomes "×2" on the one line; a hello straight after a hello replaces it (one greeting per login).
+         */
+        public void say(int who, String text, long now, boolean greet) {
+            Line last = log.peekLast();
+            if (last != null && last.who() == who && last.text().equals(text)) {
+                log.removeLast();
+                log.addLast(new Line(who, text, now, last.times() + 1, last.greet()));
+                return;
+            }
+            if (greet && last != null && last.greet()) log.removeLast();
+            log.addLast(new Line(who, text, now, 1, greet));
             while (log.size() > 80) log.removeFirst();
         }
 
@@ -101,6 +119,8 @@ public final class PaData extends SavedData {
                 c.putInt("W", l.who());
                 c.putString("T", l.text());
                 c.putLong("At", l.time());
+                if (l.times() > 1) c.putInt("N", l.times());
+                if (l.greet()) c.putBoolean("G", true);
                 lines.add(c);
             }
             t.put("Log", lines);
@@ -139,7 +159,7 @@ public final class PaData extends SavedData {
             r.jobsDone = t.getInt("Done");
             for (Tag e : t.getList("Log", Tag.TAG_COMPOUND)) {
                 CompoundTag c = (CompoundTag) e;
-                r.log.addLast(new Line(c.getInt("W"), c.getString("T"), c.getLong("At")));
+                r.log.addLast(new Line(c.getInt("W"), c.getString("T"), c.getLong("At"), Math.max(1, c.getInt("N")), c.getBoolean("G")));
             }
             for (long p : t.getLongArray("Pointed")) r.pointed.add(p);
             return r;

@@ -146,6 +146,10 @@ public final class PaServer {
                 a.plan.paused = false;
                 PaTalk.reply(a, "Trying again: " + f.label + ".");
             }
+            case "pack" -> {                                          // [pa33b] "I'll give you some": its pack, to put food in
+                a.openManagementScreen(p);
+                return;
+            }
             case "tour" -> {
                 CompoundTag t = PaNet.state(p, a);
                 t.putString("tab", "talk");

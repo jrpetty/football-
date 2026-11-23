@@ -209,7 +209,7 @@ public final class PaLife {
             if (!r.away || r.dead(p.serverLevel().getGameTime())) continue;
             PlayerAssistantEntity a = spawn(p.serverLevel(), r, p.blockPosition().relative(p.getDirection(), 3), p);
             if (a != null) {
-                PaTalk.reply(a, PaPhrases.line("greet", a.personality(), a.getRandom()::nextInt, "owner", p.getGameProfile().getName()));
+                PaTalk.greet(a, PaPhrases.line("greet", a.personality(), a.getRandom()::nextInt, "owner", p.getGameProfile().getName()));   // [pa33b]
             }
         }
     }

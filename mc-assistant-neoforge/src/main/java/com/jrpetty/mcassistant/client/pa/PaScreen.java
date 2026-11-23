@@ -239,7 +239,8 @@ public class PaScreen extends Screen {
         int total = 4;
         for (Tag t : log) {
             CompoundTag l = (CompoundTag) t;
-            List<FormattedCharSequence> lines = font.split(Component.literal(l.getString("t")), bubbleW - 10);
+            String said = l.getString("t") + (l.getInt("n") > 1 ? "  \u00D7" + l.getInt("n") : "");   // [pa33b] said again: ×2
+            List<FormattedCharSequence> lines = font.split(Component.literal(said), bubbleW - 10);
             laid.add(new Object[]{l.getInt("w"), lines});
             total += lines.size() * 10 + 8 + (l.getInt("w") == 1 ? 0 : 0);
         }
