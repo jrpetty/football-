@@ -69,6 +69,7 @@ public final class PaClient {
     static int stamp;
     /** The choices it last offered (clickable chips under the talk box). */
     static List<String[]> choices = new ArrayList<>();
+    private static long vetoAt;
     /** Chips to put up with the next line it says (a Guide answer's "show me"). */
     static List<String[]> pendingChips;
     /** A line from the system with no assistant to say it (the panel's footer). */
@@ -124,12 +125,17 @@ public final class PaClient {
         line.putString("t", text);
         log.add(line);
         state.put("log", log);
+        List<String[]> before = choices;
         choices = new ArrayList<>();
         for (Tag t : d.getList("choices", Tag.TAG_COMPOUND)) {
             CompoundTag c = (CompoundTag) t;
             choices.add(new String[]{c.getString("l"), c.getString("s")});
         }
         if (choices.isEmpty() && pendingChips != null) choices = pendingChips;
+        // something it chose to do by itself keeps its "Don't do that" chip a while, even as it reports back
+        boolean veto = before.stream().anyMatch(c -> c[1].startsWith("#veto"));
+        if (choices.isEmpty() && veto && System.currentTimeMillis() - vetoAt < 60_000L) choices = before;
+        if (choices.stream().anyMatch(c -> c[1].startsWith("#veto")) && choices != before) vetoAt = System.currentTimeMillis();
         pendingChips = null;
         stamp++;
         subtitle = d.getString("name") + ": " + text;

@@ -41,6 +41,19 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         // area sizing, dig depth) lives on the orders sheet, once.
         int bh = 18;
         AssistantEntity a = this.menu.getAssistant();
+        // [pa33] A Player AI Assistant's pack: back to its own panel, and stash. Not the crew's orders sheet.
+        if (a instanceof com.jrpetty.mcassistant.pa.PlayerAssistantEntity) {
+            this.addRenderableWidget(Button.builder(Component.literal("\u2039 Back"), b -> {
+                    if (this.minecraft != null && this.minecraft.player != null) {
+                        this.minecraft.player.closeContainer();
+                        net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
+                        t.putString("tab", "pack");
+                        com.jrpetty.mcassistant.client.pa.PaClient.send("open", t);
+                    }
+                }).bounds(x + 8, y + 100, 100, bh).build(b2 -> ((UiButton) new UiButton(b2)).primary()));
+            addButton(x + 112, y + 100, 56, bh, "Stash", AssistantMenu.BTN_DEPOSIT);
+            return;
+        }
         // A village's folk take no orders and stash nothing for you: their pack is to
         // look at, and the way back is to the conversation it was opened from.
         if (a instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity) {
@@ -141,7 +154,12 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         // --- Specialisation readout (synced from the entity, so it's live) ---
         if (a == null) return;
         AssistantEntity.StationTask job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal());
-        g.drawString(this.font, Component.literal(trim(job.title + " · " + a.clientZone())),
+        String jobLine = job.title + " · " + a.clientZone();
+        if (a instanceof com.jrpetty.mcassistant.pa.PlayerAssistantEntity pa) {   // [pa33] what it is doing, in its own words
+            String[] st = pa.state().split("\\|", -1);
+            jobLine = st.length > 1 && !st[1].isEmpty() ? st[1] : "Waiting for you";
+        }
+        g.drawString(this.font, Component.literal(trim(jobLine)),
             8, 123, UiStyle.TEXT_MUTED, false);
 
         // What it is running on. Worked out first because the status line below
