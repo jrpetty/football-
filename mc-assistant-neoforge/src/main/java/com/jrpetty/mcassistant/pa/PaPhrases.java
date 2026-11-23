@@ -36,6 +36,12 @@ public final class PaPhrases {
 
     private static final Map<String, String[][]> BANK = new HashMap<>();
 
+    /** [pa33b] How many plain (calm) ways it has to say a key: the warnings always use these. */
+    static int plainCount(String key) {
+        String[][] all = BANK.get(key);
+        return all == null ? 0 : all[2].length;
+    }
+
     /** One key, three personalities' lines: cheerful, dry, calm. */
     private static void put(String key, String[] cheerful, String[] dry, String[] calm) {
         BANK.put(key, new String[][]{cheerful, dry, calm});
@@ -122,16 +128,20 @@ public final class PaPhrases {
         put("owner_hurt",
             new String[]{"You're hurt, {owner}! Eat something, and let me handle the fighting!", "Careful, {owner}, your health's low!"},
             new String[]{"You look terrible. Eat something.", "You're low on health. I'd rather you weren't dead."},
-            new String[]{"Your health is low. Let's be careful.", "You're hurt. Eat something, {owner}."});
+            new String[]{"Your health is low. Let's be careful.", "You're hurt. Eat something, {owner}.", "{owner}, your health's low. Eat, and stay behind me.",
+                "You're badly hurt, {owner}. Eat something now.", "Low health, {owner}. Back off and eat.", "You're hurt, {owner}. Food first, then we carry on."});
         put("me_hurt",
             new String[]{"Ouch! I need to patch up.", "I'm hurt, I'll back off a bit."},
             new String[]{"I've been better. Retreating heroically.", "That hurt. I'm leaving."},
-            new String[]{"I'm hurt. I'll fall back.", "I need a moment to heal."});
+            new String[]{"I'm hurt. I'll fall back.", "I need a moment to heal.", "I'm hurt, so I'm backing off to heal.", "I've taken a beating. Falling back.",
+                "I'm low on health. Pulling back for a moment.", "I'm hurt. Retreating to heal."});
         // [pa33b] hurt, and nothing in its pack to eat
         put("no_food",
             new String[]{"I'm hurt and I've nothing to eat, {owner}. Could you spare some food? Or I can go hunting."},
             new String[]{"Injured, and the pantry is empty. Food would be lovely. Or I'll hunt something."},
-            new String[]{"I'm hurt and out of food. Some food would help me heal, or I can hunt."});
+            new String[]{"I'm hurt and out of food. Some food would help me heal, or I can hunt.", "I'm hurt and I've nothing to eat. Food, please, or I'll hunt.",
+                "Out of food and hurt, {owner}. Could you spare some? Or I'll go hunting.", "I'm hurt, and the pantry is empty. Food would help, or I can hunt.",
+                "I've nothing to eat and I'm hurt. Bread? Anything? Or I'll hunt.", "Hurt and out of food, {owner}. Some food, or shall I hunt?"});
         put("diamonds",
             new String[]{"DIAMONDS! {owner}, look!", "Ooh, shiny! I found diamonds!"},
             new String[]{"Diamonds. Try to contain yourself.", "Found diamonds. Yes, really."},
@@ -167,7 +177,8 @@ public final class PaPhrases {
         put("threat",
             new String[]{"Look out! I'll {what}.", "I've got this one: I'll {what}!"},
             new String[]{"Company. I'll {what}.", "Oh good, a fight. I'll {what}."},
-            new String[]{"Stay back, I'll {what}.", "I'll {what}. Keep behind me."});
+            new String[]{"Stay back, I'll {what}.", "I'll {what}. Keep behind me.", "Danger. I'll {what}.", "Hostile here. I'll {what}.",
+                "Behind me, {owner}. I'll {what}.", "Trouble. I'll {what}. Stay clear."});
         put("not_owner",
             new String[]{"Sorry, I only take orders from {owner}!"},
             new String[]{"Nice try. I work for {owner}."},
@@ -183,7 +194,8 @@ public final class PaPhrases {
         put("stuck",
             new String[]{"I got stuck, so I've come back to you, {owner}."},
             new String[]{"I was stuck. Teleported. Don't ask."},
-            new String[]{"I was stuck, so I came back to you."});
+            new String[]{"I was stuck, so I came back to you.", "I got stuck there, so I've come back to you.", "Stuck, so I came back to you, {owner}.",
+                "I couldn't get out, so I came back to you.", "I was stuck. I'm back beside you now.", "Got stuck. I've come back to you."});
     }
 
     /** A line for a key in this personality, the blanks filled. A key it does not know comes back as {what}. */

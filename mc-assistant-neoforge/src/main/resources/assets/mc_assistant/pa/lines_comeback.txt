@@ -122,3 +122,20 @@ My therapist says I'm too attached to my sword. I said: we'll see who's laughing
 A bed is just a respawn point with ambitions.
 Why did the iron golem give the villager a flower. It's complicated. It's always complicated with golems.
 [bad] What's a creeper's favourite subject. Hiss-tory. Fine. That one's bad. That one's mine.
+
+# [pa33b] six or more at every corner
+== comeback.insult@serious
+That's not very kind. I'll carry on regardless.
+Noted. Still working.
+Fair enough. I'll keep going.
+== comeback.praise@serious
+Thank you.
+Glad it helped.
+Thanks, {owner}.
+== comeback.love@serious
+That's kind of you.
+Thank you, {owner}.
+Appreciated.
+== comeback.love@gloomy
+That's nice. Nobody's said that to me before. Well, once. It was a chicken.
+Love. Hm. I'll try to remember the feeling when it rains.

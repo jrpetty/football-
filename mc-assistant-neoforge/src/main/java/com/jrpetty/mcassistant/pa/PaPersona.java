@@ -121,6 +121,13 @@ public final class PaPersona {
 
         public boolean has(String s) { return lines.contains(s); }
 
+        /** How long ago it was said: 0 the longest ago of those remembered (or never). */
+        int age(String s) {
+            int i = 0;
+            for (String l : lines) { if (l.equals(s)) return i; i++; }
+            return -1;
+        }
+
         public void add(String s) {
             lines.remove(s);
             lines.addLast(s);
@@ -133,7 +140,14 @@ public final class PaPersona {
         if (list == null || list.isEmpty()) return null;
         List<String> fresh = new ArrayList<>();
         for (String s : list) if (recent == null || !recent.has(s)) fresh.add(s);
-        String pick = fresh.isEmpty() ? list.get(d.nextInt(list.size())) : fresh.get(d.nextInt(fresh.size()));
+        String pick;
+        if (!fresh.isEmpty()) pick = fresh.get(d.nextInt(fresh.size()));
+        else {
+            // [pa33b] all said lately: one of the older half, so never the same twice running and rarely within the last few
+            List<String> old = new ArrayList<>(list);
+            old.sort(java.util.Comparator.comparingInt(recent::age));
+            pick = old.get(d.nextInt(Math.max(1, old.size() / 2)));
+        }
         if (recent != null) recent.add(pick);
         return pick;
     }

@@ -365,3 +365,19 @@ Ceilings are my natural enemy.
 Everyone asks about the weather up here. It's the same.
 I'm all legs. It's a lot of legs.
 Tall, dark, and a bit nervous around water.
+
+# [pa33b] six or more at every corner
+== self.knight@gloomy
+This armour's heavy. So is everything.
+A knight with no dragon. Just chores.
+Polishing armour that'll only rust.
+== self.skeleton@gloomy
+Nothing on my bones but regret.
+Even my shadow looks thin.
+== self.skeleton@on.eat
+Lovely. That'll go straight through me.
+Food. For me. In theory.
+I'll chew it. Where it goes after that is a mystery.
+== self.skeleton@on.skeleton
+Hello, cousin. Don't look at me like that.
+Another skeleton. Small world. Bony world.

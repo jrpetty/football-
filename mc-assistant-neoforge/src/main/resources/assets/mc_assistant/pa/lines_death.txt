@@ -260,3 +260,11 @@ Welcome back. Nothing's changed. It never does.
 Back again. Brace yourself.
 Alive again. Lucky you, I suppose.
 Up you get. The world awaits. Unenthusiastically.
+
+# [pa33b] six or more at every corner
+== death.fall@gloomy
+Gravity wins again. It always does.
+Down you went. Everything goes down eventually.
+== death.lava@gloomy
+Lava. The end of so many things. And now your things.
+Into the fire. Your belongings are with the lava now. Lucky lava.

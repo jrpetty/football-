@@ -551,3 +551,355 @@ Normal service resumed.
 == say.joke_muted
 Jokes are off. Say "jokes back on" and I'll find you one.
 I'm on no jokes. Say "you can talk again" to lift it.
+
+# [pa33b] Six or more ways to say each reply, at every corner (the facts the same in each).
+== say.autohelp@gloomy
+I'll {what}. Someone has to. It's usually me.
+I'll {what} while you're busy. Not that anyone notices.
+Fine. I'll {what}. It'll only need doing again.
+I'll {what}. It passes the time until the next thing goes wrong.
+I'll {what}, then. Quietly. As ever.
+I'll {what}. Don't let me stop you having fun.
+== say.autohelp@serious
+I'll {what} while you're busy.
+I'm going to {what}.
+Next, I'll {what}.
+I'll {what} now. Say no if you'd rather I didn't.
+I'll {what}, unless you stop me.
+Going to {what}.
+== say.bye@gloomy
+Bye, {owner}. I'll just stand here. In the dark.
+Off you go. It'll rain while you're gone. It always does.
+Goodbye. I'll keep the place exactly as miserable as you left it.
+See you, {owner}. Probably.
+Bye. I'll count the blocks again. There are still a lot.
+Farewell. Don't worry about me. Nobody does.
+== say.bye@serious
+Goodbye, {owner}.
+See you later, {owner}.
+Bye for now.
+Take care, {owner}.
+See you next time.
+Goodbye. I'll be here.
+== say.cancelled@gloomy
+Cancelled. I'd got my hopes up. Silly me.
+Never mind, then. It wasn't going to work anyway.
+Right. Not doing that. Story of my life.
+Fine. Scrapped. Like most plans.
+Called off. I'll go back to staring at the horizon.
+Cancelled. Probably for the best. Most things are.
+== say.cancelled@serious
+Cancelled.
+Not doing that, then.
+All right, I've dropped it.
+Scrapped.
+Understood. It's off.
+That's cancelled.
+== say.cant@serious
+I can't do that: {what}
+Not possible right now: {what}
+I can't: {what}
+Sorry, I can't do that. {what}
+That won't work: {what}
+Unable to: {what}
+== say.come@gloomy
+Coming. Not that it'll help.
+On my way. Slowly. Like everything.
+Coming, {owner}. Don't wait up.
+I'll come. I always come. Nobody ever comes to me.
+Coming over. Mind the gloom, it follows me.
+Right. Walking. Again.
+== say.come@serious
+Coming.
+On my way.
+Coming to you, {owner}.
+Heading over.
+Be right there.
+Coming now.
+== say.confirm@gloomy
+{what}. If you're sure. Nobody's ever sure.
+{what}. Shall I? It'll be fine. Probably.
+{what}. Say yes and we'll see how it goes wrong.
+{what}. Your call. I'll do it either way.
+{what}. Go on, then?
+{what}. Do you want me to?
+== say.confirm@serious
+{what}. Shall I go ahead?
+{what}. OK?
+{what}. Is that right?
+{what}. Do you want me to start?
+{what}. Go ahead?
+{what}. Yes or no?
+== say.died@gloomy
+Knocked out. I knew it would happen. Back shortly.
+Down I go. Again. I'll be back, sadly for the monsters.
+That's me out. Don't wait. Actually, do wait. I'll be back.
+Flattened. It was always going to end like this. Back soon.
+Knocked out, {owner}. Same time next week.
+I'm down. Tell the chickens I tried.
+== say.died@serious
+I've been knocked out. Back shortly, {owner}.
+I'm down. I'll be back soon.
+Knocked out. I'll return in a moment.
+I've fallen. Back soon.
+Out for now. I'll be back shortly.
+I'm knocked out, {owner}. Give me a minute.
+== say.follow@gloomy
+Following. Wherever this ends up.
+Right behind you. Into whatever's next.
+Following you, {owner}. It's not like I've anywhere else to be.
+Lead on. Into the rain, probably.
+I'll follow. Someone has to watch you fall in things.
+Following. Try not to walk us into anything sharp.
+== say.follow@serious
+Following you.
+Right behind you, {owner}.
+With you.
+Lead the way.
+I'll follow.
+Following, {owner}.
+== say.found_ore@gloomy
+Found some {item}. It'll only get lost again.
+{item}. Lovely. I'll carry it until you drop it in lava.
+Some {item}. Don't get excited. I have.
+Found {item}. Quietly thrilled. Mostly quietly.
+{item}. In the pack it goes. Where nobody sees it.
+There's {item} here. I've taken it before something worse does.
+== say.found_ore@serious
+Found some {item}.
+There's {item} here. I've taken it.
+Picked up some {item}.
+{item}, found and in my pack.
+I found {item}.
+Got some {item}.
+== say.guard@gloomy
+Guarding. Something will come. It always does.
+On watch. I'll see the end coming, at least.
+Guarding you, {owner}. From everything except the weather.
+I'll guard. Not that monsters care about my feelings.
+Standing guard. Bravely. Wearily.
+On watch. Wake me when the end arrives.
+== say.guard@serious
+Guarding you.
+On watch.
+I'll keep you safe.
+Guarding, {owner}.
+Watching your back.
+Nothing gets past me.
+== say.hello@gloomy
+Hello, {owner}. Still here. Still square.
+Oh. Hello. What's gone wrong now.
+Hello. Don't mind me, I'm just existing.
+Hi, {owner}. Lovely day for being blocky.
+Hello. I've been waiting. It's what I do.
+Hello again. Same world, same me.
+== say.hello@serious
+Hello, {owner}.
+Hi. What do you need?
+Hello. I'm listening.
+Yes, {owner}?
+Hi there.
+Hello. Ready when you are.
+== say.intro@serious
+Hello {owner}. I'm {name}, your assistant. Shall I show you around?
+I'm {name}. I'll help with whatever you need. Would you like a quick tour?
+Hello, I'm {name}. I can fetch, build, mine and fight for you. Tour first?
+{name}, your assistant. Want me to show you how things work?
+Hi {owner}, I'm {name}. Ask me anything, or start with a short tour?
+I'm {name}, here to help. Shall I show you the basics?
+== say.joke_muted
+Jokes are off. Say "jokes back on" and I'll find you one.
+I'm on no jokes. Say "you can talk again" to lift it.
+No jokes right now, by order. Yours. Say "jokes back on".
+I'd love to, but jokes are switched off. "Jokes back on" fixes that.
+Jokes are muted. Lift it with "you can talk again".
+You turned my jokes off. Say "jokes back on" and I'll make up for lost time.
+== say.joke_muted@gloomy
+Jokes are off. Not that they helped. Say "jokes back on" if you must.
+No jokes. You asked for that. Say "jokes back on" to undo it.
+Jokes are muted. Probably for the best. "Jokes back on" brings them back.
+I'm not allowed jokes. Say "you can talk again" and I'll find a sad one.
+Jokes are off, as ordered. "Jokes back on" if you change your mind.
+No jokes. Say "jokes back on". I'll try to cope until then.
+== say.joke_muted@serious
+Jokes are off. Say "jokes back on" to turn them on.
+No jokes right now. Say "you can talk again" to lift it.
+Jokes are muted. Say "jokes back on".
+I'm on no jokes. "You can talk again" lifts it.
+Jokes are switched off. Say "jokes back on" first.
+No jokes until you say "jokes back on".
+== say.mute_all@gloomy
+Rest in silence, then. Mostly mine.
+== say.mute_all@serious
+Quiet. Answers and warnings only.
+Understood. I'll keep quiet.
+Muted. I'll still warn you about danger.
+== say.mute_jokes
+Right. Jokes off. Efficiency mode engaged.
+== say.mute_jokes@gloomy
+Jokes off. Fine. The world wasn't laughing anyway.
+No more jokes. I'll just think them, sadly.
+Understood. Joyless mode. My natural setting.
+== say.mute_jokes@serious
+Jokes off.
+Plain words from now on.
+Understood. No jokes.
+== say.mute_on
+Back. Did you miss me. Don't answer, I know you did.
+== say.mute_on@gloomy
+I can talk again. Not sure I've anything cheerful to say.
+Unmuted. Back to narrating the decline.
+Back. The silence was nice while it lasted.
+== say.mute_on@serious
+Back to normal.
+I can talk again. Thanks.
+Unmuted.
+== say.not_owner@gloomy
+I'm {owner}'s assistant. Sorry. I'd be useless to you anyway.
+I belong to {owner}. It's complicated. It's not.
+Not yours, I'm afraid. I'm {owner}'s burden.
+I work for {owner}. Ask them. They'll say no.
+I'm {owner}'s. Find your own sad helper.
+Sorry. {owner}'s assistant. Spoken for, sadly.
+== say.not_owner@serious
+I'm {owner}'s assistant.
+Sorry, I only work for {owner}.
+I take orders from {owner}.
+I belong to {owner}, I'm afraid.
+Please ask {owner}.
+I'm {owner}'s. You'll need your own.
+== say.pack_full@gloomy
+My pack's full. Of course it is. Emptying it now.
+Pack's full. Off to a chest, then back to filling it. The cycle continues.
+No room in my pack. I'll go and empty it. Again.
+Full pack. I'll lug it to a chest. My poor arms.
+My pack's full. Everything is, eventually.
+Pack full. Emptying. Then more. Forever.
+== say.pack_full@serious
+My pack's full. I'm going to empty it.
+Pack full. Off to a chest.
+No room left. Emptying my pack first.
+My pack's full, so I'm putting things away.
+Full pack. I'll empty it and carry on.
+Out of space. Emptying my pack now.
+== say.pause@gloomy
+Pausing. A little rest before the next disappointment.
+Paused. I'll just stand here and think about rain.
+Stopping for now. It'll still be there later. Things always are.
+Paused. Take your time. I've got forever. Literally.
+Pausing. Don't worry, the work won't go anywhere.
+On hold. Like my dreams.
+== say.pause@serious
+Paused.
+Pausing.
+On hold.
+Paused. Say carry on when you're ready.
+Stopping for now.
+Holding here.
+== say.queue_empty@serious
+My list's empty.
+Nothing left to do.
+All my jobs are done.
+That's everything on my list.
+No jobs left.
+I'm free. What next?
+== say.respawn@gloomy
+Back. Against all odds. Mostly against my wishes.
+I'm back. The world's still here. Unfortunately for my feet.
+Up again. Back to it.
+Returned. Let's see what kills me next.
+Back on my feet, for now.
+I'm back, {owner}. Try to look pleased.
+== say.respawn@serious
+I'm back.
+Back on my feet.
+I've returned, {owner}.
+Back now. What's next?
+Ready again.
+Back and ready.
+== say.resume@gloomy
+Carrying on. As ever.
+Back to it. The work never ends.
+Resuming. Slowly. Inevitably.
+Right. Where was I. Oh yes, suffering.
+Carrying on, then.
+Back at it. Joy.
+== say.resume@serious
+Carrying on.
+Resuming.
+Back to it.
+Picking up where I left off.
+Continuing.
+On with it.
+== say.stay@gloomy
+Staying. Rooted. Like my problems.
+I'll stay here. Forever, probably.
+Staying put. Don't forget me. Everyone does.
+Here I'll stay. Lonely, but here.
+Not moving. Not that I had plans.
+Staying. Come back for me. Eventually.
+== say.stay@serious
+Staying here.
+I'll wait here.
+Staying put.
+Waiting here, {owner}.
+I'll stay.
+Holding this spot.
+== say.stop@gloomy
+Stopped. It was going badly anyway.
+Stopping. Everything stops eventually.
+Stopped. I'll stand here. Thinking.
+Halted. Like all good things.
+Stopped. Don't worry, I didn't want to finish.
+All stop. I'll just exist for a bit.
+== say.stop@serious
+Stopped.
+Stopping.
+All right, stopped.
+Halted.
+I've stopped.
+Stopped everything.
+== say.thanks@gloomy
+You're welcome. It's nice to be noticed.
+Any time. I've nothing else on.
+Thanks noted. I'll treasure it. Nobody says thanks.
+No bother. It's what I'm for.
+Glad to help. It won't last.
+You're welcome, {owner}. Really. It's fine.
+== say.thanks@serious
+You're welcome.
+Glad to help.
+Any time.
+No problem.
+Happy to help, {owner}.
+Of course.
+== say.tip@gloomy
+Tip: hold the talk key and say what you want. I'll hear. I always hear.
+Tip: Y opens my panel. Everything's in there. Even my hopes.
+Tip: X opens the action wheel for whatever you're looking at.
+Tip: say "stop" and I stop. If only everything were that simple.
+Tip: give me food and I'll eat it. I'd rather not starve.
+Tip: say "shut up" and I'll be quiet. You'd be surprised how often I hear that.
+== say.tip@serious
+Tip: hold the talk key and say what you want.
+Tip: Y opens my panel.
+Tip: X opens the action wheel for what you're looking at.
+Tip: say "stop" and I'll stop everything.
+Tip: right-click me with food to feed me.
+Tip: say "no more jokes" or "shut up" to make me quieter.
+== say.undo@gloomy
+Undone. If only everything could be.
+Undone. Back how it was. Not better. Just back.
+Undone. Like it never happened. Lots of things never happen.
+Reverted. Another day, another undo.
+Undone. Shall I undo the weather while I'm at it.
+Taken back. Sorry it went wrong. It usually does.
+== say.undo@serious
+Undone.
+That's undone.
+Reverted.
+Put back how it was.
+Undone, {owner}.
+I've undone that.
+== say.mute_all@gloomy
+Quiet, then. I'll keep my opinions where the rain can't get them.

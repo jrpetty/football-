@@ -250,3 +250,65 @@ Hello, {player}.
 I'm {owner}'s assistant. I'm busy, sorry.
 Noted, {player}.
 I'd rather not, {player}.
+
+# [pa33b] six or more at every corner and level
+== tone.polite@gloomy
+Since you asked nicely, I'll go. Things might even work out. Unlikely, but still.
+Thanks for the please. It brightened the gloom a fraction.
+== tone.polite@serious
+Thanks for asking. On it.
+Of course. Thank you.
+== tone.blunt@gloomy
+No please, then. I'm used to it.
+Barked at. Off I go.
+Straight to it. No pleasantries. Fair.
+== tone.blunt@serious
+Will do.
+Right.
+Doing it.
+== tone.rude.clean@gloomy
+Rude. Doesn't change much. Fetching your {thing}.
+== tone.rude.clean@serious
+Going. A please would help.
+== tone.rude.cheeky@gloomy
+Fine, you grumpy sod. Getting your {thing}. Nothing ever improves.
+== tone.rude.cheeky@serious
+Fetching {thing}. Less of the cheek.
+Doing it. Bloody rude, though.
+== tone.rude.unfiltered@gloomy
+Swear away. It's all shit anyway. Getting your {thing}.
+== tone.rude.unfiltered@serious
+On it. Mind your fucking manners.
+Fetching {thing}. Rude as shit, but fine.
+== stranger.polite@gloomy
+Hello, {player}. Nice of someone to say hello.
+Hi, {player}. I'm {owner}'s. Spoken for, sadly.
+Hello, {player}. Kind words are rare round here.
+Thanks, {player}. That's cheered me up a fraction.
+== stranger.polite@serious
+Hi, {player}.
+Hello, {player}. Nice to meet you.
+Thanks, {player}. I'm {owner}'s assistant.
+Hello, {player}. I'm {name}.
+== stranger.order
+Sorry, {player}. Orders come from {owner} only.
+That's one for {owner}, {player}. I'm not yours to command.
+== stranger.hit
+Careful, {player}. I'm not a punching bag. I'm a carrying bag.
+== stranger.defend.clean
+{player}, say that to {owner}'s face. Actually, don't. {owner} has a sword.
+== stranger.defend.cheeky
+Oi, {player}, bloody cheek. {owner}'s alright, you git.
+{player}, you muppet, {owner} built more today than you have all year.
+== stranger.defend.unfiltered
+{player}, {owner} is a legend and you're a shit builder. Move along.
+Piss off, {player}. Nobody talks shit about {owner} but me.
+== stranger.tell_owner
+{owner}, someone's being rude. I've got it.
+{owner}, {player}'s picking a fight with the help again.
+== stranger.bored
+Go on, {player}, find someone else to bother. I'm busy.
+I've heard better from a sheep, {player}. And I'm done listening.
+== stranger.plain
+I'm busy, {player}. Sorry.
+Hello, {player}. I'm working.
