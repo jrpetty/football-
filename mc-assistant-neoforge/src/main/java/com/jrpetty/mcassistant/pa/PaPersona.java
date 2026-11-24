@@ -283,11 +283,19 @@ public final class PaPersona {
     }
 
     /** Fill the blanks; any left over read plainly. */
+    private static final java.util.regex.Pattern SENTENCE_START = java.util.regex.Pattern.compile("(^|[.!?]\\s+)([a-z])");
+
     public static String fill(String raw, Map<String, String> kv) {
         if (raw == null) return null;
         String s = raw;
         for (Map.Entry<String, String> e : kv.entrySet()) s = s.replace("{" + e.getKey() + "}", e.getValue() == null ? "" : e.getValue());
-        return s.replace("{owner}", "you").replace("{name}", "I").replace("{did}", "Done").replace("{what}", "").replace("{item}", "it")
+        s = s.replace("{owner}", "you").replace("{name}", "I").replace("{did}", "Done").replace("{what}", "").replace("{item}", "it")
             .replaceAll("\\s+", " ").trim();
+        // [pa35] a blank filled at the start of a sentence ("a poppy. For you.") starts it with a capital
+        java.util.regex.Matcher m = SENTENCE_START.matcher(s);
+        StringBuilder b = new StringBuilder();
+        while (m.find()) m.appendReplacement(b, java.util.regex.Matcher.quoteReplacement(m.group(1) + m.group(2).toUpperCase(Locale.ROOT)));
+        m.appendTail(b);
+        return b.toString();
     }
 }

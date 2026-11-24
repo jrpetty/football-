@@ -432,4 +432,12 @@ class PaPersonaTest {
             for (String l : PaLines.get(k)) assertFalse(PaPersona.corny(l), "sincere is never corny: " + l);
         }
     }
+
+    /** [pa35] A blank filled at the start of a sentence starts it with a capital ("a poppy. Don't make a thing of it."). */
+    @Test
+    void fillCapitalisesSentenceStarts() {
+        assertEquals("Here. A poppy. Don't make a thing of it.", PaPersona.fill("Here. {item}. Don't make a thing of it.", Map.of("item", "a poppy")));
+        assertEquals("Day 3: I gave you a poppy.", PaPersona.fill("Day {day}: {what}.", Map.of("day", "3", "what", "I gave you a poppy")));
+        assertEquals("Iron ore. Finally.", PaPersona.fill("{what}. Finally.", Map.of("what", "iron ore")));
+    }
 }

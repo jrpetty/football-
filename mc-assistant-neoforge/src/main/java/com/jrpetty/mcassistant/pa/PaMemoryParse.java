@@ -397,7 +397,7 @@ public final class PaMemoryParse {
         + "when i get home|when i'm home|when i get back|when i arrive home|when i come home|when i'm back home|when i'm back)\\b");
 
     // general facts
-    private static final Pattern REMEMBER_THAT = p("(?:please )?(?:remember|don't forget|do not forget|keep in mind|bear in mind|make a note|note down|write down|memorise|memorize|note)(?: that| this:| this| :)? (.{3,120})");
+    private static final Pattern REMEMBER_THAT = p("(?:please )?(?:remember|don't forget|do not forget|keep in mind|bear in mind|make a note|note down|write down|memorise|memorize|note)(?: that| this:| :)? (.{3,120})");
     private static final Pattern MY_X_IS = p("my ([a-z]{3,16}(?: [a-z]{3,16})?)(?:'s| is| are) (?:called |named )([a-z0-9_ ]{2,24})|my ([a-z]{3,16})'s name is ([a-z0-9_ ]{2,24})");
 
     // ------------------------------------------------------------------ reading

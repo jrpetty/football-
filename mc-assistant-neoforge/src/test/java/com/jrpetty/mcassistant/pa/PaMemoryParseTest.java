@@ -77,6 +77,8 @@ class PaMemoryParseTest {
             {"golden carrots are my favourite", "SAVE FAV golden carrots=food"},
             {"good memory", "PRAISED"},
             {"here is my farm", "PLACE farm"},
+            {"remember this is my farm", "PLACE farm"},             // [pa35] found filming: "this" was eaten by "remember this"
+            {"remember that this is my mine", "PLACE mine"},
             {"hey basil, just so you know, i love cherry wood", "SAVE LIKE cherry wood [wood]"},
             {"i absolutely loathe phantoms", "SAVE DISLIKE phantoms [mob]"},
             {"i can't be doing with spiders", "SAVE DISLIKE spiders [mob]"},

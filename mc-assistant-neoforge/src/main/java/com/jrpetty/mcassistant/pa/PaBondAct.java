@@ -159,8 +159,9 @@ public final class PaBondAct {
                     w.toolAt = now;
                     ItemStack give = c.copy();
                     a.getInventoryItems().set(i, ItemStack.EMPTY);
+                    String name = give.getHoverName().getString().toLowerCase(Locale.ROOT);   // before it moves
                     if (!owner.getInventory().add(give)) owner.drop(give, false);
-                    if (r.mute < 2) PaTalk.reply(a, PaTalk.line(a, "bond.tool", "item", give.getHoverName().getString().toLowerCase(Locale.ROOT)), null, true);
+                    if (r.mute < 2) PaTalk.reply(a, PaTalk.line(a, "bond.tool", "item", name), null, true);
                     break;
                 }
             }
@@ -191,7 +192,10 @@ public final class PaBondAct {
     }
 
     private static String lower(String s) {
-        return s.isEmpty() ? s : Character.toLowerCase(s.charAt(0)) + s.substring(1).replaceAll("\\.$", "");
+        if (s.isEmpty()) return s;
+        String t = s.replaceAll("\\.$", "");
+        boolean keep = t.startsWith("I ") || t.startsWith("I'") || t.length() > 1 && Character.isUpperCase(t.charAt(1));   // "I", and names or initials, stay as they are
+        return keep ? t : Character.toLowerCase(t.charAt(0)) + t.substring(1);
     }
 
     static void wants(PlayerAssistantEntity a, PaData.Rec r, PaBond.State s, Watch w, long now) {
@@ -245,9 +249,11 @@ public final class PaBondAct {
             g = new ItemStack(Items.FLINT);
             g.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal(a.displayNameCap() + "'s lucky flint"));
         }
+        String what = PaBond.said(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(g.getItem()).getPath());   // named before it moves (an added stack is left empty)
+        if (g.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) what = g.getHoverName().getString();
         if (!owner.getInventory().add(g)) owner.drop(g, false);
-        if (r.mute < 2) PaTalk.reply(a, PaTalk.line(a, "bond.gift", "item", g.getHoverName().getString().toLowerCase(Locale.ROOT)), null, true);
-        note(a, null, "I gave you " + g.getHoverName().getString().toLowerCase(Locale.ROOT) + ". You'd better still have it.");
+        if (r.mute < 2) PaTalk.reply(a, PaTalk.line(a, "bond.gift", "item", what), null, true);
+        note(a, null, "I gave you " + what + ". You'd better still have it.");
     }
 
     // ------------------------------------------------------------------ events from elsewhere
