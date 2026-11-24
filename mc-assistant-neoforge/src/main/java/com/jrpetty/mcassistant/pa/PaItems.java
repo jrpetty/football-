@@ -44,7 +44,7 @@ public final class PaItems {
             case "seeds" -> s -> s.is(Items.WHEAT_SEEDS);
             case "food" -> s -> s.get(DataComponents.FOOD) != null && !s.is(Items.ROTTEN_FLESH) && !s.is(Items.SPIDER_EYE) && !s.is(Items.POISONOUS_POTATO) && !s.is(Items.PUFFERFISH);
             case "crops" -> s -> s.is(Items.WHEAT) || s.is(Items.CARROT) || s.is(Items.POTATO) || s.is(Items.BEETROOT);
-            case "fish" -> s -> s.is(Items.COD) || s.is(Items.SALMON) || s.is(Items.COOKED_COD) || s.is(Items.COOKED_SALMON);
+            case "fish" -> s -> s.is(ItemTags.FISHES);                                     // [pa38] every fish the rod brings in (tropical and puffer too), raw or cooked
             case "anyfish" -> s -> s.is(ItemTags.FISHES);                                   // [pa38] what the game counts as a fish caught
             case "torches" -> s -> s.is(Items.TORCH);
             case "wool" -> s -> s.is(ItemTags.WOOL);

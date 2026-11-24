@@ -100,15 +100,24 @@ class PaVoiceEndToEndTest {
         assertTrue(vosk.load(), "Vosk loads: " + vosk.status());
         String out = System.getenv("MCA_TEST_VOICE_OUT"), cache = System.getenv("MCA_TEST_VOICE_IN");
 
+        double[] tuned = run("voice_orders.txt", "", kokoro, g2p, vosk, out, cache);
+        assertTrue(tuned[0] >= 40, "forty or more orders: " + tuned[0]);
+        assertTrue(tuned[1] >= 95.0, "understood: " + tuned[1] + "%");
+        double[] held = run("voice_orders_heldout.txt", "h", kokoro, g2p, vosk, out, cache);
+        assertTrue(held[1] >= 75.0, "held-out orders understood: " + held[1] + "%");
+    }
+
+    /** One file of orders, spoken, heard and read: {orders, % understood}. */
+    static double[] run(String file, String tag, PaKokoro kokoro, PaG2p g2p, PaVosk vosk, String out, String cache) throws Exception {
         List<Result> results = new ArrayList<>();
         int i = 0;
-        for (String line : Files.readAllLines(Path.of("src/test/resources/pa/voice_orders.txt"), StandardCharsets.UTF_8)) {
+        for (String line : Files.readAllLines(Path.of("src/test/resources/pa/" + file), StandardCharsets.UTF_8)) {
             if (line.isBlank() || line.startsWith("#")) continue;
             String[] f = line.split("\\|\\|");
             String said = f[0].trim(), want = f[1].trim();
             for (int v = 0; v < 2; v++) {
                 PaKokoro.Voice voice = PaKokoro.byId(VOICES[(i + v) % VOICES.length]);
-                String name = String.format("%02d_%s", i, voice.id());
+                String name = tag + String.format("%02d_%s", i, voice.id());
                 float[] all;
                 Path cached = cache == null ? null : Path.of(cache).resolve(name + "_24k.wav");
                 if (cached != null && Files.isRegularFile(cached)) all = read24(cached);          // made by this same code on an earlier run
@@ -142,9 +151,8 @@ class PaVoiceEndToEndTest {
             if (!r.heardRight() && r.readRight()) System.out.printf("[pa38] near miss, still understood: \"%s\" (%s) heard \"%s\"%n", r.said(), r.voice(), r.heard());
         }
         double hr = 100.0 * heardRight / results.size(), rr = 100.0 * readRight / results.size();
-        System.out.printf("[pa38] voice end to end: %d utterances (%d orders x 2 British voices); heard word for word %d (%.1f%%), understood %d (%.1f%%)%s%n",
-            results.size(), i, heardRight, hr, readRight, rr, misses);
-        assertTrue(i >= 40, "forty or more orders: " + i);
-        assertTrue(rr >= 95.0, "understood: " + rr + "%" + misses);
+        System.out.printf("[pa38] voice end to end (%s): %d utterances (%d orders x 2 British voices); heard word for word %d (%.1f%%), understood %d (%.1f%%)%s%n",
+            file, results.size(), i, heardRight, hr, readRight, rr, misses);
+        return new double[]{i, rr};
     }
 }

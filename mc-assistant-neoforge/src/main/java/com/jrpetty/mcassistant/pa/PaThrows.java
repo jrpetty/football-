@@ -20,7 +20,7 @@ final class PaThrows {
     static final class Watch {
         final Projectile p;
         final LivingEntity t;
-        final int at;
+        final int at, tAt;                                   // thrown at the assistant's tick, and at the target's (each counts its own)
         final double y;
         final boolean ledge;
         boolean hit, said;
@@ -29,6 +29,7 @@ final class PaThrows {
             this.p = p;
             this.t = t;
             this.at = at;
+            this.tAt = t.tickCount;
             this.y = t.getY();
             this.ledge = ledge;
         }
@@ -52,7 +53,7 @@ final class PaThrows {
         for (java.util.Iterator<Watch> it = l.iterator(); it.hasNext(); ) {
             Watch w = it.next();
             int age = a.tickCount - w.at;
-            if (!w.hit && w.t.getLastHurtByMob() == a && w.t.getLastHurtByMobTimestamp() >= w.at) {
+            if (!w.hit && w.t.getLastHurtByMob() == a && w.t.getLastHurtByMobTimestamp() >= w.tAt) {
                 w.hit = true;
                 f.throwHits++;
             }

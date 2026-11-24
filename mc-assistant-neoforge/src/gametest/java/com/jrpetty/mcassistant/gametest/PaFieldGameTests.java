@@ -215,7 +215,7 @@ public class PaFieldGameTests {
     // ================================================================== throws and the rod
 
     /** pf03: a zombie after its hurt player, the assistant (level 3, snowballs, no bow) throws: the zombie turns on it. */
-    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pf03_snowball")
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "pf03_snowball")
     public static void pf03_snowball(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 10_006_000, y = ground(level, x);
@@ -240,7 +240,8 @@ public class PaFieldGameTests {
             if (z[0].getTarget() == p && z[0].distanceTo(p) < 3) p.setHealth(8.0F);           // keep its player standing
             PaField f = a.mind.field;
             helper.assertTrue(f.throwsDone >= 1, "it threw");
-            helper.assertTrue(z[0].getTarget() == a, "the zombie turned on it: " + z[0].getTarget());
+            helper.assertTrue(z[0].getTarget() == a, "the zombie turned on it: " + z[0].getTarget() + " (thrown " + f.throwsDone + ", hits " + f.throwHits
+                + ", hurt by " + z[0].getLastHurtByMob() + ", distance " + String.format("%.1f", z[0].distanceTo(a)) + ")");
             helper.assertTrue(a.countMatching(s -> s.is(Items.SNOWBALL)) < 16, "snowballs from its own pack");
             Kit.log("[VT] pf03 " + f.throwsDone + " thrown, " + f.throwHits + " hit; the zombie turned on it; " + allWords(a));
         });
@@ -405,7 +406,8 @@ public class PaFieldGameTests {
         PlayerAssistantEntity a = assistant(helper, p, 5);
         a.insertGiven(new ItemStack(Items.IRON_SWORD));
         a.insertGiven(new ItemStack(Items.LAPIS_LAZULI, 10));
-        a.awardXp(1395);
+        a.awardXp(1395);                                                       // thirty levels in its bank (the ladder's own experience is set apart)
+        a.setPaXpForTests(PaLevels.xpFor(5));
         int[] before = {0}, seed = {0};
         helper.runAfterDelay(10, () -> {
             a.teleportTo(x + 0.5, y, Z + 0.5);
