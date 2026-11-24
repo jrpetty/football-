@@ -1776,6 +1776,13 @@ public final class TerraceRows {
         List<BlockPos> out = new ArrayList<>();
         int top = 0;
         for (int s : steps(b.anchor())) top = Math.max(top, s);
+        java.util.Set<BlockPos> other = new java.util.HashSet<>();      // the drawing's floors, walls and the rest: not rough stone
+        for (BuildGoal.Placement pl : plan(null, b)) {
+            if (pl.part() != BuildGoal.Part.BLOCK || pl.style() == Blueprints.Style.FOUNDATION || pl.style() == Blueprints.Style.SOIL
+                    || pl.style() == Blueprints.Style.MASONRY) continue;
+            other.add(pl.pos());
+        }
+        int street = b.anchor().getY() - 1;
         for (BuildGoal.Placement pl : plan(null, b)) {
             if (pl.part() == BuildGoal.Part.BLOCK && (pl.style() == Blueprints.Style.STONE_SLAB || pl.style() == Blueprints.Style.STONE_STAIR)) {
                 BlockState there = level.getBlockState(pl.pos());
@@ -1789,9 +1796,12 @@ public final class TerraceRows {
                 for (int h = top + 1; h >= -6; h--) {
                     BlockPos q = cell(b, dx, h, dz);
                     BlockState there = level.getBlockState(q);
-                    if (!there.is(Blocks.COBBLESTONE) && !there.is(Blocks.MOSSY_COBBLESTONE)) continue;
-                    boolean open = false;                                  // open to the street or the yard (under the sky)
-                    for (Direction d : Direction.Plane.HORIZONTAL) if (level.getBlockState(q.relative(d)).isAir() && level.canSeeSky(q.relative(d))) open = true;
+                    if (!there.is(Blocks.COBBLESTONE) && !there.is(Blocks.MOSSY_COBBLESTONE) || other.contains(q)) continue;
+                    boolean open = false;                                  // open to the street, the area, the yard (not a hollow underground)
+                    for (Direction d : Direction.Plane.HORIZONTAL) {
+                        BlockPos n = q.relative(d);
+                        if (level.getBlockState(n).isAir() && (level.canSeeSky(n) || n.getY() >= street)) open = true;
+                    }
                     if (level.getBlockState(q.above()).isAir() && level.canSeeSky(q.above())) open = true;   // a floor open to the sky (an area's flags)
                     if (open) out.add(q);
                 }
