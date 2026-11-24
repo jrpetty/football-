@@ -335,6 +335,8 @@ public class PaMemoryGameTests {
         StringBuilder log = new StringBuilder();
         for (net.minecraft.world.item.Item pick : new net.minecraft.world.item.Item[]{Items.WOODEN_PICKAXE, Items.IRON_PICKAXE, Items.DIAMOND_PICKAXE, Items.AIR}) {
             p.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(pick));
+            p.setOnGround(true);                                  // a player standing on the ground (in the air vanilla digs five times slower)
+            a.setOnGround(true);
             float perTick = Blocks.STONE.defaultBlockState().getDestroyProgress(p, level, at);
             float sum = 0;
             int vanilla = 0;

@@ -49,9 +49,10 @@ public final class PaConfig {
         MAX_LANGUAGE = b.comment("[pa33b] The strongest language an assistant may use back when its player is rude to it (others see its bubbles):",
             "clean (never swears), cheeky (bloody, damn, arse, git), or unfiltered (swears). A player's own Language setting can't go past this.")
             .define("maxLanguage", "cheeky");
-        START_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 1 (it gains more as it levels up, to maxHearts at level 10).")
-            .defineInRange("startHearts", 10, 1, 50);                    // [pa35] ten hearts at level 1, like a player
-        MAX_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 10.").defineInRange("maxHearts", 20, 1, 50);   // [pa35] twenty (two rows) at level 10
+        // [pa35] new names, so a config written with the old 3/10 hearts doesn't keep them: ten at level 1 like a player, twenty (two rows) at 10
+        START_HEARTS = b.comment("Hearts an assistant has at level 1, like a player's ten (it gains more as it levels up, to heartsAtLevel10).")
+            .defineInRange("heartsAtLevel1", 10, 1, 50);
+        MAX_HEARTS = b.comment("Hearts an assistant has at level 10 (twenty: two rows).").defineInRange("heartsAtLevel10", 20, 1, 50);
         KEEP_PACK = b.comment("[pa33c-2b] Does a fallen assistant keep its pack (true), or drop it where it fell like a player (false)?")
             .define("keepPackOnDeath", true);
         XP_MULT = b.comment("[pa33d] How fast assistants level up: their experience is multiplied by this (1 = the intended grind, many game days to level 10).",
