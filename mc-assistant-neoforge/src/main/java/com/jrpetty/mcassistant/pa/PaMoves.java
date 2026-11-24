@@ -30,9 +30,12 @@ public final class PaMoves {
         PaFlight.tick(a);
         if (a.tickCount % 20 == 13) PaChunks.tick(a);                     // [pa33g] the ground round it kept awake when it has reason
         PaBow.tick(a);                                                     // [pa33g] a draw under way: its head on the mark, the pull, the loose
+        PaCrossbow.tick(a);                                                // [pa35] a crossbow spanning or aiming
+        PaTrident.tick(a);                                                 // [pa35] a Loyalty trident caught on its way back
+        if (a.tickCount % 10 == 3) PaCrossbowGoal.prefer(a);               // [pa35] the crossbow over the bow for a ranged fight, once it may
         PaShots.aimTick(a);                                                // [pa33f] eyes on its target a moment after it shoots
         // [pa33g] the shield comes up as quick as it reacts (its level): every eighth of a second at the top, slower below
-        if (a.tickCount % Math.max(2, PaLevels.reactTicks(lv) / 2) == 0 && lv >= PaLevels.levelOf("shield") && a.mind.bow == null) shield(a);
+        if (a.tickCount % Math.max(2, PaLevels.reactTicks(lv) / 2) == 0 && lv >= PaLevels.levelOf("shield") && a.mind.bow == null && a.mind.xbow == null) shield(a);   // [pa35] nor a crossbow
         if (a.tickCount % 20 == 7) {
             if (lv >= PaLevels.levelOf("parkour")) sprintAfter(a);
             if (lv >= PaLevels.levelOf("pearl")) pearl(a);
@@ -44,7 +47,7 @@ public final class PaMoves {
 
     static void shield(PlayerAssistantEntity a) {
         ItemStack off = a.getOffhandItem();
-        if (!off.is(Items.SHIELD)) {
+        if (!off.is(Items.SHIELD) || !PaLevels.canUse(a, off)) {          // [pa35] the shield from level 2
             if (a.mind.blocking) { a.stopUsingItem(); a.mind.blocking = false; }
             return;
         }

@@ -29,8 +29,8 @@ import java.util.List;
 public class PaScreen extends Screen {
 
     static final int BRAND = 0xFF1F8A7A, BRAND_LIGHT = 0xFF2BB5A0, BRAND_WASH = 0xFFD7EEEA, HEADER = 0xFF173B40;
-    private static final String[] TABS = {"talk", "orders", "jobs", "pack", "stats", "look", "settings"};          // [pa33c-2b]
-    private static final String[] TAB_LABELS = {"Talk", "Orders", "Jobs", "Pack", "Stats", "Look", "Settings"};
+    private static final String[] TABS = {"talk", "orders", "jobs", "pack", "stats", "memory", "look", "settings"};          // [pa33c-2b] [pa35] Memory
+    private static final String[] TAB_LABELS = {"Talk", "Orders", "Jobs", "Pack", "Progress", "Memory", "Look", "Settings"};   // [pa35] Stats rebuilt as Progress
     /** [pa33b] The personality triangle (About) and the look preview's turn (Look). */
     private final PaTriangle triangle = new PaTriangle();
     private float lookYaw;
@@ -85,6 +85,16 @@ public class PaScreen extends Screen {
         nameBox = new EditBox(font, 0, 0, 90, 14, Component.literal("Name"));
         nameBox.setMaxLength(16);
         addWidget(nameBox);
+        String keepMem = memBox == null ? "" : memBox.getValue(), keepEdit = memEdit == null ? "" : memEdit.getValue();
+        memBox = new EditBox(font, 0, 0, 200, 14, Component.literal("Tell it something to remember"));   // [pa35] the Memory tab
+        memBox.setMaxLength(160);
+        memBox.setHint(Component.literal("Tell it something: \"my favourite food is steak\""));
+        memBox.setValue(keepMem);
+        addWidget(memBox);
+        memEdit = new EditBox(font, 0, 0, 200, 12, Component.literal("Edit this memory"));
+        memEdit.setMaxLength(160);
+        memEdit.setValue(keepEdit);
+        addWidget(memEdit);
         if (tab.equals("talk")) setInitialFocus(input);
     }
 
@@ -115,6 +125,8 @@ public class PaScreen extends Screen {
         UiStyle.panel(g, left, top, w, h);
         input.visible = false;
         nameBox.visible = false;
+        memBox.visible = false;                                          // [pa35]
+        memEdit.visible = false;
         if (!s.getBoolean("has")) {
             welcome(g, mx, my);
             footer(g, mx, my);
@@ -136,6 +148,7 @@ public class PaScreen extends Screen {
             case "jobs" -> scrolled(g, by, bh, mx, my, (y) -> jobs(g, s, left + 8, y, w - 22, mx, my));
             case "pack" -> scrolled(g, by, bh, mx, my, (y) -> pack(g, s, left + 8, y, w - 22, mx, my));
             case "stats" -> scrolled(g, by, bh, mx, my, (y) -> stats(g, s, left + 8, y, w - 22, mx, my));
+            case "memory" -> memory(g, s, left + 6, by, w - 12, bh, mx, my);               // [pa35]
             case "settings" -> {
                 int sw = com.jrpetty.mcassistant.pa.PaLayout.sectionListW(w);
                 sections(g, left + 6, by, sw, bh, mx, my);
@@ -189,8 +202,13 @@ public class PaScreen extends Screen {
         // [pa33c-2b] hearts and hunger as a player's, from its right
         int food = a != null ? a.food() : s.getInt("hunger");
         int bx = left + w - 24;
-        PaHud.hearts(g, bx, top + 4, hp, max);
-        PaHud.food(g, bx, top + 15, food);
+        if (PaHud.heartRows(max) > 1) {                                     // [pa35] two rows from twenty health: the second above, as vanilla stacks them
+            PaHud.hearts(g, bx, top + 9, hp, max, -6);
+            PaHud.food(g, bx, top + 17, food);
+        } else {
+            PaHud.hearts(g, bx, top + 4, hp, max);
+            PaHud.food(g, bx, top + 15, food);
+        }
         if (in(mx, my, bx - 80, top + 3, 80, 22))
             g.renderTooltip(font, net.minecraft.network.chat.Component.literal((int) Math.ceil(hp) + " of " + (int) max + " health, food " + food + " of 20"), mx, my);
         button(g, "✕", left + w - 20, top + 6, 14, 14, mx, my, true, false, "Close (Esc)", this::onClose);
@@ -202,13 +220,15 @@ public class PaScreen extends Screen {
                 int n = s.getList("steps", Tag.TAG_COMPOUND).size();
                 if (n > 0) label += " (" + n + ")";
             }
-            int tw = font.width(label) + 14;
+            int tw = font.width(label) + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD;   // [pa35] eight tabs fit the smallest panel
             boolean on = tab.equals(TABS[i]);
             boolean over = in(mx, my, tx, top + 29, tw, 14);
             UiStyle.topTab(g, tx, top + 29, tw, 14, UiStyle.State.of(true, on, over));
-            g.drawString(font, label, tx + 7, top + 32, on ? UiStyle.TEXT : muted(), false);
+            g.drawString(font, label, tx + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD / 2, top + 32, on ? UiStyle.TEXT : muted(), false);
             final String t = TABS[i];
-            zone(tx, top + 29, tw, 14, () -> { tab = t; scroll = 0; picker = ""; pick.clear(); confirmDismiss = false; PaClientConfig.set(PaClientConfig.LASTTAB, t); }, "");
+            zone(tx, top + 29, tw, 14, () -> { tab = t; scroll = 0; picker = ""; pick.clear(); confirmDismiss = false; PaClientConfig.set(PaClientConfig.LASTTAB, t);
+                if (!t.equals("talk") && getFocused() == input) { input.setFocused(false); setFocused(null); }   // [pa35] the keys work the tab, not a hidden box
+                if (t.equals("stats") && !PaClientConfig.get(PaClientConfig.PROGRESSTOUR, false) && progressTip < 0) progressTip = 0; }, "");   // [pa35] three tips, once
             tx += tw + 2;
         }
     }
@@ -715,8 +735,10 @@ public class PaScreen extends Screen {
             {"Dump junk", "Drops dirt, gravel, rough stone, rotten flesh and spare seeds at its feet (not what it keeps)"},
             {"Sort", "Piles merged and laid out: tools, armour, food, ores, blocks, the rest"},
             {lockMode ? "Keep: click items" : "Keep...", "Click items in its pack to lock them: kept things are never handed over or dumped. Right-click any item does the same"},
-            {"Open full pack", "The full pack screen, with shift-click and the rest (or sneak-right-click it)"}};
-        String[] op = {"best", "all", "dump", "sort", "", ""};
+            {"Open full pack", "The full pack screen, with shift-click and the rest (or sneak-right-click it)"},
+            {"Storage", "Your chests as it knows them: what's in each, ping, rename, forget, the drop-off, keep stocked"},          // [pa36]
+            {"Craft", "Search anything craftable: what it can make now, what's missing, and craft one, some or all"}};             // [pa36]
+        String[] op = {"best", "all", "dump", "sort", "", "", "", ""};
         for (int k = 0; k < b.length; k++) {
             int bxk = beside ? cxb : cxb + (k % 3) * (bw + 4), byk = beside ? cyb + k * 18 : cyb + (k / 3) * 18;
             final int kk = k;
@@ -724,10 +746,12 @@ public class PaScreen extends Screen {
             button(g, b[k][0], bxk, byk, bw, 15, mx, my, enabled, k == 4 && lockMode, b[k][1], () -> {
                 if (kk == 4) { lockMode = !lockMode; return; }
                 if (kk == 5) { PaClient.send("pack", new CompoundTag()); return; }
+                if (kk == 6) { PaLogiClient.storage(); return; }                                // [pa36]
+                if (kk == 7) { PaLogiClient.craft(""); return; }                                // [pa36]
                 packOp(op[kk], -1, -1, null, null);
             });
         }
-        int buttonsEnd = beside ? cyb + b.length * 18 - y : cyb + 36 - y;
+        int buttonsEnd = beside ? cyb + b.length * 18 - y : cyb + (b.length + 2) / 3 * 18 - y;   // [pa36] rows for the extra buttons
         int infoY = y + Math.max(Math.max(leftH, midEnd), buttonsEnd) + 4;
         if (!near) { g.drawString(font, UiStyle.clip(font, "Come within 8 blocks to hand things over (" + dist + " away).", iw), x, infoY, UiStyle.DANGER, false); infoY += 12; }
         infoY = para(g, "Drag between its pack, its gear and yours; click a thing to hand it over; right-click to keep it.", x, infoY, iw, faint());
@@ -796,72 +820,390 @@ public class PaScreen extends Screen {
 
     // ------------------------------------------------------------------ [pa33c-2b] the Stats tab
 
+    // ------------------------------------------------------------------ [pa35] the Progress tab: everything about its levels, at a glance
+
+    private static final java.util.Map<String, net.minecraft.world.item.ItemStack> ICONS = new java.util.HashMap<>();
+
+    private static net.minecraft.world.item.ItemStack icon(String id) {
+        return ICONS.computeIfAbsent(id, k -> {
+            var rl = net.minecraft.resources.ResourceLocation.tryParse("minecraft:" + k);
+            var it = rl == null ? null : net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
+            return it == null || it == net.minecraft.world.item.Items.AIR ? new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOOK) : new net.minecraft.world.item.ItemStack(it);
+        });
+    }
+
+    /** A small padlock over a locked unlock's icon. */
+    private static void padlock(GuiGraphics g, int x, int y) {
+        g.fill(x + 1, y + 3, x + 7, y + 8, 0xFF4A4A4A);
+        g.fill(x + 2, y, x + 6, y + 1, 0xFF4A4A4A);
+        g.fill(x + 1, y + 1, x + 2, y + 3, 0xFF4A4A4A);
+        g.fill(x + 6, y + 1, x + 7, y + 3, 0xFF4A4A4A);
+        g.fill(x + 3, y + 5, x + 5, y + 7, 0xFFE0C060);
+    }
+
+    private int progressTip = -1;   // the first-open tour's step (-1 none)
+
     private int stats(GuiGraphics g, CompoundTag s, int x, int y, int iw, int mx, int my) {
-        int half = iw >= 360 ? iw / 2 - 6 : iw, cy = y;
-        UiStyle.heading(g, font, s.getString("name") + ", level " + s.getInt("level"), x, cy, half);
-        cy += 14;
+        int lv = Math.max(1, s.getInt("level")), cy = y;
+        // 1. where it stands: its level, the bar, the time to the next, and the next unlock called out
+        UiStyle.heading(g, font, s.getString("name") + ", level " + lv + " of 10", x, cy, iw);
+        cy += 13;
         int xp = s.getInt("xp"), lo = s.getInt("xpHere"), hi = Math.max(lo + 1, s.getInt("xpNext"));
-        float part = Math.max(0, Math.min(1, (xp - lo) / (float) (hi - lo)));
-        int bw = Math.min(half, 200);
-        g.fill(x, cy, x + bw, cy + 7, 0xFFB9C7C4);
-        g.fill(x, cy, x + Math.round(bw * part), cy + 7, BRAND_LIGHT);
-        if (in(mx, my, x, cy, bw, 7)) tipNow = xp + " xp; level " + (s.getInt("level") + 1) + " at " + hi;
+        float part = lv >= 10 ? 1 : Math.max(0, Math.min(1, (xp - lo) / (float) (hi - lo)));
+        g.fill(x, cy, x + iw, cy + 8, 0xFFB9C7C4);
+        g.fill(x, cy, x + Math.round(iw * part), cy + 8, BRAND_LIGHT);
+        if (in(mx, my, x, cy, iw, 8)) tipNow = xp + " xp. Level " + Math.min(10, lv + 1) + " at " + hi + ".";
+        cy += 11;
+        String when = lv >= 10 ? xp + " xp: the top" : (hi - xp) + " xp to level " + (lv + 1) + ", " + s.getString("timeNext");
+        g.drawString(font, UiStyle.clip(font, when, iw), x, cy, UiStyle.TEXT, false);
+        cy += 12;
+        String nu = s.getString("nextUnlock");
+        int nh = 10 * Math.max(1, font.split(Component.literal(nu), iw - 10).size()) + 6;
+        g.fill(x, cy, x + iw, cy + nh, BRAND_WASH);
+        g.fill(x, cy, x + 2, cy + nh, BRAND);
+        cy = para(g, nu, x + 6, cy + 3, iw - 10, UiStyle.TEXT) + 4;
+        if (progressTip == 0) cy = tourTip(g, "The bar is its level; the box says what the next one opens.", x, cy, iw, mx, my);
+        // 2. the track: ten levels, each with its unlocks as icons (padlocked till reached), and the hours of play to each
+        UiStyle.heading(g, font, "The ladder", x, cy, iw);
+        cy += 13;
+        int col = com.jrpetty.mcassistant.pa.PaLayout.trackColumn(iw), trackTop = cy;
+        ListTag curve = s.getList("curve", Tag.TAG_STRING);
+        List<CompoundTag> unl = new ArrayList<>();
+        for (Tag t : s.getList("unlocks", Tag.TAG_COMPOUND)) unl.add((CompoundTag) t);
+        int maxRows = 1;
+        for (int l = 1; l <= 10; l++) { int n = 0; for (CompoundTag u : unl) if (u.getInt("lv") == l) n++; maxRows = Math.max(maxRows, (n + 1) / 2); }
+        int rowsShown = Math.min(maxRows, 5);
+        for (int l = 1; l <= 10; l++) {
+            int cx = x + (l - 1) * col;
+            boolean here = l == lv, got = l <= lv;
+            g.fill(cx + 1, cy, cx + col - 1, cy + 11, here ? BRAND : got ? 0xFF9FD8CE : 0xFFD8D8D8);
+            String num = "L" + l;
+            g.drawString(font, num, cx + (col - font.width(num)) / 2, cy + 2, here ? 0xFFFFFFFF : UiStyle.TEXT, false);
+            if (in(mx, my, cx, cy, col, 11)) tipNow = l == 1 ? "Where it starts" : "About " + (curve.size() >= l ? curve.getString(l - 1) : "?") + " h of ordinary play from the start";
+            int k = 0;
+            for (CompoundTag u : unl) {
+                if (u.getInt("lv") != l) continue;
+                if (k >= rowsShown * 2) { k++; continue; }
+                int ix = cx + (col >= 34 ? (k % 2) * 16 + (col - 32) / 2 : (col - 16) / 2), iy = cy + 13 + (col >= 34 ? (k / 2) : k) * 17;
+                if (col < 34 && k >= rowsShown) { k++; continue; }
+                g.renderItem(icon(u.getString("i")), ix, iy);
+                if (!got) {
+                    g.pose().pushPose();
+                    g.pose().translate(0, 0, 200);
+                    g.fill(ix, iy, ix + 16, iy + 16, 0x99E6E6E6);
+                    padlock(g, ix + 9, iy + 8);
+                    g.pose().popPose();
+                }
+                if (in(mx, my, ix, iy, 16, 16)) tipNow = u.getString("l") + (got ? " (yours)" : " (level " + l + ")");
+                k++;
+            }
+            int shownK = Math.min(k, col >= 34 ? rowsShown * 2 : rowsShown);
+            if (k > shownK) {
+                String more = "+" + (k - shownK);
+                g.drawString(font, more, cx + (col - font.width(more)) / 2, cy + 13 + rowsShown * 17, faint(), false);
+                if (in(mx, my, cx, cy + 13 + rowsShown * 17, col, 9)) {
+                    StringBuilder b2 = new StringBuilder("Level " + l + ": ");
+                    for (CompoundTag u : unl) if (u.getInt("lv") == l) b2.append(u.getString("l")).append("; ");
+                    tipNow = b2.toString();
+                }
+            }
+        }
+        cy += 13 + rowsShown * 17 + 10;
+        // the curve: hours of play to each level (a gentle line over the columns)
+        int ch = 22, baseY = cy + ch;
+        double top = 1;
+        for (int l = 1; l <= Math.min(10, curve.size()); l++) top = Math.max(top, Double.parseDouble(curve.getString(l - 1)));
+        for (int l = 2; l <= Math.min(10, curve.size()); l++) {
+            int x1 = x + (l - 2) * col + col / 2, x2 = x + (l - 1) * col + col / 2;
+            int y1 = baseY - (int) Math.round(ch * Double.parseDouble(curve.getString(l - 2)) / top), y2 = baseY - (int) Math.round(ch * Double.parseDouble(curve.getString(l - 1)) / top);
+            int steps = Math.max(1, x2 - x1);
+            for (int i = 0; i <= steps; i++) { int px = x1 + i, py = y1 + (y2 - y1) * i / steps; g.fill(px, py, px + 1, py + 2, l <= lv ? BRAND : 0xFFA0A0A0); }
+        }
+        g.drawString(font, "hours of play to each level", x, baseY + 3, faint(), false);
+        String last = curve.size() >= 10 ? "about " + Math.round(Double.parseDouble(curve.getString(9))) + " h to level 10" : "";
+        g.drawString(font, last, x + iw - font.width(last), baseY + 3, faint(), false);
+        cy = baseY + 16;
+        if (progressTip == 1) cy = tourTip(g, "Each column is a level: what it opens, padlocked until it's reached. Hover any icon.", x, cy, iw, mx, my);
+        // 3. what grows: now, next level, level 10
+        UiStyle.heading(g, font, "What grows", x, cy, iw);
+        cy += 13;
+        int c1 = x + Math.max(90, iw * 38 / 100), cw = (x + iw - c1) / 3;
+        g.drawString(font, "Now", c1, cy, muted(), false);
+        g.drawString(font, "Next", c1 + cw, cy, muted(), false);
+        g.drawString(font, "Level 10", c1 + 2 * cw, cy, muted(), false);
+        cy += 11;
+        boolean shade = false;
+        for (Tag t : s.getList("metrics", Tag.TAG_COMPOUND)) {
+            CompoundTag m = (CompoundTag) t;
+            if (shade) g.fill(x - 2, cy - 1, x + iw + 2, cy + 10, 0x10000000);
+            shade = !shade;
+            g.drawString(font, UiStyle.clip(font, m.getString("l"), c1 - x - 4), x, cy, UiStyle.TEXT, false);
+            if (!m.contains("next")) g.drawString(font, UiStyle.clip(font, m.getString("now"), x + iw - c1), c1, cy, BRAND, false);
+            else {
+                g.drawString(font, UiStyle.clip(font, m.getString("now"), cw - 4), c1, cy, UiStyle.TEXT, false);
+                g.drawString(font, UiStyle.clip(font, m.getString("next"), cw - 4), c1 + cw, cy, m.getBoolean("up") ? 0xFF15591E : faint(), false);
+                g.drawString(font, UiStyle.clip(font, m.getString("top"), cw - 4), c1 + 2 * cw, cy, faint(), false);
+            }
+            if (in(mx, my, x, cy - 1, iw, 11)) tipNow = m.getString("tip");
+            cy += 11;
+        }
+        cy += 6;
+        if (progressTip == 2) cy = tourTip(g, "What gets better with each level. Breaking blocks never does: it digs as you would, by the tool.", x, cy, iw, mx, my);
+        // 4. where its experience comes from lately
+        UiStyle.heading(g, font, "Where its experience comes from", x, cy, iw);
+        cy += 13;
+        ListTag src = s.getList("sources", Tag.TAG_COMPOUND);
+        if (src.isEmpty()) cy = para(g, "Nothing lately. Varied work pays best: the same job over and over earns less until it does something else.", x, cy, iw, faint());
+        for (Tag t : src) {
+            CompoundTag c = (CompoundTag) t;
+            float share = c.getFloat("share");
+            g.fill(x, cy + 2, x + 30, cy + 7, 0xFFD8D8D8);
+            g.fill(x, cy + 2, x + Math.round(30 * share), cy + 7, share < 0.45F ? 0xFFB5543F : share < 0.8F ? 0xFFD2A338 : BRAND_LIGHT);
+            g.drawString(font, UiStyle.clip(font, c.getString("l") + "  (" + c.getInt("xp") + " xp)", iw - 36), x + 36, cy, UiStyle.TEXT, false);
+            cy += 11;
+        }
+        cy += 6;
+        // 5. the bond
+        int tier = s.getInt("bondTier");
+        String[] tiers = com.jrpetty.mcassistant.pa.PaBond.TIERS;
+        UiStyle.heading(g, font, "Your bond: " + tiers[Math.max(0, Math.min(4, tier))], x, cy, iw);
+        cy += 13;
+        int bw = Math.min(iw, 220);
+        for (int k = 0; k < 5; k++) {
+            int sx = x + k * bw / 5, ex = x + (k + 1) * bw / 5 - 2;
+            g.fill(sx, cy, ex, cy + 6, k < tier ? BRAND : k == tier ? 0xFF9FD8CE : 0xFFD8D8D8);
+            if (k == tier && tier < 4) g.fill(sx, cy, sx + Math.round((ex - sx) * s.getFloat("bondNext")), cy + 6, BRAND);
+            if (in(mx, my, sx, cy, ex - sx, 6)) tipNow = tiers[k];
+        }
         cy += 10;
-        cy = line(g, (s.getInt("level") >= 10 ? xp + " xp  ·  the top level" : xp + " xp  ·  " + (hi - xp) + " to level " + (s.getInt("level") + 1))
-            + "  ·  " + s.getInt("done") + " jobs done for you", x, cy, half);
-        if (!s.getString("nextSkills").isEmpty()) cy = para(g, s.getString("nextSkills"), x, cy, half, BRAND);   // [pa33d] what the next level opens
+        ListTag eff = s.getList("bondEffects", Tag.TAG_STRING);
+        if (eff.isEmpty()) cy = para(g, "A stranger so far. Time together, feeding it and looking after it bring you closer.", x, cy, iw, faint());
+        for (Tag t : eff) cy = para(g, "\u2022 " + t.getAsString(), x, cy, iw, UiStyle.TEXT) - 2;
+        cy += 2;
+        cy = para(g, "Raises it: " + String.join(", ", com.jrpetty.mcassistant.pa.PaBond.RAISES).toLowerCase(java.util.Locale.ROOT) + ".", x, cy, iw, faint());
+        cy = para(g, "Lowers it, gently: " + String.join(", ", com.jrpetty.mcassistant.pa.PaBond.LOWERS).toLowerCase(java.util.Locale.ROOT) + ".", x, cy, iw, faint());
+        if (!s.getString("want").isEmpty()) cy = para(g, "Just now it wants " + s.getString("want") + ".", x, cy, iw, BRAND);
+        ListTag fav = s.getList("itsFavourites", Tag.TAG_STRING);
+        if (!fav.isEmpty()) {
+            List<String> f = new ArrayList<>();
+            for (Tag t : fav) f.add(t.getAsString());
+            cy = para(g, "Its favourites: " + String.join(", ", f) + " (a gift of one goes a long way).", x, cy, iw, faint());
+        }
+        button(g, "Our story and its memory  \u203A", x, cy, Math.min(170, iw), 13, mx, my, true, false, "The Memory tab: what you've told it, and the moments it kept",
+            () -> { tab = "memory"; scroll = 0; PaClientConfig.set(PaClientConfig.LASTTAB, "memory"); });
+        cy += 20;
+        // 6. its health, food and record
+        UiStyle.heading(g, font, "Health, food and record", x, cy, iw);
+        cy += 13;
         PlayerAssistantEntity a = PaClient.mine();
         float hp = a != null ? a.getHealth() : s.getFloat("hp"), max = a != null ? a.getMaxHealth() : Math.max(1, s.getFloat("maxHp"));
         int food = a != null ? a.food() : s.getInt("hunger");
         g.drawString(font, "Health", x, cy + 1, muted(), false);
-        PaHud.hearts(g, x + 50 + 81, cy, hp, max);
+        PaHud.hearts(g, x + 50 + 81, cy, hp, max, 10);
         g.drawString(font, (int) Math.ceil(hp) + "/" + (int) max, x + 140, cy + 1, UiStyle.TEXT, false);
-        cy += 12;
+        cy += 2 + 10 * PaHud.heartRows(max);
         g.drawString(font, "Food", x, cy + 1, muted(), false);
         PaHud.food(g, x + 50 + 81, cy, food);
         g.drawString(font, food + "/20", x + 140, cy + 1, UiStyle.TEXT, false);
         cy += 14;
-        cy = line(g, "Hearts grow with its level, from 3 to 10. Food in its pack: " + s.getInt("food") + ".", x, cy, half);
-        String where = s.getString("dim").replace("_", " ") + ", " + s.getInt("dist") + " blocks from you";
-        cy = line(g, "Where: " + where + "  ·  " + s.getString("mode"), x, cy, half);
-        if (!s.getString("bed").isEmpty()) cy = line(g, "Its bed: " + s.getString("bed"), x, cy, half);
-        if (!s.getString("home").isEmpty()) cy = line(g, "Its home: " + s.getString("home"), x, cy, half);
-        if (!s.getString("chunks").isEmpty()) cy = line(g, "Keeping " + s.getString("chunks"), x, cy, half);     // [pa33g]
-        cy = line(g, "Its bow: " + (s.getString("archery").isEmpty() ? "no arrows loosed yet" : s.getString("archery")), x, cy, half);
-        cy += 6;                                                          // [pa33g] what each level does, all of it real
-        UiStyle.heading(g, font, "What each level does", x, cy, half);
-        cy += 14;
-        cy = para(g, "Work: time off every job (mining, chopping, crafting). Walk: speed. Reach: blocks. React: how long it takes to notice a change. "
-            + "Bow: hits at 30 blocks on a standing / a strafing mob, worked out by trying it.", x, cy, half, faint());
-        int lvRow = s.getInt("level");
-        for (Tag t : s.getList("levelTable", Tag.TAG_STRING)) {
-            String row = t.getAsString();
-            boolean here = row.startsWith("L" + lvRow + " ");
-            g.drawString(font, UiStyle.clip(font, row, half), x, cy, here ? BRAND : lvRow > Integer.parseInt(row.substring(1, row.indexOf(' '))) ? UiStyle.TEXT : faint(), false);
-            cy += 10;
+        cy = line(g, s.getInt("done") + " jobs done for you. Food in its pack: " + s.getInt("food") + ". Its bow: " + (s.getString("archery").isEmpty() ? "no arrows loosed yet" : s.getString("archery")) + ".", x, cy, iw);
+        for (Tag t : s.getList("deeds", Tag.TAG_STRING)) cy = line(g, "\u2022 " + t.getAsString(), x, cy, iw);
+        if (!s.getString("today").isEmpty()) cy = line(g, "Today: " + s.getString("today"), x, cy, iw);
+        if (!s.getString("death").isEmpty()) cy = line(g, s.getString("death"), x, cy, iw);
+        // 7. operators: move any rung of the ladders
+        if (s.getBoolean("op")) {
+            cy += 6;
+            UiStyle.heading(g, font, "Ladders (operators)", x, cy, iw);
+            cy += 13;
+            cy = para(g, "The level each ore and piece of kit opens at, for every assistant on this server. The switch for both is in Settings, Advanced.", x, cy, iw, faint());
+            for (Tag t : s.getList("ladder", Tag.TAG_COMPOUND)) {
+                CompoundTag c = (CompoundTag) t;
+                int lvl = c.getInt("lv");
+                String key = c.getString("k");
+                g.drawString(font, UiStyle.clip(font, PaNetCap.cap(c.getString("l")), iw - 70), x, cy + 3, UiStyle.TEXT, false);
+                button(g, "-", x + iw - 64, cy, 13, 13, mx, my, lvl > 1, false, "", () -> rung(key, lvl - 1));
+                centred(g, "L" + lvl, x + iw - 36, cy + 3, UiStyle.TEXT);
+                button(g, "+", x + iw - 20, cy, 13, 13, mx, my, lvl < 10, false, "", () -> rung(key, lvl + 1));
+                cy += 15;
+            }
         }
-        int leftEnd = cy;
-        int sx = half == iw ? x : x + half + 12;
-        cy = half == iw ? cy + 6 : y;
-        UiStyle.heading(g, font, "Its skills", sx, cy, half);                // [pa33d] what each level opens, ticked when it has it
-        cy += 14;
-        int lvNow = s.getInt("level");
-        for (Tag t : s.getList("skills", Tag.TAG_COMPOUND)) {
-            CompoundTag c = (CompoundTag) t;
-            boolean got = lvNow >= c.getInt("lv");
-            String row = (got ? "\u2714 " : "L" + c.getInt("lv") + "  ") + c.getString("l");
-            g.drawString(font, UiStyle.clip(font, row, half), sx, cy, got ? UiStyle.TEXT : faint(), false);
-            cy += 10;
+        if (progressTip > 2) { progressTip = -1; PaClientConfig.set(PaClientConfig.PROGRESSTOUR, true); }   // done: never again
+        return cy - y + 4;
+    }
+
+    private void rung(String key, int level) {
+        CompoundTag t = new CompoundTag();
+        t.putString("rung", key);
+        t.putInt("rungLevel", level);
+        PaClient.send("admin", t);
+    }
+
+    /** One of the Progress tab's three first-open tips, with "Next" and "Got it" (never again). */
+    private int tourTip(GuiGraphics g, String text, int x, int cy, int iw, int mx, int my) {
+        List<FormattedCharSequence> lines = font.split(Component.literal(text), iw - 120);
+        int h = Math.max(16, lines.size() * 10 + 6);
+        g.fill(x, cy, x + iw, cy + h, 0xFF173B40);
+        int ly = cy + 4;
+        for (FormattedCharSequence l : lines) { g.drawString(font, l, x + 6, ly, 0xFFFFFFFF, false); ly += 10; }
+        button(g, progressTip < 2 ? "Next" : "Done", x + iw - 108, cy + (h - 13) / 2, 48, 13, mx, my, true, true, "", () -> progressTip++);
+        button(g, "Got it", x + iw - 56, cy + (h - 13) / 2, 52, 13, mx, my, true, false, "Don't show these tips again",
+            () -> { progressTip = -1; PaClientConfig.set(PaClientConfig.PROGRESSTOUR, true); });
+        return cy + h + 6;
+    }
+
+    // ------------------------------------------------------------------ [pa35] the Memory tab
+
+    private EditBox memBox, memEdit;
+    /** The entry being edited: its id (or its place's name), or null. */
+    private String memEditing;
+    private boolean memConfirmForget;
+    private static final String[][] MEM_GROUPS = {{"ME", "Me", "Your name, what you like and can't stand, favourites, what you've said about it"},
+        {"PLACES", "Places", "Your base, the farm, the mine: say \"go to the farm\" to send it"},
+        {"PEOPLE", "People", "Friends it helps, people it doesn't trust, whose orders it takes"},
+        {"RULES", "Rules", "Standing orders on their triggers, things it never touches, things it always keeps"},
+        {"REMINDERS", "Reminders", "Said aloud with a toast when they're due"}};
+    private static final String[] MEM_EMPTY = {"Try \"my favourite food is steak\" or \"I hate creepers\".", "Stand somewhere and say \"this is my base\".",
+        "Try \"Sam is my friend, help him\".", "Try \"every morning, refill the furnace\" or \"never touch my chests\".", "Try \"remind me in 10 minutes to check the furnace\"."};
+
+    private void memory(GuiGraphics g, CompoundTag s, int x, int y, int iw, int ih, int mx, int my) {
+        boolean paused = s.getBoolean("memPaused");
+        int n = s.getInt("memN"), cap = Math.max(1, s.getInt("memCap"));
+        // the top: what it is, how full, and remembering on or off
+        g.drawString(font, UiStyle.clip(font, "What " + s.getString("name") + " remembers", iw - 150), x + 2, y + 3, UiStyle.TEXT, false);
+        String count = n + " of " + cap;
+        g.drawString(font, count, x + iw - 112 - font.width(count), y + 3, n >= cap ? UiStyle.DANGER : faint(), false);
+        if (in(mx, my, x + iw - 112 - font.width(count), y, font.width(count), 12))
+            tipNow = "Things kept (places are kept apart, up to 32). The server's operators set the limit.";
+        toggleAt(g, "Memory", !paused, x + iw - 104, y, 104, mx, my,
+            paused ? "Paused: it keeps nothing new until you turn this on. What it knows still counts." : "On: it keeps what you tell it. Off pauses that; what it knows still counts.",
+            () -> { CompoundTag t = new CompoundTag(); t.putString("op", "pause"); t.putBoolean("on", !paused); PaClient.send("memop", t); });
+        int cy = y + 16;
+        memBox.visible = true;
+        memBox.setX(x + 2);
+        memBox.setY(cy);
+        memBox.setWidth(iw - 58);
+        memBox.render(g, mx, my, 0);
+        button(g, "Keep", x + iw - 52, cy, 50, 14, mx, my, !memBox.getValue().isBlank() && !paused, true,
+            paused ? "Memory's paused" : "It reads it as you'd say it: a like, a place, a person, a rule, a reminder", this::memAdd);
+        cy += 18;
+        int listH = ih - (cy - y) - 18;
+        final int listY = cy;
+        scrolledIn(g, x, listY, iw, listH, mx, my, (yy) -> memList(g, s, x + 4, yy, iw - 14, mx, my));
+        // the foot: forget everything (asked twice)
+        int fy = y + ih - 15;
+        if (!memConfirmForget) button(g, "Forget everything...", x + 2, fy, 112, 13, mx, my, n > 0 || hasPlaces(s), false, "You'll be asked again", () -> memConfirmForget = true);
+        else {
+            button(g, "Yes, forget it all", x + 2, fy, 104, 13, mx, my, true, true, "Everything it remembers, places too. This can't be undone.",
+                () -> { CompoundTag t = new CompoundTag(); t.putString("op", "forgetAll"); PaClient.send("memop", t); memConfirmForget = false; });
+            button(g, "Keep it", x + 110, fy, 60, 13, mx, my, true, false, "", () -> memConfirmForget = false);
         }
-        cy += 6;
-        UiStyle.heading(g, font, "Its record", sx, cy, half);
-        cy += 14;
-        ListTag deeds = s.getList("deeds", Tag.TAG_STRING);
-        if (deeds.isEmpty()) cy = line(g, "Nothing yet: give it a job.", sx, cy, half);
-        for (Tag t : deeds) cy = line(g, "• " + t.getAsString(), sx, cy, half);
-        if (!s.getString("today").isEmpty()) cy = line(g, "Today: " + s.getString("today"), sx, cy, half);
-        if (!s.getString("death").isEmpty()) cy = line(g, s.getString("death"), sx, cy, half);
-        return Math.max(leftEnd, cy) - y + 4;
+        String hint = "Say it in Talk, or type it here. \"Forget that\" undoes the last.";
+        g.drawString(font, UiStyle.clip(font, hint, iw - 190), x + iw - Math.min(iw - 190, font.width(hint)), fy + 3, faint(), false);
+    }
+
+    private static boolean hasPlaces(CompoundTag s) {
+        for (Tag t : s.getList("mem", Tag.TAG_COMPOUND)) if (((CompoundTag) t).contains("place")) return true;
+        return false;
+    }
+
+    private int memList(GuiGraphics g, CompoundTag s, int x, int y, int iw, int mx, int my) {
+        int cy = y;
+        ListTag all = s.getList("mem", Tag.TAG_COMPOUND);
+        for (int gi = 0; gi < MEM_GROUPS.length; gi++) {
+            String[] grp = MEM_GROUPS[gi];
+            List<CompoundTag> rows = new ArrayList<>();
+            for (Tag t : all) if (((CompoundTag) t).getString("g").equals(grp[0])) rows.add((CompoundTag) t);
+            UiStyle.heading(g, font, grp[1] + (rows.isEmpty() ? "" : "  (" + rows.size() + ")"), x, cy, iw);
+            if (in(mx, my, x, cy, iw, 10)) tipNow = grp[2];
+            cy += 13;
+            if (rows.isEmpty()) {
+                g.drawString(font, UiStyle.clip(font, MEM_EMPTY[gi], iw), x + 4, cy, faint(), false);
+                cy += 14;
+                continue;
+            }
+            for (CompoundTag row : rows) {
+                String key = row.contains("place") ? "p:" + row.getString("place") : "i:" + row.getInt("id");
+                boolean editing = key.equals(memEditing);
+                boolean over = in(mx, my, x, cy - 1, iw, 13);
+                if (over) g.fill(x - 2, cy - 1, x + iw + 2, cy + 12, BRAND_WASH);
+                if (editing) {
+                    memEdit.visible = true;
+                    memEdit.setX(x + 2);
+                    memEdit.setY(cy - 1);
+                    memEdit.setWidth(iw - 92);
+                    memEdit.render(g, mx, my, 0);
+                    button(g, "Save", x + iw - 86, cy - 1, 42, 13, mx, my, !memEdit.getValue().isBlank(), true, "Read afresh, as if you'd said it", this::memSave);
+                    button(g, "Cancel", x + iw - 42, cy - 1, 42, 13, mx, my, true, false, "Esc", () -> memEditing = null);
+                    cy += 15;
+                    continue;
+                }
+                String detail = row.getString("d");
+                int dw = detail.isEmpty() ? 0 : Math.min(110, font.width(detail)) + 8;
+                int textW = iw - 44 - dw;
+                g.drawString(font, UiStyle.clip(font, row.getString("t"), textW), x + 4, cy + 2, UiStyle.TEXT, false);
+                if (!detail.isEmpty()) g.drawString(font, UiStyle.clip(font, detail, 110), x + iw - 40 - dw + 4, cy + 2, faint(), false);
+                if (over && !in(mx, my, x + iw - 40, cy - 1, 40, 13))
+                    tipNow = row.getString("t") + (row.getString("s").isEmpty() ? "" : "  ·  You said: \"" + row.getString("s") + "\"") + (detail.isEmpty() ? "" : "  ·  " + detail);
+                final CompoundTag r = row;
+                button(g, "\u270E", x + iw - 38, cy - 1, 18, 13, mx, my, true, false, row.contains("place") ? "Rename this place" : "Edit: change the words and it reads them afresh", () -> {
+                    memEditing = key;
+                    memEdit.setValue(r.contains("place") ? r.getString("place") : r.getString("s").isEmpty() ? r.getString("t") : r.getString("s"));
+                    memEdit.moveCursorToEnd(false);
+                    setFocused(memEdit);
+                });
+                button(g, "\u2715", x + iw - 18, cy - 1, 18, 13, mx, my, true, false, "Forget this one", () -> {
+                    CompoundTag t = new CompoundTag();
+                    if (r.contains("place")) { t.putString("op", "deletePlace"); t.putString("place", r.getString("place")); }
+                    else { t.putString("op", "delete"); t.putInt("id", r.getInt("id")); }
+                    PaClient.send("memop", t);
+                });
+                cy += 14;
+            }
+            cy += 4;
+        }
+        // [pa35] our story: the moments it kept on its own (firsts, close calls, big builds, anniversaries), newest first
+        ListTag story = s.getList("story", Tag.TAG_STRING);
+        UiStyle.heading(g, font, "Our story" + (story.isEmpty() ? "" : "  (" + story.size() + ")"), x, cy, iw);
+        if (in(mx, my, x, cy, iw, 10)) tipNow = "Moments it noted itself: firsts, close calls, big builds, anniversaries. It brings them up now and then.";
+        cy += 13;
+        if (story.isEmpty()) { g.drawString(font, UiStyle.clip(font, "Nothing yet. Go and do something worth remembering.", iw), x + 4, cy, faint(), false); cy += 14; }
+        for (Tag t : story) cy = para(g, t.getAsString(), x + 4, cy, iw - 4, UiStyle.TEXT) - 1;
+        return cy - y + 4;
+    }
+
+    private void memAdd() {
+        String text = memBox.getValue().trim();
+        if (text.isEmpty()) return;
+        CompoundTag t = new CompoundTag();
+        t.putString("op", "add");
+        t.putString("text", text);
+        PaClient.send("memop", t);
+        memBox.setValue("");
+    }
+
+    private void memSave() {
+        if (memEditing == null) return;
+        String text = memEdit.getValue().trim();
+        if (text.isEmpty()) return;
+        CompoundTag t = new CompoundTag();
+        if (memEditing.startsWith("p:")) { t.putString("op", "renamePlace"); t.putString("place", memEditing.substring(2)); }
+        else { t.putString("op", "edit"); t.putInt("id", Integer.parseInt(memEditing.substring(2))); }
+        t.putString("text", text);
+        PaClient.send("memop", t);
+        memEditing = null;
+        setFocused(null);
+    }
+
+    /** [pa35] A small Natural / Basic badge. */
+    private void badge(GuiGraphics g, String text, int x, int y, boolean natural) {
+        int w = font.width(text) + 6;
+        g.fill(x, y, x + w, y + 10, natural ? BRAND : 0xFF8E8E8E);
+        g.drawString(font, text, x + 3, y + 1, 0xFFFFFFFF, false);
+    }
+
+    /** A labelled on/off switch drawn at a given width (the Memory tab's top). */
+    private void toggleAt(GuiGraphics g, String label, boolean on, int x, int y, int w, int mx, int my, String tip, Runnable flip) {
+        toggle(g, label, on, x, y, w, mx, my, tip, flip);
     }
 
     // ------------------------------------------------------------------ about and settings
@@ -939,61 +1281,84 @@ public class PaScreen extends Screen {
     }
 
     private int secVoice(GuiGraphics g, CompoundTag s, int sx, int cy, int half, int mx, int my) {
+        // [pa35] on by default, natural first: Kokoro, then Piper, then a Windows 11 Natural voice; the basic system voice only if picked
         boolean speak = PaClientConfig.get(PaClientConfig.SPEAK, true);
-        cy = toggle(g, "Speak replies aloud", speak, sx, cy, half, mx, my, PaVoice.tts().status(), () -> PaClientConfig.set(PaClientConfig.SPEAK, !speak));
-        List<String> voices = PaVoice.tts().voices();
-        int vi = PaClientConfig.get(PaClientConfig.VOICE, 0);
-        String vname = voices.isEmpty() || vi <= 0 ? "Default" : voices.get(Math.min(vi, voices.size() - 1));
-        // [pa33b] the accent it listens for and speaks in: English (UK), English (US), or Auto
-        String acc = PaClientConfig.get(PaClientConfig.ACCENT, "auto");
+        cy = toggle(g, "Speak replies aloud", speak, sx, cy, half, mx, my, "Its words always show too", () -> PaClientConfig.set(PaClientConfig.SPEAK, !speak));
+        String vkey = PaClientConfig.get(PaClientConfig.VOICEKEY, "");
+        boolean basic = PaClientConfig.get(PaClientConfig.BASICVOICE, false), woman = PaClientConfig.get(PaClientConfig.VOICEWOMAN, false);
         com.jrpetty.mcassistant.pa.voice.PaAccent accNow = PaVoice.accent();
+        String now = PaVoice.tts().voiceInUse(vkey, basic, accNow, woman);
+        g.drawString(font, "Now", sx, cy + 1, muted(), false);
+        g.drawString(font, UiStyle.clip(font, now, half - 64), sx + 60, cy + 1, now.contains("natural") ? BRAND : UiStyle.TEXT, false);
+        cy += 12;
+        // the natural voice: ready, coming down, or not fetched (with the one-click choice either way)
+        boolean ready = PaVoice.tts().kokoroReady();
+        String pack = PaClientConfig.get(PaClientConfig.VOICEPACK, "auto");
+        g.drawString(font, "Natural", sx, cy + 3, muted(), false);
+        if (ready) {
+            badge(g, "Natural", sx + 60, cy + 1, true);
+            g.drawString(font, UiStyle.clip(font, "Ready: George, Emma and ten more, offline", half - 120), sx + 110, cy + 3, UiStyle.TEXT, false);
+            cy += 16;
+        } else if (PaVoice.installingVoices) {
+            int barW = Math.max(60, half - 64 - 96);
+            g.fill(sx + 60, cy + 4, sx + 60 + barW, cy + 9, 0xFFB9C7C4);
+            g.fill(sx + 60, cy + 4, sx + 60 + (int) Math.round(barW * PaVoice.packFraction), cy + 9, BRAND_LIGHT);
+            button(g, "Don't download", sx + 64 + barW, cy, 90, 13, mx, my, true, false, "Stops now (what's down is kept) and won't start by itself again",
+                PaVoice::declineVoices);
+            cy += 15;
+            cy = para(g, PaVoice.packLine, sx + 60, cy, half - 60, faint());
+        } else {
+            button(g, "Download now (" + com.jrpetty.mcassistant.pa.voice.PaKokoro.totalMb() + " MB)", sx + 60, cy, Math.min(170, half - 64), 13, mx, my, true, true,
+                "Kokoro: very human, offline voices (Apache-2.0), with ONNX Runtime (MIT), from GitHub and Maven Central, each checked by its SHA-256. Nothing about you is sent.",
+                () -> { PaClientConfig.set(PaClientConfig.VOICEPACK, "auto"); PaVoice.installVoices(); });
+            cy += 15;
+            if (PaVoice.packFailed) cy = para(g, PaVoice.packLine, sx + 60, cy, half - 60, UiStyle.DANGER);
+        }
+        cy = toggle(g, "Fetch it by itself", "auto".equals(pack), sx, cy, half, mx, my,
+            "On (the default): the natural voice downloads in the background the first time you get an assistant. Off: only when you click Download.",
+            () -> PaClientConfig.set(PaClientConfig.VOICEPACK, "auto".equals(pack) ? "declined" : "auto"));
+        cy = toggle(g, "A woman's voice", woman, sx, cy, half, mx, my, "Emma (British) or Heart (American); off: George or Michael",
+            () -> { PaClientConfig.set(PaClientConfig.VOICEWOMAN, !woman); PaClientConfig.set(PaClientConfig.VOICEKEY, ""); PaVoice.speak(PaVoice.sample(triangle.tri()), triangle.tri().gloomy(), triangle.tri().funny()); });
+        cy = toggle(g, "System voice (basic)", basic, sx, cy, half, mx, my,
+            "Your computer's old built-in voices (Windows desktop voices, macOS say). Robotic: used only if you turn this on and no natural voice is ready. Off: words only until it is.",
+            () -> PaClientConfig.set(PaClientConfig.BASICVOICE, !basic));
+        // the accent it listens for and speaks in
+        String acc = PaClientConfig.get(PaClientConfig.ACCENT, "auto");
         g.drawString(font, "Accent", sx, cy + 3, muted(), false);
         button(g, com.jrpetty.mcassistant.pa.voice.PaAccent.settingLabel(acc, accNow), sx + 60, cy, Math.max(96, Math.min(200, half - 64)), 13, mx, my, true, false,
             "Which English it listens for and speaks: English (UK), English (US), or Auto (your game's language, then your computer's)",
-            () -> { PaClientConfig.set(PaClientConfig.ACCENT, com.jrpetty.mcassistant.pa.voice.PaAccent.next(acc)); PaVoice.speak("Hello, this is my voice."); });
+            () -> { PaClientConfig.set(PaClientConfig.ACCENT, com.jrpetty.mcassistant.pa.voice.PaAccent.next(acc)); PaVoice.speak(PaVoice.sample(triangle.tri()), triangle.tri().gloomy(), triangle.tri().funny()); });
         cy += 15;
-        // [pa33b] the voice picker: every voice, grouped by engine (the most natural first), each with a preview
-        String vkey = PaClientConfig.get(PaClientConfig.VOICEKEY, "");
+        // the picker: every voice, each with a badge and a real sample line
         List<com.jrpetty.mcassistant.pa.voice.PaTts.VoiceInfo> cat = PaVoice.tts().catalogue();
-        String cur = vkey.isEmpty() ? "Auto: " + PaVoice.tts().voiceInUse(0) : vkey.substring(vkey.indexOf(':') + 1);
         g.drawString(font, "Voice", sx, cy + 3, muted(), false);
+        String cur = vkey.isEmpty() ? "Auto" : vkey.substring(vkey.indexOf(':') + 1);
         button(g, cur + (voicesOpen ? "  \u25B4" : "  \u25BE"), sx + 60, cy, Math.max(96, Math.min(200, half - 64)), 13, mx, my, true, false,
-            "Choose its voice (the list shows every voice on your computer)", () -> voicesOpen = !voicesOpen);
+            "Choose its voice: natural ones first, then your computer's basic ones", () -> voicesOpen = !voicesOpen);
         cy += 15;
-        String sug = PaVoice.suggestFor(Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length), cat);
-        if (sug != null) { g.drawString(font, UiStyle.clip(font, "Suggested for this look: " + sug, half), sx, cy, faint(), false); cy += 11; }
         if (voicesOpen) {
             String group = "";
-            button(g, "Auto (most natural)", sx, cy, half - 22, 12, mx, my, true, vkey.isEmpty(), "", () -> PaClientConfig.set(PaClientConfig.VOICEKEY, ""));
+            button(g, "Auto (the best natural voice)", sx, cy, half - 22, 12, mx, my, true, vkey.isEmpty(), "", () -> PaClientConfig.set(PaClientConfig.VOICEKEY, ""));
             cy += 14;
             for (com.jrpetty.mcassistant.pa.voice.PaTts.VoiceInfo v : cat) {
                 if (!v.group().equals(group)) { group = v.group(); g.drawString(font, group, sx, cy + 1, BRAND, false); cy += 11; }
                 final String k = v.key();
-                button(g, UiStyle.clip(font, v.label(), half - 30), sx, cy, half - 22, 12, mx, my, true, k.equals(vkey), "", () -> PaClientConfig.set(PaClientConfig.VOICEKEY, k));
-                button(g, "\u25B6", sx + half - 20, cy, 14, 12, mx, my, true, false, "Preview", () -> {
+                final boolean nat = v.natural();
+                button(g, UiStyle.clip(font, v.label(), half - 76), sx, cy, half - 70, 12, mx, my, true, k.equals(vkey), nat ? "" : "A basic voice: used only with System voice (basic) on",
+                    () -> { PaClientConfig.set(PaClientConfig.VOICEKEY, k); if (!nat) PaClientConfig.set(PaClientConfig.BASICVOICE, true); });
+                badge(g, v.badge(), sx + half - 66, cy + 1, nat);
+                button(g, "\u25B6", sx + half - 20, cy, 14, 12, mx, my, true, false, "Hear it say a real line", () -> {
+                    String before = PaClientConfig.get(PaClientConfig.VOICEKEY, "");
                     PaClientConfig.set(PaClientConfig.VOICEKEY, k);
+                    boolean wasBasic = PaClientConfig.get(PaClientConfig.BASICVOICE, false);
+                    if (!nat) PaClientConfig.set(PaClientConfig.BASICVOICE, true);
                     PaVoice.speak(PaVoice.sample(triangle.tri()), triangle.tri().gloomy(), triangle.tri().funny());
+                    PaClientConfig.set(PaClientConfig.VOICEKEY, before);
+                    PaClientConfig.set(PaClientConfig.BASICVOICE, wasBasic);
                 });
                 cy += 14;
             }
-            if (cat.isEmpty()) cy = para(g, PaVoice.tts().status(), sx, cy, half, faint());
-            // [pa33b] the natural voices (Kokoro): offered, explained, and fetched only once the player agrees
-            if (!PaVoice.tts().kokoroReady()) {
-                if (!voicesAsk) {
-                    button(g, PaVoice.installingVoices ? "Downloading..." : "Get natural British voices...", sx, cy, half - 22, 13, mx, my, !PaVoice.installingVoices, false,
-                        "George, Lewis, Daniel, Fable, Emma, Isabella, Alice, Lily: very human, offline", () -> voicesAsk = true);
-                    cy += 16;
-                } else {
-                    cy = para(g, "Natural voices (Kokoro, Apache-2.0) run on your computer, offline. This downloads about "
-                        + com.jrpetty.mcassistant.pa.voice.PaKokoro.totalMb() + " MB once into your config folder, from GitHub and Maven Central: the voice model and voices (Apache-2.0) and ONNX Runtime (MIT). "
-                        + "They also need the free program eSpeak NG on your computer to read words. Nothing you say is sent anywhere.", sx, cy, half, faint());
-                    button(g, "I agree: download", sx, cy, 100, 14, mx, my, true, true, "", () -> { voicesAsk = false; PaVoice.installVoices(); });
-                    button(g, "Not now", sx + 106, cy, 60, 14, mx, my, true, false, "", () -> voicesAsk = false);
-                    cy += 18;
-                }
-            }
-            cy = para(g, "More natural voices: on Windows add voices in Settings > Time & language > Speech; on a Mac, System Settings > Accessibility > Spoken Content > System voice > Manage Voices (pick an Enhanced or Premium one).",
-                sx, cy, half, faint());
+            if (cat.isEmpty()) cy = para(g, "No voices yet: the natural voice is " + (PaVoice.installingVoices ? "on its way." : "not downloaded."), sx, cy, half, faint());
         }
         int rate = PaClientConfig.get(PaClientConfig.RATE, 0), vol = PaClientConfig.get(PaClientConfig.VOLUME, 80), pitch = PaClientConfig.get(PaClientConfig.PITCH, 0);
         cy = stepper(g, "Speed", rate + "", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.RATE, Math.max(-5, rate - 1)),
@@ -1021,6 +1386,20 @@ public class PaScreen extends Screen {
         cy = toggle(g, "Show what it's doing (HUD)", hud, sx, cy, half, mx, my, "", () -> PaClientConfig.set(PaClientConfig.HUD, !hud));
         cy = toggle(g, "Auto-help", set.getBoolean("auto"), sx, cy, half, mx, my,
             "Keeps the furnace going, the farm picked, the chests sorted, you fed and safe; it says what it's doing and you can veto it", () -> setting("auto", !set.getBoolean("auto")));
+        if (set.getBoolean("auto")) {                                   // [pa35] each kind its own switch, indented under it
+            java.util.Set<String> off = new java.util.HashSet<>();
+            for (Tag t : set.getList("autoOff", Tag.TAG_STRING)) off.add(t.getAsString());
+            for (String[] k : com.jrpetty.mcassistant.pa.PaLayout.AUTO_HELP) {
+                final String key = k[0];
+                final boolean on = !off.contains(key);
+                cy = toggle(g, k[1], on, sx + 8, cy, half - 8, mx, my, k[2], () -> {
+                    CompoundTag t = new CompoundTag();
+                    t.putString("autoKind", key);
+                    t.putBoolean("on", !on);
+                    PaClient.send("settings", t);
+                });
+            }
+        }
         cy = toggle(g, "Ask before big jobs", set.getBoolean("confirm"), sx, cy, half, mx, my, "", () -> setting("confirm", !set.getBoolean("confirm")));
         cy = toggle(g, "Use your chests", set.getBoolean("chests"), sx, cy, half, mx, my,
             "Off: only chests you point it at. Never a town's stores or anyone else's.", () -> setting("chests", !set.getBoolean("chests")));
@@ -1053,6 +1432,13 @@ public class PaScreen extends Screen {
             () -> settingInt("language", (lang + 1) % 3));
         cy += 15;
         if (lang > cap) { g.drawString(font, UiStyle.clip(font, "* This server allows up to " + com.jrpetty.mcassistant.pa.PaTone.LANGUAGE[cap] + ".", half), sx, cy, faint(), false); cy += 11; }
+        // [pa35] its sense of humour: Dry by default; the puns and cheese only if you ask for them
+        var hu = com.jrpetty.mcassistant.pa.PaPersona.Humour.of(set.getInt("humour"));
+        g.drawString(font, "Humour", sx, cy + 3, muted(), false);
+        button(g, hu.label, sx + 60, cy, 76, 13, mx, my, true, false,
+            "Dry: understated, affection shown sideways. Daft: puns and cheese. Sincere: warmer, still not soppy. Now: " + hu.tip,
+            () -> settingInt("humour", (hu.ordinal() + 1) % 3));
+        cy += 15;
         int rb = Math.max(0, Math.min(2, set.getInt("roastBack")));
         g.drawString(font, "Others", sx, cy + 3, muted(), false);
         button(g, UiStyle.clip(font, "Roast back: " + com.jrpetty.mcassistant.pa.PaStrangers.ROAST_BACK[rb], 110), sx + 60, cy, 112, 13, mx, my, true, false,
@@ -1061,9 +1447,19 @@ public class PaScreen extends Screen {
         cy += 15;
         cy = toggle(g, "Defend me", !set.contains("defend") || set.getBoolean("defend"), sx, cy, half, mx, my,
             "When someone else says you're rubbish, it sticks up for you", () -> setting("defend", !(!set.contains("defend") || set.getBoolean("defend"))));
+        cy = toggle(g, "Ping ores I can't mine yet", !set.contains("pingLocked") || set.getBoolean("pingLocked"), sx, cy, half, mx, my,      // [pa35]
+            "When it meets an ore above its level it leaves it be, says so once, and marks it for you",
+            () -> setting("pingLocked", !(!set.contains("pingLocked") || set.getBoolean("pingLocked"))));
         int spend = set.getInt("spend");
         cy = stepper(g, "Spend limit", spend + " coins", sx, cy, mx, my, () -> settingInt("spend", spend - 16), () -> settingInt("spend", spend + 16));
         return cy;
+    }
+
+    /** [pa35] An operator's whole-number setting. */
+    private void adminInt(String key, int v) {
+        CompoundTag t = new CompoundTag();
+        t.putInt(key, v);
+        PaClient.send("admin", t);
     }
 
     private void admin(double mult) {
@@ -1135,6 +1531,14 @@ public class PaScreen extends Screen {
             String shown = (m == Math.floor(m) ? String.valueOf((int) m) : String.format(java.util.Locale.ROOT, "%.2f", m)) + "\u00D7 xp";
             cy = stepper(g, "Levelling", shown, sx, cy, mx, my, () -> admin(m <= 1 ? Math.max(0, m - 0.25) : m - 1), () -> admin(m < 1 ? m + 0.25 : m + 1));
             cy = para(g, "Every assistant's experience on this server is multiplied by this (1: the intended grind, many game days to level 10).", sx, cy, half, faint());
+            cy += 4;
+            int memCap = s.getInt("memCap");                                                    // [pa35] memory, and the ladders
+            cy = stepper(g, "Memory", memCap + " things", sx, cy, mx, my, () -> adminInt("memCap", memCap - (memCap > 100 ? 50 : 10)), () -> adminInt("memCap", memCap + (memCap >= 100 ? 50 : 10)));
+            cy = para(g, "How many things each assistant may remember for its player (places are kept apart, up to 32).", sx, cy, half, faint());
+            boolean ladder = s.getCompound("set").getBoolean("ladderOn");
+            cy = toggle(g, "Mining and gear ladders", ladder, sx, cy, half, mx, my,
+                "On: ores and kit open by level (iron at 4, crossbow at 5, diamond at 6...). Off: every assistant may mine and use anything. Each rung can be moved on the Progress tab.",
+                () -> { CompoundTag t = new CompoundTag(); t.putBoolean("ladderOn", !ladder); PaClient.send("admin", t); });
             cy += 4;
             // [pa33g] its chunks: an assistant told to stay, on guard, at work or walking over keeps the ground round it loaded
             boolean on = s.getBoolean("chunksOn"), offline = s.getBoolean("chunksOffline");
@@ -1322,8 +1726,8 @@ public class PaScreen extends Screen {
             case "orders", "jobs" -> {
                 int tx = left + 6;
                 int idx = where.equals("orders") ? 1 : 2;
-                for (int i = 0; i < idx; i++) tx += font.width(TAB_LABELS[i]) + 16;
-                hx = tx; hy = top + 29; hw = font.width(TAB_LABELS[idx]) + 14; hh = 14;
+                for (int i = 0; i < idx; i++) tx += font.width(TAB_LABELS[i]) + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD + 2;
+                hx = tx; hy = top + 29; hw = font.width(TAB_LABELS[idx]) + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD; hh = 14;
             }
             case "mic" -> { hx = left + w - 60; hy = top + h - 36; hw = 54; hh = 20; }
             default -> { hx = left + w / 2 - 40; hy = top + h / 2 - 10; hw = 80; hh = 20; }
@@ -1486,7 +1890,7 @@ public class PaScreen extends Screen {
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
         if (tour >= 0 && key == GLFW.GLFW_KEY_ESCAPE) { tour = TOUR.length; return true; }
-        if (input.isFocused() && !(key == GLFW.GLFW_KEY_TAB && (mods & GLFW.GLFW_MOD_CONTROL) != 0)) {
+        if (input.isFocused() && tab.equals("talk") && !(key == GLFW.GLFW_KEY_TAB && (mods & GLFW.GLFW_MOD_CONTROL) != 0)) {   // [pa35] only on Talk, where it's seen
             if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { sendTyped(); return true; }
             if (key == GLFW.GLFW_KEY_TAB) {
                 List<String> sug = PaUnderstand.complete(input.getValue(), 1);
@@ -1496,6 +1900,27 @@ public class PaScreen extends Screen {
             if (key != GLFW.GLFW_KEY_ESCAPE) return input.keyPressed(key, scan, mods) || true;
         }
         if (nameBox.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) return nameBox.keyPressed(key, scan, mods) || true;
+        if (memBox.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) {        // [pa35] Enter keeps it
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { memAdd(); return true; }
+            return memBox.keyPressed(key, scan, mods) || true;
+        }
+        if (memEdit.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) {
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { memSave(); return true; }
+            return memEdit.keyPressed(key, scan, mods) || true;
+        }
+        if (key == GLFW.GLFW_KEY_ESCAPE && memEditing != null) { memEditing = null; return true; }
+        // [pa35] the Progress tab's tour by keyboard: Enter for the next tip, Escape to skip them for good
+        if (tab.equals("stats") && progressTip >= 0) {
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER || key == GLFW.GLFW_KEY_SPACE) { progressTip++; UiStyle.click(); return true; }
+            if (key == GLFW.GLFW_KEY_ESCAPE) { progressTip = -1; PaClientConfig.set(PaClientConfig.PROGRESSTOUR, true); return true; }
+        }
+        // [pa35] up and down, page up and down, home and end scroll every long tab (Memory, Progress, Pack, Jobs) without a mouse
+        if (!tab.equals("settings") && !tab.equals("talk")) {
+            int step = switch (key) { case GLFW.GLFW_KEY_UP -> -20; case GLFW.GLFW_KEY_DOWN -> 20; case GLFW.GLFW_KEY_PAGE_UP -> -120; case GLFW.GLFW_KEY_PAGE_DOWN -> 120;
+                case GLFW.GLFW_KEY_HOME -> -100000; case GLFW.GLFW_KEY_END -> 100000; default -> 0; };
+            if (step != 0) { scroll = Math.max(0, scroll + step); return true; }
+            if (tab.equals("stats") && key == GLFW.GLFW_KEY_M) { tab = "memory"; scroll = 0; PaClientConfig.set(PaClientConfig.LASTTAB, tab); UiStyle.click(); return true; }   // to Our story
+        }
         if (tab.equals("settings") && (mods & GLFW.GLFW_MOD_CONTROL) != 0 && (key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_DOWN)) {
             section = Math.floorMod(section + (key == GLFW.GLFW_KEY_UP ? -1 : 1), SECTIONS.length);   // [pa33c-2b] always, even with the triangle in hand
             scroll = 0;
@@ -1514,6 +1939,7 @@ public class PaScreen extends Screen {
             scroll = 0;
             triangle.blur();
             PaClientConfig.set(PaClientConfig.LASTTAB, tab);
+            if (tab.equals("stats") && !PaClientConfig.get(PaClientConfig.PROGRESSTOUR, false) && progressTip < 0) progressTip = 0;   // [pa35] the tour by keyboard too
             if (tab.equals("talk")) setFocused(input);
             UiStyle.click();
             return true;
@@ -1531,6 +1957,8 @@ public class PaScreen extends Screen {
     public boolean charTyped(char c, int mods) {
         if (input.isFocused()) return input.charTyped(c, mods);
         if (nameBox.isFocused()) return nameBox.charTyped(c, mods);
+        if (memBox.isFocused()) return memBox.charTyped(c, mods);      // [pa35]
+        if (memEdit.isFocused()) return memEdit.charTyped(c, mods);
         return super.charTyped(c, mods);
     }
 

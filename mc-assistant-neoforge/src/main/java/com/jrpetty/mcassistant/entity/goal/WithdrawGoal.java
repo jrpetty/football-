@@ -225,11 +225,12 @@ public class WithdrawGoal extends Goal {
         for (int i = 0; i < container.getContainerSize() && moved < wanted; i++) {
             ItemStack slot = container.getItem(i);
             if (slot.isEmpty() || !match.test(slot)) continue;
-            int take = Math.min(wanted - moved, slot.getCount());
+            int take = Math.min(wanted - moved, Math.min(slot.getCount(), assistant.mayTake(chestPos, container, slot)));   // [pa36]
+            if (take <= 0) continue;
             ItemStack taking = slot.copyWithCount(take);
             ItemStack leftover = assistant.insertGiven(taking);
             int actuallyTaken = take - leftover.getCount();
-            if (actuallyTaken > 0) took.add(slot.copyWithCount(actuallyTaken));
+            if (actuallyTaken > 0) { took.add(slot.copyWithCount(actuallyTaken)); assistant.took(chestPos, slot, actuallyTaken); }   // [pa36]
             slot.shrink(actuallyTaken);
             if (slot.isEmpty()) container.setItem(i, ItemStack.EMPTY);
             moved += actuallyTaken;

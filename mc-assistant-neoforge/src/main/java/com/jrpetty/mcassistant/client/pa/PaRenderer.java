@@ -137,6 +137,7 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
             if (anim == net.minecraft.world.item.UseAnim.CROSSBOW) return HumanoidModel.ArmPose.CROSSBOW_CHARGE;
             if (anim == net.minecraft.world.item.UseAnim.BLOCK) return HumanoidModel.ArmPose.BLOCK;
             if (anim == net.minecraft.world.item.UseAnim.SPYGLASS) return HumanoidModel.ArmPose.SPYGLASS;
+            if (anim == net.minecraft.world.item.UseAnim.SPEAR) return HumanoidModel.ArmPose.THROW_SPEAR;   // [pa35] a trident raised to throw
         }
         if (held.getItem() instanceof net.minecraft.world.item.CrossbowItem && net.minecraft.world.item.CrossbowItem.isCharged(held)) return HumanoidModel.ArmPose.CROSSBOW_HOLD;
         if (held.getItem() instanceof BowItem && a.isAggressive() && hand == InteractionHand.MAIN_HAND) return HumanoidModel.ArmPose.BOW_AND_ARROW;

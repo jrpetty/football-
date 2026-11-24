@@ -33,13 +33,13 @@ import java.util.zip.ZipInputStream;
  * frozen 200 MB+ interpreter. ONNX Runtime's jar carries its own Windows, macOS and Linux libraries, loads like the
  * speech library already does (its own class loader, so nothing joins the mod's classpath), and fails into a message.
  *
- * <p>Nothing ships in the mod jar. Only when the player picks "Get natural British voices" and agrees are these
- * downloaded once into the config folder, from GitHub and Maven Central (reachable where Hugging Face often isn't):
- * the int8 model (about 92 MB) and the voice pack (about 28 MB) from the kokoro-onnx project's model-files-v1.0
- * release, its vocabulary (config.json, 2 KB), and ONNX Runtime (about 93 MB). Kokoro reads phonemes, not letters: the
- * phonemes come from espeak-ng (GPL-3) as a separate program the player installs themselves (on Windows its installer
- * from the espeak-ng GitHub releases), run out of process so its licence never mixes with the mod's. Without it the
- * voice says so and the computer's own voice speaks.
+ * <p>Nothing ships in the mod jar. [pa35] The first time an assistant is summoned on a computer (unless the player says
+ * not to), these are downloaded once into the config folder, in the background, from GitHub and Maven Central (reachable
+ * where Hugging Face often isn't), each resumed where it stopped and checked by its SHA-256 before use: the int8 model
+ * (about 92 MB) and the voice pack (about 28 MB) from kokoro-onnx's model-files-v1.0 release, its vocabulary, misaki's
+ * British and American pronouncing dictionaries (about 13 MB; PaG2p reads them, so no other program is needed), and ONNX
+ * Runtime (about 93 MB). An offline pack (a zip in the config folder, tools/voice/build_voice_pack.py) does the same
+ * with no network. espeak-ng, if the player happens to have it, only helps with words the dictionaries lack.
  *
  * <p>Not run here: downloading and running native code needs the player's go-ahead on their own computer. The paths,
  * the voice pack reader, the tokens, the style row, the speed, the per-look picks and the failure messages are
@@ -49,21 +49,28 @@ public final class PaKokoro {
 
     public static final String RELEASE = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/";
     public static final String MODEL_FILE = "kokoro-v1.0.int8.onnx", VOICES_FILE = "voices-v1.0.bin", CONFIG_FILE = "config.json";
-    public static final String CONFIG_URL = "https://raw.githubusercontent.com/thewh1teagle/kokoro-onnx/main/src/kokoro_onnx/config.json";
+    /** [pa35] Pinned to a commit (never a moving branch), so the file and its checksum never drift. */
+    public static final String CONFIG_URL = "https://raw.githubusercontent.com/thewh1teagle/kokoro-onnx/3596b26764286a7de9d90c363e988d50578918e5/src/kokoro_onnx/config.json";
+    /** [pa35] misaki's pronouncing dictionaries (Apache-2.0), the ones Kokoro was trained with, pinned to a commit. */
+    public static final String LEXICON_URL = "https://raw.githubusercontent.com/hexgrad/misaki/fba1236595f2d2bf21d414ba6e57d25256afada3/misaki/data/";
     public static final String ORT_VERSION = "1.20.0";
     public static final String ORT_URL = "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime/" + ORT_VERSION + "/onnxruntime-" + ORT_VERSION + ".jar";
     /** Sizes as published (bytes), to check a download and to tell the player before they agree. */
     public static final long MODEL_BYTES = 92_361_271L, VOICES_BYTES = 28_214_398L, ORT_BYTES = 92_987_839L;
     public static final int SAMPLE_RATE = 24_000, MAX_TOKENS = 510, STYLE = 256;
 
-    /** One download for the consent screen: what, from where, how big, under what licence. */
-    public record Part(String what, String url, String file, long bytes, String licence) {}
+    /** [pa35] One download: what, from where, the file, its size and SHA-256 (checked before it's used), its licence. */
+    public record Part(String what, String url, String file, long bytes, String sha256, String licence) {}
 
     public static final List<Part> PARTS = List.of(
-        new Part("Kokoro voice model (int8)", RELEASE + MODEL_FILE, MODEL_FILE, MODEL_BYTES, "Apache-2.0"),
-        new Part("Kokoro voices", RELEASE + VOICES_FILE, VOICES_FILE, VOICES_BYTES, "Apache-2.0"),
-        new Part("Kokoro vocabulary", CONFIG_URL, CONFIG_FILE, 0, "MIT (kokoro-onnx)"),
-        new Part("ONNX Runtime for Java", ORT_URL, "onnxruntime.jar", ORT_BYTES, "MIT"));
+        new Part("Kokoro voice model (int8)", RELEASE + MODEL_FILE, MODEL_FILE, MODEL_BYTES, "6e742170d309016e5891a994e1ce1559c702a2ccd0075e67ef7157974f6406cb", "Apache-2.0"),
+        new Part("Kokoro voices", RELEASE + VOICES_FILE, VOICES_FILE, VOICES_BYTES, "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d", "Apache-2.0"),
+        new Part("Kokoro vocabulary", CONFIG_URL, CONFIG_FILE, 2_351L, "5abb01e2403b072bf03d04fde160443e209d7a0dad49a423be15196b9b43c17f", "MIT (kokoro-onnx)"),
+        new Part("British pronouncing dictionary", LEXICON_URL + "gb_gold.json", "gb_gold.json", 2_838_552L, "29e62f4b60261c88f7f3c2c7811ca3825978948090b72d2b27d565b729282f71", "Apache-2.0 (misaki)"),
+        new Part("British pronouncing dictionary (more words)", LEXICON_URL + "gb_silver.json", "gb_silver.json", 3_663_898L, "48131e2d92ccc41655f4543e87e0f938e71463eb5a54be7f0693bb712ebb6bce", "Apache-2.0 (misaki)"),
+        new Part("American pronouncing dictionary", LEXICON_URL + "us_gold.json", "us_gold.json", 3_000_469L, "dc414872a49a28ae6c141463d502fd945f3b2fde040484fdc47d00cc4612686f", "Apache-2.0 (misaki)"),
+        new Part("American pronouncing dictionary (more words)", LEXICON_URL + "us_silver.json", "us_silver.json", 3_099_517L, "de8f67be911bb6c659187b4a65fd966b6a30e56350e0f790d763210b053ac475", "Apache-2.0 (misaki)"),
+        new Part("ONNX Runtime for Java", ORT_URL, "onnxruntime.jar", ORT_BYTES, "c46608681692b3693914defb42fa3119ad7cb6146870581ece247e0ed5793fe8", "MIT"));
 
     /** The download, in megabytes, said before the player agrees. */
     public static int totalMb() {
@@ -126,53 +133,196 @@ public final class PaKokoro {
     // ------------------------------------------------------------------ files
 
     private final Path dir;
+    /** [pa35] What it downloads (the real list; a test gives its own small one). */
+    private final List<Part> parts;
 
     public PaKokoro(Path dir) {
+        this(dir, PARTS);
+    }
+
+    public PaKokoro(Path dir, List<Part> parts) {
         this.dir = dir;
+        this.parts = parts;
     }
 
     public Path dir() { return dir; }
 
     public Path file(Part p) { return dir.resolve(p.file()); }
 
-    /** Every file there, at its published size (where one is published). */
+    /** The marker written once every file has passed its checksum (so 220 MB isn't hashed at every start). */
+    static final String VERIFIED = "verified.sha256";
+
+    /** Every file there, at its size, checked once by its SHA-256 (the marker remembers it). */
     public boolean downloaded() {
         try {
-            for (Part p : PARTS) {
+            for (Part p : parts) {
                 Path f = file(p);
-                if (!Files.isRegularFile(f)) return false;
-                if (p.bytes() > 0 && Files.size(f) != p.bytes()) return false;
+                if (!Files.isRegularFile(f) || Files.size(f) != p.bytes()) return false;
             }
-            return true;
+            Path m = dir.resolve(VERIFIED);
+            return Files.isRegularFile(m) && Files.readString(m).trim().equals(marker());
         } catch (Exception e) {
             return false;
         }
     }
 
-    /** Download what is missing (only after the player agreed), off the game thread; each file checked by its size. */
+    String marker() {
+        StringBuilder b = new StringBuilder();
+        for (Part p : parts) b.append(p.sha256()).append(' ').append(p.file()).append('\n');
+        return b.toString().trim();
+    }
+
+    /** [pa35] How a download reaches the network: one GET for the bytes from an offset (tests put a fake in its place). */
+    public interface Fetcher {
+        /** Status (200 whole, 206 from the offset), the length of what follows (-1 unknown), and the bytes. */
+        record Reply(int status, long length, InputStream body) {}
+
+        Reply get(java.net.URI uri, long from) throws Exception;
+    }
+
+    /** The real network: a plain GET with a generic user agent; nothing about the player or their world is sent. */
+    public static final Fetcher HTTP = (uri, from) -> {
+        java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+            .connectTimeout(java.time.Duration.ofSeconds(20)).build();
+        java.net.http.HttpRequest.Builder rb = java.net.http.HttpRequest.newBuilder(uri).timeout(java.time.Duration.ofMinutes(30)).header("User-Agent", "minecraft-mod");
+        if (from > 0) rb.header("Range", "bytes=" + from + "-");
+        java.net.http.HttpResponse<InputStream> res = http.send(rb.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());
+        return new Fetcher.Reply(res.statusCode(), res.headers().firstValueAsLong("Content-Length").orElse(-1L), res.body());
+    };
+
+    /** [pa35] Progress as it goes: a fraction of the whole (by bytes) and a line to show. */
+    public interface Progress {
+        void at(double fraction, String line);
+    }
+
+    private volatile boolean cancel;
+
+    /** Stop a download under way (it carries on from where it was next time). */
+    public void cancel() { cancel = true; }
+
+    /** Download what is missing, off the game thread: resumed where it stopped, each file checked by its SHA-256. */
     public boolean install(java.util.function.Consumer<String> progress) {
+        return install(HTTP, (f, l) -> progress.accept(l));
+    }
+
+    public boolean install(Fetcher net, Progress progress) {
+        cancel = false;
         try {
             Files.createDirectories(dir);
-            java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
-                .connectTimeout(java.time.Duration.ofSeconds(20)).build();
-            for (Part p : PARTS) {
+            long total = 0, done = 0;
+            for (Part p : parts) total += p.bytes();
+            for (Part p : parts) {
                 Path to = file(p);
-                if (Files.isRegularFile(to) && (p.bytes() == 0 || Files.size(to) == p.bytes())) continue;
-                progress.accept("Downloading " + p.what() + (p.bytes() > 0 ? " (about " + Math.round(p.bytes() / 1_000_000.0) + " MB)" : "") + "...");
+                if (Files.isRegularFile(to) && Files.size(to) == p.bytes() && sha256(to).equals(p.sha256())) { done += p.bytes(); continue; }
+                Files.deleteIfExists(to);
                 Path part = dir.resolve(p.file() + ".part");
-                java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(p.url())).timeout(java.time.Duration.ofMinutes(15))
-                    .header("User-Agent", "minecraft-mod").build();
-                java.net.http.HttpResponse<Path> res = http.send(req, java.net.http.HttpResponse.BodyHandlers.ofFile(part));
-                if (res.statusCode() != 200) throw new IllegalStateException("HTTP " + res.statusCode() + " from " + java.net.URI.create(p.url()).getHost());
-                if (p.bytes() > 0 && Files.size(part) != p.bytes()) { Files.deleteIfExists(part); throw new IllegalStateException(p.what() + " came down the wrong size"); }
+                long have = Files.isRegularFile(part) ? Files.size(part) : 0;
+                if (have > p.bytes()) { Files.delete(part); have = 0; }
+                for (int attempt = 0; attempt < 3 && have < p.bytes(); attempt++) {
+                    if (cancel) { why = "Download paused. It picks up where it left off."; return false; }
+                    Fetcher.Reply r = net.get(java.net.URI.create(p.url()), have);
+                    boolean append = r.status() == 206 && have > 0;
+                    if (r.status() != 200 && r.status() != 206) { try { r.body().close(); } catch (Exception ignored) { } throw new IllegalStateException("HTTP " + r.status() + " from " + java.net.URI.create(p.url()).getHost()); }
+                    if (!append) have = 0;
+                    try (InputStream in = r.body(); java.io.OutputStream out = Files.newOutputStream(part, append ? new java.nio.file.OpenOption[]{java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND}
+                            : new java.nio.file.OpenOption[]{java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING, java.nio.file.StandardOpenOption.WRITE})) {
+                        byte[] buf = new byte[1 << 16];
+                        int n;
+                        long lastShown = 0;
+                        while ((n = in.read(buf)) > 0) {
+                            if (cancel) { why = "Download paused. It picks up where it left off."; return false; }
+                            out.write(buf, 0, n);
+                            have += n;
+                            if (have - lastShown > (1 << 20) || have >= p.bytes()) {
+                                lastShown = have;
+                                progress.at(Math.min(1.0, (done + have) / (double) total), "Downloading " + p.what() + ": " + Math.round(have / 1_000_000.0) + " of " + Math.max(1, Math.round(p.bytes() / 1_000_000.0)) + " MB");
+                            }
+                        }
+                    } catch (java.io.IOException e) {
+                        if (attempt == 2) throw e;                          // a dropped line: tried again from where it got to
+                    }
+                    have = Files.size(part);
+                }
+                if (Files.size(part) != p.bytes()) throw new IllegalStateException(p.what() + " came down the wrong size");
+                if (!sha256(part).equals(p.sha256())) { Files.delete(part); throw new IllegalStateException(p.what() + " failed its checksum, so it wasn't used. Try again later."); }
                 Files.move(part, to, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                done += p.bytes();
+                progress.at(done / (double) total, "Got " + p.what() + ".");
             }
+            Files.writeString(dir.resolve(VERIFIED), marker());
             why = downloaded() ? "" : "The download didn't give what was expected.";
             return downloaded();
         } catch (Throwable e) {
-            why = "Couldn't download the natural voices: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            why = "Couldn't download the natural voice: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
             return false;
         }
+    }
+
+    /** A file's SHA-256, in hex. */
+    public static String sha256(Path f) throws Exception {
+        java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+        try (InputStream in = Files.newInputStream(f)) {
+            byte[] buf = new byte[1 << 16];
+            int n;
+            while ((n = in.read(buf)) > 0) md.update(buf, 0, n);
+        }
+        StringBuilder b = new StringBuilder();
+        for (byte x : md.digest()) b.append(String.format("%02x", x));
+        return b.toString();
+    }
+
+    /**
+     * [pa35] The offline voice pack (tools/voice/build_voice_pack.py): a zip dropped in the config folder (anything named
+     * like "*voice*pack*.zip" in config/ or config/mc_assistant/voice/) is unpacked here at start, each file checked by its
+     * SHA-256 against the list above; a file that fails is left out (and downloaded as usual). True when it made it ready.
+     */
+    public boolean importPack(Path... folders) {
+        if (downloaded()) return false;
+        for (Path folder : folders) {
+            if (folder == null || !Files.isDirectory(folder)) continue;
+            try (java.util.stream.Stream<Path> st = Files.list(folder)) {
+                for (Path z : st.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).matches(".*voice.*pack.*\\.zip")).toList()) {
+                    Files.createDirectories(dir);
+                    try (ZipInputStream zin = new ZipInputStream(Files.newInputStream(z))) {
+                        ZipEntry e;
+                        while ((e = zin.getNextEntry()) != null) {
+                            if (e.isDirectory()) continue;
+                            String name = e.getName().substring(e.getName().lastIndexOf('/') + 1);
+                            Part want = null;
+                            for (Part p : parts) if (p.file().equals(name)) want = p;
+                            if (want == null || (Files.isRegularFile(file(want)) && Files.size(file(want)) == want.bytes())) continue;
+                            Path tmp = dir.resolve(name + ".pack");
+                            Files.copy(zin, tmp, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            if (Files.size(tmp) == want.bytes() && sha256(tmp).equals(want.sha256())) Files.move(tmp, file(want), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            else Files.deleteIfExists(tmp);
+                        }
+                    }
+                    boolean all = true;
+                    for (Part p : parts) if (!(Files.isRegularFile(file(p)) && Files.size(file(p)) == p.bytes() && sha256(file(p)).equals(p.sha256()))) all = false;
+                    if (all) { Files.writeString(dir.resolve(VERIFIED), marker()); return true; }
+                }
+            } catch (Exception ignored) {
+                // a damaged zip: the usual download covers it
+            }
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------ [pa35] words to phonemes, with no other program
+
+    private final Map<PaAccent, PaG2p> g2p = new java.util.EnumMap<>(PaAccent.class);
+
+    /** The phonemiser for an accent: the dictionaries downloaded with the voices, espeak-ng for a word they lack (if installed). */
+    public synchronized PaG2p g2p(PaAccent accent, java.util.function.Function<String, String> fallback) throws Exception {
+        PaG2p g = g2p.get(accent);
+        if (g != null) return g;
+        String pre = accent == PaAccent.UK ? "gb" : "us";
+        Map<String, String> gold, silver;
+        try (InputStream in = Files.newInputStream(dir.resolve(pre + "_gold.json"))) { gold = PaG2p.read(in); }
+        try (InputStream in = Files.newInputStream(dir.resolve(pre + "_silver.json"))) { silver = PaG2p.read(in); }
+        g = new PaG2p(gold, silver, accent == PaAccent.UK, fallback);
+        g2p.put(accent, g);
+        return g;
     }
 
     /** espeak-ng, which turns words into the phonemes Kokoro reads: on the PATH, or where its Windows installer puts it. */
@@ -236,9 +386,9 @@ public final class PaKokoro {
         return out;
     }
 
-    /** The style row for a sentence of so many tokens (as kokoro-onnx: the row at the token count). */
+    /** The style row for a sentence of so many tokens: row n - 1 for n tokens (as Kokoro and kokoro-onnx 0.6 take it). [pa35] It was off by one. */
     public static float[] style(float[][] table, int tokens) {
-        return table[Math.max(0, Math.min(table.length - 1, tokens))];
+        return table[Math.max(0, Math.min(table.length, tokens) - 1)];
     }
 
     // ------------------------------------------------------------------ text to tokens

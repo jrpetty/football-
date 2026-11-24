@@ -52,7 +52,13 @@ public final class PaData extends SavedData {
         public int mute;
         /** [pa33b] Match my energy: its language back (0 Clean, 1 Cheeky, 2 Unfiltered; never past the server cap), roasting others back (0 On, 1 only when they insult it, 2 Off), defending its player. */
         public int language, roastBack;
+        /** [pa35] Its sense of humour: 0 Dry (default), 1 Daft, 2 Sincere. */
+        public int humour;
+        /** [pa35] Kinds of auto-help switched off (PaLayout.AUTO_HELP keys), by Settings or by "don't do that". */
+        public final java.util.Set<String> autoOff = new java.util.LinkedHashSet<>();
         public boolean defend = true;
+        /** [pa35] Ping an ore it may not mine yet when it meets one (Settings, Behaviour). */
+        public boolean pingLocked = true;
         /** [pa33c-2b] Its beds: the one it was told to use, and the last it slept in (where it comes back after a fall). */
         @Nullable public BlockPos bed, lastBed;
         public String bedDim = "", lastBedDim = "";
@@ -84,6 +90,10 @@ public final class PaData extends SavedData {
         /** [pa33g] Arrows it has loosed, and those that struck what it meant (its hit rate on the Stats tab). */
         public int shots, hits;
         public final ArrayDeque<Line> log = new ArrayDeque<>();
+        /** [pa35] What it remembers of what its player told it (kept with the record: survives saves, deaths and new bodies). */
+        public final PaMemory.Book memory = new PaMemory.Book();
+        /** [pa35] Its bond with its player: the friendship, its favourites, its want, our story (PaBond). */
+        public final PaBond.State bond = new PaBond.State();
         /** Chests its player pointed it at (packed positions): always allowed. */
         public final java.util.Set<Long> pointed = new java.util.HashSet<>();
 
@@ -139,7 +149,9 @@ public final class PaData extends SavedData {
             t.putInt("Mute", mute);
             t.putInt("Lang", language);
             t.putInt("RoastBack", roastBack);
+            t.putInt("Humour", humour);
             t.putBoolean("Defend", defend);
+            t.putBoolean("PingLocked", pingLocked);
             if (bed != null) { t.putLong("Bed", bed.asLong()); t.putString("BedDim", bedDim); }
             if (lastBed != null) { t.putLong("LastBed", lastBed.asLong()); t.putString("LastBedDim", lastBedDim); }
             CompoundTag wp = new CompoundTag();
@@ -148,6 +160,9 @@ public final class PaData extends SavedData {
             net.minecraft.nbt.ListTag kl = new net.minecraft.nbt.ListTag();
             for (String k : keep) kl.add(net.minecraft.nbt.StringTag.valueOf(k));
             t.put("Keep", kl);
+            ListTag ao = new ListTag();                                                             // [pa35]
+            for (String k : autoOff) ao.add(net.minecraft.nbt.StringTag.valueOf(k));
+            t.put("AutoOff", ao);
             t.putLong("LeftAt", leftAt);
             t.putLong("Xp", xp);
             t.putInt("Spend", spend);
@@ -175,6 +190,8 @@ public final class PaData extends SavedData {
             }
             t.put("Log", lines);
             t.putLongArray("Pointed", pointed.stream().mapToLong(Long::longValue).toArray());
+            t.put("Mem", PaMemoryNbt.save(memory));                                // [pa35]
+            t.put("Bond", PaMemoryNbt.saveBond(bond));
             return t;
         }
 
@@ -200,12 +217,15 @@ public final class PaData extends SavedData {
             r.mute = Math.max(0, Math.min(2, t.getInt("Mute")));
             r.language = Math.max(0, Math.min(2, t.getInt("Lang")));
             r.roastBack = Math.max(0, Math.min(2, t.getInt("RoastBack")));
+            r.humour = Math.max(0, Math.min(2, t.getInt("Humour")));
             r.defend = !t.contains("Defend") || t.getBoolean("Defend");
+            r.pingLocked = !t.contains("PingLocked") || t.getBoolean("PingLocked");
             if (t.contains("Bed")) { r.bed = BlockPos.of(t.getLong("Bed")); r.bedDim = t.getString("BedDim"); }
             if (t.contains("LastBed")) { r.lastBed = BlockPos.of(t.getLong("LastBed")); r.lastBedDim = t.getString("LastBedDim"); }
             CompoundTag wp = t.getCompound("Waypoints");
             for (String k : wp.getAllKeys()) { r.waypoints.put(k, BlockPos.of(wp.getCompound(k).getLong("P"))); r.waypointDims.put(k, wp.getCompound(k).getString("D")); }
             for (net.minecraft.nbt.Tag k : t.getList("Keep", net.minecraft.nbt.Tag.TAG_STRING)) r.keep.add(k.getAsString());
+            for (net.minecraft.nbt.Tag k : t.getList("AutoOff", net.minecraft.nbt.Tag.TAG_STRING)) r.autoOff.add(k.getAsString());   // [pa35]
             r.leftAt = t.getLong("LeftAt");
             r.xp = t.getLong("Xp");
             r.spend = t.contains("Spend") ? t.getInt("Spend") : 64;
@@ -226,6 +246,8 @@ public final class PaData extends SavedData {
                 r.log.addLast(new Line(c.getInt("W"), c.getString("T"), c.getLong("At"), Math.max(1, c.getInt("N")), c.getBoolean("G")));
             }
             for (long p : t.getLongArray("Pointed")) r.pointed.add(p);
+            if (t.contains("Mem")) PaMemoryNbt.load(r.memory, t.getCompound("Mem"));    // [pa35]
+            if (t.contains("Bond")) PaMemoryNbt.loadBond(r.bond, t.getCompound("Bond"));
             return r;
         }
     }

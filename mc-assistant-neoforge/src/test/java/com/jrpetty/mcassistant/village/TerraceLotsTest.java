@@ -84,4 +84,45 @@ class TerraceLotsTest {
         assertEquals(TerraceLots.lots(21), TownPlan.candidates("terrace"));
         assertEquals(TerraceLots.lots(22), TownPlan.candidates("terrace3"));
     }
+
+    /** [house34c] A corner terrace's place: three home lots of one block, a pair along its street and the lot behind the
+     *  pair's right-hand one, with a street down that side; a crescent's, the whole block. */
+    @Test
+    void theCornersAndTheBlocks() {
+        assertEquals("row", TownPlan.placeFor("terrace4"));
+        assertEquals("row", TownPlan.placeFor("terrace5"));
+        assertEquals(TerraceLots.corners(), TownPlan.candidates("terrace4"));
+        assertEquals(TerraceLots.blocks(), TownPlan.candidates("terrace5"));
+        assertTrue(TerraceLots.corners().size() >= 8, "corners enough: " + TerraceLots.corners().size());
+        assertTrue(TerraceLots.blocks().size() >= 4, "blocks enough: " + TerraceLots.blocks().size());
+        java.util.Map<Long, TownPlan.Lot> home = new java.util.HashMap<>();
+        for (TownPlan.Lot l : TownPlan.lots()) if (l.kind() == TownPlan.Kind.LOT && l.use().equals("home")) home.put(l.cells()[0], l);
+        for (TownPlan.Lot c : TerraceLots.corners()) {
+            assertEquals(3, c.cells().length, "three lots");
+            assertEquals(3, new HashSet<>(List.of(c.cells()[0], c.cells()[1], c.cells()[2])).size(), "three different lots");
+            for (long cell : c.cells()) assertTrue(home.containsKey(cell), "each a home lot");
+            int[] f = facing(c.back()), r = right(c.back());
+            TownPlan.Lot third = home.get(c.cells()[2]);
+            // the third lot behind the pair, on its right: its middle 5.5 to the right of the row's middle and a lot back
+            assertEquals(c.x() + 6 * r[0] + 11 * f[0], third.x(), c + " third " + third.x() + "," + third.z());
+            assertEquals(c.z() + 6 * r[1] + 11 * f[1], third.z(), c + " third " + third.x() + "," + third.z());
+            // the side street down its right, the first street before it
+            assertTrue(TownPlan.isStreet(c.x() + 12 * r[0], c.z() + 12 * r[1]), "the side street: " + c);
+            assertTrue(TownPlan.isStreet(c.x() - 6 * f[0], c.z() - 6 * f[1]), "the street before it: " + c);
+            // nothing of the plan's streets under it
+            for (int dx = -10; dx <= 11; dx++) for (int dz = -5; dz <= 15; dz++) {
+                if (dx <= 0 && dz >= 6) continue;
+                int x = c.x() + dx * r[0] + dz * f[0], z = c.z() + dx * r[1] + dz * f[1];
+                assertTrue(!TownPlan.isStreet(x, z), "no street under the corner at " + dx + "," + dz + " of " + c);
+            }
+        }
+        for (TownPlan.Lot b : TerraceLots.blocks()) {
+            assertEquals(4, b.cells().length, "a whole block");
+            int[] f = facing(b.back()), r = right(b.back());
+            for (int dx = -10; dx <= 11; dx++) for (int dz = -5; dz <= 16; dz++) {
+                int x = b.x() + dx * r[0] + dz * f[0], z = b.z() + dx * r[1] + dz * f[1];
+                assertTrue(!TownPlan.isStreet(x, z), "no street under the crescent at " + dx + "," + dz + " of " + b);
+            }
+        }
+    }
 }

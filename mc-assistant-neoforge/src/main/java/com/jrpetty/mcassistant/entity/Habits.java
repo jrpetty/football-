@@ -459,6 +459,10 @@ public final class Habits {
     /** Somewhere just outside its door: the nearest open ground under the sky within a few steps of its bed. */
     @Nullable
     static BlockPos doorstep(VillageFolkEntity f, ServerLevel level, BlockPos home) {
+        // [house34c] a house of a terrace: the step outside its own front door, on the street (its beds are upstairs, four
+        // blocks and more over the ground, and nothing was found within two of them: the whole row sat indoors at its beds)
+        BlockPos row = TerraceRows.doorstepFor(f);
+        if (row != null) return row;
         BlockPos best = null;
         double bestD = Double.MAX_VALUE;
         for (int dx = -6; dx <= 6; dx++) {

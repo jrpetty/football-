@@ -42,6 +42,13 @@ public final class PaTts {
             };
         }
 
+        /** [pa35] Natural (Kokoro, Piper, a Windows 11 Natural voice) or Basic (the old desktop voices, macOS say, espeak). */
+        public boolean natural() {
+            return engine.equals("kokoro") || engine.equals("piper") || engine.equals("winrt") && naturalName(name);
+        }
+
+        public String badge() { return natural() ? "Natural" : "Basic"; }
+
         public String label() {
             String l = lang.toLowerCase(Locale.ROOT).replace('_', '-');
             String accent = l.startsWith("en-gb") ? "British" : l.startsWith("en-us") ? "American" : l.startsWith("en-au") ? "Australian"
@@ -51,7 +58,48 @@ public final class PaTts {
     }
 
     /** What each line is said with (the player's choices, the mood, where the player stands for "forty blocks east"). */
-    public record Opts(String voiceKey, int rate, int pitch, int volume, double gloom, double fun, PaAccent accent, double px, double pz) {}
+    public record Opts(String voiceKey, int rate, int pitch, int volume, double gloom, double fun, PaAccent accent, double px, double pz, boolean basic, boolean female) {
+        public Opts(String voiceKey, int rate, int pitch, int volume, double gloom, double fun, PaAccent accent, double px, double pz) {
+            this(voiceKey, rate, pitch, volume, gloom, fun, accent, px, pz, false, false);
+        }
+    }
+
+    /** [pa35] A Windows voice that is one of the Natural ones (Windows 11's neural voices, where an app can reach them). */
+    public static boolean naturalName(String name) {
+        return name != null && name.toLowerCase(Locale.ROOT).contains("natural");
+    }
+
+    /**
+     * [pa35] Which engine says a line, in order: Kokoro (natural) when downloaded; Piper (neural) if the player has it; a
+     * Windows 11 Natural voice if one is installed; otherwise nothing (the words show as subtitles). The old desktop
+     * voices (SAPI) and macOS {@code say}, and espeak, only when the player picked "System voice (basic)". A voice picked
+     * by name is used when its engine is there. Returns "kokoro", "piper", "winrt", "sapi", "mac", "espeak" or "" (text only).
+     */
+    public static String engineFor(String voiceKey, boolean basic, boolean kokoroReady, boolean piperReady, List<VoiceInfo> voices, Kind kind) {
+        String key = voiceKey == null ? "" : voiceKey;
+        if (basic || key.startsWith("sapi:") || key.startsWith("mac:") || key.startsWith("espeak:")) {
+            String nat = natural(kokoroReady, piperReady, voices);
+            if (!basic) return nat;                                           // a basic voice picked by name without "System voice (basic)": not used
+            if (!nat.isEmpty() && !(key.startsWith("sapi:") || key.startsWith("mac:") || key.startsWith("espeak:"))) return nat;   // basic only while no natural voice is ready, unless one was picked by name
+            return switch (kind) {
+                case WINDOWS -> "sapi";
+                case MAC -> "mac";
+                case ESPEAK, ESPEAK_NG, SPD -> "espeak";
+                case NONE -> "";
+            };
+        }
+        if (key.startsWith("kokoro:") && kokoroReady) return "kokoro";
+        if (key.startsWith("piper:") && piperReady) return "piper";
+        if (key.startsWith("winrt:") && naturalName(key.substring(6)) && voices.stream().anyMatch(v -> v.key().equals(key))) return "winrt";
+        return natural(kokoroReady, piperReady, voices);
+    }
+
+    private static String natural(boolean kokoroReady, boolean piperReady, List<VoiceInfo> voices) {
+        if (kokoroReady) return "kokoro";
+        if (piperReady) return "piper";
+        for (VoiceInfo v : voices) if (v.engine().equals("winrt") && naturalName(v.name())) return "winrt";
+        return "";
+    }
 
     private final Kind kind;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
@@ -93,10 +141,27 @@ public final class PaTts {
 
     public PaKokoro kokoro() { return kokoro; }
 
-    /** [pa33b] Kokoro is ready to speak: downloaded, and espeak-ng there to read the words. */
+    /** [pa35] Kokoro is ready to speak: downloaded and checked (its own dictionaries read the words; espeak-ng no longer needed). */
     public boolean kokoroReady() {
-        return kokoro != null && kokoro.downloaded() && PaKokoro.espeak(System.getProperty("os.name"), PaTts::onPath, Files::isRegularFile) != null;
+        return kokoro != null && kokoro.downloaded();
     }
+
+    /** [pa35] Is any natural voice ready (else it is text only, unless the player picked the basic system voice)? */
+    public boolean naturalReady() {
+        return !natural(kokoroReady(), piperReady(), catalogue).isEmpty();
+    }
+
+    public boolean piperReady() {
+        return piper != null && !piper.installedVoices(System.getProperty("os.name")).isEmpty();
+    }
+
+    /** [pa35] Told when a line's sound starts, with its length in milliseconds (the gestures go with the words). */
+    private volatile java.util.function.LongConsumer onSound = ms -> { };
+
+    public void onSound(java.util.function.LongConsumer c) { if (c != null) onSound = c; }
+
+    private final java.util.concurrent.atomic.AtomicInteger gen = new java.util.concurrent.atomic.AtomicInteger();
+    private volatile javax.sound.sampled.SourceDataLine line;
 
     public static Kind pick(String osName, Predicate<String> onPath) {
         String os = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
@@ -182,14 +247,20 @@ public final class PaTts {
         if (text == null || text.isBlank()) return;
         String line = clean(PaSpeech.speakable(text, o.px(), o.pz()));
         if (line.isEmpty()) return;
+        int mine = gen.incrementAndGet();                         // [pa35] a new line cuts off the one before, at once
+        javax.sound.sampled.SourceDataLine l = this.line;
+        if (l != null) { try { l.stop(); l.flush(); } catch (Throwable ignored) { } }
         try {
-            worker.submit(() -> speak0(line, o));
+            worker.submit(() -> { if (gen.get() == mine) speak0(line, o, mine); });
         } catch (Throwable ignored) {
             // the worker has gone: stay silent
         }
     }
 
     public void hush() {
+        gen.incrementAndGet();
+        javax.sound.sampled.SourceDataLine l = this.line;
+        if (l != null) { try { l.stop(); l.flush(); } catch (Throwable ignored) { } }
         try {
             worker.submit(this::stopCurrent);
         } catch (Throwable ignored) {
@@ -200,6 +271,18 @@ public final class PaTts {
     static String clean(String text) {
         String t = text.replaceAll("[\\p{So}\\p{Cn}\\u2600-\\u27BF]", " ").replace('\n', ' ').replace('"', ' ').replaceAll("\\s+", " ").trim();
         return t.length() > 400 ? t.substring(0, 400) : t;
+    }
+
+    /** [pa35] What it sounds like just now, for Settings: "George (natural)", "Subtitles only", "Microsoft Hazel (basic)". */
+    public String voiceInUse(String key, boolean basic, PaAccent a, boolean female) {
+        String e = engineFor(key, basic, kokoroReady(), piperReady(), catalogue, kind);
+        return switch (e) {
+            case "kokoro" -> kokoroVoice(key, a, female).label() + " (natural)";
+            case "piper" -> { VoiceInfo v = find(key); if (v == null) v = auto(a); yield (v == null ? "Piper" : v.name()) + " (natural)"; }
+            case "winrt" -> { VoiceInfo v = find(key); if (v == null) for (VoiceInfo c : catalogue) if (naturalName(c.name())) { v = c; break; } yield (v == null ? "Windows" : v.name()) + " (natural)"; }
+            case "" -> "Subtitles only, for now";
+            default -> { VoiceInfo v = autoBasic(a, e); yield (v == null ? "the system voice" : v.name()) + " (basic)"; }
+        };
     }
 
     /** The voice it speaks in: the one picked, else the accent's own when the computer has one. */
@@ -215,16 +298,29 @@ public final class PaTts {
     public VoiceInfo auto(PaAccent a) {
         List<VoiceInfo> all = catalogue();
         String want = a == PaAccent.UK ? "en-gb" : "en-us";
-        String[] order = {"kokoro", "piper", "winrt", "sapi", "mac"};
+        String[] order = {"kokoro", "piper", "winrt"};                 // [pa35] natural voices only: basic ones only when picked
         for (String eng : order) {
             VoiceInfo best = null;
             for (VoiceInfo v : all) {
                 if (!v.engine().equals(eng) || !v.lang().toLowerCase(Locale.ROOT).replace('_', '-').startsWith(want)) continue;
+                if (eng.equals("winrt") && !naturalName(v.name())) continue;
                 if (best == null || score(v) > score(best)) best = v;
             }
             if (best != null) return best;
         }
         return null;
+    }
+
+    /** [pa35] With "System voice (basic)" picked: the accent's own basic voice on this computer, or the default. */
+    VoiceInfo autoBasic(PaAccent a, String engine) {
+        String want = a == PaAccent.UK ? "en-gb" : "en-us";
+        VoiceInfo best = null;
+        for (VoiceInfo v : catalogue) {
+            boolean eng = v.engine().equals(engine) || engine.equals("sapi") && v.engine().equals("winrt") && !naturalName(v.name());
+            if (!eng || !v.lang().toLowerCase(Locale.ROOT).replace('_', '-').startsWith(want)) continue;
+            if (best == null || score(v) > score(best)) best = v;
+        }
+        return best;
     }
 
     static int score(VoiceInfo v) {
@@ -242,14 +338,18 @@ public final class PaTts {
         return null;
     }
 
-    private void speak0(String line, Opts o) {
+    private void speak0(String line, Opts o, int mine) {
         try {
+            String engine = engineFor(o.voiceKey(), o.basic(), kokoroReady(), piperReady(), catalogue, kind);   // [pa35] natural first, basic only if picked
             VoiceInfo v = find(o.voiceKey());
-            if (v == null) v = auto(o.accent());
-            String engine = v != null ? v.engine() : kind == Kind.WINDOWS ? "sapi" : kind == Kind.MAC ? "mac" : kind == Kind.NONE ? "" : "espeak";
+            if (v != null && !v.engine().equals(engine)) v = null;
+            if (v == null && engine.equals("winrt")) for (VoiceInfo c : catalogue) if (c.engine().equals("winrt") && naturalName(c.name())
+                    && (v == null || c.lang().toLowerCase(Locale.ROOT).startsWith(o.accent().culture.toLowerCase(Locale.ROOT)))) v = c;
+            if (v == null && engine.equals("piper")) v = auto(o.accent());
+            if (v == null && (engine.equals("sapi") || engine.equals("mac") || engine.equals("espeak"))) v = autoBasic(o.accent(), engine);
             int[] p = PaSpeech.prosody(o.gloom(), o.fun());
             switch (engine) {
-                case "kokoro" -> kokoro(line, v, o);
+                case "kokoro" -> kokoro(line, o, mine);
                 case "piper" -> piper(line, v, o);
                 case "winrt" -> winrt(line, v, o);
                 case "sapi" -> sapi(line, v, o);
@@ -277,6 +377,8 @@ public final class PaTts {
     }
 
     private void stopCurrent() {
+        javax.sound.sampled.SourceDataLine l = line;                 // [pa35] the natural voice's stream
+        if (l != null) { try { l.stop(); l.flush(); } catch (Throwable ignored) { } }
         if (current != null && current.isAlive()) current.destroy();
         current = null;
         javax.sound.sampled.Clip c = clip;
@@ -400,34 +502,84 @@ public final class PaTts {
 
     // ------------------------------------------------------------------ Kokoro
 
-    private void kokoro(String line, VoiceInfo v, Opts o) throws Exception {
-        String os = System.getProperty("os.name");
-        PaKokoro.Voice kv = PaKokoro.byLabel(v.name());
-        String espeak = PaKokoro.espeak(os, PaTts::onPath, Files::isRegularFile);
-        if (kokoro == null || kv == null || !kokoro.downloaded()) { status = "That natural voice isn't downloaded."; return; }
-        if (espeak == null) { status = PaKokoro.espeakAdvice(os); return; }
-        if (!kokoro.load()) { status = kokoro.why(); return; }
-        // the words as phonemes, clause by clause, joined by the punctuation Kokoro pauses at; spoken a sentence at a time
-        List<String> chunks = new ArrayList<>();
-        StringBuilder b = new StringBuilder();
-        for (String[] c : PaKokoro.clauses(line)) {
-            String ph = PaKokoro.cleanPhonemes(String.join(" ", lines(PaKokoro.phonemeCommand(espeak, o.accent(), c[0]))));
-            if (ph.isEmpty()) continue;
-            if (b.length() + ph.length() > 400) { chunks.add(b.toString().trim()); b.setLength(0); }
-            b.append(ph).append(c[1]).append(' ');
+    /** [pa35] The Kokoro voice for a line: the one picked, else George or Emma (British), Michael or Heart (American). */
+    public static PaKokoro.Voice kokoroVoice(String voiceKey, PaAccent accent, boolean female) {
+        if (voiceKey != null && voiceKey.startsWith("kokoro:")) {
+            PaKokoro.Voice v = PaKokoro.byLabel(voiceKey.substring(7));
+            if (v != null) return v;
         }
-        if (b.length() > 0) chunks.add(b.toString().trim());
-        float speed = PaKokoro.speed(o.gloom(), o.rate());
-        java.io.ByteArrayOutputStream pcm = new java.io.ByteArrayOutputStream();
-        for (String ch : chunks) pcm.write(PaKokoro.pcm16(kokoro.synth(ch, kv, speed), o.volume()));
-        if (pcm.size() == 0) return;
-        stopCurrent();
+        return PaKokoro.byId(accent == PaAccent.UK ? (female ? "bf_emma" : "bm_george") : (female ? "af_heart" : "am_michael"));
+    }
+
+    /**
+     * [pa35] Spoken a sentence at a time, so the first words start as soon as the first sentence is made: the words read by
+     * its own dictionaries (PaG2p), the sound finished (PaAudio: trimmed, the mood's pitch, -16 LUFS, never clipping,
+     * faded), and streamed to the speakers while the next sentence is made. A new line stops this one at once.
+     */
+    private void kokoro(String line, Opts o, int mine) throws Exception {
+        PaKokoro.Voice kv = kokoroVoice(o.voiceKey(), o.accent(), o.female());
+        if (kokoro == null || kv == null || !kokoro.downloaded()) { status = "The natural voice isn't downloaded yet."; return; }
+        if (!kokoro.load()) { status = kokoro.why(); return; }
+        String os = System.getProperty("os.name");
+        String espeak = PaKokoro.espeak(os, PaTts::onPath, Files::isRegularFile);
+        boolean british = kv.lang().equals("en-GB");
+        PaG2p g2p = kokoro.g2p(british ? PaAccent.UK : PaAccent.US, espeak == null ? null : w -> {
+            try { return PaG2p.fromEspeak(PaKokoro.cleanPhonemes(String.join(" ", lines(PaKokoro.phonemeCommand(espeak, british ? PaAccent.UK : PaAccent.US, w)))), british); }
+            catch (Exception e) { return null; }
+        });
+        double pitch = PaAudio.pitchFactor(o.gloom(), o.fun(), o.pitch());
+        float speed = (float) Math.max(0.5, Math.min(2.0, PaKokoro.speed(o.gloom(), o.rate()) / pitch));   // asked slower by the pitch lift, so the pace is kept
         javax.sound.sampled.AudioFormat fmt = new javax.sound.sampled.AudioFormat(PaKokoro.SAMPLE_RATE, 16, 1, true, false);
-        javax.sound.sampled.Clip c = javax.sound.sampled.AudioSystem.getClip();
-        byte[] data = pcm.toByteArray();
-        c.open(fmt, data, 0, data.length);
-        c.start();
-        clip = c;
+        javax.sound.sampled.SourceDataLine out = null;
+        try {
+            boolean first = true;
+            for (String sentence : PaSpeech.sentences(line)) {
+                if (gen.get() != mine) return;
+                for (String chunk : chunks(g2p.phonemize(sentence))) {
+                    if (gen.get() != mine) return;
+                    float[] raw = kokoro.synth(chunk, kv, speed);
+                    if (raw.length == 0) continue;
+                    float[] done = PaAudio.finish(raw, PaKokoro.SAMPLE_RATE, pitch);
+                    char end = sentence.charAt(sentence.length() - 1);
+                    float[] gap = PaAudio.silence(PaKokoro.SAMPLE_RATE, end == '?' || end == '!' ? 260 : end == '.' ? 220 : 120);
+                    byte[] pcm = PaAudio.pcm16(concat(done, gap), o.volume());
+                    if (out == null) {
+                        stopCurrent();
+                        out = javax.sound.sampled.AudioSystem.getSourceDataLine(fmt);
+                        out.open(fmt, PaKokoro.SAMPLE_RATE * 2 * 12);           // twelve seconds of room: the next sentence is made while this one plays
+                        out.start();
+                        this.line = out;
+                    }
+                    if (first) { first = false; onSound.accept(Math.round(done.length * 1000.0 / PaKokoro.SAMPLE_RATE)); }
+                    out.write(pcm, 0, pcm.length);
+                }
+            }
+            if (out != null && gen.get() == mine) out.drain();
+        } finally {
+            if (out != null) { out.close(); if (this.line == out) this.line = null; }
+        }
+    }
+
+    /** Phonemes cut into pieces the model takes (under 500), at a pause where there is one, else at a word. */
+    static List<String> chunks(String ph) {
+        List<String> out = new ArrayList<>();
+        String rest = ph.trim();
+        while (rest.codePointCount(0, rest.length()) > 480) {
+            int cut = -1;
+            for (int i = Math.min(rest.length() - 1, 470); i > 200 && cut < 0; i--) if (",;:".indexOf(rest.charAt(i)) >= 0) cut = i + 1;
+            for (int i = Math.min(rest.length() - 1, 470); i > 100 && cut < 0; i--) if (rest.charAt(i) == ' ') cut = i;
+            if (cut < 0) cut = 470;
+            out.add(rest.substring(0, cut).trim());
+            rest = rest.substring(cut).trim();
+        }
+        if (!rest.isEmpty()) out.add(rest);
+        return out;
+    }
+
+    private static float[] concat(float[] a, float[] b) {
+        float[] c = java.util.Arrays.copyOf(a, a.length + b.length);
+        System.arraycopy(b, 0, c, a.length, b.length);
+        return c;
     }
 
     // ------------------------------------------------------------------ Piper

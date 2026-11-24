@@ -10,7 +10,10 @@ class PaHungerTest {
 
     @Test
     void heartsGrowWithLevel() {
-        assertEquals(6.0F, PaHunger.maxHealth(1, 3, 10), "three hearts at level 1");
+        assertEquals(20.0F, PaHunger.maxHealth(1, 10, 20), "[pa35] ten hearts at level 1, like a player");
+        assertEquals(40.0F, PaHunger.maxHealth(10, 10, 20), "[pa35] twenty (two rows) at level 10");
+        for (int l = 2; l <= 10; l++) assertTrue(PaHunger.maxHealth(l, 10, 20) - PaHunger.maxHealth(l - 1, 10, 20) <= 4, "about two health a level, smoothly");
+        assertEquals(6.0F, PaHunger.maxHealth(1, 3, 10), "an operator's own figures still work: three hearts at level 1");
         assertEquals(20.0F, PaHunger.maxHealth(10, 3, 10), "ten at level 10");
         float last = PaHunger.maxHealth(1, 3, 10);
         for (int l = 2; l <= 10; l++) {

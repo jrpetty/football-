@@ -1,0 +1,75 @@
+package com.jrpetty.mcassistant.pa;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.function.IntToDoubleFunction;
+
+/**
+ * [pa35] Everything that grows with its level, in one table: what the Progress tab shows (now, next level, level 10),
+ * what the guide says, and what the game actually uses. Break speed and hand speed are a player's at every level
+ * (PaPace); levels buy skill instead: steadier hands between actions, reach, reactions, aim, harder and more frequent
+ * critical hits, dodging, a bigger pack, eating less for the same work, healing quicker, noticing more, smarter routes,
+ * and more frequent, sharper help. Things that aren't a number (the elytra at 8) are unlocks: the skill list and the
+ * mining and gear ladders. Pure Java; PaLevelsTest checks every metric only ever improves.
+ */
+public final class PaGrowth {
+
+    private PaGrowth() {}
+
+    /** One metric: its id, what it's called, how to show a value, whether more is better, and its value at a level. */
+    public record Metric(String id, String label, String unit, boolean higherBetter, IntToDoubleFunction at, String tip) {
+        public double value(int level) { return at.applyAsDouble(Math.max(1, Math.min(PaLevels.MAX, level))); }
+
+        public String show(int level) {
+            double v = value(level);
+            return switch (unit) {
+                case "hp" -> (int) v + " (" + (int) (v / 2) + " hearts)";
+                case "s" -> String.format(Locale.ROOT, "%.2f s", v);
+                case "ms" -> (int) Math.round(v) + " ms";
+                case "%" -> (int) Math.round(v) + "%";
+                case "x" -> String.format(Locale.ROOT, "x%.2f", v);
+                case "blocks" -> (v == Math.floor(v) ? String.valueOf((int) v) : String.format(Locale.ROOT, "%.1f", v)) + " blocks";
+                case "slots" -> (int) v + " slots";
+                case "+hp" -> "+" + String.format(Locale.ROOT, "%.1f", v);
+                default -> String.format(Locale.ROOT, "%.1f", v);
+            };
+        }
+    }
+
+    public static double crit(int l) { return 5 + (l - 1) * 2.5; }
+
+    public static double dodge(int l) { return (l - 1) * 2.0; }
+
+    public static double hunger(int l) { return 100 - (l - 1) * 4.0; }
+
+    public static double healing(int l) { return 1.0 + (l - 1) * 0.06; }
+
+    public static double perception(int l) { return 12 + (l - 1) * 2.0; }
+
+    public static double autoHelpSeconds(int l) { return 15 - (l - 1); }
+
+    public static final List<Metric> METRICS = List.of(
+        new Metric("health", "Health", "hp", true, l -> PaHunger.maxHealth(l, 10, 20), "Ten hearts at level 1, like a player; twenty in two rows at level 10"),
+        new Metric("hands", "Between hand actions", "s", false, PaHand::seconds, "Planting, placing, a stack at a chest: never quicker than a hand (0.5 s), but steadier with practice"),
+        new Metric("reach", "Reach", "blocks", true, PaLevels::reach, "How far it reaches for a block"),
+        new Metric("react", "Reaction", "ms", false, l -> PaLevels.reactTicks(l) * 50.0, "How long it takes to notice a change: a target turning, a threat"),
+        new Metric("range", "Bow range", "blocks", true, PaLevels::range, "How far it will shoot"),
+        new Metric("aim", "Bow shake", "", false, l -> PaLevels.spread(l), "Its hands' shake on a full draw, in degrees (smaller is steadier)"),
+        new Metric("damage", "Melee bonus", "+hp", true, PaLevels::damage, "Extra damage on each hit"),
+        new Metric("crit", "Critical hits", "%", true, PaGrowth::crit, "The chance a hit lands half again as hard"),
+        new Metric("dodge", "Dodging", "%", true, PaGrowth::dodge, "The chance it steps out of a melee blow"),
+        new Metric("pack", "Pack", "slots", true, l -> PaPackRules.open(l), "Slots it can carry in (rows open with its level)"),
+        new Metric("hunger", "Hunger for the work", "%", false, PaGrowth::hunger, "How hungry the same work makes it (less with practice)"),
+        new Metric("healing", "Healing", "x", true, PaGrowth::healing, "How quickly it heals while fed"),
+        new Metric("perception", "Notices things within", "blocks", true, PaGrowth::perception, "How far off it notices danger near you and things worth a look"),
+        new Metric("routes", "Plans routes up to", "blocks", true, PaLevels::followRange, "How far ahead it plans a path (fewer dead ends)"),
+        new Metric("help", "Helps unasked every", "s", false, PaGrowth::autoHelpSeconds, "How often it checks what you need, with Auto-help on"));
+
+    /** Break speed reads as a player's at every level, and says so. */
+    public static final String BREAKING = "As a player, by your tool";
+
+    public static Metric metric(String id) {
+        for (Metric m : METRICS) if (m.id().equals(id)) return m;
+        return null;
+    }
+}

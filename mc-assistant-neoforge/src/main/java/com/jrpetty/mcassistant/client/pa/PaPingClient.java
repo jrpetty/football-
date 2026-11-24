@@ -237,6 +237,7 @@ public final class PaPingClient {
 
     private static void send(Aim aim, PaPings.Option o, @Nullable Aim corner) {
         if (o == null) return;
+        if (com.jrpetty.mcassistant.pa.PaLogiWheel.screen(o.id())) { PaLogiClient.open(aim.block(), o.id(), aim.label()); return; }   // [pa36] a picker
         CompoundTag t = new CompoundTag();
         t.putString("target", (corner != null ? PaPings.Target.AREA : aim.target()).name());
         t.putString("opt", o.id());
@@ -382,6 +383,8 @@ public final class PaPingClient {
         if (s.getBlock() instanceof net.minecraft.world.level.block.AbstractFurnaceBlock) return PaPings.Target.FURNACE;
         if (s.getBlock() instanceof net.minecraft.world.level.block.ChestBlock || s.getBlock() instanceof net.minecraft.world.level.block.BarrelBlock)
             return PaPings.Target.CHEST;
+        PaPings.Target box = PaLogiClient.classify(s);                       // [pa36] shulker boxes, hoppers, droppers, ender chests, composters, brewing stands
+        if (box != null) return box;
         if (s.getBlock() instanceof net.minecraft.world.level.block.CropBlock || s.is(net.minecraft.world.level.block.Blocks.FARMLAND)) return PaPings.Target.CROP;
         if (s.is(BlockTags.BASE_STONE_OVERWORLD) || s.is(net.minecraft.world.level.block.Blocks.COBBLESTONE)) return PaPings.Target.STONE;
         return PaPings.Target.GROUND;

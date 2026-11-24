@@ -1,0 +1,41 @@
+# [pa36] Held out: written after the reader was tuned on logistics.txt, scored once untuned (see the notes), then fixed.
+quarry 200 stone and put it in the stone chest || FILL stone 200 > NAMED(stone) by GATHER
+cut down 2 stacks of spruce and store them in that barrel || FILL spruce log 2st > POINT[barrel] by GATHER
+get me a stack of sand and put it in this chest || FILL sand 1st > POINT by GATHER
+dig 48 gravel and drop them into the chest near the door || FILL gravel 48 > NEAR(door) by GATHER
+fill the chest by the bed with bread || FILL bread full > NEAR(bed)
+fill this barrel with 128 cobblestone || FILL cobblestone 128 > POINT[barrel]
+put 10 bread in the food chest || DEPOSIT bread 10 < PACK > NAMED(food) by PACK
+place all the torches in the chest || DEPOSIT torches all < PACK > DEF by PACK
+deposit the stone in that chest || DEPOSIT stone all < PACK > POINT by PACK
+throw the dirt in the barrel || DEPOSIT dirt all < PACK > DEF[barrel] by PACK
+put your iron in my storage || DEPOSIT iron all < PACK > STORAGE by PACK
+unload into the drop off || EMPTY_PACK * all < PACK > DROPOFF by PACK
+dump everything in my storage || EMPTY_PACK * all < PACK > STORAGE by PACK
+put my logs in the wood chest || HANDOVER logs all < ME > NAMED(wood) by PLAYER
+put all my diamonds in my ender chest || HANDOVER diamond all < ME > ENDER[ender chest] by PLAYER
+bring me 3 iron ingots from the storage || FETCH iron ingot 3 < STORAGE > ME by KNOWN
+get me some torches from my chests || FETCH torches some < KNOWN > ME by KNOWN
+hand me the bread from that barrel || FETCH bread some < POINT[barrel] > ME by KNOWN
+take 5 diamonds from the vault || TAKE diamond 5 < STORAGE > PACK by KNOWN
+move the cobblestone from the drop off to my storage || MOVE cobblestone all < DROPOFF > STORAGE
+move everything from that barrel to this chest || MOVE * all < POINT[barrel] > POINT2
+sort out all my chests || SORT * > KNOWN
+sort the barrels || SORT * > KNOWN
+keep the food chest stocked with 32 bread || STOCK bread 32 > NAMED(food)
+keep this barrel full of arrows || STOCK arrows 1st > POINT[barrel]
+keep the smoker fuelled || STOCK fuel 16 > KNOWN[furnace]
+stop stocking the food chest || UNSTOCK > NAMED(food)
+refuel all the furnaces || FUEL fuel > KNOWN[furnace]
+smelt the stuff in this chest || SMELT * all < POINT > NEAREST[furnace]
+collect the ingots from that furnace || COLLECT * all < POINT[furnace]
+how many logs do we have || COUNT logs < KNOWN
+how much bread is in the food chest || COUNT bread < NAMED(food)
+how many emeralds have we got in total || COUNT emerald < KNOWN
+which barrel has the arrows || FIND arrows < KNOWN
+find a chest with iron in it || FIND iron < KNOWN
+where is the coal || FIND coal < KNOWN
+call that barrel the food barrel || NAME > POINT[barrel] [food]
+make that chest my drop off || DROPOFF > POINT
+haul logs from the forest to the wood chest || HAUL logs all < WAYPOINT(forest) > NAMED(wood) [loop]
+fetch my things from where i died || DEATH * all > ME

@@ -4,11 +4,11 @@ fetch us some logs || GATHER:logs
 grab us 16 logs || GATHER:logs:16
 fetch us sixteen logs please || GATHER:logs:16
 get us some stone || GATHER:stone
-chuck it in the chest || DEPOSIT
-pop it in the chest || DEPOSIT
-bung it in the chest || DEPOSIT
-chuck everything in that chest || DEPOSIT@LOOKED
-pop your stuff in the chest || DEPOSIT
+chuck it in the chest || LOGI
+pop it in the chest || LOGI
+bung it in the chest || LOGI
+chuck everything in that chest || LOGI
+pop your stuff in the chest || LOGI
 nip over here || COME
 come here mate || COME
 come here then || COME
@@ -44,8 +44,8 @@ craft iron armour || CRAFT:iron armor
 build a two storey house || BUILD:house
 build a house ten metres away || BUILD:house
 light up the area with torches || LIGHT_AREA
-sort out the chests || SORT
-tidy the chests || SORT
+sort out the chests || LOGI
+tidy the chests || LOGI
 are you alright || STATUS
 you alright || STATUS
 what are you up to || DOING

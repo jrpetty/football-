@@ -69,8 +69,14 @@ class ExtentsTest {
                 assertArrayEquals(new int[]{ -10, 11, -5, 5 }, Extents.turn(e, 0, 0, TownPlan.NORTH), d.name);
                 assertArrayEquals(new int[]{ -11, 10, -5, 5 }, Extents.turn(e, 0, 0, TownPlan.SOUTH), d.name);
             }
+            if (d.name.equals("terrace4") || d.name.equals("terrace5")) {
+                even++;
+                // [house34c] the corner and the crescent: twenty-two across, and deep onto the lots behind (their back north: -z)
+                int deep = d.name.equals("terrace4") ? 15 : 13;
+                assertArrayEquals(new int[]{ -10, 11, -deep, 5 }, Extents.turn(e, 0, 0, TownPlan.NORTH), d.name);
+            }
         }
-        assertTrue(even == 2, "the two wide rows are among the drawings an even number across");
+        assertTrue(even == 4, "the four wide rows are among the drawings an even number across");
     }
 
     /** The places that keep, clear, fill, cut back or sell a building's ground reckon it as its own box. */

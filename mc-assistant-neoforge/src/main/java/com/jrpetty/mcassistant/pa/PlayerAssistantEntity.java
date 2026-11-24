@@ -77,6 +77,9 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.goalSelector.addGoal(2, new PaTaskGoal(this));
         this.goalSelector.addGoal(1, new PaCome.ComeGoal(this));          // [pa33g] told to come: before its work
         this.goalSelector.addGoal(3, new PaBowGoal(this));                 // [pa33g] its own archery (PaBow) in a fight
+        this.goalSelector.addGoal(3, new PaCrossbowGoal(this));            // [pa35] and its crossbow (PaCrossbow)
+        this.goalSelector.addGoal(3, new PaTrident(this));                 // [pa35] and a Loyalty trident, thrown, from level 7
+        this.goalSelector.addGoal(2, new PaLogiGoal(this));                // [pa36] chests and logistics
     }
 
     /** Tests: the goals running just now, by name. */
@@ -199,6 +202,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (source.getEntity() instanceof Player p && isOwner(p)) {
+            if (!level().isClientSide) PaBondAct.event(this, PaBond.Event.HIT);   // [pa35] the bond slips a little (capped a day)
             if (!level().isClientSide && tickCount - mind.lastHit > 400) {   // [pa33b] "Rude."
                 mind.lastHit = tickCount;
                 PaBanter.after(this, "quip.hit", null);
@@ -206,6 +210,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
             return false;
         }
         if (source.getEntity() instanceof ServerPlayer sp && !level().isClientSide) PaBanter.stranger(this, sp, "", true);   // [pa33b] "Steady on."
+        // [pa35] a monster's blow stepped out of, now and then, more often with its level (PaGrowth.dodge); never arrows, fire or falls
+        if (!level().isClientSide && source.getDirectEntity() instanceof net.minecraft.world.entity.Mob m && source.getDirectEntity() == source.getEntity()
+                && getRandom().nextDouble() * 100 < PaGrowth.dodge(veteranLevel())) {
+            net.minecraft.world.phys.Vec3 away = position().subtract(m.position()).normalize().scale(0.35);
+            setDeltaMovement(getDeltaMovement().add(away.x, 0.1, away.z));
+            return false;
+        }
         boolean hit = super.hurt(source, amount);
         if (hit && !level().isClientSide) hunger.exhaust(0.1F);              // [pa33c-2b] a hit taken tires it, as a player
         if (hit && !level().isClientSide && isSleeping()) PaSleep.wake(this, "danger");   // [pa33d] up at once
@@ -215,13 +226,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public void setTarget(@Nullable net.minecraft.world.entity.LivingEntity target) {
         boolean fresh = target != null && fairGame(target) && target != getTarget();
-        super.setTarget(fairGame(target) ? target : null);
+        super.setTarget(fairGame(target) && !PaMemoryAct.sparesEntity(this, target) ? target : null);   // [pa35] "don't kill my cows"
         if (fresh && !level().isClientSide) equipBestWeapon();      // [pa33b] sword out for a fight, as a player would
     }
 
     @Override
     public boolean canAttack(net.minecraft.world.entity.LivingEntity target) {
-        return fairGame(target) && super.canAttack(target);
+        return fairGame(target) && !PaMemoryAct.sparesEntity(this, target) && super.canAttack(target);   // [pa35]
     }
 
     /**
@@ -230,7 +241,33 @@ public class PlayerAssistantEntity extends AssistantEntity {
      */
     @Override
     public boolean mayUseTier(ItemStack s) {
-        return true;
+        return PaLevels.canUse(this, s);                          // [pa35] the gear ladder (crossbow 5, diamond 6, netherite 9...)
+    }
+
+    /**
+     * [pa35] Its bow and crossbow are its own, not a town guard's rank: the bow from the start, the crossbow by the gear
+     * ladder (level 5). (The crew's rule asked for guard level 20 and 30, which its ten levels never reach: its bow
+     * never came out in a fight.)
+     */
+    @Override
+    public boolean mayShoot(ItemStack s) {
+        if (s.is(net.minecraft.world.item.Items.BOW)) return true;
+        if (s.is(net.minecraft.world.item.Items.CROSSBOW)) return PaLevels.canUse(this, s);
+        return false;
+    }
+
+    /** [pa35] Armour by the gear ladder (up to iron at 4, diamond at 6, netherite at 9). */
+    @Override
+    public boolean mayWear(ItemStack s) {
+        return PaLevels.canUse(this, s);
+    }
+
+    /** [pa35] Empty slots in the part of its pack open at its level. */
+    public int packRoom() {
+        net.minecraft.core.NonNullList<ItemStack> inv = getInventoryItems();
+        int open = Math.min(inv.size(), PaPack.open(veteranLevel())), n = 0;
+        for (int i = 0; i < open; i++) if (inv.get(i).isEmpty()) n++;
+        return n;
     }
 
     /** May it fight this? Monsters and the like yes; people, assistants, crews and folk no. */
@@ -274,6 +311,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     protected boolean onCrewRegister() { return false; }
 
+    /** [pa36] Torches it carries for a delivery (a fetch, a fill, a craft into a chest) aren't for lighting its way. */
+    @Override
+    protected boolean keepsItsLights() {
+        return (task != null && task.kind == PaTask.Kind.LOGI) || plan.all().stream().anyMatch(s -> (s.task != null && s.task.kind == PaTask.Kind.LOGI)
+            || (!"LIGHT_AREA".equals(s.kind) && (s.label.contains("torch") || s.count.contains("torch"))));   // making or bringing torches: they're the order's
+    }
+
     @Override
     public boolean levelsBuildSite() { return true; }
 
@@ -284,7 +328,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
     public static final int PLAYER_PACE = 40;
 
     @Override
-    protected int skillWorkPercent() { return PLAYER_PACE; }
+    protected int skillWorkPercent() { return 0; }                  // [pa35] a player's pace comes from PaPace, not a bonus
 
     @Override
     protected void skillPaceParts(java.util.List<PacePart> parts) {
@@ -307,7 +351,15 @@ public class PlayerAssistantEntity extends AssistantEntity {
     /** Griefing safety on every block the work goals would take: a town's ground and other people's land are off. */
     @Override
     public boolean inZone(BlockPos pos) {
-        return super.inZone(pos) && !PaSafety.offLimits(this, pos) && PaBrain.withinRoam(this, pos);
+        return super.inZone(pos) && !PaSafety.offLimits(this, pos) && PaBrain.withinRoam(this, pos)
+            && !PaMemoryAct.spared(this, pos)                          // [pa35] "don't break the blue flowers"
+            && PaMineLock.allowed(this, pos);                          // [pa35] the mining ladder (PaLevels.canMine)
+    }
+
+    /** [pa35] The wood its player likes is chopped first; the wood they don't, only when there's nothing else. */
+    @Override
+    public double gatherRank(net.minecraft.world.level.block.state.BlockState st, double d) {
+        return level().isClientSide ? d : PaMemoryAct.gatherRank(this, st, d);
     }
 
     @Override
@@ -323,6 +375,79 @@ public class PlayerAssistantEntity extends AssistantEntity {
         } finally {
             if (!level().isClientSide) PaChests.askAs(before);
         }
+        if (!level().isClientSide) PaPace.tick(this);                    // [pa35] the cracks, as a player's digging shows
+        if (!level().isClientSide) PaIdleTake.flush(this);               // [pa36b] what it borrowed from a chest, said once
+    }
+
+    /** [pa36b] On its own account it takes only from chests its player allows, never below a stock rule, never valuables. */
+    @Override
+    public int mayTake(BlockPos chest, net.minecraft.world.Container c, net.minecraft.world.item.ItemStack s) {
+        return level().isClientSide ? s.getCount() : PaIdleTake.allowance(this, chest, c, s);
+    }
+
+    @Override
+    public boolean mayTakeAny(BlockPos chest) {
+        return level().isClientSide || PaIdleTake.any(this, chest);
+    }
+
+    @Override
+    public void took(BlockPos chest, net.minecraft.world.item.ItemStack what, int n) {
+        if (!level().isClientSide) PaIdleTake.took(this, chest, what, n);
+    }
+
+    /** [pa36b] A chest it sets down itself is its own (it may take from it when nobody asked). */
+    @Override
+    protected void placedFixture(BlockPos at) {
+        if (level().isClientSide || getOwnerId() == null || !PaContainers.is(level(), at)) return;
+        PaStore.Known k = PaStore.learn(getOwnerId(), level().dimension().location().toString(), at, PaContainers.blockId(level(), at), level().getGameTime());
+        k.own = true;
+        PaStore.touch();
+    }
+
+    // ------------------------------------------------------------------ [pa35] a real player's pace (PaPace)
+
+    /** Breaking takes exactly a player's time with the tool in hand: no level buff, no level debuff. */
+    @Override
+    public int workTicksFor(net.minecraft.world.level.block.state.BlockState state) {
+        int ticks = PaPace.breakTicks(this, state, level(), blockPosition());   // hardness reads the same anywhere for every vanilla block
+        PaPace.began(this, ticks);
+        return ticks;
+    }
+
+    /** Each hand action (planting, tilling, a stack moved...) about 0.6 s apart, never quicker. */
+    @Override
+    public int actionPaceTicks() {
+        return PaPace.hand(this);
+    }
+
+    @Override
+    public int actionPaceTicks(String toolKind) {
+        return PaPace.hand(this);
+    }
+
+    /** A light touch is still a hand's action: the gap never goes under the cap. */
+    @Override
+    public void noteAction(float weight) {
+        super.noteAction(1.0F);
+    }
+
+    /** Blocks laid at the hand's pace (in hundredths of a tick, as the builder counts). */
+    @Override
+    public int buildPaceHundredths() {
+        return PaPace.hand(this) * 100;
+    }
+
+    /** A craft at the bench or a stack at a chest is one hand action; a wait the world sets (a fish's bite) is the world's. */
+    @Override
+    public int pacedTicks(int ticks, int sharePercent) {
+        return sharePercent >= 100 ? PaPace.hand(this) : ticks;
+    }
+
+    /** The swing at a block tells the clock which block (for its cracks). */
+    @Override
+    public void workHit(BlockPos pos) {
+        super.workHit(pos);
+        if (!level().isClientSide) PaPace.hitting(this, pos);
     }
 
     @Override
@@ -397,18 +522,54 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public void awardXp(int amount) {
         super.awardXp(amount);
-        gainXp(amount);
+        gainXp(amount, xpSource == null ? "fight" : xpSource);       // [pa35] by what earned it (a kill when no deed is being paid)
+    }
+
+    /** [pa35] The deed being paid just now (so its experience is counted under it, for the repetition rule). */
+    private String xpSource;
+    /** [pa35] How tired it is of each kind of work (PaXp: less for the same thing over and over). */
+    public final PaXp.Fatigue fatigue = new PaXp.Fatigue();
+
+    @Override
+    public void note(Deed deed, int count) {
+        String was = xpSource;
+        xpSource = deed.name();
+        try {
+            super.note(deed, count);
+        } finally {
+            xpSource = was;
+        }
     }
 
     /** Experience for a kind of work ("job", "build", "trick"...), scaled. */
     public void earn(String what) {
-        gainXp(PaLevels.baseFor(what));
+        gainXp(PaLevels.baseFor(what), what);
     }
 
     void gainXp(int base) {
+        gainXp(base, "work");
+    }
+
+    /** [pa35] A first's bonus (never tired: PaXp.FIRSTS). */
+    public void gainXpFirst(int base) {
+        gainXp(base, "first");
+    }
+
+    /** [pa35] Braver as its bond grows (PaBond.retreatsAt). */
+    @Override
+    public float retreatShare() {
+        PaData.Rec r = level().isClientSide ? null : rec();
+        return r == null ? 0.35F : (float) PaBond.retreatsAt(r.bond.tier());
+    }
+
+    /** [pa35] Paid for some work, less if it has done the same over and over lately (a "first" is never tired). */
+    void gainXp(int base, String key) {
         if (base <= 0 || level().isClientSide) return;
+        double share = key.equals("first") ? 1.0 : fatigue.take(key, level().getGameTime());
+        int got = (int) Math.max(1, Math.round(PaLevels.pay(base, level().getDifficulty().getId(), PaConfig.xpMultiplier()) * share));
+        fatigue.noted(key, got, share, level().getGameTime());
         int before = veteranLevel();
-        paXp = Math.min(10_000_000L, paXp + PaLevels.pay(base, level().getDifficulty().getId(), PaConfig.xpMultiplier()));
+        paXp = Math.min(10_000_000L, paXp + got);
         int after = veteranLevel();
         keepXp();
         if (after > before) PaLevelUp.levelUp(this, before, after);
@@ -437,10 +598,10 @@ public class PlayerAssistantEntity extends AssistantEntity {
         return PaLevels.reach(veteranLevel());
     }
 
-    /** Its level quickens its work far more than a town hand's (level 10: 40% off). */
+    /** [pa35] Its level never quickens its hands or its digging: it works at a player's pace (PaPace); levels buy skill instead. */
     @Override
     public int experiencePercent() {
-        return PaLevels.workPercent(veteranLevel());
+        return 0;
     }
 
     /** Its bow by its level: a wild shot at first, steadier each level, and from level 4 it leads a moving target. */
@@ -540,7 +701,20 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public boolean doHurtTarget(net.minecraft.world.entity.Entity target) {
         hunger.exhaust(0.1F);
-        return super.doHurtTarget(target);
+        // [pa35] a critical hit now and then, more often with its level (PaGrowth.crit): half again as hard, with the sparks
+        boolean crit = !level().isClientSide && getRandom().nextDouble() * 100 < PaGrowth.crit(veteranLevel());
+        var dmg = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "pa_crit");
+        if (crit && dmg != null) dmg.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, 0.5,
+            net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        try {
+            boolean hit = super.doHurtTarget(target);
+            if (hit && crit && level() instanceof ServerLevel sl)
+                sl.sendParticles(net.minecraft.core.particles.ParticleTypes.CRIT, target.getX(), target.getY(0.6), target.getZ(), 8, 0.3, 0.3, 0.3, 0.2);
+            return hit;
+        } finally {
+            if (dmg != null) dmg.removeModifier(id);
+        }
     }
 
     @Override

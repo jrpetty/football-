@@ -102,6 +102,7 @@ public final class PaClient {
                 state = data;
                 stamp++;
                 PaToast.maybeShow(data.getBoolean("has"));
+                PaVoice.maybeAutoDownload(data.getBoolean("has"));          // [pa35] the natural voice, on by default
             }
             case PaPayload.OPEN -> {
                 if (data.getString("tab").equals("stranger")) { mc.setScreen(new PaStrangerScreen(data)); return; }   // [pa33b]
@@ -114,12 +115,23 @@ public final class PaClient {
             case PaPayload.SAY -> said(mc, data);
             case PaPayload.GUIDE -> PaGuideAnswer.answer(data.getInt("id"), data.getString("q"));
             case PaPayload.PING -> PaPingClient.fromServer(data);      // [pa33c-2b]
+            case com.jrpetty.mcassistant.pa.PaLogiNet.KIND -> PaLogiClient.heard(data);   // [pa36] storage, pickers, the Craft view
+            case PaPayload.TOAST -> net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),   // [pa35] a reminder
+                net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+                net.minecraft.network.chat.Component.literal(data.getString("title")), net.minecraft.network.chat.Component.literal(data.getString("text")));
             case PaPayload.LEVEL -> {                                   // [pa33d] a level gained: a toast
-                String sk = data.getString("skills");
+                String sk = data.getString("skills"), un = data.getString("unlocks");
                 net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),
                     net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                    net.minecraft.network.chat.Component.literal(data.getString("name") + " reached level " + data.getInt("level") + "!"),
+                    net.minecraft.network.chat.Component.literal(data.getString("name") + " reached level " + data.getInt("level")),
                     net.minecraft.network.chat.Component.literal(sk.isEmpty() ? "Better at everything it does." : "New: " + sk));
+                if (!un.isEmpty()) {                                    // [pa35] the unlock moment: "Basil can now mine iron ore"
+                    int dot = un.indexOf(". ");
+                    String first = dot > 0 ? un.substring(0, dot) : un.replaceAll("\\.$", ""), rest = dot > 0 ? un.substring(dot + 2) : "Unlocked at level " + data.getInt("level") + ".";
+                    net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),
+                        net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.NARRATOR_TOGGLE,
+                        net.minecraft.network.chat.Component.literal(data.getString("name") + " c" + first.substring(1)), net.minecraft.network.chat.Component.literal(rest));
+                }
             }
             default -> { }
         }
@@ -166,7 +178,7 @@ public final class PaClient {
         stamp++;
         subtitle = d.getString("name") + ": " + text;
         subtitleUntil = System.currentTimeMillis() + 2500L + text.length() * 60L;
-        if (d.getBoolean("speak")) PaVoice.speak(text, d.getFloat("gloom"), d.getFloat("fun"));
+        if (d.getBoolean("speak")) PaVoice.speak(text, d.getFloat("gloom"), d.getFloat("fun"), id);   // [pa35] its gesture waits for its voice
     }
 
     /** The bubble over this assistant just now, or null. */
@@ -314,5 +326,6 @@ public final class PaClient {
         PaHud.draw(g, mc);
         PaPingClient.draw(g, mc);                                 // [pa33c-2b] ping markers
         PaBubbles.draw(g, mc);                                    // [pa33c-2b] speech, inside the screen
+        PaVoiceBanner.draw(g, mc, -1, -1);                        // [pa35] the natural voice coming down
     }
 }

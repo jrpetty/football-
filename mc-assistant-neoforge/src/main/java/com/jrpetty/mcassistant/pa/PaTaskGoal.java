@@ -42,7 +42,7 @@ public class PaTaskGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return a.task != null && a.getTarget() == null && !a.plan.paused;
+        return a.task != null && a.task.kind != PaTask.Kind.LOGI && a.getTarget() == null && !a.plan.paused;   // [pa36] logistics: PaLogiGoal
     }
 
     @Override
@@ -108,11 +108,12 @@ public class PaTaskGoal extends Goal {
             case BUY, SELL -> trade();
             case TAME -> tame();                                 // [pa33d]
             case VTRADE -> villagerTrade();
-            case EQUIP -> { PaPack.equipBest(a); finish("Kitted out.", false); }
+            case EQUIP -> { String kept = PaPack.equipBest(a); finish(kept.isEmpty() ? "Kitted out." : "Kitted out. " + kept, false); }   // [pa35] what it kept back
             case MAP -> map();
             case PILLAR -> pillar();
             case SHOOT -> shoot();
             case BREW -> brew();
+            case LOGI -> { }                                     // [pa36] PaLogiGoal's
         }
     }
 
@@ -330,12 +331,12 @@ public class PaTaskGoal extends Goal {
                 if (!reach(g, 4.0)) { if (gaveUpWalking()) { idx++; walkTicks = 0; } return; }
                 BlockState s = level.getBlockState(g);
                 for (ItemStack d : net.minecraft.world.level.block.Block.getDrops(s, level, g, null)) a.insertItem(d);
-                level.destroyBlock(g, false, a);
+                level.destroyBlock(g, false, a);                             // [pa35] a crop picked: a hand action (PaPace)
                 // grass gives a seed now and then, as it does a player
                 if (a.getRandom().nextInt(3) == 0) a.insertItem(new ItemStack(Items.WHEAT_SEEDS));
                 a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
                 idx++;
-                cool = 4;
+                cool = PaPace.hand(a);
             }
             case 2 -> {                                    // till round the water
                 if (work.isEmpty()) {
@@ -357,7 +358,7 @@ public class PaTaskGoal extends Goal {
                 a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
                 idx++;
                 t.progress = 20 + 50 * idx / work.size();
-                cool = 3;
+                cool = PaPace.hand(a);                                      // [pa35] a hand's pace
             }
             case 3 -> {                                    // and plant
                 if (idx >= work.size()) {
@@ -376,7 +377,7 @@ public class PaTaskGoal extends Goal {
                 }
                 idx++;
                 t.progress = 70 + 30 * idx / work.size();
-                cool = 2;
+                cool = PaPace.hand(a);                                      // [pa35] a hand's pace
             }
             default -> finish("", false);
         }

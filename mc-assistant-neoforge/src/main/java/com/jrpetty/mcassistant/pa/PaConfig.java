@@ -20,6 +20,9 @@ public final class PaConfig {
     static final ModConfigSpec.IntValue START_HEARTS, MAX_HEARTS;             // [pa33c-2b]
     static final ModConfigSpec.BooleanValue KEEP_PACK;
     static final ModConfigSpec.DoubleValue XP_MULT;                           // [pa33d]
+    static final ModConfigSpec.IntValue MEM_CAP;                              // [pa35]
+    static final ModConfigSpec.BooleanValue LADDER_ON;                        // [pa35] the mining ladder
+    static final ModConfigSpec.ConfigValue<String> LADDER;
     static final ModConfigSpec.BooleanValue FREE_FIRST, SAFETY, TOWN_WORK, LLM_ON;
     static final ModConfigSpec.ConfigValue<String> LLM_URL, LLM_KEY, LLM_MODEL;
 
@@ -46,13 +49,20 @@ public final class PaConfig {
         MAX_LANGUAGE = b.comment("[pa33b] The strongest language an assistant may use back when its player is rude to it (others see its bubbles):",
             "clean (never swears), cheeky (bloody, damn, arse, git), or unfiltered (swears). A player's own Language setting can't go past this.")
             .define("maxLanguage", "cheeky");
-        START_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 1 (it gains more as it levels up, to maxHearts at level 10).")
-            .defineInRange("startHearts", 3, 1, 50);
-        MAX_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 10.").defineInRange("maxHearts", 10, 1, 50);
+        // [pa35] new names, so a config written with the old 3/10 hearts doesn't keep them: ten at level 1 like a player, twenty (two rows) at 10
+        START_HEARTS = b.comment("Hearts an assistant has at level 1, like a player's ten (it gains more as it levels up, to heartsAtLevel10).")
+            .defineInRange("heartsAtLevel1", 10, 1, 50);
+        MAX_HEARTS = b.comment("Hearts an assistant has at level 10 (twenty: two rows).").defineInRange("heartsAtLevel10", 20, 1, 50);
         KEEP_PACK = b.comment("[pa33c-2b] Does a fallen assistant keep its pack (true), or drop it where it fell like a player (false)?")
             .define("keepPackOnDeath", true);
         XP_MULT = b.comment("[pa33d] How fast assistants level up: their experience is multiplied by this (1 = the intended grind, many game days to level 10).",
             "Operators can change it in game from the assistant's panel (Settings, Advanced).").defineInRange("xpMultiplier", 1.0, 0.0, 100.0);
+        MEM_CAP = b.comment("[pa35] How many things an assistant may remember for its player (likes, people, rules, reminders). Places are kept apart (32).",
+            "Operators can change it in game from the assistant's panel (Settings, Advanced).").defineInRange("memoryCap", 100, 10, 1000);
+        LADDER_ON = b.comment("[pa35] The mining ladder: an assistant may break an ore only from its level (coal 2, copper 3, iron 4, gold/redstone/lapis 5,",
+            "diamond 6, emerald/obsidian 7, ancient debris 8). Operators can change it in game (Settings, Advanced).").define("miningLadder", true);
+        LADDER = b.comment("[pa35] Rungs moved by operators, e.g. \"iron=3,diamond=5\" (keys: coal copper quartz iron gold redstone lapis diamond emerald obsidian debris special).")
+            .define("miningLadderLevels", "");
         ROAST_OTHERS = b.comment("[pa33b] May an assistant roast another player back when that player roasts it or its owner first? (Never unprompted.)")
             .define("allowRoastOthers", true);
         CHUNKS_ON = b.comment("[pa33g] An assistant told to stay, on guard, at work or walking over to its player keeps the chunks round it loaded",
@@ -108,9 +118,9 @@ public final class PaConfig {
     /** [pa33b] The language cap: 0 clean, 1 cheeky, 2 unfiltered. */
     public static int maxLanguage() { return PaTone.cap(read(MAX_LANGUAGE, "cheeky")); }
 
-    public static int startHearts() { return read(START_HEARTS, 3); }
+    public static int startHearts() { return read(START_HEARTS, 10); }
 
-    public static int maxHearts() { return read(MAX_HEARTS, 10); }
+    public static int maxHearts() { return read(MAX_HEARTS, 20); }
 
     public static boolean keepPack() { return read(KEEP_PACK, true); }
 
@@ -123,6 +133,66 @@ public final class PaConfig {
     private static volatile Double xpForTests;
 
     public static void xpMultiplierForTests(Double m) { xpForTests = m; }
+
+    private static volatile Integer memCapForTests;
+
+    /** [pa35] How many things an assistant may remember for its player. */
+    public static int memoryCap() {
+        Integer t = memCapForTests;
+        return t != null ? t : read(MEM_CAP, 100);
+    }
+
+    /** [pa35] An operator's change from the panel (or a test's, with no config loaded). */
+    public static void setMemoryCap(int n) {
+        int v = Math.max(10, Math.min(1000, n));
+        try {
+            MEM_CAP.set(v);
+            MEM_CAP.save();
+            memCapForTests = null;
+        } catch (Exception e) {
+            memCapForTests = v;
+        }
+    }
+
+    public static void memoryCapForTests(Integer n) { memCapForTests = n; }
+
+    private static volatile Boolean ladderForTests;
+    private static volatile String ladderLevelsForTests;
+
+    /** [pa35] Is the mining ladder on (operators may turn it off)? */
+    public static boolean ladderOn() {
+        Boolean t = ladderForTests;
+        return t != null ? t : read(LADDER_ON, true);
+    }
+
+    /** [pa35] The operators' rung overrides. */
+    public static java.util.Map<String, Integer> ladderLevels() {
+        String t = ladderLevelsForTests;
+        return PaMineLadder.parse(t != null ? t : read(LADDER, ""));
+    }
+
+    /** [pa35] An operator's change from the panel: the ladder on or off, and a rung moved (null leaves it). */
+    public static void setLadder(@javax.annotation.Nullable Boolean on, @javax.annotation.Nullable String key, int level) {
+        java.util.Map<String, Integer> m = ladderLevels();
+        if (key != null) {
+            PaMineLadder.Rung rung = null;
+            for (PaMineLadder.Rung r : PaMineLadder.RUNGS) if (r.key().equals(key)) rung = r;
+            int shipped = rung != null ? rung.level() : -1;
+            for (PaGearLadder.Rung g : PaGearLadder.RUNGS) if (g.key().equals(key)) shipped = g.level();
+            if (shipped > 0) { if (level == shipped) m.remove(key); else m.put(key, Math.max(1, Math.min(PaLevels.MAX, level))); }
+        }
+        try {
+            if (on != null) { LADDER_ON.set(on); LADDER_ON.save(); }
+            LADDER.set(PaMineLadder.format(m));
+            LADDER.save();
+        } catch (Exception e) {
+            if (on != null) ladderForTests = on;
+            ladderLevelsForTests = PaMineLadder.format(m);
+        }
+    }
+
+    /** Tests: the ladder as shipped (null), or on/off with these overrides. */
+    public static void ladderForTests(Boolean on, String levels) { ladderForTests = on; ladderLevelsForTests = levels; }
 
     /** [pa33d] An operator's change from the panel: kept in the server's config file. */
     public static void setXpMultiplier(double m) {

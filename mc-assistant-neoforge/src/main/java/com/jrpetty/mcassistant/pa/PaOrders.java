@@ -67,7 +67,9 @@ public final class PaOrders {
         if (text.length() > 240) text = text.substring(0, 240);
         PaData.Rec r = a.rec();
         if (r != null) {
-            r.say(0, (voice ? "(voice) " : "") + text, a.level().getGameTime());
+            // [pa35] a password, an address, a phone number: never kept, not even in the talk log
+            String logged = PaMemoryParse.secret(text) ? "(something private: not kept)" : text;
+            r.say(0, (voice ? "(voice) " : "") + logged, a.level().getGameTime());
             PaData.touch();
         }
         PlayerAssistantEntity before = PaChests.askAs(a);
@@ -75,6 +77,25 @@ public final class PaOrders {
             hear0(p, a, voice ? PaWords.voiceFix(text) : text, look);   // [pa33b] a spoken order: the recogniser's slips put right
         } finally {
             PaChests.askAs(before);
+        }
+        PaNet.refresh(p, a);
+    }
+
+    /**
+     * [pa35] A standing rule's order, on its trigger (PaMemoryAct): the plain order words through the same reader as
+     * anything said, with no question first (its player set the rule) and nothing logged as said by them.
+     */
+    public static void rule(ServerPlayer p, PlayerAssistantEntity a, String order) {
+        PaData.Rec r = a.rec();
+        boolean confirm = r != null && r.confirm;
+        if (r != null) r.confirm = false;
+        PlayerAssistantEntity before = PaChests.askAs(a);
+        try {
+            PaUnderstand.Reading reading = PaUnderstand.read(order, a.getAssistantName());
+            if (reading.understood()) run(p, a, reading.steps(), Look.NONE, order);
+        } finally {
+            PaChests.askAs(before);
+            if (r != null) r.confirm = confirm;
         }
         PaNet.refresh(p, a);
     }
@@ -98,6 +119,8 @@ public final class PaOrders {
             }
             PENDING.remove(p.getUUID());                // anything else is a new order: the old question lapses
         }
+        // [pa35] something to remember, a question about what it remembers, or "forget that": its memory answers first
+        if (PaQuips.mute(text, a.rec() != null && a.rec().mute > 0) == null && PaMemoryAct.hear(p, a, tone.tone() == PaTone.Tone.RUDE ? tone.order() : text, look)) return;
         // [pa33b] "shut up" (quiet: answers and warnings only), "no more jokes" (plain words), "you can talk again" (itself)
         PaData.Rec mr = a.rec();
         PaQuips.Mute mu = mr == null ? null : PaQuips.mute(text, mr.mute > 0);
@@ -115,7 +138,7 @@ public final class PaOrders {
                 || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);
             if (order) {
                 run(p, a, reading.steps(), look, text);
-                String key = PaTone.key(tone, before, a.mind.toneHeat.heat(), PaTone.level(mr.language, PaConfig.maxLanguage()), mr.mute);
+                String key = PaTone.key(tone, before, a.mind.toneHeat.heat(), PaMemoryAct.language(a, PaTone.level(mr.language, PaConfig.maxLanguage())), mr.mute);   // [pa35] clean near those it was told
                 String back = key == null ? null : PaBanter.toneLine(a, key, thing(reading));
                 if (back != null) PaTalk.reply(a, back);
                 return;
@@ -123,6 +146,8 @@ public final class PaOrders {
         }
         // [pa33b] lip, a kind word, or "tell me a joke": answered in kind. With a real order in it, the order first.
         PaQuips.Comeback cb = PaBanter.comeback(text);
+        if (cb == PaQuips.Comeback.PRAISE || cb == PaQuips.Comeback.LOVE) PaBondAct.event(a, PaBond.Event.PRAISED);    // [pa35] the bond
+        if (cb == PaQuips.Comeback.INSULT && a.mind.toneHeat.heat() >= 3) PaBondAct.event(a, PaBond.Event.INSULTED);   // constant insults only: banter's fine
         if (cb != null) {
             boolean order = reading.clarify() == null && reading.steps().stream().anyMatch(st -> st.kind().queued()
                 || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);
@@ -302,6 +327,7 @@ public final class PaOrders {
         a.plan.paused = false;
         if (a.getMode() == AssistantEntity.Mode.STAY) a.setMode(AssistantEntity.Mode.FOLLOW);   // it has work: it is not standing still
         String what = work.size() == 1 ? cap(work.get(0).label) : work.size() + " steps, starting with: " + work.get(0).label;
+        if (PaLogistics.ownStart(a, work)) return;                         // [pa36] it says its own first word
         PaTalk.reply(a, PaTalk.line(a, "ok") + " " + what + ".");
     }
 
@@ -445,8 +471,9 @@ public final class PaOrders {
             }
             case STOP -> {
                 PaCome.end(a);                                            // [pa33g] another order ends a come-here
+                String moved = PaLogistics.stopping(a);                   // [pa36] what a logistics job had moved, said instead
                 stopAll(a);
-                return PaTalk.line(a, "stop");
+                return moved != null ? moved : PaTalk.line(a, "stop");
             }
             case UNDO -> {
                 a.clearQueue();
@@ -608,6 +635,8 @@ public final class PaOrders {
         switch (i.kind()) {
             case GATHER -> {
                 String what = i.item();
+                String noOre = PaMineLock.refusal(a, what);                // [pa35] the mining ladder
+                if (noOre != null) return noOre;
                 GatherGoal.Kind k = PaItems.kind(what);
                 if (k == null) {
                     if (what.equals("clay") || what.equals("wool") || what.equals("flowers") || what.equals("saplings")
@@ -658,6 +687,13 @@ public final class PaOrders {
             }
             case MINE_ORE -> {
                 String ore = i.item();
+                // [pa35] the mining ladder: an ore above its level it won't touch, and says how far off it is
+                if (look.block() != null && (ore.equals("vein") || i.place() == PaIntent.Place.LOOKED)) {
+                    net.minecraft.world.level.block.state.BlockState ls = a.level().getBlockState(look.block());
+                    if (!PaLevels.canMine(a, ls)) { String no = PaMineLock.refusal(a, net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(ls.getBlock()).getPath().replace("deepslate_", "").replace("_ore", "")); if (no != null) return no; }
+                }
+                String noOre = PaMineLock.refusal(a, ore);
+                if (noOre != null) return noOre;
                 if (!PaItems.hasPickaxe(a)) needPickaxe(a, out);
                 GatherGoal.Kind seen = look.block() == null ? null : kindAt(a, look.block());
                 boolean looking = seen != null && !ore.equals("vein") && seen.label.toLowerCase().contains(ore);   // "mine iron", eyes on iron ore
@@ -733,6 +769,19 @@ public final class PaOrders {
                 return planBuild(p, a, i, look, out);
             }
             case CRAFT -> {
+                List<PaIntent> set = PaCraft.pieces(a, i);                 // [pa36] a whole set of armour: the four pieces, then handed over together
+                if (set != null) {
+                    String short_ = PaCraft.setShort(a, i, set);
+                    if (short_ != null) return short_.isEmpty() ? null : short_;
+                    for (PaIntent piece : set) {
+                        String r = plan(p, a, piece, look, out, said);
+                        if (r != null && !r.isEmpty()) return r;
+                    }
+                    PaCraft.deliverSet(a, i, out, set);
+                    return null;
+                }
+                String held = PaCraft.check(p, a, i, out);                 // [pa36] exactly what's missing, with choices
+                if (held != null) return held.isEmpty() ? null : held;
                 String what = i.item();
                 if (what.equals("charcoal")) {
                     PaPlan.Step s = step("make " + Math.max(1, n) + " charcoal", Kind.SMELT, 10 * Math.max(4, n));
@@ -765,6 +814,7 @@ public final class PaOrders {
                     put.task = new PaTask(PaTask.Kind.PLACE, at, what, 1);
                     out.add(put);
                 }
+                PaCraft.deliver(a, i, out, CraftPlanner.pretty(target), amount);   // [pa36] "make me ..." handed over, "make yourself ..." put on
                 return null;
             }
             case SMELT -> {
@@ -801,6 +851,9 @@ public final class PaOrders {
                 s.jobs.add(Job.give(i.item(), amount));
                 out.add(s);
                 return null;
+            }
+            case LOGI -> {                                         // [pa36] chests, gathering into them, stock jobs, hauls
+                return PaLogistics.plan(p, a, i, look, out, said);
             }
             case GOTO -> {                                         // [pa33c-2b] a ping, a waypoint, where it died, its bed
                 BlockPos to = placeFor(p, a, i, look);
@@ -980,7 +1033,8 @@ public final class PaOrders {
                     out.add(cook);
                 }
                 PaPlan.Step s = step("bring you food", Kind.BRING_FOOD, 15);
-                s.jobs.add(Job.give("food", n > 0 ? n : 4));
+                s.jobs.add(Job.give(PaMemoryAct.foodWord(a), n > 0 ? n : 4));   // [pa35] its player's favourite, when it has some
+                PaMemoryAct.gaveFood(a);
                 out.add(s);
                 return null;
             }

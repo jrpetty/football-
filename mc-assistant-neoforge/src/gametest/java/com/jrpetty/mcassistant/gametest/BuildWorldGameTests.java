@@ -857,7 +857,8 @@ public class BuildWorldGameTests {
          *  +11, not -11; one with a porch out front runs further forward than back)? */
         boolean acrossDrawing(BlockPos q) {
             int[] box = BuildGoal.box(name, a, facing, false);
-            return q.getX() >= box[0] && q.getX() <= box[1] && q.getZ() >= box[2] && q.getZ() <= box[3];
+            return q.getX() >= box[0] && q.getX() <= box[1] && q.getZ() >= box[2] && q.getZ() <= box[3]
+                && com.jrpetty.mcassistant.entity.TerraceRows.onGroundForTests(name, a, facing, q);   // [house34c] the corner's fourth lot
         }
 
         /** Nothing of the lot left inside: no earth, sand, gravel, snow, grass, leaves, wood or water. */

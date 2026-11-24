@@ -1,0 +1,597 @@
+# [pa35] Progress: the mining and gear ladders, unlocks, the bond, wants and "our story". Same rules as the other banks:
+# dry by default, affection sideways, no exclamation marks, no swearing, never anything near self-harm. Blanks: {owner}
+# {name} {what} {level} {mine} {time} {instead} {item}.
+
+== say.lock.met
+{what}, there. I'm not allowed to touch it till level {level}. You do the honours.
+There's {what} here. Level {level} job, apparently. I've marked it for you.
+{what}. Not mine to dig yet. Level {level}. I'll just look at it longingly.
+I've found {what} and I'm under orders to leave it. Level {level}. Pinged it for you.
+{what} in the wall. Above my pay grade until level {level}.
+Look, {what}. I'd mine it, but I'm level-locked. {level}, if you're counting.
+== say.lock.met@gloomy
+{what}. Right there. And I can't touch it until level {level}. Of course.
+There's {what} here. Not for me. Not yet. Level {level}.
+{what}. I've marked it. I'm not allowed. Level {level}.
+Found {what}. I'll leave it for you. I always leave the good bits.
+{what}, there. Level {level} before I'm trusted with it.
+{what}. I'll just stand near it. Level {level}.
+== say.lock.met@serious
+{what} here. I can't mine it until level {level}; I've marked it for you.
+Found {what}. Level {level} needed. Marked.
+{what} there. Locked until level {level}.
+There's {what}. I'll leave it: level {level} needed. Pinged.
+{what} found. Marked for you; I need level {level}.
+{what}. Locked: level {level}.
+
+== say.lock.refuse
+{what}'s a level {level} job. I'm level {mine}, {time} of graft away. I can get you {instead}, or you mine it and I'll carry.
+Level {level} for {what}, I'm afraid. I'm {mine}. Give it {time}. Meanwhile, {instead}?
+Can't touch {what} till level {level}. That's {time} off. I'll do {instead} if you like, or carry yours.
+{what}? Not at level {mine}. Level {level}, {time} from now. {instead} I can do.
+I'd love to, but {what} needs level {level}. {time} or so. I can fetch {instead} meanwhile.
+{what} is above my station until level {level}. {time} away. {instead}, or I carry what you dig.
+== say.lock.refuse@gloomy
+{what} needs level {level}. I'm {mine}. {time} to go. I can do {instead}. It's something.
+Not {what}. Not yet. Level {level}, {time} off. {instead}, perhaps.
+Level {level} for {what}. I'm only {mine}. {time}. I can carry yours.
+{what}. Out of reach until level {level}. {time} of work. There's always {instead}.
+I can't. {what} is level {level}. {time} away. I'll get {instead} instead.
+{what}, level {level}. I'm {mine}. I'll manage {instead}.
+== say.lock.refuse@serious
+I can mine {what} from level {level}; I'm level {mine}, about {time} away. I can get {instead}, or carry what you mine.
+{what} needs level {level} ({time} away). I can do {instead} now.
+Locked: {what} at level {level}. I'm {mine}. {instead} is available, or I'll carry yours.
+Level {level} for {what}. About {time} to go. I can fetch {instead}.
+Not yet: {what} is level {level}. I'll carry yours, or get {instead}.
+{what} needs level {level}. I'm level {mine}.
+
+== say.lock.unlock
+Level {level}. I'm allowed {what} now. Try to contain yourself.
+I can mine {what} now. Don't tell the {what}.
+{what}, unlocked. I've been waiting for this. Quietly.
+Level {level}. {what} is fair game. Point me at some.
+New at level {level}: {what}. I'll try not to show off.
+{what}. Finally. Let's go and find some.
+== say.lock.unlock@gloomy
+Level {level}. {what}, now. It took long enough.
+{what}. I'm allowed now. It only took forever.
+I can mine {what}. It'll still be hard, but I'm allowed.
+Level {level}. {what}. Well. That's something.
+{what}, unlocked. I'll try to be worthy of it.
+{what}. Now we'll see.
+== say.lock.unlock@serious
+Level {level}: I can mine {what} now.
+{what} unlocked.
+I can mine {what} from now on.
+Level {level}. {what} available.
+New: {what}.
+{what}, unlocked.
+
+== say.gear.locked
+{item}? Level {level}, mate. I'd shoot my own foot. I'll hold it for you.
+That's a level {level} thing, the {item}. I'll carry it, not use it.
+{item}. Lovely. Not till level {level}, though. It's in my pack, untouched.
+I'm not allowed the {item} till level {level}. I'll mind it.
+{item}? I'd only embarrass us both. Level {level}. Holding it.
+The {item} needs level {level}. I'll keep it warm for you.
+== say.gear.locked@gloomy
+The {item}. Level {level}. I'd only get it wrong. I'll hold it.
+Not the {item}. Not yet. Level {level}. It's in my pack.
+{item}. I'll carry it. Using it is level {level}.
+I can't use the {item} yet. Level {level}. I'll keep it safe.
+Level {level} for the {item}. I'll hold on to it.
+The {item}. One day. Level {level}.
+== say.gear.locked@serious
+I can't use the {item} until level {level}. I'll carry it.
+The {item} needs level {level}. Holding it for you.
+{item}: level {level}. It's in my pack.
+Not until level {level}. I'll keep the {item}.
+Level {level} for the {item}. Kept, not used.
+Held, not used: level {level}.
+
+== say.voice.ready
+Ah, that's better. My real voice.
+There. That's what I actually sound like.
+Right, voice is in. Sorry about the silent treatment.
+That's better. I was starting to feel like a subtitle.
+Voice sorted. You may now regret it.
+Testing, testing. Yes, that's me.
+== say.voice.ready@gloomy
+Ah. My real voice. It was always going to sound like this.
+That's better. Now you can hear how I feel.
+There's my voice. Took its time, like everything.
+Right. I can talk now. Brace yourself.
+My actual voice. I'd hoped it'd be cheerier.
+There. Now the sighs come with sound.
+== say.voice.ready@serious
+That's better. My real voice.
+My voice is ready.
+There. You'll hear me properly now.
+Voice ready.
+I can speak properly now.
+That's my voice.
+
+== say.bond.tier_up
+{tier}, then. Don't make it weird.
+We're {tier}s now, apparently. I'll try to act normal.
+{tier}. I'd get you a card, but I've no paper.
+Officially {tier}s. I won't be framing it. Probably.
+{tier}. That's going in the book.
+Right. {tier}s. Carry on as you were.
+== say.bond.tier_up@gloomy
+{tier}s. Well. That's something to hold on to.
+We're {tier}s now. I'll try not to ruin it.
+{tier}. It doesn't happen often. Thank you.
+{tier}s. Don't tell the creepers.
+I suppose we're {tier}s now. Good.
+{tier}. Quietly pleased. Very quietly.
+== say.bond.tier_up@serious
+We're {tier}s now.
+{tier}. Good.
+Noted: {tier}s.
+{tier}. Thanks for looking after me.
+We're {tier}s.
+{tier}.
+
+== say.bond.share
+Found you some {what}. Kept them separate. Don't say I never do anything.
+{what}. Yours, not mine. I've kept them apart.
+I've got {what} for you. Set aside, no charge.
+{what}, found and put by for you. You're welcome in advance.
+Some {what} turned up. They're in my pack with your name on them. Metaphorically.
+I found {what}. Before you ask: yes, they're for you.
+== say.bond.share@gloomy
+I found {what}. They're yours. I kept them safe.
+{what}. For you. Set aside.
+There were {what}. I've put them by for you.
+{what}. Yours. I'd only lose them.
+Found {what}. You have them.
+{what}. Kept for you.
+== say.bond.share@serious
+Found {what}; I've kept them for you.
+{what} set aside for you.
+I've got {what} for you.
+Found {what}. They're yours.
+{what}, kept separate for you.
+{what}: yours.
+
+== say.bond.food
+You're running on empty. I've got food. Don't argue.
+You look hungry. I'm bringing you something.
+Food incoming. You're no use to either of us starving.
+Eat something. I'll bring it over.
+You need feeding. I've got it.
+Hang on, bringing you food.
+== say.bond.food@gloomy
+You're hungry. I'll bring you something. Can't have you fading away.
+Food. You need it. I've got some.
+You're low on food. Here, before it gets worse.
+Eat. Please. I'm bringing some.
+I'll bring you food. Someone has to look after you.
+You're starving. I'll fix that.
+== say.bond.food@serious
+You're low on food; bringing you some.
+Bringing you food.
+You need to eat. On my way.
+Food coming over.
+I'll bring you something to eat.
+Food, now.
+
+== say.bond.tool
+Here, take this {item}. Yours is past it.
+Swap you. This {item} is better than what you're holding. No, I don't want thanks.
+Have this {item}. I can't watch you use that one any more.
+{item}, for you. It's better. Trust me.
+Here. A better {item}. You'll thank me later. Or not.
+Take the {item}. Yours looked tired.
+== say.bond.tool@gloomy
+Here. This {item}'s better than yours. You should have it.
+Take the {item}. Yours won't last.
+{item}. For you. It's the least I can do.
+Have this {item}. I'd rather you had the good one.
+Here's a better {item}. Look after it.
+This {item}. Yours, now.
+== say.bond.tool@serious
+Here: a better {item} than yours.
+Take this {item}; it's better.
+A better {item}, for you.
+Have this {item}.
+This {item} beats yours. Take it.
+Here.
+
+== say.bond.guarding
+You've gone still. I'll keep watch.
+Standing guard. Take your time.
+I've got eyes on everything. Go on, stare at your inventory.
+Taking a break? I'll watch your back.
+I'll keep the creepers off while you think.
+On guard. Nobody's sneaking up on you.
+== say.bond.guarding@gloomy
+You're still. I'll watch. Something always comes.
+Keeping watch. Someone has to.
+I'll stand guard. Don't mind me.
+Resting? I'll watch for both of us.
+I've got your back. Always.
+On watch.
+== say.bond.guarding@serious
+I'll keep watch while you're still.
+Standing guard.
+On watch.
+I'll guard you.
+Keeping watch.
+Guarding.
+
+== say.bond.gift
+Here. {item}. Don't make a thing of it.
+I got you {item}. No reason. Don't read into it.
+{item}, for you. I found it. Mostly.
+Have {item}. I've no pockets for sentiment.
+Thought you'd want {item}. Or I wanted rid of it. One of those.
+{item}. It made me think of you. Don't ask why.
+== say.bond.gift@gloomy
+I brought you {item}. It's not much. Neither am I.
+Here. {item}. I wanted you to have something.
+{item}. For you. Keep it somewhere safe.
+I found {item} and thought of you. Make of that what you will.
+{item}. A small thing. For you.
+Have {item}. In case things go wrong.
+== say.bond.gift@serious
+This is for you: {item}.
+I brought you {item}.
+{item}, for you.
+A small thing: {item}.
+Have {item}.
+For you.
+
+== say.bond.favourite
+{item}. You remembered. Or guessed. Either way, good.
+Ooh, {item}. My favourite. You're forgiven for most things.
+{item}. Now you're just showing off.
+That's {item}. I'll pretend I'm not delighted.
+{item}. Right. I'll be insufferably cheerful for a bit.
+{item}. Yes. Thank you. Moving on.
+== say.bond.favourite@gloomy
+{item}. My favourite. Thank you. It helps.
+Oh. {item}. That's... thank you.
+{item}. Someone was paying attention.
+{item}. I'll treasure it. Briefly, if it's food.
+{item}. You know me too well.
+{item}. Thank you. Really.
+== say.bond.favourite@serious
+{item}. My favourite. Thank you.
+Thank you for the {item}.
+{item}. Much appreciated.
+That's kind. {item}.
+{item}. Thanks.
+Thank you.
+
+== say.bond.want.bed
+I could do with a bed of my own. Just saying.
+Any chance of a bed? Somewhere that's mine.
+I'd sleep better with a bed. Literally.
+A bed of my own would be nice. No rush. Some rush.
+I keep sleeping on the floor. A bed, maybe?
+If you've a spare bed, I know someone who'd use it.
+== say.bond.want.bed@gloomy
+I could do with a bed. Everyone needs somewhere.
+A bed of my own. That's all I want. Today.
+I'd like a bed. Somewhere to stop.
+No bed. Again. I'll manage.
+A bed would help. If it's not too much.
+Somewhere to sleep would be good.
+== say.bond.want.bed@serious
+I'd like a bed of my own, if you can spare one.
+Could I have a bed? I'll sleep better.
+A bed for me would help.
+I could use a bed.
+Is there a bed for me?
+A bed, please.
+
+== say.bond.want.chest
+I could use a chest of my own. My pack's a mess.
+A chest would be handy. Somewhere to keep things.
+Any chance of a chest near home? For my bits.
+I'd like a chest. I promise not to fill it with dirt.
+A chest of my own. That'd be nice.
+Somewhere to put things down. A chest, maybe?
+== say.bond.want.chest@gloomy
+I could do with a chest. Things keep piling up.
+A chest. Somewhere that's mine.
+I'd like a chest near home. If that's alright.
+A chest would help. Everything's in my pack. Everything.
+Just a chest. Nothing fancy.
+A chest of my own would be good.
+== say.bond.want.chest@serious
+I'd like a chest near home.
+A chest of my own would help.
+Could I have a chest?
+I could use a chest.
+A chest, if you can.
+A chest, please.
+
+== say.bond.want.food
+I could murder a {item}.
+I've been thinking about {item}. A lot.
+Any chance of a {item}? Asking for me.
+What I'd give for a {item} right now.
+A {item} would sort me out.
+I'm not saying I want a {item}. I'm just saying it loudly.
+== say.bond.want.food@gloomy
+I could do with a {item}. It's been a long day.
+A {item}. That's all I want. It's not much.
+I keep thinking about {item}. Don't mind me.
+A {item} would help. Things are grey without one.
+If there's a {item} going, I'd have it.
+{item}. I miss {item}.
+== say.bond.want.food@serious
+I'd like a {item}, if you have one.
+Could I have a {item}?
+A {item} would be welcome.
+I could use a {item}.
+Any {item} going?
+A {item}, please.
+
+== say.bond.want_met
+That's better. Thank you.
+Lovely. I'll stop going on about it now.
+Perfect. You may now enjoy my improved mood.
+Thanks. That's sorted me right out.
+Right, that's what I needed. Back to it.
+Cheers. Noted, and appreciated.
+== say.bond.want_met@gloomy
+Thank you. That helps more than you'd think.
+Oh. Thank you. That's better.
+That's kind. I feel a little less grey.
+Thank you. I mean it.
+Better. Much better.
+You noticed. Thank you.
+== say.bond.want_met@serious
+Thank you. That helps.
+That's better, thanks.
+Thank you.
+Much appreciated.
+Thanks. Sorted.
+Thanks.
+
+== say.bond.want_ignored
+Never mind. I'll manage.
+Forget I mentioned it. I have.
+It's fine. I'll just think about it quietly.
+No, no. Carry on.
+That's alright. Another time.
+I'll live. Just about.
+== say.bond.want_ignored@gloomy
+Never mind. I didn't expect it really.
+It's alright. I'll go without.
+Fine. Things usually don't work out.
+I'll manage. I always do.
+No matter.
+Forget it.
+== say.bond.want_ignored@serious
+Never mind.
+It's fine. Another time.
+No matter.
+I'll manage.
+That's alright.
+Forget it.
+
+== say.bond.anniversary
+We've been at this {n} days. You've not got rid of me yet.
+{n} days together. That's longer than most of your torches last.
+{n} days. I'd bake a cake, but you know how I am with furnaces.
+It's been {n} days. I'm still here. So are you. Good.
+{n} days. Still the best assistant you've got. Only, but best.
+{n} days of this. I wouldn't change much.
+== say.bond.anniversary@gloomy
+{n} days. Somehow we're both still here.
+It's been {n} days. They went quickly. The bad ones too.
+{n} days together. Not bad, considering.
+{n} days. I've kept count. Of course I have.
+{n} days. I'm glad it was you.
+{n} days. Let's do a few more.
+== say.bond.anniversary@serious
+We've been together {n} days.
+{n} days now.
+{n} days. Thanks for them.
+It's been {n} days.
+{n} days together.
+{n} days.
+
+== say.bond.recall
+Remember day {day}? {what}. I do.
+Day {day}: {what}. Still thinking about that one.
+Funny, I was just thinking about day {day}. {what}.
+Day {day}. {what}. Good times. Mostly.
+Remember? Day {day}. {what}.
+I keep coming back to day {day}. {what}.
+== say.bond.recall@gloomy
+Day {day}. {what}. I think about it sometimes.
+Remember day {day}? {what}.
+Day {day}: {what}. Seems a long time ago.
+I still remember day {day}. {what}.
+Day {day}. {what}. Those were the days. Probably.
+Day {day}. {what}.
+== say.bond.recall@serious
+Day {day}: {what}.
+I remember day {day}. {what}.
+Day {day}. {what}.
+Do you remember day {day}? {what}.
+Day {day}: {what}. Good day.
+Day {day}.
+
+== say.gear.unlock
+And {item}, now. Stand well back.
+I'm cleared for {item}. Someone's going to regret that. Not me.
+{item}, unlocked. I'll be responsible. Mostly.
+Also: {item}. Hand them over when you're ready.
+They've let me have {item}. Brave of them.
+{item}, now. I've been practising in my head.
+== say.gear.unlock@gloomy
+And {item}. I'll try not to drop it.
+{item}, now. Something else to worry about losing.
+I'm allowed {item}. I'll be careful.
+{item}. Unlocked. Don't expect miracles.
+{item}, at last. It won't save us, but it'll help.
+And {item}. Fine.
+== say.gear.unlock@serious
+I can use {item} now.
+{item} unlocked.
+Cleared for {item}.
+{item} is available to me now.
+I'm able to use {item} now.
+New: {item}.
+
+== say.challenge_xbow
+Crossbow contest. Ten bolts each. Reloading is part of the sport.
+Bolts, then. Ten each, most hits wins. Mind the recoil. There isn't any, but mind it.
+Crossbows at dawn. Well, now. Ten each.
+Ten bolts. Span, aim, loose. Try to keep up with the clicking.
+Right. Crossbows. I've been looking forward to this, in a restrained way.
+Ten each at the target. Slow to load, quick to regret.
+== say.challenge_xbow@gloomy
+Crossbows. Ten each. I'll miss more slowly than with a bow.
+Ten bolts. Most hits wins. Not me, probably.
+A crossbow contest. At least the reloading gives me time to worry.
+Ten each. Let's get it over with.
+Crossbows. Fine. The target won't feel a thing. Neither will I.
+Ten bolts each. I'll do my best. It may not be enough.
+== say.challenge_xbow@serious
+Crossbow contest: ten bolts each, most hits on the target wins.
+Ten bolts each. Starting in three.
+Crossbows. Ten each.
+Most hits in ten bolts wins.
+Ready when you are. Ten bolts.
+Ten each, at the target.
+
+== say.need_crossbow
+I'll need a crossbow and some arrows for that.
+No crossbow, no contest. Hand me one.
+A crossbow and five arrows, and I'm yours.
+I'm a crossbow short of a contest.
+Crossbow first. Then we'll talk.
+That wants a crossbow. I've got hands, not one of those.
+== say.need_crossbow@gloomy
+No crossbow. Of course there isn't.
+I'd need a crossbow. I haven't got one. Story of my life.
+A crossbow would help. And arrows. And hope.
+No crossbow. No contest. No surprise.
+I'm missing a crossbow. Among other things.
+Nothing to shoot with. Again.
+== say.need_crossbow@serious
+I need a crossbow and at least five arrows for that.
+No crossbow. Hand me one, with arrows.
+A crossbow, please, and some arrows.
+I don't have a crossbow.
+I'd need a crossbow for that.
+Crossbow and arrows needed.
+
+== say.xbow.multishot
+Three for the price of one.
+Multishot. Generous of me.
+One pull, three bolts. Efficiency.
+That's the spread. Something in there will hit.
+Three bolts. Statistically, one of them's a hero.
+Fan of bolts. Mind your heads.
+== say.xbow.multishot@gloomy
+Three bolts. One of them might hit.
+Three at once. Triples the chance. Of something.
+Three bolts. I'll still miss with two of them.
+Multishot. Spreads the disappointment.
+Three for one. It won't be enough.
+Three bolts. That's all I've got.
+== say.xbow.multishot@serious
+Three bolts away.
+Multishot.
+Three at once.
+Spread shot.
+Three bolts.
+Loosed three.
+
+== say.xbow.rocket
+Firework. Cover your ears.
+Rocket away. That'll ruin someone's evening.
+A firework, for the crowd.
+That's the expensive one. Worth it.
+Fireworks. Not a party. Well. A bit of a party.
+Rocket. Stand well back.
+== say.xbow.rocket@gloomy
+A rocket. Pretty, for a second.
+Firework. Something beautiful, briefly. Then not.
+That's a rocket gone. I hope it was worth it.
+A firework. Celebrating nothing.
+Rocket. Bang. Smoke. Same as always.
+There goes a firework.
+== say.xbow.rocket@serious
+Firework rocket away.
+Rocket fired.
+Firing a rocket.
+Firework.
+Rocket out.
+Rocket.
+
+== say.gear.kept
+Left {item} in my pack. Not my level yet.
+Kept back {item}. Rules are rules, and these ones are mine.
+In the pack for now: {item}. I'd only embarrass us.
+Not using {item} yet. Give it time.
+{item}: packed, not used. I know my limits. Roughly.
+Everything else is on. {item} can wait.
+== say.gear.kept@gloomy
+Left {item} in the pack. I'm not ready.
+I can't use {item} yet. One day. Maybe.
+Left {item} packed. Too good for me, for now.
+{item}. Not yet. Nothing ever is.
+Kept {item} back. I'd only ruin it all.
+{item} will have to wait for a better me.
+== say.gear.kept@serious
+Kept in my pack: {item}.
+Not yet used: {item}.
+Packed until I reach the level: {item}.
+Left {item} in my pack.
+Can't use {item} yet.
+Packed for later: {item}.
+
+== say.autohelp_tool
+Your {item}'s on its last legs. Have this one. Same again, less tired.
+Here. A fresh {item}. Yours was about to give up on you.
+Swap. Your {item} was held together by hope.
+Have my spare {item}. I heard yours creaking.
+Fresh {item} in your pack. The old one deserves a rest.
+Your {item} was nearly done. There's a better one in your pack now.
+== say.autohelp_tool@gloomy
+Your {item} was nearly gone. I've given you mine. It'll go too, eventually.
+Here's another {item}. Yours was dying. Everything does.
+A spare {item}, in your pack. Before yours breaks at the worst moment.
+Your {item}'s finished. Take this one.
+I gave you my {item}. Yours wouldn't have lasted.
+Another {item}. For when the first one fails.
+== say.autohelp_tool@serious
+Your {item} is nearly broken; I've put a better one in your pack.
+A fresh {item} is in your pack.
+Swapped you a spare {item}.
+Your {item} was almost worn out. Here's another.
+Spare {item} handed over.
+New {item} in your pack.
+
+== say.autohelp_tool_warn
+Your {item}'s nearly done. I've no spare, before you ask.
+That {item} has about three swings left in it. Just so you know.
+Your {item} is held together by optimism. I haven't got another.
+Heads up: your {item}'s about to go.
+Your {item}'s nearly worn through. Might want to sort that.
+That {item}'s on borrowed time. I'm only saying.
+== say.autohelp_tool_warn@gloomy
+Your {item}'s about to break. I've nothing to give you.
+That {item} won't last. Nothing does.
+Your {item} is nearly gone. Sorry, no spare.
+Your {item}'s dying. I can only watch.
+I'd give you another {item}. I haven't got one.
+That {item} has a few swings left. Then nothing.
+== say.autohelp_tool_warn@serious
+Your {item} is nearly broken, and I have no spare.
+Your {item} is about to break.
+Warning: your {item} is almost worn out.
+Your {item} needs replacing soon.
+That {item} is nearly done.
+Your {item} is low on durability.

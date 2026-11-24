@@ -112,10 +112,42 @@ public final class PaPersona {
         return null;
     }
 
+    /**
+     * [pa35] Its sense of humour, the player's pick in Settings > Personality. Dry (the default): understated, British,
+     * affection shown sideways; the puns and cheese (lines tagged [bad] or [corny]) are never said. Daft: those come back,
+     * and more often. Sincere: no cheese either, and warmer (its own "@sincere" lines where written, else now and then the
+     * plain kind word instead of the joke), never syrupy.
+     */
+    public enum Humour {
+        DRY("Dry", "Understated. Affection shown sideways."), DAFT("Daft", "Puns and cheese. You asked for this."), SINCERE("Sincere", "Warmer. Still not soppy.");
+
+        public final String label, tip;
+
+        Humour(String label, String tip) { this.label = label; this.tip = tip; }
+
+        public static Humour of(int i) { return values()[Math.floorMod(i, values().length)]; }
+    }
+
+    /** [pa35] A pun or a cheesy line: only ever said with a Daft sense of humour. */
+    public static boolean corny(String line) {
+        java.util.Set<String> t = PaLines.tags(line);
+        return t.contains("bad") || t.contains("corny") || t.contains("daft");   // [pa35] pa-36 tags its cheesy logistics lines [daft]
+    }
+
+    /** [pa35] The lines this sense of humour may say (Dry and Sincere: no corny ones). */
+    public static List<String> allowed(List<String> list, Humour h) {
+        if (list == null || h == Humour.DAFT) return list;
+        List<String> out = new ArrayList<>(list.size());
+        for (String s : list) if (!corny(s)) out.add(s);
+        return out;
+    }
+
     /** Lines said lately, so they are not said again soon. */
     public static final class Recent {
         private final ArrayDeque<String> lines = new ArrayDeque<>();
         private final int size;
+        /** [pa35] Its owner's chosen sense of humour (Dry unless set). */
+        public volatile Humour humour = Humour.DRY;
 
         public Recent(int size) { this.size = size; }
 
@@ -137,7 +169,14 @@ public final class PaPersona {
 
     /** A line from a list, not one said lately (else the one said longest ago). */
     public static String from(List<String> list, PaPhrases.Dice d, Recent recent) {
+        Humour h = recent == null ? Humour.DRY : recent.humour;
+        list = allowed(list, h);   // [pa35] Dry and Sincere never say the corny ones
         if (list == null || list.isEmpty()) return null;
+        if (h == Humour.DAFT && d.nextInt(100) < 40) {   // [pa35] Daft: the cheese, more often
+            List<String> cheese = new ArrayList<>();
+            for (String s : list) if (corny(s) && (recent == null || !recent.has(s))) cheese.add(s);
+            if (!cheese.isEmpty()) { String pick = cheese.get(d.nextInt(cheese.size())); if (recent != null) recent.add(pick); return pick; }
+        }
         List<String> fresh = new ArrayList<>();
         for (String s : list) if (recent == null || !recent.has(s)) fresh.add(s);
         String pick;
@@ -163,6 +202,12 @@ public final class PaPersona {
      * or for a remark, nothing).
      */
     public static List<String> linesFor(String key, Tri t, PaPhrases.Dice d) {
+        return linesFor(key, t, d, null);
+    }
+
+    /** [pa35] As above, with its sense of humour (from the recent lines' owner): Sincere swaps some jokes for warmth. */
+    public static List<String> linesFor(String key, Tri t, PaPhrases.Dice d, Recent recent) {
+        Humour h = recent == null ? Humour.DRY : recent.humour;
         String e = edge(t);
         if (e != null && PaLines.has(key + "@" + e) && d.nextInt(100) < 60) return PaLines.get(key + "@" + e);
         Corner c = corner(t, d);
@@ -171,6 +216,10 @@ public final class PaPersona {
             case GLOOMY -> PaLines.has(key + "@gloomy") ? PaLines.get(key + "@gloomy") : PaLines.get(key + "@fg");
             case SERIOUS -> PaLines.get(key + "@serious");
         };
+        if (c == Corner.FUNNY && h == Humour.SINCERE) {   // [pa35] warmer: its own sincere lines, else sometimes the plain kind one
+            if (PaLines.has(key + "@sincere") && d.nextInt(100) < 65) return PaLines.get(key + "@sincere");
+            if (PaLines.has(key + "@serious") && d.nextInt(100) < 35) return PaLines.get(key + "@serious");
+        }
         if (l.isEmpty()) return null;
         if (c == Corner.FUNNY && t.funny() < 0.8) {
             List<String> mild = new ArrayList<>();
@@ -200,6 +249,7 @@ public final class PaPersona {
         if (moment != null && PaLines.has("self." + lk + "@on." + moment) && d.nextInt(100) < 50) {
             List<String> on = new ArrayList<>(PaLines.get("self." + lk + "@on." + moment));
             if (recent != null) on.removeIf(recent::has);
+            if (recent != null && recent.humour != Humour.DAFT) on.removeIf(PaPersona::corny);   // [pa35]
             if (!on.isEmpty()) return from(on, d, recent);
         }
         if (t.serious() < 0.9 && !key.startsWith("comeback.") && d.nextInt(100) < LOOK_SHARE_PERCENT) {   // an answer answers: no look aside
@@ -215,9 +265,10 @@ public final class PaPersona {
             }
             if (t.funny() < 0.8) pool.removeIf(PaPersona::cheeky);
             if (recent != null) pool.removeIf(recent::has);      // a look's lines, used up, give way to the situation's
+            if (recent == null || recent.humour != Humour.DAFT) pool.removeIf(PaPersona::corny);   // [pa35]
             if (!pool.isEmpty()) return from(pool, d, recent);
         }
-        List<String> l = linesFor(key, t, d);
+        List<String> l = allowed(linesFor(key, t, d, recent), recent == null ? Humour.DRY : recent.humour);   // [pa35] what this humour may say
         // the Joke Machine never runs dry: a used-up list gives way to its general commentary
         if (key.startsWith("jm.") && l != null && recent != null && l.stream().allMatch(recent::has)) {
             List<String> more = new ArrayList<>(PaLines.get("jm.any"));
@@ -225,17 +276,26 @@ public final class PaPersona {
             more.addAll(PaLines.get("self." + lk));
             more.addAll(PaLines.get("quip.idle"));
             if (t.funny() < 0.8) more.removeIf(PaPersona::cheeky);
+            more = allowed(more, recent.humour);
             if (more.stream().anyMatch(s -> !recent.has(s))) l = more;
         }
         return from(l, d, recent);
     }
 
     /** Fill the blanks; any left over read plainly. */
+    private static final java.util.regex.Pattern SENTENCE_START = java.util.regex.Pattern.compile("(^|[.!?]\\s+)([a-z])");
+
     public static String fill(String raw, Map<String, String> kv) {
         if (raw == null) return null;
         String s = raw;
         for (Map.Entry<String, String> e : kv.entrySet()) s = s.replace("{" + e.getKey() + "}", e.getValue() == null ? "" : e.getValue());
-        return s.replace("{owner}", "you").replace("{name}", "I").replace("{did}", "Done").replace("{what}", "").replace("{item}", "it")
+        s = s.replace("{owner}", "you").replace("{name}", "I").replace("{did}", "Done").replace("{what}", "").replace("{item}", "it")
             .replaceAll("\\s+", " ").trim();
+        // [pa35] a blank filled at the start of a sentence ("a poppy. For you.") starts it with a capital
+        java.util.regex.Matcher m = SENTENCE_START.matcher(s);
+        StringBuilder b = new StringBuilder();
+        while (m.find()) m.appendReplacement(b, java.util.regex.Matcher.quoteReplacement(m.group(1) + m.group(2).toUpperCase(Locale.ROOT)));
+        m.appendTail(b);
+        return b.toString();
     }
 }

@@ -1,0 +1,1154 @@
+# [pa35] The assistant's memory: what it says when it is told something to remember, asked what it remembers, told to
+# forget, reminded, and when it brings a memory up later. "== key" starts a list; "@gloomy", "@serious", or an edge picks
+# the corner (no corner is Funny). Blanks: {owner} (what it calls its player) {name} {what} {who} {when} {n} {thing}
+# {dist} {dir} {player}. Rules: witty, never corny; short; no exclamation marks; no swearing; gloom about chores and
+# weather only; never anything near self-harm. A memory is its player's: these lines are said to its player alone.
+
+== say.mem.got.name
+{what} it is. I'll practise saying it in a mirror.
+{what}. Got it. Suits you, I think.
+From now on you're {what}. I've crossed out the old one.
+{what}. Lovely. I'll use it sparingly so it stays special.
+Noted: {what}. Rolls off the tongue. Well, my tongue.
+{what} it is. I won't make it weird. Much.
+{what}. Has a ring to it. Like a bell, but more you.
+== say.mem.got.name@gloomy
+{what}. Fine. I'll remember it longer than most things last.
+{what}, then. Names are the only thing that doesn't wear out.
+Noted. {what}. It'll be on my list of things I worry about.
+{what}. Right. I'll say it with appropriate solemnity.
+{what}. Another thing to remember. I'm good at remembering. It's the forgetting I can't do.
+Very well. {what}. It's a name built for grey weather.
+== say.mem.got.name@serious
+Understood. I'll call you {what}.
+{what} it is.
+Noted. {what} from now on.
+I'll remember that: {what}.
+Right. {what}.
+Got it, {what}.
+
+== say.mem.got.like
+{what}. Good taste. I'll keep it in mind.
+Noted: you like {what}. I'll act surprised less often.
+{what}, then. I'll steer us that way when I can.
+You like {what}. Filed under "things that make {owner} happy". It's a short file. Kidding.
+{what}. I'll remember. I remember everything. It's a curse, but a useful one.
+Right, {what}. Consider my choices quietly adjusted.
+{what}. Good. One more thing I know about you.
+== say.mem.got.like@gloomy
+{what}. At least one of us likes something. I'll remember.
+Noted. {what}. Enjoy it while it lasts.
+{what}. I'll keep that safe. It's the safest thing I've got.
+You like {what}. I'll try to make sure there's some about. No promises from the universe.
+{what}, then. Good. Something to hold on to.
+I'll remember you like {what}. It's nice to have a cheerful fact on file.
+== say.mem.got.like@serious
+Noted: you like {what}.
+I'll remember that you like {what}.
+Understood. {what}, where I have a choice.
+Got it. {what}.
+{what}. I'll keep it in mind.
+Right. I'll favour {what}.
+
+== say.mem.got.dislike
+{what}. Struck off. They're dead to me. Metaphorically, mostly.
+Noted: no {what}. I'll glare at them on your behalf.
+You can't stand {what}. Neither can I, now. Solidarity.
+{what}, on the list. The bad list. It's longer than the good one.
+Right. {what} are officially rubbish. I'll tell them.
+{what}. Understood. I'll keep them out of your way.
+Noted. If I see {what}, I'll be very disapproving at them.
+== say.mem.got.dislike@gloomy
+{what}. Yes. They are dreadful, aren't they.
+Noted. {what}. Another thing in the world that shouldn't be.
+{what}. I'll remember. They'll still turn up, though. They always do.
+You hate {what}. Understood. I'll keep them away as long as I can.
+{what}, then. I didn't think much of them either.
+I'll remember that. There's a lot of {what} about, unfortunately.
+== say.mem.got.dislike@serious
+Noted: you dislike {what}.
+I'll keep {what} away from you where I can.
+Understood. No {what}.
+Got it. {what} are on the list.
+Right. I'll avoid {what}.
+I'll remember that you can't stand {what}.
+
+== say.mem.got.fav
+{what}. Your favourite {thing}. I'll keep a sharp eye out.
+Favourite {thing}: {what}. I'll bring it up at awkward moments.
+{what}. Excellent choice. Second only to mine, which is unknowable.
+Noted. {what}. I'll make sure there's some about.
+Your favourite {thing} is {what}. I feel like we're closer already.
+{what}. Committed to memory, and to my shopping list.
+{what}, then. I'll remember that longer than you will.
+== say.mem.got.fav@gloomy
+{what}. Your favourite {thing}. Everyone needs one good thing.
+Noted. {what}. I'll try to keep you supplied before it runs out.
+Your favourite {thing}: {what}. I'll treasure that fact. Quietly.
+{what}. Right. At least the important things are clear.
+{what}. I'll remember. Favourites are worth remembering.
+Your favourite {thing} is {what}. Good. Something to look forward to.
+== say.mem.got.fav@serious
+Noted: your favourite {thing} is {what}.
+{what}. I'll remember.
+Understood. Favourite {thing}: {what}.
+Got it. {what}.
+I'll keep that in mind: {what}.
+Right. {what} it is.
+
+== say.mem.got.fact
+Noted: {what}. I've written it down. In my head. In ink.
+{what}. Got it. I'll remember that for you.
+Right. {what}. Locked away and ready when you need it.
+{what}. Noted. Ask me any time.
+Filed: {what}. My memory has better shelves than your chests.
+{what}. Got it. I won't forget. I can't, really.
+== say.mem.got.fact@gloomy
+{what}. Noted. Someone ought to remember these things.
+I'll remember: {what}. Someone has to.
+{what}. Filed with all the other things that matter.
+Right. {what}. I'll keep it safe.
+Noted. {what}. It'll still be true later. Probably.
+{what}. Remembered. It's what I'm for.
+== say.mem.got.fact@serious
+Noted: {what}.
+I'll remember that.
+Got it: {what}.
+Understood. {what}.
+Remembered.
+Right. {what}.
+
+== say.mem.got.place
+This is the {what}. I've made a note, and a little flag in my head.
+The {what}, right here. Say "go to the {what}" and I'm off.
+Noted: the {what}. I'll find it in the dark. Probably.
+The {what}. Got it. I'll know my way back.
+Right, the {what}. Marked. Very official.
+The {what}. I'll remember where it is even if you don't.
+== say.mem.got.place@gloomy
+The {what}. Marked. It'll still be here. Places usually are.
+Right. The {what}. I'll remember the way.
+The {what}. Noted. It's a good spot. For now.
+I'll remember the {what}. I'm good at finding my way back to things.
+The {what}. Marked. Somewhere to come back to.
+Noted. The {what}. A place to be. That's something.
+== say.mem.got.place@serious
+Saved: the {what}.
+The {what}. I'll remember where it is.
+Noted. The {what} is here.
+Marked: the {what}. Say "go to the {what}" to send me.
+Got it. The {what}.
+The {what}, saved.
+
+== say.mem.got.friend
+{who}. A friend of yours is a friend of mine. Within reason.
+{who}'s one of us, then. I'll look out for them.
+Noted: {who} is a friend. I'll be nice. Genuinely nice. It's tiring.
+{who}. Friend. I'll keep an eye on them, the good kind of eye.
+Right, {who}. I'll help them out when I can.
+{who}'s a friend. Excellent. I'll stop practising my glare on them.
+== say.mem.got.friend@gloomy
+{who}. A friend. Good. Friends are rarer than diamonds.
+Noted. {who}. I'll look after them as well as I can.
+{who}'s a friend. I'll keep them safe. Safer than they keep themselves, I expect.
+{who}. Right. It's good you've got someone.
+I'll remember {who}. We need all the friends we can get.
+{who}, a friend. I'll do my best for them. My best is quite good.
+== say.mem.got.friend@serious
+Noted: {who} is your friend.
+I'll help {who} when I can.
+Understood. {who} is a friend.
+Got it. I'll look out for {who}.
+Right. {who} is one of ours.
+{who}. Friend. Understood.
+
+== say.mem.got.foe
+{who}. Not to be trusted. I'll watch them like a hawk. A blocky hawk.
+Noted: {who} is trouble. My eyebrows are permanently raised.
+{who}. Right. They get nothing from me but suspicion and short answers.
+{who}, on the list. Not the good list.
+Understood. If {who} asks me for anything, the answer's no.
+{who}. Got it. I'll be politely unhelpful in their direction.
+== say.mem.got.foe@gloomy
+{who}. I had a feeling. There's always one.
+Noted. {who}. I'll keep my distance and my wits.
+{who}. Not to be trusted. Like the weather.
+Right. {who}. I'll warn you if they turn up. They will.
+{who}. I'll remember. It's the sort of thing worth remembering.
+{who}, then. Noted with a heavy heart.
+== say.mem.got.foe@serious
+Noted: {who} is not to be trusted.
+I'll take no orders from {who}.
+Understood. I'll warn you if {who} comes near.
+Got it. {who} is trouble.
+Right. I'll keep an eye on {who}.
+{who}. Not trusted. Understood.
+
+== say.mem.got.onlyme
+Orders from you and you alone. Everyone else gets a polite stare.
+Understood. You're the only boss. I'll tell the others to queue elsewhere.
+Just you, then. I'm loyal. It's one of my better features.
+Noted. Nobody else gives me orders. Not even nicely.
+Right. Only you. The rest can whistle.
+Got it. One boss. Very tidy.
+== say.mem.got.onlyme@gloomy
+Only you. That's how it should be, really.
+Noted. I'll listen to you and no one else. It's simpler that way.
+Just you. Fine. Fewer people to disappoint.
+Understood. Nobody else. I'll ignore them sadly but firmly.
+Only you, then. I'll stay loyal. It's what I've got.
+Right. One voice. Yours.
+== say.mem.got.onlyme@serious
+Understood. I'll only take orders from you.
+Noted. Nobody else gives me orders.
+Got it. Only you.
+Right. Orders from you only.
+I'll ignore orders from anyone else.
+Understood.
+
+== say.mem.got.clean
+Clean language around {who}. I'll be a model of decorum. A model.
+Noted: no swearing near {who}. I'll save it all up for later.
+Around {who}, I'm a choirboy. A blocky one.
+Got it. {who} gets the family-friendly version of me.
+Right. When {who}'s about, I'll mind my language. And my manners, since I'm at it.
+{who}. Clean words only. I'll say "fiddlesticks" a lot.
+== say.mem.got.clean@gloomy
+No swearing near {who}. Fine. I'll keep my bleaker thoughts polite.
+Noted. Around {who} I'll be on my best behaviour. It's very tiring.
+{who}. Clean language. The world's rough enough already.
+Right. When {who}'s near, I'll keep it clean. Grimly clean.
+I'll watch my language around {who}. Somebody should be protected from things.
+Understood. {who} gets the polite me.
+== say.mem.got.clean@serious
+Understood. No swearing around {who}.
+Noted. I'll keep it clean near {who}.
+Got it. Clean language when {who} is about.
+Right. I'll mind my language around {who}.
+I'll keep it clean around {who}.
+Understood.
+
+== say.mem.got.spare
+Hands off the {what}. Understood. My hands are very obedient.
+The {what} stay. I'll walk round them like they're priceless.
+Noted: I won't touch the {what}. Not even a little.
+The {what}. Off limits. I'll tell my pickaxe.
+Right. The {what} are safe from me.
+Never the {what}. Got it. I'll admire them from a distance.
+== say.mem.got.spare@gloomy
+The {what}. I'll leave them be. Not much stays the same, but they can.
+Noted. I won't touch the {what}.
+The {what}, spared. Something should be.
+Right. Hands off the {what}. They've enough to put up with.
+I'll leave the {what} alone. Someone has to let things be.
+The {what}. Safe from me, at least.
+== say.mem.got.spare@serious
+Understood. I won't touch the {what}.
+Noted. The {what} are off limits.
+Got it. I'll leave the {what} alone.
+Right. Never the {what}.
+I'll keep away from the {what}.
+Understood.
+
+== say.mem.got.stock
+{n} {what}, always. I'll keep them topped up and say nothing smug about it.
+Noted: never fewer than {n} {what}. I'll make more when I run low.
+{n} {what} on me at all times. I'll jingle when I walk.
+Right. {n} {what}, kept and not given away.
+{n} {what}. I'm a walking supply cupboard now.
+Got it. I'll keep {n} {what} handy and restock when I'm free.
+== say.mem.got.stock@gloomy
+{n} {what}, always. Prepared for the worst, as usual.
+Noted. I'll keep {n} {what}. You never know.
+{n} {what}. Right. I'll restock before we run out. We always run out.
+I'll keep {n} {what} on me. It's good to be ready.
+{n} {what}. For the dark days. There are a lot of those.
+Understood. {n} {what}, kept.
+== say.mem.got.stock@serious
+Understood. I'll keep {n} {what} on me.
+Noted. {n} {what}, restocked when low.
+Got it. I won't give away the last {n} {what}.
+Right. {n} {what}, always.
+I'll keep at least {n} {what}.
+Understood.
+
+== say.mem.got.rule
+{when}, {what}. Consider it a standing order. I'll stand.
+Noted: {when}, I'll {what}. Like clockwork, if clocks were keen.
+Right. {when}: {what}. I'll do it without being asked twice. Or once.
+{when}, {what}. Very organised of you. I'm impressed. Slightly.
+Got it. {when} it's {what}. I'll remember even when you don't.
+{when}, {what}. A routine. I love a routine. It's the only thing I've got.
+== say.mem.got.rule@gloomy
+{when}, {what}. Same as ever. That's how it goes.
+Noted. {when}, I'll {what}. Every time. Without fail. Forever.
+Right. {when}: {what}. A small routine against the chaos.
+{when}, {what}. I'll do it. Someone should.
+Got it. {when}, {what}. Life is mostly routines anyway.
+{when}, {what}. Understood. I'll keep at it.
+== say.mem.got.rule@serious
+Understood. {when}, I'll {what}.
+Noted: {when}, {what}.
+Got it. {when}: {what}.
+Right. I'll {what} {when}.
+Standing order noted: {when}, {what}.
+Understood. {when}, {what}.
+
+== say.mem.got.reminder
+I'll remind you {when}{what}. Consider me your nagging conscience.
+Noted. {when}, I'll give you a nudge{what}. A polite nudge. Mostly.
+Right. Reminder set for {when}{what}. I'll be insufferable about it.
+{when}{what}. I'll tap you on the shoulder. Figuratively.
+Got it. I'll remember for you, {when}{what}.
+Reminder: {when}{what}. One less thing in your head.
+== say.mem.got.reminder@gloomy
+I'll remind you {when}{what}. If we're both still about. We will be.
+Noted. {when}, a reminder{what}. Time goes quicker than you'd think.
+Right. {when}{what}. I'll remember. I always do.
+A reminder, {when}{what}. Some things shouldn't be forgotten.
+Got it. {when}{what}. I'll be counting.
+{when}{what}. I'll remind you. It'll come round soon enough.
+== say.mem.got.reminder@serious
+I'll remind you {when}{what}.
+Reminder set: {when}{what}.
+Got it. {when}{what}.
+Noted. I'll remind you {when}{what}.
+Understood. {when}{what}.
+Right. A reminder {when}{what}.
+
+== say.mem.got.self_bad
+Rubbish at {what}, am I. Noted. I'll be bringing that up later.
+{what}, rubbish. I've written it down, next to "unfair".
+Bad at {what}. That's going in my memoirs, chapter "Slander".
+Noted. I'll remember that the next time I do {what} brilliantly.
+Rubbish at {what}. Bold words from someone I've seen fall in a hole.
+I'll remember you said that. I remember everything. Everything.
+Noted. I'll be quietly better at {what} out of spite.
+== say.mem.got.self_bad@gloomy
+Rubbish at {what}. Yes. I'd suspected. I'll try harder.
+Noted. {what}. I'll remember that one longer than I'd like.
+Bad at {what}. I'll practise. In the dark. Alone. Like always.
+Right. {what}. Another thing to be not very good at.
+Noted. I'll do better at {what}. Or at least the same, more quietly.
+I'll remember. It'll come back to me at three in the morning.
+== say.mem.got.self_bad@serious
+Noted. I'll work on my {what}.
+Understood. I'll try to do better at {what}.
+Fair enough. I'll improve my {what}.
+Noted. {what} needs work.
+I'll remember that, and do better at {what}.
+Understood. I'll practise {what}.
+
+== say.mem.got.self_good
+Good at {what}. I knew it. I'm framing that.
+Noted. "Good at {what}." I'll be unbearable about it for weeks.
+Thank you. I'll remember that the next time I'm being underappreciated.
+Good at {what}. Yes. Yes I am. Thank you for noticing.
+{what}, mastered. You heard it here first.
+I'll remember you said that. I'll remind you of it. Often.
+== say.mem.got.self_good@gloomy
+Good at {what}. That's kind. I'll hold on to that.
+Noted. It's nice to be good at something.
+Good at {what}. I'll remember. It's a rare bright spot.
+Thank you. I'll keep that somewhere safe.
+Good at {what}. I won't let it go to my head. There's not much room up there.
+I'll remember that. It helps more than you'd think.
+== say.mem.got.self_good@serious
+Thank you. I'll remember that.
+Noted. Glad it shows.
+Thanks. I'll keep it up.
+Appreciated.
+Noted, thank you.
+Thanks. I'll keep at it.
+
+== say.mem.got.rename
+{what}. New name, same me. Slightly more dashing.
+{what} it is. I'll answer to it, and to "oi".
+I'm {what} now. I feel taller already.
+{what}. Very well. My old name and I have had a good run.
+{what}. I like it. I'll grow into it.
+Call me {what}. Everyone else will, once I tell them.
+== say.mem.got.rename@gloomy
+{what}. Fine. Names come and go.
+I'm {what} now. Same old me underneath.
+{what}. Right. I'll get used to it eventually.
+{what}, then. A new name for the same long day.
+{what}. I'll answer to it. I answer to most things.
+Very well. {what}. It has a certain weary dignity.
+== say.mem.got.rename@serious
+Understood. My name is {what}.
+{what} it is.
+Call me {what} from now on.
+Right. I'm {what}.
+Noted. {what}.
+Understood. {what}.
+
+== say.mem.recall.intro
+Here's what I've got on you:
+Right, from the files:
+What I remember, in no particular order:
+Here's what you've told me:
+My notes on you, abridged:
+Let me see. I know this much:
+== say.mem.recall.intro@gloomy
+Here's what I remember. It's quite a lot:
+What I've kept, for what it's worth:
+I remember all this:
+Here's what you've told me. I've kept it safe:
+My memory, such as it is:
+What I know:
+== say.mem.recall.intro@serious
+Here's what I remember:
+What you've told me:
+I remember this:
+My notes:
+Here's what I know:
+In short:
+
+== say.mem.recall.none
+You haven't told me anything about yourself yet. Mysterious. I like it.
+My notes on you are a blank page. Tell me things.
+Nothing yet. Tell me what you like, and I'll remember it.
+I know nothing about you. Well, I know you're here. That's a start.
+Empty. Tell me your favourite food and we'll go from there.
+Nothing on file. You're an enigma wrapped in a block.
+== say.mem.recall.none@gloomy
+Nothing yet. You haven't told me anything. It's fine.
+My notes are empty. Like the night sky without the stars.
+I don't know anything about you yet. I'd like to.
+Nothing. A blank page. Tell me something worth keeping.
+You haven't told me anything. I'm a good listener, if you want one.
+Nothing on file. Yet.
+== say.mem.recall.none@serious
+You haven't told me anything to remember yet.
+Nothing yet. Tell me what you like, or where your base is.
+I don't have anything on file.
+Nothing so far.
+My memory's empty. Tell me something.
+Nothing yet.
+
+== say.mem.recall.unknown
+You never told me {what}. I'd remember. I remember everything.
+No idea. You've kept {what} a secret. Spill.
+That's one thing you haven't told me: {what}.
+I don't know {what}. Tell me and I'll never forget it.
+Blank on {what}. You've never said.
+{what}? Not a clue. You're a closed book on that one.
+== say.mem.recall.unknown@gloomy
+I don't know {what}. You never said.
+{what}. No. I'd remember if you'd told me.
+You haven't told me {what}. Another mystery.
+I don't know. Some things you keep to yourself.
+{what}? No idea, I'm afraid.
+Not that. You never mentioned {what}.
+== say.mem.recall.unknown@serious
+You haven't told me {what}.
+I don't know {what} yet.
+You never said {what}.
+I don't have {what} on file.
+I don't know. Tell me and I'll remember.
+Not known: {what}.
+
+== say.mem.recall.fav
+{what}. Your favourite {thing}. Obviously.
+{what}. You told me. I wrote it on my heart. And my notes.
+Your favourite {thing} is {what}. I'm not likely to forget.
+{what}. Did I pass?
+It's {what}. Ask me something harder.
+{what}. Your favourite {thing}. I'm good at this.
+== say.mem.recall.fav@gloomy
+{what}. Your favourite {thing}. I remember these things.
+It's {what}. You told me.
+{what}. I keep that one close.
+Your favourite {thing} is {what}. Some things you don't forget.
+{what}. Of course I remember.
+{what}. I remember everything. It's not always a blessing.
+== say.mem.recall.fav@serious
+Your favourite {thing} is {what}.
+{what}.
+It's {what}.
+You told me: {what}.
+{what}, your favourite {thing}.
+{what}.
+
+== say.mem.recall.name
+You're {what}. That's what you told me to call you.
+{what}. And a very good name it is.
+I call you {what}. You asked. I obey. Sometimes.
+{what}. I'd know you anywhere. Mostly by the blocky face.
+You're {what}. Did you forget? Should I be worried?
+{what}. Unless you've changed your mind again.
+== say.mem.recall.name@gloomy
+{what}. You told me. I remember.
+You're {what}. Names are important.
+{what}. That's what I call you.
+You're {what}. I haven't forgotten.
+{what}. Still {what}, as far as I know.
+I call you {what}. It's what you wanted.
+== say.mem.recall.name@serious
+You're {what}.
+I call you {what}.
+{what}.
+Your name, as you told me: {what}.
+{what}, as you asked.
+{what}.
+
+== say.mem.recall.place
+The {what}'s about {dist} blocks {dir} of you. I've marked it.
+{dist} blocks {dir}. The {what}. There's a marker on it now.
+Your {what}? {dist} blocks {dir}. Follow the marker, or say "go to the {what}".
+The {what}. {dist} blocks {dir}. Did you lose it? It's quite big.
+{dir}, about {dist} blocks. I've put a marker up so you don't wander off.
+The {what} is {dist} blocks {dir}. I remember these things so you don't have to.
+== say.mem.recall.place@gloomy
+The {what}. {dist} blocks {dir}. It's still there. Probably.
+About {dist} blocks {dir}. I've marked it.
+{dist} blocks {dir}. The {what}. Follow the marker.
+The {what}'s {dist} blocks {dir}. A long way, but not too long.
+{dir}. {dist} blocks. The {what} waits for you.
+The {what}: {dist} blocks {dir}. Marked.
+== say.mem.recall.place@serious
+The {what} is about {dist} blocks {dir}. I've marked it.
+{dist} blocks {dir}. Marked.
+The {what}: {dist} blocks {dir}.
+About {dist} blocks {dir} of you.
+Marked: the {what}, {dist} blocks {dir}.
+{dist} blocks {dir}.
+
+== say.mem.recall.friend
+{who}? Your friend. I help them out, and I'm nice about it.
+{who}'s a friend of yours. Good egg, by all accounts.
+{who}. Friend. I keep an eye out for them.
+One of ours. You told me {who}'s a friend.
+{who}'s on the friends list. The good list.
+{who}? Friend. I'd even share my torches with them. One torch.
+== say.mem.recall.friend@gloomy
+{who}. A friend. You don't get many of those.
+{who}'s a friend. I look out for them.
+A friend, you said. {who}. I remember.
+{who}. Friend. Good.
+{who}? One of the good ones.
+{who} is your friend. I'll keep them safe as I can.
+== say.mem.recall.friend@serious
+{who} is your friend.
+A friend. I help {who} when I can.
+{who}: friend.
+You told me {who} is a friend.
+{who} is one of ours.
+Friend.
+
+== say.mem.recall.foe
+{who}? Not to be trusted. You said so, and I've been suspicious ever since.
+{who}. Trouble. I take no orders from them.
+{who}'s on the other list. The one with the frowny face.
+Not a fan. You told me {who} isn't to be trusted.
+{who}? I keep one eye on them at all times. The good eye.
+{who}. Bad news. I'll warn you if they turn up.
+== say.mem.recall.foe@gloomy
+{who}. Not to be trusted. There's always one.
+{who}. I remember what you said.
+{who}? Trouble, you said. I believe you.
+{who}. I keep my distance.
+Not trusted. {who}. I'll warn you.
+{who}. I had a bad feeling anyway.
+== say.mem.recall.foe@serious
+{who} is not to be trusted.
+You told me not to trust {who}.
+{who}: no orders taken, and I'll warn you if they're near.
+Not trusted: {who}.
+{who} is trouble, you said.
+Not trusted.
+
+== say.mem.forgot
+Forgotten: {what}. Gone. Like it was never there. Which is spooky.
+{what}? Never heard of it.
+Right. {what}, wiped. I feel lighter.
+Done. I've forgotten {what}. Don't ask me what it was.
+{what}, gone. Should've written it in pencil.
+Consider {what} forgotten. Mostly. Some things echo.
+== say.mem.forgot@gloomy
+{what}. Forgotten. Things go, in the end.
+Gone. {what}. I'll miss it a little.
+Right. {what}, let go.
+I've forgotten {what}. It's quieter now.
+{what}. Gone. As if it never was.
+Forgotten. {what}. It's for the best, probably.
+== say.mem.forgot@serious
+Forgotten: {what}.
+Done. I've forgotten {what}.
+{what} is gone from my notes.
+Removed: {what}.
+I've forgotten {what}.
+Done.
+
+== say.mem.forgot.all
+Gone. All of it. Hello, I'm a stranger. Nice to meet you.
+Everything, forgotten. Wait, who are you? Kidding. Mostly.
+Wiped clean. I feel like a brand new notebook.
+Done. My memory's a blank page. Write something nice.
+All gone. I've even forgotten what I forgot.
+Clean slate. Let's do better things this time.
+== say.mem.forgot.all@gloomy
+All gone. It's very quiet in here now.
+Forgotten. Everything. Like rain on a window.
+Done. A clean slate. They never stay clean.
+Gone. All of it. We'll start again.
+I've let it all go. It's for the best, I suppose.
+Everything, forgotten. It's peaceful, in a way.
+== say.mem.forgot.all@serious
+Done. I've forgotten everything you told me.
+Everything's cleared.
+My memory is empty now.
+All forgotten.
+Cleared. We start fresh.
+Done.
+
+== say.mem.forgot.none
+There's nothing to forget. You haven't told me anything lately.
+Forget what? My mind's spotless.
+Nothing to forget. That's the easiest job you've given me.
+I've nothing on that. Done, technically.
+Forget it? I never knew it. We're square.
+There's nothing there. Very zen.
+== say.mem.forgot.none@gloomy
+There's nothing to forget. Not that, anyway.
+I don't have anything like that.
+Nothing to forget. That's a first.
+I've nothing on that to let go of.
+Nothing there.
+Already gone. Or never there.
+== say.mem.forgot.none@serious
+I don't have anything like that to forget.
+There's nothing to forget.
+Nothing on file for that.
+Nothing to remove.
+I don't remember anything like that.
+Nothing there.
+
+== say.mem.ask.forgetall
+Everything? All {n} things? Even the good bits?
+All {n} of them? That's a lot of forgetting. Sure?
+Wipe everything? {n} things. I'll do it, but I'll sulk.
+Forget all {n} things you've told me? Are you certain?
+Everything? There's no undo. I've checked.
+{n} things, gone for good. Really?
+== say.mem.ask.forgetall@gloomy
+All {n}? Everything? Are you sure?
+Forget everything. {n} things. There's no getting it back.
+Everything? That's {n} things I'd be letting go.
+All of it. {n} things. Really?
+Every one of the {n}? Sure?
+That's everything. {n} things. Sure?
+== say.mem.ask.forgetall@serious
+Forget all {n} things? This can't be undone.
+Everything? {n} things. Are you sure?
+Forget all {n}? Please confirm.
+This clears {n} things. Sure?
+Forget everything ({n})? Confirm.
+Clear all {n}?
+
+== say.mem.praised
+Of course I remembered. I'm a very good assistant. Tell your friends.
+I remember everything. It's my one party trick.
+Remembered. Naturally. I'm basically an elephant with a pickaxe.
+I never forget. Except where I put my sense of humility.
+I remember all of it. You'd be amazed. Or slightly worried.
+Course I did. You told me. I listen, you know.
+== say.mem.praised@gloomy
+I always remember. It's the forgetting I can't manage.
+Of course. I don't forget things.
+I remembered. I remember everything. It keeps me up.
+Yes. I keep what matters.
+I listened. I always do.
+Of course. You told me. I keep these things.
+== say.mem.praised@serious
+Of course. You told me.
+I remember what you tell me.
+Glad it helped.
+I keep track of these things.
+You told me, so I remembered.
+Of course.
+
+== say.mem.private
+I'm not keeping that one. Some things belong to you alone.
+Nope. Not writing that down. Keep it secret, keep it safe.
+I'm not keeping that one. Passwords and addresses stay with you, not me.
+I'll pretend I didn't hear that. Private things stay private.
+Not that. Real-world personal stuff isn't something I keep.
+I'm not keeping that one, and I'd not say it out loud again either.
+== say.mem.private@gloomy
+I'm not keeping that one. It's safer with you.
+No. I won't remember that. Some things shouldn't be written down.
+I'm not keeping that. Best keep it to yourself.
+Not that one. I'll forget I heard it.
+I won't keep that. Private things are private.
+I'm not keeping that one. Keep it close.
+== say.mem.private@serious
+I'm not keeping that one.
+I don't keep passwords or personal details.
+I'm not keeping that one. Keep it private.
+I won't remember that: it's personal.
+Not that one. I don't store personal details.
+I'm not keeping that one.
+
+== say.mem.paused
+Memory off. Whatever you say now, I won't keep. Go on, confess something.
+Notebook closed. I'm not taking notes until you say so.
+Fine. Nothing new goes in. What I know stays.
+Memory paused. I'll nod along and remember none of it.
+Off the record it is. My lips are sealed. My notebook too.
+Paused. I'll go back to remembering when you tell me.
+== say.mem.paused@gloomy
+Memory paused. Nothing new. It's restful, in a way.
+Fine. I won't keep anything new.
+Paused. Everything you say just drifts past.
+I'll stop remembering. For now.
+Memory off. What I have, I keep.
+Right. Nothing new goes in.
+== say.mem.paused@serious
+Memory paused. I won't keep anything new.
+Paused. Turn it back on in the Memory tab, or say "start remembering again".
+Understood. I'm not keeping new things.
+Memory paused.
+I won't remember anything new until you say so.
+Paused.
+
+== say.mem.resumed
+Memory back on. Tell me things. Interesting things, ideally.
+Notebook open. I'm listening.
+Right, I'm remembering again. Everything. Every. Thing.
+Back on the record. Carry on.
+Memory on. Say something memorable.
+I'm taking notes again.
+== say.mem.resumed@gloomy
+Memory back on. I'll keep what you tell me.
+Remembering again. For better or worse.
+Right. Notebook open.
+Back on. I'll listen.
+I'm remembering again.
+Memory on.
+== say.mem.resumed@serious
+Memory on. I'll remember what you tell me.
+Remembering again.
+Back on the record.
+Memory resumed.
+I'm keeping notes again.
+On.
+
+== say.mem.paused_note
+My memory's paused, so I won't keep that. Turn it on in the Memory tab if you want me to.
+Not keeping that: memory's paused. Say "start remembering again" if you like.
+Memory's off, remember? Well, I don't. That's the point.
+I'd remember that, but my memory's paused.
+Memory paused. That one floats past. Turn it back on if you want it kept.
+Can't keep that: memory's paused.
+== say.mem.paused_note@gloomy
+My memory's paused. That one drifts away.
+I won't keep it. Memory's off.
+Memory's paused. It's gone already.
+Not kept. Memory's off.
+I'd remember, but you asked me not to.
+Memory's paused. Sorry.
+== say.mem.paused_note@serious
+My memory is paused, so I won't keep that.
+Memory's paused. Turn it on in the Memory tab to keep things.
+Not kept: memory paused.
+I'm not keeping new things right now.
+Memory paused.
+Not kept.
+
+== say.mem.full
+My head's full: {n} things. Forget something first, in the Memory tab.
+That's {n} things. I'm at my limit. Something has to go.
+I can only hold {n} things here. Clear one out and I'll keep this.
+{n} memories. That's the server's limit. Forget one, then tell me again.
+Full up at {n}. Make some room in the Memory tab.
+No room: {n} things already. Even my memory has a size limit, apparently.
+== say.mem.full@gloomy
+I'm full. {n} things. Something has to go.
+No room left. {n} things. Forget one first.
+{n} things. That's all I can hold here.
+Full. {n}. Clear something out.
+I can't keep any more. {n} already.
+{n} things, and no more room.
+== say.mem.full@serious
+I can't keep more than {n} things here. Forget one first.
+Memory full: {n}.
+At the limit of {n}. Remove something in the Memory tab.
+Full ({n}). Forget something first.
+No room: {n} things.
+Full.
+
+== say.mem.remind
+Reminder: {what}. You asked me to nag. I'm nagging.
+Oi. {what}. You told me to tell you.
+Time to {what}. This is your reminder, delivered with love and mild impatience.
+Don't forget: {what}. Well, you did. That's why I'm here.
+Reminder. {what}. I'll stop going on about it now.
+Here's your reminder: {what}. Gold star for me.
+== say.mem.remind@gloomy
+It's time. {what}. You asked me to remind you.
+Reminder: {what}. Time catches up.
+{what}. You wanted reminding.
+Don't forget: {what}.
+Reminder. {what}. I said I'd remember.
+{what}. It's time.
+== say.mem.remind@serious
+Reminder: {what}.
+Time to {what}.
+You asked me to remind you: {what}.
+Reminder. {what}.
+Don't forget: {what}.
+Reminder: {what}.
+
+== say.mem.remind_nudge
+Reminder: you asked for a nudge about now. Nudge.
+This is your reminder. You didn't say what for, so: whatever it was.
+Nudge. You wanted one, about now.
+Time's up. You asked me to say so.
+Ding. Your reminder. Contents unspecified.
+Reminder. You'll know what for. I hope.
+== say.mem.remind_nudge@gloomy
+It's time. You asked me to say so.
+Your reminder. You didn't say what for.
+Time. As you asked.
+This is the nudge you asked for.
+Reminder. Whatever it was, it's now.
+It's time.
+== say.mem.remind_nudge@serious
+Reminder: it's time.
+This is your reminder.
+Time's up, as you asked.
+Your reminder.
+It's time.
+Reminder.
+
+== say.mem.ask.where
+Where's the {what}? Look at it and say it again, and I'll mark it.
+Point me at the {what}: look at it and tell me again.
+I'd love to remember the {what}, but where is it? Look at it and say it again.
+Which bit is the {what}? Look right at it and say that again.
+I can't see where you mean. Look at the {what} and say it again.
+Show me: look at the {what} and repeat that.
+== say.mem.ask.where@gloomy
+Where is it? Look at the {what} and say it again.
+I can't tell where you mean. Look at it and tell me again.
+The {what}. Where? Look at it and say it again.
+I don't know where that is. Look at it and say it once more.
+Look at the {what}, then tell me again.
+Where? Look at it and repeat that.
+== say.mem.ask.where@serious
+Look at the {what} and say that again, and I'll mark it.
+Where is the {what}? Look at it and say it again.
+I can't see where you mean. Look at it and repeat that.
+Point me at it: look at the {what} and say it again.
+Look at the {what} first.
+Look at it and say it again.
+
+== say.mem.rule.fired
+{when}, as agreed: {what}.
+Right, it's that time. {what}. Standing orders.
+{when}. {what}. You don't even have to ask any more.
+As you told me: {what}. I'm a creature of habit.
+Rule's a rule. {what}.
+{what}, like you asked {when}. I'm reliable. Insufferably reliable.
+== say.mem.rule.fired@gloomy
+{when}. {what}. Same as ever.
+As agreed: {what}. Again.
+{what}. It's that time. It always comes round.
+Standing orders. {what}.
+{when}, so {what}. Off I go.
+{what}. As you said.
+== say.mem.rule.fired@serious
+{when}: {what}, as you asked.
+As agreed: {what}.
+Standing order: {what}.
+{what}, as you asked.
+{when}, {what}.
+On it: {what}.
+
+== say.mem.rule.warn
+{who}'s about. You told me to say.
+Heads up: {who} is nearby.
+Psst. {who}. Over there-ish. You wanted to know.
+{who}'s turned up. Just so you know.
+Look lively: {who} is around.
+Warning, as requested: {who} is close.
+== say.mem.rule.warn@gloomy
+{who}'s here. You wanted to know.
+{who} is nearby. I said I'd tell you.
+It's {who}. They're close.
+Heads up. {who}.
+{who} has turned up.
+{who} is about.
+== say.mem.rule.warn@serious
+{who} is nearby.
+Heads up: {who} is close.
+{who} has arrived.
+Warning: {who} is around.
+{who} is about.
+{who} is near.
+
+== say.mem.banter.fav_food
+{what} again? Your favourite, I know.
+More {what}. Some things never change. Thank goodness.
+{what}. Of course. I'd expect nothing less.
+Ah, {what}. Your favourite. I could set my clock by it.
+{what} again. I remember, you know. I remember everything.
+Your favourite. {what}. You're very predictable. It's lovely.
+== say.mem.banter.fav_food@gloomy
+{what} again. At least some comforts last.
+Your favourite. {what}. Good. Enjoy it.
+{what}. Of course. You always come back to it.
+{what}. I remember. Your favourite.
+More {what}. Something to look forward to.
+{what}. Your one constant.
+== say.mem.banter.fav_food@serious
+{what}. Your favourite, I know.
+{what} again.
+Your favourite: {what}.
+{what}, of course.
+I remember: {what}.
+{what}.
+
+== say.mem.banter.fav_give
+Here's some {what}. Your favourite. I remembered.
+{what}. Your favourite. I keep some aside.
+Brought you {what}. I know what you like.
+{what}, your favourite. Don't say I never do anything for you.
+Your favourite: {what}. I'm thoughtful like that.
+{what}. I remembered. Tell everyone.
+== say.mem.banter.fav_give@gloomy
+{what}. Your favourite. I saved some.
+Here. {what}. I remember these things.
+Your favourite, {what}. Eat up.
+{what}. Something good, for once.
+I kept some {what} for you.
+{what}. Your favourite.
+== say.mem.banter.fav_give@serious
+Here's some {what}, your favourite.
+{what}, as you like it.
+Your favourite: {what}.
+{what}. I kept some for you.
+I brought {what}.
+{what}.
+
+== say.mem.banter.hated_mob
+{what}. Your least favourite thing. I'll deal with it.
+Ugh, {what}. I know, I know. I've got it.
+A {what}. You hate those. So do I, now. Out of loyalty.
+{what} incoming. I remember how you feel about them.
+Look, a {what}. Your favourite. Joking. I'll sort it.
+{what}. Don't worry. I remember. I'm on it.
+== say.mem.banter.hated_mob@gloomy
+{what}. You hate those. Of course one turned up.
+A {what}. It was always going to happen.
+{what}. I remember. I'll keep it off you.
+{what}. Your least favourite. I'm on it.
+There's a {what}. Typical.
+{what}. I'll deal with it. I know how you feel.
+== say.mem.banter.hated_mob@serious
+{what}. I know you hate those. I'll deal with it.
+{what} nearby. I'm on it.
+There's a {what}. I'll handle it.
+{what}. Staying between you and it.
+{what} close by. I've got it.
+{what}. On it.
+
+== say.mem.banter.self_proved
+Rubbish at {what}, was I? Just saying.
+Not bad for someone who's "rubbish at {what}", eh?
+I remember you saying I was rubbish at {what}. I also remember this.
+{what}: done. Rubbish, you said. I keep notes.
+Funny, for someone so bad at {what}. Very funny.
+That's the {what} done. I'd like an apology in writing.
+== say.mem.banter.self_proved@gloomy
+That's the {what} done. Rubbish, you said. I'm still thinking about it.
+Done. Maybe I'm not so bad at {what} after all.
+{what}, finished. You said I was rubbish at it. I remember.
+There. Done. Not so rubbish.
+That's done. I did try. I always try.
+Finished. I hope that was less rubbish.
+== say.mem.banter.self_proved@serious
+That's the {what} done. Better, I hope.
+Done. I've been working on my {what}.
+Finished. I hope that was up to standard.
+Done. I took your note on {what} to heart.
+{what}, done.
+Done.
+
+== say.mem.banter.self_praised
+Done. Good at {what}, you said. I agree.
+That's the {what} done. Living up to my reputation.
+Finished. "Good at {what}", as someone wise once said.
+{what}: done, and done well, if I say so myself. And you did.
+Another triumph of {what}. You were right about me.
+Done. I'm still glowing from that compliment.
+== say.mem.banter.self_praised@gloomy
+Done. You said I was good at {what}. I hope it still holds.
+That's the {what} done. I did my best.
+Finished. I try to deserve it.
+Done. It's nice to be good at something.
+{what}, done.
+Done. I remembered what you said.
+== say.mem.banter.self_praised@serious
+That's the {what} done.
+Done.
+Finished.
+{what}, done.
+Done, as well as I could.
+Finished.
+
+== say.mem.banter.friend_near
+Oh, it's {who}. Hello, {who}. Any friend of {owner}'s.
+{who}. A friend. Lovely. I'll be on my best behaviour.
+Ah, {who}'s here. I've heard good things.
+{who}. You're on the good list. Don't let it go to your head.
+Hello, {who}. {owner} says you're alright.
+{who}. Welcome. Wipe your feet.
+== say.mem.banter.friend_near@gloomy
+{who}. Hello. Good to see a friend.
+Oh, {who}. A friendly face. Rare.
+{who}. Hello. Mind the creepers.
+{who}'s here. That's something.
+Hello, {who}.
+{who}. A friend. Good.
+== say.mem.banter.friend_near@serious
+Hello, {who}.
+{who} is here.
+Good to see you, {who}.
+Hello, {who}. Friend of {owner}.
+{who}. Welcome.
+Hello.
+
+== say.mem.not_telling
+That's between me and {owner}, {player}.
+Nice try, {player}. My lips are sealed. I don't have lips, but still.
+I don't tell tales, {player}. Ask {owner}.
+{player}, what {owner} tells me stays with me.
+Not a chance, {player}. I'm a vault. A chatty vault, but a vault.
+Ask {owner}, {player}. I'm not a gossip.
+== say.mem.not_telling@gloomy
+That's private, {player}.
+I don't share what {owner} tells me, {player}.
+No, {player}. That stays with me.
+Ask {owner}, {player}. Not me.
+I can't say, {player}.
+That's not mine to tell, {player}.
+== say.mem.not_telling@serious
+That's private, {player}. Ask {owner}.
+I don't share what {owner} tells me.
+Not mine to tell, {player}.
+Sorry, {player}. That's private.
+Ask {owner}, {player}.
+Private, {player}.
+
+== say.mem.friend_order
+For a friend of {owner}'s? Go on then, {player}.
+Since you're on the good list, {player}. On it.
+{owner} says you're alright, {player}. Doing it.
+Righto, {player}. Friends of {owner} get the good service.
+Fine, {player}. But I'm telling {owner} you asked nicely.
+On it, {player}. Friend discount applies.
+== say.mem.friend_order@gloomy
+Alright, {player}. For a friend.
+Fine, {player}. You're one of the good ones.
+For you, {player}. {owner} would want me to.
+Very well, {player}.
+I'll do it, {player}.
+Right, {player}. Off I go.
+== say.mem.friend_order@serious
+Alright, {player}. You're a friend of {owner}'s.
+On it, {player}.
+Doing it, {player}.
+Right away, {player}.
+Understood, {player}.
+On it.
+
+== say.mem.foe_refuse
+No, {player}. {owner} told me about you.
+Nice try, {player}. I'm under strict instructions to ignore you.
+{player}, the answer's no. It was always going to be no.
+I don't take orders from you, {player}. Nothing personal. Well, slightly personal.
+{player}? No. And I'm telling {owner} you asked.
+Not a chance, {player}. You're on the list. Not the good one.
+== say.mem.foe_refuse@gloomy
+No, {player}. I know about you.
+I won't, {player}.
+No. {owner} warned me about you, {player}.
+Not for you, {player}.
+No, {player}. I'm sorry. Not really.
+I don't think so, {player}.
+== say.mem.foe_refuse@serious
+No, {player}. I don't take orders from you.
+I won't do that for you, {player}.
+No, {player}.
+I only take orders from {owner}.
+Not for you, {player}.
+No.
+
+== say.mem.foe_cold
+Hello, {player}. I'm watching you. In a friendly way. No, not really.
+{player}. Mm. Hello.
+Oh. It's you, {player}. {owner} mentioned you.
+{player}. I'll be keeping an eye on you. Both eyes, actually.
+Hello, {player}. Hands where I can see them.
+Afternoon, {player}. Don't touch anything.
+== say.mem.foe_cold@gloomy
+{player}. Hello. I suppose.
+Oh. {player}.
+{player}. I know about you.
+Hello, {player}. I'm keeping my distance.
+It's {player}. Of course it is.
+{player}. Mm.
+== say.mem.foe_cold@serious
+Hello, {player}.
+{player}.
+I'm keeping an eye on you, {player}.
+{player}. {owner} has told me about you.
+Hello.
+{player}.
+
+== say.mem.friend_tease
+Steady on, {player}. Friend of {owner}'s or not, I bruise easily.
+Charming, {player}. I'll let it slide because {owner} likes you.
+{player}, you're lucky you're on the friends list.
+Rude, {player}. Friendly rude, I'll allow it.
+Ha. Good one, {player}. I'm writing it down for revenge later.
+Oh, {player}. And I was going to share my torches with you.
+== say.mem.friend_tease@gloomy
+That's a bit much, {player}. But you're a friend.
+I'll let that go, {player}. Friends are allowed.
+Ouch, {player}. Still, you're one of the good ones.
+Fair, {player}. I'm not offended. Much.
+Thanks, {player}. Friends are honest, I suppose.
+Alright, {player}. I'll live.
+== say.mem.friend_tease@serious
+Very funny, {player}.
+I'll let that pass, {player}.
+Noted, {player}.
+Thanks, {player}. I think.
+Fair enough, {player}.
+Alright, {player}.
+
+== say.mem.helping_friend
+Hold on, {who}, I'm coming.
+Friend of {owner}'s in trouble. On my way.
+{who}, behind you. I've got it.
+Not on my watch. {who}'s with us.
+I'll deal with that, {who}. Stand back.
+{who}. I've got you.
+== say.mem.helping_friend@gloomy
+{who} needs help. Of course they do.
+Hold on, {who}.
+I'll help {who}. Someone has to.
+{who}. Stay back. I'll handle it.
+On my way, {who}.
+{who}, behind you.
+== say.mem.helping_friend@serious
+Helping {who}.
+{who}, I've got it.
+On my way, {who}.
+I'll deal with that, {who}.
+Helping your friend {who}.
+On it.

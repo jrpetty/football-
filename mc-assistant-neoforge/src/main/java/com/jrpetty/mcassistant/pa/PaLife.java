@@ -260,6 +260,7 @@ public final class PaLife {
         Entity killer = source.getEntity();
         r.lastDeath = "Knocked out by " + (killer != null ? killer.getName().getString().toLowerCase() : source.getMsgId()) + " on day " + (a.level().getDayTime() / 24000L) + ".";
         a.plan.clear();
+        PaBondAct.died(a, killer != null ? killer.getName().getString().toLowerCase() : source.getMsgId().replace('_', ' '));   // [pa35] a little experience, the bond, our story
         PaTalk.reply(a, PaTalk.line(a, "died", "owner", r.ownerName)
             + " (back in " + PaConfig.respawnSeconds() + "s" + (r.spawner != null ? " at my spawner" : "") + ")");
         PaData.touch();

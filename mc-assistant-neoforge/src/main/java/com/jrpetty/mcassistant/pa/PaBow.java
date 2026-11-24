@@ -74,7 +74,7 @@ public final class PaBow {
     /** A draw begun: false with no bow or no arrow. The bow goes into its hand first (a moment before the pull, so it is seen). */
     static boolean begin(PlayerAssistantEntity a, @Nullable Entity e, @Nullable BlockPos block, Vec3 spot, @Nullable Consumer<Shot> done,
                          @Nullable Consumer<Arrow> prep, @Nullable BooleanSupplier clear) {
-        if (a.mind.bow != null || !PaShots.hasBow(a) || a.countMatching(s -> s.is(Items.ARROW)) < 1) return false;
+        if (a.mind.bow != null || a.mind.xbow != null || !PaShots.hasBow(a) || a.countMatching(s -> s.is(Items.ARROW)) < 1) return false;
         boolean inHand = a.getMainHandItem().is(Items.BOW);
         if (!inHand) PaShots.drawBow(a);
         if (a.isUsingItem()) { a.stopUsingItem(); a.mind.blocking = false; }   // the shield down: two hands on the bow

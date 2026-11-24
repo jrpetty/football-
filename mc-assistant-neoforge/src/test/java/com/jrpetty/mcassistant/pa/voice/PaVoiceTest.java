@@ -23,11 +23,11 @@ class PaVoiceTest {
         {"mine iron until you have twenty", "MINE_ORE:iron:20"}, {"mine for diamonds", "MINE_ORE:diamond"},
         {"build me a small house here", "BUILD:house"}, {"build a shelter here", "BUILD:shelter"}, {"build a farm here", "FARM"},
         {"craft a stone pickaxe", "CRAFT:stone pickaxe"}, {"make sixteen torches", "CRAFT:torches:16"}, {"smelt eight iron", "SMELT:iron:8"},
-        {"put everything in that chest", "DEPOSIT"}, {"bring me food", "BRING_FOOD"}, {"i am hungry", "BRING_FOOD"},
+        {"put everything in that chest", "LOGI"}, {"bring me food", "BRING_FOOD"}, {"i am hungry", "BRING_FOOD"},
         {"guard me", "GUARD_ME"}, {"attack that", "FIGHT"}, {"kill the zombies", "FIGHT"}, {"farm this field", "FARM"},
         {"stop", "STOP"}, {"undo that", "UNDO"}, {"pause", "PAUSE"}, {"carry on", "RESUME"}, {"go home", "GO_HOME"},
         {"what are you doing", "DOING"}, {"how are you", "STATUS"}, {"light up the area", "LIGHT_AREA"},
-        {"sort the chests", "SORT"}, {"catch five fish", "FISH:fish:5"}, {"hunt three cows", "HUNT:cows:3"},
+        {"sort the chests", "LOGI"}, {"catch five fish", "FISH:fish:5"}, {"hunt three cows", "HUNT:cows:3"},
         {"dig a mine down to level twelve", "MINE_DOWN"}, {"how do i start a business", "QUESTION"},
     };
 
@@ -51,11 +51,11 @@ class PaVoiceTest {
         {"get me sixteen lugs", "GATHER:logs:16"}, {"chop thirty two lags", "GATHER:logs:32"}, {"fallow me", "FOLLOW"},
         {"fellow me mate", "FOLLOW"}, {"gather sixteen stun", "GATHER:stone:16"}, {"mine ion until you have ten", "MINE_ORE:iron:10"},
         {"mind iron", "MINE_ORE:iron"}, {"god me", "GUARD_ME"}, {"gourd me", "GUARD_ME"}, {"fam this field", "FARM"},
-        {"build a fam here", "FARM"}, {"put everything in the chess", "DEPOSIT"}, {"get some would", "GATHER:logs"},
-        {"stay hair", "STAY"}, {"come hair", "COME"}, {"fetch us some lugs", "GATHER:logs"}, {"bung it in the chess", "DEPOSIT"},
+        {"build a fam here", "FARM"}, {"put everything in the chess", "LOGI"}, {"get some would", "GATHER:logs"},
+        {"stay hair", "STAY"}, {"come hair", "COME"}, {"fetch us some lugs", "GATHER:logs"}, {"bung it in the chess", "LOGI"},
         {"nip over here", "COME"}, {"cheers mate", "THANKS"}, {"ta", "THANKS"}, {"hang on a sec", "PAUSE"}, {"crack on", "RESUME"},
         {"right fallow me", "FOLLOW"}, {"have a go at mining ion", "MINE_ORE:iron"}, {"go and get sixteen lugs", "GATHER:logs:16"},
-        {"pop it in the chest", "DEPOSIT"}, {"what are you up to", "DOING"}, {"you alright", "STATUS"}, {"pack it in", "STOP"},
+        {"pop it in the chest", "LOGI"}, {"what are you up to", "DOING"}, {"you alright", "STATUS"}, {"pack it in", "STOP"},
         {"grab us thirty two stun", "GATHER:stone:32"},
     };
 
@@ -196,7 +196,7 @@ class PaVoiceTest {
         assertTrue(s.contains("about fifty blocks north-east") && !s.contains("140"), s);
         assertTrue(PaSpeech.speakable("Heading there.  \u00D72", Double.NaN, Double.NaN).equals("Heading there."));
         assertEquals("Watch the nether-ite and the ender man", PaSpeech.speakable("Watch the netherite and the Enderman", 0, 0).replace("Watch the nether-ite and the ender man", "Watch the nether-ite and the ender man"));
-        assertTrue(PaSpeech.speakable("Hello Dev_123", 0, 0).contains("Dev 123"));
+        assertTrue(PaSpeech.speakable("Hello Dev_123", 0, 0).contains("Dev one twenty-three"), "[pa35] its digits said as a number");
         assertEquals(List.of("One.", "Two?", "Three."), PaSpeech.sentences("One. Two? Three."));
     }
 
@@ -286,6 +286,8 @@ class PaVoiceTest {
         assertFalse(k.downloaded());
         assertFalse(k.load());
         assertEquals("The natural voices aren't downloaded.", k.why());
+        for (PaKokoro.Part p : PaKokoro.PARTS) assertTrue(p.sha256().matches("[0-9a-f]{64}") && p.bytes() > 0, "[pa35] every file checked by size and SHA-256: " + p.file());
+        assertTrue(PaKokoro.PARTS.stream().noneMatch(p -> p.url().contains("/main/") || p.url().contains("/master/")), "[pa35] pinned, never a moving branch");
         assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
             () -> k.synth("h\u0259lo\u028a", PaKokoro.byId("bm_george"), 1f)).getMessage().contains("downloaded"));
     }
@@ -350,7 +352,7 @@ class PaVoiceTest {
         assertEquals(4, g[0].length);
         assertEquals(5f, g[1][1]);
         assertEquals(105f, voices.get("bf_emma")[1][1]);
-        assertEquals(g[2], PaKokoro.style(g, 2));
+        assertEquals(g[1], PaKokoro.style(g, 2), "[pa35] n tokens take row n - 1, as Kokoro does");
         assertEquals(g[2], PaKokoro.style(g, 999), "a long sentence takes the last row");
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> PaKokoro.npy(new byte[20]));
     }

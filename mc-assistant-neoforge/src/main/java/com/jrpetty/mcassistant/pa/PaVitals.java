@@ -34,10 +34,14 @@ final class PaVitals {
             var hp = a.getAttribute(Attributes.MAX_HEALTH);
             float want = PaHunger.maxHealth(level(a), PaConfig.startHearts(), PaConfig.maxHearts());
             if (hp != null && Math.abs(hp.getBaseValue() - want) > 0.01) {
+                double was = Math.max(1.0, a.getMaxHealth());
+                float frac = (float) Math.max(0.0, Math.min(1.0, a.getHealth() / was));
                 hp.setBaseValue(want);
-                if (a.getHealth() > a.getMaxHealth()) a.setHealth(a.getMaxHealth());
+                // [pa35] its health keeps its share of the new maximum (an old six-health assistant at full comes back at full twenty)
+                if (a.isAlive()) a.setHealth(Math.max(1.0F, Math.min(a.getMaxHealth(), frac * a.getMaxHealth())));
             }
             levelPerks(a, level(a));                                   // [pa33d] quicker on its feet, harder hits, a longer look ahead
+            h.efficiency = (float) (PaGrowth.hunger(level(a)) / 100.0);    // [pa35] less hungry for the same work with practice
         }
         // work: sprinting (quicker than a walk) costs as a player's sprint does
         Vec3 now = a.position();
@@ -51,7 +55,7 @@ final class PaVitals {
             : a.level().getDifficulty() == Difficulty.NORMAL ? 2 : 3;
         boolean regen = a.level().getGameRules().getBoolean(GameRules.RULE_NATURAL_REGENERATION);
         float change = h.tick(diff, a.getHealth(), a.getMaxHealth(), regen);
-        if (change > 0) a.heal(change);
+        if (change > 0) a.heal(change * (float) PaGrowth.healing(level(a)));   // [pa35] heals quicker with its level
         else if (change < 0) a.hurt(a.damageSources().starve(), -change);
         if (a.tickCount % 20 == 7) {
             if (h.wantsFood(a.getHealth(), a.getMaxHealth()) && (a.getTarget() == null || h.food() <= 6)) eat(a);

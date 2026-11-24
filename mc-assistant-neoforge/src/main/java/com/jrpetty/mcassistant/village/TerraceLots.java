@@ -68,6 +68,66 @@ public final class TerraceLots {
         return done;
     }
 
+    private static List<TownPlan.Lot> CORNERS, BLOCKS;
+
+    /** [house34c] The places for a row by its register name: a corner terrace's, a crescent's, or a straight row's. */
+    public static List<TownPlan.Lot> places(String structure) {
+        return switch (structure) {
+            case "terrace4" -> corners();
+            case "terrace5" -> blocks();
+            case "terrace" -> lots(21);
+            default -> lots(22);
+        };
+    }
+
+    /**
+     * [house34c] The places for a corner terrace: where two streets meet, a pair of home lots side by side facing one
+     * street (a whole side of their block) and the lot behind the pair's right-hand one (beside the side street, its back
+     * to the pair's), three lots of the four; nearest the heart first. Its anchor is the pair's, as a straight row's, its
+     * side street houses running back along the cross street on the third lot.
+     */
+    public static synchronized List<TownPlan.Lot> corners() {
+        if (CORNERS == null) CORNERS = deep("row-corner", false);
+        return CORNERS;
+    }
+
+    /** [house34c] The places for a crescent: a whole block of home lots, its front on the street a pair faces. */
+    public static synchronized List<TownPlan.Lot> blocks() {
+        if (BLOCKS == null) BLOCKS = deep("row-crescent", true);
+        return BLOCKS;
+    }
+
+    private static List<TownPlan.Lot> deep(String use, boolean whole) {
+        List<TownPlan.Lot> out = new ArrayList<>();
+        List<TownPlan.Lot> all = TownPlan.lots();
+        for (TownPlan.Lot p : lots(22)) {
+            if (!p.use().equals("row-pair")) continue;
+            TownPlan.Lot a = lotAt(all, p.cells()[0]), b = lotAt(all, p.cells()[1]);
+            if (a == null || b == null) continue;
+            // the lot behind a lot: a lot's width on toward its back (its back north: toward -z)
+            int bx = a.back() == TownPlan.EAST ? TownPlan.LOT : a.back() == TownPlan.WEST ? -TownPlan.LOT : 0;
+            int bz = a.back() == TownPlan.SOUTH ? TownPlan.LOT : a.back() == TownPlan.NORTH ? -TownPlan.LOT : 0;
+            // the pair's right-hand lot: the higher one along the street when its right runs that way
+            TownPlan.Lot right = rightSign(a.back()) > 0 ? b : a, left = right == a ? b : a;
+            TownPlan.Lot behindRight = homeAt(all, right.x() + bx, right.z() + bz), behindLeft = homeAt(all, left.x() + bx, left.z() + bz);
+            if (behindRight == null || whole && behindLeft == null) continue;
+            long[] cells = whole ? new long[]{ a.cells()[0], b.cells()[0], behindRight.cells()[0], behindLeft.cells()[0] }
+                : new long[]{ a.cells()[0], b.cells()[0], behindRight.cells()[0] };
+            out.add(new TownPlan.Lot(p.x(), p.z(), p.back(), TownPlan.Kind.LOT, p.halfAcross(), TownPlan.LOT + DEEP / 2, cells, use));
+        }
+        return List.copyOf(out);
+    }
+
+    private static TownPlan.Lot lotAt(List<TownPlan.Lot> all, long cell) {
+        for (TownPlan.Lot l : all) if (l.kind() == TownPlan.Kind.LOT && l.cells().length > 0 && l.cells()[0] == cell) return l;
+        return null;
+    }
+
+    private static TownPlan.Lot homeAt(List<TownPlan.Lot> all, int x, int z) {
+        for (TownPlan.Lot l : all) if (l.kind() == TownPlan.Kind.LOT && l.use().equals("home") && l.x() == x && l.z() == z) return l;
+        return null;
+    }
+
     private static int cellCentre(TownPlan.Lot l, int i, boolean alongX) {
         long c = l.cells()[i];
         int x = (int) (c >> 32), z = (int) c;

@@ -175,16 +175,16 @@ smelt 16 sand || SMELT:sand:16
 smelt || ?
 # --- storing and fetching
 deposit || DEPOSIT
-deposit your items || DEPOSIT
-put everything in that chest || DEPOSIT@LOOKED
-put it all in the chest || DEPOSIT
-empty your pack || DEPOSIT
-store your stuff || DEPOSIT
-stash it || DEPOSIT
-unload || DEPOSIT
-get 10 iron from the chest || FETCH:iron:10
-grab the logs from that chest || FETCH:logs@LOOKED
-take 5 coal out of the chest || FETCH:coal:5
+deposit your items || LOGI
+put everything in that chest || LOGI
+put it all in the chest || LOGI
+empty your pack || LOGI
+store your stuff || LOGI
+stash it || LOGI
+unload || LOGI
+get 10 iron from the chest || LOGI
+grab the logs from that chest || LOGI
+take 5 coal out of the chest || LOGI
 give me 16 logs || GIVE:logs:16
 hand me the pickaxe || GIVE:pickaxe
 bring me food || BRING_FOOD
@@ -198,13 +198,13 @@ get me food || BRING_FOOD
 light up the area || LIGHT_AREA
 place torches around here || LIGHT_AREA
 light this place up || LIGHT_AREA
-sort the chests || SORT
-organise the storage || SORT
-tidy the chests || SORT
+sort the chests || LOGI
+organise the storage || LOGI
+tidy the chests || LOGI
 clear a 10x10 area || CLEAR_AREA:10x10
 flatten this area || CLEAR_AREA
-keep the furnace fuelled || FUEL
-refuel the furnace || FUEL
+keep the furnace fuelled || LOGI
+refuel the furnace || LOGI
 repair your pickaxe || REPAIR
 buy 8 bread || TRADE_BUY:bread:8
 sell 32 cobblestone || TRADE_SELL:stone:32
