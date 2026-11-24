@@ -1977,6 +1977,17 @@ public class PlayerAssistantGameTests {
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
         Waiter w = Waiter.on(helper);
+        // [pa33f] while it shoots at the dragon it faces the dragon (not its player): the most it is ever turned away, aiming
+        net.minecraft.world.entity.Entity[] foe = {null};
+        double[] worst = {-1};
+        helper.onEachTick(() -> {
+            PlayerAssistantEntity q = PaLife.find(p);
+            if (foe[0] == null || q == null || q.mind.aimUntil <= q.tickCount || q.mind.aimEntity != foe[0]) return;
+            Vec3 to = foe[0].getBoundingBox().getCenter().subtract(q.position());
+            double want = Math.toDegrees(Math.atan2(to.z, to.x)) - 90.0;
+            double off = Math.abs(net.minecraft.util.Mth.wrapDegrees(want - q.getYHeadRot()));
+            worst[0] = Math.max(worst[0], off);
+        });
         atLevel(a, 10);
         a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
         a.insertGiven(new ItemStack(Items.ARROW, 64));
@@ -1999,9 +2010,11 @@ public class PlayerAssistantGameTests {
                 dragon.moveTo(ex + 14.5, ey + 3, ez + 0.5, 0, 0);
                 end.addFreshEntity(dragon);
                 dragon.getPhaseManager().setPhase(net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase.HOVERING);   // hovering where it is
+                foe[0] = dragon;
                 float full = dragon.getHealth();
                 helper.runAfterDelay(300, () -> {
                     helper.assertTrue(dragon.getHealth() < full, "arrows in the dragon: " + dragon.getHealth() + " of " + full + " (" + lastWords(b) + ")");
+                    helper.assertTrue(worst[0] >= 0 && worst[0] < 30.0, "it faced the dragon while it shot: turned " + worst[0] + " degrees away at most");
                     Kit.log("pai54 end: crystal down, dragon at " + dragon.getHealth() + " of " + full + "; " + lastWords(b));
                     dragon.discard();
                     forceAround(end, ex, ez, false);

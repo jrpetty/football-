@@ -27,7 +27,8 @@ public final class PaMoves {
         int lv = a.veteranLevel();
         if (lv >= PaLevels.levelOf("clutch")) clutch(a);
         PaParkour.tick(a);                                                 // [pa33e] jumps of one to three, a bridge or a pillar when one falls short
-        PaFlight.tick(a);                                                  // [pa33e] elytra following (it checks its level itself: putting the wings away never waits)
+        PaFlight.tick(a);
+        PaShots.aimTick(a);                                                // [pa33f] eyes on its target while it shoots                                                  // [pa33e] elytra following (it checks its level itself: putting the wings away never waits)
         if (a.tickCount % 4 == 0 && lv >= PaLevels.levelOf("shield")) shield(a);
         if (a.tickCount % 20 == 7) {
             if (lv >= PaLevels.levelOf("parkour")) sprintAfter(a);
@@ -199,6 +200,7 @@ public final class PaMoves {
     static void shootAtEntity(PlayerAssistantEntity a, net.minecraft.world.entity.Entity e) {
         if (a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return;
         PaShots.drawBow(a);
+        PaShots.holdAim(a, e, e.position());                               // [pa33f] facing what it shoots, not its player
         net.minecraft.world.entity.projectile.Arrow arrow = new net.minecraft.world.entity.projectile.Arrow(a.level(), a, new ItemStack(Items.ARROW), a.getMainHandItem().copy());
         // [pa33e] the dragon only feels a player's arrows (the game's rule): at the dragon it shoots as its player's second bow
         if ((e instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon || e instanceof net.minecraft.world.entity.boss.EnderDragonPart) && a.getOwnerPlayer() != null) arrow.setOwner(a.getOwnerPlayer());

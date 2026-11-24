@@ -52,6 +52,12 @@ public final class PaBrain {
         public boolean wingsOn;
         /** [pa33e] Ticks running it was held back by the shared budget. */
         public int starved;
+        /** [pa33f] When it last told a joke (a laugh soon after is at it). */
+        public int jokeAt = -100000;
+        /** [pa33f] What it's aiming at, and till when (its eyes stay there). */
+        @Nullable public net.minecraft.world.entity.Entity aimEntity;
+        @Nullable public net.minecraft.world.phys.Vec3 aimSpot;
+        public int aimUntil;
         public int takeoffAt, rocketAt = -1000, flightSaidAt = -100000;
         /** [pa33e] Parkour: a jump in the air (from, to, the gap), a gap it fell short at, a bridge or pillar under way. */
         public int leapAt, pkStuck, pkMode, pkLaid, pkRestUntil, pkSaidAt = -100000;
