@@ -167,7 +167,7 @@ public final class PaBrain {
             companion(a);
             post(a);
         }
-        if (t % 100 == 0) autoHelp(a);
+        if (t % 40 == 20) autoHelp(a);                            // [pa35] asked more often; how often it acts grows with its level (PaGrowth)
     }
 
     /** Still the real one? A dismissed assistant, or an old copy left in a chunk, goes. */
@@ -646,9 +646,9 @@ public final class PaBrain {
         if (r == null || !r.autoHelp || !a.plan.idle() || a.plan.paused || a.getTarget() != null || a.task != null || a.jobCount() > 0) return;
         if (!(a.getOwnerPlayer() instanceof ServerPlayer owner) || owner.level() != a.level() || a.distanceToSqr(owner) > 64 * 64) return;
         if (a.getMode() == AssistantEntity.Mode.STAY || a.mind.post != null) return;
-        if (a.tickCount - a.mind.lastAuto < 300) return;
-        // 1. danger near its player: it steps in
-        for (Monster m : a.level().getEntitiesOfClass(Monster.class, owner.getBoundingBox().inflate(12))) {
+        if (a.tickCount - a.mind.lastAuto < PaGrowth.autoHelpSeconds(a.veteranLevel()) * 20) return;   // [pa35] more often with its level
+        // 1. danger near its player: it steps in (noticed further off with its level)
+        for (Monster m : a.level().getEntitiesOfClass(Monster.class, owner.getBoundingBox().inflate(PaGrowth.perception(a.veteranLevel())))) {
             if (!m.isAlive() || m instanceof net.minecraft.world.entity.monster.Creeper && !a.canSnipeCreepers()) continue;
             if (veto(a, "fight")) break;
             a.mind.lastAuto = a.tickCount;

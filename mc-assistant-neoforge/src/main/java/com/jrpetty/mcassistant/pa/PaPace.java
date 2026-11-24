@@ -37,9 +37,9 @@ public final class PaPace {
     private PaPace() {}
 
     /** A hand action's gap, in ticks: never under 10 (0.5 s); at level 10 between 10 and 15 (about 0.6 s on average). */
-    public static final int HAND_MIN = 10, HAND_MAX = 15;
+    public static final int HAND_MIN = PaHand.MIN, HAND_MAX = PaHand.MAX;
     /** At level 1 a little hesitation stretches the top of the range to this (an average of about 0.8 s). */
-    public static final int HAND_MAX_L1 = 22;
+    public static final int HAND_MAX_L1 = PaHand.MAX_L1;
     /** Ticks between one block broken and the next swing at a block, as a player's (the game's own destroy delay). */
     public static final int BREAK_DELAY = 5;
 
@@ -92,15 +92,14 @@ public final class PaPace {
         return HAND_MIN + r.nextInt(top - HAND_MIN + 1);
     }
 
-    /** The slowest a hand action's gap can draw at this level (never the quickest: that's the cap, at every level). */
+    /** The slowest a hand action's gap can draw at this level (PaHand). */
     public static int handTop(int level) {
-        int lv = Math.max(1, Math.min(10, level));
-        return HAND_MAX + Math.round((HAND_MAX_L1 - HAND_MAX) * (10 - lv) / 9.0F);
+        return PaHand.top(level);
     }
 
-    /** The average gap, in seconds, at this level (for the Stats tab and the guide). */
+    /** The average gap, in seconds, at this level (PaHand). */
     public static double handSeconds(int level) {
-        return (HAND_MIN + handTop(level)) / 2.0 / 20.0;
+        return PaHand.seconds(level);
     }
 
     // ------------------------------------------------------------------ the entity's view

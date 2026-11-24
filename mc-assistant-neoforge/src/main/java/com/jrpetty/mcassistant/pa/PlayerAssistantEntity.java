@@ -206,6 +206,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
             return false;
         }
         if (source.getEntity() instanceof ServerPlayer sp && !level().isClientSide) PaBanter.stranger(this, sp, "", true);   // [pa33b] "Steady on."
+        // [pa35] a monster's blow stepped out of, now and then, more often with its level (PaGrowth.dodge); never arrows, fire or falls
+        if (!level().isClientSide && source.getDirectEntity() instanceof net.minecraft.world.entity.Mob m && source.getDirectEntity() == source.getEntity()
+                && getRandom().nextDouble() * 100 < PaGrowth.dodge(veteranLevel())) {
+            net.minecraft.world.phys.Vec3 away = position().subtract(m.position()).normalize().scale(0.35);
+            setDeltaMovement(getDeltaMovement().add(away.x, 0.1, away.z));
+            return false;
+        }
         boolean hit = super.hurt(source, amount);
         if (hit && !level().isClientSide) hunger.exhaust(0.1F);              // [pa33c-2b] a hit taken tires it, as a player
         if (hit && !level().isClientSide && isSleeping()) PaSleep.wake(this, "danger");   // [pa33d] up at once
@@ -458,18 +465,42 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public void awardXp(int amount) {
         super.awardXp(amount);
-        gainXp(amount);
+        gainXp(amount, xpSource == null ? "fight" : xpSource);       // [pa35] by what earned it (a kill when no deed is being paid)
+    }
+
+    /** [pa35] The deed being paid just now (so its experience is counted under it, for the repetition rule). */
+    private String xpSource;
+    /** [pa35] How tired it is of each kind of work (PaXp: less for the same thing over and over). */
+    public final PaXp.Fatigue fatigue = new PaXp.Fatigue();
+
+    @Override
+    public void note(Deed deed, int count) {
+        String was = xpSource;
+        xpSource = deed.name();
+        try {
+            super.note(deed, count);
+        } finally {
+            xpSource = was;
+        }
     }
 
     /** Experience for a kind of work ("job", "build", "trick"...), scaled. */
     public void earn(String what) {
-        gainXp(PaLevels.baseFor(what));
+        gainXp(PaLevels.baseFor(what), what);
     }
 
     void gainXp(int base) {
+        gainXp(base, "work");
+    }
+
+    /** [pa35] Paid for some work, less if it has done the same over and over lately (a "first" is never tired). */
+    void gainXp(int base, String key) {
         if (base <= 0 || level().isClientSide) return;
+        double share = key.equals("first") ? 1.0 : fatigue.take(key, level().getGameTime());
+        int got = (int) Math.max(1, Math.round(PaLevels.pay(base, level().getDifficulty().getId(), PaConfig.xpMultiplier()) * share));
+        fatigue.noted(key, got, share, level().getGameTime());
         int before = veteranLevel();
-        paXp = Math.min(10_000_000L, paXp + PaLevels.pay(base, level().getDifficulty().getId(), PaConfig.xpMultiplier()));
+        paXp = Math.min(10_000_000L, paXp + got);
         int after = veteranLevel();
         keepXp();
         if (after > before) PaLevelUp.levelUp(this, before, after);
@@ -601,7 +632,20 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public boolean doHurtTarget(net.minecraft.world.entity.Entity target) {
         hunger.exhaust(0.1F);
-        return super.doHurtTarget(target);
+        // [pa35] a critical hit now and then, more often with its level (PaGrowth.crit): half again as hard, with the sparks
+        boolean crit = !level().isClientSide && getRandom().nextDouble() * 100 < PaGrowth.crit(veteranLevel());
+        var dmg = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "pa_crit");
+        if (crit && dmg != null) dmg.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, 0.5,
+            net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        try {
+            boolean hit = super.doHurtTarget(target);
+            if (hit && crit && level() instanceof ServerLevel sl)
+                sl.sendParticles(net.minecraft.core.particles.ParticleTypes.CRIT, target.getX(), target.getY(0.6), target.getZ(), 8, 0.3, 0.3, 0.3, 0.2);
+            return hit;
+        } finally {
+            if (dmg != null) dmg.removeModifier(id);
+        }
     }
 
     @Override

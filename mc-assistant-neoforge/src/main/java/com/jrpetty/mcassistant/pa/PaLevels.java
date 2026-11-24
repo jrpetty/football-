@@ -17,15 +17,14 @@ public final class PaLevels {
 
     /** The experience a level takes, all told, at a multiplier of one (level 1 takes none). */
     public static int xpFor(int level) {
-        int l = Math.max(1, Math.min(MAX, level));
-        return (int) Math.round(40.0 * Math.pow(l - 1, 2.2));
+        return PaXp.xpFor(level);                                     // [pa35] tuned as a real grind (PaXp: about 50 hours to level 10)
     }
 
     /**
      * [pa35] Experience an hour of ordinary mixed use earns at a multiplier of one (tuned with the levelling curve: see
      * PaLevelsTest's simulation). Used only for estimates ("about three hours of graft").
      */
-    public static double XP_PER_HOUR = 120;
+    public static final double XP_PER_HOUR = PaXp.perHour();
 
     /** [pa35] About how long until a level, in words ("about three hours", "under an hour"). */
     public static String timeTo(long xp, int level) {

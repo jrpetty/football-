@@ -30,8 +30,11 @@ public final class PaHunger {
 
     /** Work done: sprinting 0.1 a block, jumping 0.05, a swing 0.1, a block broken 0.005, a hit taken 0.1 (as a player). */
     public void exhaust(float amount) {
-        exhaustion = Math.min(40.0F, exhaustion + Math.max(0, amount));
+        exhaustion = Math.min(40.0F, exhaustion + Math.max(0, amount) * efficiency);
     }
+
+    /** [pa35] How hungry the same work makes it (1 at level 1, less with practice: PaGrowth.hunger). */
+    public float efficiency = 1.0F;
 
     /** It ate: as FoodData.eat (nutrition, and the food's saturation, never past the food level). */
     public void eat(int nutrition, float sat) {
