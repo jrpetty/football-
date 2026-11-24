@@ -1280,7 +1280,11 @@ public final class TerraceRows {
             sb.append(" | ").append(name(v.id(), b)).append(' ').append(b.structure()).append(" (").append(LEFT.getOrDefault(b.anchor().asLong(), 0))
                 .append(" to finish) at ").append(b.anchor().toShortString())
                 .append(" back ").append(b.facing()).append(standing(level, v.id(), b) ? " up" : " going up");
-            for (Spot s : spots(b)) sb.append(" door").append(s.index() + 1).append('@').append(s.door().toShortString());
+            for (Spot s : spots(b)) {
+                Homes.Home h = Homes.homes(v.id()).get(s.anchor().asLong());
+                sb.append(" door").append(s.index() + 1).append('@').append(s.door().toShortString())
+                    .append(h == null ? "(off the books)" : h.members.isEmpty() ? "(to let)" : "(" + h.members.size() + ")");
+            }
         }
         sb.append(" | wants ").append(WANTS.get(v.id())).append(" | on site: bricks ").append(siteStock(v.id(), Items.BRICKS))
             .append(", dressed stone ").append(siteStock(v.id(), dressedStone(v.id()).asItem())).append(" | stores: bricks ").append(Market.stock(level, v.id(), st -> st.is(Items.BRICKS)))
