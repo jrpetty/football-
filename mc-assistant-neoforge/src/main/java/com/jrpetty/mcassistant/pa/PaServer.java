@@ -115,6 +115,7 @@ public final class PaServer {
             case "admin" -> {                                       // [pa33d] operators only: the server's levelling multiplier
                 if (!p.hasPermissions(2)) { PaNet.note(p, "Only an operator can change that."); return; }
                 if (args.contains("xpMult")) PaConfig.setXpMultiplier(args.getDouble("xpMult"));
+                if (args.contains("memCap")) PaConfig.setMemoryCap(args.getInt("memCap"));          // [pa35] how much each may remember
                 PaConfig.setChunks(args.contains("chunksOn") ? args.getBoolean("chunksOn") : null,                 // [pa33g] its chunks
                     args.contains("chunkRadius") ? args.getInt("chunkRadius") : null,
                     args.contains("chunkCap") ? args.getInt("chunkCap") : null,
@@ -139,6 +140,11 @@ public final class PaServer {
             }
             case "tour" -> {
                 if (r != null) { r.toured = true; PaData.touch(); }
+            }
+            case "memop" -> {                                       // [pa35] the Memory tab: delete, edit, add, pause, forget all
+                if (r == null || a == null || !a.isOwner(p)) return;
+                PaMemoryAct.op(p, a, r, args);
+                PaNet.refresh(p, a);
             }
             default -> { }
         }
@@ -235,6 +241,12 @@ public final class PaServer {
         String[] w = text.substring(1).split(" ");
         switch (w[0]) {
             case "fetchdeath" -> PaBanter.fetchDeath(a);           // [pa33b]
+            case "memforgetall" -> { PaMemoryAct.forgetAll(a); return; }     // [pa35] "forget everything", confirmed
+            case "memkeep" -> PaTalk.reply(a, "Right. I'll hang on to all of it.", null, true);
+            case "memlike", "memdislike" -> {                        // [pa35] "I like Sam": a thing after all, not a person
+                String it = text.substring(w[0].length() + 1).trim();
+                PaMemoryAct.hear(p, a, (w[0].equals("memlike") ? "i like " : "i hate ") + it.toLowerCase(java.util.Locale.ROOT), PaOrders.Look.NONE);
+            }
             case "nofetch" -> PaTalk.reply(a, "Right you are. Mind, they'll vanish in about five minutes.");
             case "veto" -> {
                 if (w.length > 1) {

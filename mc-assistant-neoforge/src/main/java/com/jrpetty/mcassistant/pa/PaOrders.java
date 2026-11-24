@@ -67,7 +67,9 @@ public final class PaOrders {
         if (text.length() > 240) text = text.substring(0, 240);
         PaData.Rec r = a.rec();
         if (r != null) {
-            r.say(0, (voice ? "(voice) " : "") + text, a.level().getGameTime());
+            // [pa35] a password, an address, a phone number: never kept, not even in the talk log
+            String logged = PaMemoryParse.secret(text) ? "(something private: not kept)" : text;
+            r.say(0, (voice ? "(voice) " : "") + logged, a.level().getGameTime());
             PaData.touch();
         }
         PlayerAssistantEntity before = PaChests.askAs(a);
@@ -75,6 +77,25 @@ public final class PaOrders {
             hear0(p, a, voice ? PaWords.voiceFix(text) : text, look);   // [pa33b] a spoken order: the recogniser's slips put right
         } finally {
             PaChests.askAs(before);
+        }
+        PaNet.refresh(p, a);
+    }
+
+    /**
+     * [pa35] A standing rule's order, on its trigger (PaMemoryAct): the plain order words through the same reader as
+     * anything said, with no question first (its player set the rule) and nothing logged as said by them.
+     */
+    public static void rule(ServerPlayer p, PlayerAssistantEntity a, String order) {
+        PaData.Rec r = a.rec();
+        boolean confirm = r != null && r.confirm;
+        if (r != null) r.confirm = false;
+        PlayerAssistantEntity before = PaChests.askAs(a);
+        try {
+            PaUnderstand.Reading reading = PaUnderstand.read(order, a.getAssistantName());
+            if (reading.understood()) run(p, a, reading.steps(), Look.NONE, order);
+        } finally {
+            PaChests.askAs(before);
+            if (r != null) r.confirm = confirm;
         }
         PaNet.refresh(p, a);
     }
@@ -98,6 +119,8 @@ public final class PaOrders {
             }
             PENDING.remove(p.getUUID());                // anything else is a new order: the old question lapses
         }
+        // [pa35] something to remember, a question about what it remembers, or "forget that": its memory answers first
+        if (PaQuips.mute(text, a.rec() != null && a.rec().mute > 0) == null && PaMemoryAct.hear(p, a, tone.tone() == PaTone.Tone.RUDE ? tone.order() : text, look)) return;
         // [pa33b] "shut up" (quiet: answers and warnings only), "no more jokes" (plain words), "you can talk again" (itself)
         PaData.Rec mr = a.rec();
         PaQuips.Mute mu = mr == null ? null : PaQuips.mute(text, mr.mute > 0);
@@ -115,7 +138,7 @@ public final class PaOrders {
                 || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);
             if (order) {
                 run(p, a, reading.steps(), look, text);
-                String key = PaTone.key(tone, before, a.mind.toneHeat.heat(), PaTone.level(mr.language, PaConfig.maxLanguage()), mr.mute);
+                String key = PaTone.key(tone, before, a.mind.toneHeat.heat(), PaMemoryAct.language(a, PaTone.level(mr.language, PaConfig.maxLanguage())), mr.mute);   // [pa35] clean near those it was told
                 String back = key == null ? null : PaBanter.toneLine(a, key, thing(reading));
                 if (back != null) PaTalk.reply(a, back);
                 return;
@@ -980,7 +1003,8 @@ public final class PaOrders {
                     out.add(cook);
                 }
                 PaPlan.Step s = step("bring you food", Kind.BRING_FOOD, 15);
-                s.jobs.add(Job.give("food", n > 0 ? n : 4));
+                s.jobs.add(Job.give(PaMemoryAct.foodWord(a), n > 0 ? n : 4));   // [pa35] its player's favourite, when it has some
+                PaMemoryAct.gaveFood(a);
                 out.add(s);
                 return null;
             }

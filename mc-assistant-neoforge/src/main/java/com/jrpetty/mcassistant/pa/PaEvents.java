@@ -85,6 +85,7 @@ public final class PaEvents {
         if (!(event.getEntity() instanceof ServerPlayer p) || event.isEndConquered()) return;
         PlayerAssistantEntity a = PaLife.find(p);
         if (a != null) a.mind.respawnQuipAt = a.tickCount + 60;
+        PaMemoryAct.ownerRespawned(p);                                   // [pa35] "if I die, fetch my stuff"
     }
 
     /** A fall survived, or a hard knock: a remark (rate-limited). */
@@ -120,6 +121,7 @@ public final class PaEvents {
     @SubscribeEvent
     public static void onEat(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish event) {
         if (event.getEntity() instanceof net.minecraft.world.entity.player.Player pl && event.getItem().has(net.minecraft.core.component.DataComponents.FOOD)) did(pl, "jm.eat");
+        if (event.getEntity() instanceof ServerPlayer sp && event.getItem().has(net.minecraft.core.component.DataComponents.FOOD)) PaMemoryAct.ownerAte(sp, event.getItem());   // [pa35]
     }
 
     @SubscribeEvent
@@ -132,6 +134,7 @@ public final class PaEvents {
         var server = event.getServer();
         if (server.getTickCount() % 20 != 0) return;
         PaLife.watch(server);
+        PaMemoryAct.serverTick(server);                                    // [pa35] reminders
         if (server.getTickCount() % 600 == 0) {
             for (ServerLevel level : server.getAllLevels()) {
                 for (Entity e : level.getAllEntities()) {

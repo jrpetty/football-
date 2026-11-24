@@ -114,6 +114,9 @@ public final class PaClient {
             case PaPayload.SAY -> said(mc, data);
             case PaPayload.GUIDE -> PaGuideAnswer.answer(data.getInt("id"), data.getString("q"));
             case PaPayload.PING -> PaPingClient.fromServer(data);      // [pa33c-2b]
+            case PaPayload.TOAST -> net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),   // [pa35] a reminder
+                net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+                net.minecraft.network.chat.Component.literal(data.getString("title")), net.minecraft.network.chat.Component.literal(data.getString("text")));
             case PaPayload.LEVEL -> {                                   // [pa33d] a level gained: a toast
                 String sk = data.getString("skills");
                 net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),

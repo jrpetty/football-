@@ -20,6 +20,7 @@ public final class PaConfig {
     static final ModConfigSpec.IntValue START_HEARTS, MAX_HEARTS;             // [pa33c-2b]
     static final ModConfigSpec.BooleanValue KEEP_PACK;
     static final ModConfigSpec.DoubleValue XP_MULT;                           // [pa33d]
+    static final ModConfigSpec.IntValue MEM_CAP;                              // [pa35]
     static final ModConfigSpec.BooleanValue FREE_FIRST, SAFETY, TOWN_WORK, LLM_ON;
     static final ModConfigSpec.ConfigValue<String> LLM_URL, LLM_KEY, LLM_MODEL;
 
@@ -53,6 +54,8 @@ public final class PaConfig {
             .define("keepPackOnDeath", true);
         XP_MULT = b.comment("[pa33d] How fast assistants level up: their experience is multiplied by this (1 = the intended grind, many game days to level 10).",
             "Operators can change it in game from the assistant's panel (Settings, Advanced).").defineInRange("xpMultiplier", 1.0, 0.0, 100.0);
+        MEM_CAP = b.comment("[pa35] How many things an assistant may remember for its player (likes, people, rules, reminders). Places are kept apart (32).",
+            "Operators can change it in game from the assistant's panel (Settings, Advanced).").defineInRange("memoryCap", 100, 10, 1000);
         ROAST_OTHERS = b.comment("[pa33b] May an assistant roast another player back when that player roasts it or its owner first? (Never unprompted.)")
             .define("allowRoastOthers", true);
         CHUNKS_ON = b.comment("[pa33g] An assistant told to stay, on guard, at work or walking over to its player keeps the chunks round it loaded",
@@ -123,6 +126,28 @@ public final class PaConfig {
     private static volatile Double xpForTests;
 
     public static void xpMultiplierForTests(Double m) { xpForTests = m; }
+
+    private static volatile Integer memCapForTests;
+
+    /** [pa35] How many things an assistant may remember for its player. */
+    public static int memoryCap() {
+        Integer t = memCapForTests;
+        return t != null ? t : read(MEM_CAP, 100);
+    }
+
+    /** [pa35] An operator's change from the panel (or a test's, with no config loaded). */
+    public static void setMemoryCap(int n) {
+        int v = Math.max(10, Math.min(1000, n));
+        try {
+            MEM_CAP.set(v);
+            MEM_CAP.save();
+            memCapForTests = null;
+        } catch (Exception e) {
+            memCapForTests = v;
+        }
+    }
+
+    public static void memoryCapForTests(Integer n) { memCapForTests = n; }
 
     /** [pa33d] An operator's change from the panel: kept in the server's config file. */
     public static void setXpMultiplier(double m) {
