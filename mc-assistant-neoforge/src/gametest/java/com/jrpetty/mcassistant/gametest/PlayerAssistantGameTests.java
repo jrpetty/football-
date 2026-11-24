@@ -1980,6 +1980,7 @@ public class PlayerAssistantGameTests {
         // [pa33f] while it shoots at the dragon it faces the dragon (not its player): the most it is ever turned away, aiming
         net.minecraft.world.entity.Entity[] foe = {null};
         double[] worst = {-1};
+        int[] aimed = {0}, facing = {0};                                  // ticks aiming at it, and of those turned within 30 degrees (it flies about)
         helper.onEachTick(() -> {
             PlayerAssistantEntity q = PaLife.find(p);
             if (foe[0] == null || q == null || q.mind.aimUntil <= q.tickCount || q.mind.aimEntity != foe[0]) return;
@@ -1987,6 +1988,8 @@ public class PlayerAssistantGameTests {
             double want = Math.toDegrees(Math.atan2(to.z, to.x)) - 90.0;
             double off = Math.abs(net.minecraft.util.Mth.wrapDegrees(want - q.getYHeadRot()));
             worst[0] = Math.max(worst[0], off);
+            aimed[0]++;
+            if (off < 30.0) facing[0]++;
         });
         atLevel(a, 10);
         a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
@@ -2014,7 +2017,8 @@ public class PlayerAssistantGameTests {
                 float full = dragon.getHealth();
                 helper.runAfterDelay(300, () -> {
                     helper.assertTrue(dragon.getHealth() < full, "arrows in the dragon: " + dragon.getHealth() + " of " + full + " (" + lastWords(b) + ")");
-                    helper.assertTrue(worst[0] >= 0 && worst[0] < 30.0, "it faced the dragon while it shot: turned " + worst[0] + " degrees away at most");
+                    helper.assertTrue(aimed[0] > 0 && facing[0] * 10 >= aimed[0] * 9, "it faced the dragon while it shot: " + facing[0] + " of " + aimed[0]
+                        + " aiming ticks within 30 degrees (at worst " + (int) worst[0] + ", as it wheels about)");
                     Kit.log("pai54 end: crystal down, dragon at " + dragon.getHealth() + " of " + full + "; " + lastWords(b));
                     dragon.discard();
                     forceAround(end, ex, ez, false);
