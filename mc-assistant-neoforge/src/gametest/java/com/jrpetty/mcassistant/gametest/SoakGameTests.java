@@ -167,4 +167,41 @@ public class SoakGameTests {
             com.jrpetty.mcassistant.entity.Accounts.leave(depth);
         }
     }
+
+    /**
+     * A town asleep when the server stops is on the map again when it starts: its register is in memory and its folk,
+     * who carry it, are all in chunks nobody holds; from its books it is put back, where it was, as far as it had got.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "soak_sk04_sleeper_restored")
+    public static void sk04_sleeper_restored(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x = 9_442_000, z = 92000;
+        Kit.hold(level, x, z, 24);
+        Kit.prepare(level, x, z, 24);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        for (int i = 0; i < 2; i++) VillageFolkSpawnerBlock.raise(level, heart.offset(2 + i, 0, 2), 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a town");
+        java.util.UUID id = f.ownerId();
+        com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.get(id);
+        int roll = com.jrpetty.mcassistant.entity.Villages.headcount(id);
+        java.util.List<String> built = com.jrpetty.mcassistant.entity.Villages.builtList(id);
+        com.jrpetty.mcassistant.entity.TownLod.ratesForTests(id, new com.jrpetty.mcassistant.entity.TownLod.Rates(java.util.Map.of("bread", 1.0), 1.0, 0.0, 5.0));
+        com.jrpetty.mcassistant.entity.TownLod.forceForTests(level.getServer(), com.jrpetty.mcassistant.entity.TownLod.Lod.AWAY);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.TownLod.away(id), "with nobody near it sleeps");
+        // The server stops and starts: everything in memory gone, the books kept.
+        com.jrpetty.mcassistant.SessionReset.openingForTests(com.jrpetty.mcassistant.SessionReset::resetAll);
+        boolean gone = com.jrpetty.mcassistant.entity.Villages.get(id) == null;
+        int back = com.jrpetty.mcassistant.entity.TownRoll.restoreForTests(level.getServer());
+        com.jrpetty.mcassistant.entity.Villages.Village again = com.jrpetty.mcassistant.entity.Villages.get(id);
+        Kit.log("sk04 a town of " + roll + " asleep, the server restarted: off the register " + gone + "; put back " + back + ": "
+            + (again == null ? "none" : again.centre().toShortString() + ", roll " + com.jrpetty.mcassistant.entity.Villages.headcount(id)
+            + ", built " + com.jrpetty.mcassistant.entity.Villages.builtList(id)));
+        helper.assertTrue(gone, "after the restart it is off the register (its folk unloaded carry it)");
+        helper.assertTrue(again != null && again.centre().equals(v.centre()) && again.dim().equals(v.dim()), "put back on the map where it was");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Villages.headcount(id) == roll && com.jrpetty.mcassistant.entity.Villages.builtList(id).equals(built),
+            "as far as it had got: roll " + com.jrpetty.mcassistant.entity.Villages.headcount(id) + " of " + roll);
+        helper.succeed();
+    }
 }

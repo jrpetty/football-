@@ -149,7 +149,11 @@ public final class TownLod {
     @Nullable private static Lod forced;
 
     /** Forget every town's level (a world closing, or a test). */
+    /** [soak40] The sleeping towns put back from their books since the world opened. */
+    private static boolean rollRestored;
+
     public static void reset() {
+        if (com.jrpetty.mcassistant.SessionReset.opening()) rollRestored = false;   // [soak40] a world opening, not a test's reset
         TOWNS.clear();
         SleepClaims.reset();                                             // [soak40]
         TownScheduler.reset();
@@ -237,6 +241,10 @@ public final class TownLod {
     }
 
     private static void tick(MinecraftServer server) {
+        if (!rollRestored) {                                             // [soak40] the towns asleep at the last stop, back on the map
+            rollRestored = true;
+            TownRoll.restore(server);
+        }
         if (!dirtyParked.isEmpty()) {
             for (UUID id : dirtyParked) {
                 Town t = TOWNS.get(id);
@@ -385,6 +393,7 @@ public final class TownLod {
         t.parked.addAll(let);
         save(v.id(), t);
         saveParked(v.id(), t);
+        TownRoll.keep(v);                                                // [soak40] on the map again after a restart
         LOG.info("[MCA-LOD] {} sleeps (nobody near): {} forced chunks let go, its stores counted at {} kinds",
             Villages.name(v.id()), let.size(), t.held.size());
     }
@@ -406,6 +415,7 @@ public final class TownLod {
         t.counts.clear();
         Ledger.forget(v.id(), AWAY_NOTE);
         Ledger.forget(v.id(), PARKED_NOTE);
+        TownRoll.forget(v.id());                                         // [soak40]
         LOG.info("[MCA-LOD] {} wakes after {} days: {} chunks asked for again, {} kinds of goods and {} children to settle",
             Villages.name(v.id()), String.format(Locale.ROOT, "%.2f", (t.wokeAt - t.sleptAt) / 24000.0), parked,
             t.pending.size(), (int) t.birthsDue);
