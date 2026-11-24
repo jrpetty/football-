@@ -631,6 +631,8 @@ public final class PaOrders {
         switch (i.kind()) {
             case GATHER -> {
                 String what = i.item();
+                String noOre = PaMineLock.refusal(a, what);                // [pa35] the mining ladder
+                if (noOre != null) return noOre;
                 GatherGoal.Kind k = PaItems.kind(what);
                 if (k == null) {
                     if (what.equals("clay") || what.equals("wool") || what.equals("flowers") || what.equals("saplings")
@@ -681,6 +683,13 @@ public final class PaOrders {
             }
             case MINE_ORE -> {
                 String ore = i.item();
+                // [pa35] the mining ladder: an ore above its level it won't touch, and says how far off it is
+                if (look.block() != null && (ore.equals("vein") || i.place() == PaIntent.Place.LOOKED)) {
+                    net.minecraft.world.level.block.state.BlockState ls = a.level().getBlockState(look.block());
+                    if (!PaLevels.canMine(a, ls)) { String no = PaMineLock.refusal(a, net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(ls.getBlock()).getPath().replace("deepslate_", "").replace("_ore", "")); if (no != null) return no; }
+                }
+                String noOre = PaMineLock.refusal(a, ore);
+                if (noOre != null) return noOre;
                 if (!PaItems.hasPickaxe(a)) needPickaxe(a, out);
                 GatherGoal.Kind seen = look.block() == null ? null : kindAt(a, look.block());
                 boolean looking = seen != null && !ore.equals("vein") && seen.label.toLowerCase().contains(ore);   // "mine iron", eyes on iron ore

@@ -44,7 +44,7 @@ public final class PaMoves {
 
     static void shield(PlayerAssistantEntity a) {
         ItemStack off = a.getOffhandItem();
-        if (!off.is(Items.SHIELD)) {
+        if (!off.is(Items.SHIELD) || !PaLevels.canUse(a, off)) {          // [pa35] the shield from level 2
             if (a.mind.blocking) { a.stopUsingItem(); a.mind.blocking = false; }
             return;
         }

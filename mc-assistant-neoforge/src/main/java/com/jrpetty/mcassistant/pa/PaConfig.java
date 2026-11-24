@@ -21,6 +21,8 @@ public final class PaConfig {
     static final ModConfigSpec.BooleanValue KEEP_PACK;
     static final ModConfigSpec.DoubleValue XP_MULT;                           // [pa33d]
     static final ModConfigSpec.IntValue MEM_CAP;                              // [pa35]
+    static final ModConfigSpec.BooleanValue LADDER_ON;                        // [pa35] the mining ladder
+    static final ModConfigSpec.ConfigValue<String> LADDER;
     static final ModConfigSpec.BooleanValue FREE_FIRST, SAFETY, TOWN_WORK, LLM_ON;
     static final ModConfigSpec.ConfigValue<String> LLM_URL, LLM_KEY, LLM_MODEL;
 
@@ -56,6 +58,10 @@ public final class PaConfig {
             "Operators can change it in game from the assistant's panel (Settings, Advanced).").defineInRange("xpMultiplier", 1.0, 0.0, 100.0);
         MEM_CAP = b.comment("[pa35] How many things an assistant may remember for its player (likes, people, rules, reminders). Places are kept apart (32).",
             "Operators can change it in game from the assistant's panel (Settings, Advanced).").defineInRange("memoryCap", 100, 10, 1000);
+        LADDER_ON = b.comment("[pa35] The mining ladder: an assistant may break an ore only from its level (coal 2, copper 3, iron 4, gold/redstone/lapis 5,",
+            "diamond 6, emerald/obsidian 7, ancient debris 8). Operators can change it in game (Settings, Advanced).").define("miningLadder", true);
+        LADDER = b.comment("[pa35] Rungs moved by operators, e.g. \"iron=3,diamond=5\" (keys: coal copper quartz iron gold redstone lapis diamond emerald obsidian debris special).")
+            .define("miningLadderLevels", "");
         ROAST_OTHERS = b.comment("[pa33b] May an assistant roast another player back when that player roasts it or its owner first? (Never unprompted.)")
             .define("allowRoastOthers", true);
         CHUNKS_ON = b.comment("[pa33g] An assistant told to stay, on guard, at work or walking over to its player keeps the chunks round it loaded",
@@ -148,6 +154,42 @@ public final class PaConfig {
     }
 
     public static void memoryCapForTests(Integer n) { memCapForTests = n; }
+
+    private static volatile Boolean ladderForTests;
+    private static volatile String ladderLevelsForTests;
+
+    /** [pa35] Is the mining ladder on (operators may turn it off)? */
+    public static boolean ladderOn() {
+        Boolean t = ladderForTests;
+        return t != null ? t : read(LADDER_ON, true);
+    }
+
+    /** [pa35] The operators' rung overrides. */
+    public static java.util.Map<String, Integer> ladderLevels() {
+        String t = ladderLevelsForTests;
+        return PaMineLadder.parse(t != null ? t : read(LADDER, ""));
+    }
+
+    /** [pa35] An operator's change from the panel: the ladder on or off, and a rung moved (null leaves it). */
+    public static void setLadder(@javax.annotation.Nullable Boolean on, @javax.annotation.Nullable String key, int level) {
+        java.util.Map<String, Integer> m = ladderLevels();
+        if (key != null) {
+            PaMineLadder.Rung rung = null;
+            for (PaMineLadder.Rung r : PaMineLadder.RUNGS) if (r.key().equals(key)) rung = r;
+            if (rung != null) { if (level == rung.level()) m.remove(key); else m.put(key, Math.max(1, Math.min(PaLevels.MAX, level))); }
+        }
+        try {
+            if (on != null) { LADDER_ON.set(on); LADDER_ON.save(); }
+            LADDER.set(PaMineLadder.format(m));
+            LADDER.save();
+        } catch (Exception e) {
+            if (on != null) ladderForTests = on;
+            ladderLevelsForTests = PaMineLadder.format(m);
+        }
+    }
+
+    /** Tests: the ladder as shipped (null), or on/off with these overrides. */
+    public static void ladderForTests(Boolean on, String levels) { ladderForTests = on; ladderLevelsForTests = levels; }
 
     /** [pa33d] An operator's change from the panel: kept in the server's config file. */
     public static void setXpMultiplier(double m) {

@@ -21,6 +21,21 @@ public final class PaLevels {
         return (int) Math.round(40.0 * Math.pow(l - 1, 2.2));
     }
 
+    /**
+     * [pa35] Experience an hour of ordinary mixed use earns at a multiplier of one (tuned with the levelling curve: see
+     * PaLevelsTest's simulation). Used only for estimates ("about three hours of graft").
+     */
+    public static double XP_PER_HOUR = 120;
+
+    /** [pa35] About how long until a level, in words ("about three hours", "under an hour"). */
+    public static String timeTo(long xp, int level) {
+        double left = Math.max(0, xpFor(level) - xp) / Math.max(1e-6, XP_PER_HOUR * Math.max(0.01, PaConfig.xpMultiplier()));
+        if (left <= 0) return "no time at all";
+        if (left < 0.75) return Math.max(5, (int) Math.round(left * 60 / 5) * 5) + " minutes";
+        int h = (int) Math.round(left);
+        return h <= 1 ? "about an hour" : "about " + com.jrpetty.mcassistant.pa.voice.PaSpeech.words(h) + " hours";
+    }
+
     /** The level so much experience makes. */
     public static int level(long xp) {
         int l = 1;
@@ -45,6 +60,42 @@ public final class PaLevels {
     public static int pay(int base, int diff, double multiplier) {
         if (base <= 0) return 0;
         return Math.max(1, (int) Math.round(base * difficulty(diff) * Math.max(0.0, multiplier)));
+    }
+
+    // ------------------------------------------------------------------ [pa35] the mining ladder (PaMineLadder)
+
+    /** The level this block needs before an assistant may break it (1 for most; the ladder's rung for ores). */
+    public static int mineLevel(net.minecraft.world.level.block.state.BlockState state) {
+        String path = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+        return PaMineLadder.levelFor(path, PaConfig.ladderOn(), PaConfig.ladderLevels());
+    }
+
+    /**
+     * [pa35] May this assistant break this block? The one gate every break path asks (its gathering, mining, tunnelling,
+     * clearing, orders, pings, and the logistics jobs). Only what it breaks: it carries, smelts and crafts with any ore.
+     * Vanilla's tool rules still apply on top. Anything that isn't a Player AI Assistant may.
+     */
+    public static boolean canMine(net.minecraft.world.entity.Entity assistant, net.minecraft.world.level.block.state.BlockState state) {
+        if (!(assistant instanceof PlayerAssistantEntity a) || state.isAir()) return true;
+        int need = mineLevel(state);
+        return need <= 1 || a.veteranLevel() >= need;
+    }
+
+    /** [pa35] The level this item needs before an assistant equips or uses it (the gear ladder, PaGearLadder). */
+    public static int gearLevel(net.minecraft.world.item.ItemStack s) {
+        if (s == null || s.isEmpty()) return 1;
+        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+        return PaGearLadder.levelFor(path, PaConfig.ladderOn(), PaConfig.ladderLevels());
+    }
+
+    /**
+     * [pa35] May this assistant equip or use this item? The gate auto-equip, "equip best", the shield, the bow and
+     * crossbow, armour and thrown things ask. Below the level it carries the item and gives it back, never uses it.
+     */
+    public static boolean canUse(net.minecraft.world.entity.Entity assistant, net.minecraft.world.item.ItemStack s) {
+        if (!(assistant instanceof PlayerAssistantEntity a)) return true;
+        int need = gearLevel(s);
+        return need <= 1 || a.veteranLevel() >= need;
     }
 
     // ------------------------------------------------------------------ what each level does

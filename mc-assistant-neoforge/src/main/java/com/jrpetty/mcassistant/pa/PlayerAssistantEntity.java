@@ -230,7 +230,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
      */
     @Override
     public boolean mayUseTier(ItemStack s) {
-        return true;
+        return PaLevels.canUse(this, s);                          // [pa35] the gear ladder (crossbow 5, diamond 6, netherite 9...)
+    }
+
+    /** [pa35] Armour by the gear ladder (up to iron at 4, diamond at 6, netherite at 9). */
+    @Override
+    public boolean mayWear(ItemStack s) {
+        return PaLevels.canUse(this, s);
     }
 
     /** May it fight this? Monsters and the like yes; people, assistants, crews and folk no. */
@@ -308,7 +314,8 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public boolean inZone(BlockPos pos) {
         return super.inZone(pos) && !PaSafety.offLimits(this, pos) && PaBrain.withinRoam(this, pos)
-            && !PaMemoryAct.spared(this, pos);                         // [pa35] "don't break the blue flowers"
+            && !PaMemoryAct.spared(this, pos)                          // [pa35] "don't break the blue flowers"
+            && PaMineLock.allowed(this, pos);                          // [pa35] the mining ladder (PaLevels.canMine)
     }
 
     /** [pa35] The wood its player likes is chopped first; the wood they don't, only when there's nothing else. */

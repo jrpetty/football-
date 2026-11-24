@@ -199,7 +199,7 @@ public final class PaPack {
             int bestDef = a.getItemBySlot(e).getItem() instanceof ArmorItem w ? w.getDefense() : -1;
             for (int k = 0; k < inv.size(); k++) {
                 ItemStack s = inv.get(k);
-                if (s.getItem() instanceof ArmorItem ar && a.getEquipmentSlotForItem(s) == e && ar.getDefense() > bestDef) { best = k; bestDef = ar.getDefense(); }
+                if (s.getItem() instanceof ArmorItem ar && a.getEquipmentSlotForItem(s) == e && ar.getDefense() > bestDef && PaLevels.canUse(a, s)) { best = k; bestDef = ar.getDefense(); }   // [pa35] gear ladder
             }
             if (best >= 0) {
                 ItemStack worn = a.getItemBySlot(e).copy();
