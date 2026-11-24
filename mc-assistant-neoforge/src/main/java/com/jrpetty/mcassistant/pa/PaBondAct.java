@@ -179,10 +179,11 @@ public final class PaBondAct {
             if (note(a, "days" + mark, "We've been mates for " + mark + " days. Nobody else would put up with either of us.") && r.mute < 2)
                 PaTalk.reply(a, PaTalk.line(a, "bond.anniversary", "n", Integer.toString(mark)), null, true);
         }
-        if (near && now >= w.storyAt && s.story.size() >= 3) {
-            boolean first = w.storyAt == 0;
-            w.storyAt = now + 48000 + a.getRandom().nextInt(48000);
-            if (!first && r.mute == 0 && r.chatty >= 1 && a.getRandom().nextInt(100) < 25) {
+        boolean filmStory = Boolean.getBoolean("mca.pa.filmStory");            // filming only: a story line every half minute or so
+        if (near && now >= w.storyAt && s.story.size() >= (filmStory ? 1 : 3)) {
+            boolean first = w.storyAt == 0 && !filmStory;
+            w.storyAt = now + (filmStory ? 600 : 48000 + a.getRandom().nextInt(48000));
+            if (!first && r.mute == 0 && r.chatty >= 1 && (filmStory || a.getRandom().nextInt(100) < 25)) {
                 String[] e = s.story.get(a.getRandom().nextInt(Math.max(1, s.story.size() - 1)));
                 PaTalk.comment(a, 2, PaTalk.line(a, "bond.recall", "day", e[0], "what", lower(e[2])), false, true);
             }
