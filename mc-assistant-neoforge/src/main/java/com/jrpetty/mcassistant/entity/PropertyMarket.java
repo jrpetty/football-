@@ -110,6 +110,11 @@ public final class PropertyMarket {
     static boolean covers(CompoundTag t, BlockPos p, int margin) {
         BlockPos a = BlockPos.of(t.getLong("anchor"));
         Direction f = Direction.from2DDataValue(t.getInt("facing"));
+        String drawing = t.getString("drawing");
+        if (!drawing.isEmpty() && com.jrpetty.mcassistant.entity.goal.Blueprints.has(drawing)) {   // [house34b] its own ground, not one past an even drawing's end
+            int[] box = BuildGoal.box(drawing, a, f, false);
+            return p.getX() >= box[0] - margin && p.getX() <= box[1] + margin && p.getZ() >= box[2] - margin && p.getZ() <= box[3] + margin;
+        }
         boolean turned = f.getAxis() == Direction.Axis.X;
         int wx = turned ? t.getInt("hd") : t.getInt("hw"), wz = turned ? t.getInt("hw") : t.getInt("hd");
         return Math.abs(p.getX() - a.getX()) <= wx + margin && Math.abs(p.getZ() - a.getZ()) <= wz + margin;

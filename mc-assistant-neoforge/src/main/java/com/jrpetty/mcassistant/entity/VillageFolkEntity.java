@@ -7543,8 +7543,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (still != null && !project.equals("fortify") && drawn == 0) return 0;
         int blocks = drawn + drawn / 10 + 2;                    // a margin for the cells that are lost
         if (!project.equals("fortify")) {                       // and the ground to build up
-            int[] g = BuildGoal.footprint(project);
-            blocks += BuildGoal.fillCells(level(), site.anchor(), site.facing(), g[0], g[1]).size();
+            blocks += BuildGoal.fillCells(level(), site.anchor(), BuildGoal.box(project, site.anchor(), site.facing(), false)).size();   // [house34b] its own ground, not one past an even drawing's end
         }
         return blocks;
     }
@@ -7887,6 +7886,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int bricksHeld = countCarried(brickBlocks);
         // The village's own stone and timber first (Palettes), then whatever else will do.
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> dressed = BuildGoal.preferred(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY);
+        if (TerraceRows.isRow(project)) topUp(heart, st -> st.is(net.minecraft.world.item.Items.STONE_BRICKS), masonry, r);   // [house34b] a row's dressed stone, its own
         topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY, dressed, masonry + Math.max(0, brick - bricksHeld), r);
         topUp(heart, dressed, masonry + Math.max(0, brick - bricksHeld), r);
         topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FOUNDATION, BuildGoal::isStoneLike, Math.max(0, stone - bricksHeld), r);

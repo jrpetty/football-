@@ -314,6 +314,7 @@ def bayfronted():
             x = -10 if i == 0 else 11
             for h in (1, 2):
                 d.put(x, h, -1, 'G')
+                d.put(x, h, 2, 'G')                              # the end house's kitchen lit from the side street too
             for h in (5, 6):
                 d.put(x, h, 3 if i == 0 else 0, 'G')
     roof(d, FRONT, BACK, EAVES, True)
@@ -345,7 +346,7 @@ def grand():
             for h in range(0, DECK + 2):
                 d.put(x, h, z, 'S' if h <= F2 - 1 or h == DECK + 1 and z == FRONT else 'Z')
         d.put(x, 0, -4, 'S'); d.put(x, 0, -3, 'S'); d.put(x, 0, RAIL, 'S'); d.put(x, 1, RAIL, 'S')
-        d.put(x, F2, -3, 'S'); d.put(x, DECK, -3, 'S'); d.put(x, DECK + 2, FRONT, 's')
+        d.put(x, F2, -3, 'S'); d.put(x, F2 + 1, -3, 'S'); d.put(x, DECK, -3, 'S'); d.put(x, DECK + 2, FRONT, 's')
     for i, H in enumerate(houses):
         end = i == 0 or i == len(houses) - 1
         for c in range(6):
@@ -390,11 +391,11 @@ def grand():
             H.put(c, 0, RAIL, 'P')
         H.put(4, 1, -4, 'P'); H.put(4, 2, -3, 'P')
         H.put(0, 1, RAIL, 'l')
-        # the band projecting before the first floor (a canopy over the steps), its balconettes
+        # the band projecting before the first floor (a canopy over the steps) and the balcony along it: an iron railing the
+        # width of the house, between the party walls' stone piers, before the tall first-floor windows
         for c in range(6):
             H.put(c, F2, -3, 'S')
-        for c in (1, 3, 5):
-            H.put(c, 7, -3, 'P')
+            H.put(c, F2 + 1, -3, 'P')
         H.put(5, 5, -3, 'j')
         # the cornice and the parapet
         for c in range(6):

@@ -350,10 +350,8 @@ public final class Sweepers {
                     rings.add(new int[]{ a.getX(), a.getZ(), e.getValue().radius() });
                     continue;
                 }
-                int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(e.getKey());
-                boolean turned = e.getValue().facing().getAxis() == net.minecraft.core.Direction.Axis.X;
-                int wx = (turned ? half[1] : half[0]) + SITE_MARGIN, wz = (turned ? half[0] : half[1]) + SITE_MARGIN;
-                sites.add(new int[]{ a.getX() - wx, a.getZ() - wz, a.getX() + wx, a.getZ() + wz });
+                int[] box = com.jrpetty.mcassistant.entity.goal.BuildGoal.box(e.getKey(), a, e.getValue().facing(), false);   // [house34b] its own ground, not one past an even drawing's end
+                sites.add(new int[]{ box[0] - SITE_MARGIN, box[2] - SITE_MARGIN, box[1] + SITE_MARGIN, box[3] + SITE_MARGIN });
             }
             for (AssistantEntity a : Villages.folkOf(id)) {
                 if (!(a instanceof VillageFolkEntity f) || f.isBaby() || !f.isAlive()) continue;

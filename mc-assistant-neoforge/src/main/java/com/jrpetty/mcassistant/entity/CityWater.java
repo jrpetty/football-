@@ -102,11 +102,9 @@ public final class CityWater {
     public static java.util.function.Predicate<BlockPos> own(Ledger.Building b, Collection<BlockPos> cells) {
         Set<BlockPos> basin = new java.util.HashSet<>(cells);
         if (b.structure().equals(TownLook.ALLOTMENTS)) return basin::contains;
-        int[] g = BuildGoal.footprint(b.structure());
-        boolean turned = b.facing().getAxis() == Direction.Axis.X;
-        int hx = turned ? g[1] : g[0], hz = turned ? g[0] : g[1];
+        int[] box = BuildGoal.box(b.structure(), b.anchor(), b.facing(), false);   // [house34b] its own ground, not one past an even drawing's end
         BlockPos a = b.anchor();
-        return q -> basin.contains(q) || (Math.abs(q.getX() - a.getX()) < hx && Math.abs(q.getZ() - a.getZ()) < hz && q.getY() >= a.getY() - 1);
+        return q -> basin.contains(q) || (q.getX() > box[0] && q.getX() < box[1] && q.getZ() > box[2] && q.getZ() < box[3] && q.getY() >= a.getY() - 1);
     }
 
     /** A building's own water cells (its drawing's water), where they are in the world. */

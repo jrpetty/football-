@@ -454,6 +454,10 @@ public final class TownJobs {
         // yard of street laid. The paving's hand and the doors' ways' are on top of the eighth (and not counted against the
         // other works'), so the roads, the beds and the rest keep theirs.
         if (streetsWork(works) && busy < cap + 2) extra = true;
+        // [house34b] Nor a row's finishing: the town's other works kept the eighth's hands for days while its new terraces
+        // stood half in cobble and timber; their one hand is on top of the eighth, as the streets' are.
+        // (A city's eighth and the streets' two are always out at something: up to a third of the town, then.)
+        if (TerraceRows.ROWS_WORK.equals(works) && busy < Math.max(cap + 2, adults / 3)) extra = true;
         // [vision27] Nor a paid order (a player's commission, a household's own house): it was quoted a time and paid for,
         // and a villa ordered and paid for in a town of sixty sat all day at "waiting for a hand the town can spare",
         // its one hand in eight always taken by the town's beds, signs and gardens first.

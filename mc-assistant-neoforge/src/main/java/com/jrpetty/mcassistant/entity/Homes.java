@@ -1100,16 +1100,17 @@ public final class Homes {
     static BlockPos bedSpot(ServerLevel level, UUID village, Home h, List<BlockPos> beds) {
         if (Flats.isFlat(h)) return Flats.bedSpot(level, village, h, beds);   // [flats] in its own room
         if (TerraceRows.isHouse(h)) return TerraceRows.bedSpot(level, village, h, beds);   // [house34]
-        int[] half = BuildGoal.footprint(drawing(village, h));
+        Ledger.Building lb = building(village, h.anchor);
+        int[] box = BuildGoal.box(drawing(village, h), h.anchor, lb == null ? Direction.NORTH : lb.facing(), false);   // [house34b] its own ground, turned with it
         double cx = 0, cz = 0;
         for (BlockPos b : beds) { cx += b.getX(); cz += b.getZ(); }
         if (!beds.isEmpty()) { cx /= beds.size(); cz /= beds.size(); } else { cx = h.anchor.getX(); cz = h.anchor.getZ(); }
         BlockPos best = null;
         double far = -1;
         int y = h.anchor.getY();
-        for (int dx = -half[0] + 1; dx <= half[0] - 1; dx++) {
-            for (int dz = -half[1] + 1; dz <= half[1] - 1; dz++) {
-                BlockPos p = new BlockPos(h.anchor.getX() + dx, y, h.anchor.getZ() + dz);
+        for (int x = box[0] + 1; x <= box[1] - 1; x++) {
+            for (int z = box[2] + 1; z <= box[3] - 1; z++) {
+                BlockPos p = new BlockPos(x, y, z);
                 Direction lie = spotLie(level, p);
                 if (!clear(level, p) || !clear(level, p.relative(lie))) continue;
                 double d = (p.getX() - cx) * (p.getX() - cx) + (p.getZ() - cz) * (p.getZ() - cz);

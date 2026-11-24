@@ -584,15 +584,14 @@ public final class Renovation {
             }
             List<Work> moves = new ArrayList<>(), rest = new ArrayList<>();
             // The furniture standing in the building that is not where the design has it: to be moved, never lost.
-            int[] half = Blueprints.groundHalf(drawing);
-            boolean turned = b.facing().getAxis() == Direction.Axis.X;
-            int wx = turned ? half[1] : half[0], wz = turned ? half[0] : half[1];
+            int[] box = BuildGoal.box(drawing, b.anchor(), b.facing(), false);   // [house34b] its own ground, not one past an even drawing's end
+            int x0 = box[0] - b.anchor().getX(), x1 = box[1] - b.anchor().getX(), z0 = box[2] - b.anchor().getZ(), z1 = box[3] - b.anchor().getZ();
             Map<BuildGoal.Part, List<BlockPos>> orphans = new EnumMap<>(BuildGoal.Part.class);
             List<BlockPos> bedsOut = new ArrayList<>();
             int bedPlaces = 0;
             Set<Long> inside = new HashSet<>();
-            for (int dx = -wx; dx <= wx; dx++) {
-                for (int dz = -wz; dz <= wz; dz++) {
+            for (int dx = x0; dx <= x1; dx++) {
+                for (int dz = z0; dz <= z1; dz++) {
                     for (int dy = 0; dy <= top; dy++) {
                         BlockPos q = b.anchor().offset(dx, dy, dz);
                         if (!level.isLoaded(q)) continue;
@@ -887,13 +886,12 @@ public final class Renovation {
                 at.putIfAbsent(p.pos().asLong(), p);
                 top = Math.max(top, p.pos().getY() - b.anchor().getY());
             }
-            int[] half = Blueprints.groundHalf(drawing);
-            boolean turned = b.facing().getAxis() == Direction.Axis.X;
-            int wx = turned ? half[1] : half[0], wz = turned ? half[0] : half[1];
+            int[] box = BuildGoal.box(drawing, b.anchor(), b.facing(), false);   // [house34b] its own ground, not one past an even drawing's end
+            int x0 = box[0] - b.anchor().getX(), x1 = box[1] - b.anchor().getX(), z0 = box[2] - b.anchor().getZ(), z1 = box[3] - b.anchor().getZ();
             Set<Long> inside = new HashSet<>();
             List<BlockPos> feet = new ArrayList<>();
-            for (int dx = -wx; dx <= wx; dx++) {
-                for (int dz = -wz; dz <= wz; dz++) {
+            for (int dx = x0; dx <= x1; dx++) {
+                for (int dz = z0; dz <= z1; dz++) {
                     for (int dy = 0; dy <= top; dy++) {
                         BlockPos q = b.anchor().offset(dx, dy, dz);
                         inside.add(q.asLong());

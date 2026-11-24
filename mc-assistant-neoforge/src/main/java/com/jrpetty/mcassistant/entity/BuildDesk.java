@@ -303,10 +303,10 @@ public final class BuildDesk {
 
     /** Its size: across, deep, storeys. */
     public static int[] size(String blueprint) {
-        int[] g = BuildGoal.footprint(blueprint);
+        int[] g = BuildGoal.span(blueprint, false);                          // [house34b] twenty-two across is twenty-two, not twenty-three
         int top = 0;
         for (BuildGoal.Placement p : BuildGoal.plan(blueprint, BlockPos.ZERO, Direction.SOUTH, 8)) top = Math.max(top, p.pos().getY());
-        return new int[]{ 2 * g[0] + 1, 2 * g[1] + 1, Math.max(1, (top + 1) / 4) };
+        return new int[]{ g[1] - g[0] + 1, g[3] - g[2] + 1, Math.max(1, (top + 1) / 4) };
     }
 
     /** What is inside it, counted off the drawing. */

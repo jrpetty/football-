@@ -81,12 +81,10 @@ public final class BuildPlots {
         String builders = BuildOrders.plotProblem(level, v, blueprint, at, facing, null);   // [join21] the town's builders' own rules first
         if (!builders.isEmpty()) return "it would be " + builders;
         if (at.distSqr(v.centre()) > 110.0 * 110.0) return "too far out of town";
-        int[] g = BuildGoal.footprint(blueprint);
-        int gx = facing.getAxis() == Direction.Axis.Z ? g[0] : g[1], gz = facing.getAxis() == Direction.Axis.Z ? g[1] : g[0];
+        int[] box = BuildGoal.box(blueprint, at, facing, false);             // [house34b] its own ground, not one past an even drawing's end
         int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
-        for (int dx = -gx - 1; dx <= gx + 1; dx++) {
-            for (int dz = -gz - 1; dz <= gz + 1; dz++) {
-                int x = at.getX() + dx, z = at.getZ() + dz;
+        for (int x = box[0] - 1; x <= box[1] + 1; x++) {
+            for (int z = box[2] - 1; z <= box[3] + 1; z++) {
                 BlockPos col = new BlockPos(x, at.getY(), z);
                 if (!level.isLoaded(col)) return "the ground there isn't loaded";
                 if (Footways.street(v, x, z)) return "it would stand on a street";
@@ -103,7 +101,7 @@ public final class BuildPlots {
         if (hi - lo > 2) return "the ground is too steep";
         if (Math.abs(at.getY() - lo) > 2) return "the ground is too steep";
         for (PlayerShops.Shop s : PlayerShops.all(v.id())) {
-            if (Math.abs(s.anchor.getX() - at.getX()) <= gx + 3 && Math.abs(s.anchor.getZ() - at.getZ()) <= gz + 3) return "a shop stands there";
+            if (s.anchor.getX() >= box[0] - 3 && s.anchor.getX() <= box[1] + 3 && s.anchor.getZ() >= box[2] - 3 && s.anchor.getZ() <= box[3] + 3) return "a shop stands there";
         }
         return "";
     }

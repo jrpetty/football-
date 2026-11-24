@@ -3044,6 +3044,11 @@ public final class Villages {
             holdPrivateSite(villageId, project, kept);
             return kept;
         }
+        Site row = TerraceRows.kept(level, villageId, project);                    // [house34b] a row begun before a restart: its lot again
+        if (row != null) {
+            pending.put(project, row);
+            return row;
+        }
         // [city26] No lot is chosen while the founding is still making the town's ground: a site claimed then stood on the
         // ground as it was (its floor measured from it), and the way in to its door kept the levelling off that street.
         if (Founding.shaping(level, v.centre(), 16)) return null;
@@ -3158,7 +3163,8 @@ public final class Villages {
                 // [districts] A park's lawn at the middle height of its lot, cut and filled to it (ParkGround).
                 ground = ParkGround.floorFor(level, project, ground);
                 valid++;
-                int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground, back, half[0], half[1]).size()
+                int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground,
+                        com.jrpetty.mcassistant.entity.goal.BuildGoal.box(project, ground, back, false)).size()   // [house34b] its own ground, not one past an even drawing's end
                     + 6 * index + Quarters.misfit(villageId, project, lot)      // out of its own quarter: the worse
                     + ParkGround.roughness(level, project, ground)              // [districts] a park: earth to cut, a drop's edge
                     - AgeSites.shore(level, project, x, z);                     // [econ32b] the lighthouse by the water where there is any

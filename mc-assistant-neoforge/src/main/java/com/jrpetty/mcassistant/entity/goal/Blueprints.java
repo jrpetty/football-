@@ -445,6 +445,44 @@ public final class Blueprints {
         return new int[]{ w, d };
     }
 
+    private static final Map<String, int[]> EXTENTS = new ConcurrentHashMap<>();
+
+    /**
+     * [house34b] A drawing's own extent, {least dx, most dx, least dz, most dz}: its footing ({@code full} false) or all of
+     * it. A drawing an even number of blocks across runs a block further to its right than to its left (twenty-two
+     * across: dx -10 to +11), which a half taken each way (groundHalf, fullHalf) cannot say: a box of eleven each way held
+     * a column past its left end, a street beside it refused and a lamp or a fence kept off ground that was nobody's.
+     */
+    public static int[] extent(String name, boolean full) {
+        return EXTENTS.computeIfAbsent(name + (full ? "|full" : "|ground"), k -> {
+            int x0 = 0, x1 = 0, z0 = 0, z1 = 0;
+            for (Cell c : cells(name)) {
+                if (!full && c.h() > 0) continue;
+                x0 = Math.min(x0, c.dx()); x1 = Math.max(x1, c.dx());
+                z0 = Math.min(z0, c.dz()); z1 = Math.max(z1, c.dz());
+            }
+            return new int[]{ x0, x1, z0, z1 };
+        }).clone();
+    }
+
+    /** [house34b] A drawing's extent (extent) set at an anchor with its back toward {@code facing}, in the world:
+     *  {minX, maxX, minZ, maxZ}. */
+    public static int[] worldBox(String name, int ax, int az, Direction facing, boolean full) {
+        return turn(extent(name, full), ax, az, facing);
+    }
+
+    /** [house34b] A box in a building's own terms {least dx, most dx, least dz, most dz} turned and set in the world
+     *  (village/Extents: its back toward {@code facing}). */
+    public static int[] turn(int[] e, int ax, int az, Direction facing) {
+        int back = switch (facing) {
+            case EAST -> com.jrpetty.mcassistant.village.TownPlan.EAST;
+            case SOUTH -> com.jrpetty.mcassistant.village.TownPlan.SOUTH;
+            case WEST -> com.jrpetty.mcassistant.village.TownPlan.WEST;
+            default -> com.jrpetty.mcassistant.village.TownPlan.NORTH;
+        };
+        return com.jrpetty.mcassistant.village.Extents.turn(e, ax, az, back);
+    }
+
     /** Half the width and depth of everything, eaves and porches included. */
     public static int[] fullHalf(String name) {
         int w = 0, d = 0;

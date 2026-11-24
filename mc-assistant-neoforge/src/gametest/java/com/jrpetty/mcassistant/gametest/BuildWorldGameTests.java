@@ -853,17 +853,11 @@ public class BuildWorldGameTests {
             return level.getBlockState(q).isCollisionShapeFullBlock(level, q);
         }
 
-        /** [house34] Is this across the drawing's own ground (a drawing twenty-two across runs dx -10 to +11, not -11)? */
+        /** [house34b] Is this on the drawing's own ground (Blueprints.extent: a drawing an even number across runs dx -10 to
+         *  +11, not -11; one with a porch out front runs further forward than back)? */
         boolean acrossDrawing(BlockPos q) {
-            int ox = q.getX() - a.getX(), oz = q.getZ() - a.getZ();
-            int dx = ox * right.getStepX() + oz * right.getStepZ();
-            int lo = 0, hi = 0;
-            for (Blueprints.Cell c : Blueprints.cells(name)) {
-                if (c.h() > 0) continue;
-                lo = Math.min(lo, c.dx());
-                hi = Math.max(hi, c.dx());
-            }
-            return dx >= lo && dx <= hi;
+            int[] box = BuildGoal.box(name, a, facing, false);
+            return q.getX() >= box[0] && q.getX() <= box[1] && q.getZ() >= box[2] && q.getZ() <= box[3];
         }
 
         /** Nothing of the lot left inside: no earth, sand, gravel, snow, grass, leaves, wood or water. */

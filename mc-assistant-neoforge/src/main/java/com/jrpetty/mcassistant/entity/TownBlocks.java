@@ -512,7 +512,11 @@ public final class TownBlocks {
         int fx = turned ? f[1] : f[0], fz = turned ? f[0] : f[1];
         o.gx0 = a.getX() - gx; o.gx1 = a.getX() + gx; o.gz0 = a.getZ() - gz; o.gz1 = a.getZ() + gz;
         o.fx0 = a.getX() - fx; o.fx1 = a.getX() + fx; o.fz0 = a.getZ() - fz; o.fz1 = a.getZ() + fz;
-        if (TerraceRows.isRow(o.design)) TerraceRows.bounds(o, plan, a);   // [house34] a row twenty-two across: its own ground, not one past its end
+        if (Blueprints.has(o.design)) {                                       // [house34b] its own ground, not one past an even drawing's end
+            int[] gb = BuildGoal.box(o.design, a, facing, false), fb = BuildGoal.box(o.design, a, facing, true);
+            o.gx0 = gb[0]; o.gx1 = gb[1]; o.gz0 = gb[2]; o.gz1 = gb[3];
+            o.fx0 = fb[0]; o.fx1 = fb[1]; o.fz0 = fb[2]; o.fz1 = fb[3];
+        }
         int top = a.getY();
         int bottom = a.getY();
         for (BuildGoal.Placement p : plan) {
