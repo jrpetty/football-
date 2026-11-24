@@ -23,6 +23,10 @@ public final class PaClientConfig {
     /** [pa35] The natural voice: fetched automatically (auto) unless the player said not to (declined); the basic system voice only if picked; a woman's or a man's voice. */
     public static final ModConfigSpec.ConfigValue<String> VOICEPACK;
     public static final ModConfigSpec.BooleanValue BASICVOICE, VOICEWOMAN, VOICEREADYSAID, PROGRESSTOUR;
+    /** [voice37] The voice engine tier (auto, expressive, natural, basic), the expressive voice's download choice, how much it performs, and the benchmarks. */
+    public static final ModConfigSpec.ConfigValue<String> VOICETIER, EXPRESSIVEPACK;
+    public static final ModConfigSpec.IntValue EXPRESSIVENESS;
+    public static final ModConfigSpec.DoubleValue EXPRESSIVERTF, KOKORORTF;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -51,6 +55,15 @@ public final class PaClientConfig {
             .define("systemVoiceBasic", com.jrpetty.mcassistant.pa.voice.PaVoiceDefaults.BASIC);
         VOICEWOMAN = b.comment("[pa35] A woman's natural voice (Emma, or Heart in American English) instead of a man's (George, or Michael).").define("womanVoice", false);
         VOICEREADYSAID = b.comment("[pa35] It has told you its natural voice is ready.").define("naturalVoiceAnnounced", false);
+        VOICETIER = b.comment("[voice37] Which voice: auto (the best this computer keeps up with, by a quick benchmark), expressive (laughs and sighs; needs a fast",
+            "computer), natural (Kokoro, light on any computer) or basic (your computer's own robotic voice).").define("voiceTier", "auto");
+        EXPRESSIVEPACK = b.comment("[voice37] The expressive voice (Chatterbox-Turbo, about 570 MB, once, into this config folder): auto (fetched in the background when",
+            "this computer is quick enough) or declined (never fetched by itself; Settings > Voice can still fetch it).").define("expressiveVoice", "auto");
+        EXPRESSIVENESS = b.comment("[voice37] How much the expressive voice performs (laughs, sighs, how freely it reads): 0 (the words only) .. 100.")
+            .defineInRange("expressiveness", 50, 0, 100);
+        EXPRESSIVERTF = b.comment("[voice37] The expressive voice's measured speed on this computer (seconds of work per second of speech; -1 not measured).")
+            .defineInRange("expressiveBenchmark", -1.0, -1.0, 1000.0);
+        KOKORORTF = b.comment("[voice37] The natural voice's measured speed on this computer (-1 not measured).").defineInRange("naturalBenchmark", -1.0, -1.0, 1000.0);
         b.pop();
         b.push("pings");
         PINGMODE = b.comment("[pa33c-2b] The middle mouse button: both (tap pings when you have an assistant; sneak for pick block), ping, or pick (pick block only).")

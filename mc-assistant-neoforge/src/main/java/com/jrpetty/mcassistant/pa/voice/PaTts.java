@@ -33,6 +33,7 @@ public final class PaTts {
 
         public String group() {
             return switch (engine) {
+                case "expressive" -> "Expressive";                       // [voice37]
                 case "kokoro" -> "Natural (Kokoro)";
                 case "piper" -> "Natural (Piper)";
                 case "winrt" -> "Windows (modern)";
@@ -44,10 +45,10 @@ public final class PaTts {
 
         /** [pa35] Natural (Kokoro, Piper, a Windows 11 Natural voice) or Basic (the old desktop voices, macOS say, espeak). */
         public boolean natural() {
-            return engine.equals("kokoro") || engine.equals("piper") || engine.equals("winrt") && naturalName(name);
+            return engine.equals("expressive") || engine.equals("kokoro") || engine.equals("piper") || engine.equals("winrt") && naturalName(name);
         }
 
-        public String badge() { return natural() ? "Natural" : "Basic"; }
+        public String badge() { return PaVoiceTier.badge(engine, natural()); }   // [voice37] Expressive, Natural or Basic
 
         public String label() {
             String l = lang.toLowerCase(Locale.ROOT).replace('_', '-');
@@ -141,6 +142,58 @@ public final class PaTts {
 
     public PaKokoro kokoro() { return kokoro; }
 
+    // ------------------------------------------------------------------ [voice37] the expressive voice, first where it suits
+
+    /** The player's choices for the expressive voice: the tier, humour (0 Dry, 1 Daft, 2 Sincere), expressiveness 0..100, its benchmark. */
+    public record Prefs(PaVoiceTier.Setting tier, int humour, int expressiveness, double expressiveRtf) {
+        public static final Prefs DEFAULT = new Prefs(PaVoiceTier.Setting.AUTO, 0, 50, PaVoiceTier.UNKNOWN);
+    }
+
+    private PaExpressive expressive;
+    private PaLineCache cache;
+    private volatile java.util.function.Supplier<Prefs> prefs = () -> Prefs.DEFAULT;
+    private volatile boolean expressiveFailed;
+    private volatile double kokoroRtf = PaVoiceTier.UNKNOWN;
+    private volatile java.util.function.DoubleConsumer onKokoroRtf = r -> { };
+
+    /** Where the expressive voice lives once downloaded, and where its made lines are kept. */
+    public void expressive(Path dir, Path cacheDir) {
+        expressive = new PaExpressive(dir);
+        cache = new PaLineCache(cacheDir, PaLineCache.DEFAULT_LIMIT);
+    }
+
+    public PaExpressive expressive() { return expressive; }
+
+    public PaLineCache lineCache() { return cache; }
+
+    public void prefs(java.util.function.Supplier<Prefs> p) { if (p != null) prefs = p; }
+
+    /** Told each time the natural voice is timed faster than before (Settings keeps it for the tier's guess). */
+    public void onKokoroRtf(java.util.function.DoubleConsumer c) { if (c != null) onKokoroRtf = c; }
+
+    public double kokoroRtf() { return kokoroRtf; }
+
+    public void kokoroRtf(double r) { kokoroRtf = r; }
+
+    /** Downloaded, with the natural voice's runtime there too. */
+    public boolean expressiveReady() {
+        return expressive != null && expressive.downloaded() && kokoroReady();
+    }
+
+    /** It broke this session (the natural voice is speaking instead): why, or "". */
+    public String expressiveTrouble() { return expressiveFailed ? expressive == null ? "" : expressive.why() : ""; }
+
+    public void retryExpressive() { expressiveFailed = false; }
+
+    /** Would this line be said by the expressive voice? Not when a natural or basic voice was picked by name. */
+    public boolean expressiveFirst(String voiceKey, boolean basic) {
+        String key = voiceKey == null ? "" : voiceKey;
+        if (basic || !(key.isEmpty() || key.startsWith("expressive:"))) return false;
+        Prefs p = prefs.get();
+        PaVoiceTier.Setting tier = key.startsWith("expressive:") && p.tier() == PaVoiceTier.Setting.AUTO && expressiveReady() ? PaVoiceTier.Setting.EXPRESSIVE : p.tier();
+        return PaVoiceTier.chain(tier, expressiveReady(), expressiveFailed, p.expressiveRtf(), kokoroReady(), false).contains("expressive");
+    }
+
     /** [pa35] Kokoro is ready to speak: downloaded and checked (its own dictionaries read the words; espeak-ng no longer needed). */
     public boolean kokoroReady() {
         return kokoro != null && kokoro.downloaded();
@@ -213,6 +266,7 @@ public final class PaTts {
     /** [pa33b] Every voice the picker can offer, grouped by engine, the most natural first. */
     public List<VoiceInfo> catalogue() {
         List<VoiceInfo> all = new ArrayList<>();
+        if (expressiveReady()) for (PaExpressive.Voice v : PaExpressive.VOICES) all.add(new VoiceInfo("expressive", v.label(), "en-GB", v.gender(), "expressive"));   // [voice37]
         if (kokoroReady()) for (PaKokoro.Voice v : PaKokoro.CATALOGUE) all.add(new VoiceInfo("kokoro", v.label(), v.lang(), v.gender(), "natural"));
         if (piper != null) for (PaPiper.Voice v : piper.installedVoices(System.getProperty("os.name")))
             all.add(new VoiceInfo("piper", v.label(), v.id().substring(0, 5), v.gender(), v.quality()));
@@ -251,7 +305,7 @@ public final class PaTts {
         javax.sound.sampled.SourceDataLine l = this.line;
         if (l != null) { try { l.stop(); l.flush(); } catch (Throwable ignored) { } }
         try {
-            worker.submit(() -> { if (gen.get() == mine) speak0(line, o, mine); });
+            worker.submit(() -> { if (gen.get() == mine) speak0(text, line, o, mine); });   // [voice37] the words as written too (to find the line's kind)
         } catch (Throwable ignored) {
             // the worker has gone: stay silent
         }
@@ -275,6 +329,7 @@ public final class PaTts {
 
     /** [pa35] What it sounds like just now, for Settings: "George (natural)", "Subtitles only", "Microsoft Hazel (basic)". */
     public String voiceInUse(String key, boolean basic, PaAccent a, boolean female) {
+        if (expressiveFirst(key, basic)) return PaExpressive.pick(key, female).label() + " (expressive)";   // [voice37]
         String e = engineFor(key, basic, kokoroReady(), piperReady(), catalogue, kind);
         return switch (e) {
             case "kokoro" -> kokoroVoice(key, a, female).label() + " (natural)";
@@ -338,8 +393,9 @@ public final class PaTts {
         return null;
     }
 
-    private void speak0(String line, Opts o, int mine) {
+    private void speak0(String written, String line, Opts o, int mine) {
         try {
+            if (expressiveFirst(o.voiceKey(), o.basic()) && expressiveLine(written, line, o, mine)) return;   // [voice37] else the natural voice says it
             String engine = engineFor(o.voiceKey(), o.basic(), kokoroReady(), piperReady(), catalogue, kind);   // [pa35] natural first, basic only if picked
             VoiceInfo v = find(o.voiceKey());
             if (v != null && !v.engine().equals(engine)) v = null;
@@ -537,7 +593,9 @@ public final class PaTts {
                 if (gen.get() != mine) return;
                 for (String chunk : chunks(g2p.phonemize(sentence))) {
                     if (gen.get() != mine) return;
+                    long made = System.nanoTime();
                     float[] raw = kokoro.synth(chunk, kv, speed);
+                    timedKokoro(System.nanoTime() - made, raw.length);           // [voice37] the tier's guess
                     if (raw.length == 0) continue;
                     float[] done = PaAudio.finish(raw, PaKokoro.SAMPLE_RATE, pitch);
                     char end = sentence.charAt(sentence.length() - 1);
@@ -580,6 +638,100 @@ public final class PaTts {
         float[] c = java.util.Arrays.copyOf(a, a.length + b.length);
         System.arraycopy(b, 0, c, a.length, b.length);
         return c;
+    }
+
+    // ------------------------------------------------------------------ [voice37] the expressive voice
+
+    /** The natural voice timed on a sentence of at least a second: the fastest kept (the tier's guess for the expressive one). */
+    private void timedKokoro(long nanos, int samples) {
+        if (samples < PaKokoro.SAMPLE_RATE) return;
+        double rtf = nanos / 1e9 / (samples / (double) PaKokoro.SAMPLE_RATE);
+        if (kokoroRtf <= 0 || rtf < kokoroRtf) { kokoroRtf = rtf; onKokoroRtf.accept(rtf); }
+    }
+
+    /**
+     * A line performed by the expressive voice: its kind found from the phrase banks, its sounds placed for the personality
+     * and humour (PaVoiceStyle), made a piece at a time (kept pieces from the line cache play at once) and streamed while
+     * the next is made. False when it couldn't start (the natural voice then says the whole line); a failure part-way
+     * stops it there. It is never tried again this session after a failure, until Settings says retry.
+     */
+    private boolean expressiveLine(String written, String line, Opts o, int mine) {
+        Prefs p = prefs.get();
+        javax.sound.sampled.SourceDataLine out = null;
+        boolean played = false;
+        try {
+            if (!expressive.load(kokoro.dir().resolve("onnxruntime.jar"))) { expressiveFailed = true; status = expressive.why(); return false; }
+            PaExpressive.Voice v = PaExpressive.pick(o.voiceKey(), o.female());
+            String key = PaVoiceStyle.keyOf(written);
+            PaVoiceStyle.Kind kind = key != null ? PaVoiceStyle.kindOf(key) : PaVoiceStyle.guess(line);
+            PaVoiceStyle.Style st = PaVoiceStyle.perform(line, kind, o.gloom(), o.fun(), p.humour(), p.expressiveness(), key != null && key.endsWith("@gloomy"));
+            double pitch = PaAudio.pitchFactor(0, 0, o.pitch());                   // its own performance carries the mood
+            javax.sound.sampled.AudioFormat fmt = new javax.sound.sampled.AudioFormat(PaExpressive.SAMPLE_RATE, 16, 1, true, false);
+            boolean first = true;
+            for (String piece : PaVoiceStyle.chunks(st.text())) {
+                if (gen.get() != mine) return true;
+                float[] done = cache == null ? null : cache.get(v.id(), piece, st.temperature());
+                if (done == null) {
+                    float[] raw = expressive.synth(piece, v, new PaExpressive.Read(st.temperature(), 0), () -> gen.get() != mine);
+                    if (gen.get() != mine) return true;
+                    if (raw.length == 0) continue;
+                    done = PaAudio.finish(raw, PaExpressive.SAMPLE_RATE, pitch);
+                    if (cache != null) cache.put(v.id(), piece, st.temperature(), done);
+                }
+                char end = piece.charAt(piece.length() - 1);
+                float[] gap = PaAudio.silence(PaExpressive.SAMPLE_RATE, end == '?' || end == '!' ? 240 : end == '.' ? 200 : 120);
+                byte[] pcm = PaAudio.pcm16(concat(done, gap), o.volume());
+                if (out == null) {
+                    stopCurrent();
+                    out = javax.sound.sampled.AudioSystem.getSourceDataLine(fmt);
+                    out.open(fmt, PaExpressive.SAMPLE_RATE * 2 * 15);
+                    out.start();
+                    this.line = out;
+                }
+                if (first) { first = false; onSound.accept(Math.round(done.length * 1000.0 / PaExpressive.SAMPLE_RATE)); }
+                out.write(pcm, 0, pcm.length);
+                played = true;
+            }
+            if (out != null && gen.get() == mine) out.drain();
+            return true;
+        } catch (Throwable e) {
+            expressiveFailed = true;
+            status = "The expressive voice stopped (" + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()) + "); the natural voice speaks instead.";
+            return played;
+        } finally {
+            if (out != null) { out.close(); if (this.line == out) this.line = null; }
+        }
+    }
+
+    /**
+     * Make common lines ahead, while it's quiet, so they play at once (the line cache keeps them). Stops the moment a
+     * line is asked for. Runs on its own low-priority thread.
+     */
+    public void prewarm(List<String> lines, Opts o) {
+        if (expressive == null || cache == null || lines.isEmpty()) return;
+        int startGen = gen.get();
+        Thread t = new Thread(() -> {
+            try {
+                if (!expressiveFirst(o.voiceKey(), o.basic()) || !expressive.load(kokoro.dir().resolve("onnxruntime.jar"))) return;
+                Prefs p = prefs.get();
+                PaExpressive.Voice v = PaExpressive.pick(o.voiceKey(), o.female());
+                for (String l : lines) {
+                    if (gen.get() != startGen) return;
+                    String key = PaVoiceStyle.keyOf(l);
+                    PaVoiceStyle.Style st = PaVoiceStyle.perform(clean(PaSpeech.speakable(l, Double.NaN, Double.NaN)), key == null ? PaVoiceStyle.Kind.PLAIN : PaVoiceStyle.kindOf(key),
+                        o.gloom(), o.fun(), p.humour(), p.expressiveness(), key != null && key.endsWith("@gloomy"));
+                    List<String> pieces = PaVoiceStyle.chunks(st.text());
+                    if (pieces.size() != 1 || cache.get(v.id(), pieces.get(0), st.temperature()) != null) continue;
+                    float[] raw = expressive.synth(pieces.get(0), v, new PaExpressive.Read(st.temperature(), 0), () -> gen.get() != startGen);
+                    if (raw.length > 0 && gen.get() == startGen) cache.put(v.id(), pieces.get(0), st.temperature(), PaAudio.finish(raw, PaExpressive.SAMPLE_RATE, PaAudio.pitchFactor(0, 0, o.pitch())));
+                }
+            } catch (Throwable ignored) {
+                // only a head start: the line is made when said
+            }
+        }, "mca-assistant-voice-prewarm");
+        t.setDaemon(true);
+        t.setPriority(Thread.MIN_PRIORITY);
+        t.start();
     }
 
     // ------------------------------------------------------------------ Piper

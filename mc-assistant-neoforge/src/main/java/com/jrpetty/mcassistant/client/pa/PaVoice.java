@@ -37,9 +37,11 @@ public final class PaVoice {
             tts.piper(dir().resolve("piper-voices"));
             tts.kokoro(dir().resolve("kokoro"));                // [pa33b] the natural voices, once downloaded
             tts.onSound(PaVoice::soundStarted);                 // [pa35] the gestures go with the words
+            PaVoiceExpressive.attach(tts, dir());               // [voice37] the expressive voice, its tier and its personality
             // [pa35] an offline voice pack dropped in the config folder: unpacked and checked, off the game thread
             Thread t = new Thread(() -> {
                 if (tts.kokoro() != null && tts.kokoro().importPack(FMLPaths.CONFIGDIR.get(), dir())) readyNow();
+                PaVoiceExpressive.importPack(FMLPaths.CONFIGDIR.get(), dir());   // [voice37] its optional pack too
             }, "mca-assistant-voice-pack");
             t.setDaemon(true);
             t.start();
@@ -64,6 +66,7 @@ public final class PaVoice {
         boolean go = com.jrpetty.mcassistant.pa.voice.PaVoiceDefaults.autoDownload(hasAssistant, autoTried, PaClientConfig.get(PaClientConfig.VOICEPACK, "auto"),
             tts().kokoroReady(), installingVoices);
         if (hasAssistant) autoTried = true;
+        PaVoiceExpressive.maybeAutoDownload(hasAssistant);                 // [voice37] on a computer quick enough
         if (!go) return;
         installVoices();
         try {
@@ -154,7 +157,7 @@ public final class PaVoice {
     public static void speak(String text, double gloom, double fun, int id) {
         if (!PaClientConfig.get(PaClientConfig.SPEAK, true)) return;
         var p = Minecraft.getInstance().player;
-        boolean basic = PaClientConfig.get(PaClientConfig.BASICVOICE, false);
+        boolean basic = PaClientConfig.get(PaClientConfig.BASICVOICE, false) || PaVoiceExpressive.basicTier();   // [voice37] the Basic tier
         if (id >= 0 && (tts().naturalReady() || basic)) { holdId = id; holdUntil = System.currentTimeMillis() + 2500L; }
         tts().speak(text, new PaTts.Opts(PaClientConfig.get(PaClientConfig.VOICEKEY, ""), PaClientConfig.get(PaClientConfig.RATE, 0),
             PaClientConfig.get(PaClientConfig.PITCH, 0), PaClientConfig.get(PaClientConfig.VOLUME, 80), gloom, fun, accent(),
@@ -163,7 +166,7 @@ public final class PaVoice {
 
     /** [pa35] With no voice ready, its words show as a subtitle whatever the subtitle setting (text only, never silent). */
     public static boolean textOnly() {
-        return !PaClientConfig.get(PaClientConfig.SPEAK, true) || !(tts().naturalReady() || PaClientConfig.get(PaClientConfig.BASICVOICE, false) && tts().available());
+        return !PaClientConfig.get(PaClientConfig.SPEAK, true) || !(tts().naturalReady() || (PaClientConfig.get(PaClientConfig.BASICVOICE, false) || PaVoiceExpressive.basicTier()) && tts().available());   // [voice37] tier
     }
 
     static void say(String s) {

@@ -25,7 +25,13 @@ public final class PaVoiceBanner {
 
     /** Is the card up just now? */
     static boolean showing() {
-        return PaVoice.installingVoices || System.currentTimeMillis() - PaVoice.packEndedAt < 6000L && PaVoice.packEndedAt > 0;
+        return PaVoice.installingVoices || System.currentTimeMillis() - PaVoice.packEndedAt < 6000L && PaVoice.packEndedAt > 0 || expressive();
+    }
+
+    /** [voice37] The card is the expressive voice's (its download, then its benchmark) while the natural one's isn't up. */
+    private static boolean expressive() {
+        return !PaVoice.installingVoices && !(System.currentTimeMillis() - PaVoice.packEndedAt < 6000L && PaVoice.packEndedAt > 0)
+            && (PaVoiceExpressive.showing() || PaVoiceExpressive.benchmarking);
     }
 
     /** Draw the card (mx, my: the mouse in a screen, or -1 on the HUD where it can't be clicked). */
@@ -43,15 +49,19 @@ public final class PaVoiceBanner {
         UiStyle.shadow(g, bx, by, bw, bh);
         g.fill(bx, by, bx + bw, by + bh, 0xF0173B40);
         g.fill(bx, by, bx + 2, by + bh, PaScreen.BRAND_LIGHT);
-        String title = PaVoice.installingVoices ? "Your assistant's natural voice" : PaVoice.packFailed ? "Natural voice: not this time" : "Natural voice";
+        boolean ex = expressive();                                         // [voice37] the same card for the expressive voice
+        boolean installing = ex ? PaVoiceExpressive.installing : PaVoice.installingVoices, failed = ex ? PaVoiceExpressive.failed : PaVoice.packFailed;
+        double fraction = ex ? PaVoiceExpressive.fraction : PaVoice.packFraction;
+        String title = ex ? (installing ? "Your assistant's expressive voice" : failed ? "Expressive voice: not this time" : "Expressive voice")
+            : PaVoice.installingVoices ? "Your assistant's natural voice" : PaVoice.packFailed ? "Natural voice: not this time" : "Natural voice";
         g.drawString(font, UiStyle.clip(font, title, bw - 12), bx + 7, by + 4, 0xFFFFFFFF, false);
-        String line = PaVoice.packLine == null ? "" : PaVoice.packLine;
+        String line = ex ? PaVoiceExpressive.line : PaVoice.packLine == null ? "" : PaVoice.packLine;
         g.drawString(font, UiStyle.clip(font, line, bw - 12), bx + 7, by + 14, 0xFFBFE3DC, false);
-        int barW = bw - 14 - (PaVoice.installingVoices ? 78 : 0);
+        int barW = bw - 14 - (installing ? 78 : 0);
         g.fill(bx + 7, by + 26, bx + 7 + barW, by + 31, 0xFF0E2A2E);
-        g.fill(bx + 7, by + 26, bx + 7 + (int) Math.round(barW * Math.max(0, Math.min(1, PaVoice.packFraction))), by + 31, PaVoice.packFailed ? 0xFFB5543F : PaScreen.BRAND_LIGHT);
-        if (PaVoice.installingVoices) {
-            String pct = Math.round(PaVoice.packFraction * 100) + "%";
+        g.fill(bx + 7, by + 26, bx + 7 + (int) Math.round(barW * Math.max(0, Math.min(1, fraction))), by + 31, failed ? 0xFFB5543F : PaScreen.BRAND_LIGHT);
+        if (installing) {
+            String pct = Math.round(fraction * 100) + "%";
             int kx = bx + bw - 72, ky = by + 23, kw = 66, kh = 11;
             boolean over = mx >= kx && mx < kx + kw && my >= ky && my < ky + kh;
             button = mx >= 0;
@@ -69,11 +79,12 @@ public final class PaVoiceBanner {
 
     @SubscribeEvent
     public static void onClick(ScreenEvent.MouseButtonPressed.Pre e) {
-        if (!button || !PaVoice.installingVoices) return;
+        boolean ex = expressive();
+        if (!button || !(ex ? PaVoiceExpressive.installing : PaVoice.installingVoices)) return;
         int kx = bx + bw - 72, ky = by + 23;
         if (e.getMouseX() >= kx && e.getMouseX() < kx + 66 && e.getMouseY() >= ky && e.getMouseY() < ky + 11) {
             UiStyle.click();
-            PaVoice.declineVoices();
+            if (ex) PaVoiceExpressive.decline(); else PaVoice.declineVoices();   // [voice37]
             e.setCanceled(true);
         }
     }

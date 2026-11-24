@@ -1313,6 +1313,7 @@ public class PaScreen extends Screen {
         cy = toggle(g, "Fetch it by itself", "auto".equals(pack), sx, cy, half, mx, my,
             "On (the default): the natural voice downloads in the background the first time you get an assistant. Off: only when you click Download.",
             () -> PaClientConfig.set(PaClientConfig.VOICEPACK, "auto".equals(pack) ? "declined" : "auto"));
+        cy = secVoiceExpressive(g, sx, cy, half, mx, my);                  // [voice37] the engine tier and the expressive voice
         cy = toggle(g, "A woman's voice", woman, sx, cy, half, mx, my, "Emma (British) or Heart (American); off: George or Michael",
             () -> { PaClientConfig.set(PaClientConfig.VOICEWOMAN, !woman); PaClientConfig.set(PaClientConfig.VOICEKEY, ""); PaVoice.speak(PaVoice.sample(triangle.tri()), triangle.tri().gloomy(), triangle.tri().funny()); });
         cy = toggle(g, "System voice (basic)", basic, sx, cy, half, mx, my,
@@ -1374,6 +1375,43 @@ public class PaScreen extends Screen {
                 () -> { PaClientConfig.set(PaClientConfig.AGREED, true); PaVoice.install(); });
             cy += 18;
         }
+        return cy;
+    }
+
+    /** [voice37] Engine (Auto, Expressive, Natural, Basic), the expressive voice (ready, coming down, or fetch it), and how much it performs. */
+    private int secVoiceExpressive(GuiGraphics g, int sx, int cy, int half, int mx, int my) {
+        com.jrpetty.mcassistant.pa.voice.PaVoiceTier.Setting tier = PaVoiceExpressive.tier();
+        g.drawString(font, "Engine", sx, cy + 3, muted(), false);
+        button(g, tier.label, sx + 60, cy, Math.max(96, Math.min(160, half - 64)), 13, mx, my, true, false,
+            tier.tip + ". Click for the next: Auto, Expressive, Natural, Basic.",
+            () -> { PaClientConfig.set(PaClientConfig.VOICETIER, tier.next().key()); PaVoice.tts().retryExpressive(); });
+        cy += 15;
+        g.drawString(font, "Expressive", sx, cy + 3, muted(), false);
+        if (PaVoiceExpressive.ready()) {
+            badge(g, "Expressive", sx + 60, cy + 1, true);
+            g.drawString(font, UiStyle.clip(font, "Ready: Arthur, Callum, Harriet, Elsie", half - 130), sx + 122, cy + 3, UiStyle.TEXT, false);
+            cy += 14;
+        } else if (PaVoiceExpressive.installing) {
+            int barW = Math.max(60, half - 64 - 96);
+            g.fill(sx + 60, cy + 4, sx + 60 + barW, cy + 9, 0xFFB9C7C4);
+            g.fill(sx + 60, cy + 4, sx + 60 + (int) Math.round(barW * PaVoiceExpressive.fraction), cy + 9, BRAND_LIGHT);
+            button(g, "Don't download", sx + 64 + barW, cy, 90, 13, mx, my, true, false, "Stops now (what's down is kept) and won't start by itself again",
+                PaVoiceExpressive::decline);
+            cy += 15;
+        } else {
+            boolean can = PaVoice.tts().kokoroReady();
+            button(g, "Download (" + com.jrpetty.mcassistant.pa.voice.PaExpressive.totalMb() + " MB)", sx + 60, cy, Math.min(170, half - 64), 13, mx, my, can, false,
+                can ? "Chatterbox-Turbo (MIT): laughs, sighs and a real performance, in four British voices, from its Hugging Face page, each file checked by its SHA-256. "
+                    + "Needs a fast computer; Auto times it and keeps the natural voice where it can't keep up. Nothing about you is sent."
+                    : "The natural voice comes first (the two share its runtime)",
+                () -> { PaClientConfig.set(PaClientConfig.EXPRESSIVEPACK, "auto"); PaVoiceExpressive.install(); });
+            cy += 15;
+        }
+        String st = PaVoiceExpressive.status();
+        if (!st.isEmpty()) cy = para(g, st, sx + 60, cy, half - 60, PaVoiceExpressive.failed ? UiStyle.DANGER : faint());
+        int ex = PaClientConfig.get(PaClientConfig.EXPRESSIVENESS, 50);
+        cy = stepper(g, "Expression", ex + "", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.EXPRESSIVENESS, Math.max(0, ex - 10)),
+            () -> PaClientConfig.set(PaClientConfig.EXPRESSIVENESS, Math.min(100, ex + 10)));
         return cy;
     }
 
