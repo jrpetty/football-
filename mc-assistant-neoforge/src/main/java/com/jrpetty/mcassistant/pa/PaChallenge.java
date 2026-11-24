@@ -103,7 +103,22 @@ public final class PaChallenge {
                 a.plan.paused = true;
                 return PaTalk.line(a, "challenge_shoot");
             }
-            default -> { return "I don't know that game. Race, mining or shooting."; }
+            case "xbow" -> {                                            // [pa35] the crossbow contest: ten bolts each, spanned and loosed as a player's
+                BlockPos target = look.block();
+                if (target == null || !a.level().getBlockState(target).is(net.minecraft.world.level.block.Blocks.TARGET))
+                    return "Point at a target block (or ping one) and say \"crossbow contest\". Ten bolts each.";
+                if (!a.mayShoot(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CROSSBOW)) && a.countMatching(s -> s.is(net.minecraft.world.item.Items.CROSSBOW)) + (a.getMainHandItem().is(net.minecraft.world.item.Items.CROSSBOW) ? 1 : 0) > 0)
+                    return PaTalk.line(a, "gear.locked", "item", "crossbow", "level", String.valueOf(PaLevels.gearLevel(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CROSSBOW))));
+                if (a.countMatching(s -> s.is(net.minecraft.world.item.Items.ARROW)) < 5 || !PaCrossbow.has(a)) return PaTalk.line(a, "need_crossbow");
+                Game shoot = new Game("xbow", target.immutable(), now + COUNT, now + COUNT + 20 * 70, 0, 0);
+                shoot.before = a.getMode();
+                a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.STAY);
+                a.getNavigation().stop();
+                GAMES.put(p.getUUID(), shoot);
+                a.plan.paused = true;
+                return PaTalk.line(a, "challenge_xbow");
+            }
+            default -> { return "I don't know that game. Race, mining, shooting or crossbows."; }
         }
     }
 
@@ -160,6 +175,17 @@ public final class PaChallenge {
                 if (!score.equals(g.scoreShown)) { g.scoreShown = score; PaNet.note(p, score); }
                 if (now > g.end || now > g.start + 360 + 100) finish(a, p, g, Integer.compare(g.ownerScore, g.mineScore));   // its ten shots, then a moment for your last
             }
+            case "xbow" -> {                                            // [pa35] a bolt every two and a half seconds: span, shoulder, loose
+                int due = (int) Math.min(10, (now - g.start) / 50 + 1);
+                if (g.mineShots < due && !PaCrossbow.busy(a)) {
+                    g.mineShots++;
+                    PaCrossbow.atBlock(a, g.goal, shot -> { if (shot.willHit()) g.hitsDue.add(a.tickCount + shot.flightTicks()); });
+                }
+                for (java.util.Iterator<Integer> it = g.hitsDue.iterator(); it.hasNext(); ) if (it.next() <= a.tickCount) { it.remove(); g.mineScore++; }
+                String score = "You " + g.ownerScore + ", " + a.displayNameCap() + " " + g.mineScore;
+                if (!score.equals(g.scoreShown)) { g.scoreShown = score; PaNet.note(p, score); }
+                if (now > g.end || now > g.start + 500 + 100) finish(a, p, g, Integer.compare(g.ownerScore, g.mineScore));
+            }
             default -> GAMES.remove(p.getUUID());
         }
     }
@@ -167,7 +193,7 @@ public final class PaChallenge {
     /** A target block hit by its player's arrow (from the server's projectile event). */
     public static void ownerHit(ServerPlayer p, BlockPos at) {
         Game g = GAMES.get(p.getUUID());
-        if (g != null && g.kind.equals("shoot") && !g.over && at.equals(g.goal)) g.ownerScore++;
+        if (g != null && (g.kind.equals("shoot") || g.kind.equals("xbow")) && !g.over && at.equals(g.goal)) g.ownerScore++;
     }
 
     /** It's over: who won (1 its player, -1 it, 0 a draw or nobody), the score, a line in kind, pay for taking part. */
@@ -175,6 +201,7 @@ public final class PaChallenge {
         g.over = true;
         GAMES.remove(p.getUUID());
         if (g.kind.equals("shoot")) PaBow.cancel(a);
+        if (g.kind.equals("xbow")) PaCrossbow.cancel(a);
         a.plan.paused = false;
         a.setSprinting(false);
         a.getNavigation().stop();

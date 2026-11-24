@@ -77,6 +77,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.goalSelector.addGoal(2, new PaTaskGoal(this));
         this.goalSelector.addGoal(1, new PaCome.ComeGoal(this));          // [pa33g] told to come: before its work
         this.goalSelector.addGoal(3, new PaBowGoal(this));                 // [pa33g] its own archery (PaBow) in a fight
+        this.goalSelector.addGoal(3, new PaCrossbowGoal(this));            // [pa35] and its crossbow (PaCrossbow)
     }
 
     /** Tests: the goals running just now, by name. */
@@ -239,6 +240,18 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public boolean mayUseTier(ItemStack s) {
         return PaLevels.canUse(this, s);                          // [pa35] the gear ladder (crossbow 5, diamond 6, netherite 9...)
+    }
+
+    /**
+     * [pa35] Its bow and crossbow are its own, not a town guard's rank: the bow from the start, the crossbow by the gear
+     * ladder (level 5). (The crew's rule asked for guard level 20 and 30, which its ten levels never reach: its bow
+     * never came out in a fight.)
+     */
+    @Override
+    public boolean mayShoot(ItemStack s) {
+        if (s.is(net.minecraft.world.item.Items.BOW)) return true;
+        if (s.is(net.minecraft.world.item.Items.CROSSBOW)) return PaLevels.canUse(this, s);
+        return false;
     }
 
     /** [pa35] Armour by the gear ladder (up to iron at 4, diamond at 6, netherite at 9). */

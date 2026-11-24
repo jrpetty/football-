@@ -441,3 +441,91 @@ Cleared for {item}.
 {item} is available to me now.
 I'm able to use {item} now.
 New: {item}.
+
+== say.challenge_xbow
+Crossbow contest. Ten bolts each. Reloading is part of the sport.
+Bolts, then. Ten each, most hits wins. Mind the recoil. There isn't any, but mind it.
+Crossbows at dawn. Well, now. Ten each.
+Ten bolts. Span, aim, loose. Try to keep up with the clicking.
+Right. Crossbows. I've been looking forward to this, in a restrained way.
+Ten each at the target. Slow to load, quick to regret.
+== say.challenge_xbow@gloomy
+Crossbows. Ten each. I'll miss more slowly than with a bow.
+Ten bolts. Most hits wins. Not me, probably.
+A crossbow contest. At least the reloading gives me time to worry.
+Ten each. Let's get it over with.
+Crossbows. Fine. The target won't feel a thing. Neither will I.
+Ten bolts each. I'll do my best. It may not be enough.
+== say.challenge_xbow@serious
+Crossbow contest: ten bolts each, most hits on the target wins.
+Ten bolts each. Starting in three.
+Crossbows. Ten each.
+Most hits in ten bolts wins.
+Ready when you are. Ten bolts.
+Ten each, at the target.
+
+== say.need_crossbow
+I'll need a crossbow and some arrows for that.
+No crossbow, no contest. Hand me one.
+A crossbow and five arrows, and I'm yours.
+I'm a crossbow short of a contest.
+Crossbow first. Then we'll talk.
+That wants a crossbow. I've got hands, not one of those.
+== say.need_crossbow@gloomy
+No crossbow. Of course there isn't.
+I'd need a crossbow. I haven't got one. Story of my life.
+A crossbow would help. And arrows. And hope.
+No crossbow. No contest. No surprise.
+I'm missing a crossbow. Among other things.
+Nothing to shoot with. Again.
+== say.need_crossbow@serious
+I need a crossbow and at least five arrows for that.
+No crossbow. Hand me one, with arrows.
+A crossbow, please, and some arrows.
+I don't have a crossbow.
+I'd need a crossbow for that.
+Crossbow and arrows needed.
+
+== say.xbow.multishot
+Three for the price of one.
+Multishot. Generous of me.
+One pull, three bolts. Efficiency.
+That's the spread. Something in there will hit.
+Three bolts. Statistically, one of them's a hero.
+Fan of bolts. Mind your heads.
+== say.xbow.multishot@gloomy
+Three bolts. One of them might hit.
+Three at once. Triples the chance. Of something.
+Three bolts. I'll still miss with two of them.
+Multishot. Spreads the disappointment.
+Three for one. It won't be enough.
+Three bolts. That's all I've got.
+== say.xbow.multishot@serious
+Three bolts away.
+Multishot.
+Three at once.
+Spread shot.
+Three bolts.
+Loosed three.
+
+== say.xbow.rocket
+Firework. Cover your ears.
+Rocket away. That'll ruin someone's evening.
+A firework, for the crowd.
+That's the expensive one. Worth it.
+Fireworks. Not a party. Well. A bit of a party.
+Rocket. Stand well back.
+== say.xbow.rocket@gloomy
+A rocket. Pretty, for a second.
+Firework. Something beautiful, briefly. Then not.
+That's a rocket gone. I hope it was worth it.
+A firework. Celebrating nothing.
+Rocket. Bang. Smoke. Same as always.
+There goes a firework.
+== say.xbow.rocket@serious
+Firework rocket away.
+Rocket fired.
+Firing a rocket.
+Firework.
+Rocket out.
+Rocket.

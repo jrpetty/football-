@@ -127,4 +127,44 @@ class PaArcheryTest {
         assertTrue(early > full * 1.3, "five ticks in " + early + " vs a full draw " + full);
         assertTrue(s.sway(0.2) > full, "moving shakes it");
     }
+
+    // ------------------------------------------------------------------ [pa35] the crossbow
+
+    @Test
+    void crossbowLoadsInTheGamesTime() {
+        assertEquals(25, PaArchery.chargeTicks(0), "a plain crossbow spans in 1.25 s, as a player's");
+        assertEquals(20, PaArchery.chargeTicks(1));
+        assertEquals(15, PaArchery.chargeTicks(2));
+        assertEquals(10, PaArchery.chargeTicks(3), "Quick Charge III: half a second");
+    }
+
+    @Test
+    void crossbowTableHasItsShape() {
+        for (int l = 1; l < PaArchery.CROSSBOW.length; l++) {
+            PaArchery.Row a = PaArchery.CROSSBOW[l - 1], b = PaArchery.CROSSBOW[l];
+            assertTrue(b.swayDeg() < a.swayDeg() && b.range() > a.range() && b.rangeErr() <= a.rangeErr() && b.drawTicks() <= a.drawTicks(), "steadier, further, quicker each level: " + l);
+            assertTrue(a.swayDeg() < PaArchery.row(l).swayDeg(), "braced steadier than a held bowstring at level " + l);
+            assertEquals(a.reactionTicks(), PaArchery.row(l).reactionTicks(), "the same eyes as its bow");
+        }
+    }
+
+    @Test
+    void crossbowShootsLikeACrossbow() {
+        StringBuilder log = new StringBuilder();
+        double[] standing = new double[11], strafing = new double[11], multi = new double[11];
+        for (int l : new int[]{1, 5, 10}) {
+            standing[l] = PaArchery.crossbowHitRate(l, 30, false, false, false, N, 3500L + l);
+            strafing[l] = PaArchery.crossbowHitRate(l, 30, true, false, false, N, 3600L + l);
+            multi[l] = PaArchery.crossbowHitRate(l, 30, true, false, true, N, 3600L + l);
+            double bow = PaArchery.hitRate(l, 30, false, false, N, 3500L + l);
+            log.append(String.format("L%d at 30: crossbow %.0f%% standing (bow %.0f%%), %.0f%% strafing, %.0f%% with Multishot; ", l, standing[l] * 100, bow * 100, strafing[l] * 100, multi[l] * 100));
+            assertTrue(standing[l] >= bow - 0.02, "a crossbow is at least as good as its bow on a standing mob at 30: L" + l + " " + standing[l] + " vs " + bow);
+            assertTrue(multi[l] >= strafing[l] - 0.01, "Multishot never hurts against a strafer: L" + l);
+        }
+        System.out.println("[pa35] " + log);
+        assertTrue(standing[10] > standing[5] + 0.03 && standing[5] > standing[1] + 0.03, "better with level: " + log);
+        assertTrue(strafing[10] > strafing[1] + 0.1, "leads a strafer better with level: " + log);
+        assertTrue(multi[5] > strafing[5] + 0.03, "Multishot clearly helps against a strafer at 30: " + log);
+        assertTrue(standing[10] < 0.995 || strafing[10] < 0.9, "never an aimbot: " + log);
+    }
 }

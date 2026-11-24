@@ -32,7 +32,7 @@ public final class PaShots {
     /** Each tick, from its moves: the aim held (between draws), turning at its level's pace. */
     static void aimTick(PlayerAssistantEntity a) {
         PaBrain.Mind m = a.mind;
-        if (m.bow != null || m.aimUntil <= a.tickCount || m.aimSpot == null) return;
+        if (m.bow != null || m.xbow != null && m.xbow.shooter != null || m.aimUntil <= a.tickCount || m.aimSpot == null) return;   // [pa35] a crossbow aiming turns its own head
         if (m.aimEntity != null && !m.aimEntity.isAlive()) { m.aimUntil = 0; return; }
         Vec3 p = m.aimEntity != null ? m.aimEntity.getBoundingBox().getCenter() : m.aimSpot;
         Vec3 eye = a.getEyePosition();

@@ -470,4 +470,103 @@ public class PaMemoryGameTests {
             helper.succeed();
         });
     }
+
+    /** pam11: the crossbow as a player's. Locked at level 4 (it won't shoot one); at 5 it spans a plain crossbow in the
+     *  game's 25 ticks (held in the charging pose), one arrow from its pack, then shoulders and looses; Multishot with
+     *  Quick Charge III spans in 10 ticks and carries three bolts for one arrow; Piercing IV bolts pierce four; and with
+     *  the fight over it spans it again, so it carries a bolt. */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pam11_crossbow")
+    public static void pam11_crossbow(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_530_000, y = ground(level, x);
+        BlockPos tgt = new BlockPos(x + 14, y + 1, Z);
+        for (int dx = 1; dx <= 14; dx++) for (int dy = 0; dy <= 3; dy++) level.setBlock(new BlockPos(x + dx, y + dy, Z), Blocks.AIR.defaultBlockState(), 3);
+        level.setBlock(tgt, Blocks.TARGET.defaultBlockState(), 3);
+        ServerPlayer p = player(helper, level, new BlockPos(x - 3, y, Z + 3));
+        PlayerAssistantEntity a = assistant(helper, p);
+        PaConfig.ladderForTests(null, null);
+        var ench = level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
+        a.removeMatching(st -> st.is(Items.BOW) || st.is(Items.CROSSBOW) || st.is(Items.ARROW), 999);
+        a.insertGiven(new ItemStack(Items.CROSSBOW));
+        a.insertGiven(new ItemStack(Items.ARROW, 16));
+        int[] phase = {0}, usingFrom = {-1}, chargedAt = {-1}, arrows = {0}, wait = {0};
+        boolean[] shot = {false};
+        StringBuilder log = new StringBuilder();
+        helper.onEachTick(() -> {
+            if (!a.isAlive()) helper.fail("it died");
+            ItemStack hand = a.getMainHandItem();
+            if (a.isUsingItem() && a.getUseItem().is(Items.CROSSBOW) && usingFrom[0] < 0) usingFrom[0] = a.tickCount;
+            if (hand.is(Items.CROSSBOW) && net.minecraft.world.item.CrossbowItem.isCharged(hand) && chargedAt[0] < 0) chargedAt[0] = a.tickCount;
+            wait[0]++;
+            switch (phase[0]) {
+                case 0 -> {                                                  // level 4: locked
+                    if (wait[0] < 10) return;
+                    a.teleportTo(x + 0.5, y, Z + 0.5);
+                    a.setPaXpForTests(PaLevels.xpFor(4));
+                    helper.assertTrue(!com.jrpetty.mcassistant.pa.PaCrossbow.atBlock(a, tgt, null) && !a.mayShoot(new ItemStack(Items.CROSSBOW)), "level 4: it won't shoot a crossbow");
+                    a.setPaXpForTests(PaLevels.xpFor(5));
+                    arrows[0] = a.countMatching(st -> st.is(Items.ARROW));
+                    usingFrom[0] = -1; chargedAt[0] = -1; shot[0] = false;
+                    helper.assertTrue(com.jrpetty.mcassistant.pa.PaCrossbow.atBlock(a, tgt, sh -> shot[0] = true), "level 5: it takes the shot");
+                    if (a.isUsingItem()) usingFrom[0] = a.tickCount;           // spanning from this very tick
+                    phase[0] = 1; wait[0] = 0;
+                }
+                case 1 -> {                                                  // a plain crossbow: 25 ticks to span, one arrow, the shot
+                    if (!shot[0]) { if (wait[0] > 200) helper.fail("no shot in 10 s: " + a.mind.xbow); return; }
+                    int load = chargedAt[0] - usingFrom[0];
+                    helper.assertTrue(load >= 25 && load <= 27, "spanned in the game's time: " + load + " ticks");
+                    helper.assertTrue(arrows[0] - a.countMatching(st -> st.is(Items.ARROW)) == 1, "one arrow from its pack");
+                    log.append("plain: spanned in ").append(load).append(" ticks; ");
+                    com.jrpetty.mcassistant.pa.PaCrossbow.cancel(a);
+                    ItemStack cb = new ItemStack(Items.CROSSBOW);
+                    cb.enchant(ench.getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.MULTISHOT), 1);
+                    cb.enchant(ench.getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.QUICK_CHARGE), 3);
+                    a.setItemSlot(EquipmentSlot.MAINHAND, cb);
+                    arrows[0] = a.countMatching(st -> st.is(Items.ARROW));
+                    usingFrom[0] = -1; chargedAt[0] = -1; shot[0] = false;
+                    helper.assertTrue(com.jrpetty.mcassistant.pa.PaCrossbow.atBlock(a, tgt, sh -> shot[0] = true), "the Multishot shot");
+                    if (a.isUsingItem()) usingFrom[0] = a.tickCount;           // spanning from this very tick
+                    phase[0] = 2; wait[0] = 0;
+                }
+                case 2 -> {                                                  // Multishot + Quick Charge III
+                    if (chargedAt[0] > 0 && !shot[0]) {
+                        var cp = a.getMainHandItem().get(net.minecraft.core.component.DataComponents.CHARGED_PROJECTILES);
+                        if (cp != null && !cp.isEmpty()) helper.assertTrue(cp.getItems().size() == 3, "three bolts loaded: " + cp.getItems().size());
+                    }
+                    if (!shot[0]) { if (wait[0] > 200) helper.fail("no Multishot shot"); return; }
+                    int load = chargedAt[0] - usingFrom[0];
+                    helper.assertTrue(load >= 10 && load <= 12, "Quick Charge III spans in half a second: " + load);
+                    helper.assertTrue(arrows[0] - a.countMatching(st -> st.is(Items.ARROW)) == 1, "three bolts for one arrow");
+                    int flying = level.getEntitiesOfClass(net.minecraft.world.entity.projectile.Arrow.class, a.getBoundingBox().inflate(20), ar -> ar.getOwner() == a && ar.tickCount < 30).size();
+                    helper.assertTrue(flying >= 3, "three in the air: " + flying);
+                    log.append("multishot: ").append(flying).append(" bolts, spanned in ").append(load).append("; ");
+                    com.jrpetty.mcassistant.pa.PaCrossbow.cancel(a);
+                    ItemStack cb = new ItemStack(Items.CROSSBOW);
+                    cb.enchant(ench.getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.PIERCING), 4);
+                    a.setItemSlot(EquipmentSlot.MAINHAND, cb);
+                    usingFrom[0] = -1; chargedAt[0] = -1; shot[0] = false;
+                    helper.assertTrue(com.jrpetty.mcassistant.pa.PaCrossbow.atBlock(a, tgt, sh -> shot[0] = true), "the Piercing shot");
+                    if (a.isUsingItem()) usingFrom[0] = a.tickCount;           // spanning from this very tick
+                    phase[0] = 3; wait[0] = 0;
+                }
+                case 3 -> {                                                  // Piercing IV
+                    if (!shot[0]) { if (wait[0] > 200) helper.fail("no Piercing shot"); return; }
+                    var bolts = level.getEntitiesOfClass(net.minecraft.world.entity.projectile.Arrow.class, a.getBoundingBox().inflate(20), ar -> ar.getOwner() == a && ar.tickCount < 3);
+                    helper.assertTrue(!bolts.isEmpty() && bolts.get(0).getPierceLevel() == 4 && bolts.get(0).isCritArrow(), "a Piercing IV bolt, crit as a player's: " + (bolts.isEmpty() ? "none" : bolts.get(0).getPierceLevel()));
+                    log.append("piercing ").append(bolts.get(0).getPierceLevel()).append("; ");
+                    chargedAt[0] = -1;
+                    phase[0] = 4; wait[0] = 0;
+                }
+                case 4 -> {                                                  // the fight over: spanned again, carried loaded
+                    if (chargedAt[0] < 0) { if (wait[0] > 120) helper.fail("not reloaded after the shot"); return; }
+                    helper.assertTrue(a.getMainHandItem().is(Items.CROSSBOW) && net.minecraft.world.item.CrossbowItem.isCharged(a.getMainHandItem()), "carries a bolt");
+                    log.append("reloaded after ").append(wait[0]).append(" ticks; shots ").append(a.mind.xbowShots).append(", loads ").append(a.mind.xbowLoads);
+                    Kit.log("[VT] pam11 crossbow: " + log + "; said " + allWords(a));
+                    phase[0] = 5;
+                    helper.succeed();
+                }
+                default -> { }
+            }
+        });
+    }
 }
