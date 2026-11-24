@@ -327,6 +327,7 @@ public final class PaOrders {
         a.plan.paused = false;
         if (a.getMode() == AssistantEntity.Mode.STAY) a.setMode(AssistantEntity.Mode.FOLLOW);   // it has work: it is not standing still
         String what = work.size() == 1 ? cap(work.get(0).label) : work.size() + " steps, starting with: " + work.get(0).label;
+        if (PaLogistics.ownStart(a, work)) return;                         // [pa36] it says its own first word
         PaTalk.reply(a, PaTalk.line(a, "ok") + " " + what + ".");
     }
 
@@ -470,8 +471,9 @@ public final class PaOrders {
             }
             case STOP -> {
                 PaCome.end(a);                                            // [pa33g] another order ends a come-here
+                String moved = PaLogistics.stopping(a);                   // [pa36] what a logistics job had moved, said instead
                 stopAll(a);
-                return PaTalk.line(a, "stop");
+                return moved != null ? moved : PaTalk.line(a, "stop");
             }
             case UNDO -> {
                 a.clearQueue();
@@ -767,6 +769,19 @@ public final class PaOrders {
                 return planBuild(p, a, i, look, out);
             }
             case CRAFT -> {
+                List<PaIntent> set = PaCraft.pieces(a, i);                 // [pa36] a whole set of armour: the four pieces, then handed over together
+                if (set != null) {
+                    String short_ = PaCraft.setShort(a, i, set);
+                    if (short_ != null) return short_.isEmpty() ? null : short_;
+                    for (PaIntent piece : set) {
+                        String r = plan(p, a, piece, look, out, said);
+                        if (r != null && !r.isEmpty()) return r;
+                    }
+                    PaCraft.deliverSet(a, i, out, set);
+                    return null;
+                }
+                String held = PaCraft.check(p, a, i, out);                 // [pa36] exactly what's missing, with choices
+                if (held != null) return held.isEmpty() ? null : held;
                 String what = i.item();
                 if (what.equals("charcoal")) {
                     PaPlan.Step s = step("make " + Math.max(1, n) + " charcoal", Kind.SMELT, 10 * Math.max(4, n));
@@ -799,6 +814,7 @@ public final class PaOrders {
                     put.task = new PaTask(PaTask.Kind.PLACE, at, what, 1);
                     out.add(put);
                 }
+                PaCraft.deliver(a, i, out, CraftPlanner.pretty(target), amount);   // [pa36] "make me ..." handed over, "make yourself ..." put on
                 return null;
             }
             case SMELT -> {
@@ -835,6 +851,9 @@ public final class PaOrders {
                 s.jobs.add(Job.give(i.item(), amount));
                 out.add(s);
                 return null;
+            }
+            case LOGI -> {                                         // [pa36] chests, gathering into them, stock jobs, hauls
+                return PaLogistics.plan(p, a, i, look, out, said);
             }
             case GOTO -> {                                         // [pa33c-2b] a ping, a waypoint, where it died, its bed
                 BlockPos to = placeFor(p, a, i, look);

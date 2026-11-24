@@ -735,8 +735,10 @@ public class PaScreen extends Screen {
             {"Dump junk", "Drops dirt, gravel, rough stone, rotten flesh and spare seeds at its feet (not what it keeps)"},
             {"Sort", "Piles merged and laid out: tools, armour, food, ores, blocks, the rest"},
             {lockMode ? "Keep: click items" : "Keep...", "Click items in its pack to lock them: kept things are never handed over or dumped. Right-click any item does the same"},
-            {"Open full pack", "The full pack screen, with shift-click and the rest (or sneak-right-click it)"}};
-        String[] op = {"best", "all", "dump", "sort", "", ""};
+            {"Open full pack", "The full pack screen, with shift-click and the rest (or sneak-right-click it)"},
+            {"Storage", "Your chests as it knows them: what's in each, ping, rename, forget, the drop-off, keep stocked"},          // [pa36]
+            {"Craft", "Search anything craftable: what it can make now, what's missing, and craft one, some or all"}};             // [pa36]
+        String[] op = {"best", "all", "dump", "sort", "", "", "", ""};
         for (int k = 0; k < b.length; k++) {
             int bxk = beside ? cxb : cxb + (k % 3) * (bw + 4), byk = beside ? cyb + k * 18 : cyb + (k / 3) * 18;
             final int kk = k;
@@ -744,10 +746,12 @@ public class PaScreen extends Screen {
             button(g, b[k][0], bxk, byk, bw, 15, mx, my, enabled, k == 4 && lockMode, b[k][1], () -> {
                 if (kk == 4) { lockMode = !lockMode; return; }
                 if (kk == 5) { PaClient.send("pack", new CompoundTag()); return; }
+                if (kk == 6) { PaLogiClient.storage(); return; }                                // [pa36]
+                if (kk == 7) { PaLogiClient.craft(""); return; }                                // [pa36]
                 packOp(op[kk], -1, -1, null, null);
             });
         }
-        int buttonsEnd = beside ? cyb + b.length * 18 - y : cyb + 36 - y;
+        int buttonsEnd = beside ? cyb + b.length * 18 - y : cyb + (b.length + 2) / 3 * 18 - y;   // [pa36] rows for the extra buttons
         int infoY = y + Math.max(Math.max(leftH, midEnd), buttonsEnd) + 4;
         if (!near) { g.drawString(font, UiStyle.clip(font, "Come within 8 blocks to hand things over (" + dist + " away).", iw), x, infoY, UiStyle.DANGER, false); infoY += 12; }
         infoY = para(g, "Drag between its pack, its gear and yours; click a thing to hand it over; right-click to keep it.", x, infoY, iw, faint());

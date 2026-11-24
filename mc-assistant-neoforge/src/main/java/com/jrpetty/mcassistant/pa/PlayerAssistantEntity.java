@@ -79,6 +79,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.goalSelector.addGoal(3, new PaBowGoal(this));                 // [pa33g] its own archery (PaBow) in a fight
         this.goalSelector.addGoal(3, new PaCrossbowGoal(this));            // [pa35] and its crossbow (PaCrossbow)
         this.goalSelector.addGoal(3, new PaTrident(this));                 // [pa35] and a Loyalty trident, thrown, from level 7
+        this.goalSelector.addGoal(2, new PaLogiGoal(this));                // [pa36] chests and logistics
     }
 
     /** Tests: the goals running just now, by name. */
@@ -310,6 +311,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     protected boolean onCrewRegister() { return false; }
 
+    /** [pa36] Torches it carries for a delivery (a fetch, a fill, a craft into a chest) aren't for lighting its way. */
+    @Override
+    protected boolean keepsItsLights() {
+        return (task != null && task.kind == PaTask.Kind.LOGI) || plan.all().stream().anyMatch(s -> (s.task != null && s.task.kind == PaTask.Kind.LOGI)
+            || (!"LIGHT_AREA".equals(s.kind) && (s.label.contains("torch") || s.count.contains("torch"))));   // making or bringing torches: they're the order's
+    }
+
     @Override
     public boolean levelsBuildSite() { return true; }
 
@@ -368,6 +376,32 @@ public class PlayerAssistantEntity extends AssistantEntity {
             if (!level().isClientSide) PaChests.askAs(before);
         }
         if (!level().isClientSide) PaPace.tick(this);                    // [pa35] the cracks, as a player's digging shows
+        if (!level().isClientSide) PaIdleTake.flush(this);               // [pa36b] what it borrowed from a chest, said once
+    }
+
+    /** [pa36b] On its own account it takes only from chests its player allows, never below a stock rule, never valuables. */
+    @Override
+    public int mayTake(BlockPos chest, net.minecraft.world.Container c, net.minecraft.world.item.ItemStack s) {
+        return level().isClientSide ? s.getCount() : PaIdleTake.allowance(this, chest, c, s);
+    }
+
+    @Override
+    public boolean mayTakeAny(BlockPos chest) {
+        return level().isClientSide || PaIdleTake.any(this, chest);
+    }
+
+    @Override
+    public void took(BlockPos chest, net.minecraft.world.item.ItemStack what, int n) {
+        if (!level().isClientSide) PaIdleTake.took(this, chest, what, n);
+    }
+
+    /** [pa36b] A chest it sets down itself is its own (it may take from it when nobody asked). */
+    @Override
+    protected void placedFixture(BlockPos at) {
+        if (level().isClientSide || getOwnerId() == null || !PaContainers.is(level(), at)) return;
+        PaStore.Known k = PaStore.learn(getOwnerId(), level().dimension().location().toString(), at, PaContainers.blockId(level(), at), level().getGameTime());
+        k.own = true;
+        PaStore.touch();
     }
 
     // ------------------------------------------------------------------ [pa35] a real player's pace (PaPace)

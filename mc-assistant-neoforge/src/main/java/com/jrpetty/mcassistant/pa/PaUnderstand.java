@@ -140,6 +140,8 @@ public final class PaUnderstand {
         }
         norm = (" " + norm + " ").replaceAll(" (?:go|come|run|hurry) and ", " ").replaceAll(" (?:would|do) you mind ", " ").trim();
         String flat = norm.replace(" , ", " ").replace(",", "").trim();
+        List<PaIntent> logi = PaLogiParse.read(stripName(text, name));   // [pa36] chests, gathering into them, stock jobs, counts, hauls
+        if (logi != null) return new Reading(logi, null);
         // [pa33c-2b] pings and places, read whole (they look like questions or lead-ins otherwise)
         PaIntent place0 = places(flat, text);
         if (place0 != null) return new Reading(List.of(place0), null);
@@ -180,6 +182,13 @@ public final class PaUnderstand {
         }
         if (steps.isEmpty()) return new Reading(List.of(), notSure(flat));
         return new Reading(steps, null);
+    }
+
+    /** [pa36] The sentence as said, without its leading "Basil," / "assistant," (the logistics reader makes its own plain words). */
+    private static String stripName(String text, String name) {
+        String t = text.trim();
+        if (name != null && !name.isEmpty()) t = t.replaceAll("(?i)^(?:hello |hey |ok |oi )?" + Pattern.quote(name.replace('_', ' ')) + "\\b\\s*,?\\s*", "");
+        return t.replaceAll("(?i)^(?:hello |hey |ok |oi )?(?:assistant|buddy|robot|bot)\\b\\s*,?\\s*", "");
     }
 
     /** [pa33c-2b] Places and pings: go there, go back to where I died, go to my bed, the mine; remember this as...; find the nearest...;
@@ -396,7 +405,7 @@ public final class PaUnderstand {
         if (c.matches("^(?:pause|hold on|hang on|hold up|wait up|wait a (?:sec|second|moment|minute)|one sec|one moment|take a break)(?: .*)?$")) return PaIntent.of(Kind.PAUSE, raw);
         if (c.matches("^(?:resume|continue|carry on|keep going|keep at it|keep it up|go on|back to work|unpause|get back to work)(?: .*)?$")) return PaIntent.of(Kind.RESUME, raw);
         Matcher rn = RENAME.matcher(c);
-        if (rn.matches()) return new PaIntent(Kind.RENAME, rn.group(1), 0, Place.NONE, raw);
+        if (rn.matches()) return new PaIntent(Kind.RENAME, PaNames.asSaid(raw, c, rn.start(1), rn.end(1), 16, rn.group(1)), 0, Place.NONE, raw);   // [pa36b] the name as said
 
         // auto-help
         if (has(c, "auto help on", "turn on auto help", "help out on your own", "do your own thing", "be useful",

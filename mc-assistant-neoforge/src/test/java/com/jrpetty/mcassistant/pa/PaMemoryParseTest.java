@@ -69,7 +69,7 @@ class PaMemoryParseTest {
             {"forget that", "FORGET_LAST"},
             {"forget the furnace rule", "FORGET furnace"},
             {"forget what i just said", "FORGET_LAST"},
-            {"from now on you're Gizmo", "RENAME gizmo"},
+            {"from now on you're Gizmo", "RENAME Gizmo"},
             {"get me 16 logs", "NONE"},
             {"give me a shout in 30 seconds", "SAVE REMINDER  @TIME #600"},
             {"give me food whenever i'm low", "SAVE RULE give me food=bring me food @LOW"},
@@ -92,7 +92,7 @@ class PaMemoryParseTest {
             {"i love bread", "SAVE LIKE bread [food]"},
             {"i prefer birch to spruce", "SAVE LIKE birch [wood;over:spruce] + DISLIKE spruce"},
             {"i rly hate creepers", "SAVE DISLIKE creepers [mob]"},
-            {"i'll call you Rex", "RENAME rex"},
+            {"i'll call you Rex", "RENAME Rex"},
             {"i'm 12 years old", "PRIVATE"},
             {"i'm scared of endermen", "SAVE DISLIKE endermen [mob]"},
             {"if I die, fetch my stuff", "SAVE RULE fetch my stuff=#fetchdeath @DEATH"},
@@ -252,8 +252,8 @@ class PaMemoryParseTest {
             {"you're funny", "NONE"},
             {"you're rubbish at mining", "SAVE SELF mining #-1"},
             {"you're useless at fighting", "SAVE SELF fighting #-1"},
-            {"your name is now Bob", "RENAME bob"},
-            {"your new name is Biscuit", "RENAME biscuit"}
+            {"your name is now Bob", "RENAME Bob"},   // [pa36b] a name keeps the capitals it was said with
+            {"your new name is Biscuit", "RENAME Biscuit"}
     };
 
     @Test

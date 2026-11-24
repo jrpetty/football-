@@ -3042,6 +3042,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             for (int i = 0; i < c.getContainerSize(); i++) {
                 ItemStack st = c.getItem(i);
                 if (st.isEmpty() || !what.test(st)) continue;
+                if (mayTake(f.pos(), c, st) <= 0) continue;                     // [pa36]
+                took(f.pos(), st, 1);                                           // [pa36]
                 st.shrink(1);
                 if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
                 c.setChanged();
@@ -3922,7 +3924,25 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * The question is asked of the block itself now, so a light source added by
      * another mod lights a mine here without anybody being told about it.
      */
+    /** [pa36] Carrying lights for someone else just now (a delivery): they're not its to put down. */
+    /** [pa36] How many of this stack it may take out of this container on its own account (folk: all of it). */
+    public int mayTake(BlockPos chest, Container c, ItemStack s) { return s.getCount(); }
+
+    /** [pa36] Might it take anything at all out of this container on its own account (folk: yes)? */
+    public boolean mayTakeAny(BlockPos chest) { return true; }
+
+    /** [pa36] It took these out of a container (folk: nothing more to it). */
+    public void took(BlockPos chest, ItemStack what, int n) { }
+
+    /** [pa36] It set this block down itself (a chest, a table, a furnace). */
+    protected void placedFixture(BlockPos at) { }
+
+    protected boolean keepsItsLights() {
+        return false;
+    }
+
     private void placeTorchNearby() {
+        if (keepsItsLights()) return;                                         // [pa36] a delivery's lights aren't its to put down
         ItemStack lamp = ItemStack.EMPTY;
         for (ItemStack st : inventory) {
             if (com.jrpetty.mcassistant.BlockLore.lightSource(st)) { lamp = st; break; }
@@ -5470,6 +5490,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty() || !(s.getItem() instanceof ArmorItem candidate)) continue;
                 if (!mayWear(s)) continue;                              // [pa35] the gear ladder
+                if (mayTake(f.pos(), c, s) <= 0) continue;              // [pa36] only from a chest it may take from
                 EquipmentSlot slot = this.getEquipmentSlotForItem(s);
                 if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
                     && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;
@@ -5642,6 +5663,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private void torchIfDark() {
         BlockPos pos = blockPosition();
         if (carriesABuilding()) return;            // [districts] its torches are the building's lamps (see carriesABuilding)
+        if (keepsItsLights()) return;              // [pa36] nor a delivery's
         if (level().getMaxLocalRawBrightness(pos) >= 6) return;
         if (!level().getBlockState(pos).canBeReplaced()) return;
         if (!level().getBlockState(pos.below()).isFaceSturdy(level(), pos.below(), net.minecraft.core.Direction.UP)) return;
@@ -6121,7 +6143,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public java.util.List<Container> nearbyContainers(int radius) {
         java.util.List<Container> out = new java.util.ArrayList<>();
         for (ZoneChests.Found found : ZoneChests.around(level(), blockPosition(), radius, 4)) {
-            if (found.stillThere()) out.add(found.container());
+            if (found.stillThere() && mayTakeAny(found.pos())) out.add(found.container());   // [pa36]
         }
         return out;
     }
@@ -8035,10 +8057,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             for (int i = 0; i < c.getContainerSize() && moved < max; i++) {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty() || !what.test(s)) continue;
-                int take = Math.min(s.getCount(), max - moved);
+                int take = Math.min(Math.min(s.getCount(), mayTake(found.pos(), c, s)), max - moved);   // [pa36]
+                if (take <= 0) continue;
                 ItemStack leftover = insertItem(s.copyWithCount(take));
                 int taken = take - leftover.getCount();
                 if (taken <= 0) { c.setChanged(); return moved; } // pack is full
+                took(found.pos(), s, taken);                                                            // [pa36]
                 s.shrink(taken);
                 if (s.isEmpty()) c.setItem(i, ItemStack.EMPTY);
                 moved += taken;
@@ -9079,6 +9103,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (best == null || removeMatching(what, 1) < 1) return false;
         level().setBlockAndUpdate(best, block.defaultBlockState());
         if (isSettler()) ZoneChests.mark(level(), best);      // the village's, not anybody's
+        placedFixture(best);                                  // [pa36]
         return true;
     }
 

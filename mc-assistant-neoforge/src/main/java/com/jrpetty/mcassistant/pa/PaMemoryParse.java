@@ -450,7 +450,7 @@ public final class PaMemoryParse {
         if (storing && secret(raw)) return Heard.of(Op.PRIVATE, "");
 
         // its own name, and what's said of it
-        if ((m = RENAME.matcher(t)).matches()) return Heard.of(Op.RENAME, m.group(1));
+        if ((m = RENAME.matcher(t)).matches()) return Heard.of(Op.RENAME, PaNames.asSaid(raw, t, m.start(1), m.end(1), 16, m.group(1)));   // [pa36b] the name as said
         if ((m = SELF_BAD.matcher(t)).matches()) return selfOpinion(first(m), -1, t);
         if ((m = SELF_GOOD.matcher(t)).matches()) return selfOpinion(first(m), 1, t);
 

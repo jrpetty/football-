@@ -15,7 +15,8 @@ public final class PaPings {
     private PaPings() {}
 
     /** What a ping lands on. */
-    public enum Target { GROUND, TREE, ORE, STONE, MOB, ANIMAL, CHEST, CROP, BED, FURNACE, PLAYER, ASSISTANT, WATER, LAVA, AREA, VILLAGER, TABLE }
+    public enum Target { GROUND, TREE, ORE, STONE, MOB, ANIMAL, CHEST, CROP, BED, FURNACE, PLAYER, ASSISTANT, WATER, LAVA, AREA, VILLAGER, TABLE,
+        COMPOSTER, BREWING }                                                                         // [pa36]
 
     /** The kind of thing an option is, for its colour and shape (colour-blind safe: each has its own shape too). */
     public enum Sort {
@@ -80,20 +81,15 @@ public final class PaPings {
                 o.add(new Option("tame", "Tame it for me", Sort.GATHER, "tame that"));               // [pa33d]
                 o.add(new Option("leave", "Leave it alone", Sort.LOOK, ""));
             }
-            case CHEST -> {
-                o.add(new Option("put", "Put stuff in there", Sort.GATHER, "put everything in that chest"));
-                o.add(new Option("fetch", "Fetch from there", Sort.GATHER, "take everything from that chest"));
-                o.add(new Option("sort", "Sort that", Sort.GATHER, "sort the chests"));
-            }
+            case CHEST -> o.addAll(PaLogiWheel.chest());                                               // [pa36] the container wheel
+            case COMPOSTER -> o.addAll(PaLogiWheel.composter());                                       // [pa36]
+            case BREWING -> o.addAll(PaLogiWheel.brewing());                                           // [pa36]
             case CROP -> {
                 o.add(new Option("farm", "Farm this", Sort.GATHER, "farm this field"));
                 o.add(new Option("harvest", "Harvest and replant", Sort.GATHER, "harvest this field"));
             }
             case BED -> o.add(new Option("bed", "Use this bed", Sort.MOVE, "use this bed"));
-            case FURNACE -> {
-                o.add(new Option("fuel", "Fuel that", Sort.GATHER, "fuel the furnace"));
-                o.add(new Option("smelt", "Smelt my ore there", Sort.GATHER, "smelt in that furnace"));
-            }
+            case FURNACE -> o.addAll(PaLogiWheel.furnace());                                           // [pa36] fuel, smelt, collect
             case PLAYER -> {
                 o.add(new Option("hi", "Say hi", Sort.LOOK, ""));
                 o.add(new Option("followthem", "Follow them", Sort.MOVE, ""));

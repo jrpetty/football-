@@ -152,6 +152,7 @@ public final class PaBrain {
         PaMoves.tick(a);                                          // [pa33d] shield, clutch, sprint, pearl: never held back by the budget
         if (t % 10 == 3) PaSleep.tick(a);                         // [pa33d] bedtime; [pa33e] cheap, so never held back either
         if (t % 2 == 0) PaChallenge.tick(a);                      // [pa33d] a race, a mining minute, a shooting match (timed: never held back)
+        if (t % 200 == 37) PaLogistics.standing(a);                    // [pa36] stock jobs, furnace fuel, the drop-off
         // [pa33e] the budget is shared by every assistant on the server, so the last in the tick order could go without for
         // ever: one held back four ticks running thinks on the fifth regardless
         if (!spare && ++a.mind.starved < 5) return;
@@ -272,6 +273,7 @@ public final class PaBrain {
         a.earn("BUILD".equals(cur.kind) ? "build" : cur.auto ? "craft" : "job");   // [pa33d] paid for the job done
         PaMemoryAct.jobDone(a, cur.kind, cur.label);                                // [pa35] "rubbish at mining, was I?"
         if ("BUILD".equals(cur.kind)) PaBondAct.first(a, "build", "Our first building: " + cur.label.replaceFirst("^build ", "") + ". It's still standing. So far.");
+        if (PaLogistics.saidItsOwn(cur.task)) return;                       // [pa36] a logistics job says its own last word
         String res = cur.task != null && !cur.task.result.isEmpty() ? cur.task.result : "";
         boolean last = plan.steps.stream().noneMatch(s -> !s.auto);
         if (cur.auto) {

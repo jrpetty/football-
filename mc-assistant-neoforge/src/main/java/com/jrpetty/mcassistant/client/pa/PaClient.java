@@ -115,6 +115,7 @@ public final class PaClient {
             case PaPayload.SAY -> said(mc, data);
             case PaPayload.GUIDE -> PaGuideAnswer.answer(data.getInt("id"), data.getString("q"));
             case PaPayload.PING -> PaPingClient.fromServer(data);      // [pa33c-2b]
+            case com.jrpetty.mcassistant.pa.PaLogiNet.KIND -> PaLogiClient.heard(data);   // [pa36] storage, pickers, the Craft view
             case PaPayload.TOAST -> net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),   // [pa35] a reminder
                 net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
                 net.minecraft.network.chat.Component.literal(data.getString("title")), net.minecraft.network.chat.Component.literal(data.getString("text")));
