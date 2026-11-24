@@ -1223,7 +1223,13 @@ public final class TerraceRows {
                 .append(" back ").append(b.facing()).append(standing(level, v.id(), b) ? " up" : " going up");
             for (Spot s : spots(b)) sb.append(" door").append(s.index() + 1).append('@').append(s.door().toShortString());
         }
-        sb.append(" | wants ").append(WANTS.get(v.id()));
+        sb.append(" | wants ").append(WANTS.get(v.id())).append(" | stores: bricks ").append(Market.stock(level, v.id(), st -> st.is(Items.BRICKS)))
+            .append(", stone bricks ").append(Market.stock(level, v.id(), st -> st.is(Items.STONE_BRICKS)))
+            .append(", clay ").append(Market.stock(level, v.id(), st -> st.is(Items.CLAY_BALL)))
+            .append(", cobbled deepslate ").append(Market.stock(level, v.id(), st -> st.is(Items.COBBLED_DEEPSLATE)))
+            .append(" | treasury ").append(Ledger.coins(v.id())).append(", budget pressure ").append(TownBudget.pressure(v.id()));
+        VillageFolkEntity hand = TownJobs.handAt(level, v.id(), ROWS_WORK);
+        sb.append(" | the rows' hand: ").append(hand == null ? "none" : hand.displayNameCap() + " at " + hand.blockPosition().toShortString() + ", " + hand.hobbyNow);
         return sb.toString();
     }
 
@@ -1354,7 +1360,9 @@ public final class TerraceRows {
         int done = 0;
         // the brickwork faced in brick where it went up in whatever the builders had (a stretch at a time)
         int laid = 0;
-        boolean[] have = { free || Crafts.stock(level, v, st -> st.is(Items.BRICKS)) > 0, free || Crafts.stock(level, v, st -> st.is(Items.STONE_BRICKS)) > 0 };
+        // ([house34c] or the makings to hand to make them there and then, as the builders do: loose bricks, fired stone)
+        boolean[] have = { free || Crafts.stock(level, v, st -> st.is(Items.BRICKS)) > 0 || Masonry.can(level, v, Items.BRICKS, 1),
+            free || Crafts.stock(level, v, st -> st.is(Items.STONE_BRICKS)) > 0 || Masonry.can(level, v, Items.STONE_BRICKS, 1) };
         for (BuildGoal.Placement pl : plan(id, b)) {
             if (pl.part() != BuildGoal.Part.BLOCK) continue;
             // the brick in brick; and ([house34b]) the dressed stone (the grand row's ground floors, the bands, the quoins) in
@@ -1369,7 +1377,7 @@ public final class TerraceRows {
             if (!have[brick ? 0 : 1]) continue;
             if (!free) {
                 if (laid == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "facing " + name(id, b) + (brick ? " in brick" : " in dressed stone"))) break;
-                if (Crafts.takeOne(level, v, st -> st.is(faceItem)).isEmpty()) { have[brick ? 0 : 1] = false; continue; }
+                if (Crafts.takeOne(level, v, st -> st.is(faceItem)).isEmpty() && !Masonry.take(level, v, faceItem, 1)) { have[brick ? 0 : 1] = false; continue; }
                 Crafts.giveBack(level, v, there.getBlock().asItem(), 1);                  // what came off goes back into the stores
             }
             level.setBlock(pl.pos(), face.defaultBlockState(), 2);
