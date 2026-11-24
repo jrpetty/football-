@@ -283,6 +283,45 @@ public class TownLodGameTests {
         helper.succeed();
     }
 
+    /**
+     * [soak40] A traveller crossing a sleeping town's ground: each window it opens there is kept for the town's waking,
+     * and each it moves on from is forgotten with it, so the town keeps only where the traveller is now; once its trip
+     * is over, nothing. When the town wakes, nothing of the traveller's road is forced again. Before, every window it
+     * ever opened there was forced again at the waking, under a name nobody would ever let go of, and parked again at
+     * the next sleep: the four-hundred-day towns' forced chunks grew from hundreds to thirty thousand.
+     */
+    @GameTest(template = "empty", timeoutTicks = 3000, batch = "lod05_parked_let_go")
+    public static void lod05_parked_let_go(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        found(helper, 9420000, 8, v -> {
+            UUID id = v.id();
+            TownLod.forceForTests(level.getServer(), TownLod.Lod.AWAY);
+            helper.assertTrue(TownLod.away(id), "with nobody near the town sleeps");
+            UUID trip = UUID.nameUUIDFromBytes(("lod05-caravan-" + id).getBytes());
+            BlockPos a = v.centre().offset(24, 0, 8), b = v.centre().offset(-24, 0, -8);
+            ChunkLoad.setLoaded(level, trip, a, 1, true);
+            int first = TownLod.parkedForTests(id, trip);
+            helper.assertTrue(first == 9, "its first window kept for the town's waking: " + first);
+            ChunkLoad.setLoaded(level, trip, a, 1, false);              // on to the next stretch of road
+            ChunkLoad.setLoaded(level, trip, b, 1, true);
+            int moved = TownLod.parkedForTests(id, trip);
+            Kit.log("[VT] lod05 parked for the traveller: " + first + " at its first window, " + moved + " once it moved on");
+            helper.assertTrue(moved == 9, "only the window it is in now is kept, not the road behind it: " + moved);
+            ChunkLoad.setLoaded(level, trip, b, 1, false);              // its trip over
+            helper.assertTrue(TownLod.parkedForTests(id, trip) == 0, "its trip over, nothing of it kept: " + TownLod.parkedForTests(id, trip));
+            TownLod.forceForTests(level.getServer(), TownLod.Lod.FULL);
+            helper.assertTrue(!TownLod.away(id), "somebody near: it wakes");
+            int held = 0;
+            for (BlockPos p : new BlockPos[] { a, b }) {
+                for (int dx = -1; dx <= 1; dx++)
+                    for (int dz = -1; dz <= 1; dz++) if (ChunkLoad.holds(level, trip, (p.getX() >> 4) + dx, (p.getZ() >> 4) + dz)) held++;
+            }
+            TownLod.forceForTests(level.getServer(), null);
+            helper.assertTrue(held == 0, "awake, nothing of the traveller's road forced again: " + held + " chunks");
+            pass(helper);
+        });
+    }
+
     /** The bread in the town's store chests themselves (not the kept count). */
     private static int realBread(ServerLevel level, UUID id) {
         int n = 0;
