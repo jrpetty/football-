@@ -577,3 +577,94 @@ Dragon incoming.
 Covering you.
 Hit it when it perches.
 On the dragon.
+
+# [pa33g] Come here, on foot the whole way: setting off from far, how it's going, arriving, and truly stuck (the only shortcut).
+== say.come_far
+On my way. {dist} blocks, I'll be quick.
+Coming. {dist} blocks, running the whole way.
+Heading over. {dist} blocks, give or take a hill.
+On my way. {dist} blocks of scenery, here I come.
+[anim:point] Coming to you. {dist} blocks, shouldn't be long.
+Right, {dist} blocks. Leg day it is.
+Coming. {dist} blocks. Put the kettle on.
+== say.come_far@gloomy
+On my way. {dist} blocks. My poor feet.
+Coming. {dist} blocks. I'll be there eventually.
+{dist} blocks. Of course it is. Coming.
+Walking {dist} blocks. Someone has to.
+Coming. {dist} blocks of trudging ahead.
+On my way. {dist} blocks. Don't wait up. Actually, do.
+== say.come_far@serious
+On my way. {dist} blocks.
+Coming to you. {dist} blocks out.
+Heading to you, {dist} blocks.
+Coming. Distance {dist} blocks.
+En route. {dist} blocks.
+Making my way to you. {dist} blocks.
+
+== say.come_progress
+Still coming. {dist} to go.
+{dist} blocks left. Nearly there. Ish.
+Making good time. {dist} to go.
+Halfway-ish. {dist} blocks left.
+Still on my way. {dist} blocks.
+[anim:point] {dist} blocks out. Keep the light on.
+Closing in. {dist} to go.
+== say.come_progress@gloomy
+Still walking. {dist} to go.
+{dist} blocks left. My legs have opinions.
+Still coming. {dist} blocks. It's a long way.
+{dist} to go. Not that I'm counting. I am.
+Plodding on. {dist} blocks.
+{dist} more blocks. Nobody tells you about the walking.
+== say.come_progress@serious
+{dist} blocks to go.
+Still coming. {dist} out.
+Progress: {dist} blocks left.
+On my way, {dist} blocks.
+{dist} to go.
+Closing. {dist} blocks.
+
+== say.come_arrived
+[anim:wave] Made it. What do you need?
+[anim:wave] Here. Ran most of it.
+[anim:wave] There you are. I'm here.
+[anim:wave] Arrived. Barely out of breath.
+[anim:wave] Here I am. What's next?
+[anim:wave] Made it. That was a trek.
+== say.come_arrived@gloomy
+[anim:shrug] Made it. My feet hate you.
+[anim:shrug] Here. All that way.
+[anim:shrug] Arrived. Exhausted, but arrived.
+[anim:shrug] Here I am. Again.
+[anim:shrug] Made it. I'd like a sit down.
+[anim:shrug] Here. Don't ask me to walk back.
+== say.come_arrived@serious
+[anim:salute] Here.
+[anim:salute] Arrived.
+[anim:salute] With you now.
+[anim:salute] I'm here.
+[anim:salute] Made it.
+[anim:salute] Reporting in.
+
+== say.come_stuck
+I'm properly stuck. Taking the shortcut.
+Can't find a way through. I'll pop over.
+No path from here. Cheating, just this once.
+Wedged. I'll come the quick way.
+This way's blocked every which way. Shortcut.
+I've tried every way round. Skipping ahead.
+== say.come_stuck@gloomy
+Stuck. Of course. Taking the shortcut.
+There's no way through. Typical. Popping over.
+Hopelessly stuck. I'll cheat.
+Can't get there on foot. The world's against me.
+Stuck again. Shortcut it is.
+No way round. I give up walking.
+== say.come_stuck@serious
+No path. Taking the shortcut.
+Blocked. Coming the quick way.
+I'm stuck. Moving to you directly.
+Can't get through. Shortcut.
+Route blocked. Coming directly.
+No way on foot. Coming to you.

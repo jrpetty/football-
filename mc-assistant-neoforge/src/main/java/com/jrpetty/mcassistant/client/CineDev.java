@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <pre>
  *   orbit X Y Z RADIUS HEIGHT SPEED [ENTITY]    an orbit (CinemaCam), round a point or an entity id
- *   follow ID | nearest                          follow a folk
+ *   follow ID | nearest | pa                     follow a folk (pa: the nearest Player AI Assistant)
  *   point X Y Z YAW PITCH                        a fly-through point (clear: points cleared)
  *   path SECONDS [loop]                          fly the points
  *   happening | heart R H SPEED                  ask the server (as the screen's button) / orbit the town's heart
@@ -95,7 +95,15 @@ public final class CineDev {
                 }
                 case "follow" -> {
                     int id = -1;
-                    if (w[1].equals("nearest") && mc.level != null && mc.player != null) {
+                    if (w[1].equals("pa") && mc.level != null && mc.player != null) {     // [pa33g] the nearest Player AI Assistant
+                        double best = Double.MAX_VALUE;
+                        for (Entity e : mc.level.entitiesForRendering()) {
+                            if (e instanceof com.jrpetty.mcassistant.pa.PlayerAssistantEntity a && a.distanceToSqr(mc.player) < best) {
+                                best = a.distanceToSqr(mc.player);
+                                id = a.getId();
+                            }
+                        }
+                    } else if (w[1].equals("nearest") && mc.level != null && mc.player != null) {
                         double best = Double.MAX_VALUE;
                         for (Entity e : mc.level.entitiesForRendering()) {
                             if (e instanceof VillageFolkEntity f && !f.isBaby() && !f.isSleeping() && f.distanceToSqr(mc.player) < best) {

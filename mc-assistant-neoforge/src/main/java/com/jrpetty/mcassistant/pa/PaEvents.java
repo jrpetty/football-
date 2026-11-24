@@ -46,6 +46,8 @@ public final class PaEvents {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
         for (PaData.Rec r : PaData.of(p.getUUID())) {
             PlayerAssistantEntity a = PaLife.entity(p.server, r);
+            // [pa33g] an operator's choice: one left staying, on guard or at work carries on with its chunks while you're away
+            if (a != null && PaConfig.chunksOffline() && PaConfig.chunksOn() && a.mind.come == null && PaChunks.reason(a) != null) continue;
             if (a != null) PaLife.stash(a);
             else if (!r.dead(p.serverLevel().getGameTime()) && r.snapshot != null) { r.away = true; PaData.touch(); }
         }
@@ -142,7 +144,12 @@ public final class PaEvents {
     /** [pa33d] A player's arrow on a target block: a point in a shooting contest with its assistant. */
     @SubscribeEvent
     public static void onImpact(net.neoforged.neoforge.event.entity.ProjectileImpactEvent e) {
-        if (e.getProjectile().level().isClientSide || !(e.getProjectile().getOwner() instanceof ServerPlayer p)) return;
+        if (e.getProjectile().level().isClientSide) return;
+        if (e.getProjectile() instanceof net.minecraft.world.entity.projectile.AbstractArrow ar && ar.getPersistentData().hasUUID("pa_shooter")) {
+            PaBow.impact(ar, e.getRayTraceResult());                    // [pa33g] its own arrow (even one loosed as its player's second bow)
+            return;
+        }
+        if (!(e.getProjectile().getOwner() instanceof ServerPlayer p)) return;
         if (e.getRayTraceResult() instanceof net.minecraft.world.phys.BlockHitResult bh
             && e.getProjectile().level().getBlockState(bh.getBlockPos()).is(net.minecraft.world.level.block.Blocks.TARGET)) PaChallenge.ownerHit(p, bh.getBlockPos());
     }

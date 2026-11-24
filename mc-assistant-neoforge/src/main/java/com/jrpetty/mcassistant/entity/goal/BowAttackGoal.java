@@ -35,7 +35,8 @@ public class BowAttackGoal extends Goal {
         return t != null && t.isAlive()
             && assistant.mayShoot(hand)
             && assistant.hasArrows()
-            && assistant.combatStance() != AssistantEntity.Stance.MELEE;
+            && assistant.combatStance() != AssistantEntity.Stance.MELEE
+            && !(assistant.ownBow() && hand.is(Items.BOW));            // [pa33g] a Player AI Assistant draws its bow its own way (PaBowGoal)
     }
 
     @Override

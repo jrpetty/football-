@@ -75,6 +75,30 @@ public class PlayerAssistantEntity extends AssistantEntity {
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(2, new PaTaskGoal(this));
+        this.goalSelector.addGoal(1, new PaCome.ComeGoal(this));          // [pa33g] told to come: before its work
+        this.goalSelector.addGoal(3, new PaBowGoal(this));                 // [pa33g] its own archery (PaBow) in a fight
+    }
+
+    /** Tests: the goals running just now, by name. */
+    public String goalSelectorForTests() {
+        StringBuilder b = new StringBuilder();
+        this.goalSelector.getAvailableGoals().stream().filter(net.minecraft.world.entity.ai.goal.WrappedGoal::isRunning)
+            .forEach(g -> b.append(g.getGoal().getClass().getSimpleName()).append(' '));
+        return b.toString().trim();
+    }
+
+    /** [pa33g] Its bow is drawn its own way (PaBowGoal, PaBow), never the town archers'. */
+    @Override
+    public boolean ownBow() {
+        return true;
+    }
+
+    /** [pa33g] Told to come: on foot the whole way (PaCome). And with work in hand it stays at it: no trailing after its
+     *  player (nor the catch-up hop) while it has a job here; it keeps its chunks awake instead (PaChunks). */
+    @Override
+    public boolean walkingToOwner() {
+        return mind.come != null || task != null || !plan.idle() && !plan.paused
+            || sleepWanted;                                             // on its way to bed: the follow pulled it back each time (pai46)
     }
 
     // ------------------------------------------------------------------ who it is
@@ -407,6 +431,12 @@ public class PlayerAssistantEntity extends AssistantEntity {
         keepXp();
     }
 
+    /** [pa33g] Its reach grows with its level (PaLevels.reach). */
+    @Override
+    public double reach() {
+        return PaLevels.reach(veteranLevel());
+    }
+
     /** Its level quickens its work far more than a town hand's (level 10: 40% off). */
     @Override
     public int experiencePercent() {
@@ -540,7 +570,17 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public void die(DamageSource source) {
         super.die(source);
-        if (!level().isClientSide) PaLife.fell(this, source);
+        if (!level().isClientSide) {
+            PaChunks.removed(this);                                     // [pa33g] its window let go of
+            PaLife.fell(this, source);
+        }
+    }
+
+    /** [pa33g] Gone from the world for any reason: its window of awake chunks let go of (on the next tick). */
+    @Override
+    public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
+        if (!level().isClientSide) PaChunks.removed(this);
+        super.remove(reason);
     }
 
     // ------------------------------------------------------------------ keeping

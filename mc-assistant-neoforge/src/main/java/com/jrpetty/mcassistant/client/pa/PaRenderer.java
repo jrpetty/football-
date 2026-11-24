@@ -20,6 +20,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -92,6 +93,7 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
             new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
             ctx.getModelManager()));
         this.addLayer(new ItemInHandLayer<>(this, ctx.getItemInHandRenderer()));
+        this.addLayer(new net.minecraft.client.renderer.entity.layers.ElytraLayer<>(this, ctx.getModelSet()));   // [pa33g] its wings, worn and spread
     }
 
     @Override
@@ -105,10 +107,12 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
         this.model = lk == SKELETON ? skeletonBody : lk == ZOMBIE ? zombieBody : lk == ENDERMAN ? endermanBody : playerBody;
         HumanoidModel<PlayerAssistantEntity> m = getModel();
         ItemStack main = a.getMainHandItem(), off = a.getOffhandItem();
-        m.rightArmPose = main.isEmpty() ? HumanoidModel.ArmPose.EMPTY
-            : main.getItem() instanceof BowItem && a.isAggressive() ? HumanoidModel.ArmPose.BOW_AND_ARROW : HumanoidModel.ArmPose.ITEM;
-        m.leftArmPose = off.isEmpty() ? HumanoidModel.ArmPose.EMPTY
-            : off.is(net.minecraft.world.item.Items.SHIELD) && a.isAggressive() ? HumanoidModel.ArmPose.BLOCK : HumanoidModel.ArmPose.ITEM;
+        HumanoidModel.ArmPose mainPose = pose(a, main, InteractionHand.MAIN_HAND), offPose = pose(a, off, InteractionHand.OFF_HAND);
+        // [pa33g] two-handed poses (the bow drawn, a crossbow) take the other arm too, as the player's model does
+        if (mainPose.isTwoHanded()) offPose = off.isEmpty() ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;
+        boolean right = a.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT;
+        m.rightArmPose = right ? mainPose : offPose;
+        m.leftArmPose = right ? offPose : mainPose;
         m.crouching = a.isCrouching();
         m.setAllVisible(true);
         super.render(a, yaw, partialTick, pose, buffer, light);
@@ -120,6 +124,40 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
         // [pa33c-2b] its words are drawn on the screen (PaBubbles), kept inside it; the plate stands aside meanwhile
         if (said != null && d2 < 32 * 32 && !(mc.screen instanceof PaScreen)) return;
         if (d2 < 24 * 24) plate(a, pose, buffer, light, d2);
+    }
+
+    /** [pa33g] How an arm holds what's in that hand, as the player's renderer decides it: a bow being drawn (both arms up,
+     *  the bow bending as the item is used), a crossbow spanned or loaded, a raised shield, or just held. */
+    static HumanoidModel.ArmPose pose(PlayerAssistantEntity a, ItemStack held, InteractionHand hand) {
+        if (held.isEmpty()) return HumanoidModel.ArmPose.EMPTY;
+        boolean using = a.isUsingItem() && a.getUsedItemHand() == hand && a.getUseItemRemainingTicks() > 0;
+        if (using) {
+            net.minecraft.world.item.UseAnim anim = held.getUseAnimation();
+            if (anim == net.minecraft.world.item.UseAnim.BOW) return HumanoidModel.ArmPose.BOW_AND_ARROW;
+            if (anim == net.minecraft.world.item.UseAnim.CROSSBOW) return HumanoidModel.ArmPose.CROSSBOW_CHARGE;
+            if (anim == net.minecraft.world.item.UseAnim.BLOCK) return HumanoidModel.ArmPose.BLOCK;
+            if (anim == net.minecraft.world.item.UseAnim.SPYGLASS) return HumanoidModel.ArmPose.SPYGLASS;
+        }
+        if (held.getItem() instanceof net.minecraft.world.item.CrossbowItem && net.minecraft.world.item.CrossbowItem.isCharged(held)) return HumanoidModel.ArmPose.CROSSBOW_HOLD;
+        if (held.getItem() instanceof BowItem && a.isAggressive() && hand == InteractionHand.MAIN_HAND) return HumanoidModel.ArmPose.BOW_AND_ARROW;
+        return HumanoidModel.ArmPose.ITEM;
+    }
+
+    /** [pa33g] Gliding on an elytra: the body laid out along its flight and rolled into its turns, as a player's is. */
+    @Override
+    protected void setupRotations(PlayerAssistantEntity a, PoseStack pose, float bob, float yaw, float partialTick, float scale) {
+        super.setupRotations(a, pose, bob, yaw, partialTick, scale);
+        if (!a.isFallFlying()) return;
+        float t = a.getFallFlyingTicks() + partialTick;
+        float lay = net.minecraft.util.Mth.clamp(t * t / 100.0F, 0.0F, 1.0F);
+        pose.mulPose(com.mojang.math.Axis.XP.rotationDegrees(lay * (-90.0F - a.getViewXRot(partialTick))));
+        net.minecraft.world.phys.Vec3 look = a.getViewVector(partialTick), move = a.getDeltaMovement();
+        double mm = move.horizontalDistanceSqr(), ll = look.horizontalDistanceSqr();
+        if (mm > 0.0 && ll > 0.0) {
+            double cos = (move.x * look.x + move.z * look.z) / Math.sqrt(mm * ll);
+            double side = move.x * look.z - move.z * look.x;
+            pose.mulPose(com.mojang.math.Axis.YP.rotation((float) (Math.signum(side) * Math.acos(Math.min(1.0, Math.max(-1.0, cos))))));
+        }
     }
 
     @Override

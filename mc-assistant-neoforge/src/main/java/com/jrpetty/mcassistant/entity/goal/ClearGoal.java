@@ -138,7 +138,7 @@ public class ClearGoal extends Goal {
         BlockPos pos = cells.get(cursor);
         double distSq = assistant.getEyePosition().distanceToSqr(
             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+        if (distSq > assistant.reach() * assistant.reach()) {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 1.1D);
             }

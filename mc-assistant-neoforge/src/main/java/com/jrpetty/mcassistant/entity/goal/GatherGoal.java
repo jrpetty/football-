@@ -329,7 +329,7 @@ public class GatherGoal extends Goal {
         assistant.getLookControl().setLookAt(
             targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
 
-        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+        if (distSq > assistant.reach() * assistant.reach()) {
             // Stuck is measured by PROGRESS, not by time: a long walk round a pond is
             // not being stuck, and a folk only starts digging or bridging once it has
             // stopped getting any nearer — and stopped moving — for a second and a half.

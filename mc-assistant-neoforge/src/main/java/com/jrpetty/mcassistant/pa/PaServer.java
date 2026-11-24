@@ -115,6 +115,10 @@ public final class PaServer {
             case "admin" -> {                                       // [pa33d] operators only: the server's levelling multiplier
                 if (!p.hasPermissions(2)) { PaNet.note(p, "Only an operator can change that."); return; }
                 if (args.contains("xpMult")) PaConfig.setXpMultiplier(args.getDouble("xpMult"));
+                PaConfig.setChunks(args.contains("chunksOn") ? args.getBoolean("chunksOn") : null,                 // [pa33g] its chunks
+                    args.contains("chunkRadius") ? args.getInt("chunkRadius") : null,
+                    args.contains("chunkCap") ? args.getInt("chunkCap") : null,
+                    args.contains("chunksOffline") ? args.getBoolean("chunksOffline") : null);
                 PaNet.refresh(p, a);
             }
             case "glance" -> {                                      // [pa33d] a bare ping: it looks over, nothing more (no order, no log)

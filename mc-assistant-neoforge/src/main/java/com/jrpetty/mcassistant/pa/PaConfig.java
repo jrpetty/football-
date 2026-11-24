@@ -15,6 +15,8 @@ public final class PaConfig {
     static final ModConfigSpec.IntValue PER_PLAYER, RESPAWN_SECONDS, SUMMON_COOLDOWN, BUDGET_MICROS, ROAM_MAX, SPEND_MAX;
     static final ModConfigSpec.ConfigValue<String> MAX_LANGUAGE;            // [pa33b]
     static final ModConfigSpec.BooleanValue ROAST_OTHERS;
+    static final ModConfigSpec.BooleanValue CHUNKS_ON, CHUNKS_OFFLINE;       // [pa33g]
+    static final ModConfigSpec.IntValue CHUNK_RADIUS, CHUNK_CAP;
     static final ModConfigSpec.IntValue START_HEARTS, MAX_HEARTS;             // [pa33c-2b]
     static final ModConfigSpec.BooleanValue KEEP_PACK;
     static final ModConfigSpec.DoubleValue XP_MULT;                           // [pa33d]
@@ -53,6 +55,13 @@ public final class PaConfig {
             "Operators can change it in game from the assistant's panel (Settings, Advanced).").defineInRange("xpMultiplier", 1.0, 0.0, 100.0);
         ROAST_OTHERS = b.comment("[pa33b] May an assistant roast another player back when that player roasts it or its owner first? (Never unprompted.)")
             .define("allowRoastOthers", true);
+        CHUNKS_ON = b.comment("[pa33g] An assistant told to stay, on guard, at work or walking over to its player keeps the chunks round it loaded",
+            "(a forced, ticking ticket), so it truly stays and keeps working while its player is far away. Operators can change these from the panel.")
+            .define("keepChunksLoaded", true);
+        CHUNK_RADIUS = b.comment("[pa33g] How many chunks round it: 0 just its own, 1 a 3x3 square, 2 a 5x5.").defineInRange("chunkRadius", 1, 0, 3);
+        CHUNK_CAP = b.comment("[pa33g] The most chunks one player's assistants may keep loaded between them.").defineInRange("chunkCapPerPlayer", 25, 1, 200);
+        CHUNKS_OFFLINE = b.comment("[pa33g] Keep them loaded (and the assistant working where it was left) while its player is offline.",
+            "Off, it goes with its player when they leave, as always.").define("keepChunksWhileOffline", false);
         b.pop();
         b.comment("Optional free conversation through a remote language model. OFF by default and never needed: every order,",
             "question and reply works offline without it. When on, only sentences the assistant could not read are sent, with the",
@@ -124,6 +133,39 @@ public final class PaConfig {
             xpForTests = Math.max(0.0, Math.min(100.0, m));            // no config loaded (a test): for this run
         }
     }
+
+    // [pa33g] chunks: read, and an operator's change from the panel (kept in the config file; for this run when none is loaded)
+    private static final java.util.Map<String, Object> CHUNK_OVERRIDE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static boolean chunksOn() { return (Boolean) CHUNK_OVERRIDE.getOrDefault("on", read(CHUNKS_ON, true)); }
+
+    public static boolean chunksOffline() { return (Boolean) CHUNK_OVERRIDE.getOrDefault("offline", read(CHUNKS_OFFLINE, false)); }
+
+    public static int chunkRadius() { return (Integer) CHUNK_OVERRIDE.getOrDefault("radius", read(CHUNK_RADIUS, 1)); }
+
+    public static int chunkCap() { return (Integer) CHUNK_OVERRIDE.getOrDefault("cap", read(CHUNK_CAP, 25)); }
+
+    public static void setChunks(@javax.annotation.Nullable Boolean on, @javax.annotation.Nullable Integer radius, @javax.annotation.Nullable Integer cap,
+                                 @javax.annotation.Nullable Boolean offline) {
+        if (on != null) put(CHUNKS_ON, "on", on);
+        if (radius != null) put(CHUNK_RADIUS, "radius", Math.max(0, Math.min(3, radius)));
+        if (cap != null) put(CHUNK_CAP, "cap", Math.max(1, Math.min(200, cap)));
+        if (offline != null) put(CHUNKS_OFFLINE, "offline", offline);
+    }
+
+    private static <T> void put(ModConfigSpec.ConfigValue<T> v, String key, T value) {
+        try {
+            if (!SPEC.isLoaded()) throw new IllegalStateException();
+            v.set(value);
+            v.save();
+            CHUNK_OVERRIDE.remove(key);
+        } catch (Exception e) {
+            CHUNK_OVERRIDE.put(key, value);
+        }
+    }
+
+    /** Tests: every chunk setting back to the file's. */
+    public static void chunksForTests() { CHUNK_OVERRIDE.clear(); }
 
     public static boolean allowRoastOthers() { return read(ROAST_OTHERS, true); }
 

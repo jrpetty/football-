@@ -27,7 +27,7 @@ public final class PaFlight {
         PaBrain.Mind m = a.mind;
         ServerPlayer owner = a.getOwnerPlayer() instanceof ServerPlayer sp && sp.level() == a.level() ? sp : null;
         if (!a.isFallFlying()) {
-            if (m.wingsOn && (a.onGround() || a.isInWater()) && a.tickCount - m.takeoffAt > 10) putAway(a);
+            if (m.wingsOn && (a.onGround() || a.isInWater()) && a.tickCount - m.takeoffAt > 10 && a.tickCount - m.wingsAt > 40) putAway(a);
             if (m.takeoffAt > 0 && a.tickCount - m.takeoffAt <= 10 && !a.onGround() && a.getDeltaMovement().y < 0.25) {
                 a.glide(true);                                           // the top of the jump: wings open
                 if (rockets(a) > 0) boost(a);
@@ -38,7 +38,13 @@ public final class PaFlight {
             if (!PaLevels.has(a.veteranLevel(), "elytra") || elytra(a) < 0) return;
             boolean high = !a.onGround() && a.fallDistance > 2.0F || drop(a) >= 5;
             if (rockets(a) == 0 && !high) return;                        // no rocket and nowhere to jump from: on foot
-            if (!wear(a)) return;
+            // [pa33g] the wings on first, where it stands, and a moment to be seen in them (the swap reaches every client) before it goes
+            if (!a.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA)) {
+                if (wear(a)) { m.wingsAt = a.tickCount; a.getNavigation().stop(); }
+                return;
+            }
+            if (a.tickCount - m.wingsAt < 8) return;
+            m.wingsOn = true;
             m.takeoffAt = a.tickCount;
             if (a.onGround()) {
                 a.getJumpControl().jump();
@@ -55,8 +61,9 @@ public final class PaFlight {
         a.fallDistance = 0;                                              // a glide, not a fall
         a.getNavigation().stop();
         boolean up = owner != null && owner.isFallFlying();
-        Vec3 target = up ? owner.position().subtract(owner.getLookAngle().multiply(1, 0, 1).normalize().scale(2.5)).add(-owner.getLookAngle().z * 1.5, 0.4, owner.getLookAngle().x * 1.5)
-            : landing(a, owner);
+        // [pa33g] on its wing, as a wingman flies: a little behind and well out to one side (where its player sees it, clear of their wings)
+        Vec3 ahead = up ? owner.getLookAngle().multiply(1, 0, 1).normalize() : Vec3.ZERO;
+        Vec3 target = up ? owner.position().subtract(ahead.scale(1.5)).add(-ahead.z * 3.0, 0.4, ahead.x * 3.0) : landing(a, owner);
         Vec3 to = target.subtract(a.position());
         double dist = to.length(), flat = Math.sqrt(to.x * to.x + to.z * to.z);
         float yaw = (float) (Math.atan2(to.z, to.x) * 180.0 / Math.PI) - 90.0F;
@@ -151,6 +158,8 @@ public final class PaFlight {
             if (a.removeMatching(s -> ItemStack.isSameItemSameComponents(s, pick), 1) == 1) put = pick;
         }
         a.setItemSlot(EquipmentSlot.CHEST, put);
+        if (put.getItem() instanceof ArmorItem ai)                       // [pa33g] heard as well as seen: the chestplate back on
+            a.level().playSound(null, a.blockPosition(), ai.getEquipSound().value(), net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
         ItemStack left = a.insertItem(chest);
         if (!left.isEmpty()) a.spawnAtLocation(left);
     }

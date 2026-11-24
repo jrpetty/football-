@@ -255,6 +255,15 @@ public final class PaNet {
             }
             t.put("skills", skills);
             t.putDouble("xpMult", PaConfig.xpMultiplier());
+            t.putBoolean("chunksOn", PaConfig.chunksOn());                             // [pa33g] its chunks (operators set them)
+            t.putInt("chunkRadius", PaConfig.chunkRadius());
+            t.putInt("chunkCap", PaConfig.chunkCap());
+            t.putBoolean("chunksOffline", PaConfig.chunksOffline());
+            t.putString("chunks", PaChunks.describe(a));
+            if (r.shots > 0) t.putString("archery", r.hits + " of " + r.shots + " arrows on target (" + Math.round(100.0 * r.hits / r.shots) + "%)");
+            ListTag table = new ListTag();                                             // [pa33g] what each level does, all of it real
+            for (int l = 1; l <= PaLevels.MAX; l++) table.add(StringTag.valueOf(PaLevels.tableRow(l)));
+            t.put("levelTable", table);
             t.putBoolean("op", p.hasPermissions(2));                                   // [pa33c-2b] the Pack tab's slots, gear, open rows, locks
             t.putString("held", a.getMainHandItem().isEmpty() ? "nothing" : a.getMainHandItem().getHoverName().getString());
             t.putString("dim", a.level().dimension().location().getPath());

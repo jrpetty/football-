@@ -28,6 +28,7 @@ public class FollowOwnerGoal extends Goal {
         // Doing its own thing: fully detached — never trail or teleport to the owner.
         if (assistant.isAutonomous()) return false;
         if (assistant.getMode() != AssistantEntity.Mode.FOLLOW) return false;
+        if (assistant.walkingToOwner()) return false;                  // [pa33g] told to come: it walks the whole way (PaCome)
         Player p = assistant.getOwnerPlayer();
         if (p == null || p.isSpectator()) return false;
         if (assistant.distanceToSqr(p) < startDistance * startDistance) return false;
@@ -37,7 +38,7 @@ public class FollowOwnerGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return !assistant.isAutonomous()
+        return !assistant.isAutonomous() && !assistant.walkingToOwner()
             && assistant.getMode() == AssistantEntity.Mode.FOLLOW
             && owner != null && owner.isAlive()
             && assistant.distanceToSqr(owner) > (startDistance * startDistance) * 0.6;

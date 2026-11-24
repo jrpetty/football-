@@ -57,7 +57,7 @@ public class PaTaskGoal extends Goal {
         idx = 0;
         walkTicks = 0;
         cool = 0;
-        if (t != shotFor) { shotLine = null; shotAt = null; moverDrawn = false; }                      // a shot in the air carries on if its task does
+        if (t != shotFor) { shotLine = null; shotAt = null; shotAnim = null; }                      // a shot in the air carries on if its task does
         shotFor = t;
         if (t != null && shotLine == null && shotAt == null) t.stage = 0;
     }
@@ -65,6 +65,7 @@ public class PaTaskGoal extends Goal {
     @Override
     public void stop() {
         a.getNavigation().stop();
+        if (t != null && t.kind == PaTask.Kind.SHOOT && PaBow.drawing(a)) PaBow.cancel(a);   // [pa33g] no shot loosed for a task it has left
     }
 
     @Override
@@ -679,9 +680,9 @@ public class PaTaskGoal extends Goal {
     @javax.annotation.Nullable private net.minecraft.world.entity.Entity shotAt;
     private int shotDist;
     @javax.annotation.Nullable private PaTask shotFor;
-    private boolean moverDrawn;
 
     private void shoot() {
+        if (PaBow.drawing(a)) return;                                              // [pa33g] mid-draw: it looses in its own time
         if (shotLine != null || shotAt != null) {                                  // waiting for the arrow to get there
             if (a.tickCount < shotLandsAt) return;
             if (shotAt != null) {                                                  // a mover: did it feel it?
@@ -700,6 +701,8 @@ public class PaTaskGoal extends Goal {
             }
             String line = shotLine;
             shotLine = null;
+            if (shotAnim != null) a.playAnim(shotAnim);                            // the cheer (or the shrug) when it lands, not before
+            shotAnim = null;
             finish(line, false);
             return;
         }
@@ -712,24 +715,28 @@ public class PaTaskGoal extends Goal {
             if (!PaShots.canShoot(a, at)) { finish("I can't get a clear shot at it from anywhere near.", true); return; }
         }
         a.getNavigation().stop();
-        a.getLookControl().setLookAt(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
-        if (cool > 0) return;
-        cool = 25;
-        boolean hit = PaShots.shootAt(a, at);
-        t.stage++;
-        int dist = (int) Math.round(Math.sqrt(a.blockPosition().distSqr(at)));
-        shotLandsAt = a.tickCount + PaShots.flightTicks(a, dist) + 4;              // the word once it's there
-        if (hit) {
-            a.earn("trick");
-            a.playAnim(dist >= 20 ? "bow" : "cheer");
-            shotLine = PaTalk.line(a, dist >= 20 ? "trick_long" : "trick_hit", "dist", String.valueOf(dist));
-        } else if (t.stage >= Math.max(1, t.amount)) {
-            a.playAnim("shrug");
-            shotLine = PaTalk.line(a, "trick_miss", "dist", String.valueOf(dist));
-        }
+        final PaTask task = t;
+        boolean began = PaShots.shootAt(a, at, shot -> {                           // [pa33g] drawn, held on the mark, loosed
+            if (a.task != task) return;
+            task.stage++;
+            int dist = (int) Math.round(shot.dist());
+            shotLandsAt = a.tickCount + shot.flightTicks() + 4;                    // the word once it's there
+            cool = 12;
+            if (shot.willHit()) {
+                a.earn("trick");
+                shotAnim = dist >= 20 ? "bow" : "cheer";
+                shotLine = PaTalk.line(a, dist >= 20 ? "trick_long" : "trick_hit", "dist", String.valueOf(dist));
+            } else if (task.stage >= Math.max(1, task.amount)) {
+                shotAnim = "shrug";
+                shotLine = PaTalk.line(a, "trick_miss", "dist", String.valueOf(dist));
+            }
+        });
+        if (!began) finish(PaTalk.line(a, "need_bow"), true);
     }
 
-    /** [pa33e] At something moving: led by where it will be when the arrow gets there. */
+    @javax.annotation.Nullable private String shotAnim;
+
+    /** [pa33e] At something moving: [pa33g] tracked through the draw and led by what it saw (as well as its level allows). */
     private void shootMover() {
         net.minecraft.world.entity.Entity e = a.level().getEntity(Integer.parseInt(t.item.substring(2)));
         if ((e == null || !e.isAlive()) && t.stage > 0) {                          // gone since it fired: that was the arrow
@@ -746,16 +753,16 @@ public class PaTaskGoal extends Goal {
             return;
         }
         a.getNavigation().stop();
-        a.getLookControl().setLookAt(e, 30.0F, 30.0F);
-        if (cool > 0) return;
-        if (!moverDrawn) { moverDrawn = true; PaShots.drawBow(a); PaShots.holdAim(a, e, e.position()); cool = 16; return; }   // a draw first, as a player's (about a second)
-        cool = 25;
-        t.stage++;
-        int ticks = PaShots.shootAtMover(a, e);
-        if (ticks < 0) { finish(PaTalk.line(a, "need_bow"), true); return; }
-        shotAt = e;
-        shotDist = (int) Math.round(d);
-        shotLandsAt = a.tickCount + ticks + 3;
+        final PaTask task = t;
+        boolean began = PaShots.shootAtMover(a, e, shot -> {
+            if (a.task != task) return;
+            task.stage++;
+            shotAt = e;
+            shotDist = (int) Math.round(shot.dist());
+            shotLandsAt = a.tickCount + shot.flightTicks() + 3;
+            cool = 10;
+        });
+        if (!began) finish(PaTalk.line(a, "need_bow"), true);
     }
 
     // ------------------------------------------------------------------ [pa33d] brewing basic potions at a stand

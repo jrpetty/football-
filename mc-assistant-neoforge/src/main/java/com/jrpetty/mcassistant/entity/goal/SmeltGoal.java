@@ -299,7 +299,7 @@ public class SmeltGoal extends Goal {
             furnacePos.getX() + 0.5, furnacePos.getY() + 0.5, furnacePos.getZ() + 0.5);
         assistant.getLookControl().setLookAt(
             furnacePos.getX() + 0.5, furnacePos.getY() + 0.5, furnacePos.getZ() + 0.5);
-        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+        if (distSq > assistant.reach() * assistant.reach()) {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(
                     furnacePos.getX() + 0.5, furnacePos.getY(), furnacePos.getZ() + 0.5, 1.1D);

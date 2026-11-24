@@ -161,7 +161,7 @@ public class FarmGoal extends Goal {
         assistant.getLookControl().setLookAt(
             targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
 
-        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+        if (distSq > assistant.reach() * assistant.reach()) {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(
                     targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.1D);

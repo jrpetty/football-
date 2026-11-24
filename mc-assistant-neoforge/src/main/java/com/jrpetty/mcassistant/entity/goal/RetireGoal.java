@@ -79,7 +79,7 @@ public class RetireGoal extends Goal {
         if (job == null || chest == null) return;
         double distSq = assistant.getEyePosition().distanceToSqr(chest.getX() + 0.5, chest.getY() + 0.5, chest.getZ() + 0.5);
         assistant.getLookControl().setLookAt(chest.getX() + 0.5, chest.getY() + 0.5, chest.getZ() + 0.5);
-        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+        if (distSq > assistant.reach() * assistant.reach()) {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(chest.getX() + 0.5, chest.getY(), chest.getZ() + 0.5, 1.1D);
             }

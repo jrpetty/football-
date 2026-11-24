@@ -1,7 +1,6 @@
 package com.jrpetty.mcassistant.pa;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.BlockHitResult;
@@ -22,34 +21,27 @@ public final class PaShots {
         return a.getMainHandItem().is(Items.BOW) || a.countMatching(s -> s.is(Items.BOW)) > 0;
     }
 
-    /** The bow into its hand (what was there goes in the pack). */
-    /** [pa33f] Its eyes (and body) held on what it's shooting at for a second, as a player's are while drawing and loosing:
-     *  other habits (a look at its player, a glance about) wait. */
+    /** [pa33f] Its eyes (and body) held on what it shot at for a moment after the loose (the follow-through); while it
+     *  draws, PaBow keeps them there. [pa33g] Turned no faster than its level allows: no snapping. */
     static void holdAim(PlayerAssistantEntity a, @javax.annotation.Nullable net.minecraft.world.entity.Entity at, Vec3 spot) {
         a.mind.aimEntity = at;
         a.mind.aimSpot = spot;
         a.mind.aimUntil = a.tickCount + 24;
-        face(a, at != null ? at.getBoundingBox().getCenter() : spot);
     }
 
-    /** Turned to face a spot, head and body. */
-    static void face(PlayerAssistantEntity a, Vec3 p) {
-        double dx = p.x - a.getX(), dz = p.z - a.getZ(), dy = p.y - a.getEyeY();
-        float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F;
-        float pitch = (float) (-Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)) * 180.0 / Math.PI);
-        a.setYRot(yaw);
-        a.yBodyRot = yaw;
-        a.setYHeadRot(yaw);
-        a.setXRot(pitch);
-        a.getLookControl().setLookAt(p.x, p.y, p.z, 360.0F, 90.0F);
-    }
-
-    /** Each tick, from its moves: the aim held. */
+    /** Each tick, from its moves: the aim held (between draws), turning at its level's pace. */
     static void aimTick(PlayerAssistantEntity a) {
         PaBrain.Mind m = a.mind;
-        if (m.aimUntil <= a.tickCount || m.aimSpot == null) return;
+        if (m.bow != null || m.aimUntil <= a.tickCount || m.aimSpot == null) return;
         if (m.aimEntity != null && !m.aimEntity.isAlive()) { m.aimUntil = 0; return; }
-        face(a, m.aimEntity != null ? m.aimEntity.getBoundingBox().getCenter() : m.aimSpot);
+        Vec3 p = m.aimEntity != null ? m.aimEntity.getBoundingBox().getCenter() : m.aimSpot;
+        Vec3 eye = a.getEyePosition();
+        double dx = p.x - eye.x, dy = p.y - eye.y, dz = p.z - eye.z;
+        double wantYaw = PaArchery.yawTo(dx, dz), wantPitch = -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
+        double turn = PaLevels.turnDegrees(a.veteranLevel());
+        double yaw = a.getYHeadRot() + Math.max(-turn, Math.min(turn, PaArchery.wrap(wantYaw - a.getYHeadRot())));
+        double pitch = a.getXRot() + Math.max(-turn, Math.min(turn, wantPitch - a.getXRot()));
+        PaBow.face(a, yaw, pitch);
     }
 
     static void drawBow(PlayerAssistantEntity a) {
@@ -75,67 +67,21 @@ public final class PaShots {
         return hit.getType() == HitResult.Type.MISS || hit.getBlockPos().equals(at);
     }
 
-    /** One arrow at a block. True when it will hit it (the flight worked out at once); false for a miss or no shot. */
-    public static boolean shootAt(PlayerAssistantEntity a, BlockPos at) {
-        if (!hasBow(a) || a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return false;
-        drawBow(a);
-        holdAim(a, null, Vec3.atCenterOf(at));
-        int lv = a.veteranLevel();
-        float velocity = 2.6F + 0.04F * lv;
-        Arrow arrow = new Arrow(a.level(), a, new ItemStack(Items.ARROW), a.getMainHandItem().copy());
-        Vec3 aim = Vec3.atCenterOf(at);
-        double dx = aim.x - a.getX(), dy = aim.y - arrow.getY(), dz = aim.z - a.getZ();
-        double horiz = Math.sqrt(dx * dx + dz * dz);
-        // a player's lob: the least lift whose flight meets the block (worked out as a player learns it, by eye)
-        double lift = 0;
-        for (int k = 0; k <= 60; k++) {
-            double l = horiz * k * 0.01;
-            if (flies(a, arrow.position(), new Vec3(dx, dy + l, dz).normalize().scale(velocity), at)) { lift = l; break; }
-        }
-        arrow.shoot(dx, dy + lift, dz, velocity, PaLevels.spread(lv) * 0.5F);
-        arrow.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.ALLOWED;
-        boolean hit = lands(a, arrow, at);
-        a.playSound(net.minecraft.sounds.SoundEvents.ARROW_SHOOT, 1.0F, 1.0F / (a.getRandom().nextFloat() * 0.4F + 0.8F));
-        a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-        a.level().addFreshEntity(arrow);
-        return hit;
+    /** [pa33g] An arrow at a block, drawn and loosed as a player's (PaBow): {@code done} hears of the shot when it leaves
+     *  the bow (whether it will land on the block, worked out from its real flight). False for no bow or arrow. */
+    public static boolean shootAt(PlayerAssistantEntity a, BlockPos at, @javax.annotation.Nullable java.util.function.Consumer<PaBow.Shot> done) {
+        return PaBow.atBlock(a, at, done);
     }
 
-    /** [pa33e] About how long an arrow takes over so many blocks (ticks). */
+    /** About how long an arrow takes over so many blocks off a full draw (ticks). */
     static int flightTicks(PlayerAssistantEntity a, double dist) {
-        float v = 2.6F + 0.04F * a.veteranLevel();
-        return (int) Math.ceil(dist / (v * 0.93));
+        return PaArchery.flightTicks(PaArchery.FULL_SPEED, dist);
     }
 
-    /** [pa33e] At something on the move (a pig in a cart, a running mob): aimed at where it will be, the arrow's own
-     *  flight worked out to meet it. The ticks till it gets there, or -1 for no bow or arrow. */
-    public static int shootAtMover(PlayerAssistantEntity a, net.minecraft.world.entity.Entity e) {
-        if (!hasBow(a) || a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return -1;
-        drawBow(a);
-        holdAim(a, e, e.position());
-        int lv = a.veteranLevel();
-        float velocity = 2.6F + 0.04F * lv;
-        Arrow arrow = new Arrow(a.level(), a, new ItemStack(Items.ARROW), a.getMainHandItem().copy());
-        Vec3 move = e.getRootVehicle().getDeltaMovement();
-        if (e.getRootVehicle() == e && e.onGround()) move = new Vec3(move.x, 0, move.z);
-        Vec3 at = e.position().add(0, e.getBbHeight() * 0.6, 0);
-        int ticks = 0;
-        for (int k = 0; k < 4; k++) {                                     // where it'll be when the arrow is: settle on it
-            ticks = flightTicks(a, at.distanceTo(arrow.position()));
-            at = e.position().add(0, e.getBbHeight() * 0.6, 0).add(move.scale(PaLevels.leads(lv) ? ticks : 0));
-        }
-        double dx = at.x - a.getX(), dy = at.y - arrow.getY(), dz = at.z - a.getZ(), horiz = Math.sqrt(dx * dx + dz * dz);
-        double lift = horiz * 0.02;
-        for (int k = 0; k <= 60; k++) {
-            double l = horiz * k * 0.01;
-            if (passes(arrow.position(), new Vec3(dx, dy + l, dz).normalize().scale(velocity), at)) { lift = l; break; }
-        }
-        arrow.shoot(dx, dy + lift, dz, velocity, PaLevels.spread(lv) * 0.3F);
-        arrow.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.ALLOWED;
-        a.playSound(net.minecraft.sounds.SoundEvents.ARROW_SHOOT, 1.0F, 1.0F / (a.getRandom().nextFloat() * 0.4F + 0.8F));
-        a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-        a.level().addFreshEntity(arrow);
-        return ticks;
+    /** [pa33g] At something on the move (a pig in a cart, a running mob): it tracks it through the draw and leads it by
+     *  what it saw, as well as its level allows. False for no bow or arrow. */
+    public static boolean shootAtMover(PlayerAssistantEntity a, net.minecraft.world.entity.Entity e, @javax.annotation.Nullable java.util.function.Consumer<PaBow.Shot> done) {
+        return PaBow.atEntity(a, e, done, null, null);
     }
 
     /** Does a flight pass within half a block of a point (drag and gravity as the game's)? */
@@ -152,11 +98,6 @@ public final class PaShots {
             v = v.scale(0.99).add(0, -0.05, 0);
         }
         return false;
-    }
-
-    /** Fly the arrow in our heads (the game's own drag and gravity) and see what it meets first. */
-    static boolean lands(PlayerAssistantEntity a, Arrow arrow, BlockPos at) {
-        return flies(a, arrow.position(), arrow.getDeltaMovement(), at);
     }
 
     static boolean flies(PlayerAssistantEntity a, Vec3 from, Vec3 vel, BlockPos at) {

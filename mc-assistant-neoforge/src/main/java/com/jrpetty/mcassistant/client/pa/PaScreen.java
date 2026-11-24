@@ -826,6 +826,20 @@ public class PaScreen extends Screen {
         cy = line(g, "Where: " + where + "  ·  " + s.getString("mode"), x, cy, half);
         if (!s.getString("bed").isEmpty()) cy = line(g, "Its bed: " + s.getString("bed"), x, cy, half);
         if (!s.getString("home").isEmpty()) cy = line(g, "Its home: " + s.getString("home"), x, cy, half);
+        if (!s.getString("chunks").isEmpty()) cy = line(g, "Keeping " + s.getString("chunks"), x, cy, half);     // [pa33g]
+        cy = line(g, "Its bow: " + (s.getString("archery").isEmpty() ? "no arrows loosed yet" : s.getString("archery")), x, cy, half);
+        cy += 6;                                                          // [pa33g] what each level does, all of it real
+        UiStyle.heading(g, font, "What each level does", x, cy, half);
+        cy += 14;
+        cy = para(g, "Work: time off every job (mining, chopping, crafting). Walk: speed. Reach: blocks. React: how long it takes to notice a change. "
+            + "Bow: hits at 30 blocks on a standing / a strafing mob, worked out by trying it.", x, cy, half, faint());
+        int lvRow = s.getInt("level");
+        for (Tag t : s.getList("levelTable", Tag.TAG_STRING)) {
+            String row = t.getAsString();
+            boolean here = row.startsWith("L" + lvRow + " ");
+            g.drawString(font, UiStyle.clip(font, row, half), x, cy, here ? BRAND : lvRow > Integer.parseInt(row.substring(1, row.indexOf(' '))) ? UiStyle.TEXT : faint(), false);
+            cy += 10;
+        }
         int leftEnd = cy;
         int sx = half == iw ? x : x + half + 12;
         cy = half == iw ? cy + 6 : y;
@@ -1058,6 +1072,13 @@ public class PaScreen extends Screen {
         PaClient.send("admin", t);
     }
 
+    /** [pa33g] An operator's change to the chunk settings. */
+    private void adminChunks(String key, boolean flag, int n) {
+        CompoundTag t = new CompoundTag();
+        if (key.equals("chunksOn") || key.equals("chunksOffline")) t.putBoolean(key, flag); else t.putInt(key, n);
+        PaClient.send("admin", t);
+    }
+
     private int secLook(GuiGraphics g, CompoundTag s, int sx, int cy, int half, int mx, int my) {
         int lk = Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length);
         g.drawString(font, "Its look", sx, cy + 3, muted(), false);
@@ -1114,6 +1135,19 @@ public class PaScreen extends Screen {
             String shown = (m == Math.floor(m) ? String.valueOf((int) m) : String.format(java.util.Locale.ROOT, "%.2f", m)) + "\u00D7 xp";
             cy = stepper(g, "Levelling", shown, sx, cy, mx, my, () -> admin(m <= 1 ? Math.max(0, m - 0.25) : m - 1), () -> admin(m < 1 ? m + 0.25 : m + 1));
             cy = para(g, "Every assistant's experience on this server is multiplied by this (1: the intended grind, many game days to level 10).", sx, cy, half, faint());
+            cy += 4;
+            // [pa33g] its chunks: an assistant told to stay, on guard, at work or walking over keeps the ground round it loaded
+            boolean on = s.getBoolean("chunksOn"), offline = s.getBoolean("chunksOffline");
+            int rad = s.getInt("chunkRadius"), cap = s.getInt("chunkCap");
+            cy = toggle(g, "Keep its chunks loaded", on, sx, cy, half, mx, my,
+                "Told to stay, on guard, at work or walking over to you, it keeps the chunks round it loaded so it truly carries on while you're far away",
+                () -> adminChunks("chunksOn", !on, 0));
+            String sq = (2 * rad + 1) + "\u00D7" + (2 * rad + 1);
+            cy = stepper(g, "Chunk square", sq, sx, cy, mx, my, () -> adminChunks("chunkRadius", false, Math.max(0, rad - 1)), () -> adminChunks("chunkRadius", false, Math.min(3, rad + 1)));
+            cy = stepper(g, "Most per player", cap + " chunks", sx, cy, mx, my, () -> adminChunks("chunkCap", false, Math.max(1, cap - 9)), () -> adminChunks("chunkCap", false, Math.min(200, cap + 9)));
+            cy = toggle(g, "Even while its player is offline", offline, sx, cy, half, mx, my,
+                "On: one left staying, on guard or at work carries on while its player is away. Off: it goes with them, as always.",
+                () -> adminChunks("chunksOffline", !offline, 0));
             cy += 4;
         }
         UiStyle.heading(g, font, "Dismiss", sx, cy, half);

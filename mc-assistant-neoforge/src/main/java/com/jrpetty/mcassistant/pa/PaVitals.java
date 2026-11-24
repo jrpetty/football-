@@ -30,7 +30,7 @@ final class PaVitals {
     static void tick(PlayerAssistantEntity a) {
         PaHunger h = a.hunger;
         // hearts by level
-        if (a.tickCount % 20 == 0) {
+        if (a.tickCount % 5 == 0) {                                     // [pa33g] a quarter second: a new level's hearts at once
             var hp = a.getAttribute(Attributes.MAX_HEALTH);
             float want = PaHunger.maxHealth(level(a), PaConfig.startHearts(), PaConfig.maxHearts());
             if (hp != null && Math.abs(hp.getBaseValue() - want) > 0.01) {

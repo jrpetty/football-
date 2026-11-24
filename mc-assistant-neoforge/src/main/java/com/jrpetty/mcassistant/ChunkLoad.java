@@ -173,6 +173,48 @@ public final class ChunkLoad {
         }
     }
 
+    /** [pa33g] Force (queued, as setLoaded) or release (at once) one chunk for this owner: a window that moves lets go
+     *  of only the chunks it has left, never one it is still standing in. */
+    public static void forceOne(ServerLevel level, UUID owner, int cx, int cz, boolean on) {
+        Key key = new Key(level.dimension(), owner, ChunkPos.asLong(cx, cz));
+        if (!on) {
+            FORCED.remove(key);
+            Want w = WANTED.remove(key);
+            if (w != null) dropAsk(w);
+            CONTROLLER.forceChunk(level, owner, cx, cz, false, true);
+            return;
+        }
+        if (!AssistantConfig.chunkLoading() || FORCED.contains(key) || WANTED.containsKey(key)) return;
+        WANTED.put(key, new Want(level, owner, cx, cz));
+    }
+
+    /** [pa33g] Is this chunk forced (or queued to be) for this owner? */
+    public static boolean holds(ServerLevel level, UUID owner, int cx, int cz) {
+        Key key = new Key(level.dimension(), owner, ChunkPos.asLong(cx, cz));
+        return FORCED.contains(key) || WANTED.containsKey(key);
+    }
+
+    /** [pa33g] Let go of everything held for owners that match (in any world): tickets left from an earlier session. */
+    public static int releaseOwners(net.minecraft.server.MinecraftServer server, java.util.function.Predicate<UUID> which) {
+        int n = 0;
+        for (Iterator<Key> it = FORCED.iterator(); it.hasNext(); ) {
+            Key k = it.next();
+            if (!which.test(k.owner())) continue;
+            it.remove();
+            ServerLevel level = server.getLevel(k.dimension());
+            if (level != null) CONTROLLER.forceChunk(level, k.owner(), ChunkPos.getX(k.chunk()), ChunkPos.getZ(k.chunk()), false, true);
+            n++;
+        }
+        for (Iterator<java.util.Map.Entry<Key, Want>> it = WANTED.entrySet().iterator(); it.hasNext(); ) {
+            java.util.Map.Entry<Key, Want> e = it.next();
+            if (!which.test(e.getKey().owner())) continue;
+            it.remove();
+            dropAsk(e.getValue());
+            n++;
+        }
+        return n;
+    }
+
     /**
      * [scale] Let go of every chunk forced, or waiting to be, in this box of chunks in this level, where {@code let}
      * agrees (given who asked for it and which chunk); returns what was let go, so it can be asked for again (a town going to sleep,

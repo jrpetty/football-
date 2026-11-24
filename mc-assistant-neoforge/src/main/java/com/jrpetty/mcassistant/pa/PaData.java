@@ -81,6 +81,8 @@ public final class PaData extends SavedData {
         public boolean away;
         public boolean introduced, toured;
         public int jobsDone;
+        /** [pa33g] Arrows it has loosed, and those that struck what it meant (its hit rate on the Stats tab). */
+        public int shots, hits;
         public final ArrayDeque<Line> log = new ArrayDeque<>();
         /** Chests its player pointed it at (packed positions): always allowed. */
         public final java.util.Set<Long> pointed = new java.util.HashSet<>();
@@ -159,6 +161,8 @@ public final class PaData extends SavedData {
             t.putBoolean("Intro", introduced);
             t.putBoolean("Toured", toured);
             t.putInt("Done", jobsDone);
+            t.putInt("Shots", shots);
+            t.putInt("Hits", hits);
             ListTag lines = new ListTag();
             for (Line l : log) {
                 CompoundTag c = new CompoundTag();
@@ -215,6 +219,8 @@ public final class PaData extends SavedData {
             r.introduced = t.getBoolean("Intro");
             r.toured = t.getBoolean("Toured");
             r.jobsDone = t.getInt("Done");
+            r.shots = t.getInt("Shots");
+            r.hits = t.getInt("Hits");
             for (Tag e : t.getList("Log", Tag.TAG_COMPOUND)) {
                 CompoundTag c = (CompoundTag) e;
                 r.log.addLast(new Line(c.getInt("W"), c.getString("T"), c.getLong("At"), Math.max(1, c.getInt("N")), c.getBoolean("G")));
