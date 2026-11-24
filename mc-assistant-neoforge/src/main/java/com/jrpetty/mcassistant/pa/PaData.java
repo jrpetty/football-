@@ -84,6 +84,8 @@ public final class PaData extends SavedData {
         /** [pa33g] Arrows it has loosed, and those that struck what it meant (its hit rate on the Stats tab). */
         public int shots, hits;
         public final ArrayDeque<Line> log = new ArrayDeque<>();
+        /** [pa35] What it remembers of what its player told it (kept with the record: survives saves, deaths and new bodies). */
+        public final PaMemory.Book memory = new PaMemory.Book();
         /** Chests its player pointed it at (packed positions): always allowed. */
         public final java.util.Set<Long> pointed = new java.util.HashSet<>();
 
@@ -175,6 +177,7 @@ public final class PaData extends SavedData {
             }
             t.put("Log", lines);
             t.putLongArray("Pointed", pointed.stream().mapToLong(Long::longValue).toArray());
+            t.put("Mem", memory.save());                                // [pa35]
             return t;
         }
 
@@ -226,6 +229,7 @@ public final class PaData extends SavedData {
                 r.log.addLast(new Line(c.getInt("W"), c.getString("T"), c.getLong("At"), Math.max(1, c.getInt("N")), c.getBoolean("G")));
             }
             for (long p : t.getLongArray("Pointed")) r.pointed.add(p);
+            if (t.contains("Mem")) r.memory.load(t.getCompound("Mem"));    // [pa35]
             return r;
         }
     }

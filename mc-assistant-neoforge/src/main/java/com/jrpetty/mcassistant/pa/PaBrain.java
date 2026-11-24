@@ -58,6 +58,8 @@ public final class PaBrain {
         @Nullable public net.minecraft.world.entity.Entity aimEntity;
         @Nullable public net.minecraft.world.phys.Vec3 aimSpot;
         public int aimUntil;
+        /** [pa35] A block it is breaking (PaPace: the cracks a player's digging shows), or null. */
+        @Nullable public PaPace.Dig dig;
         /** [pa33g] A bow drawn (PaBow), or null. */
         @Nullable public PaBow.Draw bow;
         /** [pa33g] A come-here under way (PaCome), or null. */
@@ -154,6 +156,7 @@ public final class PaBrain {
         if (t % 20 == 0) personalSpace(a);
         if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
         if (t % 20 == 5) sleptIn(a);                              // [pa33c-2b] the bed it sleeps in is its spawn
+        if (t % 20 == 7) PaMemoryAct.tick(a);                     // [pa35] its standing rules, friends, foes, stock
         if (a.mind.glanceAt != null) {                            // [pa33d] a look at a bare ping
             if (a.tickCount < a.mind.glanceUntil) a.getLookControl().setLookAt(a.mind.glanceAt.getX() + 0.5, a.mind.glanceAt.getY() + 0.5, a.mind.glanceAt.getZ() + 0.5);
             else a.mind.glanceAt = null;
@@ -693,7 +696,7 @@ public final class PaBrain {
             if (s.get(net.minecraft.core.component.DataComponents.FOOD) != null) ownerFood += s.getCount();
         }
         if (ownerFood == 0 && owner.getFoodData().getFoodLevel() < 14 && a.countFood() >= 4 && !veto(a, "food")) {
-            autoStep(a, "food", "bring you some food", PaIntent.Kind.BRING_FOOD, Job.give("food", 4), null);
+            autoStep(a, "food", "bring you some food", PaIntent.Kind.BRING_FOOD, Job.give(PaMemoryAct.foodWord(a), 4), null);   // [pa35] the favourite
             return;
         }
         // 6. dark ground round its player at night, and torches to hand

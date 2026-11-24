@@ -197,9 +197,29 @@ public final class PaBanter {
         PaStrangers.Said s = hit ? PaStrangers.Said.HIT : PaStrangers.said(text, a.ownerName(), a.getAssistantName(), order);
         PaStrangers.Limit.Verdict v = a.mind.strangers.check(p.getUUID(), now);
         if (v == PaStrangers.Limit.Verdict.SILENT) return;
-        int level = PaTone.level(r.language, PaConfig.maxLanguage());
+        int level = PaMemoryAct.language(a, PaTone.level(r.language, PaConfig.maxLanguage()));   // [pa35] clean near those it was told
         String key = v == PaStrangers.Limit.Verdict.BORED ? "stranger.bored"
             : PaStrangers.key(s, r.roastBack, r.defend, PaConfig.allowRoastOthers(), level, r.mute);
+        // [pa35] what its player told it about people: friends teased gently and helped, foes refused, watched and roasted
+        String who0 = p.getGameProfile().getName();
+        boolean friend = PaMemoryAct.friend(a, who0), foe = PaMemoryAct.foe(a, who0);
+        if (v != PaStrangers.Limit.Verdict.BORED && !hit && PaMemoryAct.askingAbout(text, a.ownerName())) key = "say.mem.not_telling";
+        else if (v != PaStrangers.Limit.Verdict.BORED && s == PaStrangers.Said.ORDER) {
+            if (foe) key = "say.mem.foe_refuse";
+            else if (PaMemoryAct.friendOrders(a, p)) {
+                String ok = PaTalk.line(a, "mem.friend_order", "player", who0, "owner", a.ownerName());
+                PaTalk.reply(a, ok);
+                PaOrders.rule(p, a, PaTone.read(text).order());
+                return;
+            }
+        } else if (v != PaStrangers.Limit.Verdict.BORED && friend && (s == PaStrangers.Said.ROAST_ME || s == PaStrangers.Said.ROAST_OWNER || s == PaStrangers.Said.HIT)) key = "say.mem.friend_tease";
+        else if (v != PaStrangers.Limit.Verdict.BORED && foe && r.mute == 0) {
+            String lang = level >= 2 ? "unfiltered" : level == 1 ? "cheeky" : "clean";
+            boolean allowed = PaConfig.allowRoastOthers();
+            if (s == PaStrangers.Said.POLITE || s == PaStrangers.Said.NEUTRAL || s == PaStrangers.Said.PRAISE) key = "say.mem.foe_cold";
+            else if (s == PaStrangers.Said.ROAST_ME && allowed) key = "stranger.roast." + lang;          // a foe gets it back whatever the roast setting
+            else if (s == PaStrangers.Said.ROAST_OWNER && allowed) key = "stranger.defend." + lang;
+        }
         if (key == null) return;
         boolean roast = key.startsWith("stranger.roast") || key.startsWith("stranger.defend") || key.equals("stranger.hit");
         int heat = 0;
@@ -208,7 +228,7 @@ public final class PaBanter {
         String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt), a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) raw = PaPersona.from(PaLines.get(key), a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) return;
-        String line = fill(a, raw, "player", who);
+        String line = fill(a, raw, "player", who);   // [pa35] its player's own name to others: a nickname they asked for is private
         // its player close by and it keeps happening: it brings them in
         if (roast && a.getOwnerPlayer() instanceof ServerPlayer owner && owner.level() == a.level() && owner.distanceToSqr(a) < 32 * 32
                 && (heat >= 2 || a.getRandom().nextInt(100) < 25)) {
@@ -240,7 +260,7 @@ public final class PaBanter {
         String key = "comeback." + cb.name().toLowerCase(Locale.ROOT);
         if (cb == PaQuips.Comeback.LAUGH && a.tickCount - a.mind.jokeAt > 1200) key = "comeback.laugh_other";   // nothing of its to laugh at lately
         // [pa33f] in kind at its Language: now and then a cheekier (or unfiltered) line back
-        int lang = r == null || r.mute > 0 ? 0 : PaTone.level(r.language, PaConfig.maxLanguage());
+        int lang = r == null || r.mute > 0 ? 0 : PaMemoryAct.language(a, PaTone.level(r.language, PaConfig.maxLanguage()));   // [pa35]
         if (lang > 0 && cb != PaQuips.Comeback.LOVE && a.getRandom().nextInt(100) < 50) {
             String tk = "tone." + key + "." + (lang >= 2 ? "unfiltered" : "cheeky");
             if (PaLines.has(tk)) {

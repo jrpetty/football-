@@ -36,6 +36,11 @@ public final class PaTalk {
     }
 
     public static void reply(PlayerAssistantEntity a, String text, @Nullable List<PaUnderstand.Choice> choices) {
+        reply(a, text, choices, false);
+    }
+
+    /** [pa35] A reply its player alone hears and reads (a memory: never a bubble anyone else can read). */
+    public static void reply(PlayerAssistantEntity a, String text, @Nullable List<PaUnderstand.Choice> choices, boolean ownerOnly) {
         if (text == null || text.isBlank()) return;
         PaData.Rec r = a.rec();
         if (r != null) {
@@ -44,7 +49,7 @@ public final class PaTalk {
         }
         a.mind.lastSaid = a.tickCount;
         PaAnim.forLine(a, text);                                     // [pa33c-2b] a gesture with the words ([anim:x] tags)
-        PaNet.say(a, text, true, choices, bubbleTicks(text));
+        PaNet.say(a, text, true, choices, bubbleTicks(text), false, ownerOnly);
     }
 
     /** [pa33b] A hello (on login, on coming back): one in the log however often its player reconnects. */
@@ -66,6 +71,11 @@ public final class PaTalk {
 
     /** As comment; an event (something just happened) may come a little sooner than idle chatter. */
     public static boolean comment(PlayerAssistantEntity a, int least, String text, boolean event) {
+        return comment(a, least, text, event, false);
+    }
+
+    /** [pa35] As comment, for its player alone when it touches on a memory. */
+    public static boolean comment(PlayerAssistantEntity a, int least, String text, boolean event, boolean ownerOnly) {
         PaData.Rec r = a.rec();
         int chatty = r == null ? 2 : r.chatty;
         if (chatty < least) return false;
@@ -74,7 +84,7 @@ public final class PaTalk {
         int gap = PaQuips.gap(chatty, event);
         if (a.tickCount - a.mind.lastComment < gap && least > 0) return false;
         a.mind.lastComment = a.tickCount;
-        reply(a, text);
+        reply(a, text, null, ownerOnly);
         return true;
     }
 
@@ -82,7 +92,7 @@ public final class PaTalk {
     public static String line(PlayerAssistantEntity a, String key, String... kv) {
         String[] all = new String[kv.length + 4];
         all[0] = "owner";
-        all[1] = a.ownerName().isEmpty() ? "you" : a.ownerName();
+        all[1] = PaMemoryAct.callName(a);                        // [pa35] what it was told to call them
         all[2] = "name";
         all[3] = a.displayNameCap();
         System.arraycopy(kv, 0, all, 4, kv.length);              // the caller's own blanks after, so they win

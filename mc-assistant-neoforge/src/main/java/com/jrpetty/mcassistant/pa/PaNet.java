@@ -105,6 +105,11 @@ public final class PaNet {
     }
 
     public static void say(PlayerAssistantEntity a, String text, boolean speak, @Nullable List<PaUnderstand.Choice> choices, int ticks, boolean greet) {
+        say(a, text, speak, choices, ticks, greet, false);
+    }
+
+    /** [pa35] ownerOnly: its player alone hears and reads it (a memory is never shown to anyone else). */
+    public static void say(PlayerAssistantEntity a, String text, boolean speak, @Nullable List<PaUnderstand.Choice> choices, int ticks, boolean greet, boolean ownerOnly) {
         CompoundTag t = new CompoundTag();
         if (greet) t.putBoolean("greet", true);
         t.putInt("id", a.getId());
@@ -118,7 +123,7 @@ public final class PaNet {
         if (a.level() instanceof net.minecraft.server.level.ServerLevel) {
             for (ServerPlayer viewer : ((net.minecraft.server.level.ServerLevel) a.level()).players()) {
                 boolean owner = a.isOwner(viewer);
-                if (!owner && viewer.distanceToSqr(a) > 48 * 48) continue;
+                if (!owner && (ownerOnly || viewer.distanceToSqr(a) > 48 * 48)) continue;
                 CompoundTag mine = t.copy();
                 mine.putBoolean("owner", owner);
                 mine.putBoolean("speak", owner && speak);
@@ -267,6 +272,7 @@ public final class PaNet {
             t.putBoolean("op", p.hasPermissions(2));                                   // [pa33c-2b] the Pack tab's slots, gear, open rows, locks
             t.putString("held", a.getMainHandItem().isEmpty() ? "nothing" : a.getMainHandItem().getHoverName().getString());
             t.putString("dim", a.level().dimension().location().getPath());
+            PaMemoryAct.state(t, r, a, p);                                             // [pa35] the Memory tab
             t.putInt("dist", (int) Math.sqrt(a.distanceToSqr(p)));
             PaOrders.Pending pend = PaOrders.pending(p.getUUID());
             if (pend != null) {

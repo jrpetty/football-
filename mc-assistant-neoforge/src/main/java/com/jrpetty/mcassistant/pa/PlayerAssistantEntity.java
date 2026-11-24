@@ -215,13 +215,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public void setTarget(@Nullable net.minecraft.world.entity.LivingEntity target) {
         boolean fresh = target != null && fairGame(target) && target != getTarget();
-        super.setTarget(fairGame(target) ? target : null);
+        super.setTarget(fairGame(target) && !PaMemoryAct.sparesEntity(this, target) ? target : null);   // [pa35] "don't kill my cows"
         if (fresh && !level().isClientSide) equipBestWeapon();      // [pa33b] sword out for a fight, as a player would
     }
 
     @Override
     public boolean canAttack(net.minecraft.world.entity.LivingEntity target) {
-        return fairGame(target) && super.canAttack(target);
+        return fairGame(target) && !PaMemoryAct.sparesEntity(this, target) && super.canAttack(target);   // [pa35]
     }
 
     /**
@@ -284,7 +284,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
     public static final int PLAYER_PACE = 40;
 
     @Override
-    protected int skillWorkPercent() { return PLAYER_PACE; }
+    protected int skillWorkPercent() { return 0; }                  // [pa35] a player's pace comes from PaPace, not a bonus
 
     @Override
     protected void skillPaceParts(java.util.List<PacePart> parts) {
@@ -307,7 +307,14 @@ public class PlayerAssistantEntity extends AssistantEntity {
     /** Griefing safety on every block the work goals would take: a town's ground and other people's land are off. */
     @Override
     public boolean inZone(BlockPos pos) {
-        return super.inZone(pos) && !PaSafety.offLimits(this, pos) && PaBrain.withinRoam(this, pos);
+        return super.inZone(pos) && !PaSafety.offLimits(this, pos) && PaBrain.withinRoam(this, pos)
+            && !PaMemoryAct.spared(this, pos);                         // [pa35] "don't break the blue flowers"
+    }
+
+    /** [pa35] The wood its player likes is chopped first; the wood they don't, only when there's nothing else. */
+    @Override
+    public double gatherRank(net.minecraft.world.level.block.state.BlockState st, double d) {
+        return level().isClientSide ? d : PaMemoryAct.gatherRank(this, st, d);
     }
 
     @Override
@@ -323,6 +330,53 @@ public class PlayerAssistantEntity extends AssistantEntity {
         } finally {
             if (!level().isClientSide) PaChests.askAs(before);
         }
+        if (!level().isClientSide) PaPace.tick(this);                    // [pa35] the cracks, as a player's digging shows
+    }
+
+    // ------------------------------------------------------------------ [pa35] a real player's pace (PaPace)
+
+    /** Breaking takes exactly a player's time with the tool in hand: no level buff, no level debuff. */
+    @Override
+    public int workTicksFor(net.minecraft.world.level.block.state.BlockState state) {
+        int ticks = PaPace.breakTicks(this, state, level(), blockPosition());   // hardness reads the same anywhere for every vanilla block
+        PaPace.began(this, ticks);
+        return ticks;
+    }
+
+    /** Each hand action (planting, tilling, a stack moved...) about 0.6 s apart, never quicker. */
+    @Override
+    public int actionPaceTicks() {
+        return PaPace.hand(this);
+    }
+
+    @Override
+    public int actionPaceTicks(String toolKind) {
+        return PaPace.hand(this);
+    }
+
+    /** A light touch is still a hand's action: the gap never goes under the cap. */
+    @Override
+    public void noteAction(float weight) {
+        super.noteAction(1.0F);
+    }
+
+    /** Blocks laid at the hand's pace (in hundredths of a tick, as the builder counts). */
+    @Override
+    public int buildPaceHundredths() {
+        return PaPace.hand(this) * 100;
+    }
+
+    /** A craft at the bench or a stack at a chest is one hand action; a wait the world sets (a fish's bite) is the world's. */
+    @Override
+    public int pacedTicks(int ticks, int sharePercent) {
+        return sharePercent >= 100 ? PaPace.hand(this) : ticks;
+    }
+
+    /** The swing at a block tells the clock which block (for its cracks). */
+    @Override
+    public void workHit(BlockPos pos) {
+        super.workHit(pos);
+        if (!level().isClientSide) PaPace.hitting(this, pos);
     }
 
     @Override
@@ -437,10 +491,10 @@ public class PlayerAssistantEntity extends AssistantEntity {
         return PaLevels.reach(veteranLevel());
     }
 
-    /** Its level quickens its work far more than a town hand's (level 10: 40% off). */
+    /** [pa35] Its level never quickens its hands or its digging: it works at a player's pace (PaPace); levels buy skill instead. */
     @Override
     public int experiencePercent() {
-        return PaLevels.workPercent(veteranLevel());
+        return 0;
     }
 
     /** Its bow by its level: a wild shot at first, steadier each level, and from level 4 it leads a moving target. */

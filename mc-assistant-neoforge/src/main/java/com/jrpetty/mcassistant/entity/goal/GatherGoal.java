@@ -695,7 +695,7 @@ public class GatherGoal extends Goal {
             if (respectCrew && assistant.outsideMyShare(pos)) continue;
             // [mines] No looking through rock: an ore only where it shows (a face open to the air).
             if (request.kind().isOre() && !com.jrpetty.mcassistant.entity.OreSight.exposed(assistant.level(), pos)) continue;
-            double d = pos.distSqr(feet) + Math.abs(pos.getY() - feet.getY()) * 16.0;
+            double d = assistant.gatherRank(rankSt, pos.distSqr(feet) + Math.abs(pos.getY() - feet.getY()) * 16.0);   // [pa35] liked wood first
             if (d < bestDist) {
                 // [mines] ...and where it can see it from here, or saw it before (OreNotes): a ray only for a winner.
                 if (request.kind().isOre() && !oreKnown(pos)) continue;
