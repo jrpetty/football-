@@ -4682,6 +4682,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [pa33c-2b] Is this block part of somebody's build (made things about it)? Only asked when it spares builds. */
     public boolean partOfBuild(BlockPos pos) { return false; }
 
+    /** [pa35] How a gatherer ranks a block it might take (its distance, adjusted): the Player AI Assistant's player's likes. */
+    public double gatherRank(BlockState st, double d) { return d; }
+
+    /** [pa35] The health share it fights on to before it falls back (0.35; the Player AI Assistant's bond makes it braver). */
+    public float retreatShare() { return 0.35F; }
+
+    /** [pa35] May it put on this armour (the Player AI Assistant's gear ladder; everyone else, always)? */
+    public boolean mayWear(ItemStack s) { return true; }
+
     /** Does this one talk to the player at all? An assistant does — it is
      *  yours, and its needs are your business. Village Folk do not, ever:
      *  they are a settlement getting on with its own life in the background,
@@ -5460,6 +5469,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             for (int i = 0; i < c.getContainerSize(); i++) {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty() || !(s.getItem() instanceof ArmorItem candidate)) continue;
+                if (!mayWear(s)) continue;                              // [pa35] the gear ladder
                 EquipmentSlot slot = this.getEquipmentSlotForItem(s);
                 if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
                     && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;
@@ -5484,6 +5494,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         for (int i = 0; i < inventory.size(); i++) {
             ItemStack s = inventory.get(i);
             if (s.isEmpty() || !(s.getItem() instanceof ArmorItem candidate)) continue;
+            if (!mayWear(s)) continue;                                  // [pa35] the gear ladder
             EquipmentSlot slot = this.getEquipmentSlotForItem(s);
             if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
                 && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;

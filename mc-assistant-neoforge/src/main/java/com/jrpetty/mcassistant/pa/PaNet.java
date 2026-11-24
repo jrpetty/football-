@@ -105,6 +105,11 @@ public final class PaNet {
     }
 
     public static void say(PlayerAssistantEntity a, String text, boolean speak, @Nullable List<PaUnderstand.Choice> choices, int ticks, boolean greet) {
+        say(a, text, speak, choices, ticks, greet, false);
+    }
+
+    /** [pa35] ownerOnly: its player alone hears and reads it (a memory is never shown to anyone else). */
+    public static void say(PlayerAssistantEntity a, String text, boolean speak, @Nullable List<PaUnderstand.Choice> choices, int ticks, boolean greet, boolean ownerOnly) {
         CompoundTag t = new CompoundTag();
         if (greet) t.putBoolean("greet", true);
         t.putInt("id", a.getId());
@@ -118,7 +123,7 @@ public final class PaNet {
         if (a.level() instanceof net.minecraft.server.level.ServerLevel) {
             for (ServerPlayer viewer : ((net.minecraft.server.level.ServerLevel) a.level()).players()) {
                 boolean owner = a.isOwner(viewer);
-                if (!owner && viewer.distanceToSqr(a) > 48 * 48) continue;
+                if (!owner && (ownerOnly || viewer.distanceToSqr(a) > 48 * 48)) continue;
                 CompoundTag mine = t.copy();
                 mine.putBoolean("owner", owner);
                 mine.putBoolean("speak", owner && speak);
@@ -165,6 +170,9 @@ public final class PaNet {
         t.putBoolean("introduced", r.introduced);
         CompoundTag set = new CompoundTag();
         set.putBoolean("auto", r.autoHelp);
+        ListTag ao = new ListTag();                                                                 // [pa35] the kinds switched off
+        for (String k : r.autoOff) ao.add(net.minecraft.nbt.StringTag.valueOf(k));
+        set.put("autoOff", ao);
         set.putBoolean("chests", r.useChests);
         set.putBoolean("break", r.breakNearBuilds);
         set.putBoolean("confirm", r.confirm);
@@ -177,7 +185,10 @@ public final class PaNet {
         set.putInt("language", r.language);
         set.putInt("langCap", PaConfig.maxLanguage());
         set.putInt("roastBack", r.roastBack);
+        set.putInt("humour", r.humour);                                                             // [pa35]
         set.putBoolean("defend", r.defend);
+        set.putBoolean("pingLocked", r.pingLocked);                                                 // [pa35]
+        set.putBoolean("ladderOn", PaConfig.ladderOn());
         set.putBoolean("roastAllowed", PaConfig.allowRoastOthers());                               // [pa33b] 0 talking, 1 no jokes, 2 quiet
         set.putInt("spend", r.spend);
         set.putInt("roamMax", PaConfig.roamMax());
@@ -267,6 +278,9 @@ public final class PaNet {
             t.putBoolean("op", p.hasPermissions(2));                                   // [pa33c-2b] the Pack tab's slots, gear, open rows, locks
             t.putString("held", a.getMainHandItem().isEmpty() ? "nothing" : a.getMainHandItem().getHoverName().getString());
             t.putString("dim", a.level().dimension().location().getPath());
+            PaMemoryAct.state(t, r, a, p);                                             // [pa35] the Memory tab
+            PaBondAct.state(t, r);                                                     // [pa35] the bond and our story
+            PaProgress.state(t, a, r);                                                 // [pa35] the Progress tab
             t.putInt("dist", (int) Math.sqrt(a.distanceToSqr(p)));
             PaOrders.Pending pend = PaOrders.pending(p.getUUID());
             if (pend != null) {

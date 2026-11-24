@@ -20,11 +20,14 @@ public final class PaClientConfig {
     public static final ModConfigSpec.ConfigValue<String> TALKMODE, PINGMODE, UISCALE, LASTTAB;
     public static final ModConfigSpec.IntValue VASENS;
     public static final ModConfigSpec.BooleanValue SHAREPINGS, ACTQUICK, VOICEPING, CONTRAST, SUBTITLES, HEARTBAR;
+    /** [pa35] The natural voice: fetched automatically (auto) unless the player said not to (declined); the basic system voice only if picked; a woman's or a man's voice. */
+    public static final ModConfigSpec.ConfigValue<String> VOICEPACK;
+    public static final ModConfigSpec.BooleanValue BASICVOICE, VOICEWOMAN, VOICEREADYSAID, PROGRESSTOUR;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
         b.push("voice");
-        SPEAK = b.comment("Your assistant speaks its replies out loud (your computer's own voice). Its words always show too.").define("speak", true);
+        SPEAK = b.comment("Your assistant speaks its replies out loud (your computer's own voice). Its words always show too.").define("speak", com.jrpetty.mcassistant.pa.voice.PaVoiceDefaults.SPEAK);
         VOICE = b.comment("Which of your computer's voices it uses (0 = the first; the Settings tab lists them).").defineInRange("voice", 0, 0, 64);
         RATE = b.comment("How fast it speaks: -5 slow .. 5 fast.").defineInRange("rate", 0, -5, 5);
         VOLUME = b.comment("How loud: 0..100.").defineInRange("volume", 80, 0, 100);
@@ -42,6 +45,12 @@ public final class PaClientConfig {
             .define("talkMode", "hold");
         VASENS = b.comment("[pa33c-2b] Voice activation sensitivity, 0..100 (higher hears quieter speech).").defineInRange("voiceSensitivity", 50, 0, 100);
         VOICEPING = b.comment("[pa33c-2b] Speaking pings what you're looking at when you start, so \"mine that\" means that.").define("voicePings", true);
+        VOICEPACK = b.comment("[pa35] The natural voice (Kokoro, about 220 MB, once, into this config folder): auto (fetched in the background the first time you",
+            "get an assistant) or declined (never fetched; Settings > Voice can still fetch it). Nothing about you is sent.").define("naturalVoice", com.jrpetty.mcassistant.pa.voice.PaVoiceDefaults.NATURAL);
+        BASICVOICE = b.comment("[pa35] Use your computer's basic system voice (Windows' old desktop voices, macOS say) when no natural voice is ready. Off: words only.")
+            .define("systemVoiceBasic", com.jrpetty.mcassistant.pa.voice.PaVoiceDefaults.BASIC);
+        VOICEWOMAN = b.comment("[pa35] A woman's natural voice (Emma, or Heart in American English) instead of a man's (George, or Michael).").define("womanVoice", false);
+        VOICEREADYSAID = b.comment("[pa35] It has told you its natural voice is ready.").define("naturalVoiceAnnounced", false);
         b.pop();
         b.push("pings");
         PINGMODE = b.comment("[pa33c-2b] The middle mouse button: both (tap pings when you have an assistant; sneak for pick block), ping, or pick (pick block only).")
@@ -58,6 +67,7 @@ public final class PaClientConfig {
         LASTTAB = b.comment("[pa33c-2b] The panel tab you last had open.").define("lastTab", "talk");
         HUD = b.comment("A small line on screen saying what your assistant is doing.").define("hud", true);
         TOURED = b.comment("You have seen the assistant's tour.").define("toured", false);
+        PROGRESSTOUR = b.comment("[pa35] You have seen (or dismissed) the Progress tab's three tips.").define("progressTips", false);
         b.pop();
         SPEC = b.build();
     }

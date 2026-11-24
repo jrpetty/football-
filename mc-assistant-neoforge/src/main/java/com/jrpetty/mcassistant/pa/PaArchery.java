@@ -52,6 +52,42 @@ public final class PaArchery {
         return TABLE[Math.max(1, Math.min(TABLE.length, level)) - 1];
     }
 
+    // ------------------------------------------------------------------ [pa35] the crossbow
+
+    /**
+     * [pa35] The crossbow's own table. It is spanned before it is aimed (the load is the crossbow's, not the hands': 25
+     * ticks, 5 fewer a level of Quick Charge, exactly as a player's), then shouldered and braced: so the "draw" column
+     * here is how long it takes to settle the stock against its shoulder and find the mark, the shake is less than a
+     * held bowstring's, and it judges distance better (a flatter, faster bolt: 3.15 a tick against the bow's 3).
+     * It walks with it loaded without losing as much. Same reaction, lead and head-turn as its bow: the same eyes.
+     */
+    public static final Row[] CROSSBOW = {
+        //       lv  sway  settle aim  rangeErr leadMean leadSig react  turn  track  move  range
+        new Row(1,  1.50,  8.0,  14,  0.095,   0.25,    0.50,   12,   6.0,  0.80,  6.0,  20),
+        new Row(2,  1.32,  7.5,  13,  0.080,   0.35,    0.45,   11,   7.0,  0.72,  5.4,  23),
+        new Row(3,  1.14,  7.0,  13,  0.072,   0.45,    0.40,   10,   8.0,  0.63,  4.8,  26),
+        new Row(4,  0.98,  6.5,  12,  0.064,   0.60,    0.33,    9,   9.5,  0.54,  4.4,  29),
+        new Row(5,  0.82,  6.0,  11,  0.052,   0.70,    0.28,    8,  11.0,  0.47,  4.0,  32),
+        new Row(6,  0.68,  5.5,  11,  0.044,   0.78,    0.24,    7,  12.5,  0.41,  3.6,  35),
+        new Row(7,  0.57,  5.0,  10,  0.036,   0.85,    0.20,    6,  14.0,  0.36,  3.2,  38),
+        new Row(8,  0.48,  4.5,  10,  0.032,   0.90,    0.13,    5,  16.0,  0.32,  2.8,  41),
+        new Row(9,  0.41,  4.0,   9,  0.028,   0.93,    0.10,    4,  18.0,  0.27,  2.4,  44),
+        new Row(10, 0.34,  3.5,   8,  0.024,   0.96,    0.08,    3,  20.0,  0.24,  2.0,  47),
+    };
+
+    public static Row crossbowRow(int level) {
+        return CROSSBOW[Math.max(1, Math.min(CROSSBOW.length, level)) - 1];
+    }
+
+    /** [pa35] The game's crossbow: a bolt's speed, a firework rocket's, and the load (ticks) for a level of Quick Charge. */
+    public static final double BOLT_SPEED = 3.15, ROCKET_SPEED = 1.6;
+    /** Multishot's spread either side (degrees), as the game's. */
+    public static final double MULTISHOT_SPREAD = 10.0;
+
+    public static int chargeTicks(int quickCharge) {
+        return Math.max(0, (int) Math.floor((1.25 - 0.25 * Math.max(0, quickCharge)) * 20));
+    }
+
     /** The game's arrow: drag and gravity a tick, its speed off a full draw, and how far below the eye it leaves. */
     public static final double DRAG = 0.99, GRAVITY = 0.05, FULL_SPEED = 3.0, EYE_DROP = 0.1;
     /** Nearer than this, a quick snap of a draw (half its usual pull: weaker and shakier, as anyone's). */
@@ -139,19 +175,27 @@ public final class PaArchery {
         /** Ticks of draw so far (the bow's own count). */
         public int ticks;
         public final int plannedDraw;
+        /** [pa35] A crossbow's: the speed it shoots at, whatever the "draw" (0 for a bow, whose pull sets it). */
+        public final double fixedSpeed;
         private final double rangeJudge, leadJudge;
         private final double[][] seen = new double[64][];
         private int n;
         private double angSpeed, lastBearing = Double.NaN;
 
         public Shooter(int level, Random rnd, double yaw, double pitch, double dist) {
-            this.row = row(level);
+            this(row(level), rnd, yaw, pitch, dist, 0);
+        }
+
+        /** [pa35] With any table's row; a fixed speed (above 0) for a crossbow, where "draw" is the time to shoulder and aim. */
+        public Shooter(Row row, Random rnd, double yaw, double pitch, double dist, double fixedSpeed) {
+            this.row = row;
             this.rnd = rnd;
             this.yaw = yaw;
             this.pitch = pitch;
             this.wantYaw = yaw;
             this.wantPitch = pitch;
-            this.plannedDraw = dist < CLOSE ? Math.max(10, row.drawTicks() / 2) : row.drawTicks();
+            this.fixedSpeed = fixedSpeed;
+            this.plannedDraw = fixedSpeed > 0 ? row.drawTicks() : dist < CLOSE ? Math.max(10, row.drawTicks() / 2) : row.drawTicks();
             this.rangeJudge = Math.max(0.6, 1.0 + rnd.nextGaussian() * row.rangeErr());
             this.leadJudge = row.leadMean() + rnd.nextGaussian() * row.leadSigma();
         }
@@ -163,6 +207,7 @@ public final class PaArchery {
 
         /** The speed it means to loose at (its planned draw, or more if it is still pulling). */
         public double speed() {
+            if (fixedSpeed > 0) return fixedSpeed;
             return FULL_SPEED * power(Math.max(ticks, plannedDraw));
         }
 
@@ -220,7 +265,7 @@ public final class PaArchery {
         public double[] loose(double ownSpeed) {
             double s = sway(ownSpeed);
             double[] d = dir(yaw + rnd.nextGaussian() * s, pitch + rnd.nextGaussian() * s);
-            double v = FULL_SPEED * power(ticks);
+            double v = fixedSpeed > 0 ? fixedSpeed : FULL_SPEED * power(ticks);
             return new double[]{d[0] * v, d[1] * v, d[2] * v};
         }
     }
@@ -237,9 +282,15 @@ public final class PaArchery {
      * or walking, from its first sight of it (its head 45 degrees off to begin with). True for a hit.
      */
     public static boolean trial(int level, double dist, boolean moving, boolean walking, Random rnd) {
+        return trial(row(level), 0, false, dist, moving, walking, rnd);
+    }
+
+    /** [pa35] The same with any table's row and speed (a crossbow: CROSSBOW and BOLT_SPEED), and Multishot's three bolts. */
+    public static boolean trial(Row row, double fixedSpeed, boolean multishot, double dist, boolean moving, boolean walking, Random rnd) {
         double ex = 0, ey = 1.62, ez = 0;
         double dirX = rnd.nextBoolean() ? 1 : -1, tx = moving ? -dirX * 6 : 0, tz = dist;   // a strafer starts off to one side
-        Shooter s = new Shooter(level, rnd, rnd.nextBoolean() ? 45 : -45, 0, dist);
+        Shooter s = new Shooter(row, rnd, rnd.nextBoolean() ? 45 : -45, 0, dist, fixedSpeed);
+        double[][] bolts = null, vels = null;
         double[] arrow = null, vel = null;
         for (int t = 0; t < 400; t++) {
             if (moving) {
@@ -254,16 +305,44 @@ public final class PaArchery {
                 if (s.ticks > 0 && s.ready()) {
                     vel = s.loose(walking ? WALK : 0);
                     arrow = new double[]{ex, ey - EYE_DROP, ez};
+                    int n = multishot ? 3 : 1;
+                    bolts = new double[n][];
+                    vels = new double[n][];
+                    for (int k = 0; k < n; k++) {
+                        bolts[k] = arrow.clone();
+                        vels[k] = k == 0 ? vel.clone() : spread(vel, k == 1 ? MULTISHOT_SPREAD : -MULTISHOT_SPREAD);
+                    }
                 }
                 continue;
             }
-            double[] next = {arrow[0] + vel[0], arrow[1] + vel[1], arrow[2] + vel[2]};
-            if (segmentHitsBox(arrow, next, tx - HALF_W, LOW, tz - HALF_W, tx + HALF_W, HIGH, tz + HALF_W)) return true;
-            if (next[1] < 0 || next[2] > dist + 30) return false;         // in the ground, or long past
-            arrow = next;
-            vel = new double[]{vel[0] * DRAG, vel[1] * DRAG - GRAVITY, vel[2] * DRAG};
+            boolean flying = false;
+            for (int k = 0; k < bolts.length; k++) {
+                if (bolts[k] == null) continue;
+                double[] b = bolts[k], v = vels[k];
+                double[] next = {b[0] + v[0], b[1] + v[1], b[2] + v[2]};
+                if (segmentHitsBox(b, next, tx - HALF_W, LOW, tz - HALF_W, tx + HALF_W, HIGH, tz + HALF_W)) return true;
+                if (next[1] < 0 || next[2] > dist + 30) { bolts[k] = null; continue; }   // in the ground, or long past
+                bolts[k] = next;
+                vels[k] = new double[]{v[0] * DRAG, v[1] * DRAG - GRAVITY, v[2] * DRAG};
+                flying = true;
+            }
+            if (!flying) return false;
         }
         return false;
+    }
+
+    /** [pa35] A velocity turned so many degrees about the vertical (Multishot's side bolts, as near as matters). */
+    static double[] spread(double[] v, double deg) {
+        double r = Math.toRadians(deg), c = Math.cos(r), sn = Math.sin(r);
+        return new double[]{v[0] * c - v[2] * sn, v[1], v[0] * sn + v[2] * c};
+    }
+
+    /** [pa35] The crossbow's share of n shots that hit (Multishot or not). */
+    public static double crossbowHitRate(int level, double dist, boolean moving, boolean walking, boolean multishot, int n, long seed) {
+        Random rnd = new Random(seed);
+        int hits = 0;
+        for (int i = 0; i < n; i++) if (trial(crossbowRow(level), BOLT_SPEED, multishot, dist, moving, walking, rnd)) hits++;
+        return hits / (double) n;
     }
 
     /** The share of n shots that hit (a fixed seed: the same every run). */

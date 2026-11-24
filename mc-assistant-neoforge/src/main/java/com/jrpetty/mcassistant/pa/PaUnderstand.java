@@ -253,6 +253,8 @@ public final class PaUnderstand {
             return new PaIntent(Kind.CHALLENGE, "race", 0, Place.LOOKED, raw);
         if (c.matches("^(?:who can|let us see who can|bet i can|bet you cant|bet you can not) mine (?:the )?(?:more|most|faster)(?: in a minute| in 1 minute)?$|^mining (?:race|contest|competition|challenge)$"))
             return new PaIntent(Kind.CHALLENGE, "mine", 0, Place.NONE, raw);
+        if (c.matches("^(?:crossbow|bolt) (?:contest|competition|match|challenge|shoot ?out)$|^(?:shooting|archery) (?:contest|competition|match|challenge) with (?:the |a |your )?crossbows?$"))   // [pa35] the crossbow variant
+            return new PaIntent(Kind.CHALLENGE, "xbow", 0, Place.LOOKED, raw);
         if (c.matches("^(?:shooting|archery) (?:contest|competition|match|challenge)$|^(?:who can|let us see who can|bet i can|bet you cant) (?:shoot|hit the target) (?:better|more|best)$"))
             return new PaIntent(Kind.CHALLENGE, "shoot", 0, Place.LOOKED, raw);
         return null;

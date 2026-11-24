@@ -108,12 +108,12 @@ I asked a villager for directions. He said "hrmm". Best directions I've had all 
 I'm reading a book about anti-gravity. Impossible to put down. Unlike a bed, which you can't put down near anything nice.
 [anim:shrug] The Ender Dragon sat on its egg for ten thousand years. Then someone took the egg. That's the whole of parenting, really.
 [anim:point] What's the difference between a zombie and your neighbour. One shuffles round at night groaning. The other's a zombie.
-A skeleton asked me to dinner. I said no. He didn't have the stomach for it anyway.
+[corny] A skeleton asked me to dinner. I said no. He didn't have the stomach for it anyway.
 They say diamonds are forever. Not near lava they aren't.
 Why do witches never win at cards. Someone always throws the potion.
 [anim:shrug] A wolf, a cat and a parrot walk into a house. That's not a joke, that's your inventory.
 What did one furnace say to the other. You're hot. The other one said: I know, I'm a furnace.
-[anim:bow] I told a joke to a sheep once. It didn't laugh. Tough crowd. Woolly crowd.
+[anim:bow] [corny] I told a joke to a sheep once. It didn't laugh. Tough crowd. Woolly crowd.
 Why don't villagers play hide and seek. Iron golems always find you, and then there's paperwork.
 The pig said to the carrot on a stick: I'll follow you anywhere. And that, friends, is a relationship.
 Why is the Nether so cheap to heat. Location, location, location.

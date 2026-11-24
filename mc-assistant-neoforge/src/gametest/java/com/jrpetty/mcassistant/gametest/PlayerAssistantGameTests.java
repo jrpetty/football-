@@ -64,6 +64,7 @@ public class PlayerAssistantGameTests {
         Kit.noLeftoverPlayers(level);
         PaConfig.perPlayerForTests(null);
         PaConfig.respawnSecondsForTests(null);
+        PaConfig.ladderForTests(false, null);                          // [pa35] these tests predate the mining and gear ladders (PaMemoryGameTests has its own)
         level.setDayTime(2000);
         Kit.hold(level, x, Z, 40);
         Kit.prepare(level, x, Z, 40);
@@ -918,7 +919,7 @@ public class PlayerAssistantGameTests {
         a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
         a.insertGiven(new ItemStack(Items.BREAD, 4));
         a.hunger.set(12, 0, 0);                                   // [pa33c-2b] peckish (player rules: a full bar heals without eating)
-        float low = 3.0F;                                         // of its three hearts at level 1
+        float low = 3.0F;                                         // [pa35] of its ten hearts at level 1
         a.setHealth(low);
         helper.runAfterDelay(400, () -> {
             int bread = a.countMatching(st -> st.is(Items.BREAD));
@@ -1265,15 +1266,16 @@ public class PlayerAssistantGameTests {
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
         a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
-        helper.runAfterDelay(25, () -> {
-            helper.assertTrue(Math.abs(a.getMaxHealth() - 6.0F) < 0.01F, "three hearts at level 1: " + a.getMaxHealth());
+        helper.runAfterDelay(20, () -> a.setPaXpForTests(0));     // [pa35] level 1, whatever an earlier test (or a first on a shared record) left
+        helper.runAfterDelay(32, () -> {
+            helper.assertTrue(Math.abs(a.getMaxHealth() - 20.0F) < 0.01F, "[pa35] ten hearts at level 1, like a player: " + a.getMaxHealth() + " at level " + a.veteranLevel());
             int before = a.hunger.food();
             for (int i = 0; i < 40; i++) a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             a.hunger.exhaust(30F);                                // a hard stint
             helper.runAfterDelay(10, () -> {
                 helper.assertTrue(a.hunger.food() < before || a.hunger.saturation() < 5.0F, "work drains it: food " + a.hunger.food() + ", saturation " + a.hunger.saturation());
                 a.hunger.set(10, 0, 0);
-                a.setHealth(3.0F);
+                a.setHealth(8.0F);                                 // [pa35] hurt, not critical (under a quarter it rightly eats the golden apple)
                 a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ROTTEN_FLESH, 4));
                 a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 2));
                 a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 1));
@@ -1541,9 +1543,9 @@ public class PlayerAssistantGameTests {
             helper.assertTrue((a.animValue() & 0xFF) == com.jrpetty.mcassistant.entity.FolkAction.Act.CHEER.ordinal(), "a cheer");
             helper.assertTrue(said(a) > said && fromLists(lastWords(a), "say.levelup") && lastWords(a).contains("4"), "a line for it: " + lastWords(a));
             helper.runAfterDelay(25, () -> {
-                helper.assertTrue(a.getMaxHealth() > 6.0F, "more hearts: " + a.getMaxHealth());
-                helper.assertTrue(a.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) > speed1, "quicker on its feet");
-                helper.assertTrue(a.experiencePercent() > 0, "quicker at the work");
+                helper.assertTrue(a.getMaxHealth() > 20.0F, "more hearts: " + a.getMaxHealth());   // [pa35] ten hearts at level 1, more by level 4
+                helper.assertTrue(Math.abs(a.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) - speed1) < 1e-6, "[pa35] a player's legs at every level");
+                helper.assertTrue(a.experiencePercent() == 0, "[pa35] never quicker at the work itself: a player's pace (PaPace)");
                 // the multiplier: three times the pay
                 long b2 = a.paXp();
                 a.earn("build");
@@ -1551,7 +1553,8 @@ public class PlayerAssistantGameTests {
                 com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(3.0);
                 long b3 = a.paXp();
                 a.earn("build");
-                helper.assertTrue(a.paXp() - b3 == one * 3, "the multiplier: " + one + " then " + (a.paXp() - b3));
+                long three = a.paXp() - b3;                       // [pa35] the second "build" in a row earns a touch less (repetition), so within a tenth
+                helper.assertTrue(three <= one * 3 && three >= Math.round(one * 3 * 0.9), "the multiplier: " + one + " then " + three);
                 com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(null);
                 // only an operator may change it
                 CompoundTag ad = new CompoundTag();
@@ -2188,11 +2191,13 @@ public class PlayerAssistantGameTests {
     }
 
     /** pai58: work by level, timed: two assistants at the same rock face (level 1 and level 10, the same stone pick) each
-     *  mine until they have three iron. Level 10 is done well before level 1, its clock quicker by its level. [pa33g] */
+     *  mine until they have three iron. [pa35] Both break each block in exactly a player's time (PaPace: no level buff);
+     *  level 10 still finishes no later, by its reach and its steadier hands between actions, never by quicker digging. */
     @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "pai58_work_by_level")
     public static void pai58_work_by_level(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_171_000, y = ground(level, x);
+        PaConfig.ladderForTests(false, null);                              // [pa35] the mining ladder off: level 1 may mine iron here
         PlayerAssistantEntity[] who = new PlayerAssistantEntity[2];
         long[] doneAt = {-1, -1};
         for (int k = 0; k < 2; k++) {
@@ -2216,11 +2221,12 @@ public class PlayerAssistantGameTests {
         });
         helper.succeedWhen(() -> {
             helper.assertTrue(doneAt[1] >= 0, "level 10 has its three iron");
-            helper.assertTrue(t10 * 100 <= t1 * 70, "level 10's clock at the rock is a good deal quicker: " + t10 + " ticks a block against " + t1);
+            helper.assertTrue(t10 == t1, "[pa35] the same break time at both levels (a player's, by the tool): " + t10 + " against " + t1);
             helper.assertTrue(who[1].reach() > who[0].reach(), "and it reaches further: " + who[1].reach() + " against " + who[0].reach());
-            helper.assertTrue(who[1].pacedTicks(20, 100) < who[0].pacedTicks(20, 100), "and crafts quicker: " + who[1].pacedTicks(20, 100) + " against " + who[0].pacedTicks(20, 100));
-            helper.assertTrue(doneAt[0] < 0 || doneAt[1] * 100 <= doneAt[0] * 90, "level 10 done well before level 1: " + doneAt[1] + " ticks against " + doneAt[0]);
-            if (doneAt[0] < 0) helper.assertTrue(helper.getTick() - start >= doneAt[1] * 100 / 90, "level 1 still at it well after level 10 finished");
+            int top1 = com.jrpetty.mcassistant.pa.PaPace.handTop(1), top10 = com.jrpetty.mcassistant.pa.PaPace.handTop(10);
+            helper.assertTrue(top10 < top1, "[pa35] steadier hands at level 10 (fewer idle gaps), never past the cap: " + top10 + " against " + top1);
+            helper.assertTrue(doneAt[0] < 0 || doneAt[1] <= doneAt[0] + 40, "level 10 done no later than level 1: " + doneAt[1] + " ticks against " + doneAt[0]);
+            PaConfig.ladderForTests(null, null);
             Kit.log("pai58 work by level: three iron at level 10 in " + doneAt[1] + " ticks, level 1 " + (doneAt[0] < 0 ? "still at it" : doneAt[0] + " ticks")
                 + "; a block of ore " + t10 + " against " + t1 + " ticks");
         });

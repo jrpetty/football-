@@ -58,6 +58,10 @@ public final class PaServer {
             case "settings" -> {
                 if (r == null) return;
                 if (args.contains("auto")) r.autoHelp = args.getBoolean("auto");
+                if (args.contains("autoKind")) {                         // [pa35] one kind of auto-help on or off
+                    String k = args.getString("autoKind");
+                    if (args.getBoolean("on")) { r.autoOff.remove(k); if (a != null) a.mind.vetoed.remove(k); } else r.autoOff.add(k);
+                }
                 if (args.contains("chests")) r.useChests = args.getBoolean("chests");
                 if (args.contains("break")) r.breakNearBuilds = args.getBoolean("break");
                 if (args.contains("confirm")) r.confirm = args.getBoolean("confirm");
@@ -75,8 +79,10 @@ public final class PaServer {
                 if (args.contains("mute") && a != null && args.getInt("mute") != r.mute) PaOrders.hush(a, args.getInt("mute"));   // [pa33b] About, Orders, wheel
                 else if (args.contains("mute")) r.mute = Math.max(0, Math.min(2, args.getInt("mute")));
                 if (args.contains("language")) r.language = Math.max(0, Math.min(2, args.getInt("language")));     // [pa33b] match my energy
+                if (args.contains("humour")) r.humour = Math.max(0, Math.min(2, args.getInt("humour")));     // [pa35] Dry, Daft, Sincere
                 if (args.contains("roastBack")) r.roastBack = Math.max(0, Math.min(2, args.getInt("roastBack")));
                 if (args.contains("defend")) r.defend = args.getBoolean("defend");
+                if (args.contains("pingLocked")) r.pingLocked = args.getBoolean("pingLocked");      // [pa35]
                 if (args.contains("spend")) r.spend = Math.max(0, Math.min(PaConfig.spendMax(), args.getInt("spend")));
                 if (args.getBoolean("reset")) {                     // [pa33c-2b] Settings, Advanced: its settings as they came
                     r.autoHelp = true; r.useChests = true; r.breakNearBuilds = false; r.confirm = true; r.sleepAtNight = false;
@@ -115,6 +121,9 @@ public final class PaServer {
             case "admin" -> {                                       // [pa33d] operators only: the server's levelling multiplier
                 if (!p.hasPermissions(2)) { PaNet.note(p, "Only an operator can change that."); return; }
                 if (args.contains("xpMult")) PaConfig.setXpMultiplier(args.getDouble("xpMult"));
+                if (args.contains("memCap")) PaConfig.setMemoryCap(args.getInt("memCap"));          // [pa35] how much each may remember
+                if (args.contains("ladderOn")) PaConfig.setLadder(args.getBoolean("ladderOn"), null, 0);   // [pa35] the mining and gear ladders
+                if (args.contains("rung")) PaConfig.setLadder(null, args.getString("rung"), args.getInt("rungLevel"));
                 PaConfig.setChunks(args.contains("chunksOn") ? args.getBoolean("chunksOn") : null,                 // [pa33g] its chunks
                     args.contains("chunkRadius") ? args.getInt("chunkRadius") : null,
                     args.contains("chunkCap") ? args.getInt("chunkCap") : null,
@@ -139,6 +148,11 @@ public final class PaServer {
             }
             case "tour" -> {
                 if (r != null) { r.toured = true; PaData.touch(); }
+            }
+            case "memop" -> {                                       // [pa35] the Memory tab: delete, edit, add, pause, forget all
+                if (r == null || a == null || !a.isOwner(p)) return;
+                PaMemoryAct.op(p, a, r, args);
+                PaNet.refresh(p, a);
             }
             default -> { }
         }
@@ -168,7 +182,7 @@ public final class PaServer {
         switch (o.id()) {
             case "look" -> {
                 String key = "ping.look." + target.name().toLowerCase(java.util.Locale.ROOT);
-                String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt), a.getRandom()::nextInt, a.mind.recent);
+                String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt, a.mind.recent), a.getRandom()::nextInt, a.mind.recent);
                 if (raw == null) raw = PaPersona.from(PaLines.get(key), a.getRandom()::nextInt, a.mind.recent);
                 PaTalk.reply(a, raw == null ? "Yes. I see it." : PaBanter.fill(a, raw, "what", label.isEmpty() ? "that" : label));
                 return;
@@ -235,10 +249,18 @@ public final class PaServer {
         String[] w = text.substring(1).split(" ");
         switch (w[0]) {
             case "fetchdeath" -> PaBanter.fetchDeath(a);           // [pa33b]
+            case "memforgetall" -> { PaMemoryAct.forgetAll(a); return; }     // [pa35] "forget everything", confirmed
+            case "memkeep" -> PaTalk.reply(a, "Right. I'll hang on to all of it.", null, true);
+            case "memlike", "memdislike" -> {                        // [pa35] "I like Sam": a thing after all, not a person
+                String it = text.substring(w[0].length() + 1).trim();
+                PaMemoryAct.hear(p, a, (w[0].equals("memlike") ? "i like " : "i hate ") + it.toLowerCase(java.util.Locale.ROOT), PaOrders.Look.NONE);
+            }
             case "nofetch" -> PaTalk.reply(a, "Right you are. Mind, they'll vanish in about five minutes.");
             case "veto" -> {
                 if (w.length > 1) {
                     a.mind.vetoed.add(w[1]);
+                    r.autoOff.add(w[1]);                                 // [pa35] kept, and shown in Settings > Behaviour
+                    PaData.touch();
                     a.plan.dropAuto();
                     if (a.plan.current != null && a.plan.current.auto) { a.clearQueue(); a.task = null; a.plan.current = null; }
                     if (w[1].equals("fight")) a.setTarget(null);

@@ -343,6 +343,7 @@ class PaPersonaTest {
         for (Map.Entry<String, List<String>> e : PaLines.all().entrySet()) {
             String k = e.getKey();
             if (k.contains("@") || k.startsWith("self.") || k.startsWith("look.")) continue;
+            if (k.startsWith("say.mem.") || k.startsWith("say.lock.") || k.startsWith("say.gear.") || k.startsWith("say.bond.") || k.startsWith("say.xbow.") || k.startsWith("say.autohelp_tool") || k.equals("say.challenge_xbow") || k.equals("say.need_crossbow")) continue;   // [pa35] answers about memory and progress, not banter
             for (String l : e.getValue()) { funny++; if (PaLines.bad(l)) bad++; }
         }
         double share = 100.0 * bad / funny;
@@ -373,9 +374,70 @@ class PaPersonaTest {
         for (String s : allLines()) {
             String f = PaPersona.fill(s, Map.ofEntries(Map.entry("owner", "Alex"), Map.entry("name", "Pip"), Map.entry("did", "Built a small house"),
                 Map.entry("what", "I'm out of coal."), Map.entry("item", "iron"), Map.entry("thing", "wheat"), Map.entry("player", "Sam"),
-                Map.entry("x", "1"), Map.entry("y", "64"), Map.entry("z", "2"), Map.entry("dist", "12"), Map.entry("dir", "north"), Map.entry("job", "chop that tree"), Map.entry("level", "4"), Map.entry("skill", "blocking with a shield"), Map.entry("need", "6"), Map.entry("score", "5 to 3")));
+                Map.entry("x", "1"), Map.entry("y", "64"), Map.entry("z", "2"), Map.entry("dist", "12"), Map.entry("dir", "north"), Map.entry("job", "chop that tree"), Map.entry("level", "4"), Map.entry("skill", "blocking with a shield"), Map.entry("need", "6"), Map.entry("score", "5 to 3"),
+                Map.entry("who", "Sam"), Map.entry("when", "every morning"), Map.entry("n", "32"), Map.entry("mine", "2"), Map.entry("time", "about three hours"),
+                Map.entry("instead", "coal ore"), Map.entry("tier", "Good Mate"), Map.entry("day", "3")));   // [pa35] the memory and progress lines' blanks
             assertFalse(f.contains("{") || f.contains("}"), "a blank left in: " + f);
         }
         assertNotNull(PaLines.get("say.ok"));
+    }
+
+    // ------------------------------------------------------------------ [pa35] its sense of humour
+
+    /** Under Dry (the default) no corny line is ever picked, by any route, at any blend, for any key or look. */
+    @Test
+    void dryNeverPicksCorny() {
+        Random rnd = new Random(35);
+        PaPersona.Recent rec = new PaPersona.Recent(400);
+        assertEquals(PaPersona.Humour.DRY, rec.humour, "Dry is the default");
+        int corny = 0, picks = 0;
+        for (String k : PaLines.keys()) for (String l : PaLines.get(k)) if (PaPersona.corny(l)) corny++;
+        assertTrue(corny >= 100, "the corny lines are tagged: " + corny);
+        PaPersona.Tri[] blends = {PaPersona.Tri.of(1, 0), PaPersona.Tri.of(0.6, 0.2), PaPersona.Tri.of(0.34, 0.33), PaPersona.Tri.of(0, 1), PaPersona.Tri.of(0, 0)};
+        for (String k : PaLines.keys()) {
+            if (k.contains("@")) continue;
+            for (PaPersona.Tri t : blends) for (int i = 0; i < 12; i++) {
+                String a = PaPersona.from(PaLines.get(k), rnd::nextInt, rec);
+                String b = PaPersona.from(PaPersona.linesFor(k, t, rnd::nextInt, rec), rnd::nextInt, rec);
+                String c = PaPersona.remark(k, t, rnd.nextInt(18), null, rnd::nextInt, rec);
+                for (String x : new String[]{a, b, c}) if (x != null) { picks++; assertFalse(PaPersona.corny(x), "Dry said a corny line for " + k + ": " + x); }
+            }
+        }
+        assertTrue(picks > 10000, "picked " + picks);
+        // asked for a joke under Dry: still a joke, just not a pun
+        for (int i = 0; i < 200; i++) { String j = PaPersona.from(PaLines.get("joke"), rnd::nextInt, rec); assertNotNull(j); assertFalse(PaPersona.corny(j)); }
+    }
+
+    @Test
+    void daftBringsTheCheeseAndSincereTheWarmth() {
+        Random rnd = new Random(7);
+        PaPersona.Recent daft = new PaPersona.Recent(400);
+        daft.humour = PaPersona.Humour.DAFT;
+        int cheese = 0;
+        for (int i = 0; i < 400; i++) if (PaPersona.corny(PaPersona.from(PaLines.get("joke"), rnd::nextInt, daft))) cheese++;
+        assertTrue(cheese > 200, "Daft: puns most of the time when asked for a joke: " + cheese);
+        PaPersona.Recent sincere = new PaPersona.Recent(400);
+        sincere.humour = PaPersona.Humour.SINCERE;
+        int warm = 0, n = 0;
+        for (int i = 0; i < 400; i++) {
+            String l = PaPersona.from(PaPersona.linesFor("say.thanks", PaPersona.Tri.of(1, 0), rnd::nextInt, sincere), rnd::nextInt, sincere);
+            assertFalse(PaPersona.corny(l));
+            n++;
+            if (PaLines.get("say.thanks@sincere").contains(l) || PaLines.get("say.thanks@serious").contains(l)) warm++;
+        }
+        assertTrue(warm > n * 0.6, "Sincere: mostly the warm lines at the Funny corner: " + warm + "/" + n);
+        for (String k : PaLines.keys()) if (k.endsWith("@sincere")) {
+            assertTrue(PaLines.get(k).size() >= 6, k + " has six or more");
+            assertTrue(PaLines.has(k.substring(0, k.length() - "@sincere".length())), k + " stands in for a real key");
+            for (String l : PaLines.get(k)) assertFalse(PaPersona.corny(l), "sincere is never corny: " + l);
+        }
+    }
+
+    /** [pa35] A blank filled at the start of a sentence starts it with a capital ("a poppy. Don't make a thing of it."). */
+    @Test
+    void fillCapitalisesSentenceStarts() {
+        assertEquals("Here. A poppy. Don't make a thing of it.", PaPersona.fill("Here. {item}. Don't make a thing of it.", Map.of("item", "a poppy")));
+        assertEquals("Day 3: I gave you a poppy.", PaPersona.fill("Day {day}: {what}.", Map.of("day", "3", "what", "I gave you a poppy")));
+        assertEquals("Iron ore. Finally.", PaPersona.fill("{what}. Finally.", Map.of("what", "iron ore")));
     }
 }

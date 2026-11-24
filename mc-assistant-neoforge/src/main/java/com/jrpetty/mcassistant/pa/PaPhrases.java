@@ -223,7 +223,7 @@ public final class PaPhrases {
         Map<String, String> fill = new HashMap<>();
         for (int i = 0; i + 1 < kv.length; i += 2) fill.put(kv[i], kv[i + 1]);
         if (!DANGER.contains(key) && (BANK.containsKey(key) || PaLines.has("say." + key))) {
-            String raw = PaPersona.from(PaPersona.linesFor("say." + key, t, random), random, recent);
+            String raw = PaPersona.from(PaPersona.linesFor("say." + key, t, random, recent), random, recent);
             if (raw != null) return PaPersona.fill(raw, fill);
         }
         if (!BANK.containsKey(key)) {                          // [pa33b] only in the written lines: their plain corner

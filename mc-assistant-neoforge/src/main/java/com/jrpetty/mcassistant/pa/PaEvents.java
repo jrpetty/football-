@@ -24,7 +24,9 @@ public final class PaEvents {
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
         PaLife.restore(p);
-        PaNet.refresh(p, PaLife.find(p));
+        PlayerAssistantEntity back = PaLife.find(p);
+        if (back != null) PaBondAct.returned(back);                        // [pa35] days away: the bond slips a little
+        PaNet.refresh(p, back);
     }
 
     /** [pa33b] On a server with chat: someone else naming an assistant near them is talking to it (its own player's chat is never read). */
@@ -78,6 +80,7 @@ public final class PaEvents {
     @SubscribeEvent
     public static void onOwnerDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer p) PaBanter.ownerDied(p, event.getSource());
+        else if (!event.getEntity().level().isClientSide) PaBondAct.killed(event.getEntity(), event.getSource().getEntity());   // [pa35] saved by its player; a boss beaten
     }
 
     @SubscribeEvent
@@ -85,6 +88,7 @@ public final class PaEvents {
         if (!(event.getEntity() instanceof ServerPlayer p) || event.isEndConquered()) return;
         PlayerAssistantEntity a = PaLife.find(p);
         if (a != null) a.mind.respawnQuipAt = a.tickCount + 60;
+        PaMemoryAct.ownerRespawned(p);                                   // [pa35] "if I die, fetch my stuff"
     }
 
     /** A fall survived, or a hard knock: a remark (rate-limited). */
@@ -120,6 +124,7 @@ public final class PaEvents {
     @SubscribeEvent
     public static void onEat(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish event) {
         if (event.getEntity() instanceof net.minecraft.world.entity.player.Player pl && event.getItem().has(net.minecraft.core.component.DataComponents.FOOD)) did(pl, "jm.eat");
+        if (event.getEntity() instanceof ServerPlayer sp && event.getItem().has(net.minecraft.core.component.DataComponents.FOOD)) PaMemoryAct.ownerAte(sp, event.getItem());   // [pa35]
     }
 
     @SubscribeEvent
@@ -132,6 +137,7 @@ public final class PaEvents {
         var server = event.getServer();
         if (server.getTickCount() % 20 != 0) return;
         PaLife.watch(server);
+        PaMemoryAct.serverTick(server);                                    // [pa35] reminders
         if (server.getTickCount() % 600 == 0) {
             for (ServerLevel level : server.getAllLevels()) {
                 for (Entity e : level.getAllEntities()) {
