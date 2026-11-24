@@ -61,8 +61,9 @@ public final class PaFlight {
         a.fallDistance = 0;                                              // a glide, not a fall
         a.getNavigation().stop();
         boolean up = owner != null && owner.isFallFlying();
-        Vec3 target = up ? owner.position().subtract(owner.getLookAngle().multiply(1, 0, 1).normalize().scale(2.5)).add(-owner.getLookAngle().z * 1.5, 0.4, owner.getLookAngle().x * 1.5)
-            : landing(a, owner);
+        // [pa33g] on its wing, as a wingman flies: a little behind and well out to one side (where its player sees it, clear of their wings)
+        Vec3 ahead = up ? owner.getLookAngle().multiply(1, 0, 1).normalize() : Vec3.ZERO;
+        Vec3 target = up ? owner.position().subtract(ahead.scale(1.5)).add(-ahead.z * 3.0, 0.4, ahead.x * 3.0) : landing(a, owner);
         Vec3 to = target.subtract(a.position());
         double dist = to.length(), flat = Math.sqrt(to.x * to.x + to.z * to.z);
         float yaw = (float) (Math.atan2(to.z, to.x) * 180.0 / Math.PI) - 90.0F;

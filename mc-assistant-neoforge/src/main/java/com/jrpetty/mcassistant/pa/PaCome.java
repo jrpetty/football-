@@ -137,7 +137,10 @@ public final class PaCome {
             }
             boolean run = d > RUN_FROM;
             a.setSprinting(run && !a.isInWater());
-            double speed = run ? 1.25 : 1.0;
+            // a player's pace, not a mob's dash: a mob's speed goes with the square of this (its forward input is the
+            // speed itself), so 0.75 sprinting is a run a shade quicker than a player's (about 6.6 blocks a second at
+            // level 1, a little more with its level) and 0.8 walking is a player's walk (about 4.3)
+            double speed = run ? 0.75 : 0.8;
             boolean repath = a.getNavigation().isDone() || a.tickCount - t.pathAt >= 20
                 || (t.leg != null && a.position().distanceToSqr(t.leg) < 6 * 6);
             if (!repath) return;
