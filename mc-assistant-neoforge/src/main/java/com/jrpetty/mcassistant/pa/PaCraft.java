@@ -243,6 +243,7 @@ public final class PaCraft {
     public static String check(@Nullable ServerPlayer p, PlayerAssistantEntity a, PaIntent i, List<PaPlan.Step> out) {
         if (i.raw() != null && i.raw().startsWith("#go ")) return null;                           // "go and get them": the engine's full chain
         if (!a.plan.idle() || !PaLogiPlan.alone(i.raw())) return null;                           // a later step: what it needs may come from the steps before
+        for (String tool : PaUnderstand.TOOLS) if (tool.equals(i.item())) return null;           // "a pickaxe": the planner picks the material it can make
         Item item = itemFor(a.level(), i.item());
         if (item == null || item == Items.AIR) return null;
         int n = Math.max(1, i.amount());

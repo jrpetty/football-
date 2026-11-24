@@ -144,23 +144,23 @@ Full. Using the adjacent chest.
 == logi.full_none
 Every chest near there is full. Where would you like the rest?
 I've run out of room. Ping a chest, or I'll keep the rest on me.
-No space left anywhere near {chest}. Another chest, or more chests?
+No room left anywhere near {chest}. Another chest, or more chests?
 Full, and so is the next one. I'll hang on to the rest. Point me somewhere.
 Out of room. Place a chest and ping it and I'll carry on.
-Nowhere left to put them. I'm holding the rest for now.
+Full up, and nowhere else to put them. I'm holding the rest for now.
 == logi.full_none@gloomy
 All full. There's no room anywhere. I'll just carry it. Forever.
 Everything's full. I'm the storage now.
 No room left. Not here, not anywhere near. Point me somewhere else.
 Full, all of it. The rest stays with me, like a burden.
-Nowhere to put it. Make me a chest and I'll fill that too.
-No space. I'm keeping the rest, against my will.
+It's all full. Make me a chest and I'll fill that too.
+No room. I'm keeping the rest, against my will.
 == logi.full_none@serious
 All nearby containers are full. Where should the rest go?
-No space left near {chest}. Ping another container.
+No room left near {chest}. Ping another container.
 Out of room. I'm holding the remainder.
 Every known chest nearby is full. Please add or ping another.
-No space found. Remainder kept in my pack.
+No room found. Remainder kept in my pack.
 Storage full. Awaiting a new container.
 
 == logi.none
