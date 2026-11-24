@@ -2,8 +2,6 @@ package com.jrpetty.mcassistant.pa.voice;
 
 import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -196,6 +194,10 @@ public final class PaKokoro {
     }
 
     private volatile boolean cancel;
+    /** [voice37] What these files are, in messages ("natural voice"; the expressive voice reuses this downloader). */
+    private String what = "natural voice";
+
+    public PaKokoro named(String what) { this.what = what; return this; }
 
     /** Stop a download under way (it carries on from where it was next time). */
     public void cancel() { cancel = true; }
@@ -253,7 +255,7 @@ public final class PaKokoro {
             why = downloaded() ? "" : "The download didn't give what was expected.";
             return downloaded();
         } catch (Throwable e) {
-            why = "Couldn't download the natural voice: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            why = "Couldn't download the " + what + ": " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
             return false;
         }
     }
@@ -498,9 +500,9 @@ public final class PaKokoro {
             try (InputStream in = Files.newInputStream(dir.resolve(VOICES_FILE))) {
                 voices = readVoices(in);
             }
-            ort = new URLClassLoader(new URL[]{dir.resolve("onnxruntime.jar").toUri().toURL()}, PaKokoro.class.getClassLoader());
+            ort = PaOrt.loader(dir.resolve("onnxruntime.jar"));       // [voice37] one runtime for both neural voices
             Class<?> envC = ort.loadClass("ai.onnxruntime.OrtEnvironment");
-            env = envC.getMethod("getEnvironment").invoke(null);
+            env = PaOrt.env(ort);
             Class<?> optsC = ort.loadClass("ai.onnxruntime.OrtSession$SessionOptions");
             Object opts = optsC.getConstructor().newInstance();
             session = envC.getMethod("createSession", String.class, optsC).invoke(env, dir.resolve(MODEL_FILE).toString(), opts);
