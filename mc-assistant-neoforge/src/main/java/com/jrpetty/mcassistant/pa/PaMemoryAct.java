@@ -224,7 +224,16 @@ public final class PaMemoryAct {
             for (Entry e : b.entries) if (e.kind.group() == g && parts.size() < 7) parts.add(e.line());
         }
         int more = b.size() + (r.waypoints.isEmpty() ? 0 : 1) - parts.size();
+        for (int i = 0; i < parts.size(); i++) parts.set(i, midSentence(parts.get(i)));   // [pa35] one sentence: "call you Boss; you like birch trees"
         return PaTalk.line(a, "mem.recall.intro") + " " + String.join("; ", parts) + "." + (more > 0 ? " And " + more + " more in the Memory tab." : "");
+    }
+
+    /** [pa35] A Memory-tab line as part of a sentence: its capital dropped, unless it's "I", a name or an initialism. */
+    static String midSentence(String s) {
+        if (s.length() < 2 || s.startsWith("I ") || Character.isUpperCase(s.charAt(1))) return s;
+        String first = s.split("[ :;,]", 2)[0];
+        if (first.matches("(?:Call|You|Your|Never|Always|Orders|No|Remind|Its|When|Every|At|If|The|A|An|Before|After|In)")) return Character.toLowerCase(s.charAt(0)) + s.substring(1);
+        return s;                                                    // probably a name ("Sam is your friend")
     }
 
     static String recall(PlayerAssistantEntity a, PaData.Rec r, String what) {

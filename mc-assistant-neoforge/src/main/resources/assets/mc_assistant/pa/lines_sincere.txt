@@ -87,7 +87,7 @@ Here, {item}. A small thank you.
 {item}, for you. You've earned it.
 I found {item} and thought of you straight away.
 Have {item}. Just because.
-This {item} is for you. Thanks for everything.
+{item}, for you. Thanks for everything.
 
 == say.bond.favourite@sincere
 {item}. My favourite. Thank you, that's thoughtful.

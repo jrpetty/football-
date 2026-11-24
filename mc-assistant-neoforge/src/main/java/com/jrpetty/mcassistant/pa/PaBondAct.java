@@ -186,7 +186,8 @@ public final class PaBondAct {
             w.storyAt = now + (filmStory ? 600 : 48000 + a.getRandom().nextInt(48000));
             if (!first && r.mute == 0 && r.chatty >= 1 && (filmStory || a.getRandom().nextInt(100) < 25)) {
                 String[] e = s.story.get(a.getRandom().nextInt(Math.max(1, s.story.size() - 1)));
-                PaTalk.comment(a, 2, PaTalk.line(a, "bond.recall", "day", e[0], "what", lower(e[2])), false, true);
+                String said = PaTalk.line(a, "bond.recall", "day", e[0], "what", lower(e[2]));
+                if (filmStory) PaTalk.reply(a, said, null, true); else PaTalk.comment(a, 2, said, false, true);   // filming: past the chatter limit
             }
         }
     }

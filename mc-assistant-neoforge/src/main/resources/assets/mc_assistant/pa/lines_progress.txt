@@ -226,7 +226,7 @@ Guarding.
 Here. {item}. Don't make a thing of it.
 I got you {item}. No reason. Don't read into it.
 {item}, for you. I found it. Mostly.
-Have this {item}. I've no pockets for sentiment.
+Have {item}. I've no pockets for sentiment.
 Thought you'd want {item}. Or I wanted rid of it. One of those.
 {item}. It made me think of you. Don't ask why.
 == say.bond.gift@gloomy
