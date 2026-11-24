@@ -84,7 +84,8 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.goalSelector.addGoal(2, new PaEnchantGoal(this));             // [pa38] the table's real offers, judged by its level
         this.goalSelector.addGoal(2, new PaThrowGoal(this));               // [pa38] snowballs and eggs: a mob pulled off its player
         this.goalSelector.addGoal(2, new PaRodPull(this));                 // [pa38] the rod in a fight
-        this.goalSelector.addGoal(2, new PaMace(this));                    // [pa38] the mace's smash from height
+        this.goalSelector.addGoal(2, new PaMace(this));
+        this.goalSelector.addGoal(2, new PaCureGoal(this));                // [pa38] a zombie villager cured when asked                    // [pa38] the mace's smash from height
     }
 
     /** Tests: the goals running just now, by name. */
@@ -231,13 +232,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public void setTarget(@Nullable net.minecraft.world.entity.LivingEntity target) {
         boolean fresh = target != null && fairGame(target) && target != getTarget();
-        super.setTarget(fairGame(target) && !PaMemoryAct.sparesEntity(this, target) ? target : null);   // [pa35] "don't kill my cows"
+        super.setTarget(fairGame(target) && !PaMemoryAct.sparesEntity(this, target) && !PaTrade.curing(this, target) ? target : null);   // [pa35] "don't kill my cows"; [pa38] nor the one it's curing
         if (fresh && !level().isClientSide) equipBestWeapon();      // [pa33b] sword out for a fight, as a player would
     }
 
     @Override
     public boolean canAttack(net.minecraft.world.entity.LivingEntity target) {
-        return fairGame(target) && !PaMemoryAct.sparesEntity(this, target) && super.canAttack(target);   // [pa35]
+        return fairGame(target) && !PaMemoryAct.sparesEntity(this, target) && !PaTrade.curing(this, target) && super.canAttack(target);   // [pa35] [pa38]
     }
 
     /**

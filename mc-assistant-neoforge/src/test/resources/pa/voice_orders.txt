@@ -1,0 +1,48 @@
+# [pa38] Spoken orders for the end-to-end voice test (PaVoiceEndToEndTest): synthesised in British voices by the mod's
+# own Kokoro, heard by Vosk with the mod's grammar, read by the mod's reader. "text || what it should read as".
+go there || GOTO
+come here || COME
+follow me || FOLLOW
+stay here || STAY
+wait there || STAY
+chop that tree || GATHER
+chop down that tree || GATHER
+get me sixteen logs || GATHER
+gather a hundred stone and put it in this chest || LOGI
+mine that iron || MINE_ORE
+dig down || MINE_DOWN
+build a small house || BUILD
+craft a stone pickaxe || CRAFT
+make me a crafting table || CRAFT
+smelt the iron || SMELT
+put everything in the chest || LOGI
+fetch some bread from the chest || LOGI
+bring me some food || BRING_FOOD
+farm this field || FARM
+guard me || GUARD_ME
+attack that zombie || FIGHT
+shoot that || SHOOT_AT
+go fishing || FISH
+catch me ten fish || FISH
+throw snowballs at that zombie || THROW
+hook that || HOOK
+smash that with the mace || SMASH
+cure that zombie villager || CURE
+enchant my sword || ENCHANT
+put bookshelves round the table || SHELVES
+trade with that villager || VTRADE
+light up the area || LIGHT_AREA
+go home || GO_HOME
+stop || STOP
+shut up || ?quiet
+no more jokes || ?jokes
+you can talk again || ?talk
+what do you remember || ?memory
+what are you doing || DOING
+what have you got || INVENTORY
+where are you || WHERE
+remember this spot as the mine || WAYPOINT
+go to the mine || GOTO
+cheers mate || THANKS
+right then pop over here || COME
+could you nip and grab some wood || GATHER

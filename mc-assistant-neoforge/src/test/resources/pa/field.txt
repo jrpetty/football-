@@ -1,0 +1,57 @@
+# [pa38] Its rod, throws, mace, cure and bookshelves: orders as players say them (British and otherwise).
+# --- snowballs and eggs
+throw snowballs at that || THROW:snowball@LOOKED
+throw snowballs at that zombie || THROW:snowball@LOOKED
+throw a snowball at it || THROW:snowball@LOOKED
+throw some eggs at that skeleton || THROW:egg@LOOKED
+lob a snowball at that creeper || THROW:snowball@LOOKED
+chuck snowballs at it || THROW:snowball@LOOKED
+bung a snowball at that || THROW:snowball@LOOKED
+throw 5 snowballs at the zombie || THROW:snowball:5@LOOKED
+pelt it with snowballs || THROW:snowball@LOOKED
+pelt that zombie with eggs || THROW:egg@LOOKED
+snowball that || THROW:snowball@LOOKED
+egg him || THROW:egg@LOOKED
+distract that zombie || THROW@LOOKED
+distract it || THROW@LOOKED
+draw it off me || THROW@LOOKED
+pull its aggro || THROW@LOOKED
+take the aggro off me || THROW@LOOKED
+Pip, throw snowballs at that creeper please || THROW:snowball@LOOKED
+could you throw snowballs at that || THROW:snowball@LOOKED
+# --- the rod
+hook that || HOOK@LOOKED
+hook that zombie || HOOK@LOOKED
+reel it in || HOOK@LOOKED
+hook him off the ledge || HOOK@LOOKED
+yank that skeleton over the edge || HOOK@LOOKED
+use your rod on that || HOOK@LOOKED
+use the fishing rod on that creeper || HOOK@LOOKED
+# --- fishing
+go fishing || FISH
+catch me 10 fish || FISH:fish:10
+catch 10 fish || FISH:fish:10
+catch some fish || FISH
+go and catch some fish || FISH
+# --- the mace
+smash that || SMASH@LOOKED
+smash that ravager with the mace || SMASH@LOOKED
+use your mace on that || SMASH@LOOKED
+mace that || SMASH@LOOKED
+ground pound that brute || SMASH@LOOKED
+do a mace smash || SMASH@LOOKED
+# --- the cure
+cure that zombie villager || CURE@LOOKED
+cure the zombie villager || CURE@LOOKED
+save that zombie villager || CURE@LOOKED
+turn that zombie villager back into a villager || CURE@LOOKED
+cure him || CURE@LOOKED
+# --- bookshelves
+put bookshelves round the table || SHELVES
+place bookshelves around the enchanting table || SHELVES
+put the bookshelves round that table || SHELVES
+set up bookshelves around my enchanting table || SHELVES
+surround the table with bookshelves || SHELVES
+max out the enchanting table || SHELVES
+# --- not these
+pull that lever || ?

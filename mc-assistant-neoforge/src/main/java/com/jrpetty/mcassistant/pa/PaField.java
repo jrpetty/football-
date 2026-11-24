@@ -47,6 +47,9 @@ public final class PaField {
 
     // ---- trading (PaTrade)
     public int deals, bargains, cures;
+    /** A zombie villager it was asked to cure (and till when). */
+    @Nullable public UUID cureOrder;
+    public int cureUntil;
     public String lastDeal = "";
 
     // ---- the learner's slips (PaSlips)

@@ -155,7 +155,7 @@ final class PaMace extends Goal {
         placed.clear();
         if (phase == Phase.FALL && !struck) {
             a.mind.field.smashMisses++;
-            PaTalk.comment(a, 1, PaLogiTalk.line(a, "field.mace_miss"), true);
+            PaTalk.comment(a, 1, PaLogiTalk.line(a, "field.mace_miss", "item", target == null ? "it" : PaThrows.mob(target)), true);
         }
         phase = Phase.READY;
         target = null;

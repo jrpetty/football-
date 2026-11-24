@@ -89,7 +89,9 @@ public final class PaWords {
         "quick", "simple", "basic", "nice", "everything", "anything", "something", "auto", "yourself", "own",
         "market", "shop", "coins", "money",
         "ping", "pings", "mark", "marker", "bridge", "waypoint", "route", "skip", "closest", "nearest", "died",   // [pa33c-2b]
-        "tame", "lever", "button", "wolf", "pillar", "enchant", "quartz", "parrot", "ocelot", "upgrade", "netherrack"));   // [pa33d]
+        "tame", "lever", "button", "wolf", "pillar", "enchant", "quartz", "parrot", "ocelot", "upgrade", "netherrack",   // [pa33d]
+        "mace", "smash", "snowball", "snowballs", "eggs", "hook", "rod", "fishing", "aggro", "distract", "bookshelves", "bookshelf", "cure",
+        "ravager", "brute", "pound", "ground", "pelt", "lob", "reel", "ledge"));   // [pa38]
 
     /** Plain English the assistant must not "correct" into an order word ("mind" is not "mine", "your" is not "you"). */
     public static final Set<String> COMMON = new java.util.HashSet<>(List.of(("gear target trick shot armor armour villager race contest nether bell wake bedtime that this those these them they their there then than with have want need some when "

@@ -346,6 +346,7 @@ public final class PaPingClient {
             Entity e = eh.getEntity();
             PaPings.Target t = e instanceof PlayerAssistantEntity ? PaPings.Target.ASSISTANT : e instanceof Player ? PaPings.Target.PLAYER
                 : e instanceof net.minecraft.world.entity.npc.AbstractVillager ? PaPings.Target.VILLAGER
+                : e instanceof net.minecraft.world.entity.monster.ZombieVillager ? PaPings.Target.ZOMBIE_VILLAGER   // [pa38] a cure on offer
                 : e instanceof Enemy ? PaPings.Target.MOB : e instanceof Animal ? PaPings.Target.ANIMAL : PaPings.Target.MOB;
             return new Aim(t, e.blockPosition(), e.getId(), e.position().add(0, e.getBbHeight() / 2, 0), e.getName().getString());
         }
