@@ -448,4 +448,26 @@ public class PaMemoryGameTests {
             Kit.log("[VT] pam09 ladder: refused at 3, left in place, mined at 4; said " + allWords(a));
         });
     }
+
+    /** pam10: the unlock moment: reaching level 4 it says what it may now mine and use (iron ore, armour up to iron), and
+     *  its player gets the unlock toast (the payload carries them). */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pam10_unlock")
+    public static void pam10_unlock(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_527_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        PaConfig.ladderForTests(null, null);
+        helper.runAfterDelay(10, () -> {
+            a.setPaXpForTests(PaLevels.xpFor(4) - 1);
+            helper.assertTrue(a.veteranLevel() == 3, "level 3 first: " + a.veteranLevel());
+            a.gainXpFirst(40);
+            String said = lastWords(a).toLowerCase(java.util.Locale.ROOT);
+            helper.assertTrue(a.veteranLevel() == 4, "level 4 now: " + a.veteranLevel());
+            helper.assertTrue(said.contains("iron ore") && said.contains("armour up to iron"), "names its unlocks: " + said);
+            helper.assertTrue(com.jrpetty.mcassistant.pa.PaLevelUp.unlocks(4).contains("Can now mine iron ore"), "the toast's text");
+            Kit.log("[VT] pam10 unlock at level 4: " + lastWords(a));
+            helper.succeed();
+        });
+    }
 }

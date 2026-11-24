@@ -23,6 +23,12 @@ public final class PaLevelUp {
         a.playAnim("cheer");
         String skills = skills(to);
         String line = PaTalk.line(a, "levelup", "level", String.valueOf(to), "skill", skills.isEmpty() ? "a bit of everything" : skills);
+        // [pa35] the unlock moment: what the mining and gear ladders open at this level, said and on the toast
+        String ores = PaMineLadder.opens(to, PaConfig.ladderOn(), PaConfig.ladderLevels()), gear = PaGearLadder.opens(to, PaConfig.ladderOn(), PaConfig.ladderLevels());
+        if (!ores.isEmpty()) line += " " + PaTalk.line(a, "lock.unlock", "level", String.valueOf(to), "what", ores);
+        if (!gear.isEmpty()) line += " " + PaTalk.line(a, "gear.unlock", "level", String.valueOf(to), "item", gear);
+        String unlocks = unlocks(ores, gear);
+        if (!unlocks.isEmpty()) com.mojang.logging.LogUtils.getLogger().info("[pa35] level {} unlocked: {}", to, unlocks);
         PaData.Rec r = a.rec();
         if (r != null) { r.say(1, line, level.getGameTime()); PaData.touch(); }
         a.mind.lastSaid = a.tickCount;
@@ -32,8 +38,24 @@ public final class PaLevelUp {
             t.putString("name", a.displayNameCap());
             t.putInt("level", to);
             t.putString("skills", skills);
+            t.putString("unlocks", unlocks);                     // [pa35]
             PaNet.send(owner, PaPayload.LEVEL, t);
         }
+    }
+
+    /** [pa35] "Can now mine iron ore. Can now use armour up to iron." ("" when nothing opens). */
+    static String unlocks(String ores, String gear) {
+        return unlocksText(ores, gear);
+    }
+
+    /** [pa35] What the unlock toast says at a level as the ladders stand (the game tests read it). */
+    public static String unlocks(int level) {
+        return unlocksText(PaMineLadder.opens(level, PaConfig.ladderOn(), PaConfig.ladderLevels()), PaGearLadder.opens(level, PaConfig.ladderOn(), PaConfig.ladderLevels()));
+    }
+
+    private static String unlocksText(String ores, String gear) {
+        String s = (ores.isEmpty() ? "" : "Can now mine " + ores + ".") + (gear.isEmpty() ? "" : (ores.isEmpty() ? "" : " ") + "Can now use " + gear + ".");
+        return s;
     }
 
     static String skills(int level) {

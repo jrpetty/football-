@@ -1274,7 +1274,7 @@ public class PlayerAssistantGameTests {
             helper.runAfterDelay(10, () -> {
                 helper.assertTrue(a.hunger.food() < before || a.hunger.saturation() < 5.0F, "work drains it: food " + a.hunger.food() + ", saturation " + a.hunger.saturation());
                 a.hunger.set(10, 0, 0);
-                a.setHealth(3.0F);
+                a.setHealth(8.0F);                                 // [pa35] hurt, not critical (under a quarter it rightly eats the golden apple)
                 a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ROTTEN_FLESH, 4));
                 a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 2));
                 a.insertGiven(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 1));

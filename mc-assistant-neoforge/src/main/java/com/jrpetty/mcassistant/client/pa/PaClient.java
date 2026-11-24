@@ -119,11 +119,14 @@ public final class PaClient {
                 net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
                 net.minecraft.network.chat.Component.literal(data.getString("title")), net.minecraft.network.chat.Component.literal(data.getString("text")));
             case PaPayload.LEVEL -> {                                   // [pa33d] a level gained: a toast
-                String sk = data.getString("skills");
+                String sk = data.getString("skills"), un = data.getString("unlocks");
                 net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),
                     net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                    net.minecraft.network.chat.Component.literal(data.getString("name") + " reached level " + data.getInt("level") + "!"),
+                    net.minecraft.network.chat.Component.literal(data.getString("name") + " reached level " + data.getInt("level")),
                     net.minecraft.network.chat.Component.literal(sk.isEmpty() ? "Better at everything it does." : "New: " + sk));
+                if (!un.isEmpty()) net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),   // [pa35] the unlock moment
+                    net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.NARRATOR_TOGGLE,
+                    net.minecraft.network.chat.Component.literal("Unlocked at level " + data.getInt("level")), net.minecraft.network.chat.Component.literal(un));
             }
             default -> { }
         }

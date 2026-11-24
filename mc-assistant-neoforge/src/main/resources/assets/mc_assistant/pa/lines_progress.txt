@@ -419,3 +419,25 @@ Day {day}. {what}.
 Do you remember day {day}? {what}.
 Day {day}: {what}. Good day.
 Day {day}.
+
+== say.gear.unlock
+And {item}, now. Stand well back.
+I'm cleared for {item}. Someone's going to regret that. Not me.
+{item}, unlocked. I'll be responsible. Mostly.
+Also: {item}. Hand them over when you're ready.
+They've let me have {item}. Brave of them.
+{item}, now. I've been practising in my head.
+== say.gear.unlock@gloomy
+And {item}. I'll try not to drop it.
+{item}, now. Something else to worry about losing.
+I'm allowed {item}. I'll be careful.
+{item}. Unlocked. Don't expect miracles.
+{item}, at last. It won't save us, but it'll help.
+And {item}. Fine.
+== say.gear.unlock@serious
+I can use {item} now.
+{item} unlocked.
+Cleared for {item}.
+{item} is available to me now.
+I'm able to use {item} now.
+New: {item}.
