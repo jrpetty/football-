@@ -57,7 +57,9 @@ public class PaTaskGoal extends Goal {
         idx = 0;
         walkTicks = 0;
         cool = 0;
-        if (t != null) t.stage = 0;
+        if (t != shotFor) { shotLine = null; shotAt = null; moverDrawn = false; }                      // a shot in the air carries on if its task does
+        shotFor = t;
+        if (t != null && shotLine == null && shotAt == null) t.stage = 0;
     }
 
     @Override
@@ -622,7 +624,7 @@ public class PaTaskGoal extends Goal {
 
     // ------------------------------------------------------------------ [pa33d] pillaring up, as a player does
 
-    private static boolean pillarBlock(ItemStack s) {
+    static boolean pillarBlock(ItemStack s) {
         return s.getItem() instanceof BlockItem bi && (s.is(Items.COBBLESTONE) || s.is(Items.DIRT) || s.is(Items.NETHERRACK) || s.is(net.minecraft.tags.ItemTags.PLANKS)
             || s.is(Items.COBBLED_DEEPSLATE) || s.is(Items.STONE));
     }
@@ -671,8 +673,38 @@ public class PaTaskGoal extends Goal {
 
     // ------------------------------------------------------------------ [pa33d] a trick shot at a block (a ping, a target, a bell)
 
+    /** [pa33e] A shot in the air: when it lands, and what it says then (the word after the hit, not before). */
+    private int shotLandsAt;
+    @javax.annotation.Nullable private String shotLine;
+    @javax.annotation.Nullable private net.minecraft.world.entity.Entity shotAt;
+    private int shotDist;
+    @javax.annotation.Nullable private PaTask shotFor;
+    private boolean moverDrawn;
+
     private void shoot() {
+        if (shotLine != null || shotAt != null) {                                  // waiting for the arrow to get there
+            if (a.tickCount < shotLandsAt) return;
+            if (shotAt != null) {                                                  // a mover: did it feel it?
+                boolean hit = !shotAt.isAlive() || shotAt instanceof net.minecraft.world.entity.LivingEntity le && le.hurtTime > 0
+                    || shotAt instanceof net.minecraft.world.entity.vehicle.AbstractMinecart mc && mc.getHurtTime() > 0;
+                net.minecraft.world.entity.Entity was = shotAt;
+                shotAt = null;
+                if (hit) {
+                    a.earn("trick");
+                    a.playAnim("cheer");
+                    finish(PaTalk.line(a, "trick_moving", "dist", String.valueOf(shotDist), "thing", was.getName().getString().toLowerCase(java.util.Locale.ROOT)), false);
+                    return;
+                }
+                if (t.stage >= Math.max(1, t.amount)) { a.playAnim("shrug"); finish(PaTalk.line(a, "trick_miss", "dist", String.valueOf(shotDist)), false); }
+                return;
+            }
+            String line = shotLine;
+            shotLine = null;
+            finish(line, false);
+            return;
+        }
         if (!PaShots.hasBow(a) || a.countMatching(st -> st.is(Items.ARROW)) == 0) { finish(PaTalk.line(a, "need_bow"), true); return; }
+        if (t.item.startsWith("e:")) { shootMover(); return; }
         BlockPos at = t.pos;
         if (at == null) { finish("Point at what to hit.", true); return; }
         if (!PaShots.canShoot(a, at)) {
@@ -686,14 +718,44 @@ public class PaTaskGoal extends Goal {
         boolean hit = PaShots.shootAt(a, at);
         t.stage++;
         int dist = (int) Math.round(Math.sqrt(a.blockPosition().distSqr(at)));
+        shotLandsAt = a.tickCount + PaShots.flightTicks(a, dist) + 4;              // the word once it's there
         if (hit) {
             a.earn("trick");
             a.playAnim(dist >= 20 ? "bow" : "cheer");
-            finish(PaTalk.line(a, dist >= 20 ? "trick_long" : "trick_hit", "dist", String.valueOf(dist)), false);
+            shotLine = PaTalk.line(a, dist >= 20 ? "trick_long" : "trick_hit", "dist", String.valueOf(dist));
         } else if (t.stage >= Math.max(1, t.amount)) {
             a.playAnim("shrug");
-            finish(PaTalk.line(a, "trick_miss", "dist", String.valueOf(dist)), false);
+            shotLine = PaTalk.line(a, "trick_miss", "dist", String.valueOf(dist));
         }
+    }
+
+    /** [pa33e] At something moving: led by where it will be when the arrow gets there. */
+    private void shootMover() {
+        net.minecraft.world.entity.Entity e = a.level().getEntity(Integer.parseInt(t.item.substring(2)));
+        if ((e == null || !e.isAlive()) && t.stage > 0) {                          // gone since it fired: that was the arrow
+            a.earn("trick");
+            a.playAnim("cheer");
+            finish(PaTalk.line(a, "trick_moving", "dist", String.valueOf(shotDist), "thing", "target"), false);
+            return;
+        }
+        if (e == null || !e.isAlive()) { finish("It's gone.", true); return; }
+        double d = Math.sqrt(a.distanceToSqr(e));
+        if (d > PaLevels.range(a.veteranLevel()) + (PaLevels.has(a.veteranLevel(), "trick") ? 12 : 0) || !a.hasLineOfSight(e)) {
+            if (t.ticks > 200) finish("I can't get a clear shot at it.", true);
+            else a.getNavigation().moveTo(e, 1.0);
+            return;
+        }
+        a.getNavigation().stop();
+        a.getLookControl().setLookAt(e, 30.0F, 30.0F);
+        if (cool > 0) return;
+        if (!moverDrawn) { moverDrawn = true; PaShots.drawBow(a); cool = 16; return; }   // a draw first, as a player's (about a second)
+        cool = 25;
+        t.stage++;
+        int ticks = PaShots.shootAtMover(a, e);
+        if (ticks < 0) { finish(PaTalk.line(a, "need_bow"), true); return; }
+        shotAt = e;
+        shotDist = (int) Math.round(d);
+        shotLandsAt = a.tickCount + ticks + 3;
     }
 
     // ------------------------------------------------------------------ [pa33d] brewing basic potions at a stand

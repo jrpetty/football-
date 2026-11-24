@@ -2,7 +2,7 @@
 # {dist} blocks, {score} a score, {owner} its player. No exclamation marks: it says things, it doesn't shout them.
 
 == say.skill_locked
-[bad] That's above my level. Literally. It's a level joke. I'll wait over here.
+[bad] That's above my level. Literally: level {need}, and I'm {level}. It's a level joke. I'll wait over here.
 That's a level {need} job and I'm level {level}. Keep me busy and I'll get there.
 Level {need} for that, I'm afraid. I'm {level}. Practice makes perfect, or at least level {need}.
 Not yet. I'll know how at level {need}. I'm level {level}, so, soon. Ish.
@@ -116,6 +116,29 @@ I'm out of arrows.
 I'll need a bow for that.
 No bow or arrows.
 
+== say.trick_moving
+[bad] Got the {thing} on the move. I led it. I'm a natural leader. Sorry. That one's mine and it's bad.
+[anim:cheer] Got the {thing}. On the move, {dist} blocks. Write that down.
+[anim:cheer] Led it just right. The {thing} never saw it coming.
+[anim:bow] Moving target. Still hit it. You may clap.
+[anim:cheer] Hit the {thing} on the move. Aimed where it was going, not where it was.
+[anim:point] That's how you lead a shot. Watch and learn.
+[anim:cheer] Clean hit on a moving {thing}. I'm frightening myself.
+== say.trick_moving@gloomy
+[anim:shrug] Hit the {thing}. It was having a nice day, too.
+[anim:shrug] Got it on the move. Poor {thing}.
+[anim:shrug] Led it right. Don't expect it twice.
+[anim:shrug] Hit. The {thing} didn't deserve that.
+[anim:shrug] A moving target. Hit it anyway. Lucky.
+[anim:shrug] Got the {thing}. I'll feel bad about it later.
+== say.trick_moving@serious
+[anim:salute] Moving target hit, {dist} blocks.
+[anim:salute] Hit the {thing} on the move.
+[anim:salute] Led and hit.
+[anim:salute] Target hit while moving.
+[anim:salute] Hit, with lead.
+[anim:salute] On target. Moving {thing}.
+
 == say.trick_hit
 [bad] Hit. I'm on target today. That's an arrow pun. I'm keeping it.
 [anim:cheer] Bullseye. Did you see that. Tell me you saw that.
@@ -208,6 +231,74 @@ No bow or arrows.
 [anim:salute] Water placed. No damage.
 [anim:salute] Fall broken.
 
+== say.elytra_up
+[bad] Wings on. I'd say I'm winging it, but that's the joke and it's a poor one.
+[anim:cheer] Wings on. Try and lose me.
+[anim:cheer] Right behind you. Mind the clouds.
+[anim:cheer] Up we go. I packed wings for this.
+[anim:point] Following you up. Lead the way.
+[anim:cheer] Elytra on. Keep it steady, I'm on your wing.
+[anim:point] Taking off. Watch the mountains.
+== say.elytra_up@gloomy
+[anim:shrug] Wings on. Gravity will want a word later.
+[anim:shrug] Up we go. Down we'll come, one way or another.
+[anim:shrug] Following you into the sky. What could go wrong.
+[anim:shrug] Elytra on. The ground misses me already.
+[anim:shrug] Flying. I'd rather be walking, but here we are.
+[anim:shrug] On your wing. Try not to hit a tree.
+== say.elytra_up@serious
+[anim:salute] Elytra on. Following.
+[anim:salute] Taking off.
+[anim:salute] On your wing.
+[anim:salute] Airborne. Following you.
+[anim:salute] Following by air.
+[anim:salute] Wings on. In formation.
+
+== say.parkour
+[bad] Parkour. Or as I call it, falling with intent. That's not funny. It's accurate.
+[anim:cheer] Hup. Over we go.
+[anim:cheer] Mind the gap. I did.
+[anim:cheer] Jumped it. Didn't even look down.
+[anim:point] Gap? What gap.
+[anim:cheer] And over. Like a goat. A tidy goat.
+[anim:point] Coming across. Stand back.
+== say.parkour@gloomy
+[anim:shrug] Jumped it. The ground wasn't ready for me anyway.
+[anim:shrug] Across. Somehow.
+[anim:shrug] Mind the gap. It minded me.
+[anim:shrug] Over. I'll pretend that was planned.
+[anim:shrug] A jump. Survived it. Again.
+[anim:shrug] Made it across. Don't clap.
+== say.parkour@serious
+[anim:salute] Jumping the gap.
+[anim:salute] Across.
+[anim:salute] Gap cleared.
+[anim:salute] Following across the gap.
+[anim:salute] Jump made.
+[anim:salute] Over the gap.
+== say.parkour_short
+[bad] Fell short. Gravity one, me nil. I'll get the rematch. Sorry, that was poor.
+[anim:shrug] Fell short. Building my way out.
+[anim:shrug] Didn't make it. Pillar time.
+[anim:shrug] Short by a foot. I'll climb.
+[anim:shrug] Missed it. Back up I come.
+[anim:shrug] Not my best. Out in a moment.
+[anim:shrug] Down the hole. I'll block my way up.
+== say.parkour_short@gloomy
+[anim:shrug] Fell short. Of course I did.
+[anim:shrug] Down the hole. Fitting.
+[anim:shrug] Missed. Climbing out, slowly, like always.
+[anim:shrug] Short. The ground wins again.
+[anim:shrug] In a hole. I'll pillar out. Don't wait.
+[anim:shrug] Didn't make it. I'll build my own way.
+== say.parkour_short@serious
+[anim:salute] Jump failed. Pillaring out.
+[anim:salute] Fell short. Climbing.
+[anim:salute] Missed the jump. Coming up.
+[anim:salute] In the gap. Building out.
+[anim:salute] Short. Recovering.
+[anim:salute] Failed jump. Back shortly.
+
 == say.pearl
 [bad] Pearl of wisdom: carry pearls. That was the joke. I'm sorry.
 [anim:point] Pearl. Back in a jiffy.
@@ -294,30 +385,30 @@ Fine. Starting in three.
 == say.challenge_mine@serious
 One minute. Most blocks mined wins.
 Mining contest. On three.
-Ready. One minute.
+Ready. Ten shots each.
 Most blocks in a minute.
 Starting in three.
 Mining contest. Go on three.
 
 == say.challenge_shoot
-Shooting contest. A minute each way. Most hits on the target wins.
+Shooting contest. Ten shots each. Most hits on the target wins.
 Target practice. Try to keep up.
 Archery contest. I'll go easy on you. I won't.
-Most hits in a minute. Bows ready.
+Ten arrows each. Bows ready.
 You and me and the target. Starting in three.
 Let's see your aim. On three.
 == say.challenge_shoot@gloomy
 A shooting contest. I'll miss. Fine.
 Most hits wins. I'll be the one losing.
 Archery. Let's get it over with.
-A minute of shooting. My aim is cursed.
+Ten shots each. My aim is cursed.
 Fine. On three.
 Target practice. Mostly practice.
 == say.challenge_shoot@serious
-Shooting contest. Most hits in a minute.
+Shooting contest. Ten shots each.
 Target practice. On three.
 Most hits on the target wins.
-Ready. One minute.
+Ready. Ten shots each.
 Starting in three.
 Archery contest. Go on three.
 
@@ -346,7 +437,7 @@ Off.
 
 == say.challenge_won
 [bad] I win. I'm a winner. A win-ner. A win-dow. That made no sense. Keeping it.
-[anim:cheer] I win. Better luck next time. Bring a faster you.
+[anim:cheer] I win. Better luck next time. Bring a better you.
 [anim:cheer] Victory. I'd say it was close, but I'd be lying.
 [anim:dance] Winner. I'll accept my prize in cake.
 [anim:cheer] And that's how it's done. Lessons on Tuesdays.

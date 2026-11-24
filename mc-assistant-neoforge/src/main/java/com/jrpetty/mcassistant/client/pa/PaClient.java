@@ -241,8 +241,21 @@ public final class PaClient {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || !state.contains("id")) return null;
         Entity e = mc.level.getEntity(state.getInt("id"));
-        return e instanceof PlayerAssistantEntity a ? a : null;
+        if (e instanceof PlayerAssistantEntity a && !a.isRemoved()) return a;
+        // [pa33e] stood up again (across a portal, called back) it has a new id: found by its player and name, a few times a second
+        if (mc.player == null || mc.level.getGameTime() - lastSearch < 5) return null;
+        lastSearch = mc.level.getGameTime();
+        String me = mc.player.getGameProfile().getName(), name = state.getString("name");
+        for (Entity x : mc.level.entitiesForRendering()) {
+            if (x instanceof PlayerAssistantEntity pa && !pa.isRemoved() && me.equals(pa.ownerName()) && (name.isEmpty() || name.equalsIgnoreCase(pa.shownName()))) {
+                state.putInt("id", pa.getId());
+                return pa;
+            }
+        }
+        return null;
     }
+
+    private static long lastSearch = -100;
 
     public static boolean has() {
         return state.getBoolean("has");

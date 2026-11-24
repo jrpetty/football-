@@ -65,6 +65,8 @@ public final class PaData extends SavedData {
         public long leftAt;
         /** [pa33d] Its experience, kept here too: a body stood up afresh (a lost copy) keeps its level. */
         public long xp;
+        /** [pa33e] When it was first found missing from the world (not saved; -1 when it isn't). */
+        public long missingSince = -1;
 
         public PaPersona.Tri tri() {
             return PaPersona.Tri.of(funny, gloomy);

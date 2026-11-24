@@ -536,6 +536,29 @@ public final class PaOrders {
         }
     }
 
+    /** [pa33e] The creature an order names ("that pig", "the cart") nearest the player's line of sight, within 32 blocks and 16 degrees. */
+    @Nullable
+    static net.minecraft.world.entity.Entity named(ServerPlayer p, String raw) {
+        String t = raw.toLowerCase(java.util.Locale.ROOT);
+        java.util.function.Predicate<net.minecraft.world.entity.Entity> kind =
+            t.matches(".*\\bpig\\b.*") ? e -> e instanceof net.minecraft.world.entity.animal.Pig
+            : t.matches(".*\\bcow\\b.*") ? e -> e instanceof net.minecraft.world.entity.animal.Cow
+            : t.matches(".*\\bsheep\\b.*") ? e -> e instanceof net.minecraft.world.entity.animal.Sheep
+            : t.matches(".*\\bchicken\\b.*") ? e -> e instanceof net.minecraft.world.entity.animal.Chicken
+            : t.matches(".*\\bhorse\\b.*") ? e -> e instanceof net.minecraft.world.entity.animal.horse.AbstractHorse
+            : t.matches(".*\\b(minecart|cart)\\b.*") ? e -> e instanceof net.minecraft.world.entity.vehicle.AbstractMinecart : null;
+        if (kind == null) return null;
+        net.minecraft.world.phys.Vec3 eye = p.getEyePosition(), dir = p.getViewVector(1.0F);
+        net.minecraft.world.entity.Entity best = null;
+        double bestAngle = Math.cos(Math.toRadians(16));
+        for (net.minecraft.world.entity.Entity e : p.level().getEntities(p, p.getBoundingBox().inflate(32), e -> e.isAlive() && kind.test(e))) {
+            net.minecraft.world.phys.Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
+            double c = to.normalize().dot(dir);
+            if (c > bestAngle) { bestAngle = c; best = e; }
+        }
+        return best;
+    }
+
     /** Stop everything at once: no more work, no target, standing still. */
     public static void stopAll(PlayerAssistantEntity a) {
         a.plan.clear();
@@ -871,6 +894,15 @@ public final class PaOrders {
             case SHOOT_AT -> {
                 String lock = locked(a, "trick");
                 if (lock != null) return lock;
+                net.minecraft.world.entity.Entity mover = look.entity() >= 0 ? p.level().getEntity(look.entity()) : null;
+                if (mover == null && i.raw() != null) mover = named(p, i.raw());       // "shoot that pig" with the crosshair just off it
+                if (mover != null && !mover.getPassengers().isEmpty()) mover = mover.getPassengers().get(0);   // the pig in the cart, not the cart
+                if (mover != null) {                                       // [pa33e] something on the move: led, as a player leads it
+                    PaPlan.Step s = step("a trick shot at the " + mover.getName().getString().toLowerCase(java.util.Locale.ROOT), Kind.SHOOT_AT, 10);
+                    s.task = new PaTask(PaTask.Kind.SHOOT, mover.blockPosition(), "e:" + mover.getId(), 3);
+                    out.add(s);
+                    return null;
+                }
                 if (look.block() == null) return "Look at the thing to hit, or ping it, and say it again.";
                 PaPlan.Step s = step("a trick shot", Kind.SHOOT_AT, 10);
                 s.task = new PaTask(PaTask.Kind.SHOOT, look.block(), "", 3);

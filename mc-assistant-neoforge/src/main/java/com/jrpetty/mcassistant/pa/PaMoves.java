@@ -26,6 +26,8 @@ public final class PaMoves {
     static void tick(PlayerAssistantEntity a) {
         int lv = a.veteranLevel();
         if (lv >= PaLevels.levelOf("clutch")) clutch(a);
+        PaParkour.tick(a);                                                 // [pa33e] jumps of one to three, a bridge or a pillar when one falls short
+        PaFlight.tick(a);                                                  // [pa33e] elytra following (it checks its level itself: putting the wings away never waits)
         if (a.tickCount % 4 == 0 && lv >= PaLevels.levelOf("shield")) shield(a);
         if (a.tickCount % 20 == 7) {
             if (lv >= PaLevels.levelOf("parkour")) sprintAfter(a);
@@ -198,6 +200,8 @@ public final class PaMoves {
         if (a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return;
         PaShots.drawBow(a);
         net.minecraft.world.entity.projectile.Arrow arrow = new net.minecraft.world.entity.projectile.Arrow(a.level(), a, new ItemStack(Items.ARROW), a.getMainHandItem().copy());
+        // [pa33e] the dragon only feels a player's arrows (the game's rule): at the dragon it shoots as its player's second bow
+        if ((e instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon || e instanceof net.minecraft.world.entity.boss.EnderDragonPart) && a.getOwnerPlayer() != null) arrow.setOwner(a.getOwnerPlayer());
         Vec3 aim = e.position().add(0, e.getBbHeight() * 0.5, 0).add(e.getDeltaMovement().scale(Math.sqrt(a.distanceToSqr(e)) / 3.0));
         double dx = aim.x - a.getX(), dy = aim.y - arrow.getY(), dz = aim.z - a.getZ(), horiz = Math.sqrt(dx * dx + dz * dz);
         a.getLookControl().setLookAt(aim.x, aim.y, aim.z);

@@ -232,12 +232,25 @@ public final class PaBanter {
         if (cb == PaQuips.Comeback.JOKE) {
             String intro = PaPersona.from(PaLines.get("comeback.joke"), a.getRandom()::nextInt, a.mind.recent);
             String joke = PaPersona.from(PaLines.get("joke"), a.getRandom()::nextInt, a.mind.recent);
+            String film = filmNext("mca.pa.filmJokes");                     // [pa33e] filming only: the jokes in a chosen order
+            if (film != null) for (String l : PaLines.get("joke")) if (l.contains(film)) joke = l;
             return (intro == null ? "" : intro + " ") + (joke == null ? "I've forgotten all my jokes. That's the joke." : joke);
         }
         String key = "comeback." + cb.name().toLowerCase(Locale.ROOT);
         String raw = PaPersona.remark(key, t, r == null ? 0 : r.look, null, a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) raw = PaPersona.from(PaLines.get(key + "@serious"), a.getRandom()::nextInt, a.mind.recent);
         return raw == null ? "Noted." : fill(a, raw);
+    }
+
+    private static int filmAt;
+
+    /** [pa33e] Filming only: the next of a "|"-list of words a chosen line contains, when the server is started with it. */
+    @javax.annotation.Nullable
+    static String filmNext(String property) {
+        String all = System.getProperty(property, "");
+        if (all.isEmpty()) return null;
+        String[] l = all.split("\\|");
+        return l[filmAt++ % l.length];
     }
 
     /** A line names something it can be told apart by: kept for tests (the patterns compile). */

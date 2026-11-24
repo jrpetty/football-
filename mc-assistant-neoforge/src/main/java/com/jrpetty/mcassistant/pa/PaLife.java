@@ -147,6 +147,7 @@ public final class PaLife {
         if (!level.addFreshEntity(a)) { LOG.info("[pa33] the world would not take the assistant at {}", spot); return null; }
         r.entity = a.getUUID();
         r.away = false;
+        if (owner != null) PaNet.refresh(owner, a);                         // [pa33e] its panel follows it to the new body (a new id)
         r.snapshot = a.saveWithoutId(new CompoundTag());                     // [pa33d] a copy from the start: lost before the next keep, it comes back as itself, not a blank
         PaData.touch();
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, spot.x, spot.y + 1, spot.z, 16, 0.4, 0.6, 0.4, 0.02);
@@ -275,15 +276,28 @@ public final class PaLife {
             } else if (!r.away && r.deadUntil <= 0 && r.entity != null && r.snapshot != null && server.getTickCount() % 200 == 0) {
                 // lost with an unloaded chunk while its player is elsewhere and it should be following: stand it up again
                 ServerPlayer owner = server.getPlayerList().getPlayer(r.owner);
-                if (owner != null && entity(server, r) == null && followsAlong(r)) {
-                    PlayerAssistantEntity a = spawn(owner.serverLevel(), r, owner.blockPosition(), owner);
-                    if (a != null) PaTalk.comment(a, 1, "Caught up with you!");
+                if (owner != null && followsAlong(r)) {
+                    // [pa33e] missing at two looks running (ten seconds apart), not at one: a body whose chunk is only
+                    // slow to load is not doubled
+                    if (entity(server, r) != null) r.missingSince = -1;
+                    else if (r.missingSince < 0) r.missingSince = now;
+                    else if (now - r.missingSince >= 190) {
+                        r.missingSince = -1;
+                        PlayerAssistantEntity a = spawn(owner.serverLevel(), r, owner.blockPosition(), owner);
+                        if (a != null) PaTalk.comment(a, 1, "Caught up with you!");
+                    }
                 }
             }
         }
     }
 
-    private static boolean followsAlong(PaData.Rec r) {
+    /** [pa33e] Stood up beside its player from its kept copy (its old body, wherever it is, is sent away when it loads). */
+    static void standUp(ServerPlayer p, PaData.Rec r) {
+        r.missingSince = -1;
+        spawn(p.serverLevel(), r, p.blockPosition(), p);
+    }
+
+    static boolean followsAlong(PaData.Rec r) {
         CompoundTag s = r.snapshot;
         if (s == null) return false;
         String mode = s.getString("Mode");

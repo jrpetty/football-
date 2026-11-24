@@ -246,7 +246,8 @@ public final class PaUnderstand {
             String g = m.group(1) != null ? m.group(1) : m.group(2);
             return new PaIntent(Kind.PILLAR, "pillar", g == null ? 5 : Integer.parseInt(g), Place.NONE, raw);
         }
-        if (c.matches("^(?:shoot|hit) (?:that |the |this )(?:target|bell|block|ping|button|sign|marker|mark|spot)(?: .*)?$|^trick shot(?: that)?$|^show me a trick shot$|^shoot the ping$"))
+        if (c.matches("^(?:shoot|hit) (?:that |the |this )(?:target|bell|block|ping|button|sign|marker|mark|spot)(?: .*)?$|^trick shot(?: that)?$|^show me a trick shot$|^shoot the ping$")
+            || c.matches("^(?:shoot|hit) (?:that|the|this) (?:moving )?(?:pig|cow|sheep|chicken|minecart|cart|horse|target)(?: in (?:the|that) (?:minecart|cart))?(?: as it goes| on the move| while it moves)?$"))   // [pa33e] a moving one too
             return PaIntent.of(Kind.SHOOT_AT, raw).withPlace(Place.LOOKED);
         if (c.matches("^race (?:me|you)(?: to (?:that|the|this) [a-z ]+)?$|^(?:i will |ill |i'll )?race you(?: to .*)?$|^first to (?:that|the) [a-z ]+(?: wins)?$"))
             return new PaIntent(Kind.CHALLENGE, "race", 0, Place.LOOKED, raw);
