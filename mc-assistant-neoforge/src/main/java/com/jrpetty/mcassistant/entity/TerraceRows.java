@@ -282,6 +282,7 @@ public final class TerraceRows {
         WORTH.clear();
         WANT.clear();
         WANTS.clear();
+        LEFT.clear();
     }
 
     /** The steps of the row at this anchor (the floor of each house over the anchor's), or an empty array if level. */
@@ -1166,6 +1167,8 @@ public final class TerraceRows {
      * laid only as fast as the masons happened to keep their usual stock by.
      */
     private static final Map<UUID, Map<Item, Integer>> WANTS = new ConcurrentHashMap<>();
+    /** [house34c] Each row's own share of the wants (by its anchor): the finishing takes the row nearest done first. */
+    private static final Map<Long, Integer> LEFT = new ConcurrentHashMap<>();
 
     /** [house34c] How many of this (BRICKS, STONE_BRICKS, DEEPSLATE_TILES) the town's rows still want for their finishing. */
     public static int finishingWant(@Nullable UUID village, Item it) {
@@ -1182,21 +1185,28 @@ public final class TerraceRows {
             if (!Land.areaLoaded(level, b.anchor(), 12) || Ledger.raising(id, b.anchor()) || !standing(level, id, b)) continue;
             Shape sh = shape(b.structure());
             int[] steps = steps(b.anchor());
+            Item dressedItem = dressedStone(id).asItem();
             int rough = roughFaces(level, b, sh).size();
-            if (rough > 0) w.merge(Items.STONE_BRICKS, rough, Integer::sum);
+            if (rough > 0) w.merge(dressedItem, rough, Integer::sum);
+            int before = 0;
+            for (int n : w.values()) before += n;
+            before -= rough;
             for (BuildGoal.Placement pl : plan(id, b)) {
                 if (pl.part() != BuildGoal.Part.BLOCK) continue;
                 BlockState there = level.getBlockState(pl.pos());
                 if (pl.style() == Blueprints.Style.BRICK) {
                     if (!there.is(Blocks.BRICKS) && there.isCollisionShapeFullBlock(level, pl.pos()) && !there.hasBlockEntity()) w.merge(Items.BRICKS, 1, Integer::sum);
                 } else if (pl.style() == Blueprints.Style.MASONRY) {
-                    if (there.is(Blocks.COBBLESTONE) || there.is(Blocks.MOSSY_COBBLESTONE)) w.merge(Items.STONE_BRICKS, 1, Integer::sum);
+                    if (there.is(Blocks.COBBLESTONE) || there.is(Blocks.MOSSY_COBBLESTONE)) w.merge(dressedItem, 1, Integer::sum);
                 } else if (iron && BuildGoal.isRoof(pl.style()) && !indoors(b, sh, steps, pl.pos())
                         && (there.is(net.minecraft.tags.BlockTags.WOODEN_STAIRS) || there.is(net.minecraft.tags.BlockTags.WOODEN_SLABS)
                             || there.is(net.minecraft.tags.BlockTags.PLANKS))) {
                     w.merge(Items.DEEPSLATE_TILES, 1, Integer::sum);
                 }
             }
+            int after = 0;
+            for (int n : w.values()) after += n;
+            LEFT.put(b.anchor().asLong(), after - before);
         }
         WANTS.put(id, w);
     }
@@ -1221,6 +1231,11 @@ public final class TerraceRows {
         // and kept up only with the builders: the grand row's cornice stood in cobble for days with cobble in the stores)
         int dressed = finishingWant(id, Items.STONE_BRICKS) - Market.stock(level, id, st -> st.is(Items.STONE_BRICKS));
         if (dressed > 0) Market.importFor(level, v, day, Items.STONE_BRICKS, Math.min(128, dressed), "the terraces' dressed stone");
+        Item own = dressedStone(id).asItem();
+        if (own != Items.STONE_BRICKS) {
+            int deep = w.getOrDefault(own, 0) - Market.stock(level, id, st -> st.is(own) || st.is(Items.COBBLED_DEEPSLATE) || st.is(Items.POLISHED_DEEPSLATE));
+            if (deep > 0) Market.importFor(level, v, day, Items.COBBLED_DEEPSLATE, Math.min(128, deep), "the terraces' dressed stone");
+        }
         int slate = finishingWant(id, Items.DEEPSLATE_TILES) - Market.stock(level, id, st -> st.is(Items.DEEPSLATE_TILES) || st.is(Items.COBBLED_DEEPSLATE));
         if (slate > 0) Market.importFor(level, v, day, Items.COBBLED_DEEPSLATE, Math.min(128, slate), "the terraces' slate");
     }
@@ -1232,7 +1247,8 @@ public final class TerraceRows {
         reckonWants(level, v);
         StringBuilder sb = new StringBuilder(Villages.name(v.id()) + ":");
         for (Ledger.Building b : rows(v.id())) {
-            sb.append(" | ").append(name(v.id(), b)).append(' ').append(b.structure()).append(" at ").append(b.anchor().toShortString())
+            sb.append(" | ").append(name(v.id(), b)).append(' ').append(b.structure()).append(" (").append(LEFT.getOrDefault(b.anchor().asLong(), 0))
+                .append(" to finish) at ").append(b.anchor().toShortString())
                 .append(" back ").append(b.facing()).append(standing(level, v.id(), b) ? " up" : " going up");
             for (Spot s : spots(b)) sb.append(" door").append(s.index() + 1).append('@').append(s.door().toShortString());
         }
@@ -1262,7 +1278,14 @@ public final class TerraceRows {
         Long last = FINISHED.get(id);
         if (last != null && now - last < 100L && now >= last) return;
         FINISHED.put(id, now);
-        for (Ledger.Building b : rows(id)) {
+        // [house34c] the row nearest done first, and on with it till it is: the hand went to whichever row came first on the
+        // books, a cell here and a cell there, and no row was ever quite finished
+        List<Ledger.Building> order = new ArrayList<>(rows(id));
+        order.sort(Comparator.comparingInt((Ledger.Building b) -> {
+            int left = LEFT.getOrDefault(b.anchor().asLong(), 0);
+            return left <= 0 ? Integer.MAX_VALUE : left;
+        }));
+        for (Ledger.Building b : order) {
             if (!Land.areaLoaded(level, b.anchor(), 12) || Ledger.raising(id, b.anchor())) continue;
             if (!standing(level, id, b)) continue;
             int n = dress(level, v, b, false);
@@ -1396,8 +1419,10 @@ public final class TerraceRows {
         // the brickwork faced in brick where it went up in whatever the builders had (a stretch at a time)
         int laid = 0;
         // ([house34c] or the makings to hand to make them there and then, as the builders do: loose bricks, fired stone)
+        Block dressed = dressedStone(id);
+        Item dressedItem = dressed.asItem();
         boolean[] have = { free || Crafts.stock(level, v, st -> st.is(Items.BRICKS)) > 0 || Masonry.can(level, v, Items.BRICKS, 1),
-            free || Crafts.stock(level, v, st -> st.is(Items.STONE_BRICKS)) > 0 || Masonry.can(level, v, Items.STONE_BRICKS, 1) };
+            free || Crafts.stock(level, v, st -> st.is(dressedItem)) > 0 || Masonry.can(level, v, dressedItem, 1) };
         for (BuildGoal.Placement pl : plan(id, b)) {
             if (pl.part() != BuildGoal.Part.BLOCK) continue;
             // the brick in brick; and ([house34b]) the dressed stone (the grand row's ground floors, the bands, the quoins) in
@@ -1406,8 +1431,8 @@ public final class TerraceRows {
             if (!brick && pl.style() != Blueprints.Style.MASONRY) continue;
             BlockState there = level.getBlockState(pl.pos());
             if (!brick && !(there.is(Blocks.COBBLESTONE) || there.is(Blocks.MOSSY_COBBLESTONE))) continue;
-            Block face = brick ? Blocks.BRICKS : Blocks.STONE_BRICKS;
-            Item faceItem = brick ? Items.BRICKS : Items.STONE_BRICKS;
+            Block face = brick ? Blocks.BRICKS : dressed;
+            Item faceItem = brick ? Items.BRICKS : dressedItem;
             if (there.is(face) || !there.isCollisionShapeFullBlock(level, pl.pos()) || there.hasBlockEntity()) continue;
             if (!have[brick ? 0 : 1]) continue;
             if (!free) {
@@ -1427,16 +1452,17 @@ public final class TerraceRows {
         // its copings (cobble slabs) dressed in stone bricks as well: a grand row up and faced stood on a bank of rough cobble
         if (have[1]) {
             int faced = 0;
+            Block[] cut = DRESSED_CUTS.get(dressed);
             for (BlockPos q : roughFaces(level, b, sh)) {
                 BlockState there = level.getBlockState(q);
-                boolean slab = there.is(Blocks.COBBLESTONE_SLAB) || there.is(Blocks.MOSSY_COBBLESTONE_SLAB);
-                Item want = slab ? Items.STONE_BRICK_SLAB : Items.STONE_BRICKS;
+                Block to = there.getBlock() instanceof net.minecraft.world.level.block.SlabBlock ? cut[0]
+                    : there.getBlock() instanceof net.minecraft.world.level.block.StairBlock ? cut[1] : dressed;
                 if (!free) {
                     if (faced == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, q), "dressing the stone of " + name(id, b))) break;
-                    if (Crafts.takeOne(level, v, st -> st.is(want)).isEmpty() && !Masonry.take(level, v, want, 1)) break;
+                    if (Crafts.takeOne(level, v, st -> st.is(dressedItem)).isEmpty() && !Masonry.take(level, v, dressedItem, 1)) break;
                     Crafts.giveBack(level, v, there.getBlock().asItem(), 1);
                 }
-                level.setBlock(q, slab ? copy(there, Blocks.STONE_BRICK_SLAB.defaultBlockState()) : Blocks.STONE_BRICKS.defaultBlockState(), 2);
+                level.setBlock(q, copy(there, to.defaultBlockState()), 2);
                 faced++;
                 if (!free && faced >= REFACE) break;
             }
@@ -1721,9 +1747,10 @@ public final class TerraceRows {
         int top = 0;
         for (int s : steps(b.anchor())) top = Math.max(top, s);
         for (BuildGoal.Placement pl : plan(null, b)) {
-            if (pl.part() == BuildGoal.Part.BLOCK && pl.style() == Blueprints.Style.STONE_SLAB) {
+            if (pl.part() == BuildGoal.Part.BLOCK && (pl.style() == Blueprints.Style.STONE_SLAB || pl.style() == Blueprints.Style.STONE_STAIR)) {
                 BlockState there = level.getBlockState(pl.pos());
-                if (there.is(Blocks.COBBLESTONE_SLAB) || there.is(Blocks.MOSSY_COBBLESTONE_SLAB)) out.add(pl.pos());
+                if (there.is(Blocks.COBBLESTONE_SLAB) || there.is(Blocks.MOSSY_COBBLESTONE_SLAB)
+                        || there.is(Blocks.COBBLESTONE_STAIRS) || there.is(Blocks.MOSSY_COBBLESTONE_STAIRS)) out.add(pl.pos());
             }
         }
         for (int dx = sh.ground[0]; dx <= sh.ground[1]; dx++) {
@@ -1733,13 +1760,35 @@ public final class TerraceRows {
                     BlockPos q = cell(b, dx, h, dz);
                     BlockState there = level.getBlockState(q);
                     if (!there.is(Blocks.COBBLESTONE) && !there.is(Blocks.MOSSY_COBBLESTONE)) continue;
-                    boolean open = false;
-                    for (Direction d : Direction.Plane.HORIZONTAL) if (level.getBlockState(q.relative(d)).isAir()) open = true;
+                    boolean open = false;                                  // open to the street or the yard (under the sky)
+                    for (Direction d : Direction.Plane.HORIZONTAL) if (level.getBlockState(q.relative(d)).isAir() && level.canSeeSky(q.relative(d))) open = true;
                     if (open) out.add(q);
                 }
             }
         }
         return out;
+    }
+
+    /** [house34c] The dressed stones a row's finishing lays, each with its slab and its stair. */
+    private static final Map<Block, Block[]> DRESSED_CUTS = Map.of(
+        Blocks.STONE_BRICKS, new Block[]{ Blocks.STONE_BRICK_SLAB, Blocks.STONE_BRICK_STAIRS },
+        Blocks.DEEPSLATE_BRICKS, new Block[]{ Blocks.DEEPSLATE_BRICK_SLAB, Blocks.DEEPSLATE_BRICK_STAIRS },
+        Blocks.DEEPSLATE_TILES, new Block[]{ Blocks.DEEPSLATE_TILE_SLAB, Blocks.DEEPSLATE_TILE_STAIRS },
+        Blocks.POLISHED_DEEPSLATE, new Block[]{ Blocks.POLISHED_DEEPSLATE_SLAB, Blocks.POLISHED_DEEPSLATE_STAIRS },
+        Blocks.POLISHED_BLACKSTONE_BRICKS, new Block[]{ Blocks.POLISHED_BLACKSTONE_BRICK_SLAB, Blocks.POLISHED_BLACKSTONE_BRICK_STAIRS },
+        Blocks.POLISHED_ANDESITE, new Block[]{ Blocks.POLISHED_ANDESITE_SLAB, Blocks.POLISHED_ANDESITE_STAIRS });
+
+    /**
+     * [house34c] The town's own dressed stone (its look's first for the dressed parts: Palettes), which a row's rough cobble is
+     * faced in: stone bricks, or a town that dresses in deepslate its deepslate bricks. Stone bricks laid over a deepslate
+     * town's cobble left its grand row light grey in patches between its dark bands.
+     */
+    static Block dressedStone(@Nullable UUID village) {
+        if (village != null) for (Item it : Palettes.ranked(village, Blueprints.Style.MASONRY)) {
+            Block b = Block.byItem(it);
+            if (DRESSED_CUTS.containsKey(b)) return b;
+        }
+        return Blocks.STONE_BRICKS;
     }
 
     /** [house34c] Is this spot of a row out in front of its houses' fronts (its railings, not its banisters and tables)? */
