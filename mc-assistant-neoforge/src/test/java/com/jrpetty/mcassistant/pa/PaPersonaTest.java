@@ -343,7 +343,7 @@ class PaPersonaTest {
         for (Map.Entry<String, List<String>> e : PaLines.all().entrySet()) {
             String k = e.getKey();
             if (k.contains("@") || k.startsWith("self.") || k.startsWith("look.")) continue;
-            if (k.startsWith("say.mem.") || k.startsWith("say.lock.") || k.startsWith("say.gear.")) continue;   // [pa35] answers about memory and progress, not banter
+            if (k.startsWith("say.mem.") || k.startsWith("say.lock.") || k.startsWith("say.gear.") || k.startsWith("say.bond.")) continue;   // [pa35] answers about memory and progress, not banter
             for (String l : e.getValue()) { funny++; if (PaLines.bad(l)) bad++; }
         }
         double share = 100.0 * bad / funny;
@@ -376,7 +376,7 @@ class PaPersonaTest {
                 Map.entry("what", "I'm out of coal."), Map.entry("item", "iron"), Map.entry("thing", "wheat"), Map.entry("player", "Sam"),
                 Map.entry("x", "1"), Map.entry("y", "64"), Map.entry("z", "2"), Map.entry("dist", "12"), Map.entry("dir", "north"), Map.entry("job", "chop that tree"), Map.entry("level", "4"), Map.entry("skill", "blocking with a shield"), Map.entry("need", "6"), Map.entry("score", "5 to 3"),
                 Map.entry("who", "Sam"), Map.entry("when", "every morning"), Map.entry("n", "32"), Map.entry("mine", "2"), Map.entry("time", "about three hours"),
-                Map.entry("instead", "coal ore")));   // [pa35] the memory and progress lines' blanks
+                Map.entry("instead", "coal ore"), Map.entry("tier", "Good Mate"), Map.entry("day", "3")));   // [pa35] the memory and progress lines' blanks
             assertFalse(f.contains("{") || f.contains("}"), "a blank left in: " + f);
         }
         assertNotNull(PaLines.get("say.ok"));

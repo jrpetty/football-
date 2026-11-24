@@ -21,7 +21,7 @@ public final class PaGearLadder {
         new Rung("throwing", 3, "snowballs, eggs and the fishing rod", p -> p.equals("snowball") || p.equals("egg") || p.equals("fishing_rod"), "fishing_rod"),
         new Rung("armour", 4, "armour up to iron", p -> p.matches("(leather|chainmail|iron|golden)_(helmet|chestplate|leggings|boots)|turtle_helmet"), "iron_chestplate"),
         new Rung("crossbow", 5, "the crossbow", p -> p.equals("crossbow"), "crossbow"),
-        new Rung("diamond", 6, "diamond gear and splash potions", p -> p.startsWith("diamond_") && !p.equals("diamond_block") || p.equals("splash_potion") || p.equals("lingering_potion"), "diamond_sword"),
+        new Rung("diamondgear", 6, "diamond gear and splash potions", p -> p.startsWith("diamond_") && !p.equals("diamond_block") || p.equals("splash_potion") || p.equals("lingering_potion"), "diamond_sword"),
         new Rung("trident", 7, "the trident and ender pearls", p -> p.equals("trident") || p.equals("ender_pearl"), "trident"),
         new Rung("fireworks", 8, "firework rockets and the elytra", p -> p.equals("firework_rocket") || p.equals("elytra"), "elytra"),
         new Rung("mace", 9, "the mace and netherite gear", p -> p.equals("mace") || p.startsWith("netherite_") && !p.equals("netherite_block") && !p.equals("netherite_scrap")

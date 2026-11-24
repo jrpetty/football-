@@ -88,6 +88,8 @@ public final class PaData extends SavedData {
         public final ArrayDeque<Line> log = new ArrayDeque<>();
         /** [pa35] What it remembers of what its player told it (kept with the record: survives saves, deaths and new bodies). */
         public final PaMemory.Book memory = new PaMemory.Book();
+        /** [pa35] Its bond with its player: the friendship, its favourites, its want, our story (PaBond). */
+        public final PaBond.State bond = new PaBond.State();
         /** Chests its player pointed it at (packed positions): always allowed. */
         public final java.util.Set<Long> pointed = new java.util.HashSet<>();
 
@@ -181,6 +183,7 @@ public final class PaData extends SavedData {
             t.put("Log", lines);
             t.putLongArray("Pointed", pointed.stream().mapToLong(Long::longValue).toArray());
             t.put("Mem", PaMemoryNbt.save(memory));                                // [pa35]
+            t.put("Bond", PaMemoryNbt.saveBond(bond));
             return t;
         }
 
@@ -234,6 +237,7 @@ public final class PaData extends SavedData {
             }
             for (long p : t.getLongArray("Pointed")) r.pointed.add(p);
             if (t.contains("Mem")) PaMemoryNbt.load(r.memory, t.getCompound("Mem"));    // [pa35]
+            if (t.contains("Bond")) PaMemoryNbt.loadBond(r.bond, t.getCompound("Bond"));
             return r;
         }
     }

@@ -199,6 +199,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (source.getEntity() instanceof Player p && isOwner(p)) {
+            if (!level().isClientSide) PaBondAct.event(this, PaBond.Event.HIT);   // [pa35] the bond slips a little (capped a day)
             if (!level().isClientSide && tickCount - mind.lastHit > 400) {   // [pa33b] "Rude."
                 mind.lastHit = tickCount;
                 PaBanter.after(this, "quip.hit", null);
@@ -491,6 +492,18 @@ public class PlayerAssistantEntity extends AssistantEntity {
 
     void gainXp(int base) {
         gainXp(base, "work");
+    }
+
+    /** [pa35] A first's bonus (never tired: PaXp.FIRSTS). */
+    public void gainXpFirst(int base) {
+        gainXp(base, "first");
+    }
+
+    /** [pa35] Braver as its bond grows (PaBond.retreatsAt). */
+    @Override
+    public float retreatShare() {
+        PaData.Rec r = level().isClientSide ? null : rec();
+        return r == null ? 0.35F : (float) PaBond.retreatsAt(r.bond.tier());
     }
 
     /** [pa35] Paid for some work, less if it has done the same over and over lately (a "first" is never tired). */

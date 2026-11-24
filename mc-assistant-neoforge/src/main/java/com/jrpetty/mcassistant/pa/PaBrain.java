@@ -157,6 +157,7 @@ public final class PaBrain {
         if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
         if (t % 20 == 5) sleptIn(a);                              // [pa33c-2b] the bed it sleeps in is its spawn
         if (t % 20 == 7) PaMemoryAct.tick(a);                     // [pa35] its standing rules, friends, foes, stock
+        if (t % 20 == 11) PaBondAct.tick(a);                      // [pa35] the bond: its wants, its help, our story
         if (a.mind.glanceAt != null) {                            // [pa33d] a look at a bare ping
             if (a.tickCount < a.mind.glanceUntil) a.getLookControl().setLookAt(a.mind.glanceAt.getX() + 0.5, a.mind.glanceAt.getY() + 0.5, a.mind.glanceAt.getZ() + 0.5);
             else a.mind.glanceAt = null;
@@ -260,6 +261,8 @@ public final class PaBrain {
         }
         if (r != null && !cur.auto) { r.jobsDone++; PaData.touch(); }
         a.earn("BUILD".equals(cur.kind) ? "build" : cur.auto ? "craft" : "job");   // [pa33d] paid for the job done
+        PaMemoryAct.jobDone(a, cur.kind, cur.label);                                // [pa35] "rubbish at mining, was I?"
+        if ("BUILD".equals(cur.kind)) PaBondAct.first(a, "build", "Our first building: " + cur.label.replaceFirst("^build ", "") + ". It's still standing. So far.");
         String res = cur.task != null && !cur.task.result.isEmpty() ? cur.task.result : "";
         boolean last = plan.steps.stream().noneMatch(s -> !s.auto);
         if (cur.auto) {

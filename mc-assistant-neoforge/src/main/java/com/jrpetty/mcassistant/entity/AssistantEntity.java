@@ -4685,6 +4685,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [pa35] How a gatherer ranks a block it might take (its distance, adjusted): the Player AI Assistant's player's likes. */
     public double gatherRank(BlockState st, double d) { return d; }
 
+    /** [pa35] The health share it fights on to before it falls back (0.35; the Player AI Assistant's bond makes it braver). */
+    public float retreatShare() { return 0.35F; }
+
     /** [pa35] May it put on this armour (the Player AI Assistant's gear ladder; everyone else, always)? */
     public boolean mayWear(ItemStack s) { return true; }
 

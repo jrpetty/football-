@@ -445,6 +445,18 @@ public final class PaMemoryAct {
 
     // ------------------------------------------------------------------ living by it
 
+    /** [pa35] Where a moment happened, as said: the nearest named place within 48 blocks, else the world's name, else "". */
+    public static String placeNear(PaData.Rec r, BlockPos at, String dim) {
+        String best = "";
+        double bestD = 48 * 48;
+        for (Map.Entry<String, BlockPos> w : r.waypoints.entrySet()) {
+            double d = w.getValue().distSqr(at);
+            if (d < bestD) { bestD = d; best = "by the " + w.getKey(); }
+        }
+        if (!best.isEmpty()) return best;
+        return dim.equals("the_nether") ? "the Nether" : dim.equals("the_end") ? "the End" : "";
+    }
+
     /** What it calls its player: the name they asked for, else their own. */
     public static String callName(PlayerAssistantEntity a) {
         PaData.Rec r = a.rec();

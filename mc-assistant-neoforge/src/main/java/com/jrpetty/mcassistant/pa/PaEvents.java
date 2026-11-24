@@ -24,7 +24,9 @@ public final class PaEvents {
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
         PaLife.restore(p);
-        PaNet.refresh(p, PaLife.find(p));
+        PlayerAssistantEntity back = PaLife.find(p);
+        if (back != null) PaBondAct.returned(back);                        // [pa35] days away: the bond slips a little
+        PaNet.refresh(p, back);
     }
 
     /** [pa33b] On a server with chat: someone else naming an assistant near them is talking to it (its own player's chat is never read). */
@@ -78,6 +80,7 @@ public final class PaEvents {
     @SubscribeEvent
     public static void onOwnerDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer p) PaBanter.ownerDied(p, event.getSource());
+        else if (!event.getEntity().level().isClientSide) PaBondAct.killed(event.getEntity(), event.getSource().getEntity());   // [pa35] saved by its player; a boss beaten
     }
 
     @SubscribeEvent

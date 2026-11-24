@@ -30,9 +30,11 @@ public final class PaLayout {
     // ------------------------------------------------------------------ the panel's boxes, for the layout test
 
     /** The panel's tabs, as their labels read (Jobs may carry a count). */
-    public static final String[] TABS = {"Talk", "Orders", "Jobs (99)", "Pack", "Stats", "Memory", "Look", "Settings"};   // [pa35] Memory
-    /** [pa35] A tab's padding beside its label (10: eight tabs fit the smallest panel). */
-    public static final int TAB_PAD = 10;
+    public static final String[] TABS = {"Talk", "Orders", "Jobs (99)", "Pack", "Progress", "Memory", "Look", "Settings"};   // [pa35] Progress, Memory
+    /** [pa35] The Progress tab: its track of ten levels, each column wide enough for an item icon and its level number. */
+    public static int trackColumn(int innerW) { return Math.max(26, innerW / 10); }
+    /** [pa35] A tab's padding beside its label (9: eight tabs fit the smallest panel). */
+    public static final int TAB_PAD = 9;
     /** [pa35] The Memory tab's buttons and foot. */
     public static final String[] MEMORY_BUTTONS = {"Keep", "Forget everything...", "Yes, forget it all", "Keep it", "Save", "Cancel"};
     public static final String[] SECTIONS = {"Personality", "Voice", "Behaviour", "Look", "Keys", "Advanced"};

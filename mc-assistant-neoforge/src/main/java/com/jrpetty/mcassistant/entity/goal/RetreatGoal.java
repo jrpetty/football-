@@ -32,7 +32,7 @@ public class RetreatGoal extends Goal {
     public boolean canUse() {
         if (com.jrpetty.mcassistant.entity.Armies.inLine(assistant)) return false;   // [war] in the ranks: its Captain's orders, not its own
         // Badly hurt in (or just out of) a fight...
-        if (assistant.getHealth() <= assistant.getMaxHealth() * 0.35F
+        if (assistant.getHealth() <= assistant.getMaxHealth() * assistant.retreatShare()   // [pa35] braver with a closer bond (the Player AI Assistant)
             && (assistant.getTarget() != null
                 || assistant.tickCount - assistant.lastDamageTick() < 100)) {
             return true;

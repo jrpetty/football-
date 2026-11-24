@@ -146,6 +146,8 @@ public final class PaOrders {
         }
         // [pa33b] lip, a kind word, or "tell me a joke": answered in kind. With a real order in it, the order first.
         PaQuips.Comeback cb = PaBanter.comeback(text);
+        if (cb == PaQuips.Comeback.PRAISE || cb == PaQuips.Comeback.LOVE) PaBondAct.event(a, PaBond.Event.PRAISED);    // [pa35] the bond
+        if (cb == PaQuips.Comeback.INSULT && a.mind.toneHeat.heat() >= 3) PaBondAct.event(a, PaBond.Event.INSULTED);   // constant insults only: banter's fine
         if (cb != null) {
             boolean order = reading.clarify() == null && reading.steps().stream().anyMatch(st -> st.kind().queued()
                 || st.kind() == Kind.FOLLOW || st.kind() == Kind.STAY || st.kind() == Kind.COME || st.kind() == Kind.GUARD_ME);

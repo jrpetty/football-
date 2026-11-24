@@ -30,7 +30,7 @@ public class PaScreen extends Screen {
 
     static final int BRAND = 0xFF1F8A7A, BRAND_LIGHT = 0xFF2BB5A0, BRAND_WASH = 0xFFD7EEEA, HEADER = 0xFF173B40;
     private static final String[] TABS = {"talk", "orders", "jobs", "pack", "stats", "memory", "look", "settings"};          // [pa33c-2b] [pa35] Memory
-    private static final String[] TAB_LABELS = {"Talk", "Orders", "Jobs", "Pack", "Stats", "Memory", "Look", "Settings"};
+    private static final String[] TAB_LABELS = {"Talk", "Orders", "Jobs", "Pack", "Progress", "Memory", "Look", "Settings"};   // [pa35] Stats rebuilt as Progress
     /** [pa33b] The personality triangle (About) and the look preview's turn (Look). */
     private final PaTriangle triangle = new PaTriangle();
     private float lookYaw;
@@ -226,7 +226,8 @@ public class PaScreen extends Screen {
             UiStyle.topTab(g, tx, top + 29, tw, 14, UiStyle.State.of(true, on, over));
             g.drawString(font, label, tx + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD / 2, top + 32, on ? UiStyle.TEXT : muted(), false);
             final String t = TABS[i];
-            zone(tx, top + 29, tw, 14, () -> { tab = t; scroll = 0; picker = ""; pick.clear(); confirmDismiss = false; PaClientConfig.set(PaClientConfig.LASTTAB, t); }, "");
+            zone(tx, top + 29, tw, 14, () -> { tab = t; scroll = 0; picker = ""; pick.clear(); confirmDismiss = false; PaClientConfig.set(PaClientConfig.LASTTAB, t);
+                if (t.equals("stats") && !PaClientConfig.get(PaClientConfig.PROGRESSTOUR, false) && progressTip < 0) progressTip = 0; }, "");   // [pa35] three tips, once
             tx += tw + 2;
         }
     }
@@ -814,72 +815,235 @@ public class PaScreen extends Screen {
 
     // ------------------------------------------------------------------ [pa33c-2b] the Stats tab
 
+    // ------------------------------------------------------------------ [pa35] the Progress tab: everything about its levels, at a glance
+
+    private static final java.util.Map<String, net.minecraft.world.item.ItemStack> ICONS = new java.util.HashMap<>();
+
+    private static net.minecraft.world.item.ItemStack icon(String id) {
+        return ICONS.computeIfAbsent(id, k -> {
+            var rl = net.minecraft.resources.ResourceLocation.tryParse("minecraft:" + k);
+            var it = rl == null ? null : net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
+            return it == null || it == net.minecraft.world.item.Items.AIR ? new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOOK) : new net.minecraft.world.item.ItemStack(it);
+        });
+    }
+
+    /** A small padlock over a locked unlock's icon. */
+    private static void padlock(GuiGraphics g, int x, int y) {
+        g.fill(x + 1, y + 3, x + 7, y + 8, 0xFF4A4A4A);
+        g.fill(x + 2, y, x + 6, y + 1, 0xFF4A4A4A);
+        g.fill(x + 1, y + 1, x + 2, y + 3, 0xFF4A4A4A);
+        g.fill(x + 6, y + 1, x + 7, y + 3, 0xFF4A4A4A);
+        g.fill(x + 3, y + 5, x + 5, y + 7, 0xFFE0C060);
+    }
+
+    private int progressTip = -1;   // the first-open tour's step (-1 none)
+
     private int stats(GuiGraphics g, CompoundTag s, int x, int y, int iw, int mx, int my) {
-        int half = iw >= 360 ? iw / 2 - 6 : iw, cy = y;
-        UiStyle.heading(g, font, s.getString("name") + ", level " + s.getInt("level"), x, cy, half);
-        cy += 14;
+        int lv = Math.max(1, s.getInt("level")), cy = y;
+        // 1. where it stands: its level, the bar, the time to the next, and the next unlock called out
+        UiStyle.heading(g, font, s.getString("name") + ", level " + lv + " of 10", x, cy, iw);
+        cy += 13;
         int xp = s.getInt("xp"), lo = s.getInt("xpHere"), hi = Math.max(lo + 1, s.getInt("xpNext"));
-        float part = Math.max(0, Math.min(1, (xp - lo) / (float) (hi - lo)));
-        int bw = Math.min(half, 200);
-        g.fill(x, cy, x + bw, cy + 7, 0xFFB9C7C4);
-        g.fill(x, cy, x + Math.round(bw * part), cy + 7, BRAND_LIGHT);
-        if (in(mx, my, x, cy, bw, 7)) tipNow = xp + " xp; level " + (s.getInt("level") + 1) + " at " + hi;
+        float part = lv >= 10 ? 1 : Math.max(0, Math.min(1, (xp - lo) / (float) (hi - lo)));
+        g.fill(x, cy, x + iw, cy + 8, 0xFFB9C7C4);
+        g.fill(x, cy, x + Math.round(iw * part), cy + 8, BRAND_LIGHT);
+        if (in(mx, my, x, cy, iw, 8)) tipNow = xp + " xp. Level " + Math.min(10, lv + 1) + " at " + hi + ".";
+        cy += 11;
+        String when = lv >= 10 ? xp + " xp: the top" : (hi - xp) + " xp to level " + (lv + 1) + ", " + s.getString("timeNext");
+        g.drawString(font, UiStyle.clip(font, when, iw), x, cy, UiStyle.TEXT, false);
+        cy += 12;
+        String nu = s.getString("nextUnlock");
+        int nh = 10 * Math.max(1, font.split(Component.literal(nu), iw - 10).size()) + 6;
+        g.fill(x, cy, x + iw, cy + nh, BRAND_WASH);
+        g.fill(x, cy, x + 2, cy + nh, BRAND);
+        cy = para(g, nu, x + 6, cy + 3, iw - 10, UiStyle.TEXT) + 4;
+        if (progressTip == 0) cy = tourTip(g, "The bar is its level; the box says what the next one opens.", x, cy, iw, mx, my);
+        // 2. the track: ten levels, each with its unlocks as icons (padlocked till reached), and the hours of play to each
+        UiStyle.heading(g, font, "The ladder", x, cy, iw);
+        cy += 13;
+        int col = com.jrpetty.mcassistant.pa.PaLayout.trackColumn(iw), trackTop = cy;
+        ListTag curve = s.getList("curve", Tag.TAG_STRING);
+        List<CompoundTag> unl = new ArrayList<>();
+        for (Tag t : s.getList("unlocks", Tag.TAG_COMPOUND)) unl.add((CompoundTag) t);
+        int maxRows = 1;
+        for (int l = 1; l <= 10; l++) { int n = 0; for (CompoundTag u : unl) if (u.getInt("lv") == l) n++; maxRows = Math.max(maxRows, (n + 1) / 2); }
+        int rowsShown = Math.min(maxRows, 5);
+        for (int l = 1; l <= 10; l++) {
+            int cx = x + (l - 1) * col;
+            boolean here = l == lv, got = l <= lv;
+            g.fill(cx + 1, cy, cx + col - 1, cy + 11, here ? BRAND : got ? 0xFF9FD8CE : 0xFFD8D8D8);
+            String num = "L" + l;
+            g.drawString(font, num, cx + (col - font.width(num)) / 2, cy + 2, here ? 0xFFFFFFFF : UiStyle.TEXT, false);
+            if (in(mx, my, cx, cy, col, 11)) tipNow = l == 1 ? "Where it starts" : "About " + (curve.size() >= l ? curve.getString(l - 1) : "?") + " h of ordinary play from the start";
+            int k = 0;
+            for (CompoundTag u : unl) {
+                if (u.getInt("lv") != l) continue;
+                if (k >= rowsShown * 2) { k++; continue; }
+                int ix = cx + (col >= 34 ? (k % 2) * 16 + (col - 32) / 2 : (col - 16) / 2), iy = cy + 13 + (col >= 34 ? (k / 2) : k) * 17;
+                if (col < 34 && k >= rowsShown) { k++; continue; }
+                g.renderItem(icon(u.getString("i")), ix, iy);
+                if (!got) {
+                    g.pose().pushPose();
+                    g.pose().translate(0, 0, 200);
+                    g.fill(ix, iy, ix + 16, iy + 16, 0x99E6E6E6);
+                    padlock(g, ix + 9, iy + 8);
+                    g.pose().popPose();
+                }
+                if (in(mx, my, ix, iy, 16, 16)) tipNow = u.getString("l") + (got ? " (yours)" : " (level " + l + ")");
+                k++;
+            }
+            int shownK = Math.min(k, col >= 34 ? rowsShown * 2 : rowsShown);
+            if (k > shownK) {
+                String more = "+" + (k - shownK);
+                g.drawString(font, more, cx + (col - font.width(more)) / 2, cy + 13 + rowsShown * 17, faint(), false);
+                if (in(mx, my, cx, cy + 13 + rowsShown * 17, col, 9)) {
+                    StringBuilder b2 = new StringBuilder("Level " + l + ": ");
+                    for (CompoundTag u : unl) if (u.getInt("lv") == l) b2.append(u.getString("l")).append("; ");
+                    tipNow = b2.toString();
+                }
+            }
+        }
+        cy += 13 + rowsShown * 17 + 10;
+        // the curve: hours of play to each level (a gentle line over the columns)
+        int ch = 22, baseY = cy + ch;
+        double top = 1;
+        for (int l = 1; l <= Math.min(10, curve.size()); l++) top = Math.max(top, Double.parseDouble(curve.getString(l - 1)));
+        for (int l = 2; l <= Math.min(10, curve.size()); l++) {
+            int x1 = x + (l - 2) * col + col / 2, x2 = x + (l - 1) * col + col / 2;
+            int y1 = baseY - (int) Math.round(ch * Double.parseDouble(curve.getString(l - 2)) / top), y2 = baseY - (int) Math.round(ch * Double.parseDouble(curve.getString(l - 1)) / top);
+            int steps = Math.max(1, x2 - x1);
+            for (int i = 0; i <= steps; i++) { int px = x1 + i, py = y1 + (y2 - y1) * i / steps; g.fill(px, py, px + 1, py + 2, l <= lv ? BRAND : 0xFFA0A0A0); }
+        }
+        g.drawString(font, "hours of play to each level", x, baseY + 3, faint(), false);
+        String last = curve.size() >= 10 ? "about " + Math.round(Double.parseDouble(curve.getString(9))) + " h to level 10" : "";
+        g.drawString(font, last, x + iw - font.width(last), baseY + 3, faint(), false);
+        cy = baseY + 16;
+        if (progressTip == 1) cy = tourTip(g, "Each column is a level: what it opens, padlocked until it's reached. Hover any icon.", x, cy, iw, mx, my);
+        // 3. what grows: now, next level, level 10
+        UiStyle.heading(g, font, "What grows", x, cy, iw);
+        cy += 13;
+        int c1 = x + Math.max(90, iw * 38 / 100), cw = (x + iw - c1) / 3;
+        g.drawString(font, "Now", c1, cy, muted(), false);
+        g.drawString(font, "Next", c1 + cw, cy, muted(), false);
+        g.drawString(font, "Level 10", c1 + 2 * cw, cy, muted(), false);
+        cy += 11;
+        boolean shade = false;
+        for (Tag t : s.getList("metrics", Tag.TAG_COMPOUND)) {
+            CompoundTag m = (CompoundTag) t;
+            if (shade) g.fill(x - 2, cy - 1, x + iw + 2, cy + 10, 0x10000000);
+            shade = !shade;
+            g.drawString(font, UiStyle.clip(font, m.getString("l"), c1 - x - 4), x, cy, UiStyle.TEXT, false);
+            if (!m.contains("next")) g.drawString(font, UiStyle.clip(font, m.getString("now"), x + iw - c1), c1, cy, BRAND, false);
+            else {
+                g.drawString(font, UiStyle.clip(font, m.getString("now"), cw - 4), c1, cy, UiStyle.TEXT, false);
+                g.drawString(font, UiStyle.clip(font, m.getString("next"), cw - 4), c1 + cw, cy, m.getBoolean("up") ? 0xFF15591E : faint(), false);
+                g.drawString(font, UiStyle.clip(font, m.getString("top"), cw - 4), c1 + 2 * cw, cy, faint(), false);
+            }
+            if (in(mx, my, x, cy - 1, iw, 11)) tipNow = m.getString("tip");
+            cy += 11;
+        }
+        cy += 6;
+        if (progressTip == 2) cy = tourTip(g, "What gets better with each level. Breaking blocks never does: it digs as you would, by the tool.", x, cy, iw, mx, my);
+        // 4. where its experience comes from lately
+        UiStyle.heading(g, font, "Where its experience comes from", x, cy, iw);
+        cy += 13;
+        ListTag src = s.getList("sources", Tag.TAG_COMPOUND);
+        if (src.isEmpty()) cy = para(g, "Nothing lately. Varied work pays best: the same job over and over earns less until it does something else.", x, cy, iw, faint());
+        for (Tag t : src) {
+            CompoundTag c = (CompoundTag) t;
+            float share = c.getFloat("share");
+            g.fill(x, cy + 2, x + 30, cy + 7, 0xFFD8D8D8);
+            g.fill(x, cy + 2, x + Math.round(30 * share), cy + 7, share < 0.45F ? 0xFFB5543F : share < 0.8F ? 0xFFD2A338 : BRAND_LIGHT);
+            g.drawString(font, UiStyle.clip(font, c.getString("l") + "  (" + c.getInt("xp") + " xp)", iw - 36), x + 36, cy, UiStyle.TEXT, false);
+            cy += 11;
+        }
+        cy += 6;
+        // 5. the bond
+        int tier = s.getInt("bondTier");
+        String[] tiers = com.jrpetty.mcassistant.pa.PaBond.TIERS;
+        UiStyle.heading(g, font, "Your bond: " + tiers[Math.max(0, Math.min(4, tier))], x, cy, iw);
+        cy += 13;
+        int bw = Math.min(iw, 220);
+        for (int k = 0; k < 5; k++) {
+            int sx = x + k * bw / 5, ex = x + (k + 1) * bw / 5 - 2;
+            g.fill(sx, cy, ex, cy + 6, k < tier ? BRAND : k == tier ? 0xFF9FD8CE : 0xFFD8D8D8);
+            if (k == tier && tier < 4) g.fill(sx, cy, sx + Math.round((ex - sx) * s.getFloat("bondNext")), cy + 6, BRAND);
+            if (in(mx, my, sx, cy, ex - sx, 6)) tipNow = tiers[k];
+        }
         cy += 10;
-        cy = line(g, (s.getInt("level") >= 10 ? xp + " xp  ·  the top level" : xp + " xp  ·  " + (hi - xp) + " to level " + (s.getInt("level") + 1))
-            + "  ·  " + s.getInt("done") + " jobs done for you", x, cy, half);
-        if (!s.getString("nextSkills").isEmpty()) cy = para(g, s.getString("nextSkills"), x, cy, half, BRAND);   // [pa33d] what the next level opens
+        ListTag eff = s.getList("bondEffects", Tag.TAG_STRING);
+        if (eff.isEmpty()) cy = para(g, "A stranger so far. Time together, feeding it and looking after it bring you closer.", x, cy, iw, faint());
+        for (Tag t : eff) cy = para(g, "\u2022 " + t.getAsString(), x, cy, iw, UiStyle.TEXT) - 2;
+        cy += 2;
+        cy = para(g, "Raises it: " + String.join(", ", com.jrpetty.mcassistant.pa.PaBond.RAISES).toLowerCase(java.util.Locale.ROOT) + ".", x, cy, iw, faint());
+        cy = para(g, "Lowers it, gently: " + String.join(", ", com.jrpetty.mcassistant.pa.PaBond.LOWERS).toLowerCase(java.util.Locale.ROOT) + ".", x, cy, iw, faint());
+        if (!s.getString("want").isEmpty()) cy = para(g, "Just now it wants " + s.getString("want") + ".", x, cy, iw, BRAND);
+        ListTag fav = s.getList("itsFavourites", Tag.TAG_STRING);
+        if (!fav.isEmpty()) {
+            List<String> f = new ArrayList<>();
+            for (Tag t : fav) f.add(t.getAsString());
+            cy = para(g, "Its favourites: " + String.join(", ", f) + " (a gift of one goes a long way).", x, cy, iw, faint());
+        }
+        button(g, "Our story and its memory  \u203A", x, cy, Math.min(170, iw), 13, mx, my, true, false, "The Memory tab: what you've told it, and the moments it kept",
+            () -> { tab = "memory"; scroll = 0; PaClientConfig.set(PaClientConfig.LASTTAB, "memory"); });
+        cy += 20;
+        // 6. its health, food and record
+        UiStyle.heading(g, font, "Health, food and record", x, cy, iw);
+        cy += 13;
         PlayerAssistantEntity a = PaClient.mine();
         float hp = a != null ? a.getHealth() : s.getFloat("hp"), max = a != null ? a.getMaxHealth() : Math.max(1, s.getFloat("maxHp"));
         int food = a != null ? a.food() : s.getInt("hunger");
         g.drawString(font, "Health", x, cy + 1, muted(), false);
         PaHud.hearts(g, x + 50 + 81, cy, hp, max, 10);
         g.drawString(font, (int) Math.ceil(hp) + "/" + (int) max, x + 140, cy + 1, UiStyle.TEXT, false);
-        cy += 2 + 10 * PaHud.heartRows(max);                           // [pa35] a second row from twenty health
+        cy += 2 + 10 * PaHud.heartRows(max);
         g.drawString(font, "Food", x, cy + 1, muted(), false);
         PaHud.food(g, x + 50 + 81, cy, food);
         g.drawString(font, food + "/20", x + 140, cy + 1, UiStyle.TEXT, false);
         cy += 14;
-        cy = line(g, "Hearts grow with its level, from 10 to 20 (a second row). Food in its pack: " + s.getInt("food") + ".", x, cy, half);
-        String where = s.getString("dim").replace("_", " ") + ", " + s.getInt("dist") + " blocks from you";
-        cy = line(g, "Where: " + where + "  ·  " + s.getString("mode"), x, cy, half);
-        if (!s.getString("bed").isEmpty()) cy = line(g, "Its bed: " + s.getString("bed"), x, cy, half);
-        if (!s.getString("home").isEmpty()) cy = line(g, "Its home: " + s.getString("home"), x, cy, half);
-        if (!s.getString("chunks").isEmpty()) cy = line(g, "Keeping " + s.getString("chunks"), x, cy, half);     // [pa33g]
-        cy = line(g, "Its bow: " + (s.getString("archery").isEmpty() ? "no arrows loosed yet" : s.getString("archery")), x, cy, half);
-        cy += 6;                                                          // [pa33g] what each level does, all of it real
-        UiStyle.heading(g, font, "What each level does", x, cy, half);
-        cy += 14;
-        cy = para(g, "Work: time off every job (mining, chopping, crafting). Walk: speed. Reach: blocks. React: how long it takes to notice a change. "
-            + "Bow: hits at 30 blocks on a standing / a strafing mob, worked out by trying it.", x, cy, half, faint());
-        int lvRow = s.getInt("level");
-        for (Tag t : s.getList("levelTable", Tag.TAG_STRING)) {
-            String row = t.getAsString();
-            boolean here = row.startsWith("L" + lvRow + " ");
-            g.drawString(font, UiStyle.clip(font, row, half), x, cy, here ? BRAND : lvRow > Integer.parseInt(row.substring(1, row.indexOf(' '))) ? UiStyle.TEXT : faint(), false);
-            cy += 10;
+        cy = line(g, s.getInt("done") + " jobs done for you. Food in its pack: " + s.getInt("food") + ". Its bow: " + (s.getString("archery").isEmpty() ? "no arrows loosed yet" : s.getString("archery")) + ".", x, cy, iw);
+        for (Tag t : s.getList("deeds", Tag.TAG_STRING)) cy = line(g, "\u2022 " + t.getAsString(), x, cy, iw);
+        if (!s.getString("today").isEmpty()) cy = line(g, "Today: " + s.getString("today"), x, cy, iw);
+        if (!s.getString("death").isEmpty()) cy = line(g, s.getString("death"), x, cy, iw);
+        // 7. operators: move any rung of the ladders
+        if (s.getBoolean("op")) {
+            cy += 6;
+            UiStyle.heading(g, font, "Ladders (operators)", x, cy, iw);
+            cy += 13;
+            cy = para(g, "The level each ore and piece of kit opens at, for every assistant on this server. The switch for both is in Settings, Advanced.", x, cy, iw, faint());
+            for (Tag t : s.getList("ladder", Tag.TAG_COMPOUND)) {
+                CompoundTag c = (CompoundTag) t;
+                int lvl = c.getInt("lv");
+                String key = c.getString("k");
+                g.drawString(font, UiStyle.clip(font, PaNetCap.cap(c.getString("l")), iw - 70), x, cy + 3, UiStyle.TEXT, false);
+                button(g, "-", x + iw - 64, cy, 13, 13, mx, my, lvl > 1, false, "", () -> rung(key, lvl - 1));
+                centred(g, "L" + lvl, x + iw - 36, cy + 3, UiStyle.TEXT);
+                button(g, "+", x + iw - 20, cy, 13, 13, mx, my, lvl < 10, false, "", () -> rung(key, lvl + 1));
+                cy += 15;
+            }
         }
-        int leftEnd = cy;
-        int sx = half == iw ? x : x + half + 12;
-        cy = half == iw ? cy + 6 : y;
-        UiStyle.heading(g, font, "Its skills", sx, cy, half);                // [pa33d] what each level opens, ticked when it has it
-        cy += 14;
-        int lvNow = s.getInt("level");
-        for (Tag t : s.getList("skills", Tag.TAG_COMPOUND)) {
-            CompoundTag c = (CompoundTag) t;
-            boolean got = lvNow >= c.getInt("lv");
-            String row = (got ? "\u2714 " : "L" + c.getInt("lv") + "  ") + c.getString("l");
-            g.drawString(font, UiStyle.clip(font, row, half), sx, cy, got ? UiStyle.TEXT : faint(), false);
-            cy += 10;
-        }
-        cy += 6;
-        UiStyle.heading(g, font, "Its record", sx, cy, half);
-        cy += 14;
-        ListTag deeds = s.getList("deeds", Tag.TAG_STRING);
-        if (deeds.isEmpty()) cy = line(g, "Nothing yet: give it a job.", sx, cy, half);
-        for (Tag t : deeds) cy = line(g, "• " + t.getAsString(), sx, cy, half);
-        if (!s.getString("today").isEmpty()) cy = line(g, "Today: " + s.getString("today"), sx, cy, half);
-        if (!s.getString("death").isEmpty()) cy = line(g, s.getString("death"), sx, cy, half);
-        return Math.max(leftEnd, cy) - y + 4;
+        if (progressTip >= 0 && progressTip > 2) progressTip = -1;
+        return cy - y + 4;
+    }
+
+    private void rung(String key, int level) {
+        CompoundTag t = new CompoundTag();
+        t.putString("rung", key);
+        t.putInt("rungLevel", level);
+        PaClient.send("admin", t);
+    }
+
+    /** One of the Progress tab's three first-open tips, with "Next" and "Got it" (never again). */
+    private int tourTip(GuiGraphics g, String text, int x, int cy, int iw, int mx, int my) {
+        List<FormattedCharSequence> lines = font.split(Component.literal(text), iw - 120);
+        int h = Math.max(16, lines.size() * 10 + 6);
+        g.fill(x, cy, x + iw, cy + h, 0xFF173B40);
+        int ly = cy + 4;
+        for (FormattedCharSequence l : lines) { g.drawString(font, l, x + 6, ly, 0xFFFFFFFF, false); ly += 10; }
+        button(g, progressTip < 2 ? "Next" : "Done", x + iw - 108, cy + (h - 13) / 2, 48, 13, mx, my, true, true, "", () -> progressTip++);
+        button(g, "Got it", x + iw - 56, cy + (h - 13) / 2, 52, 13, mx, my, true, false, "Don't show these tips again",
+            () -> { progressTip = -1; PaClientConfig.set(PaClientConfig.PROGRESSTOUR, true); });
+        return cy + h + 6;
     }
 
     // ------------------------------------------------------------------ [pa35] the Memory tab
@@ -992,6 +1156,13 @@ public class PaScreen extends Screen {
             }
             cy += 4;
         }
+        // [pa35] our story: the moments it kept on its own (firsts, close calls, big builds, anniversaries), newest first
+        ListTag story = s.getList("story", Tag.TAG_STRING);
+        UiStyle.heading(g, font, "Our story" + (story.isEmpty() ? "" : "  (" + story.size() + ")"), x, cy, iw);
+        if (in(mx, my, x, cy, iw, 10)) tipNow = "Moments it noted itself: firsts, close calls, big builds, anniversaries. It brings them up now and then.";
+        cy += 13;
+        if (story.isEmpty()) { g.drawString(font, UiStyle.clip(font, "Nothing yet. Go and do something worth remembering.", iw), x + 4, cy, faint(), false); cy += 14; }
+        for (Tag t : story) cy = para(g, t.getAsString(), x + 4, cy, iw - 4, UiStyle.TEXT) - 1;
         return cy - y + 4;
     }
 
@@ -1529,8 +1700,8 @@ public class PaScreen extends Screen {
             case "orders", "jobs" -> {
                 int tx = left + 6;
                 int idx = where.equals("orders") ? 1 : 2;
-                for (int i = 0; i < idx; i++) tx += font.width(TAB_LABELS[i]) + 16;
-                hx = tx; hy = top + 29; hw = font.width(TAB_LABELS[idx]) + 14; hh = 14;
+                for (int i = 0; i < idx; i++) tx += font.width(TAB_LABELS[i]) + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD + 2;
+                hx = tx; hy = top + 29; hw = font.width(TAB_LABELS[idx]) + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD; hh = 14;
             }
             case "mic" -> { hx = left + w - 60; hy = top + h - 36; hw = 54; hh = 20; }
             default -> { hx = left + w / 2 - 40; hy = top + h / 2 - 10; hw = 80; hh = 20; }

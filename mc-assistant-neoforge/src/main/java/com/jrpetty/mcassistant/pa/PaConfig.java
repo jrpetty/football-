@@ -176,7 +176,9 @@ public final class PaConfig {
         if (key != null) {
             PaMineLadder.Rung rung = null;
             for (PaMineLadder.Rung r : PaMineLadder.RUNGS) if (r.key().equals(key)) rung = r;
-            if (rung != null) { if (level == rung.level()) m.remove(key); else m.put(key, Math.max(1, Math.min(PaLevels.MAX, level))); }
+            int shipped = rung != null ? rung.level() : -1;
+            for (PaGearLadder.Rung g : PaGearLadder.RUNGS) if (g.key().equals(key)) shipped = g.level();
+            if (shipped > 0) { if (level == shipped) m.remove(key); else m.put(key, Math.max(1, Math.min(PaLevels.MAX, level))); }
         }
         try {
             if (on != null) { LADDER_ON.set(on); LADDER_ON.save(); }

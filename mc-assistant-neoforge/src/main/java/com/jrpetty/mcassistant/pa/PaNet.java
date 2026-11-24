@@ -275,6 +275,8 @@ public final class PaNet {
             t.putString("held", a.getMainHandItem().isEmpty() ? "nothing" : a.getMainHandItem().getHoverName().getString());
             t.putString("dim", a.level().dimension().location().getPath());
             PaMemoryAct.state(t, r, a, p);                                             // [pa35] the Memory tab
+            PaBondAct.state(t, r);                                                     // [pa35] the bond and our story
+            PaProgress.state(t, a, r);                                                 // [pa35] the Progress tab
             t.putInt("dist", (int) Math.sqrt(a.distanceToSqr(p)));
             PaOrders.Pending pend = PaOrders.pending(p.getUUID());
             if (pend != null) {

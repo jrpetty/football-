@@ -100,11 +100,14 @@ public final class PaPack {
                 if (ps.isEmpty()) return "";
                 if (args.contains("i") && i >= 0 && i < open && inv.get(i).isEmpty()) {
                     inv.set(i, ps.copy());
+                    PaBondAct.given(a, ps.copy());                                    // [pa35]
                     p.getInventory().setItem(j, ItemStack.EMPTY);
                     return "";
                 }
+                ItemStack gave = ps.copy();
                 ItemStack left = a.insertGiven(ps.copy());
                 p.getInventory().setItem(j, left);
+                if (left.getCount() < gave.getCount()) PaBondAct.given(a, gave);   // [pa35] fed, a gift, its favourite, kit; a locked weapon said so
                 return left.isEmpty() ? "" : "Its pack is full" + (open < SIZE ? " (its third row opens at level " + rowLevel(2) + ")." : ".");
             }
             case "move" -> {                                          // one of its slots to another (swapped)

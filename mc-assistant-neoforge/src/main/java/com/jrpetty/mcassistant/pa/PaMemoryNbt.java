@@ -33,6 +33,40 @@ public final class PaMemoryNbt {
         }
     }
 
+    /** [pa35] The bond: its number, favourites, want, firsts, our story, when its player was last seen. */
+    public static CompoundTag saveBond(PaBond.State s) {
+        CompoundTag t = new CompoundTag();
+        t.putDouble("B", s.bond);
+        t.putString("Want", s.want);
+        t.putLong("WantSince", s.wantSince);
+        t.putLong("WantAgain", s.wantAgainAt);
+        t.putLong("Seen", s.lastSeen);
+        ListTag f = new ListTag();
+        for (String x : s.favourites) f.add(net.minecraft.nbt.StringTag.valueOf(x));
+        t.put("Fav", f);
+        ListTag fi = new ListTag();
+        for (String x : s.firsts) fi.add(net.minecraft.nbt.StringTag.valueOf(x));
+        t.put("Firsts", fi);
+        ListTag st = new ListTag();
+        for (String[] e : s.story) { CompoundTag c = new CompoundTag(); c.putString("D", e[0]); c.putString("W", e[1]); c.putString("T", e[2]); st.add(c); }
+        t.put("Story", st);
+        return t;
+    }
+
+    public static void loadBond(PaBond.State s, CompoundTag t) {
+        s.bond = t.contains("B") ? t.getDouble("B") : 5;
+        s.want = t.getString("Want");
+        s.wantSince = t.getLong("WantSince");
+        s.wantAgainAt = t.getLong("WantAgain");
+        s.lastSeen = t.getLong("Seen");
+        s.favourites.clear();
+        for (Tag x : t.getList("Fav", Tag.TAG_STRING)) s.favourites.add(x.getAsString());
+        s.firsts.clear();
+        for (Tag x : t.getList("Firsts", Tag.TAG_STRING)) s.firsts.add(x.getAsString());
+        s.story.clear();
+        for (Tag x : t.getList("Story", Tag.TAG_COMPOUND)) { CompoundTag c = (CompoundTag) x; s.story.add(new String[]{c.getString("D"), c.getString("W"), c.getString("T")}); }
+    }
+
     static CompoundTag save(Entry e) {
         CompoundTag t = new CompoundTag();
         t.putInt("Id", e.id);

@@ -22,7 +22,7 @@ public final class PaClientConfig {
     public static final ModConfigSpec.BooleanValue SHAREPINGS, ACTQUICK, VOICEPING, CONTRAST, SUBTITLES, HEARTBAR;
     /** [pa35] The natural voice: fetched automatically (auto) unless the player said not to (declined); the basic system voice only if picked; a woman's or a man's voice. */
     public static final ModConfigSpec.ConfigValue<String> VOICEPACK;
-    public static final ModConfigSpec.BooleanValue BASICVOICE, VOICEWOMAN, VOICEREADYSAID;
+    public static final ModConfigSpec.BooleanValue BASICVOICE, VOICEWOMAN, VOICEREADYSAID, PROGRESSTOUR;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -67,6 +67,7 @@ public final class PaClientConfig {
         LASTTAB = b.comment("[pa33c-2b] The panel tab you last had open.").define("lastTab", "talk");
         HUD = b.comment("A small line on screen saying what your assistant is doing.").define("hud", true);
         TOURED = b.comment("You have seen the assistant's tour.").define("toured", false);
+        PROGRESSTOUR = b.comment("[pa35] You have seen (or dismissed) the Progress tab's three tips.").define("progressTips", false);
         b.pop();
         SPEC = b.build();
     }
