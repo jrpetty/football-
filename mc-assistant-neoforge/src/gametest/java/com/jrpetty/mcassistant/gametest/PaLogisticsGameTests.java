@@ -172,10 +172,13 @@ public class PaLogisticsGameTests {
         int each = PaPace.breakTicks(probe, Blocks.STONE.defaultBlockState(), level, new BlockPos(x + 8, y, Z));
         a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, held);
         String[] hud = {""};
-        helper.onEachTick(() -> { if (a.state() != null && a.state().contains("/100")) hud[0] = a.state(); });
+        helper.onEachTick(() -> {
+            if (a.state() != null && a.state().contains("/100")) hud[0] = a.state();
+            if (level.getGameTime() % 400 == 0) Kit.log("[VT] pl01 t+" + (level.getGameTime() - t0) + " " + a.state() + " stone in pack " + a.countMatching(st -> st.is(Items.COBBLESTONE)) + " chest " + in(level, chest, Items.COBBLESTONE) + " jobs " + a.jobLabels());
+        });
         helper.succeedWhen(() -> {
             int n = in(level, chest, Items.COBBLESTONE) + in(level, chest, Items.STONE);
-            helper.assertTrue(n >= 100 && a.plan.idle(), "100 stone in the chest: " + n + " (" + a.state() + "; " + lastWords(a) + ")");
+            helper.assertTrue(n >= 100 && a.plan.idle(), "100 stone in the chest: " + n + " (" + a.state() + "; " + allWords(a) + ")");
             long took = level.getGameTime() - t0;
             Kit.log("[VT] pl01 chest holds " + n + " stone after " + took + " ticks (vanilla floor " + 100 * each + " = 100 x " + each + "); hud seen \"" + hud[0] + "\"; said " + allWords(a));
             helper.assertTrue(n == 100, "exactly 100, not more: " + n);
@@ -412,9 +415,10 @@ public class PaLogisticsGameTests {
         a.setPaXpForTests(PaLevels.xpFor(4));
         say(p, a, "gather 8 iron and put it in this chest", chest);
         helper.assertTrue(a.plan.total() == 1, "level 4 starts: " + lastWords(a));
+        helper.onEachTick(() -> { if (level.getGameTime() % 400 == 0) Kit.log("[VT] pl10 " + a.state() + " iron in pack " + a.countMatching(st -> st.is(Items.RAW_IRON)) + " chest " + in(level, chest, Items.RAW_IRON) + " jobs " + a.jobLabels() + " at " + a.blockPosition().toShortString()); });
         helper.succeedWhen(() -> {
             int n = in(level, chest, Items.RAW_IRON);
-            helper.assertTrue(n >= 8 && a.plan.idle(), "8 raw iron in the chest: " + n + " (" + a.state() + "; " + lastWords(a) + ")");
+            helper.assertTrue(n >= 8 && a.plan.idle(), "8 raw iron in the chest: " + n + " (" + a.state() + "; " + allWords(a) + ")");
             Kit.log("[VT] pl10 " + n + " raw iron; said " + allWords(a));
         });
     }

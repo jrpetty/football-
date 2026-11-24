@@ -535,9 +535,9 @@ Off. I'll suffer the weight.
 Stopped. I'll carry the load.
 == logi.autodrop_off@serious
 Auto drop-off off.
-Automatic drop-off disabled.
+Automatic drop-off switched off.
 I'll no longer unload on my own.
-Disabled.
+Switched off.
 Noted: no automatic drop-offs.
 Off.
 
@@ -599,7 +599,7 @@ Trip {trip}. {n} moved. My feet have opinions.
 Trip {trip}. The road knows me by name now.
 Another one done. {n} in all. More to come.
 {trip} trips. Still going. Still hauling.
-Trip {trip}. Don't count the steps, they're depressing.
+Trip {trip}. Don't count the steps. I do, and I regret it.
 == logi.haul_trip@serious
 Trip {trip} complete: {n} moved.
 {n} moved in {trip} trips.

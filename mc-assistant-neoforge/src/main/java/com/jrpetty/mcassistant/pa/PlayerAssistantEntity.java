@@ -281,6 +281,12 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     protected boolean onCrewRegister() { return false; }
 
+    /** [pa36] Torches it carries for a delivery (a fetch, a fill, a craft into a chest) aren't for lighting its way. */
+    @Override
+    protected boolean keepsItsLights() {
+        return (task != null && task.kind == PaTask.Kind.LOGI) || plan.all().stream().anyMatch(s -> s.task != null && s.task.kind == PaTask.Kind.LOGI);
+    }
+
     @Override
     public boolean levelsBuildSite() { return true; }
 

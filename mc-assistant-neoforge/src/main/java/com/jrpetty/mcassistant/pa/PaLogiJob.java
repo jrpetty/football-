@@ -638,7 +638,7 @@ public final class PaLogiJob {
                 movingNow = got;
             }
             case "unload" -> {
-                int r = run.unload(a, p, movingNow);
+                int r = run.unload(a, p, Math.max(0, Math.min(movingNow - run.batch, target - moved)));
                 if (r == 0) return;
                 if (r < 0) { fail(a, PaLogiTalk.line(a, "logi.full_none", "chest", chestName(a))); return; }
                 run.close(a);
@@ -736,7 +736,7 @@ public final class PaLogiJob {
             phase = "go";
         }
         if (phase.equals("getfuel")) {
-            int r = run.load(a, PaLogiItems::fuel, 64);
+            int r = run.load(a, PaLogiItems::fuel, Math.max(0, 64 - count(a, PaLogiItems::fuel)));
             if (r == 0) return;
             run.close(a);
             run = null;
@@ -847,7 +847,7 @@ public final class PaLogiJob {
                 smeltDeadline = a.level().getGameTime() + (long) (per * 220 + 600);
             }
             case "smeltfuel" -> {
-                int r = run.load(a, PaLogiItems::fuel, 32);
+                int r = run.load(a, PaLogiItems::fuel, Math.max(0, 32 - count(a, PaLogiItems::fuel)));
                 if (r == 0) return;
                 run.close(a);
                 moved = 0;
@@ -1044,7 +1044,7 @@ public final class PaLogiJob {
                 phase = "unload";
             }
             case "unload" -> {
-                int r = run.unload(a, p, movingNow);
+                int r = run.unload(a, p, Math.max(0, movingNow - run.batch));
                 if (r == 0) return;
                 if (r < 0) { fail(a, PaLogiTalk.line(a, "logi.full_none", "chest", chestName(a))); return; }
                 run.close(a);
@@ -1214,7 +1214,7 @@ public final class PaLogiJob {
 
         /** Its pack's matching stacks in, at most {@code most} (-1 all): 1 done, 0 working, -1 nowhere left with room. */
         int unload(PlayerAssistantEntity a, Predicate<ItemStack> p, int most) {
-            if (most == 0 || count(a, p) == 0 || (most > 0 && batch >= most)) { close(a); return 1; }
+            if (most == 0 || count(a, p) == 0) { close(a); return 1; }       // most: what's still to go in (-1 all), the caller's count
             if (idx >= list.size() && at == null) {
                 if (noOverflow) return 1;
                 BlockPos last = list.isEmpty() ? a.blockPosition() : list.get(list.size() - 1);
@@ -1232,7 +1232,7 @@ public final class PaLogiJob {
             Container c = PaContainers.open(a, at);
             if (c == null) { next(a); return 0; }
             if (!PaLogistics.handFree(a)) return 0;
-            int cap = most < 0 ? 64 : Math.min(64, most - batch);
+            int cap = most < 0 ? 64 : Math.min(64, most);
             int[] n = {0};
             PaLogistics.act(a, () -> { n[0] = PaContainers.putOne(a, c, p, cap, false); return n[0] > 0; });
             if (n[0] > 0) {
@@ -1247,7 +1247,7 @@ public final class PaLogiJob {
 
         /** Matching stacks out into its pack, at most {@code most} (-1 all): 1 done (enough, or the list ran out), 0 working, -1 its pack is full. */
         int load(PlayerAssistantEntity a, Predicate<ItemStack> p, int most) {
-            if (most == 0 || (most > 0 && batch >= most)) { close(a); return 1; }
+            if (most == 0) { close(a); return 1; }                             // most: what's still wanted (-1 all), the caller's count
             if (idx >= list.size() && at == null) return 1;
             int v = arrive(a);
             if (v < 0) return 0;
@@ -1255,7 +1255,7 @@ public final class PaLogiJob {
             Container c = PaContainers.open(a, at);
             if (c == null || PaContainers.count(c, p) == 0) { next(a); return 0; }
             if (!PaLogistics.handFree(a)) return 0;
-            int cap = most < 0 ? 64 : Math.min(64, most - batch);
+            int cap = most < 0 ? 64 : Math.min(64, most);
             int[] n = {0};
             PaLogistics.act(a, () -> { n[0] = PaContainers.takeOne(a, c, p, cap, 0, c.getContainerSize()); return n[0] > 0; });
             if (n[0] > 0) {

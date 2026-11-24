@@ -112,7 +112,7 @@ public final class PaCraft {
             int left = need - use;
             if (left <= 0) continue;
             Item make = rep != null ? rep : first(part);
-            if (make != null && makeable(level, make, left, pool, new HashSet<>(List.of(item)), 1)) continue;
+            if (makePart(level, part, left, pool, new HashSet<>(List.of(item)), 1)) continue;
             miss.merge(make == null ? Items.BARRIER : make, left, Integer::sum);
         }
         return miss;
@@ -135,17 +135,53 @@ public final class PaCraft {
                 boolean ok = true;
                 for (RecipeBook.Part part : craft.parts()) {
                     int need = part.count() * crafts;
-                    Item rep = choose(trial, part);
-                    if (rep == null) rep = first(part);
-                    if (rep == null || !makeable(level, rep, need, trial, path, depth + 1)) { ok = false; break; }
+                    if (!makePart(level, part, need, trial, path, depth + 1)) { ok = false; break; }
                 }
                 if (ok) { pool.clear(); pool.putAll(trial); return true; }
             }
-            Item raw = smeltFrom(level, item);
-            return raw != null && makeable(level, raw, n, pool, path, depth + 1);
+            for (Item raw : smeltFroms(level, item, pool)) {
+                Map<Item, Integer> trial = new LinkedHashMap<>(pool);
+                if (makeable(level, raw, n, trial, path, depth + 1)) { pool.clear(); pool.putAll(trial); return true; }
+            }
+            return false;
         } finally {
             path.remove(item);
         }
+    }
+
+    /**
+     * Can it come by {@code need} of a recipe part (any of the items it accepts: "any planks" is oak or birch or...)?
+     * What it has first, then each kind it could make from the pool, tried on a copy so a dead end costs nothing.
+     */
+    private static boolean makePart(Level level, RecipeBook.Part part, int need, Map<Item, Integer> pool, Set<Item> path, int depth) {
+        Item rep = choose(pool, part);
+        if (rep != null) {
+            Map<Item, Integer> trial = new LinkedHashMap<>(pool);
+            if (makeable(level, rep, need, trial, path, depth)) { pool.clear(); pool.putAll(trial); return true; }
+        }
+        ItemStack[] cands = part.ingredient().getItems();
+        for (int i = 0; i < cands.length && i < 48; i++) {
+            Item c = cands[i].getItem();
+            if (c == rep) continue;
+            Map<Item, Integer> trial = new LinkedHashMap<>(pool);
+            if (makeable(level, c, need, trial, path, depth)) { pool.clear(); pool.putAll(trial); return true; }
+        }
+        return false;
+    }
+
+    /** What a furnace makes this from, the kinds it has first (raw iron before iron ore). */
+    static List<Item> smeltFroms(Level level, Item out, Map<Item, Integer> pool) {
+        List<Item> have = new ArrayList<>(), rest = new ArrayList<>();
+        for (RecipeHolder<net.minecraft.world.item.crafting.SmeltingRecipe> h : level.getRecipeManager().getAllRecipesFor(RecipeType.SMELTING)) {
+            if (!h.value().getResultItem(level.registryAccess()).is(out) || h.value().getIngredients().isEmpty()) continue;
+            for (ItemStack in : h.value().getIngredients().get(0).getItems()) {
+                Item it = in.getItem();
+                if (have.contains(it) || rest.contains(it)) continue;
+                if (pool.getOrDefault(it, 0) > 0) have.add(it); else rest.add(it);
+            }
+        }
+        have.addAll(rest.subList(0, Math.min(4, rest.size())));
+        return have;
     }
 
     private static boolean take(Map<Item, Integer> pool, Item item, int n) {

@@ -3922,6 +3922,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * The question is asked of the block itself now, so a light source added by
      * another mod lights a mine here without anybody being told about it.
      */
+    /** [pa36] Carrying lights for someone else just now (a delivery): they're not its to put down. */
+    protected boolean keepsItsLights() {
+        return false;
+    }
+
     private void placeTorchNearby() {
         ItemStack lamp = ItemStack.EMPTY;
         for (ItemStack st : inventory) {
@@ -4254,7 +4259,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
         }
         // A dark spot on its own ground is where the next creeper comes from.
-        if (countCarried(com.jrpetty.mcassistant.BlockLore::lightSource) > 0
+        if (countCarried(com.jrpetty.mcassistant.BlockLore::lightSource) > 0 && !keepsItsLights()   // [pa36]
             && level().getMaxLocalRawBrightness(blockPosition()) < 6
             && inZone(blockPosition())) {
             placeTorchNearby();
