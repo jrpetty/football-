@@ -3928,6 +3928,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     private void placeTorchNearby() {
+        if (keepsItsLights()) return;                                         // [pa36] a delivery's lights aren't its to put down
         ItemStack lamp = ItemStack.EMPTY;
         for (ItemStack st : inventory) {
             if (com.jrpetty.mcassistant.BlockLore.lightSource(st)) { lamp = st; break; }
@@ -4259,7 +4260,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
         }
         // A dark spot on its own ground is where the next creeper comes from.
-        if (countCarried(com.jrpetty.mcassistant.BlockLore::lightSource) > 0 && !keepsItsLights()   // [pa36]
+        if (countCarried(com.jrpetty.mcassistant.BlockLore::lightSource) > 0
             && level().getMaxLocalRawBrightness(blockPosition()) < 6
             && inZone(blockPosition())) {
             placeTorchNearby();
@@ -5644,6 +5645,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private void torchIfDark() {
         BlockPos pos = blockPosition();
         if (carriesABuilding()) return;            // [districts] its torches are the building's lamps (see carriesABuilding)
+        if (keepsItsLights()) return;              // [pa36] nor a delivery's
         if (level().getMaxLocalRawBrightness(pos) >= 6) return;
         if (!level().getBlockState(pos).canBeReplaced()) return;
         if (!level().getBlockState(pos.below()).isFaceSturdy(level(), pos.below(), net.minecraft.core.Direction.UP)) return;

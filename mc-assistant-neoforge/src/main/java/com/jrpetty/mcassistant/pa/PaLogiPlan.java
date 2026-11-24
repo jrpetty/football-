@@ -509,6 +509,7 @@ final class PaLogiPlan {
         s.dim = dim;
         s.item = item;
         s.n = n;
+        s.every = Math.max(200, Integer.getInteger("mca.pa.stockEvery", s.every));   // filming only: a quicker check
         s.next = a.level().getGameTime() + s.every;
         st.stock.add(s);
         PaStore.learn(owner, dim, b, PaContainers.blockId(a.level(), b), a.level().getGameTime());
