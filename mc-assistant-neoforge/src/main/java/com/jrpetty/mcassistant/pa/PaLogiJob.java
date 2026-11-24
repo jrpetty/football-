@@ -112,10 +112,16 @@ public final class PaLogiJob {
             case HAUL -> b.append("trip ").append(trips + 1).append(" · ").append(moved).append(" moved");
             case SORT, FUEL -> { if (target > 0) b.append(Math.min(moved, target)).append('/').append(target); }
             case SMELT -> { if (smeltIn > 0) b.append(smeltOut).append('/').append(smeltIn); }
+            case FILL -> {
+                // what it has got so far (in its pack and in the chest), then how much is in the chest already
+                int got = Math.min(target, moved + (finished ? 0 : count(a, pred(a))));
+                b.append(Math.max(0, got)).append('/').append(target);
+                if (moved > 0 && moved < target) b.append(" · ").append(moved).append(" in");
+                if (trips > 0) b.append(" · trip ").append(trips);
+            }
             default -> {
                 if (target > 0) b.append(Math.min(moved, target)).append('/').append(target);
                 else if (moved > 0) b.append(moved).append(" moved");
-                if (o.op() == Op.FILL && trips > 0) b.append(" · trip ").append(trips);
             }
         }
         if (o.op() == Op.FILL && !to.isEmpty() && a.level().isLoaded(to.get(0))) {
@@ -129,6 +135,12 @@ public final class PaLogiJob {
         if (o.op() == Op.SMELT) return smeltIn > 0 ? Math.min(100, 100 * smeltOut / smeltIn) : -1;
         if (target > 0) return Math.min(100, moved * 100 / target);
         return -1;
+    }
+
+    /** FILL's progress counts what it has gathered too (the HUD's "64/100" while it's still digging). */
+    int percent(PlayerAssistantEntity a) {
+        if (o.op() == Op.FILL && target > 0) return Math.min(100, Math.min(target, moved + (finished ? 0 : count(a, pred(a)))) * 100 / target);
+        return percent();
     }
 
     // ------------------------------------------------------------------ the goal's calls

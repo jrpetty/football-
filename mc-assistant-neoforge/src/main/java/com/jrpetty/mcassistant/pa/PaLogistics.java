@@ -111,7 +111,7 @@ public final class PaLogistics {
     /** 0..100, or -1 (PaPlan hook). */
     public static int percent(PlayerAssistantEntity a, PaPlan.Step s) {
         PaLogiJob j = jobOf(a, s);
-        return j == null ? -1 : j.percent();
+        return j == null ? -1 : j.percent(a);
     }
 
     /** Did the job say its own last word (so the plan doesn't add a "done")? PaBrain hook. */
