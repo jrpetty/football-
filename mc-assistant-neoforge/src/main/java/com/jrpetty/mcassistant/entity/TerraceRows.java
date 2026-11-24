@@ -1191,8 +1191,8 @@ public final class TerraceRows {
     /**
      * [house34c] Each morning (Market's, on the works' account): what the rows' finishing wants and the town's own trades
      * have not made, from the traders, a lot or two a day: clay for the kiln (four balls a block of brick) when the stores
-     * have none to fire, stone bricks when there is no stone to spare to cut, and cobbled deepslate for the slate when the
-     * mine has sent up none.
+     * have none to fire, stone bricks while the bench is behind, and cobbled deepslate for the slate when the mine has sent
+     * up none.
      */
     public static void buyForFinishing(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
@@ -1201,10 +1201,27 @@ public final class TerraceRows {
         int bricks = finishingWant(id, Items.BRICKS) - Market.stock(level, id, st -> st.is(Items.BRICKS));
         int clay = Market.stock(level, id, st -> st.is(Items.CLAY_BALL)), fired = Market.stock(level, id, st -> st.is(Items.BRICK));
         if (bricks > 0 && clay < 16) Market.importFor(level, v, day, Items.CLAY_BALL, Math.min(64, 4 * bricks) - clay - fired, "the kiln's bricks for the terraces");
+        // the stone bricks bought too while the bench has not caught up (it cuts the town's own stone between its iron runs,
+        // and kept up only with the builders: the grand row's cornice stood in cobble for days with cobble in the stores)
         int dressed = finishingWant(id, Items.STONE_BRICKS) - Market.stock(level, id, st -> st.is(Items.STONE_BRICKS));
-        if (dressed > 0 && Masonry.plainToSpare(level, v) < 16) Market.importFor(level, v, day, Items.STONE_BRICKS, Math.min(64, dressed), "the terraces' dressed stone");
+        if (dressed > 0) Market.importFor(level, v, day, Items.STONE_BRICKS, Math.min(64, dressed), "the terraces' dressed stone");
         int slate = finishingWant(id, Items.DEEPSLATE_TILES) - Market.stock(level, id, st -> st.is(Items.DEEPSLATE_TILES) || st.is(Items.COBBLED_DEEPSLATE));
         if (slate > 0) Market.importFor(level, v, day, Items.COBBLED_DEEPSLATE, Math.min(64, slate), "the terraces' slate");
+    }
+
+    /** [house34c] The command (/village terrace rows): the nearest town's rows, where they stand, and their wants. */
+    public static String list(ServerLevel level, BlockPos at) {
+        Villages.Village v = Villages.nearest(level, at);
+        if (v == null) return "no town";
+        reckonWants(level, v);
+        StringBuilder sb = new StringBuilder(Villages.name(v.id()) + ":");
+        for (Ledger.Building b : rows(v.id())) {
+            sb.append(" | ").append(name(v.id(), b)).append(' ').append(b.structure()).append(" at ").append(b.anchor().toShortString())
+                .append(" back ").append(b.facing()).append(standing(level, v.id(), b) ? " up" : " going up");
+            for (Spot s : spots(b)) sb.append(" door").append(s.index() + 1).append('@').append(s.door().toShortString());
+        }
+        sb.append(" | wants ").append(WANTS.get(v.id()));
+        return sb.toString();
     }
 
     /** [house34c] Tests: the rows' wants reckoned now. */
@@ -1417,8 +1434,18 @@ public final class TerraceRows {
         }
         if (hung != null) for (Spot s : spots(b)) {
             BlockPos door = s.door();
-            if (!level.getBlockState(door).isAir() || !level.getBlockState(door.above()).isAir()) continue;
-            if (!free && !take(level, v, Items.OAK_DOOR, "hanging the front door of " + address(id, s), door)) continue;
+            if (!level.getBlockState(door).isAir()) continue;
+            if (!level.getBlockState(door.above()).isAir()) {
+                // [house34c] a block set in the doorway's head where the drawing has none (a builder's stand-in, a repair's
+                // guess): taken out, into the stores, and the door hung (the grand row's third house stood shut for good)
+                boolean drawn = false;
+                for (BuildGoal.Placement pl : plan(id, b)) if (pl.pos().equals(door.above()) && pl.part() == BuildGoal.Part.BLOCK) { drawn = true; break; }
+                BlockState head = level.getBlockState(door.above());
+                if (drawn || head.hasBlockEntity() || head.getDestroySpeed(level, door.above()) < 0) continue;
+                if (!free && v != null) Crafts.giveBack(level, v, head.getBlock().asItem(), 1);
+                level.setBlock(door.above(), Blocks.AIR.defaultBlockState(), 2 | 16);
+            }
+            if (!free && !takeDoor(level, v, "hanging the front door of " + address(id, s), door)) continue;
             BlockState lower = copy(hung, Blocks.OAK_DOOR.defaultBlockState());
             Direction hf = hung.getValue(DoorBlock.FACING);                        // [house34c] turned with its house
             for (Direction w = hungWay; w != s.frame().facing(); w = w.getClockWise()) hf = hf.getClockWise();
@@ -1668,6 +1695,15 @@ public final class TerraceRows {
         // the stack whose top is highest first: the house's own hearth
         out.sort(Comparator.comparingInt((BlockPos p) -> -p.getY()));
         return out;
+    }
+
+    /** [house34c] A door for a house that has none: one of the stores' doors, or made of six of its planks there and then, as a
+     *  renovation makes one (a row whose stores held no door stood with a house open to the street for good). */
+    private static boolean takeDoor(ServerLevel level, Villages.Village v, String what, BlockPos at) {
+        boolean have = Crafts.stock(level, v, st -> st.is(net.minecraft.tags.ItemTags.WOODEN_DOORS)) > 0;
+        if (!have && Crafts.stock(level, v, st -> st.is(net.minecraft.tags.ItemTags.PLANKS)) < 6) return false;
+        if (!TownJobs.atWork(level, v, "furniture", at, what)) return false;
+        return have ? !Crafts.takeOne(level, v, st -> st.is(net.minecraft.tags.ItemTags.WOODEN_DOORS)).isEmpty() : Crafts.usePlanks(level, v, 6);
     }
 
     private static boolean take(ServerLevel level, Villages.Village v, Item item, String what, BlockPos at) {
