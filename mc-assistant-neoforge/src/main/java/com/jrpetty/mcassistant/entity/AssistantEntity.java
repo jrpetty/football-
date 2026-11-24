@@ -3934,6 +3934,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [pa36] It took these out of a container (folk: nothing more to it). */
     public void took(BlockPos chest, ItemStack what, int n) { }
 
+    /** [pa38] What it says when it went to a chest for something it may not take on its own account (folk: null, never
+     *  refused); "" to say nothing this time. */
+    @Nullable
+    public String refusedTakeLine(BlockPos chest, String word) { return null; }
+
+    /** [pa38] It has just laid a part of a building here (folk: nothing more to it). */
+    public void placedPart(BlockPos pos, BlockState state) { }
+
+    /** [pa38] A job a subclass works with its own goal (the Player AI Assistant's real rod and enchanting table): the
+     *  engine's goal for it stands aside. Folk: none. */
+    public boolean ownsJob(Job.Type type) { return false; }
+
+    /** [pa38] The last chest findChestWith passed over because it may not take from it on its own account (or null). */
+    @Nullable
+    public BlockPos lastBarredChest;
+
     /** [pa36] It set this block down itself (a chest, a table, a furnace). */
     protected void placedFixture(BlockPos at) { }
 
@@ -9164,13 +9180,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     @Nullable
     public BlockPos findChestWith(java.util.function.Predicate<ItemStack> what, int radius) {
         // Remembered chests first — verify they still match.
-        BlockPos best = null;
+        BlockPos best = null, barred = null;                    // [pa38] barred: has it, but not its to take on its own account
         double bestDist = Double.MAX_VALUE;
         for (Long key : chestMemory.keySet()) {
             BlockPos pos = BlockPos.of(key);
             if (pos.distSqr(blockPosition()) > (double) radius * radius) continue;
             if (ZoneChests.isPrivate(level(), pos)) continue;   // signed: hands off
             if (containerHas(pos, what)) {
+                if (!mayTakeAny(pos)) { if (barred == null) barred = pos; continue; }   // [pa38] an allowed chest first
                 double d = pos.distSqr(blockPosition());
                 if (d < bestDist) { bestDist = d; best = pos; }
             }
@@ -9180,9 +9197,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         BlockPos feet = blockPosition();
         for (ZoneChests.Found found : ZoneChests.around(level(), feet, radius, 4)) {
             if (!found.holds(what)) continue;
+            if (!mayTakeAny(found.pos())) { if (barred == null) barred = found.pos(); continue; }   // [pa38]
             double d = found.pos().distSqr(feet);
             if (d < bestDist) { bestDist = d; best = found.pos(); }
         }
+        lastBarredChest = best == null ? barred : null;         // [pa38] the withdraw can say why, without the walk
         return best;
     }
 

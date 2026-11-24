@@ -72,6 +72,7 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
         @SubscribeEvent
         public static void onRenderers(EntityRenderersEvent.RegisterRenderers event) {
             event.registerEntityRenderer(McAssistantMod.PLAYER_ASSISTANT.get(), PaRenderer::new);
+            event.registerEntityRenderer(McAssistantMod.PA_FISH_HOOK.get(), PaFishHookRenderer::new);   // [pa38] its bobber and line
         }
     }
 

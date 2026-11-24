@@ -1291,6 +1291,7 @@ public class BuildGoal extends Goal {
             }
         } else {
             assistant.level().setBlockAndUpdate(pos, state);
+            assistant.placedPart(pos, state);                         // [pa38] a learner's slip now and then (Player AI Assistant)
             // What a settlement builds is the settlement's: the furnaces of its smeltery carry
             // its name. Its stores are the Village Storehouse alone: a chest or a barrel in a
             // building is furniture, not one more place for the village's goods to scatter to.

@@ -39,7 +39,8 @@ public class FishGoal extends Goal {
     @Override
     public boolean canUse() {
         Job j = assistant.peekJob();
-        return j != null && j.type() == Job.Type.FISH && assistant.getTarget() == null;
+        return j != null && j.type() == Job.Type.FISH && assistant.getTarget() == null
+            && !assistant.ownsJob(Job.Type.FISH);                        // [pa38] the Player AI Assistant's own rod
     }
 
     @Override
