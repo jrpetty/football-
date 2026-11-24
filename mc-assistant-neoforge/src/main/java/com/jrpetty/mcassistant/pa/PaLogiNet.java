@@ -78,6 +78,7 @@ public final class PaLogiNet {
             c.putInt("s", k.size);
             c.putBoolean("drop", k.dropoff);
             c.putBoolean("store", k.storage);
+            c.putInt("mt", k.takeLevel());                                  // [pa36b] what it may take on its own account
             ListTag items = new ListTag();
             int i = 0;
             for (Map.Entry<String, Integer> e : k.snap.entrySet()) {
@@ -147,6 +148,7 @@ public final class PaLogiNet {
                 }
                 case "rename" -> PaLogiPlan.plan(p, a, PaLogiOrder.of(Op.NAME).withTo(Ref.of(Ref.Kind.POINT)).withArg(clean(args.getString("name"))), look, new ArrayList<>(), "name it");
                 case "forget" -> PaLogiPlan.plan(p, a, PaLogiOrder.of(Op.FORGET).withTo(Ref.of(Ref.Kind.POINT)), look, new ArrayList<>(), "forget it");
+                case "maytake" -> { if (b != null) mayTake(p, a, b); }
                 case "dropoff" -> PaLogiPlan.plan(p, a, PaLogiOrder.of(Op.DROPOFF).withTo(Ref.of(Ref.Kind.POINT)), look, new ArrayList<>(), "make it the drop-off");
                 case "autodrop" -> PaLogiPlan.plan(p, a, PaLogiOrder.of(Op.AUTODROP).withArg(args.getBoolean("on") ? "on" : "off"), look, new ArrayList<>(), "drop-off");
                 case "unstock" -> PaLogiPlan.plan(p, a, PaLogiOrder.of(Op.UNSTOCK).withTo(Ref.of(Ref.Kind.POINT)), look, new ArrayList<>(), "stop stocking it");
@@ -237,5 +239,17 @@ public final class PaLogiNet {
             }
             default -> { }
         }
+    }
+
+    /** [pa36b] The Storage view's Take button: nothing, basics, anything, round again. */
+    static void mayTake(ServerPlayer p, PlayerAssistantEntity a, BlockPos b) {
+        UUID owner = a.getOwnerId();
+        if (owner == null || !PaContainers.is(a.level(), b)) return;
+        if (PaContainers.refuse(a, b) != null && !PaContainers.refuse(a, b).startsWith("I don't know that chest")) { PaTalk.reply(a, PaContainers.refuse(a, b)); return; }
+        PaStore.Known k = PaStore.learn(owner, a.level().dimension().location().toString(), b, PaContainers.blockId(a.level(), b), a.level().getGameTime());
+        k.take = (k.takeLevel() + 1) % 3;
+        PaStore.touch();
+        String chest = PaLogistics.called(a, b, null);
+        PaTalk.reply(a, PaLogiTalk.line(a, k.take == 0 ? "logi.maytake_no" : k.take == 1 ? "logi.maytake_basics" : "logi.maytake_any", "chest", chest));
     }
 }

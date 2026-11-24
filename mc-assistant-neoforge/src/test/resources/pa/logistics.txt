@@ -200,6 +200,12 @@ call this chest the iron chest || NAME > POINT [iron]
 name that barrel food || NAME > POINT[barrel] [food]
 label this chest ores || NAME > POINT [ores]
 this chest is the wood chest || NAME > POINT [wood]
+## [pa36b] names as said, never typo-fixed
+call this chest basil || NAME > POINT [basil]
+name that barrel Wren || NAME > POINT[barrel] [Wren]
+call this chest the Kitchen Stuff chest || NAME > POINT [Kitchen Stuff]
+label this chest Dave's ores! || NAME > POINT [Dave's ores]
+call this chest stoen || NAME > POINT [stoen]
 this is my storage || NAME > POINT [storage]
 rename that chest to tools || NAME > POINT [tools]
 make this chest the drop off || DROPOFF > POINT
@@ -275,3 +281,17 @@ place a crafting table here || null
 stop || null
 keep going || null
 tame that wolf || null
+
+## [pa36b] what it may take on its own account
+you can take anything from this chest || MAYTAKE > POINT [2]
+help yourself to whatever you need from the wood chest || MAYTAKE > NAMED(wood) [2]
+you can take from this chest || MAYTAKE > POINT [1]
+help yourself from the food barrel || MAYTAKE > NAMED(food)[barrel] [1]
+don't take anything from my storage || MAYTAKE > STORAGE [0]
+keep your hands off the iron chest || MAYTAKE > NAMED(iron) [0]
+never touch that chest || MAYTAKE > POINT [0]
+
+## [pa36b] its own kit stays unless told every last thing
+empty every last thing into this chest || DEPOSIT ** all < PACK > POINT by PACK
+put everything in that chest, tools and all || DEPOSIT ** all < PACK > POINT by PACK
+empty your pack, including your tools || EMPTY_PACK ** all < PACK > STORAGE by PACK

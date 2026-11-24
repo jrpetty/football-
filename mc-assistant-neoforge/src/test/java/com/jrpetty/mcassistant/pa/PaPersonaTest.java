@@ -377,7 +377,7 @@ class PaPersonaTest {
                 Map.entry("x", "1"), Map.entry("y", "64"), Map.entry("z", "2"), Map.entry("dist", "12"), Map.entry("dir", "north"), Map.entry("job", "chop that tree"), Map.entry("level", "4"), Map.entry("skill", "blocking with a shield"), Map.entry("need", "6"), Map.entry("score", "5 to 3"),
                 // [pa36] the logistics lines' blanks
                 Map.entry("n", "64"), Map.entry("chest", "the iron chest"), Map.entry("have", "40"), Map.entry("trip", "2"), Map.entry("from", "the mine"),
-                Map.entry("to", "storage"), Map.entry("who", "Sam"), Map.entry("answer", "20 in all."), Map.entry("secs", "60"), Map.entry("left", "24"), Map.entry("chests", "3")));
+                Map.entry("to", "storage"), Map.entry("who", "Sam"), Map.entry("answer", "20 in all."), Map.entry("secs", "60"), Map.entry("left", "24"), Map.entry("chests", "3"), Map.entry("why", "for tools")));
             assertFalse(f.contains("{") || f.contains("}"), "a blank left in: " + f);
         }
         assertNotNull(PaLines.get("say.ok"));

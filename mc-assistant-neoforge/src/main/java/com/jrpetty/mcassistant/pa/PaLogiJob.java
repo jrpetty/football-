@@ -220,8 +220,10 @@ public final class PaLogiJob {
 
     /** What the order's item means here: "*" is everything but its own gear and food. */
     static Predicate<ItemStack> what(PlayerAssistantEntity a, String item) {
-        if (item == null || item.isEmpty() || item.equals("*") || item.equals("it"))
-            return s -> !s.isEmpty() && !PaLogiItems.gear(a, s) && s.get(DataComponents.FOOD) == null;
+        if (item == null || item.isEmpty() || item.equals("*") || item.equals("it"))           // its own kit stays: tools, weapon, armour, food, torches
+            return s -> !s.isEmpty() && !PaLogiItems.gear(a, s) && s.get(DataComponents.FOOD) == null && !s.is(net.minecraft.world.item.Items.TORCH)
+                && !s.is(net.minecraft.world.item.Items.SOUL_TORCH);
+        if (item.equals("**")) return s -> !s.isEmpty();                                         // [pa36b] "empty everything": every last thing
         return PaLogiItems.of(item);
     }
 
@@ -1027,8 +1029,19 @@ public final class PaLogiJob {
 
     // ---- HAUL: back and forth until told to stop
 
+    /** [pa36b] What it had of each thing before a haul's load: only what it picked up goes in at the other end. */
+    private final Map<String, Integer> haulKept = new java.util.HashMap<>();
+
+    private void keepNow(PlayerAssistantEntity a) {
+        haulKept.clear();
+        for (ItemStack s : a.getInventoryItems()) if (!s.isEmpty()) haulKept.merge(PaLogiItems.id(s), s.getCount(), Integer::sum);
+    }
+
     private void haul(PlayerAssistantEntity a) {
-        Predicate<ItemStack> p = pred(a);
+        Predicate<ItemStack> wanted = pred(a);
+        Predicate<ItemStack> p = phase.equals("unload")
+            ? s -> wanted.test(s) && count(a, x -> PaLogiItems.id(x).equals(PaLogiItems.id(s))) > haulKept.getOrDefault(PaLogiItems.id(s), 0)
+            : wanted;
         switch (phase) {
             case "start" -> {
                 PaTalk.reply(a, PaLogiTalk.line(a, "logi.haul_start", "from", PaLogiPlan.placeName(o.from()), "to", PaLogiPlan.placeName(o.to())));
@@ -1036,6 +1049,7 @@ public final class PaLogiJob {
                 run = from.isEmpty() ? null : new Run(from, this);
                 if (run != null) run.noOverflow = true;
                 lastHave = count(a, p);
+                keepNow(a);
             }
             case "load" -> {
                 if (run != null) {
@@ -1066,7 +1080,8 @@ public final class PaLogiJob {
                 trips++;
                 PaTalk.comment(a, 2, PaLogiTalk.line(a, "logi.haul_trip", "trip", String.valueOf(trips), "n", String.valueOf(moved)), true);
                 if (tripsWanted > 0 && trips >= tripsWanted) { done(a, PaLogiTalk.line(a, "logi.stopped", "n", String.valueOf(moved))); return; }
-                lastHave = count(a, p);
+                lastHave = count(a, wanted);
+                keepNow(a);
                 run = from.isEmpty() ? null : new Run(from, this);
                 if (run != null) run.noOverflow = true;
                 phase = "load";
@@ -1278,7 +1293,9 @@ public final class PaLogiJob {
             Container c = PaContainers.open(a, at);
             if (c == null || PaContainers.count(c, p) == 0) { next(a); return 0; }
             if (!PaLogistics.handFree(a)) return 0;
-            int cap = most < 0 ? 64 : Math.min(64, most);
+            int cap = (job.o.op() == PaLogiOrder.Op.FILL || job.rule != null)          // sourcing for a fill: never under a stock rule there
+                ? Math.min(most < 0 ? 64 : Math.min(64, most), PaIdleTake.aboveStock(a, at, c, p)) : most < 0 ? 64 : Math.min(64, most);
+            if (cap <= 0) { next(a); return 0; }
             int[] n = {0};
             PaLogistics.act(a, () -> { n[0] = PaContainers.takeOne(a, c, p, cap, 0, c.getContainerSize()); return n[0] > 0; });
             if (n[0] > 0) {

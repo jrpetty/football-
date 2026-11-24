@@ -46,6 +46,8 @@ public record PaLogiOrder(Op op, String item, PaQty.Qty qty, Ref from, Ref to, S
         DROPOFF,
         /** Turn the automatic drop-off on or off ("when your pack is full, go to the drop-off and come back"). */
         AUTODROP,
+        /** [pa36b] What it may take from a container on its own account (arg 0 nothing, 1 basics, 2 anything). */
+        MAYTAKE,
         /** A repeating run from one place to another until told to stop. */
         HAUL,
         /** Find the chest with something in it, and ping it. */

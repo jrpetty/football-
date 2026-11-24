@@ -43,7 +43,7 @@ public final class PaLogiItems {
             return s -> s.is(it);
         }
         return switch (w) {
-            case "*", "everything", "" -> s -> !s.isEmpty();
+            case "*", "**", "everything", "" -> s -> !s.isEmpty();
             case "cooked food" -> s -> s.get(DataComponents.FOOD) != null && cooked(s);
             case "ore" -> s -> com.jrpetty.mcassistant.entity.AssistantEntity.SMELTABLE_ORE.test(s) || path(s).endsWith("_ore") || path(s).startsWith("raw_");
             case "raw iron" -> s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE);
@@ -132,7 +132,7 @@ public final class PaLogiItems {
 
     /** "64 cobblestone" style name for a word: the plain word, or the item's own name. */
     public static String name(String word, int n) {
-        if (word == null || word.isEmpty() || word.equals("*")) return n == 1 ? "item" : "items";
+        if (word == null || word.isEmpty() || word.startsWith("*")) return n == 1 ? "item" : "items";
         if (word.startsWith("item:")) {
             String p = word.substring(word.indexOf(':', 5) + 1).replace('_', ' ');
             return n == 1 || p.endsWith("s") ? p : plural(p);

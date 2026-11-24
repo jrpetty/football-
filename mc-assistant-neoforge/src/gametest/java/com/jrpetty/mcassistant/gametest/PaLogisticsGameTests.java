@@ -550,4 +550,58 @@ public class PaLogisticsGameTests {
             Kit.log("[VT] logi17 pieces " + got + "; said " + allWords(a));
         });
     }
+
+    /** [pa36b] Idle, beside a storage chest of logs and iron: nothing taken; "you can take from this chest" lets basics out (said once), never the iron. */
+    @GameTest(template = EMPTY, timeoutTicks = 2000, batch = "logi18_idle_takes")
+    public static void logi18_idle_takes(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 9_651_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        BlockPos chest = chest(level, new BlockPos(x + 3, y, Z + 2), p);
+        String dim = level.dimension().location().toString();
+        PaStore.Known k = PaStore.of(p.getUUID()).at(chest, dim);
+        k.storage = true;
+        k.name = "storage";
+        if (level.getBlockEntity(chest) instanceof Container c) {
+            c.setItem(0, new ItemStack(Items.OAK_LOG, 64));
+            c.setItem(1, new ItemStack(Items.IRON_INGOT, 16));
+        }
+        Container box = (Container) level.getBlockEntity(chest);
+        helper.assertTrue(a.mayTake(chest, box, box.getItem(0)) == 0, "a storage chest is not for idle takes");
+        // an idle top-up, as the engine's own kit-making queues it
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.withdraw("logs", 16));
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.withdraw("iron", 8));
+        int[] stage = {0};
+        long[] at = {level.getGameTime()};
+        helper.succeedWhen(() -> {
+            long now = level.getGameTime();
+            if (stage[0] == 0) {
+                helper.assertTrue(now - at[0] > 300 && a.jobCount() == 0, "waiting out the idle tries");
+                helper.assertTrue(in(level, chest, Items.OAK_LOG) == 64 && in(level, chest, Items.IRON_INGOT) == 16,
+                    "nothing taken from the storage: " + in(level, chest, Items.OAK_LOG) + " logs, " + in(level, chest, Items.IRON_INGOT) + " iron");
+                PaLogistics.seen(p, chest);
+                say(p, a, "you can take from this chest", chest);
+                helper.assertTrue(PaStore.of(p.getUUID()).at(chest, dim).takeLevel() == 1, "basics allowed now: " + lastWords(a));
+                helper.assertTrue(a.mayTake(chest, box, box.getItem(1)) == 0, "never the iron on basics");
+                a.enqueue(com.jrpetty.mcassistant.entity.Job.withdraw("logs", 16));
+                a.enqueue(com.jrpetty.mcassistant.entity.Job.withdraw("iron", 8));
+                stage[0] = 1;
+                at[0] = now;
+                helper.fail("stage 2");
+            }
+            helper.assertTrue(now - at[0] > 300 && a.jobCount() == 0, "waiting out the allowed tries");
+            int logs = in(level, chest, Items.OAK_LOG), iron = in(level, chest, Items.IRON_INGOT);
+            helper.assertTrue(logs == 48 && iron == 16, "16 logs borrowed, no iron: " + logs + " logs, " + iron + " iron (" + allWords(a) + ")");
+            helper.assertTrue(allWords(a).toLowerCase().contains("16 oak logs"), "the borrowing said: " + allWords(a));
+            // never below a keep-stocked amount
+            PaStore.Stock st = new PaStore.Stock();
+            st.pos = chest.asLong(); st.dim = dim; st.item = "logs"; st.n = 40;
+            PaStore.of(p.getUUID()).stock.add(st);
+            int slot = box.getItem(0).is(Items.OAK_LOG) ? 0 : 1;
+            for (int i = 0; i < box.getContainerSize(); i++) if (box.getItem(i).is(Items.OAK_LOG)) slot = i;
+            helper.assertTrue(a.mayTake(chest, box, box.getItem(slot)) == 8, "only what's above the stock rule: " + a.mayTake(chest, box, box.getItem(slot)));
+            Kit.log("[VT] logi18 ok; said " + allWords(a));
+        });
+    }
 }

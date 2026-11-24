@@ -42,8 +42,19 @@ public final class PaStore extends SavedData {
         public int used, size;
         public long seen;
         public boolean dropoff, storage;
+        /** It set this chest down itself. */
+        public boolean own;
+        /** What it may take from here when nobody asked (idle top-ups): -1 unset (its own chests and the drop-off: basics;
+         *  anything else: nothing), 0 nothing, 1 basics (not valuables), 2 anything. */
+        public int take = -1;
 
         public BlockPos at() { return BlockPos.of(pos); }
+
+        /** The idle-take level in force: the player's choice, else the default. */
+        public int takeLevel() {
+            if (take >= 0) return take;
+            return (own || dropoff) && !storage ? 1 : 0;
+        }
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -59,6 +70,8 @@ public final class PaStore extends SavedData {
             t.putLong("T", seen);
             t.putBoolean("Drop", dropoff);
             t.putBoolean("Store", storage);
+            t.putBoolean("Own", own);
+            t.putInt("Take", take);
             return t;
         }
 
@@ -75,6 +88,8 @@ public final class PaStore extends SavedData {
             k.seen = t.getLong("T");
             k.dropoff = t.getBoolean("Drop");
             k.storage = t.getBoolean("Store");
+            k.own = t.getBoolean("Own");
+            k.take = t.contains("Take") ? t.getInt("Take") : -1;
             return k;
         }
 

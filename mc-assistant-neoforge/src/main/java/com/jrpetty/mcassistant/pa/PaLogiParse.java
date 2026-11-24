@@ -119,6 +119,10 @@ public final class PaLogiParse {
         c = c.replaceAll("^(?:hello|ok|right|so|now|also|just|and|alright|oi|hey|please|can you|could you|would you|will you|i want you to|i need you to|i would like you to|go and|go|be a dear and|do me a favour and|could you please|can you please)\\s+", "");
         c = c.replaceAll("^(?:can you|could you|would you|will you|please)\\s+", "").trim();
         if (c.isEmpty()) return null;
+        // [pa36b] "every last thing", "tools and all": read as everything (intent() then empties the kit too)
+        c = c.replaceAll("\\b(?:every last thing|absolutely everything|literally everything)\\b", "everything")
+            .replaceAll(",? (?:tools and all|kit and all|including (?:your |the )?(?:tools|kit|gear|armou?r|food|torches)|(?:your |the )?(?:tools|kit|gear|food|torches) (?:too|as well)|even (?:your |the )?(?:tools|kit|gear|food|torches))\\b", "")
+            .replaceAll("\\s+", " ").trim();
         String raw = text;
         // "feed the animals in the pen": feeding is breeding, in this game
         Matcher feed = Pattern.compile("^feed (?:the |all the |my |our )?(animals|cows|pigs|sheep|chickens|horses|rabbits|goats|cattle)(?: (?:in|at|by) (?:the |my |our )?(?:pen|field|farm|barn|enclosure|paddock|yard))?$").matcher(c);
@@ -135,6 +139,7 @@ public final class PaLogiParse {
         List<String> parts = PaUnderstand.split(c);
         if (parts.size() <= 1) {
             PaLogiOrder one = clause(c, null);
+            if (one != null && one.op() == Op.NAME && !"storage".equals(one.arg())) one = one.withArg(nameAsSaid(raw, one.arg()));   // [pa36b]
             return one == null ? null : List.of(intent(one, raw));
         }
         List<PaIntent> out = new ArrayList<>();
@@ -163,7 +168,12 @@ public final class PaLogiParse {
         return ours ? out : null;
     }
 
+    private static final Pattern EVERY_LAST = Pattern.compile("(?i).*\\b(?:every last thing|absolutely everything|literally everything|tools and all|kit and all|the lot including|"
+        + "including (?:your |the )?(?:tools|kit|gear|armou?r|food|torches)|(?:your |the )?(?:tools|kit|gear|food|torches) (?:too|as well)|even (?:your |the )?(?:tools|kit|gear|food|torches))\\b.*");
+
     static PaIntent intent(PaLogiOrder o, String raw) {
+        // [pa36b] emptying its pack keeps its own kit (tools, weapon, armour, food, torches) unless told every last thing
+        if ((o.op() == Op.EMPTY_PACK || o.op() == Op.HAUL || o.op() == Op.DEPOSIT) && "*".equals(o.item()) && raw != null && EVERY_LAST.matcher(raw).matches()) o = o.withItem("**");
         return new PaIntent(PaIntent.Kind.LOGI, o.spec(), 0, o.to().pointed() || o.from().pointed() ? PaIntent.Place.LOOKED : PaIntent.Place.NONE, raw);
     }
 
@@ -428,6 +438,24 @@ public final class PaLogiParse {
         if (c.matches("^(?:stop using|stop|turn off|no more|forget) (?:the |your )?(?:auto(?:matic)? )?drop ?offs?(?: trips)?$") || c.matches("^(?:do not|dont) (?:go to|use) the drop off(?: any more| anymore)?$"))
             return PaLogiOrder.of(Op.AUTODROP).withArg("off");
         if (c.matches("^(?:turn on|use|start using) (?:the |your )?(?:auto(?:matic)? )?drop ?offs?(?: trips)?$")) return PaLogiOrder.of(Op.AUTODROP).withTo(Ref.of(Ref.Kind.DROPOFF)).withArg("on");
+        // [pa36b] what it may take on its own account: "you can take anything from this chest", "don't take from my storage"
+        if ((m = Pattern.compile("^(?:(?:you can|you may|feel free to|it s fine to|its fine to|go ahead and) (?:take|use|borrow|have|help yourself to)|help yourself to) (?:anything|everything|whatever you (?:need|like|want)|what you (?:need|like|want))(?: you (?:need|like|want))? (?:from|out of|in) (.+?)(?: if you need (?:it|to)| when you need (?:it|to))?$").matcher(c)).matches()
+            || (m = Pattern.compile("^(?:you can|you may|feel free to) (?:take|use|borrow) (?:the )?(?:iron|valuables|good stuff)(?: too)? (?:from|out of|in) (.+?)$").matcher(c)).matches()) {
+            Ref r = ref(m.group(1));
+            if (r.kind() != Ref.Kind.NONE && r.kind() != Ref.Kind.ME && r.kind() != Ref.Kind.PACK) return PaLogiOrder.of(Op.MAYTAKE).withTo(r).withArg("2");
+        }
+        if ((m = Pattern.compile("^(?:(?:you can|you may|feel free to) (?:take|use|borrow|help yourself to)|help yourself to) (?:basics|food|wood|bits|the basics|the odd thing|what you need for (?:your )?(?:kit|tools)) (?:from|out of|in) (.+?)$").matcher(c)).matches()
+            || (m = Pattern.compile("^(?:you can|you may|feel free to) (?:take|use|borrow) (?:from|out of) (.+?)$").matcher(c)).matches()
+            || (m = Pattern.compile("^help yourself (?:from|to|out of) (.+?)$").matcher(c)).matches()) {
+            Ref r = ref(m.group(1));
+            if (r.kind() != Ref.Kind.NONE && r.kind() != Ref.Kind.ME && r.kind() != Ref.Kind.PACK) return PaLogiOrder.of(Op.MAYTAKE).withTo(r).withArg("1");
+        }
+        if ((m = Pattern.compile("^(?:do not|dont|never|stop|please dont|please do not|no more) (?:take|taking|use|using|borrow|borrowing|help yourself (?:to|from)|touch|touching)(?: anything| stuff| things| my stuff)? (?:from|out of|in) (.+?)(?: (?:unless|without) i (?:ask|say)(?: so)?| on your own| any more| anymore)?$").matcher(c)).matches()
+            || (m = Pattern.compile("^(?:keep )?(?:your )?hands off (.+?)$").matcher(c)).matches()
+            || (m = Pattern.compile("^(?:do not|dont|never) touch (.+?)$").matcher(c)).matches()) {
+            Ref r = ref(m.group(1));
+            if (r.kind() != Ref.Kind.NONE && r.kind() != Ref.Kind.ME && r.kind() != Ref.Kind.PACK) return PaLogiOrder.of(Op.MAYTAKE).withTo(r).withArg("0");
+        }
         if ((m = Pattern.compile("^(?:call|name|label|rename|tag|title|mark) ((?:this|that|the|my|our)(?: [a-z]+)?? " + CONT + "|this|that|it|this one|that one) (?:as |to |the |it )*(.+?)$").matcher(c)).matches()) {
             Ref r = ref(m.group(1));
             String name = cleanName(m.group(2));
@@ -575,6 +603,31 @@ public final class PaLogiParse {
             return new PaLogiOrder(Op.DEPOSIT, it, q.said() ? q : Qty.ALL, Ref.of(Ref.Kind.PACK), Ref.of(Ref.Kind.STORAGE), Src.PACK, "");
         }
         return null;
+    }
+
+    // [pa36b] A name is taken as it was said: never typo-fixed ("basil" stays Basil), trimmed and capped.
+    private static final Pattern NAME_SAID = Pattern.compile("^(?:call|name|label|rename|tag|title|mark) ((?:this|that|the|my|our)(?: [a-z]+)?? " + CONT
+        + "|this|that|it|this one|that one) (?:as |to |the |it )*(.+?)$");
+    private static final Pattern NAME_SAID2 = Pattern.compile("^(this|that|this one|that one|here|this " + CONT + "|that " + CONT
+        + ") (?:is|will be|s|shall be|can be) (?:the |my |our |your )?(.+?)(?: chest| barrel| box| storage| one)?$");
+
+    /** The name in a naming order, in the words (and capitals) its player used; {@code fallback} when it can't be found. */
+    static String nameAsSaid(String raw, String fallback) {
+        if (raw == null) return fallback;
+        String light = raw.replace('\u2019', '\'').replace('\u2018', '\'').replaceAll("[\u201c\u201d\"]", " ").replaceAll("^\\(voice\\)\\s*", "")
+            .replaceAll("[!?.,;:]+\\s*$", "").replaceAll("\\s+", " ").trim();
+        String low = light.toLowerCase(java.util.Locale.ROOT);
+        String lead = low.replaceAll("^(?:(?:hello|ok|okay|right|so|now|also|just|and|alright|oi|hey|please|can you|could you|would you|will you|i want you to|i need you to)\\s+)+", "");
+        int cut = low.length() - lead.length();
+        Matcher m = NAME_SAID.matcher(lead);
+        if (!m.matches()) m = NAME_SAID2.matcher(lead);
+        if (!m.matches()) return fallback;
+        String said = light.substring(cut + m.start(2), cut + m.end(2));
+        String n = said.replaceAll("(?i)^(?:the|my|our|your|a|an) ", "").replaceAll("(?i) (?:chest|barrel|box|one|storage|container|please|for me|thanks|thank you)$", "")
+            .replaceAll("[^\\p{L}\\p{N} '\\-]", "").replaceAll("\\s+", " ").trim();
+        if (n.length() > 24) n = n.substring(0, 24).trim();
+        if (n.isEmpty() || n.toLowerCase(java.util.Locale.ROOT).matches("(?:it|this|that|chest|barrel|box)")) return fallback;
+        return n;
     }
 
     private static String cleanName(String s) {

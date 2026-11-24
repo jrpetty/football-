@@ -185,6 +185,7 @@ public final class PaContainers {
     /** What claims mods say: a right-click on the block by its player, asked and not done. */
     static boolean claimsAllow(ServerPlayer o, BlockPos p) {
         if (o.level() != null && o.level().getServer() != null && o.connection == null) return true;   // a test's mock player
+        if (!PaClaims.allow(o, p)) return false;                                                        // [pa36b] FTB Chunks, Open Parties and Claims, asked directly
         ASKING_CLAIMS.set(true);
         try {
             BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(p), net.minecraft.core.Direction.UP, p, false);

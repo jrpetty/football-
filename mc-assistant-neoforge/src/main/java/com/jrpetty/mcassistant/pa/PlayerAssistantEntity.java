@@ -346,6 +346,32 @@ public class PlayerAssistantEntity extends AssistantEntity {
             if (!level().isClientSide) PaChests.askAs(before);
         }
         if (!level().isClientSide) PaPace.tick(this);                    // [pa35] the cracks, as a player's digging shows
+        if (!level().isClientSide) PaIdleTake.flush(this);               // [pa36b] what it borrowed from a chest, said once
+    }
+
+    /** [pa36b] On its own account it takes only from chests its player allows, never below a stock rule, never valuables. */
+    @Override
+    public int mayTake(BlockPos chest, net.minecraft.world.Container c, net.minecraft.world.item.ItemStack s) {
+        return level().isClientSide ? s.getCount() : PaIdleTake.allowance(this, chest, c, s);
+    }
+
+    @Override
+    public boolean mayTakeAny(BlockPos chest) {
+        return level().isClientSide || PaIdleTake.any(this, chest);
+    }
+
+    @Override
+    public void took(BlockPos chest, net.minecraft.world.item.ItemStack what, int n) {
+        if (!level().isClientSide) PaIdleTake.took(this, chest, what, n);
+    }
+
+    /** [pa36b] A chest it sets down itself is its own (it may take from it when nobody asked). */
+    @Override
+    protected void placedFixture(BlockPos at) {
+        if (level().isClientSide || getOwnerId() == null || !PaContainers.is(level(), at)) return;
+        PaStore.Known k = PaStore.learn(getOwnerId(), level().dimension().location().toString(), at, PaContainers.blockId(level(), at), level().getGameTime());
+        k.own = true;
+        PaStore.touch();
     }
 
     // ------------------------------------------------------------------ [pa35] a real player's pace (PaPace)

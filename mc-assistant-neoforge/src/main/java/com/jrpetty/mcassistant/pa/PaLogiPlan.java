@@ -48,6 +48,7 @@ final class PaLogiPlan {
             case DROPOFF -> { return dropoff(p, a, o, look); }
             case FORGET -> { return forget(p, a, o, look); }
             case AUTODROP -> { return autodrop(p, a, o, look); }
+            case MAYTAKE -> { return mayTake(p, a, o, look); }
             case STOCK -> { return stock(p, a, o, look, out); }
             case UNSTOCK -> { return unstock(p, a, o, look); }
             case HANDOVER -> { return handover(p, a, o, look, out); }
@@ -83,7 +84,7 @@ final class PaLogiPlan {
                 for (ItemStack s : a.getInventoryItems()) if (!s.isEmpty() && what.test(s)) have += s.getCount();
                 // with "made" (craft 64 torches and put them in the chest) the items come from the step before: count them then
                 if (have == 0 && !"made".equals(o.arg()) && alone(said) && a.plan.idle()) {
-                    if (!item.equals("*") && p != null) {
+                    if (!item.startsWith("*") && p != null) {
                         int hers = 0;
                         for (ItemStack s : p.getInventory().items) if (!s.isEmpty() && what.test(s)) hers += s.getCount();
                         if (hers > 0) {
@@ -91,12 +92,12 @@ final class PaLogiPlan {
                             return handover(p, a, ho, look, out);
                         }
                     }
-                    return item.equals("*") ? "My pack's empty. Nothing to put away." : "I haven't any " + thing + " on me.";
+                    return item.startsWith("*") ? "My pack's empty. Nothing to put away." : "I haven't any " + thing + " on me.";
                 }
                 Item sample = PaLogiItems.sample(item);
                 j.target = o.qty().mode() == PaQty.Mode.ALL || !o.qty().said() ? -1 : o.qty().items(sample.getDefaultMaxStackSize(), -1);
                 String where = PaLogistics.called(a, to.get(0), o.to());
-                out.add(PaLogistics.step(j, o.op() == Op.EMPTY_PACK ? "put my things away" : "put " + (j.target > 0 ? j.target + " " : "") + (item.equals("*") ? "everything" : thing) + " in " + where, 20 + to.size() * 5));
+                out.add(PaLogistics.step(j, o.op() == Op.EMPTY_PACK ? "put my things away" : "put " + (j.target > 0 ? j.target + " " : "") + (item.startsWith("*") ? "everything" : thing) + " in " + where, 20 + to.size() * 5));
                 return null;
             }
             case FILL -> {
@@ -151,8 +152,8 @@ final class PaLogiPlan {
                 j.from.addAll(from);
                 Item sample = PaLogiItems.sample(item);
                 j.target = o.qty().mode() == PaQty.Mode.ALL ? inChests : Math.min(inChests, Math.max(1, o.qty().items(sample.getDefaultMaxStackSize(), 16)));
-                if (o.qty().mode() == PaQty.Mode.SOME && !item.equals("*")) j.target = Math.min(inChests, sample.getDefaultMaxStackSize() >= 16 ? 16 : sample.getDefaultMaxStackSize());
-                String what = item.equals("*") ? "everything" : thing;
+                if (o.qty().mode() == PaQty.Mode.SOME && !item.startsWith("*")) j.target = Math.min(inChests, sample.getDefaultMaxStackSize() >= 16 ? 16 : sample.getDefaultMaxStackSize());
+                String what = item.startsWith("*") ? "everything" : thing;
                 out.add(PaLogistics.step(j, (o.op() == Op.FETCH ? "fetch you " : "take ") + j.target + " " + what + (o.op() == Op.TAKE ? " from " + PaLogistics.called(a, from.get(0), o.from()) : ""), 30 + from.size() * 10));
                 return null;
             }
@@ -169,7 +170,7 @@ final class PaLogiPlan {
                 int in = c == null ? 0 : PaContainers.count(c, PaLogiJob.what(a, item));
                 if (in == 0) return "There's nothing like that in " + PaLogistics.called(a, from.get(0), o.from()) + ".";
                 j.target = o.qty().mode() == PaQty.Mode.ALL || !o.qty().said() ? in : Math.min(in, o.qty().items(PaLogiItems.sample(item).getDefaultMaxStackSize(), in));
-                out.add(PaLogistics.step(j, "move " + (item.equals("*") ? "everything" : thing) + " to " + PaLogistics.called(a, to.get(0), o.to()), 30 + j.target / 32 * 15));
+                out.add(PaLogistics.step(j, "move " + (item.startsWith("*") ? "everything" : thing) + " to " + PaLogistics.called(a, to.get(0), o.to()), 30 + j.target / 32 * 15));
                 return null;
             }
             case SORT -> {
@@ -212,7 +213,7 @@ final class PaLogiPlan {
                 if (furn.isEmpty()) {
                     // no furnace of its own about: the engine's smelting finds or places one
                     if (!j.from.isEmpty()) return "I can't see a furnace nearby. Place one and I'll smelt it all.";
-                    String raw = item.equals("*") || item.equals("ore") ? "ore" : item;
+                    String raw = item.startsWith("*") || item.equals("ore") ? "ore" : item;
                     PaPlan.Step s = PaOrders.step("smelt " + raw, PaIntent.Kind.SMELT, 120);
                     s.jobs.add(com.jrpetty.mcassistant.entity.Job.smelt(raw.equals("ore") ? "iron" : raw, o.qty().items(64, 64)));
                     out.add(s);
@@ -220,7 +221,7 @@ final class PaLogiPlan {
                 }
                 j.to.addAll(furn.subList(0, Math.min(furn.size(), a.veteranLevel() >= 4 ? 3 : a.veteranLevel() >= 2 ? 2 : 1)));
                 j.target = o.qty().mode() == PaQty.Mode.EXACT || o.qty().mode() == PaQty.Mode.STACKS ? o.qty().items(64, 64) : -1;
-                out.add(PaLogistics.step(j, j.from.isEmpty() ? "smelt " + (item.equals("*") ? "my ores" : thing) : "smelt everything in " + PaLogistics.called(a, j.from.get(0), o.from()), 120));
+                out.add(PaLogistics.step(j, j.from.isEmpty() ? "smelt " + (item.startsWith("*") ? "my ores" : thing) : "smelt everything in " + PaLogistics.called(a, j.from.get(0), o.from()), 120));
                 return null;
             }
             case COLLECT -> {
@@ -260,7 +261,7 @@ final class PaLogiPlan {
                 j.trips = 0;
                 j.tripsWanted = o.arg().matches("\\d+") ? Integer.parseInt(o.arg()) : -1;
                 j.target = -1;
-                out.add(PaLogistics.step(j, "haul " + (item.equals("*") ? "everything" : thing) + " from " + placeName(o.from()) + " to " + placeName(o.to()), j.tripsWanted > 0 ? 60 * j.tripsWanted : 100000));
+                out.add(PaLogistics.step(j, "haul " + (item.startsWith("*") ? "everything" : thing) + " from " + placeName(o.from()) + " to " + placeName(o.to()), j.tripsWanted > 0 ? 60 * j.tripsWanted : 100000));
                 return null;
             }
             default -> { return "I'm not sure how to do that yet."; }
@@ -420,6 +421,34 @@ final class PaLogiPlan {
         PaStore.touch();
         PaTalk.reply(a, PaLogiTalk.line(a, "logi.named", "chest", PaLogistics.called(a, b, null)));
         if (p != null) PaNet.ping(p, b, PaLogistics.cap(k.label()), "GATHER", "found");
+        return null;
+    }
+
+    /** [pa36b] "You can take anything from this chest" / "don't take from my storage": what it may take on its own account. */
+    @Nullable
+    private static String mayTake(@Nullable ServerPlayer p, PlayerAssistantEntity a, PaLogiOrder o, PaOrders.Look look) {
+        List<BlockPos> to = PaLogistics.resolve(p, a, o.to(), look, 0);
+        if (o.to().kind() == Ref.Kind.STORAGE || o.to().kind() == Ref.Kind.KNOWN) to = new ArrayList<>(to);
+        else if (!to.isEmpty()) to = List.of(to.get(0));
+        if (to.isEmpty()) return noChest(p, a, o.to(), look, 0);
+        UUID owner = a.getOwnerId();
+        if (owner == null) return null;
+        String dim = a.level().dimension().location().toString();
+        int lvl = o.arg().matches("[0-2]") ? Integer.parseInt(o.arg()) : 1;
+        int done = 0;
+        BlockPos first = null;
+        for (BlockPos b : to) {
+            String why = PaContainers.refuse(a, b);
+            if (why != null && !why.startsWith("I don't know that chest")) { if (done == 0 && to.size() == 1) return why; continue; }
+            PaStore.Known k = PaStore.learn(owner, dim, b, PaContainers.blockId(a.level(), b), a.level().getGameTime());
+            k.take = lvl;
+            if (first == null) first = b;
+            done++;
+        }
+        if (first == null) return noChest(p, a, o.to(), look, 0);
+        PaStore.touch();
+        String chest = done > 1 ? (o.to().kind() == Ref.Kind.STORAGE ? "the storage" : "those " + done + " chests") : PaLogistics.called(a, first, o.to());
+        PaTalk.reply(a, PaLogiTalk.line(a, lvl == 0 ? "logi.maytake_no" : lvl == 1 ? "logi.maytake_basics" : "logi.maytake_any", "chest", chest));
         return null;
     }
 

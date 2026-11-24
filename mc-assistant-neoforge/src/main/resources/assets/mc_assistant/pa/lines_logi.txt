@@ -630,6 +630,93 @@ Paused: {from} empty.
 Waiting for items at {from}.
 Will recheck {from} soon.
 
+== logi.borrowed
+Borrowed {what} from {chest} {why}. I'll owe you.
+Took {what} out of {chest} {why}. Noted, in case you're counting.
+{what} from {chest}, {why}. You did say I could.
+Helped myself to {what} from {chest} {why}. Within the rules, I checked.
+Borrowed {what} from {chest} {why}, before you ask.
+{what} out of {chest} {why}. I'll put it on my tab.
+[daft] Borrowed {what} from {chest} {why}. Think of it as an investment in me.
+== logi.borrowed@gloomy
+Borrowed {what} from {chest} {why}. Someone has to keep me going.
+Took {what} from {chest} {why}. I'll pay it back. One day.
+{what} from {chest}, {why}. It's not as if I wanted to.
+Borrowed {what} from {chest} {why}. That's the whole story.
+I've had {what} from {chest} {why}. Sorry.
+{what} out of {chest} {why}. Add it to what I owe.
+== logi.borrowed@serious
+Borrowed {what} from {chest} {why}.
+Took {what} from {chest} {why}.
+{what} taken from {chest} {why}.
+Withdrew {what} from {chest} {why}.
+From {chest}: {what}, {why}.
+{what} borrowed from {chest} {why}.
+
+== logi.maytake_no
+Understood. I won't take anything from {chest} unless you ask.
+{chest} is hands-off for me, then. Your orders still count.
+Noted. Nothing out of {chest} on my own account.
+{chest}: look, don't touch. Got it.
+Fine. If I want anything from {chest}, I'll ask first.
+Right. {chest} stays exactly as you left it, as far as I'm concerned.
+== logi.maytake_no@gloomy
+{chest} is off limits. I'll just look at it longingly.
+Hands off {chest}. I'll manage. Somehow.
+Nothing from {chest}. Not even a stick. Understood.
+{chest} isn't for me. Few things are.
+Noted. {chest} is yours alone.
+I won't touch {chest}. I'll be over here, wanting.
+== logi.maytake_no@serious
+{chest}: no taking on my own account.
+Understood. {chest} is not used for my kit.
+{chest} set to: take nothing.
+No idle takes from {chest}.
+{chest} excluded from my top-ups.
+{chest}: orders only.
+== logi.maytake_basics
+I may help myself to basics from {chest}, then. Food, wood, coal. Nothing shiny.
+Basics from {chest} when I need them. I'll leave the iron alone.
+{chest} for food and makings, never your valuables. Fair.
+Right. A bit of wood or bread from {chest} if I'm short. I'll say so each time.
+Noted: basics only from {chest}. Iron and up stays put.
+Understood. I'll borrow the plain stuff from {chest}, and tell you when I do.
+== logi.maytake_basics@gloomy
+Basics from {chest}. The shiny things are not for the likes of me.
+I may have bread from {chest}. Bread. Lovely.
+Wood and food from {chest}. I'll try not to enjoy it.
+Basics only. I'll stay humble about {chest}.
+{chest}: the ordinary stuff. Which suits me.
+Fine. Plain things from {chest}. I'll report every crumb.
+== logi.maytake_basics@serious
+{chest}: basics may be taken for my kit. No valuables.
+{chest} set to: take basics.
+I may take food and makings from {chest}, not iron and up.
+Idle takes from {chest}: basics only.
+{chest}: basics allowed, valuables excluded.
+Basics from {chest} permitted. Each take reported.
+== logi.maytake_any
+Anything from {chest}, then, iron included. I'll still say what I take.
+{chest} is open to me, valuables too. I'll be sensible. Mostly.
+Everything in {chest} I may use. I'll tell you each time.
+Noted: {chest} for anything I need, iron and up included.
+That's generous. Anything from {chest}, reported as I go.
+Right. {chest} is fair game. I'll keep a tally in the Talk log.
+== logi.maytake_any@gloomy
+Anything from {chest}. I'll try to deserve it.
+{chest}, all of it. I'll probably only take bread anyway.
+Even the iron in {chest}. Don't say I didn't warn you.
+Everything in {chest} is open to me. Feels like a trap.
+Anything from {chest}. I'll own up to every bit.
+{chest} for anything. Responsibility. Wonderful.
+== logi.maytake_any@serious
+{chest}: anything may be taken for my kit.
+{chest} set to: take anything.
+Idle takes from {chest}: all items, valuables included.
+{chest} fully available for my top-ups. Each take reported.
+I may take anything from {chest}.
+{chest}: unrestricted, reported.
+
 == logi.stopped
 Stopped. Moved {n} in all.
 Right, stopping. That's {n} moved.

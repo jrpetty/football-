@@ -403,7 +403,7 @@ public final class PaUnderstand {
         if (c.matches("^(?:pause|hold on|hang on|hold up|wait up|wait a (?:sec|second|moment|minute)|one sec|one moment|take a break)(?: .*)?$")) return PaIntent.of(Kind.PAUSE, raw);
         if (c.matches("^(?:resume|continue|carry on|keep going|keep at it|keep it up|go on|back to work|unpause|get back to work)(?: .*)?$")) return PaIntent.of(Kind.RESUME, raw);
         Matcher rn = RENAME.matcher(c);
-        if (rn.matches()) return new PaIntent(Kind.RENAME, rn.group(1), 0, Place.NONE, raw);
+        if (rn.matches()) return new PaIntent(Kind.RENAME, PaNames.asSaid(raw, c, rn.start(1), rn.end(1), 16, rn.group(1)), 0, Place.NONE, raw);   // [pa36b] the name as said
 
         // auto-help
         if (has(c, "auto help on", "turn on auto help", "help out on your own", "do your own thing", "be useful",

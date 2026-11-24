@@ -135,10 +135,17 @@ public final class PaStorageScreen extends PaLogiBase {
             button(g, "Take...", bx + 82, by, 42, 14, mx, my, true, false, "Take something out of it", () -> PaLogiClient.open(b, "ltake", title));
             button(g, "Forget", bx + 126, by, 42, 14, mx, my, true, false, "It won't use this one again", () -> { send("forget", b); PaLogiClient.send("storage", new CompoundTag()); });
         }
-        button(g, c.getBoolean("drop") ? "Drop-off" : "Make drop-off", bx, by + 17, 80, 14, mx, my, !c.getBoolean("drop"), false, "Where it unloads when its pack is full",
+        button(g, "Drop-off", bx, by + 17, 52, 14, mx, my, !c.getBoolean("drop"), c.getBoolean("drop"),
+            c.getBoolean("drop") ? "This is where it unloads when its pack is full" : "Make this where it unloads when its pack is full",
             () -> { send("dropoff", b); PaLogiClient.send("storage", new CompoundTag()); });
-        if (c.contains("stock")) button(g, "Stop stocking", bx + 82, by + 17, 86, 14, mx, my, true, false, "Stop topping it up", () -> { send("unstock", b); PaLogiClient.send("storage", new CompoundTag()); });
-        else button(g, "Keep stocked...", bx + 82, by + 17, 86, 14, mx, my, true, false, "It checks every few minutes and tops it up", () -> PaLogiClient.open(b, "lstock", title));
+        if (c.contains("stock")) button(g, "Unstock", bx + 54, by + 17, 46, 14, mx, my, true, false, "Stop topping it up", () -> { send("unstock", b); PaLogiClient.send("storage", new CompoundTag()); });
+        else button(g, "Stock...", bx + 54, by + 17, 46, 14, mx, my, true, false, "Keep this chest stocked: it checks every few minutes and tops it up", () -> PaLogiClient.open(b, "lstock", title));
+        int mt = c.getInt("mt");                                            // [pa36b] what it may take from here on its own account
+        String ml = mt >= 2 ? "Take: any" : mt == 1 ? "Take: basics" : "Take: no";
+        String mtip = mt >= 2 ? "When nobody asked, it may take anything from here for its kit, valuables too"
+            : mt == 1 ? "When nobody asked, it may take basics from here for its kit (food, wood, coal), never iron and up"
+            : "When nobody asked, it takes nothing from here (your orders still can)";
+        button(g, ml, bx + 102, by + 17, 66, 14, mx, my, true, mt > 0, mtip, () -> { send("maytake", b); PaLogiClient.send("storage", new CompoundTag()); });
     }
 
     private static String nameOrWord(String item) {
