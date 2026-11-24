@@ -1013,6 +1013,13 @@ public class PaScreen extends Screen {
         setFocused(null);
     }
 
+    /** [pa35] A small Natural / Basic badge. */
+    private void badge(GuiGraphics g, String text, int x, int y, boolean natural) {
+        int w = font.width(text) + 6;
+        g.fill(x, y, x + w, y + 10, natural ? BRAND : 0xFF8E8E8E);
+        g.drawString(font, text, x + 3, y + 1, 0xFFFFFFFF, false);
+    }
+
     /** A labelled on/off switch drawn at a given width (the Memory tab's top). */
     private void toggleAt(GuiGraphics g, String label, boolean on, int x, int y, int w, int mx, int my, String tip, Runnable flip) {
         toggle(g, label, on, x, y, w, mx, my, tip, flip);
@@ -1093,61 +1100,84 @@ public class PaScreen extends Screen {
     }
 
     private int secVoice(GuiGraphics g, CompoundTag s, int sx, int cy, int half, int mx, int my) {
+        // [pa35] on by default, natural first: Kokoro, then Piper, then a Windows 11 Natural voice; the basic system voice only if picked
         boolean speak = PaClientConfig.get(PaClientConfig.SPEAK, true);
-        cy = toggle(g, "Speak replies aloud", speak, sx, cy, half, mx, my, PaVoice.tts().status(), () -> PaClientConfig.set(PaClientConfig.SPEAK, !speak));
-        List<String> voices = PaVoice.tts().voices();
-        int vi = PaClientConfig.get(PaClientConfig.VOICE, 0);
-        String vname = voices.isEmpty() || vi <= 0 ? "Default" : voices.get(Math.min(vi, voices.size() - 1));
-        // [pa33b] the accent it listens for and speaks in: English (UK), English (US), or Auto
-        String acc = PaClientConfig.get(PaClientConfig.ACCENT, "auto");
+        cy = toggle(g, "Speak replies aloud", speak, sx, cy, half, mx, my, "Its words always show too", () -> PaClientConfig.set(PaClientConfig.SPEAK, !speak));
+        String vkey = PaClientConfig.get(PaClientConfig.VOICEKEY, "");
+        boolean basic = PaClientConfig.get(PaClientConfig.BASICVOICE, false), woman = PaClientConfig.get(PaClientConfig.VOICEWOMAN, false);
         com.jrpetty.mcassistant.pa.voice.PaAccent accNow = PaVoice.accent();
+        String now = PaVoice.tts().voiceInUse(vkey, basic, accNow, woman);
+        g.drawString(font, "Now", sx, cy + 1, muted(), false);
+        g.drawString(font, UiStyle.clip(font, now, half - 64), sx + 60, cy + 1, now.contains("natural") ? BRAND : UiStyle.TEXT, false);
+        cy += 12;
+        // the natural voice: ready, coming down, or not fetched (with the one-click choice either way)
+        boolean ready = PaVoice.tts().kokoroReady();
+        String pack = PaClientConfig.get(PaClientConfig.VOICEPACK, "auto");
+        g.drawString(font, "Natural", sx, cy + 3, muted(), false);
+        if (ready) {
+            badge(g, "Natural", sx + 60, cy + 1, true);
+            g.drawString(font, UiStyle.clip(font, "Ready: George, Emma and ten more, offline", half - 120), sx + 110, cy + 3, UiStyle.TEXT, false);
+            cy += 16;
+        } else if (PaVoice.installingVoices) {
+            int barW = Math.max(60, half - 64 - 96);
+            g.fill(sx + 60, cy + 4, sx + 60 + barW, cy + 9, 0xFFB9C7C4);
+            g.fill(sx + 60, cy + 4, sx + 60 + (int) Math.round(barW * PaVoice.packFraction), cy + 9, BRAND_LIGHT);
+            button(g, "Don't download", sx + 64 + barW, cy, 90, 13, mx, my, true, false, "Stops now (what's down is kept) and won't start by itself again",
+                PaVoice::declineVoices);
+            cy += 15;
+            cy = para(g, PaVoice.packLine, sx + 60, cy, half - 60, faint());
+        } else {
+            button(g, "Download now (" + com.jrpetty.mcassistant.pa.voice.PaKokoro.totalMb() + " MB)", sx + 60, cy, Math.min(170, half - 64), 13, mx, my, true, true,
+                "Kokoro: very human, offline voices (Apache-2.0), with ONNX Runtime (MIT), from GitHub and Maven Central, each checked by its SHA-256. Nothing about you is sent.",
+                () -> { PaClientConfig.set(PaClientConfig.VOICEPACK, "auto"); PaVoice.installVoices(); });
+            cy += 15;
+            if (PaVoice.packFailed) cy = para(g, PaVoice.packLine, sx + 60, cy, half - 60, UiStyle.DANGER);
+        }
+        cy = toggle(g, "Fetch it by itself", "auto".equals(pack), sx, cy, half, mx, my,
+            "On (the default): the natural voice downloads in the background the first time you get an assistant. Off: only when you click Download.",
+            () -> PaClientConfig.set(PaClientConfig.VOICEPACK, "auto".equals(pack) ? "declined" : "auto"));
+        cy = toggle(g, "A woman's voice", woman, sx, cy, half, mx, my, "Emma (British) or Heart (American); off: George or Michael",
+            () -> { PaClientConfig.set(PaClientConfig.VOICEWOMAN, !woman); PaClientConfig.set(PaClientConfig.VOICEKEY, ""); PaVoice.speak(PaVoice.sample(triangle.tri()), triangle.tri().gloomy(), triangle.tri().funny()); });
+        cy = toggle(g, "System voice (basic)", basic, sx, cy, half, mx, my,
+            "Your computer's old built-in voices (Windows desktop voices, macOS say). Robotic: used only if you turn this on and no natural voice is ready. Off: words only until it is.",
+            () -> PaClientConfig.set(PaClientConfig.BASICVOICE, !basic));
+        // the accent it listens for and speaks in
+        String acc = PaClientConfig.get(PaClientConfig.ACCENT, "auto");
         g.drawString(font, "Accent", sx, cy + 3, muted(), false);
         button(g, com.jrpetty.mcassistant.pa.voice.PaAccent.settingLabel(acc, accNow), sx + 60, cy, Math.max(96, Math.min(200, half - 64)), 13, mx, my, true, false,
             "Which English it listens for and speaks: English (UK), English (US), or Auto (your game's language, then your computer's)",
-            () -> { PaClientConfig.set(PaClientConfig.ACCENT, com.jrpetty.mcassistant.pa.voice.PaAccent.next(acc)); PaVoice.speak("Hello, this is my voice."); });
+            () -> { PaClientConfig.set(PaClientConfig.ACCENT, com.jrpetty.mcassistant.pa.voice.PaAccent.next(acc)); PaVoice.speak(PaVoice.sample(triangle.tri()), triangle.tri().gloomy(), triangle.tri().funny()); });
         cy += 15;
-        // [pa33b] the voice picker: every voice, grouped by engine (the most natural first), each with a preview
-        String vkey = PaClientConfig.get(PaClientConfig.VOICEKEY, "");
+        // the picker: every voice, each with a badge and a real sample line
         List<com.jrpetty.mcassistant.pa.voice.PaTts.VoiceInfo> cat = PaVoice.tts().catalogue();
-        String cur = vkey.isEmpty() ? "Auto: " + PaVoice.tts().voiceInUse(0) : vkey.substring(vkey.indexOf(':') + 1);
         g.drawString(font, "Voice", sx, cy + 3, muted(), false);
+        String cur = vkey.isEmpty() ? "Auto" : vkey.substring(vkey.indexOf(':') + 1);
         button(g, cur + (voicesOpen ? "  \u25B4" : "  \u25BE"), sx + 60, cy, Math.max(96, Math.min(200, half - 64)), 13, mx, my, true, false,
-            "Choose its voice (the list shows every voice on your computer)", () -> voicesOpen = !voicesOpen);
+            "Choose its voice: natural ones first, then your computer's basic ones", () -> voicesOpen = !voicesOpen);
         cy += 15;
-        String sug = PaVoice.suggestFor(Math.floorMod(s.getInt("look"), PaRenderer.LOOK_NAMES.length), cat);
-        if (sug != null) { g.drawString(font, UiStyle.clip(font, "Suggested for this look: " + sug, half), sx, cy, faint(), false); cy += 11; }
         if (voicesOpen) {
             String group = "";
-            button(g, "Auto (most natural)", sx, cy, half - 22, 12, mx, my, true, vkey.isEmpty(), "", () -> PaClientConfig.set(PaClientConfig.VOICEKEY, ""));
+            button(g, "Auto (the best natural voice)", sx, cy, half - 22, 12, mx, my, true, vkey.isEmpty(), "", () -> PaClientConfig.set(PaClientConfig.VOICEKEY, ""));
             cy += 14;
             for (com.jrpetty.mcassistant.pa.voice.PaTts.VoiceInfo v : cat) {
                 if (!v.group().equals(group)) { group = v.group(); g.drawString(font, group, sx, cy + 1, BRAND, false); cy += 11; }
                 final String k = v.key();
-                button(g, UiStyle.clip(font, v.label(), half - 30), sx, cy, half - 22, 12, mx, my, true, k.equals(vkey), "", () -> PaClientConfig.set(PaClientConfig.VOICEKEY, k));
-                button(g, "\u25B6", sx + half - 20, cy, 14, 12, mx, my, true, false, "Preview", () -> {
+                final boolean nat = v.natural();
+                button(g, UiStyle.clip(font, v.label(), half - 76), sx, cy, half - 70, 12, mx, my, true, k.equals(vkey), nat ? "" : "A basic voice: used only with System voice (basic) on",
+                    () -> { PaClientConfig.set(PaClientConfig.VOICEKEY, k); if (!nat) PaClientConfig.set(PaClientConfig.BASICVOICE, true); });
+                badge(g, v.badge(), sx + half - 66, cy + 1, nat);
+                button(g, "\u25B6", sx + half - 20, cy, 14, 12, mx, my, true, false, "Hear it say a real line", () -> {
+                    String before = PaClientConfig.get(PaClientConfig.VOICEKEY, "");
                     PaClientConfig.set(PaClientConfig.VOICEKEY, k);
+                    boolean wasBasic = PaClientConfig.get(PaClientConfig.BASICVOICE, false);
+                    if (!nat) PaClientConfig.set(PaClientConfig.BASICVOICE, true);
                     PaVoice.speak(PaVoice.sample(triangle.tri()), triangle.tri().gloomy(), triangle.tri().funny());
+                    PaClientConfig.set(PaClientConfig.VOICEKEY, before);
+                    PaClientConfig.set(PaClientConfig.BASICVOICE, wasBasic);
                 });
                 cy += 14;
             }
-            if (cat.isEmpty()) cy = para(g, PaVoice.tts().status(), sx, cy, half, faint());
-            // [pa33b] the natural voices (Kokoro): offered, explained, and fetched only once the player agrees
-            if (!PaVoice.tts().kokoroReady()) {
-                if (!voicesAsk) {
-                    button(g, PaVoice.installingVoices ? "Downloading..." : "Get natural British voices...", sx, cy, half - 22, 13, mx, my, !PaVoice.installingVoices, false,
-                        "George, Lewis, Daniel, Fable, Emma, Isabella, Alice, Lily: very human, offline", () -> voicesAsk = true);
-                    cy += 16;
-                } else {
-                    cy = para(g, "Natural voices (Kokoro, Apache-2.0) run on your computer, offline. This downloads about "
-                        + com.jrpetty.mcassistant.pa.voice.PaKokoro.totalMb() + " MB once into your config folder, from GitHub and Maven Central: the voice model and voices (Apache-2.0) and ONNX Runtime (MIT). "
-                        + "They also need the free program eSpeak NG on your computer to read words. Nothing you say is sent anywhere.", sx, cy, half, faint());
-                    button(g, "I agree: download", sx, cy, 100, 14, mx, my, true, true, "", () -> { voicesAsk = false; PaVoice.installVoices(); });
-                    button(g, "Not now", sx + 106, cy, 60, 14, mx, my, true, false, "", () -> voicesAsk = false);
-                    cy += 18;
-                }
-            }
-            cy = para(g, "More natural voices: on Windows add voices in Settings > Time & language > Speech; on a Mac, System Settings > Accessibility > Spoken Content > System voice > Manage Voices (pick an Enhanced or Premium one).",
-                sx, cy, half, faint());
+            if (cat.isEmpty()) cy = para(g, "No voices yet: the natural voice is " + (PaVoice.installingVoices ? "on its way." : "not downloaded."), sx, cy, half, faint());
         }
         int rate = PaClientConfig.get(PaClientConfig.RATE, 0), vol = PaClientConfig.get(PaClientConfig.VOLUME, 80), pitch = PaClientConfig.get(PaClientConfig.PITCH, 0);
         cy = stepper(g, "Speed", rate + "", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.RATE, Math.max(-5, rate - 1)),

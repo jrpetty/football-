@@ -64,6 +64,7 @@ public class PlayerAssistantGameTests {
         Kit.noLeftoverPlayers(level);
         PaConfig.perPlayerForTests(null);
         PaConfig.respawnSecondsForTests(null);
+        PaConfig.ladderForTests(false, null);                          // [pa35] these tests predate the mining and gear ladders (PaMemoryGameTests has its own)
         level.setDayTime(2000);
         Kit.hold(level, x, Z, 40);
         Kit.prepare(level, x, Z, 40);
@@ -2188,11 +2189,13 @@ public class PlayerAssistantGameTests {
     }
 
     /** pai58: work by level, timed: two assistants at the same rock face (level 1 and level 10, the same stone pick) each
-     *  mine until they have three iron. Level 10 is done well before level 1, its clock quicker by its level. [pa33g] */
+     *  mine until they have three iron. [pa35] Both break each block in exactly a player's time (PaPace: no level buff);
+     *  level 10 still finishes no later, by its reach and its steadier hands between actions, never by quicker digging. */
     @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "pai58_work_by_level")
     public static void pai58_work_by_level(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_171_000, y = ground(level, x);
+        PaConfig.ladderForTests(false, null);                              // [pa35] the mining ladder off: level 1 may mine iron here
         PlayerAssistantEntity[] who = new PlayerAssistantEntity[2];
         long[] doneAt = {-1, -1};
         for (int k = 0; k < 2; k++) {
@@ -2216,11 +2219,12 @@ public class PlayerAssistantGameTests {
         });
         helper.succeedWhen(() -> {
             helper.assertTrue(doneAt[1] >= 0, "level 10 has its three iron");
-            helper.assertTrue(t10 * 100 <= t1 * 70, "level 10's clock at the rock is a good deal quicker: " + t10 + " ticks a block against " + t1);
+            helper.assertTrue(t10 == t1, "[pa35] the same break time at both levels (a player's, by the tool): " + t10 + " against " + t1);
             helper.assertTrue(who[1].reach() > who[0].reach(), "and it reaches further: " + who[1].reach() + " against " + who[0].reach());
-            helper.assertTrue(who[1].pacedTicks(20, 100) < who[0].pacedTicks(20, 100), "and crafts quicker: " + who[1].pacedTicks(20, 100) + " against " + who[0].pacedTicks(20, 100));
-            helper.assertTrue(doneAt[0] < 0 || doneAt[1] * 100 <= doneAt[0] * 90, "level 10 done well before level 1: " + doneAt[1] + " ticks against " + doneAt[0]);
-            if (doneAt[0] < 0) helper.assertTrue(helper.getTick() - start >= doneAt[1] * 100 / 90, "level 1 still at it well after level 10 finished");
+            int top1 = com.jrpetty.mcassistant.pa.PaPace.handTop(1), top10 = com.jrpetty.mcassistant.pa.PaPace.handTop(10);
+            helper.assertTrue(top10 < top1, "[pa35] steadier hands at level 10 (fewer idle gaps), never past the cap: " + top10 + " against " + top1);
+            helper.assertTrue(doneAt[0] < 0 || doneAt[1] <= doneAt[0] + 40, "level 10 done no later than level 1: " + doneAt[1] + " ticks against " + doneAt[0]);
+            PaConfig.ladderForTests(null, null);
             Kit.log("pai58 work by level: three iron at level 10 in " + doneAt[1] + " ticks, level 1 " + (doneAt[0] < 0 ? "still at it" : doneAt[0] + " ticks")
                 + "; a block of ore " + t10 + " against " + t1 + " ticks");
         });

@@ -102,6 +102,7 @@ public final class PaClient {
                 state = data;
                 stamp++;
                 PaToast.maybeShow(data.getBoolean("has"));
+                PaVoice.maybeAutoDownload(data.getBoolean("has"));          // [pa35] the natural voice, on by default
             }
             case PaPayload.OPEN -> {
                 if (data.getString("tab").equals("stranger")) { mc.setScreen(new PaStrangerScreen(data)); return; }   // [pa33b]
@@ -169,7 +170,7 @@ public final class PaClient {
         stamp++;
         subtitle = d.getString("name") + ": " + text;
         subtitleUntil = System.currentTimeMillis() + 2500L + text.length() * 60L;
-        if (d.getBoolean("speak")) PaVoice.speak(text, d.getFloat("gloom"), d.getFloat("fun"));
+        if (d.getBoolean("speak")) PaVoice.speak(text, d.getFloat("gloom"), d.getFloat("fun"), id);   // [pa35] its gesture waits for its voice
     }
 
     /** The bubble over this assistant just now, or null. */
@@ -317,5 +318,6 @@ public final class PaClient {
         PaHud.draw(g, mc);
         PaPingClient.draw(g, mc);                                 // [pa33c-2b] ping markers
         PaBubbles.draw(g, mc);                                    // [pa33c-2b] speech, inside the screen
+        PaVoiceBanner.draw(g, mc, -1, -1);                        // [pa35] the natural voice coming down
     }
 }

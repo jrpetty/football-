@@ -31,7 +31,9 @@ public final class PaAnims {
         Integer was = LAST.put(a.getId(), v);
         FolkAction.Seen s = SEEN.computeIfAbsent(a.getId(), k -> new FolkAction.Seen());
         int act = v & 0xFF;
-        boolean talking = PaClient.BUBBLES.containsKey(a.getId()) && PaClient.bubble(a.getId(), a.level().getGameTime()) != null;
+        if (act != 0 && PaVoice.holdingGesture(a.getId())) act = 0;          // [pa35] the gesture waits for its voice, so they line up
+        boolean talking = PaVoice.sounding(a.getId())                          // [pa35] the talking hands while its voice sounds
+            || PaClient.BUBBLES.containsKey(a.getId()) && PaClient.bubble(a.getId(), a.level().getGameTime()) != null && !PaVoice.holdingGesture(a.getId());
         int want = act != 0 ? act : talking && !a.isAggressive() && a.walkAnimation.speed() < 0.2F ? FolkAction.Act.TALK.ordinal() : 0;
         if ((was != null && was != v && act != 0) || want != s.act) s.begin(want, a.tickCount);
         // [pa33g] a bow drawn, a crossbow, a shield up or gliding: the pose is the game's, and no gesture or talking hands break it

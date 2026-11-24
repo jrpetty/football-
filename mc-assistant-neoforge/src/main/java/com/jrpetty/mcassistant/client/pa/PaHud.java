@@ -125,7 +125,8 @@ final class PaHud {
             PlayerAssistantEntity a = PaClient.mine();
             boolean seen = a != null && a.distanceTo(mc.player) < 14 && mc.player.hasLineOfSight(a)
                 && a.getEyePosition().subtract(mc.player.getEyePosition()).normalize().dot(mc.player.getViewVector(1.0F)) > 0.72   // [pa33e] on screen, not just beside you
-                && !com.jrpetty.mcassistant.pa.PaClientConfig.get(com.jrpetty.mcassistant.pa.PaClientConfig.SUBTITLES, false);   // [pa33c-2b] subtitles always
+                && !com.jrpetty.mcassistant.pa.PaClientConfig.get(com.jrpetty.mcassistant.pa.PaClientConfig.SUBTITLES, false)    // [pa33c-2b] subtitles always
+                && !PaVoice.textOnly();                                   // [pa35] no voice ready yet: its words as subtitles
             if (!seen) {
                 var lines = font.split(net.minecraft.network.chat.Component.literal(PaClient.subtitle), Math.min(320, w - 40));
                 int n = Math.min(3, lines.size());

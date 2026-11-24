@@ -196,7 +196,7 @@ class PaVoiceTest {
         assertTrue(s.contains("about fifty blocks north-east") && !s.contains("140"), s);
         assertTrue(PaSpeech.speakable("Heading there.  \u00D72", Double.NaN, Double.NaN).equals("Heading there."));
         assertEquals("Watch the nether-ite and the ender man", PaSpeech.speakable("Watch the netherite and the Enderman", 0, 0).replace("Watch the nether-ite and the ender man", "Watch the nether-ite and the ender man"));
-        assertTrue(PaSpeech.speakable("Hello Dev_123", 0, 0).contains("Dev 123"));
+        assertTrue(PaSpeech.speakable("Hello Dev_123", 0, 0).contains("Dev one twenty-three"), "[pa35] its digits said as a number");
         assertEquals(List.of("One.", "Two?", "Three."), PaSpeech.sentences("One. Two? Three."));
     }
 
@@ -286,6 +286,8 @@ class PaVoiceTest {
         assertFalse(k.downloaded());
         assertFalse(k.load());
         assertEquals("The natural voices aren't downloaded.", k.why());
+        for (PaKokoro.Part p : PaKokoro.PARTS) assertTrue(p.sha256().matches("[0-9a-f]{64}") && p.bytes() > 0, "[pa35] every file checked by size and SHA-256: " + p.file());
+        assertTrue(PaKokoro.PARTS.stream().noneMatch(p -> p.url().contains("/main/") || p.url().contains("/master/")), "[pa35] pinned, never a moving branch");
         assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
             () -> k.synth("h\u0259lo\u028a", PaKokoro.byId("bm_george"), 1f)).getMessage().contains("downloaded"));
     }
@@ -350,7 +352,7 @@ class PaVoiceTest {
         assertEquals(4, g[0].length);
         assertEquals(5f, g[1][1]);
         assertEquals(105f, voices.get("bf_emma")[1][1]);
-        assertEquals(g[2], PaKokoro.style(g, 2));
+        assertEquals(g[1], PaKokoro.style(g, 2), "[pa35] n tokens take row n - 1, as Kokoro does");
         assertEquals(g[2], PaKokoro.style(g, 999), "a long sentence takes the last row");
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> PaKokoro.npy(new byte[20]));
     }

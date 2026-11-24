@@ -120,7 +120,9 @@ public final class PaPace {
         float submergedSpeed = (float) attr(e, Attributes.SUBMERGED_MINING_SPEED, aqua ? 1.0 : 0.2);
         boolean submerged = e.isEyeInFluid(net.minecraft.tags.FluidTags.WATER);
         // the Efficiency bonus is the mining-efficiency attribute for a player; a mob has none of its own, so it's read off the tool
-        float speed = digSpeed(tool.getDestroySpeed(state), eff, haste, fatigue, breakAttr, submerged, submergedSpeed, e.onGround());
+        // off the ground as a player is: in the air on the way up or down (a mob just set down reads "not on ground" for a tick)
+        boolean grounded = e.onGround() || Math.abs(e.getDeltaMovement().y) < 1e-3 || e.isPassenger();
+        float speed = digSpeed(tool.getDestroySpeed(state), eff, haste, fatigue, breakAttr, submerged, submergedSpeed, grounded);
         return ticksToBreak(hardness, speed, correct);
     }
 

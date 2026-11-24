@@ -630,9 +630,9 @@ public final class PaMemoryAct {
     public static boolean askingAbout(String text, String owner) {
         String t = " " + PaMemoryParse.norm(text, "") + " ";
         String o = owner == null ? "" : owner.toLowerCase(Locale.ROOT);
-        boolean who = (!o.isEmpty() && t.contains(" " + o)) || t.matches(".* (?:your owner|your master|your boss|your player|he|she|they|his|her|their) .*");
-        return who && t.matches(".* (?:favourite|fav|like|likes|love|hate|hates|base|house|home|mine|farm|live|lives|told you|remember|password|secret|friends?|where|stuff|chests?) .*")
-            && t.matches(".* (?:what|where|who|which|does|do|tell me|is|whats|wheres) .*");
+        boolean who = (!o.isEmpty() && t.contains(" " + o)) || t.matches(".*\\b(?:your owner|your master|your boss|your player|he|she|they|his|her|their)\\b.*");
+        return who && t.matches(".*\\b(?:favourite|fav|like|likes|love|hate|hates|base|house|home|mine|farm|live|lives|told you|remember|password|secret|friends?|where|stuff|chests?)\\b.*")
+            && t.matches(".*\\b(?:what|where|who|which|does|do|tell me|is)\\b.*");
     }
 
     // ------------------------------------------------------------------ its rules, on their triggers (each assistant, about once a second)

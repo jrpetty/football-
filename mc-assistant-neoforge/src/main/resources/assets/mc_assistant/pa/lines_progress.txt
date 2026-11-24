@@ -89,3 +89,25 @@ The {item} needs level {level}. Holding it for you.
 Not until level {level}. I'll keep the {item}.
 Level {level} for the {item}. Kept, not used.
 Held, not used: level {level}.
+
+== say.voice.ready
+Ah, that's better. My real voice.
+There. That's what I actually sound like.
+Right, voice is in. Sorry about the silent treatment.
+That's better. I was starting to feel like a subtitle.
+Voice sorted. You may now regret it.
+Testing, testing. Yes, that's me.
+== say.voice.ready@gloomy
+Ah. My real voice. It was always going to sound like this.
+That's better. Now you can hear how I feel.
+There's my voice. Took its time, like everything.
+Right. I can talk now. Brace yourself.
+My actual voice. I'd hoped it'd be cheerier.
+There. Now the sighs come with sound.
+== say.voice.ready@serious
+That's better. My real voice.
+My voice is ready.
+There. You'll hear me properly now.
+Voice ready.
+I can speak properly now.
+That's my voice.

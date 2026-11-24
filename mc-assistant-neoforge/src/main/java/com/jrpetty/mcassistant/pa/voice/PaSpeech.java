@@ -46,7 +46,10 @@ public final class PaSpeech {
      */
     public static String speakable(String text, double px, double pz) {
         if (text == null) return "";
-        String t = text.replace('\u201C', ' ').replace('\u201D', ' ').replaceAll("\\s+\u00D7\\d+", "");
+        // [pa35] markup off first: gesture tags ("[anim:shrug]"), colour codes, markdown and angle-bracket tags, emoji
+        String t = text.replaceAll("\\[(?:anim|bad|tag)[^\\]]*\\]", " ").replaceAll("\u00A7.", "").replaceAll("<[^>]{1,40}>", " ")
+            .replaceAll("[*_`~]{1,3}([^*_`~]+)[*_`~]{1,3}", "$1").replaceAll("[\\x{1F000}-\\x{1FAFF}\\x{2600}-\\x{27BF}\\x{FE0F}\\x{200D}]", " ");
+        t = t.replace('\u201C', ' ').replace('\u201D', ' ').replaceAll("\\s+\u00D7\\d+", "");
         Matcher m = COORDS.matcher(t);
         StringBuilder b = new StringBuilder();
         while (m.find()) {
@@ -71,7 +74,91 @@ public final class PaSpeech {
             else out.append(w);
             out.append(' ');
         }
-        return out.toString().replaceAll("\\s+", " ").trim();
+        return numbers(abbreviations(out.toString())).replaceAll("\\s+", " ").trim();
+    }
+
+    // ------------------------------------------------------------------ [pa35] numbers and abbreviations, said as people say them
+
+    private static final String[][] ABBREV = {
+        {"(?i)\\be\\.g\\.", "for example"}, {"(?i)\\bi\\.e\\.", "that is"}, {"(?i)\\betc\\.", "et cetera"}, {"(?i)\\bvs\\.?(?=\\s)", "versus"},
+        {"(?i)\\bapprox\\.?(?=\\s)", "about"}, {"(?i)\\bmins?\\b", "minutes"}, {"(?i)\\bsecs?\\b", "seconds"}, {"(?i)\\bhrs?\\b", "hours"},
+        {"(?i)\\bhp\\b", "health"}, {"(?i)\\bL(\\d{1,2})\\b", "level $1"}, {"(?i)\\bLv\\.?\\s?(\\d{1,2})\\b", "level $1"}, {"(?i)\\bno\\.\\s?(\\d)", "number $1"},
+        {"(\\d)\\s?%", "$1 percent"}, {"\\s&\\s", " and "}, {"(\\d)\\s?x\\b", "$1 times"}, {"(?i)\\bY\\s?(-?\\d)", "Y $1"},
+        {"(?i)\\bmr\\.", "mister"}, {"(?i)\\bmrs\\.", "missus"}, {"(?i)\\bdr\\.", "doctor"}, {"(?i)\\bst\\.(?=\\s[A-Z])", "saint"},
+    };
+
+    /** Abbreviations opened out ("e.g." is "for example", "L5" "level five", "50%" "fifty percent"). */
+    static String abbreviations(String t) {
+        String s = t;
+        for (String[] a : ABBREV) s = s.replaceAll(a[0], a[1]);
+        return s;
+    }
+
+    private static final Pattern NUMBER = Pattern.compile("(?<![\\w.])(-?)(\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.(\\d+))?(st|nd|rd|th)?(?![\\w])");
+
+    /** Every number in words, the way people say them: "-120, 64" is "minus one twenty, sixty-four"; "1200" "twelve hundred". */
+    static String numbers(String t) {
+        Matcher m = NUMBER.matcher(t);
+        StringBuilder b = new StringBuilder();
+        while (m.find()) {
+            String digits = m.group(2).replace(",", "");
+            String said;
+            try {
+                long n = Long.parseLong(digits);
+                said = m.group(4) != null ? ordinal(n) : spoken(n);
+                if (m.group(3) != null) {
+                    StringBuilder d = new StringBuilder(" point");
+                    for (char c : m.group(3).toCharArray()) d.append(' ').append(ONES[c - '0']);
+                    said += d;
+                }
+                if (!m.group(1).isEmpty()) said = "minus " + said;
+            } catch (NumberFormatException e) {
+                said = m.group();
+            }
+            m.appendReplacement(b, Matcher.quoteReplacement(said));
+        }
+        m.appendTail(b);
+        return b.toString();
+    }
+
+    /** A whole number as people say it: 120 "one twenty", 105 "one hundred and five", 1200 "twelve hundred", 64 "sixty-four". */
+    public static String spoken(long n) {
+        if (n < 0) return "minus " + spoken(-n);
+        if (n < 100) return words((int) n);
+        if (n < 1000) {
+            int h = (int) (n / 100), r = (int) (n % 100);
+            if (r == 0) return ONES[h] + " hundred";
+            if (r < 10) return ONES[h] + " hundred and " + ONES[r];
+            return ONES[h] + " " + words(r);
+        }
+        if (n < 10000 && n % 100 == 0 && n % 1000 != 0) return words((int) (n / 100)) + " hundred";
+        if (n < 1_000_000) {
+            long th = n / 1000, r = n % 1000;
+            String head = (th < 100 ? words((int) th) : spokenFull(th)) + " thousand";
+            if (r == 0) return head;
+            return head + (r < 100 ? " and " + words((int) r) : " " + spokenFull(r));
+        }
+        if (n < 1_000_000_000L) {
+            long mi = n / 1_000_000, r = n % 1_000_000;
+            return spokenFull(mi) + " million" + (r == 0 ? "" : " " + spoken(r));
+        }
+        return Long.toString(n);
+    }
+
+    /** Hundreds in full ("three hundred and forty"), for inside a bigger number. */
+    private static String spokenFull(long n) {
+        if (n < 100) return words((int) n);
+        int h = (int) (n / 100), r = (int) (n % 100);
+        return ONES[h] + " hundred" + (r == 0 ? "" : " and " + words(r));
+    }
+
+    /** "1st" "first", "22nd" "twenty-second". */
+    static String ordinal(long n) {
+        String w = spoken(n);
+        String[][] end = {{"one", "first"}, {"two", "second"}, {"three", "third"}, {"five", "fifth"}, {"eight", "eighth"}, {"nine", "ninth"}, {"twelve", "twelfth"}};
+        for (String[] e : end) if (w.endsWith(e[0])) return w.substring(0, w.length() - e[0].length()) + e[1];
+        if (w.endsWith("y")) return w.substring(0, w.length() - 1) + "ieth";
+        return w + "th";
     }
 
     static int round(int d) {
