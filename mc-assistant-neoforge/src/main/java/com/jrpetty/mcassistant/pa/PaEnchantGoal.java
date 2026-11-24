@@ -92,6 +92,10 @@ final class PaEnchantGoal extends Goal {
         PaField f = a.mind.field;
         if (!f.seedSet) { f.enchantSeed = a.getRandom().nextInt(); f.seedSet = true; }
         shelfMode = job != null && "shelves".equals(job.arg());
+        if (!shelfMode && !PaLevels.has(a.veteranLevel(), "enchant")) {                 // the table from level 6, however the job came
+            finish(PaTalk.line(a, "skill_locked", "need", String.valueOf(PaLevels.levelOf("enchant")), "level", String.valueOf(a.veteranLevel())), false);
+            return;
+        }
         table = findTable();
         if (table == null) { finish(PaLogiTalk.line(a, "field.enchant_no_table"), false); return; }
         if (shelfMode) {

@@ -41,7 +41,11 @@ public final class PaSlips {
         return testing || System.getProperty("neoforge.enabledGameTestNamespaces") == null;
     }
 
+    /** Filming hook (-Dmca.pa.filmSlips=true): every chance a learner has comes up, so the slip is on camera. Nothing changes without it. */
+    static final boolean FILM = Boolean.getBoolean("mca.pa.filmSlips");
+
     private static Random dice(PlayerAssistantEntity a) {
+        if (FILM) return new Random() { @Override public double nextDouble() { return 0.0; } };
         Random d = testDice;
         return d != null ? d : new Random(a.getRandom().nextLong());
     }

@@ -47,6 +47,38 @@ class PaVoiceEndToEndTest {
         return r.steps().get(0).kind().name();
     }
 
+    /**
+     * 24 kHz to the recogniser's 16 kHz as a sound card would: low-passed below the new Nyquist first (a windowed sinc),
+     * so the voice's top octave doesn't fold back down into the words (plain picking of samples aliases, and Vosk
+     * heard nothing at all of a third of the orders).
+     */
+    static float[] to16k(float[] a) {
+        double step = 24000.0 / 16000.0, fc = 0.95 * 16000.0 / 24000.0;
+        int half = 24, n = (int) Math.floor((a.length - 1) / step);
+        float[] out = new float[n];
+        for (int i = 0; i < n; i++) {
+            double t = i * step, acc = 0;
+            int c = (int) Math.floor(t);
+            for (int k = c - half + 1; k <= c + half; k++) {
+                if (k < 0 || k >= a.length) continue;
+                double x = t - k, sinc = Math.abs(x) < 1e-9 ? 1.0 : Math.sin(Math.PI * fc * x) / (Math.PI * fc * x);
+                double w = 0.42 + 0.5 * Math.cos(Math.PI * x / half) + 0.08 * Math.cos(2 * Math.PI * x / half);   // Blackman
+                acc += a[k] * fc * sinc * w;
+            }
+            out[i] = (float) acc;
+        }
+        return out;
+    }
+
+    /** A 16-bit mono WAV back to samples (the cache an earlier run wrote). */
+    static float[] read24(Path f) throws java.io.IOException {
+        byte[] b = Files.readAllBytes(f);
+        int at = 44;
+        float[] out = new float[(b.length - at) / 2];
+        for (int i = 0; i < out.length; i++) out[i] = (short) ((b[at + 2 * i] & 0xFF) | (b[at + 2 * i + 1] << 8)) / 32768F;
+        return out;
+    }
+
     static String words(String s) {
         return s.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z ]", " ").replaceAll("\\s+", " ").trim();
     }
@@ -66,7 +98,7 @@ class PaVoiceEndToEndTest {
         PaG2p g2p = kokoro.g2p(PaAccent.UK, null);
         PaVosk vosk = new PaVosk(Path.of(vd));
         assertTrue(vosk.load(), "Vosk loads: " + vosk.status());
-        String out = System.getenv("MCA_TEST_VOICE_OUT");
+        String out = System.getenv("MCA_TEST_VOICE_OUT"), cache = System.getenv("MCA_TEST_VOICE_IN");
 
         List<Result> results = new ArrayList<>();
         int i = 0;
@@ -76,18 +108,26 @@ class PaVoiceEndToEndTest {
             String said = f[0].trim(), want = f[1].trim();
             for (int v = 0; v < 2; v++) {
                 PaKokoro.Voice voice = PaKokoro.byId(VOICES[(i + v) % VOICES.length]);
-                float[] raw = kokoro.synth(g2p.phonemize(said), voice, 1.0F);
-                float[] done = PaAudio.finish(raw, PaKokoro.SAMPLE_RATE, 1.0);
-                float[] pad = PaAudio.silence(PaKokoro.SAMPLE_RATE, 300);
-                float[] all = new float[pad.length * 2 + done.length];
-                System.arraycopy(done, 0, all, pad.length, done.length);
-                float[] at16 = PaAudio.resample(all, PaKokoro.SAMPLE_RATE / 16000.0);
-                byte[] pcm = PaKokoro.pcm16(at16, 100);
-                if (out != null) Files.write(Path.of(out).resolve(String.format("%02d_%s.wav", i, voice.id())), PaWav.wav(pcm, 16000));
+                String name = String.format("%02d_%s", i, voice.id());
+                float[] all;
+                Path cached = cache == null ? null : Path.of(cache).resolve(name + "_24k.wav");
+                if (cached != null && Files.isRegularFile(cached)) all = read24(cached);          // made by this same code on an earlier run
+                else {
+                    float[] raw = kokoro.synth(g2p.phonemize(said), voice, 1.0F);
+                    float[] done = PaAudio.finish(raw, PaKokoro.SAMPLE_RATE, 1.0);
+                    float[] pad = PaAudio.silence(PaKokoro.SAMPLE_RATE, 300);
+                    all = new float[pad.length * 2 + done.length];
+                    System.arraycopy(done, 0, all, pad.length, done.length);
+                    if (out != null) Files.write(Path.of(out).resolve(name + "_24k.wav"), PaWav.wav(PaKokoro.pcm16(all, 100), PaKokoro.SAMPLE_RATE));
+                }
+                byte[] pcm = PaKokoro.pcm16(to16k(all), 100);
+                if (out != null) Files.write(Path.of(out).resolve(name + ".wav"), PaWav.wav(pcm, 16000));
                 PaVosk.Session held = vosk.session(PaStt.words()), free = vosk.session(null);
                 held.feed(pcm);
                 free.feed(pcm);
-                String heard = PaStt.choose(held.finish(), free.finish());
+                String hs = held.finish(), fs = free.finish();
+                String heard = PaStt.choose(hs, fs);
+                if (System.getenv("MCA_TEST_VOICE_DEBUG") != null) System.out.printf("[pa38] dbg \"%s\" (%s): held \"%s\" free \"%s\"%n", said, voice.id(), hs, fs);
                 String read = reading(PaWords.voiceFix(heard));
                 results.add(new Result(said, voice.id(), heard, read, words(heard).equals(words(said)), read.equals(want)));
             }

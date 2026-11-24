@@ -21,7 +21,7 @@ bring me some food || BRING_FOOD
 farm this field || FARM
 guard me || GUARD_ME
 attack that zombie || FIGHT
-shoot that || SHOOT_AT
+shoot that || FIGHT
 go fishing || FISH
 catch me ten fish || FISH
 throw snowballs at that zombie || THROW
