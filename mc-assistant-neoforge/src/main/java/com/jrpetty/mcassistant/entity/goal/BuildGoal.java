@@ -583,6 +583,7 @@ public class BuildGoal extends Goal {
             } catch (Exception e) { anchor = null; anchorFacing = null; }
         }
         this.building = structure;
+        this.standing = null;
         if (structure == null || !STRUCTURES.contains(structure)) {
             finish("I can build: " + String.join(", ", STRUCTURES) + ".");
             return;
@@ -1140,7 +1141,7 @@ public class BuildGoal extends Goal {
                 cursor++; // can't get there — skip that cell
                 stuckTicks = 0;
                 nearest = Double.MAX_VALUE;
-                if (++skipped >= 3 && placed == 0 && building != null) {
+                if (++skipped >= 3 && placed == 0 && building != null && !standsAlready()) {   // [house34b] (standsAlready)
                     // Three cells in a row out of reach and nothing standing: the
                     // ground is at fault, not the cells. Let the village choose another.
                     assistant.noteBuildAbandoned(building);
@@ -1522,8 +1523,35 @@ public class BuildGoal extends Goal {
         };
     }
 
+    /** [house34b] Is a good part of this building up already (a quarter of its blocks)? Then a few cells out of reach are
+     *  cells out of reach, not ground the builders cannot get to: a grand terrace four storeys up, its builder taken off it
+     *  and come back, found its first three cells left (in the rooms upstairs) out of reach, "could not get to the ground",
+     *  and gave the lot up: the town chose it again, and again, and the row stood unfinished for good. */
+    private boolean standsAlready() {
+        if (standing != null) return standing;
+        int all = 0, up = 0;
+        for (Placement p : plan) {
+            if (p.part() != Part.BLOCK) continue;
+            all++;
+            if (!soft(assistant.level().getBlockState(p.pos()))) up++;
+        }
+        standing = all > 0 && up * 4 >= all;
+        return standing;
+    }
+
+    @Nullable private Boolean standing;
+
     @Nullable
     private BlockState takeStyled(Blueprints.Style style) {
+        // [house34b] A terrace is brick and dressed stone: brick where the drawing has brick and stone bricks where it has
+        // dressed stone, laid first time when the builder carries them (its stocking fetched them for those cells), not the
+        // theme's stand-in first and the row faced again afterwards.
+        if (com.jrpetty.mcassistant.entity.TerraceRows.isRow(building)) {
+            Predicate<ItemStack> own = style == Blueprints.Style.BRICK ? s -> s.is(Items.BRICKS)
+                : style == Blueprints.Style.MASONRY ? s -> s.is(Items.STONE_BRICKS) : null;
+            BlockState st = own == null ? null : takeBlockMatching(own);
+            if (st != null) return st;
+        }
         // [styles] Down the tiers (tiers()): the town's own look, the builder's own order, the theme's stand-ins for the
         // town's age, and (a young town) any proper block; never a forbidden one, nor rough fill once the town is past it.
         for (Predicate<ItemStack> tier : tiers(assistant.ownerId(), style)) {

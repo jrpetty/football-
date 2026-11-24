@@ -7886,6 +7886,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int bricksHeld = countCarried(brickBlocks);
         // The village's own stone and timber first (Palettes), then whatever else will do.
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> dressed = BuildGoal.preferred(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY);
+        if (TerraceRows.isRow(project)) topUp(heart, st -> st.is(net.minecraft.world.item.Items.STONE_BRICKS), masonry, r);   // [house34b] a row's dressed stone, its own
         topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY, dressed, masonry + Math.max(0, brick - bricksHeld), r);
         topUp(heart, dressed, masonry + Math.max(0, brick - bricksHeld), r);
         topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FOUNDATION, BuildGoal::isStoneLike, Math.max(0, stone - bricksHeld), r);
