@@ -67,6 +67,8 @@ public class BuildGoal extends Goal {
         "flats",
         // [house34] the terraces: a workers' row, a bay-fronted row, a grand row of town houses (entity/TerraceRows)
         "terrace", "terrace2", "terrace3",
+        // [house34c] a corner terrace round where two streets meet, a crescent of town houses round a lawn
+        "terrace4", "terrace5",
 
         // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
         "museum",

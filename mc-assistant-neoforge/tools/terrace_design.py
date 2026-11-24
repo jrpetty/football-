@@ -86,6 +86,38 @@ class House:
         self.d.drop(self.x(c), h, z)
 
 
+# A house turned to front the row's right side (turn 1): its back toward -dx, its front toward +dx. Each way-bearing key
+# turns with it: its back to the row's left, its left to the row's front, its front to the right, its right to the back.
+TURN = {}
+for ring in ("^<v>", "n{u}", "D78Y", "c(C)", "B[b]", "12U3", "45r6", "g9!0"):
+    for k, ch in enumerate(ring):
+        TURN[ch] = ring[(k + 1) % 4]
+TURN['-'], TURN['|'] = '|', '-'
+
+
+class View:
+    """A drawing seen through a house's frame (entity/TerraceRows.frame): its own columns u across and rows w toward its
+    back, shifted by (ox, oz) and, turn 1, turned to front the row's right side: (u, w) -> (ox - w, oz + u)."""
+
+    def __init__(self, d, ox=0, oz=0, turn=0):
+        self.d, self.ox, self.oz, self.turn = d, ox, oz, turn
+
+    def at(self, u, w):
+        return (self.ox - w, self.oz + u) if self.turn else (self.ox + u, self.oz + w)
+
+    def put(self, u, h, w, ch):
+        x, z = self.at(u, w)
+        self.d.put(x, h, z, TURN.get(ch, ch) if self.turn else ch)
+
+    def drop(self, u, h, w):
+        x, z = self.at(u, w)
+        self.d.drop(x, h, z)
+
+    def get(self, u, h, w):
+        x, z = self.at(u, w)
+        return self.d.get(x, h, z)
+
+
 def roof(d, front, back, eaves, ridge_slab):
     """A pitched roof along the row, ridge along the street: a course of stairs each side from the eaves (over the
     front and back walls) stepping in to the ridge; the party walls' gables are drawn by the row."""
@@ -112,98 +144,118 @@ def gable(d, x, front, back, eaves, ch='Z'):
 
 # ============================================================ the workers' terrace
 
+W_FRONT, W_BACK, W_REAR, W_EAVES = -5, 2, 5, 7
+
+
+def workers_wall(d, x, yard=True, coping=False):
+    """A party wall of the workers' terrace: its footing, the wall to the eaves, its gable, the yard wall behind (coped
+    with a slab, {@code coping}, as the lane's wall is)."""
+    FRONT, BACK, REAR, EAVES = W_FRONT, W_BACK, W_REAR, W_EAVES
+    for z in range(FRONT, REAR + 1):
+        d.put(x, -1, z, 'F')
+    for z in range(FRONT, BACK + 1):
+        for h in range(0, EAVES):
+            d.put(x, h, z, 'Z')
+    gable(d, x, FRONT, BACK, EAVES)
+    if yard:
+        for z in range(BACK + 1, REAR + 1):                      # the yard walls between neighbours
+            d.put(x, 0, z, 'Z')
+            d.put(x, 1, z, 's' if coping else 'Z')
+
+
+def workers_quoins(d, x):
+    """Toothed stone quoins up an end of the row, front and back."""
+    for z in (W_FRONT, W_BACK):
+        for h in range(0, W_EAVES):
+            d.put(x, h, z, 'S')
+            if h % 2 == 1:
+                d.put(x, h, z + (1 if z == W_FRONT else -1), 'S')
+
+
+def workers_house(d, H, end=None):
+    """One two-up two-down of the workers' terrace (H: its House); {@code end}: the column of its end wall, if it is an
+    end house, its windows in it."""
+    FRONT, BACK, REAR, EAVES = W_FRONT, W_BACK, W_REAR, W_EAVES
+    for c in range(4):
+        # the footing and the floors: boards in the parlour, flags in the kitchen, a brick-paved yard
+        H.put(c, -1, FRONT, 'F')
+        H.put(c, -1, BACK, 'F')
+        for z in range(FRONT + 1, BACK):
+            H.put(c, -1, z, 'f' if z < 0 else 'S')
+        for z in range(BACK + 1, REAR + 1):
+            H.put(c, -1, z, 'F')
+        # the floor upstairs and the ceiling under the roof
+        for z in range(FRONT + 1, BACK):
+            H.put(c, 3, z, 'f')
+            H.put(c, EAVES, z, 'f')
+        # the front: a stone string course at the floor, brick over and under
+        H.put(c, 3, FRONT, 'S')
+        H.put(c, 6, FRONT, 'Z')
+        H.put(c, 3, BACK, 'Z')
+        H.put(c, 6, BACK, 'Z')
+    # the front wall: the parlour's window (stone sill), a pier, the door with a fanlight over it
+    H.put(0, 0, FRONT, 'S'); H.put(1, 0, FRONT, 'S'); H.put(2, 0, FRONT, 'Z'); H.put(3, 0, FRONT, 'D')
+    for h in (1, 2):
+        H.put(0, h, FRONT, 'G'); H.put(1, h, FRONT, 'G'); H.put(2, h, FRONT, 'Z')
+    H.put(3, 2, FRONT, 'G')
+    for h in (4, 5):
+        H.put(0, h, FRONT, 'Z'); H.put(1, h, FRONT, 'G'); H.put(2, h, FRONT, 'G'); H.put(3, h, FRONT, 'Z')
+    # the back wall: the kitchen's window, the back door, the back bedroom's window
+    H.put(0, 0, BACK, 'Z'); H.put(1, 0, BACK, 'S'); H.put(2, 0, BACK, '8'); H.put(3, 0, BACK, 'Z')
+    H.put(0, 1, BACK, 'Z'); H.put(1, 1, BACK, 'G'); H.put(3, 1, BACK, 'Z')
+    H.put(0, 2, BACK, 'Z'); H.put(1, 2, BACK, 'G'); H.put(2, 2, BACK, 'Z'); H.put(3, 2, BACK, 'Z')
+    for h in (4, 5):
+        H.put(0, h, BACK, 'Z'); H.put(1, h, BACK, 'Z'); H.put(2, h, BACK, 'G'); H.put(3, h, BACK, 'Z')
+    # the stair: straight up beside the party wall from the hall to the landing at the back
+    for k, z in enumerate((-3, -2, -1, 0)):
+        H.put(3, k, z, '^')
+        if k < 3:
+            H.drop(3, 3, z)
+    H.put(3, 4, -3, 'P')                                    # the banister at the stairhead
+    # the parlour: an armchair at a table with a cloth on it, the dresser; the hall's lamp lights the door
+    H.put(0, 0, -4, '<'); H.put(1, 0, -4, 'P'); H.put(1, 1, -4, 'X'); H.put(0, 0, -2, 'K')
+    H.put(1, 2, -3, 'j'); H.put(3, 2, -4, 'j')
+    for c, z in ((1, -3), (2, -3), (1, -2), (2, -2)):
+        H.put(c, 0, z, 'X')                                  # the parlour's rug
+    # the wall between the parlour and the kitchen, a doorway through it
+    for h in (0, 1, 2, 4, 5, 6):
+        H.put(0, h, -1, 'W'); H.put(1, h, -1, 'W')
+    H.put(2, 2, -1, 'W'); H.put(2, 6, -1, 'W')
+    # the kitchen: the bench, the range on the chimney wall, the copper under the stair, the chest under the landing
+    H.put(0, 0, 0, 'T'); H.put(0, 0, 1, '3'); H.put(3, 0, 0, '&'); H.put(3, 0, 1, '(')
+    H.put(1, 2, 1, 'j')
+    # the front bedroom: the parents' pair of beds, heads to the party wall, a chest by the stairhead
+    H.put(1, 4, -3, '['); H.put(1, 4, -2, '['); H.put(3, 4, -4, '('); H.put(2, 6, -3, 'j')
+    # the back bedroom: the children's two, a chest
+    H.put(1, 4, 1, '['); H.put(1, 4, 0, '['); H.put(3, 4, 1, '('); H.put(2, 6, 0, 'j')
+    H.put(2, 4, -3, 'X'); H.put(2, 4, -2, 'X'); H.put(2, 4, 0, 'X')   # rag rugs by the beds
+    # the yard: the wall to the lane with its gate, the coal bunker, the privy, the water butt
+    H.put(0, 0, REAR, 'Z'); H.put(1, 0, REAR, 'Z'); H.put(2, 0, REAR, 'g'); H.put(3, 0, REAR, 'Z')
+    H.put(0, 1, REAR, 's'); H.put(1, 1, REAR, 's'); H.put(3, 1, REAR, 's')
+    H.put(0, 0, 4, 'Q'); H.put(0, 1, 4, '_')
+    H.put(3, 0, 4, 'W'); H.put(3, 1, 4, 'W'); H.put(3, 2, 4, '_')
+    H.put(3, 0, 3, '&')
+    if end is not None:
+        # the end house's windows in its end wall
+        for h in (1, 2):
+            H.d.put(end, h, -3, 'G')
+            H.d.put(end, h, 0, 'G')
+        for h in (4, 5):
+            H.d.put(end, h, -4, 'G')
+
+
 def workers():
     d = Drawing(-10, 10)
     walls = [-10, -5, 0, 5, 10]
     houses = [House(d, -9, -6, False), House(d, -4, -1, True), House(d, 1, 4, False), House(d, 6, 9, True)]
-    FRONT, BACK, REAR, EAVES = -5, 2, 5, 7
     for x in walls:
-        for z in range(FRONT, REAR + 1):
-            d.put(x, -1, z, 'F')
-        for z in range(FRONT, BACK + 1):
-            for h in range(0, EAVES):
-                d.put(x, h, z, 'Z')
-        gable(d, x, FRONT, BACK, EAVES)
-        for z in range(BACK + 1, REAR + 1):                      # the yard walls between neighbours
-            d.put(x, 0, z, 'Z')
-            d.put(x, 1, z, 'Z')
+        workers_wall(d, x)
     # toothed stone quoins at the row's four corners
     for x in (-10, 10):
-        for z in (FRONT, BACK):
-            for h in range(0, EAVES):
-                d.put(x, h, z, 'S')
-                if h % 2 == 1:
-                    d.put(x, h, z + (1 if z == FRONT else -1), 'S')
+        workers_quoins(d, x)
     for i, H in enumerate(houses):
-        end = i == 0 or i == len(houses) - 1
-        for c in range(4):
-            # the footing and the floors: boards in the parlour, flags in the kitchen, a brick-paved yard
-            H.put(c, -1, FRONT, 'F')
-            H.put(c, -1, BACK, 'F')
-            for z in range(FRONT + 1, BACK):
-                H.put(c, -1, z, 'f' if z < 0 else 'S')
-            for z in range(BACK + 1, REAR + 1):
-                H.put(c, -1, z, 'F')
-            # the floor upstairs and the ceiling under the roof
-            for z in range(FRONT + 1, BACK):
-                H.put(c, 3, z, 'f')
-                H.put(c, EAVES, z, 'f')
-            # the front: a stone string course at the floor, brick over and under
-            H.put(c, 3, FRONT, 'S')
-            H.put(c, 6, FRONT, 'Z')
-            H.put(c, 3, BACK, 'Z')
-            H.put(c, 6, BACK, 'Z')
-        # the front wall: the parlour's window (stone sill), a pier, the door with a fanlight over it
-        H.put(0, 0, FRONT, 'S'); H.put(1, 0, FRONT, 'S'); H.put(2, 0, FRONT, 'Z'); H.put(3, 0, FRONT, 'D')
-        for h in (1, 2):
-            H.put(0, h, FRONT, 'G'); H.put(1, h, FRONT, 'G'); H.put(2, h, FRONT, 'Z')
-        H.put(3, 2, FRONT, 'G')
-        for h in (4, 5):
-            H.put(0, h, FRONT, 'Z'); H.put(1, h, FRONT, 'G'); H.put(2, h, FRONT, 'G'); H.put(3, h, FRONT, 'Z')
-        # the back wall: the kitchen's window, the back door, the back bedroom's window
-        H.put(0, 0, BACK, 'Z'); H.put(1, 0, BACK, 'S'); H.put(2, 0, BACK, '8'); H.put(3, 0, BACK, 'Z')
-        H.put(0, 1, BACK, 'Z'); H.put(1, 1, BACK, 'G'); H.put(3, 1, BACK, 'Z')
-        H.put(0, 2, BACK, 'Z'); H.put(1, 2, BACK, 'G'); H.put(2, 2, BACK, 'Z'); H.put(3, 2, BACK, 'Z')
-        for h in (4, 5):
-            H.put(0, h, BACK, 'Z'); H.put(1, h, BACK, 'Z'); H.put(2, h, BACK, 'G'); H.put(3, h, BACK, 'Z')
-        # the stair: straight up beside the party wall from the hall to the landing at the back
-        for k, z in enumerate((-3, -2, -1, 0)):
-            H.put(3, k, z, '^')
-            if k < 3:
-                H.drop(3, 3, z)
-        H.put(3, 4, -3, 'P')                                    # the banister at the stairhead
-        # the parlour: an armchair at a table with a cloth on it, the dresser; the hall's lamp lights the door
-        H.put(0, 0, -4, '<'); H.put(1, 0, -4, 'P'); H.put(1, 1, -4, 'X'); H.put(0, 0, -2, 'K')
-        H.put(1, 2, -3, 'j'); H.put(3, 2, -4, 'j')
-        for c, z in ((1, -3), (2, -3), (1, -2), (2, -2)):
-            H.put(c, 0, z, 'X')                                  # the parlour's rug
-        # the wall between the parlour and the kitchen, a doorway through it
-        for h in (0, 1, 2, 4, 5, 6):
-            H.put(0, h, -1, 'W'); H.put(1, h, -1, 'W')
-        H.put(2, 2, -1, 'W'); H.put(2, 6, -1, 'W')
-        # the kitchen: the bench, the range on the chimney wall, the copper under the stair, the chest under the landing
-        H.put(0, 0, 0, 'T'); H.put(0, 0, 1, '3'); H.put(3, 0, 0, '&'); H.put(3, 0, 1, '(')
-        H.put(1, 2, 1, 'j')
-        # the front bedroom: the parents' pair of beds, heads to the party wall, a chest by the stairhead
-        H.put(1, 4, -3, '['); H.put(1, 4, -2, '['); H.put(3, 4, -4, '('); H.put(2, 6, -3, 'j')
-        # the back bedroom: the children's two, a chest
-        H.put(1, 4, 1, '['); H.put(1, 4, 0, '['); H.put(3, 4, 1, '('); H.put(2, 6, 0, 'j')
-        H.put(2, 4, -3, 'X'); H.put(2, 4, -2, 'X'); H.put(2, 4, 0, 'X')   # rag rugs by the beds
-        # the yard: the wall to the lane with its gate, the coal bunker, the privy, the water butt
-        H.put(0, 0, REAR, 'Z'); H.put(1, 0, REAR, 'Z'); H.put(2, 0, REAR, 'g'); H.put(3, 0, REAR, 'Z')
-        H.put(0, 1, REAR, 's'); H.put(1, 1, REAR, 's'); H.put(3, 1, REAR, 's')
-        H.put(0, 0, 4, 'Q'); H.put(0, 1, 4, '_')
-        H.put(3, 0, 4, 'W'); H.put(3, 1, 4, 'W'); H.put(3, 2, 4, '_')
-        H.put(3, 0, 3, '&')
-        if end:
-            # the end house's windows in its end wall
-            x = -10 if i == 0 else 10
-            for h in (1, 2):
-                d.put(x, h, -3, 'G')
-                d.put(x, h, 0, 'G')
-            for h in (4, 5):
-                d.put(x, h, -4, 'G')
-    roof(d, FRONT, BACK, EAVES, False)
+        workers_house(d, H, -10 if i == 0 else 10 if i == len(houses) - 1 else None)
+    roof(d, W_FRONT, W_BACK, W_EAVES, False)
     # a brick stack up every party wall through the ridge, shared by the houses either side
     for x in walls:
         for z in (-2, -1):
@@ -333,10 +385,10 @@ def bayfronted():
 
 # ============================================================ the grand terrace
 
-def grand():
+def grand(mirror_last=False):
     d = Drawing(-10, 11)
     walls = [-10, -3, 4, 11]
-    houses = [House(d, -9, -4, False), House(d, -2, 3, False), House(d, 5, 10, False)]
+    houses = [House(d, -9, -4, False), House(d, -2, 3, False), House(d, 5, 10, mirror_last)]
     RAIL, FRONT, BACK, GARDEN = -5, -2, 4, 5
     F1, F2, F3, DECK = 1, 6, 11, 15                             # the floors: raised ground, first, second; the roof deck
     for x in walls:
@@ -463,6 +515,195 @@ def grand():
     return d
 
 
+# ============================================================ the corner terrace
+
+def corner():
+    """The corner terrace (twenty-two square, the ground of three lots where two streets meet): three cottages along the
+    first street, the corner house on the corner with a front door on each street (a shop window round the corner, its
+    rooms deeper than its neighbours'), and two cottages round the corner along the side street, turned to face it. One
+    roof turns the corner: the two ridges meet over the corner house, hipped down to both streets at the outer corner
+    and in a valley over the yards. The fourth lot of the block (behind the first street's cottages, beside the side
+    street's) is left alone; the yards back onto it."""
+    # (drawn from dz -16: a drawing's rows are read about its middle, so the street side is padded as deep as its back)
+    d = Drawing(-10, 11, -16, 16)
+    FRONT, BACK, REAR, EAVES = W_FRONT, W_BACK, W_REAR, W_EAVES
+    side = View(d, 6, 0, 1)                 # the side street's cottages: their fronts on dx 11, their yards to dx 1
+    # the first street: walls and three cottages, the end one's windows in its end wall
+    for x in (-10, -5, 0):
+        workers_wall(d, x)
+    workers_quoins(d, -10)
+    first = [House(d, -9, -6, False), House(d, -4, -1, True), House(d, 1, 4, False)]
+    for i, H in enumerate(first):
+        workers_house(d, H, -10 if i == 0 else None)
+    # (the third's yard gate opens into the first side cottage's yard, and through its gate to the lane: a back passage)
+    # the side street: walls (the first shared with the corner house's back) and two cottages turned to it
+    for u in (5, 10, 15):
+        workers_wall(side, u, coping=True)     # the yards' walls coped low, so the corner's yards are not shut in
+    workers_quoins(side, 15)
+    for i, H in enumerate((House(side, 6, 9, False), House(side, 11, 14, True))):
+        workers_house(side, H, 15 if i == 1 else None)
+    # a back passage through the yards from the third cottage's to the end of the side street: gates in the side yards'
+    # wall between them and in the end yard's wall
+    d.put(3, 0, REAR, 'g'); d.drop(3, 1, REAR)     # (the third cottage's own gate, its side neighbour's wall drawn over it)
+    d.put(1, 0, 10, 'g'); d.drop(1, 1, 10)
+    d.put(3, 0, 15, 'g'); d.drop(3, 1, 15)
+    # the corner house: its party wall with the third cottage (dx 5), its two street fronts (dz -5 and dx 11), its back
+    # the first side cottage's wall (dz 5)
+    for z in range(FRONT, REAR + 1):
+        for x in (5, 11):
+            d.put(x, -1, z, 'F')
+            for h in range(0, EAVES):
+                d.put(x, h, z, 'Z')
+    gable(d, 5, FRONT, BACK, EAVES)
+    for x in range(6, 11):
+        d.put(x, -1, FRONT, 'F')
+        for h in range(0, EAVES):
+            d.put(x, h, FRONT, 'Z')
+        for z in range(FRONT + 1, REAR):
+            d.put(x, -1, z, 'f' if z < 0 else 'S')       # boards in the shop, flags in the kitchen
+            d.put(x, 3, z, 'f')
+            d.put(x, EAVES, z, 'f')
+    # a stone string course round both fronts, and quoins up the corner
+    for x in range(6, 11):
+        d.put(x, 3, FRONT, 'S')
+    for z in range(FRONT + 1, REAR):
+        d.put(11, 3, z, 'S')
+    for h in range(0, EAVES):
+        d.put(11, h, FRONT, 'S')
+        if h % 2 == 1:
+            d.put(10, h, FRONT, 'S'); d.put(11, h, FRONT + 1, 'S')
+    # the first street: the front door with a fanlight, the shop window, the windows over
+    d.put(7, 0, FRONT, 'D'); d.drop(7, 1, FRONT); d.put(7, 2, FRONT, 'G')
+    for x in (8, 9, 10):
+        d.put(x, 0, FRONT, 'S'); d.put(x, 1, FRONT, 'G'); d.put(x, 2, FRONT, 'G')
+    for x in (7, 9):
+        d.put(x, 4, FRONT, 'G'); d.put(x, 5, FRONT, 'G')
+    # the side street: the shop window carried round the corner, the side door with its fanlight, the kitchen's window
+    for z in (-4, -3):
+        d.put(11, 0, z, 'S'); d.put(11, 1, z, 'G'); d.put(11, 2, z, 'G')
+    d.put(11, 0, -1, '7'); d.drop(11, 1, -1); d.put(11, 2, -1, 'G')
+    d.put(11, 0, 2, 'S'); d.put(11, 1, 2, 'G'); d.put(11, 2, 2, 'G')
+    for z in (-3, -1, 1, 4):
+        d.put(11, 4, z, 'G'); d.put(11, 5, z, 'G')
+    # the wall between the shop and the kitchen, a doorway through it, upstairs and down
+    for x in range(8, 11):
+        for h in (0, 1, 2):
+            d.put(x, h, 0, 'W')
+    d.put(7, 2, 0, 'W')
+    for x in (6, 7, 9, 10):
+        for h in (4, 5, 6):
+            d.put(x, h, 0, 'W')
+    d.put(8, 6, 0, 'W')
+    # the stair up the party wall from the back of the shop to the landing at the back
+    for k, z in enumerate((1, 2, 3, 4)):
+        d.put(6, k, z, '^')
+        if k < 3:
+            d.drop(6, 3, z)
+    for z in (1, 2, 3):
+        d.put(7, 4, z, 'P')                                # the banister along the stair's well
+    # the shop: the counter of casks, the shelves, a table and an armchair by the window, the lamps (one by each door)
+    d.put(8, 0, -1, 'Q'); d.put(9, 0, -1, 'Q'); d.put(6, 0, -4, 'K'); d.put(6, 1, -4, 'K')
+    d.put(9, 0, -3, 'P'); d.put(9, 1, -3, 'X'); d.put(10, 0, -3, '>')
+    d.put(7, 2, -4, 'j'); d.put(10, 2, -1, 'j')
+    for x, z in ((7, -3), (8, -3), (7, -2), (8, -2)):
+        d.put(x, 0, z, 'X')
+    # the kitchen: the range, the bench, the chest, the copper
+    d.put(10, 0, 3, '2'); d.put(10, 0, 4, 'T'); d.put(8, 0, 4, 'C'); d.put(7, 0, 4, '&')
+    d.put(9, 2, 2, 'j')
+    # the front bedroom over the shop: the parents' pair, heads to the party wall, a chest; the back bedroom: the
+    # children's two, heads to the side street's wall, a chest
+    d.put(7, 4, -3, '['); d.put(7, 4, -2, '['); d.put(10, 4, -4, '('); d.put(9, 6, -3, 'j')
+    d.put(9, 4, 2, ']'); d.put(9, 4, 3, ']'); d.put(10, 4, 4, '('); d.put(8, 6, 2, 'j')
+    for x, z in ((8, -3), (8, -2), (9, -3)):
+        d.put(x, 4, z, 'X')
+    # the roof: the first street's ridge along dx, the side street's along dz, hipped at the outer corner, a valley at
+    # the inner, over the corner house
+    def f(z):
+        return EAVES + min(z - FRONT, BACK - z)
+
+    def g(x):
+        return EAVES + min(11 - x, x - 4)
+    for x in range(-10, 12):
+        for z in range(FRONT, 16):
+            a, b = z <= BACK, 4 <= x <= 11
+            if not a and not b:
+                continue
+            fa, ca = f(z), ('^' if z <= -2 else 'v')
+            gb, cb = g(x), ('<' if x >= 8 else '>')
+            if a and not b:
+                h, ch = fa, ca
+            elif b and not a:
+                h, ch = gb, cb
+            elif x >= 8 and z <= -2:                      # the hip: both slopes down to the streets
+                h, ch = (fa, ca) if fa <= gb else (gb, cb)
+            elif x <= 7 and z >= -1:                      # the valley: both slopes down to it
+                h, ch = (fa, ca) if fa >= gb else (gb, cb)
+            elif x <= 7:
+                h, ch = fa, ca
+            else:
+                h, ch = gb, cb
+            d.put(x, h, z, ch)
+    # the stacks up the party walls through the ridges, the corner house's shared with its neighbours
+    for x in (-10, -5, 0, 5):
+        for z in (-2, -1):
+            for h in (10, 11, 12):
+                d.put(x, h, z, 'Z')
+    for u in (5, 10, 15):
+        for w in (-2, -1):
+            for h in (10, 11, 12):
+                side.put(u, h, w, 'Z')
+    return d
+
+
+# ============================================================ the crescent
+
+# How far each column of the crescent's front stands back from its ends: a shallow arc, a block at a time.
+ARC = {-10: 0, -9: 0, -8: 1, -7: 1, -6: 1, -5: 2, -4: 2, -3: 2, -2: 3, -1: 3, 0: 3,
+       1: 3, 2: 3, 3: 3, 4: 2, 5: 2, 6: 2, 7: 1, 8: 1, 9: 1, 10: 0, 11: 0}
+LAWN, ARC_MOST = 5, 3
+
+
+def crescent():
+    """A Regency crescent (twenty-two across, the ground of a whole block): three grand town houses on a shallow arc
+    round a lawn, their fronts stepping back a block at a time toward the middle, the railings, the area, the bands,
+    the balconies, the cornice and the parapet all following the curve; the rooms behind as the grand terrace's (the
+    last house drawn the other way round, so the three stand as a mirror about the middle), deeper toward the ends.
+    Before them a lawn with a flower border, iron railings along the street with two gates, paths to the pavement
+    before the houses, and lamps on piers at its corners."""
+    src = grand(mirror_last=True)
+    d = Drawing(-10, 11, -13, 13)                # (padded on the street side: rows are read about the middle)
+    skin = set('FSZfR')
+    for (x, h, z), ch in src.c.items():
+        d.put(x, h, z + LAWN + (ARC[x] if z <= -2 else ARC_MOST), ch)
+    # where a column's front stands forward of the rooms, its floors, its plinth, its deck and its walls carried forward
+    for x in range(-10, 12):
+        for k in range(1, ARC_MOST - ARC[x] + 1):
+            z = -2 + LAWN + ARC[x] + k
+            for h in range(-1, 20):
+                ch = src.get(x, h, -1)
+                if ch in skin:
+                    d.put(x, h, z, ch)
+    # the end houses' rooms run deeper toward the street: a lamp for each, downstairs and up
+    for x in (-8, 9):
+        z = -2 + LAWN + ARC[x] + 1
+        d.put(x, 5, z, 'j'); d.put(x, 10, z, 'j')
+    # the lawn: its railings along the street on a footing, two gates, the corner piers with their lamps
+    for x in range(-10, 12):
+        d.put(x, -1, -5, 'F')
+        d.put(x, 0, -5, 'g' if x in (-6, 7) else 'P')
+    for x in (-10, 11):
+        d.put(x, 0, -5, 'S'); d.put(x, 1, -5, 'l')
+    for x in range(-10, 12):
+        rail = -5 + LAWN + ARC[x]
+        d.put(x, -1, rail - 1, 'S')                          # the pavement before the railings, curving with them
+        if x in (-6, 7):
+            for z in range(-4, rail - 1):
+                d.put(x, -1, z, 'S')                         # the paths from the gates
+        elif rail - 2 > -4 and x not in (-10, 11):
+            d.put(x, -1, rail - 2, 'd'); d.put(x, 0, rail - 2, '*')   # the flower border round the lawn's back
+    return d
+
+
 HEAD = {
     "terrace": """
 A workers' terrace (entity/TerraceRows): four two-up two-down houses in a row, sharing their side walls, in mirrored
@@ -475,6 +716,17 @@ A bay-fronted terrace (entity/TerraceRows): three taller houses in a row on a se
 under a lean-to that runs on over its porch, a front garden behind a low wall, a hall up the side, the stair across
 the middle, the parlour and the kitchen down, two bedrooms up and a dormer in the roof. Twenty-two across.
 """,
+    "terrace4": """
+A corner terrace (entity/TerraceRows): an L of six homes where two streets meet, three workers' cottages along the
+first, the corner house with a front door on each street and a shop window round the corner, and two cottages round
+the corner along the side street; one roof turning the corner, hipped over it and in a valley behind. Twenty-two square
+(three lots of a block; the fourth left to the yards' backs).
+""",
+    "terrace5": """
+A Regency crescent (entity/TerraceRows): three grand town houses on a shallow arc round a lawn, their fronts stepping
+back a block at a time toward the middle, railings, area, bands, balconies, cornice and parapet following the curve;
+the lawn railed along the street with two gates and a flower border. Twenty-two across, a whole block deep.
+""",
     "terrace3": """
 A grand terrace (entity/TerraceRows): three Georgian town houses four storeys high, iron railings round the area, steps
 up to the door, tall windows in three bays, stone below and brick above with a band at every floor, balconettes, a
@@ -486,7 +738,8 @@ children's and a servant's room. Twenty-two across.
 
 def main():
     out = sys.argv[1] if len(sys.argv) > 1 else OUT
-    for name, fn in (("terrace", workers), ("terrace2", bayfronted), ("terrace3", grand)):
+    for name, fn in (("terrace", workers), ("terrace2", bayfronted), ("terrace3", grand), ("terrace4", corner),
+                     ("terrace5", crescent)):
         with open(os.path.join(out, name + ".txt"), "w") as f:
             f.write(fn().text(name, HEAD[name]))
         print("drew", name)

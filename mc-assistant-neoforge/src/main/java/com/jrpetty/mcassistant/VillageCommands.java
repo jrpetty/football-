@@ -289,7 +289,9 @@ public final class VillageCommands {
             // dressed, and on "slope" a workers' and a bay-fronted row stepping up a street that climbs.
             .then(Commands.literal("terrace").requires(src -> src.hasPermission(2))
                 .then(Commands.literal("stage").executes(ctx -> terraceStage(ctx, "rows"))
-                    .then(Commands.literal("slope").executes(ctx -> terraceStage(ctx, "slope")))))
+                    .then(Commands.literal("slope").executes(ctx -> terraceStage(ctx, "slope")))
+                    .then(Commands.literal("corner").executes(ctx -> terraceStage(ctx, "corner")))        // [house34c]
+                    .then(Commands.literal("crescent").executes(ctx -> terraceStage(ctx, "crescent")))))
             // The job market between towns: the notices, the applications, who came and went (JobMarketCommands).
             .then(JobMarketCommands.node())
             // [interviews] The town's interviews, set and held; a word put in, a seat on the panel, a choice; (ops) one staged now.

@@ -741,6 +741,8 @@ class BlueprintSoundnessTest {
         "terrace 10 5 10 5 back",               // [house34] a workers' terrace on a long lot turned to its street (TerraceLots); its yards' back doors are drawn first
         "terrace2 11 5 11 5 back",              // [house34] a bay-fronted terrace, twenty-two across (dx -10..11)
         "terrace3 11 5 11 5 front",             // [house34] a grand terrace of town houses
+        "terrace4 11 15 11 15 left",            // [house34c] a corner terrace (deep onto the lot behind; its side door counted)
+        "terrace5 11 13 11 13 front",           // [house34c] a crescent, a whole block deep
         "restaurant 4 5 5 5 front",                                     // [dining] the tavern's frame: the same civic lot
         "theatre 4 5 4 5 none",
         "townhall 5 10 6 10 front",
@@ -1679,6 +1681,8 @@ class BlueprintSoundnessTest {
         "terrace BED CHEST FURNACE CRAFTING_TABLE",                       // [house34] every house of the row
         "terrace2 BED CHEST FURNACE CRAFTING_TABLE",
         "terrace3 BED CHEST FURNACE CRAFTING_TABLE",
+        "terrace4 BED CHEST FURNACE CRAFTING_TABLE",                      // [house34c] the corner and the crescent
+        "terrace5 BED CHEST FURNACE CRAFTING_TABLE",
         "townhall BED LECTERN CHEST",
         "townlibrary BOOKSHELF LECTERN",
         "tradingpost LECTERN BARREL CHEST",
@@ -1692,7 +1696,7 @@ class BlueprintSoundnessTest {
     /** The homes and lodgings, where every bed has a chest or a cask by it for the things of whoever sleeps in it. */
     static final Set<String> HOMES = Set.of("house", "house2", "guesthouse", "manor", "villa", "knightmanor", "knighthall",
         "flats", "flats4", "inn", "barracks", "lodge", "townhall",
-        "terrace", "terrace2", "terrace3");                                                          // [house34]
+        "terrace", "terrace2", "terrace3", "terrace4", "terrace5");                                  // [house34] [house34c]
 
     @Test
     @DisplayName("[build-audit] every room furnished for what it is for, and a chest by every bed in a home")
