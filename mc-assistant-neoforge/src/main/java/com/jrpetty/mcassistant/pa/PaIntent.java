@@ -28,7 +28,9 @@ public record PaIntent(Kind kind, String item, int amount, Place place, String r
         // small talk and answers
         GREETING, THANKS, BYE, YES, NO,
         // not understood (the reader asks back with choices)
-        UNKNOWN;
+        UNKNOWN,
+        // [pa36] a chest, gathering or logistics order (its PaLogiOrder rides in the item as a spec)
+        LOGI;
 
         /** Work that takes a while or changes the world: the assistant checks before it starts (unless told not to). */
         public boolean confirmable() {
@@ -41,7 +43,8 @@ public record PaIntent(Kind kind, String item, int amount, Place place, String r
             return switch (this) {
                 case GATHER, MINE_ORE, MINE_DOWN, FARM, BUILD, CRAFT, SMELT, DEPOSIT, FETCH, GIVE, BRING_FOOD, HUNT, FISH,
                      BREED, SHEAR, LIGHT_AREA, SORT, CLEAR_AREA, FUEL, TRADE_BUY, TRADE_SELL, REPAIR, GO_HOME, EXPLORE, BED_PLACE, GOTO, BRIDGE,
-                     ENCHANT, NETHER, TAME, VTRADE, UPGRADE, PLACE_THING, MAP, PILLAR, SHOOT_AT, BREW -> true;
+                     ENCHANT, NETHER, TAME, VTRADE, UPGRADE, PLACE_THING, MAP, PILLAR, SHOOT_AT, BREW,
+                     LOGI -> true;                                                                     // [pa36]
                 default -> false;
             };
         }
