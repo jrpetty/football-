@@ -113,6 +113,9 @@ public class GatherGoal extends Goal {
     private boolean announcedReroute;      // say "going after another" only once per run
     private final java.util.Set<BlockPos> unreachable = new java.util.HashSet<>();
     private final java.util.Set<BlockPos> stumps = new java.util.HashSet<>(); // for replanting
+    /** [tree] The logs still standing of the tree it is felling. Kept between runs (a trip to stash a full pack comes back to the same tree). */
+    private final java.util.Set<BlockPos> tree = new java.util.HashSet<>();
+    private boolean toppingSaid;           // [tree] "just finishing this tree" said once per run
 
     /** The wood ladder: a hand below level 10 fells only oak and birch. */
     private boolean rankAllows(Kind kind, BlockState state) {
@@ -166,6 +169,9 @@ public class GatherGoal extends Goal {
         this.buildTicks = 0;
         this.announcedReroute = false;
         this.unreachable.clear();
+        this.toppingSaid = false;
+        assistant.setMidTree(false);
+        if (request.kind() != Kind.LOGS) tree.clear();
         // NB: pending stumps deliberately survive between runs — a felling
         // interrupted by combat, or one that ran out of saplings, must still be
         // replantable on a later pass.
@@ -185,6 +191,7 @@ public class GatherGoal extends Goal {
             assistant.sayRoutine("Paused gathering (" + collected + " " + request.kind().label + " so far).");
             replantStumps(); // don't lose the stumps to an interruption
         }
+        assistant.setMidTree(false);
         this.request = null;
         this.myJob = null;
         this.targetPos = null;
@@ -194,6 +201,7 @@ public class GatherGoal extends Goal {
 
     /** A job finished (or gave up) — drop it from the queue and move on. */
     private void finish(String message) {
+        assistant.setMidTree(false);
         replantStumps();
         assistant.say(message);
         assistant.noteJobOutcome(collected > 0); // idle initiative backs off when the area is dry
@@ -280,7 +288,7 @@ public class GatherGoal extends Goal {
     public void tick() {
         if (request == null) return;
 
-        if (collected >= request.amount()) {
+        if (collected >= request.amount() && !topping()) {
             if (com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return;   // [mines] down its steps first
             finish("Done — gathered " + collected + " " + request.kind().label + ".");
             return;
@@ -290,8 +298,21 @@ public class GatherGoal extends Goal {
             || !request.kind().matches(assistant.level().getBlockState(targetPos))
             || !rankAllows(request.kind(), assistant.level().getBlockState(targetPos))) {
             // [mines] Down the steps it built to the last one first, each block back into its pack.
-            if (com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return;
-            targetPos = findNearest();
+            // [tree] The rest of the tree it is on first, a fresh tree only when that one is down (or what is left of
+            // it can't be got at: out of reach, out of its zone, part of a build, a wood its level doesn't allow).
+            BlockPos inTree = nextInTree();
+            if (inTree == null && collected >= request.amount()) {
+                if (com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return;
+                finish("Done — gathered " + collected + " " + request.kind().label + ".");
+                return;
+            }
+            if (inTree == null && com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return;
+            targetPos = inTree != null ? inTree : findNearest();
+            if (inTree == null && targetPos != null && wholeTrees()) {
+                tree.clear();
+                tree.add(targetPos);
+                readTree(targetPos);
+            }
             assistant.claimTarget(targetPos);   // tell the crew where I'm headed
             workTicks = 0;
             stuckTicks = 0;
@@ -414,11 +435,95 @@ public class GatherGoal extends Goal {
             collected++;
             assistant.damageHeldTool(); // tools wear like a player's
             sweepDrops(pos);
+            if (wholeTrees()) {
+                tree.remove(pos);
+                readTree(pos);
+                // [tree] Still logs to come on this tree: the plan must not call the job done on the count alone.
+                assistant.setMidTree(collected < request.amount() + TOP_OFF && nextInTree() != null);
+                if (collected >= request.amount()) topping();
+            }
             if (assistant.isPackFull() && collected < request.amount()) {
                 interjectDeposit();
             }
         }
     }
+
+    /** [tree] Felling whole trees: a player's assistant gathering logs. */
+    private boolean wholeTrees() {
+        return request != null && request.kind() == Kind.LOGS && assistant.fellsWholeTrees();
+    }
+
+    /** [tree] Most logs it takes past the count asked to finish the tree it is on. */
+    private static final int TOP_OFF = 40;
+
+    /**
+     * [tree] The count is made but the tree it is on still stands: it finishes that tree (the last few logs, not a
+     * floating crown left in the sky) before it calls the job done. Never a new tree, never more than TOP_OFF over.
+     */
+    private boolean topping() {
+        if (!wholeTrees() || collected >= request.amount() + TOP_OFF) return false;
+        boolean on = (targetPos != null && tree.contains(targetPos)) || nextInTree() != null;
+        if (on && !toppingSaid) {
+            toppingSaid = true;
+            assistant.toppingOff(collected);
+        }
+        return on;
+    }
+
+    /**
+     * [tree] The logs still joined to this one: up the trunk, out along the branches, the other columns of a
+     * two-by-two trunk. Within a tree's spread of where it started, so the next tree over is not taken for a branch.
+     */
+    private void readTree(BlockPos from) {
+        var level = assistant.level();
+        java.util.ArrayDeque<BlockPos> todo = new java.util.ArrayDeque<>();
+        java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+        BlockPos root = from.immutable();
+        todo.add(root);
+        seen.add(root);
+        while (!todo.isEmpty() && tree.size() < 160) {
+            BlockPos c = todo.poll();
+            for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dy == 0 && dz == 0) continue;
+                BlockPos n = c.offset(dx, dy, dz);
+                if (Math.abs(n.getX() - root.getX()) > 7 || Math.abs(n.getZ() - root.getZ()) > 7
+                    || n.getY() < root.getY() - 3 || n.getY() > root.getY() + 32) continue;
+                if (!seen.add(n)) continue;
+                if (!Kind.LOGS.matches(level.getBlockState(n))) continue;
+                tree.add(n);
+                todo.add(n);
+            }
+        }
+    }
+
+    /**
+     * [tree] The next log of the tree it is felling (the nearest, the low ones first), or null when the tree is down
+     * or the rest of it can't be had. What can't be had drops off the list for good.
+     */
+    @Nullable
+    private BlockPos nextInTree() {
+        if (!wholeTrees() || tree.isEmpty()) return null;
+        BlockPos feet = assistant.feetPos();
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (java.util.Iterator<BlockPos> it = tree.iterator(); it.hasNext(); ) {
+            BlockPos p = it.next();
+            BlockState st = assistant.level().getBlockState(p);
+            double d = p.distSqr(feet) + Math.abs(p.getY() - feet.getY()) * 4.0;
+            if (!request.kind().matches(st) || !rankAllows(request.kind(), st)
+                || unreachable.contains(p) || assistant.isUnreachable(p) || !assistant.inZone(p)
+                || (assistant.sparesBuilds() && assistant.partOfBuild(p))
+                || d > 32 * 32) {                                   // sent off elsewhere since: that tree is not this job's
+                it.remove();
+                continue;
+            }
+            if (d < bd) { bd = d; best = p; }
+        }
+        return best;
+    }
+
+    /** Tests: the logs it still means to take from the tree it is on. */
+    public int treeLeftForTests() { return tree.size(); }
 
     private void sweepDrops(BlockPos around) {
         for (ItemEntity drop : assistant.level().getEntitiesOfClass(

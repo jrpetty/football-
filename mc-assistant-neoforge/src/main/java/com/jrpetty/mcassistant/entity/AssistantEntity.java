@@ -4699,6 +4699,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [pa33] Does it leave builds alone when it gathers (only trees for logs, never laid cobblestone)? */
     public boolean sparesBuilds() { return false; }
 
+    /** [tree] Does it fell the whole of a tree before it starts on the next (the Player AI Assistant does; a town's hands take the nearest log)? */
+    public boolean fellsWholeTrees() { return false; }
+
+    /** [tree] Part way down a tree it means to finish (its count may be made already): the job is not over yet. */
+    private boolean midTree;
+    public boolean midTree() { return midTree; }
+    public void setMidTree(boolean on) { midTree = on; }
+
+    /** [tree] The count is made, the tree it is on still stands: it says it is finishing the tree. */
+    public void toppingOff(int got) { sayRoutine("That's " + got + ". Just finishing this tree."); }
+
     /** [pa33c-2b] Is this block part of somebody's build (made things about it)? Only asked when it spares builds. */
     public boolean partOfBuild(BlockPos pos) { return false; }
 

@@ -301,6 +301,15 @@ public class PlayerAssistantEntity extends AssistantEntity {
         return r == null || !r.breakNearBuilds;
     }
 
+    /** [tree] Like a player: one tree down to the last log before the next, never a forest of floating crowns. */
+    @Override
+    public boolean fellsWholeTrees() { return true; }
+
+    @Override
+    public void toppingOff(int got) {
+        if (!level().isClientSide) PaTalk.comment(this, 1, PaTalk.line(this, "topping", "n", String.valueOf(got)));
+    }
+
     /** May this player give it orders: its owner, or an operator. */
     public boolean obeys(Player p) {
         return isOwner(p) || (p instanceof ServerPlayer sp && sp.hasPermissions(2));

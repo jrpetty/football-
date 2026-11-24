@@ -226,7 +226,8 @@ public final class PaBrain {
         cur.best = Math.max(cur.best, pct);                                // [pa33d] logs handed over mid-way still count
         if (!running) pct = Math.max(pct, cur.best);
         // like a player, it stops when it has what it was sent for (a dig "until you have 20", or 16 logs)
-        if ((cur.stopAtTarget || "GATHER".equals(cur.kind)) && cur.target > 0 && pct >= 100 && running) {
+        // ...but a tree it is part way down it finishes first (GatherGoal: no crowns left floating in the sky)
+        if ((cur.stopAtTarget || "GATHER".equals(cur.kind)) && cur.target > 0 && pct >= 100 && running && !a.midTree()) {
             a.clearQueue();
             a.task = null;
             running = false;
