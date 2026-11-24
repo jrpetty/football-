@@ -250,6 +250,16 @@ put the lot in that chest || DEPOSIT * all < PACK > POINT by PACK
 put half a stack of bread in the food barrel || DEPOSIT bread 32 < PACK > NAMED(food)[barrel] by PACK
 put a couple of stacks of stone in the chest || DEPOSIT stone 2st < PACK > DEF by PACK
 
+## feeding
+feed the animals in the pen || BREED:animals
+feed the cows || BREED:cows
+
+## recipes
+how do i make a piston || RECIPE piston
+what do you need for a beacon || RECIPE beacon
+what's the recipe for a bed || RECIPE bed
+what can you make with this || CANMAKE
+
 ## not ours: the usual reader keeps these
 chop 16 logs || null
 build a small house here || null

@@ -1205,6 +1205,9 @@ public final class PaLogiJob {
             walk++;
             if (d < best - 0.5) { best = d; stall = 0; } else stall++;
             if (stall > 20 * 15 || walk > 20 * 120) {
+                com.mojang.logging.LogUtils.getLogger().info("[pa36] {} can't reach {} from {} (walk {}, stall {}, best {}, nav done {}, path {}, blocked {})", a.displayNameCap(),
+                    at.toShortString(), a.blockPosition().toShortString(), walk, stall, String.format("%.1f", best), a.getNavigation().isDone(),
+                    a.getNavigation().getPath() == null ? "none" : a.getNavigation().getPath().getTarget().toShortString() + " reach " + a.getNavigation().getPath().canReach(), a.movementBlocked());
                 PaTalk.comment(a, 1, "I can't get to " + PaLogistics.called(a, at, null) + ". Trying the next.", true);
                 next(a);
                 return -1;

@@ -95,15 +95,27 @@ public final class PaCraft {
      * when it can). Intermediates made from what's at hand don't count as missing; ore smelts into ingots.
      */
     public static Map<Item, Integer> missing(Level level, Item item, int n, Map<Item, Integer> avail) {
+        Map<Item, Integer> first = null;
+        for (RecipeBook.Way w : RecipeBook.waysFor(level, item)) {
+            if (w.fire() != RecipeBook.Fire.NONE) continue;
+            Map<Item, Integer> miss = missingBy(level, item, w, n, avail);
+            if (miss.isEmpty()) return miss;
+            if (first == null) first = miss;
+        }
+        if (first != null) return first;
+        // no bench recipe: fired, or gathered
         Map<Item, Integer> pool = new LinkedHashMap<>(avail);
         Map<Item, Integer> miss = new LinkedHashMap<>();
-        RecipeBook.Craft craft = RecipeBook.craftFor(level, item);
-        if (craft == null) {
-            if (!take(pool, item, n) && !makeable(level, item, n, pool, new HashSet<>(), 0)) miss.put(item, n - Math.min(n, pool.getOrDefault(item, 0)));
-            return miss;
-        }
-        int crafts = (n + craft.yield() - 1) / craft.yield();
-        for (RecipeBook.Part part : craft.parts()) {
+        if (!makeable(level, item, n, pool, new HashSet<>(), 0)) miss.put(item, Math.max(1, n - Math.min(n, avail.getOrDefault(item, 0))));
+        return miss;
+    }
+
+    /** What's missing to make it this one way: the way's own parts it can't get or make from what it has. */
+    private static Map<Item, Integer> missingBy(Level level, Item item, RecipeBook.Way way, int n, Map<Item, Integer> avail) {
+        Map<Item, Integer> pool = new LinkedHashMap<>(avail);
+        Map<Item, Integer> miss = new LinkedHashMap<>();
+        int crafts = (n + way.yield() - 1) / way.yield();
+        for (RecipeBook.Part part : way.parts()) {
             int need = part.count() * crafts;
             Item rep = choose(pool, part);
             int have = rep == null ? 0 : pool.getOrDefault(rep, 0);
@@ -118,31 +130,27 @@ public final class PaCraft {
         return miss;
     }
 
-    /** Can it make {@code n} of this from the pool (taking what it uses)? */
+    /** Can it make {@code n} of this from the pool (taking what it uses)? Every way the game has: benches and fires. */
     private static boolean makeable(Level level, Item item, int n, Map<Item, Integer> pool, Set<Item> path, int depth) {
         if (n <= 0) return true;
         if (take(pool, item, n)) return true;
         if (depth > 8 || path.contains(item)) return false;
+        Map<Item, Integer> start = new LinkedHashMap<>(pool);
         int have = pool.getOrDefault(item, 0);
         if (have > 0) { pool.put(item, 0); n -= have; }
-        RecipeBook.Craft craft = RecipeBook.craftFor(level, item);
         path.add(item);
         try {
-            if (craft != null) {
-                // tried on a copy: an iron ingot has a recipe (nine nuggets) that fails where the furnace succeeds
+            for (RecipeBook.Way w : RecipeBook.waysFor(level, item)) {
                 Map<Item, Integer> trial = new LinkedHashMap<>(pool);
-                int crafts = (n + craft.yield() - 1) / craft.yield();
+                int crafts = (n + w.yield() - 1) / w.yield();
                 boolean ok = true;
-                for (RecipeBook.Part part : craft.parts()) {
-                    int need = part.count() * crafts;
-                    if (!makePart(level, part, need, trial, path, depth + 1)) { ok = false; break; }
+                for (RecipeBook.Part part : w.parts()) {
+                    if (!makePart(level, part, part.count() * crafts, trial, path, depth + 1)) { ok = false; break; }
                 }
                 if (ok) { pool.clear(); pool.putAll(trial); return true; }
             }
-            for (Item raw : smeltFroms(level, item, pool)) {
-                Map<Item, Integer> trial = new LinkedHashMap<>(pool);
-                if (makeable(level, raw, n, trial, path, depth + 1)) { pool.clear(); pool.putAll(trial); return true; }
-            }
+            pool.clear();
+            pool.putAll(start);
             return false;
         } finally {
             path.remove(item);
@@ -318,7 +326,8 @@ public final class PaCraft {
     public static void recipe(@Nullable ServerPlayer p, PlayerAssistantEntity a, String phrase, boolean view) {
         Item item = itemFor(a.level(), phrase);
         if (item == null || item == Items.AIR) { PaTalk.reply(a, "I don't know a recipe for " + phrase + "."); return; }
-        RecipeBook.Craft craft = RecipeBook.craftFor(a.level(), item);
+        RecipeBook.Way craft = null;                                             // the usual bench recipe (sticks of planks, not bamboo)
+        for (RecipeBook.Way w : RecipeBook.waysFor(a.level(), item)) if (w.fire() == RecipeBook.Fire.NONE) { craft = w; break; }
         String name = PaLogiItems.nameOf(item, 1);
         if (craft == null) {
             Item raw = smeltFrom(a.level(), item);

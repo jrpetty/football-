@@ -91,7 +91,7 @@ public class PaLogisticsGameTests {
         t.putString("text", text);
         if (look != null) { t.putInt("bx", look.getX()); t.putInt("by", look.getY()); t.putInt("bz", look.getZ()); }
         PaServer.act(p, "talk", t);
-        Kit.log("[VT] pl said \"" + text + "\" -> " + lastWords(a) + " | plan " + a.plan.total() + " " + (a.plan.all().isEmpty() ? "" : a.plan.all().get(0).label));
+        Kit.log("[VT] logi said \"" + text + "\" -> " + lastWords(a) + " | plan " + a.plan.total() + " " + (a.plan.all().isEmpty() ? "" : a.plan.all().get(0).label));
     }
 
     private static void hash(ServerPlayer p, String text) {
@@ -153,8 +153,8 @@ public class PaLogisticsGameTests {
     // ================================================================== gathering into a chest
 
     /** pl01: "gather 100 stone and put it in this chest" ends with exactly 100 in the chest, at a player's pace (vanilla break time for each block, and the walking). */
-    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "pl01_gather_chest")
-    public static void pl01_gather_chest(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "logi01_gather_chest")
+    public static void logi01_gather_chest(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_600_000, y = ground(level, x);
         for (int dx = 8; dx <= 16; dx++) for (int dz = -4; dz <= 4; dz++) for (int dy = 0; dy < 2; dy++) level.setBlock(new BlockPos(x + dx, y + dy, Z + dz), Blocks.STONE.defaultBlockState(), 3);
@@ -174,13 +174,13 @@ public class PaLogisticsGameTests {
         String[] hud = {""};
         helper.onEachTick(() -> {
             if (a.state() != null && a.state().contains("/100")) hud[0] = a.state();
-            if (level.getGameTime() % 400 == 0) Kit.log("[VT] pl01 t+" + (level.getGameTime() - t0) + " " + a.state() + " stone in pack " + a.countMatching(st -> st.is(Items.COBBLESTONE)) + " chest " + in(level, chest, Items.COBBLESTONE) + " jobs " + a.jobLabels());
+            if (level.getGameTime() % 100 == 0) Kit.log("[VT] logi01 at " + a.blockPosition().toShortString() + " nav " + a.getNavigation().isDone() + " goals " + a.goalSelectorForTests() + " t+" + (level.getGameTime() - t0) + " " + a.state() + " stone in pack " + a.countMatching(st -> st.is(Items.COBBLESTONE)) + " chest " + in(level, chest, Items.COBBLESTONE) + " jobs " + a.jobLabels());
         });
         helper.succeedWhen(() -> {
             int n = in(level, chest, Items.COBBLESTONE) + in(level, chest, Items.STONE);
             helper.assertTrue(n >= 100 && a.plan.idle(), "100 stone in the chest: " + n + " (" + a.state() + "; " + allWords(a) + ")");
             long took = level.getGameTime() - t0;
-            Kit.log("[VT] pl01 chest holds " + n + " stone after " + took + " ticks (vanilla floor " + 100 * each + " = 100 x " + each + "); hud seen \"" + hud[0] + "\"; said " + allWords(a));
+            Kit.log("[VT] logi01 chest holds " + n + " stone after " + took + " ticks (vanilla floor " + 100 * each + " = 100 x " + each + "); hud seen \"" + hud[0] + "\"; said " + allWords(a));
             helper.assertTrue(n == 100, "exactly 100, not more: " + n);
             helper.assertTrue(took >= 100L * each, "a player's pace: " + took + " ticks >= " + 100 * each);
             helper.assertTrue(saidAny(a, "100 stone", "100 cobblestone"), "it said it was done: " + allWords(a));
@@ -188,8 +188,8 @@ public class PaLogisticsGameTests {
     }
 
     /** pl02: ping a chest, then "put my cobble in this chest": the player's cobble goes in when they press Hand over. */
-    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pl02_handover")
-    public static void pl02_handover(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "logi02_handover")
+    public static void logi02_handover(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_603_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -205,13 +205,13 @@ public class PaLogisticsGameTests {
         helper.succeedWhen(() -> {
             int n = in(level, chest, Items.COBBLESTONE);
             helper.assertTrue(n == 94 && a.plan.idle(), "94 cobble in the chest: " + n + " (" + lastWords(a) + ")");
-            Kit.log("[VT] pl02 chest " + n + "; said " + allWords(a));
+            Kit.log("[VT] logi02 chest " + n + "; said " + allWords(a));
         });
     }
 
     /** pl03: "keep this chest stocked with 32 bread": filled now, and topped back up after the test takes 20. */
-    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "pl03_stock")
-    public static void pl03_stock(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "logi03_stock")
+    public static void logi03_stock(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_606_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -234,20 +234,20 @@ public class PaLogisticsGameTests {
                 }
                 for (PaStore.Stock s : PaStore.of(p.getUUID()).stock) s.next = level.getGameTime();   // the check falls due now
                 stage[0] = 1;
-                Kit.log("[VT] pl03 took 20 bread; chest " + in(level, chest, Items.BREAD));
+                Kit.log("[VT] logi03 took 20 bread; chest " + in(level, chest, Items.BREAD));
             }
         });
         helper.succeedWhen(() -> {
             helper.assertTrue(stage[0] == 1, "first filled to 32 (" + in(level, chest, Items.BREAD) + "; " + lastWords(a) + ")");
             int n = in(level, chest, Items.BREAD);
             helper.assertTrue(n >= 32 && a.plan.idle(), "topped back up to 32: " + n + " (" + a.state() + "; " + lastWords(a) + ")");
-            Kit.log("[VT] pl03 topped up to " + n + "; pack " + pack(a, Items.BREAD) + "; said " + allWords(a));
+            Kit.log("[VT] logi03 topped up to " + n + "; pack " + pack(a, Items.BREAD) + "; said " + allWords(a));
         });
     }
 
     /** pl04: fuel and smelt: raw iron smelted in the pinged furnace at the furnace's own speed (10 s an item), fuel put in; and "fuel this furnace". */
-    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pl04_smelt")
-    public static void pl04_smelt(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "logi04_smelt")
+    public static void logi04_smelt(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_609_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -279,13 +279,13 @@ public class PaLogisticsGameTests {
             int fuel = level.getBlockEntity(f2) instanceof Container c ? c.getItem(1).getCount() : 0;
             boolean lit = level.getBlockState(f2).getValue(net.minecraft.world.level.block.AbstractFurnaceBlock.LIT);
             helper.assertTrue(fuelled[0] && (fuel > 0 || lit) && a.plan.idle(), "the second furnace fuelled: " + fuel + " lit " + lit + " (" + lastWords(a) + ")");
-            Kit.log("[VT] pl04 6 ingots after " + took + " ticks; furnace 2 fuel " + fuel + "; said " + allWords(a));
+            Kit.log("[VT] logi04 6 ingots after " + took + " ticks; furnace 2 fuel " + fuel + "; said " + allWords(a));
         });
     }
 
     /** pl05: "bring me 20 torches from my chests": found in its player's known chests (not the empty one) and handed over. */
-    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "pl05_fetch")
-    public static void pl05_fetch(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "logi05_fetch")
+    public static void logi05_fetch(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_612_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -297,13 +297,13 @@ public class PaLogisticsGameTests {
         helper.succeedWhen(() -> {
             helper.assertTrue(on(p, Items.TORCH) == 20 && a.plan.idle(), "20 torches on the player: " + on(p, Items.TORCH) + " (" + a.state() + "; " + lastWords(a) + ")");
             helper.assertTrue(in(level, b, Items.TORCH) == 28, "taken from the chest: " + in(level, b, Items.TORCH));
-            Kit.log("[VT] pl05 torches on player " + on(p, Items.TORCH) + "; said " + allWords(a));
+            Kit.log("[VT] logi05 torches on player " + on(p, Items.TORCH) + "; said " + allWords(a));
         });
     }
 
     /** pl06: a full chest goes on to the next one: 128 stone into a chest with one free slot, the rest in the chest beside it. */
-    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "pl06_full_next")
-    public static void pl06_full_next(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "logi06_full_next")
+    public static void logi06_full_next(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_615_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -317,13 +317,13 @@ public class PaLogisticsGameTests {
         helper.succeedWhen(() -> {
             int one = in(level, full, Items.COBBLESTONE), two = in(level, next, Items.COBBLESTONE);
             helper.assertTrue(one == 64 && two == 64 && a.plan.idle(), "64 in the full one, 64 in the next: " + one + " / " + two + " (" + lastWords(a) + ")");
-            Kit.log("[VT] pl06 " + one + " + " + two + "; said " + allWords(a));
+            Kit.log("[VT] logi06 " + one + " + " + two + "; said " + allWords(a));
         });
     }
 
     /** pl07: another player's chest is refused, even pointed at: nothing goes in, and it says whose. */
-    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pl07_refuse")
-    public static void pl07_refuse(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "logi07_refuse")
+    public static void logi07_refuse(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_618_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -341,14 +341,14 @@ public class PaLogisticsGameTests {
             helper.assertTrue(in(level, theirs, Items.DIAMOND) == 3 && pack(a, Items.DIAMOND) == 0, "nothing came out");
             helper.assertTrue(said1.toLowerCase().contains("someone else") || said1.toLowerCase().contains("not opening") || said1.toLowerCase().contains("belongs")
                 || said1.toLowerCase().contains("thief") || said1.toLowerCase().contains("s chest") || said1.toLowerCase().contains("'s"), "it said whose: " + said1);
-            Kit.log("[VT] pl07 refused: " + allWords(a));
+            Kit.log("[VT] logi07 refused: " + allWords(a));
             helper.succeed();
         });
     }
 
     /** pl08: a haul loop: "haul from the mine to my storage until I say stop" moves the mine chest's stone in trips; "stop" says what it moved. */
-    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "pl08_haul")
-    public static void pl08_haul(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "logi08_haul")
+    public static void logi08_haul(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_621_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -371,13 +371,13 @@ public class PaLogisticsGameTests {
         helper.succeedWhen(() -> {
             helper.assertTrue(stopped[0], "all 320 hauled to storage: " + in(level, store, Items.COBBLESTONE) + " (" + a.state() + "; " + lastWords(a) + ")");
             helper.assertTrue(a.plan.idle() && saidAny(a, "320"), "stopped, saying what it moved: " + allWords(a));
-            Kit.log("[VT] pl08 storage " + in(level, store, Items.COBBLESTONE) + "; said " + allWords(a));
+            Kit.log("[VT] logi08 storage " + in(level, store, Items.COBBLESTONE) + "; said " + allWords(a));
         });
     }
 
     /** pl09: "how much iron do we have?" counts the known chests, its pack and its player, every kind of iron. */
-    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pl09_count")
-    public static void pl09_count(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "logi09_count")
+    public static void logi09_count(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_624_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -395,13 +395,13 @@ public class PaLogisticsGameTests {
         helper.assertTrue(w.contains("3 on me") && w.contains("2 on you"), "its pack and its player: " + w);
         say(p, a, "find me a chest with raw iron in it", null);
         helper.assertTrue(lastWords(a).toLowerCase().contains("blocks"), "found and said where: " + lastWords(a));
-        Kit.log("[VT] pl09 " + allWords(a));
+        Kit.log("[VT] logi09 " + allWords(a));
         helper.succeed();
     }
 
     /** pl10: the mining ladder: "gather 8 iron and put it in this chest" at level 3 is declined (level 4), at level 4 done. */
-    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "pl10_ladder")
-    public static void pl10_ladder(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "logi10_ladder")
+    public static void logi10_ladder(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_627_000, y = ground(level, x);
         for (int dx = 8; dx <= 11; dx++) for (int dz = -2; dz <= 2; dz++) level.setBlock(new BlockPos(x + dx, y, Z + dz), Blocks.IRON_ORE.defaultBlockState(), 3);
@@ -415,19 +415,19 @@ public class PaLogisticsGameTests {
         a.setPaXpForTests(PaLevels.xpFor(4));
         say(p, a, "gather 8 iron and put it in this chest", chest);
         helper.assertTrue(a.plan.total() == 1, "level 4 starts: " + lastWords(a));
-        helper.onEachTick(() -> { if (level.getGameTime() % 400 == 0) Kit.log("[VT] pl10 " + a.state() + " iron in pack " + a.countMatching(st -> st.is(Items.RAW_IRON)) + " chest " + in(level, chest, Items.RAW_IRON) + " jobs " + a.jobLabels() + " at " + a.blockPosition().toShortString()); });
+        helper.onEachTick(() -> { if (level.getGameTime() % 400 == 0) Kit.log("[VT] logi10 " + a.state() + " iron in pack " + a.countMatching(st -> st.is(Items.RAW_IRON)) + " chest " + in(level, chest, Items.RAW_IRON) + " jobs " + a.jobLabels() + " at " + a.blockPosition().toShortString()); });
         helper.succeedWhen(() -> {
             int n = in(level, chest, Items.RAW_IRON);
             helper.assertTrue(n >= 8 && a.plan.idle(), "8 raw iron in the chest: " + n + " (" + a.state() + "; " + allWords(a) + ")");
-            Kit.log("[VT] pl10 " + n + " raw iron; said " + allWords(a));
+            Kit.log("[VT] logi10 " + n + " raw iron; said " + allWords(a));
         });
     }
 
     // ================================================================== crafting
 
     /** pl11: "make me an iron pickaxe" from three ingots and two sticks it was given: crafted at a table and handed over. */
-    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "pl11_craft_given")
-    public static void pl11_craft_given(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "logi11_craft_given")
+    public static void logi11_craft_given(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_630_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -438,13 +438,13 @@ public class PaLogisticsGameTests {
         say(p, a, "make me an iron pickaxe", null);
         helper.succeedWhen(() -> {
             helper.assertTrue(on(p, Items.IRON_PICKAXE) == 1 && a.plan.idle(), "an iron pickaxe handed over (" + a.state() + "; " + lastWords(a) + ")");
-            Kit.log("[VT] pl11 said " + allWords(a));
+            Kit.log("[VT] logi11 said " + allWords(a));
         });
     }
 
     /** pl12: the full chain: logs and raw iron, a furnace and coal, to an iron pickaxe (planks, sticks, smelted ingots, the pickaxe). */
-    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "pl12_craft_chain")
-    public static void pl12_craft_chain(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "logi12_craft_chain")
+    public static void logi12_craft_chain(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_633_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -458,13 +458,13 @@ public class PaLogisticsGameTests {
         helper.succeedWhen(() -> {
             helper.assertTrue(pack(a, Items.IRON_PICKAXE) + (a.getMainHandItem().is(Items.IRON_PICKAXE) ? 1 : 0) >= 1 && a.plan.idle(),
                 "an iron pickaxe made from logs and ore (" + a.state() + "; " + lastWords(a) + ")");
-            Kit.log("[VT] pl12 said " + allWords(a));
+            Kit.log("[VT] logi12 said " + allWords(a));
         });
     }
 
     /** pl13: "craft 64 torches" from 16 coal and 2 logs (planks, sticks, torches). */
-    @GameTest(template = EMPTY, timeoutTicks = 2000, batch = "pl13_torches")
-    public static void pl13_torches(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 2000, batch = "logi13_torches")
+    public static void logi13_torches(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_636_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -475,13 +475,13 @@ public class PaLogisticsGameTests {
         say(p, a, "craft 64 torches", null);
         helper.succeedWhen(() -> {
             helper.assertTrue(pack(a, Items.TORCH) >= 64 && a.plan.idle(), "64 torches: " + pack(a, Items.TORCH) + " (" + a.state() + "; " + lastWords(a) + ")");
-            Kit.log("[VT] pl13 torches " + pack(a, Items.TORCH) + "; said " + allWords(a));
+            Kit.log("[VT] logi13 torches " + pack(a, Items.TORCH) + "; said " + allWords(a));
         });
     }
 
     /** pl14: a missing ingredient: exactly what's short, with the choices (hand over, go and get them, leave it). */
-    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pl14_shortfall")
-    public static void pl14_shortfall(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "logi14_shortfall")
+    public static void logi14_shortfall(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_639_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -495,13 +495,13 @@ public class PaLogisticsGameTests {
         hash(p, "#logi crafthand");
         helper.assertTrue(pack(a, Items.IRON_INGOT) == 3 && on(p, Items.IRON_INGOT) == 3, "the two handed over: pack " + pack(a, Items.IRON_INGOT) + ", player " + on(p, Items.IRON_INGOT));
         helper.assertTrue(!a.plan.idle(), "and it's making it: " + lastWords(a));
-        Kit.log("[VT] pl14 " + allWords(a));
+        Kit.log("[VT] logi14 " + allWords(a));
         helper.succeed();
     }
 
     /** pl15: a tag recipe: a crafting table from birch planks (any planks will do). */
-    @GameTest(template = EMPTY, timeoutTicks = 800, batch = "pl15_tag")
-    public static void pl15_tag(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 800, batch = "logi15_tag")
+    public static void logi15_tag(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_642_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -510,13 +510,13 @@ public class PaLogisticsGameTests {
         say(p, a, "craft a crafting table", null);
         helper.succeedWhen(() -> {
             helper.assertTrue(pack(a, Items.CRAFTING_TABLE) >= 1 && a.plan.idle(), "a crafting table from birch planks (" + lastWords(a) + ")");
-            Kit.log("[VT] pl15 said " + allWords(a));
+            Kit.log("[VT] logi15 said " + allWords(a));
         });
     }
 
     /** pl16: "craft 16 torches and put them in this chest": made, then delivered into the pinged chest. */
-    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "pl16_craft_chest")
-    public static void pl16_craft_chest(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "logi16_craft_chest")
+    public static void logi16_craft_chest(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 9_645_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
@@ -530,7 +530,7 @@ public class PaLogisticsGameTests {
         helper.succeedWhen(() -> {
             int n = in(level, chest, Items.TORCH);
             helper.assertTrue(n == 16 && a.plan.idle(), "16 torches in the chest: " + n + " (" + a.state() + "; " + lastWords(a) + ")");
-            Kit.log("[VT] pl16 chest " + n + "; said " + allWords(a));
+            Kit.log("[VT] logi16 chest " + n + "; said " + allWords(a));
         });
     }
 }

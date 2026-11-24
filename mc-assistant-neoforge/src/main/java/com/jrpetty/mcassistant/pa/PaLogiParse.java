@@ -120,6 +120,12 @@ public final class PaLogiParse {
         c = c.replaceAll("^(?:can you|could you|would you|will you|please)\\s+", "").trim();
         if (c.isEmpty()) return null;
         String raw = text;
+        // "feed the animals in the pen": feeding is breeding, in this game
+        Matcher feed = Pattern.compile("^feed (?:the |all the |my |our )?(animals|cows|pigs|sheep|chickens|horses|rabbits|goats|cattle)(?: (?:in|at|by) (?:the |my |our )?(?:pen|field|farm|barn|enclosure|paddock|yard))?$").matcher(c);
+        if (feed.matches()) {
+            String an = feed.group(1).equals("cattle") ? "cows" : feed.group(1);
+            return List.of(new PaIntent(PaIntent.Kind.BREED, an, 0, PaIntent.Place.NONE, raw));
+        }
         // whole-sentence orders first: the ones whose "and" or "then" is part of the order
         PaLogiOrder whole = whole(c);
         if (whole != null) return List.of(intent(whole, raw));
