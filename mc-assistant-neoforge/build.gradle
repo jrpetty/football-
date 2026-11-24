@@ -121,3 +121,115 @@ processResources {
         expand replaceProperties
     }
 }
+
+// ---------------------------------------------------------------------------
+// [voice37] The voices inside the release jar. Nothing here runs unless
+// -PbundleVoice=true is passed (CI's release build does), so local builds, unit
+// tests and game tests stay small and quick. The build downloads every file in
+// src/main/resources/assets/mc_assistant/voice/parts.tsv from its pinned source
+// (Hugging Face at one revision, GitHub, Maven Central), checks its SHA-256,
+// trims what the mod never uses (ONNX Runtime's macOS debug symbols, the Kokoro
+// voices nobody can pick), and packs the lot under assets/mc_assistant/voicepack/
+// with a manifest of what is in the jar. checkVoiceBundle then opens the jar and
+// confirms every file is there at its size. Players' games never go online for a
+// voice: the mod unpacks these on first use (PaVoiceAssets).
+// ---------------------------------------------------------------------------
+if (project.findProperty('bundleVoice') in ['true', true]) {
+    def partsFile = file('src/main/resources/assets/mc_assistant/voice/parts.tsv')
+    def voiceCache = layout.buildDirectory.dir('voice-cache').get().asFile
+    def voiceOut = layout.buildDirectory.dir('voice-assets').get().asFile
+    def sha256 = { File f ->
+        def md = java.security.MessageDigest.getInstance('SHA-256')
+        f.withInputStream { ins -> byte[] buf = new byte[1 << 16]; int n; while ((n = ins.read(buf)) > 0) md.update(buf, 0, n) }
+        md.digest().collect { String.format('%02x', it) }.join('')
+    }
+    def kokoroVoicesKept = ['bm_george', 'bm_lewis', 'bm_daniel', 'bm_fable', 'bf_emma', 'bf_isabella', 'bf_alice', 'bf_lily',
+                            'af_heart', 'af_bella', 'am_michael', 'am_adam']   // PaKokoro.CATALOGUE
+    def repack = { File from, File to, Closure keep ->
+        to.parentFile.mkdirs()
+        new java.util.zip.ZipInputStream(new FileInputStream(from)).withCloseable { zin ->
+            new java.util.zip.ZipOutputStream(new FileOutputStream(to)).withCloseable { zout ->
+                java.util.zip.ZipEntry e
+                while ((e = zin.nextEntry) != null) {
+                    if (!keep(e.name)) continue
+                    def n = new java.util.zip.ZipEntry(e.name)
+                    n.time = e.time
+                    zout.putNextEntry(n)
+                    if (!e.directory) zout << zin
+                    zout.closeEntry()
+                }
+            }
+        }
+    }
+    tasks.register('voiceAssets') {
+        description = 'Downloads, checks and packs the bundled voices (-PbundleVoice=true).'
+        inputs.file partsFile
+        outputs.dir voiceOut
+        doLast {
+            voiceCache.mkdirs()
+            project.delete(voiceOut)
+            def manifest = new StringBuilder('# group\tfile\tbytes\tsha256 (as packed in this jar)\n')
+            partsFile.eachLine('UTF-8') { line ->
+                if (line.isBlank() || line.startsWith('#')) return
+                def (group, name, bytes, sha, licence, url) = line.split('\t') as List
+                long size = bytes as long
+                File got = new File(voiceCache, name)
+                for (int attempt = 0; attempt < 4 && !(got.exists() && got.length() == size); attempt++) {
+                    long have = got.exists() ? got.length() : 0
+                    if (have > size) { got.delete(); have = 0 }
+                    def c = (HttpURLConnection) new URL(url).openConnection()
+                    c.instanceFollowRedirects = true
+                    c.setRequestProperty('User-Agent', 'minecraft-mod-build')
+                    if (have > 0) c.setRequestProperty('Range', "bytes=${have}-")
+                    c.connectTimeout = 30000
+                    c.readTimeout = 120000
+                    int code = c.responseCode
+                    if (code != 200 && code != 206) throw new GradleException("HTTP ${code} fetching ${url}")
+                    boolean append = code == 206 && have > 0
+                    try {
+                        new FileOutputStream(got, append).withCloseable { out -> c.inputStream.withCloseable { ins -> out << ins } }
+                    } catch (IOException ex) {
+                        logger.warn("voice download interrupted (${name}): ${ex.message}; resuming")
+                    }
+                }
+                if (got.length() != size || sha256(got) != sha) { got.delete(); throw new GradleException("${name} failed its size or SHA-256 check; run the build again") }
+                File dest = new File(voiceOut, "assets/mc_assistant/voicepack/${group}/${name}")
+                if (name == 'onnxruntime.jar') repack(got, dest) { String n -> !n.contains('.dSYM/') }
+                else if (name == 'voices-v1.0.bin') repack(got, dest) { String n -> kokoroVoicesKept.contains(n.replace('.npy', '')) }
+                else { dest.parentFile.mkdirs(); java.nio.file.Files.copy(got.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING) }
+                manifest.append("${group}\t${name}\t${dest.length()}\t${sha256(dest)}\n")
+                logger.lifecycle("voice: ${group}/${name} ${(dest.length() / 1000000) as long} MB (${licence})")
+            }
+            def m = new File(voiceOut, 'assets/mc_assistant/voicepack/manifest.tsv')
+            m.parentFile.mkdirs()
+            m.setText(manifest.toString(), 'UTF-8')
+        }
+    }
+    tasks.named('jar') {
+        dependsOn 'voiceAssets'
+        from(voiceOut)
+    }
+    tasks.register('checkVoiceBundle') {
+        description = 'Opens the release jar and confirms every bundled voice file is in it at its size.'
+        dependsOn 'jar'
+        doLast {
+            File jarFile = tasks.named('jar').get().archiveFile.get().asFile
+            new java.util.zip.ZipFile(jarFile).withCloseable { z ->
+                def me = z.getEntry('assets/mc_assistant/voicepack/manifest.tsv')
+                if (me == null) throw new GradleException('the jar has no voice manifest')
+                int n = 0
+                z.getInputStream(me).getText('UTF-8').eachLine { line ->
+                    if (line.isBlank() || line.startsWith('#')) return
+                    def f = line.split('\t')
+                    def e = z.getEntry("assets/mc_assistant/voicepack/${f[0]}/${f[1]}")
+                    if (e == null || e.size != (f[2] as long)) throw new GradleException("voice file missing or the wrong size in the jar: ${f[0]}/${f[1]}")
+                    n++
+                }
+                if (n < 15) throw new GradleException("only ${n} voice files in the jar")
+                if (jarFile.length() >= 2_000_000_000L) throw new GradleException("the jar is ${jarFile.length()} bytes: over GitHub's 2 GB asset limit")
+                logger.lifecycle("voice bundle: ${n} files, jar ${(jarFile.length() / 1000000) as long} MB")
+            }
+        }
+    }
+    tasks.named('assemble') { dependsOn 'checkVoiceBundle' }
+}

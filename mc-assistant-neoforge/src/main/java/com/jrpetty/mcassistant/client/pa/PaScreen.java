@@ -1299,19 +1299,20 @@ public class PaScreen extends Screen {
             int barW = Math.max(60, half - 64 - 96);
             g.fill(sx + 60, cy + 4, sx + 60 + barW, cy + 9, 0xFFB9C7C4);
             g.fill(sx + 60, cy + 4, sx + 60 + (int) Math.round(barW * PaVoice.packFraction), cy + 9, BRAND_LIGHT);
-            button(g, "Don't download", sx + 64 + barW, cy, 90, 13, mx, my, true, false, "Stops now (what's down is kept) and won't start by itself again",
+            button(g, "Not now", sx + 64 + barW, cy, 90, 13, mx, my, true, false, "Stops now (what's out is kept) and won't start by itself again",
                 PaVoice::declineVoices);
             cy += 15;
             cy = para(g, PaVoice.packLine, sx + 60, cy, half - 60, faint());
         } else {
-            button(g, "Download now (" + com.jrpetty.mcassistant.pa.voice.PaKokoro.totalMb() + " MB)", sx + 60, cy, Math.min(170, half - 64), 13, mx, my, true, true,
-                "Kokoro: very human, offline voices (Apache-2.0), with ONNX Runtime (MIT), from GitHub and Maven Central, each checked by its SHA-256. Nothing about you is sent.",
+            button(g, "Unpack it now", sx + 60, cy, Math.min(170, half - 64), 13, mx, my, PaVoice.bundled(), true,
+                PaVoice.bundled() ? "Kokoro: clear, human, offline voices (Apache-2.0), with ONNX Runtime (MIT), inside the mod: unpacked once into your game folder, each file checked by its SHA-256."
+                    : "This build of the mod has no voices inside it (a release build does). An offline voice pack zip in your config folder works instead.",
                 () -> { PaClientConfig.set(PaClientConfig.VOICEPACK, "auto"); PaVoice.installVoices(); });
             cy += 15;
             if (PaVoice.packFailed) cy = para(g, PaVoice.packLine, sx + 60, cy, half - 60, UiStyle.DANGER);
         }
-        cy = toggle(g, "Fetch it by itself", "auto".equals(pack), sx, cy, half, mx, my,
-            "On (the default): the natural voice downloads in the background the first time you get an assistant. Off: only when you click Download.",
+        cy = toggle(g, "Unpack it by itself", "auto".equals(pack), sx, cy, half, mx, my,
+            "On (the default): the natural voice is unpacked from the mod the first time you get an assistant. Off: only when you click Unpack.",
             () -> PaClientConfig.set(PaClientConfig.VOICEPACK, "auto".equals(pack) ? "declined" : "auto"));
         cy = secVoiceExpressive(g, sx, cy, half, mx, my);                  // [voice37] the engine tier and the expressive voice
         cy = toggle(g, "A woman's voice", woman, sx, cy, half, mx, my, "Emma (British) or Heart (American); off: George or Michael",
@@ -1395,15 +1396,15 @@ public class PaScreen extends Screen {
             int barW = Math.max(60, half - 64 - 96);
             g.fill(sx + 60, cy + 4, sx + 60 + barW, cy + 9, 0xFFB9C7C4);
             g.fill(sx + 60, cy + 4, sx + 60 + (int) Math.round(barW * PaVoiceExpressive.fraction), cy + 9, BRAND_LIGHT);
-            button(g, "Don't download", sx + 64 + barW, cy, 90, 13, mx, my, true, false, "Stops now (what's down is kept) and won't start by itself again",
+            button(g, "Not now", sx + 64 + barW, cy, 90, 13, mx, my, true, false, "Stops now (what's out is kept) and won't start by itself again",
                 PaVoiceExpressive::decline);
             cy += 15;
         } else {
-            boolean can = PaVoice.tts().kokoroReady();
-            button(g, "Download (" + com.jrpetty.mcassistant.pa.voice.PaExpressive.totalMb() + " MB)", sx + 60, cy, Math.min(170, half - 64), 13, mx, my, can, false,
-                can ? "Chatterbox-Turbo (MIT): laughs, sighs and a real performance, in four British voices, from its Hugging Face page, each file checked by its SHA-256. "
-                    + "Needs a fast computer; Auto times it and keeps the natural voice where it can't keep up. Nothing about you is sent."
-                    : "The natural voice comes first (the two share its runtime)",
+            boolean can = PaVoice.tts().kokoroReady() && PaVoiceExpressive.bundled();
+            button(g, "Unpack it (" + com.jrpetty.mcassistant.pa.voice.PaExpressive.totalMb() + " MB on disk)", sx + 60, cy, Math.min(170, half - 64), 13, mx, my, can, false,
+                can ? "Chatterbox-Turbo (MIT): laughs, sighs and a real performance, in four British voices. It's inside the mod: this unpacks it into your game "
+                    + "folder once, each file checked by its SHA-256. Needs a fast computer; Auto times it and keeps the natural voice where it can't keep up."
+                    : !PaVoiceExpressive.bundled() ? "This build of the mod has no expressive voice inside it" : "The natural voice comes first (the two share its runtime)",
                 () -> { PaClientConfig.set(PaClientConfig.EXPRESSIVEPACK, "auto"); PaVoiceExpressive.install(); });
             cy += 15;
         }
@@ -1412,6 +1413,18 @@ public class PaScreen extends Screen {
         int ex = PaClientConfig.get(PaClientConfig.EXPRESSIVENESS, 50);
         cy = stepper(g, "Expression", ex + "", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.EXPRESSIVENESS, Math.max(0, ex - 10)),
             () -> PaClientConfig.set(PaClientConfig.EXPRESSIVENESS, Math.min(100, ex + 10)));
+        button(g, "Test voice", sx + 60, cy, 80, 13, mx, my, true, false, "Hear it say one of its own lines, the way it would now",
+            () -> PaVoice.speak(PaVoice.sample(triangle.tri()), triangle.tri().gloomy(), triangle.tri().funny()));
+        cy += 15;
+        boolean radio = PaClientConfig.get(PaClientConfig.VOICERADIO, false);
+        cy = toggle(g, "Radio (full volume anywhere)", radio, sx, cy, half, mx, my,
+            "Off: its voice comes from where it stands, quieter far off and from the left or right. On: heard at full volume wherever it is.",
+            () -> PaClientConfig.set(PaClientConfig.VOICERADIO, !radio));
+        if (com.jrpetty.mcassistant.pa.voice.PaOrt.mac(System.getProperty("os.name"))) {
+            boolean cml = PaClientConfig.get(PaClientConfig.COREML, false);
+            cy = toggle(g, "Core ML (Mac)", cml, sx, cy, half, mx, my, "Let Apple's Core ML run the expressive voice where it can. Off: the CPU. Applies after a restart.",
+                () -> { PaClientConfig.set(PaClientConfig.COREML, !cml); com.jrpetty.mcassistant.pa.voice.PaExpressive.coreMl(!cml); PaClientConfig.set(PaClientConfig.EXPRESSIVERTF, -1.0); });
+        }
         return cy;
     }
 

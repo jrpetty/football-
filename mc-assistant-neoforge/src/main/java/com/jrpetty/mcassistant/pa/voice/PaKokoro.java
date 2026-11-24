@@ -238,7 +238,7 @@ public final class PaKokoro {
                             have += n;
                             if (have - lastShown > (1 << 20) || have >= p.bytes()) {
                                 lastShown = have;
-                                progress.at(Math.min(1.0, (done + have) / (double) total), "Downloading " + p.what() + ": " + Math.round(have / 1_000_000.0) + " of " + Math.max(1, Math.round(p.bytes() / 1_000_000.0)) + " MB");
+                                progress.at(Math.min(1.0, (done + have) / (double) total), (p.url().startsWith("jar:") ? "Unpacking " : "Downloading ") + p.what() + ": " + Math.round(have / 1_000_000.0) + " of " + Math.max(1, Math.round(p.bytes() / 1_000_000.0)) + " MB");
                             }
                         }
                     } catch (java.io.IOException e) {
@@ -256,7 +256,7 @@ public final class PaKokoro {
             why = downloaded() ? "" : "The download didn't give what was expected.";
             return downloaded();
         } catch (Throwable e) {
-            why = "Couldn't download the " + what + ": " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            why = "Couldn't get the " + what + " ready: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
             return false;
         }
     }

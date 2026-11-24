@@ -77,14 +77,29 @@ public final class PaExpressive {
         return null;
     }
 
-    /** The voice for a pick ("expressive:Harriet"), else the first of the wanted gender. */
+    /** The voice for a pick ("expressive:Harriet"), else the default of the wanted gender. */
     public static Voice pick(String voiceKey, boolean female) {
+        return pick(voiceKey, female, -1);
+    }
+
+    /**
+     * The voice for a pick, else the one that suits the assistant's look (PaPersona.LOOK_KEYS order): Arthur (p226) by
+     * default, Callum's northern voice for the pirate, lumberjack, miner, farmer and the mobs; Harriet for a woman's
+     * voice, Elsie's softer one for the ranger, farmer, chef and scholar. -1: no look known.
+     */
+    public static Voice pick(String voiceKey, boolean female, int look) {
         if (voiceKey != null && voiceKey.startsWith("expressive:")) {
             Voice v = byLabel(voiceKey.substring(11));
             if (v != null) return v;
         }
-        for (Voice v : VOICES) if (v.female() == female) return v;
-        return VOICES.get(0);
+        if (female) return byId(switch (look) {
+            case 2, 3, 5, 10 -> "gb_f_p225";         // ranger, scholar, farmer, chef: Elsie
+            default -> "gb_f_p228";                   // Harriet
+        });
+        return byId(switch (look) {
+            case 5, 6, 7, 11, 14, 15, 16, 17 -> "gb_m_p227";   // farmer, miner, pirate, lumberjack, skeleton, zombie, creeper, enderman: Callum
+            default -> "gb_m_p226";                   // Arthur
+        });
     }
 
     // ------------------------------------------------------------------ a voice's conditioning (in the jar)
@@ -178,7 +193,7 @@ public final class PaExpressive {
             try (InputStream in = Files.newInputStream(dir.resolve("tokenizer.json"))) { bpe = PaBpe.read(in); }
             ort = PaOrt.loader(ortJar);
             int threads = PaOrt.threads(Runtime.getRuntime().availableProcessors());
-            boolean mac = PaOrt.mac(System.getProperty("os.name")) && Boolean.getBoolean("mca.voice.coreml");
+            boolean mac = PaOrt.mac(System.getProperty("os.name")) && coreMl;
             embed = PaOrt.session(ort, dir.resolve("embed_tokens_q4.onnx"), 1, false);
             lm = PaOrt.session(ort, dir.resolve("language_model_q4.onnx"), threads, mac);
             decoder = PaOrt.session(ort, dir.resolve("conditional_decoder_quantized.onnx"), threads, mac);
@@ -196,6 +211,18 @@ public final class PaExpressive {
     }
 
     public boolean loaded() { return lm != null; }
+
+    /** [voice37] Apple's Core ML (a Mac, the player's opt-in in Settings): tried first, the CPU backing it up. Takes effect on the next load. */
+    private static volatile boolean coreMl;
+
+    public static void coreMl(boolean on) { coreMl = on; }
+
+    /** Let the models go (the benchmark said this computer is too slow, or the tier changed): their native memory is freed. */
+    public synchronized void unload() {
+        PaOrt.close(embed); PaOrt.close(lm); PaOrt.close(decoder);
+        embed = lm = decoder = null;
+        conds.clear();
+    }
 
     /** How a line is read: sampling temperature, and a seed (0 = fresh each time). */
     public record Read(float temperature, long seed) {

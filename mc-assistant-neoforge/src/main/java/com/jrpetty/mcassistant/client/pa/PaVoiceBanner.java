@@ -66,7 +66,7 @@ public final class PaVoiceBanner {
             boolean over = mx >= kx && mx < kx + kw && my >= ky && my < ky + kh;
             button = mx >= 0;
             g.fill(kx, ky, kx + kw, ky + kh, over ? 0xFFF0F0F0 : 0xFFDCDCDC);
-            String label = mx >= 0 ? "Don't download" : pct;
+            String label = mx >= 0 ? "Not now" : pct;
             g.drawString(font, UiStyle.clip(font, label, kw - 4), kx + (kw - Math.min(kw - 4, font.width(label))) / 2, ky + 2, UiStyle.TEXT, false);
         }
         g.pose().popPose();

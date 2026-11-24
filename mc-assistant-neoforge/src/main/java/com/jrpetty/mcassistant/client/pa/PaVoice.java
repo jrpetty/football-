@@ -26,6 +26,21 @@ public final class PaVoice {
     static volatile String transcript = "", status = "";
     static long transcriptAt, statusAt;
 
+    /** [voice37] This mod's version (the unpacked voices are kept per version). */
+    static String modVersion() {
+        try {
+            return net.neoforged.fml.ModList.get().getModContainerById(com.jrpetty.mcassistant.McAssistantMod.MODID)
+                .map(c -> c.getModInfo().getVersion().toString()).orElse("dev");
+        } catch (Throwable e) {
+            return "dev";
+        }
+    }
+
+    /** [voice37] This jar carries its voices (a release build). */
+    static boolean bundled() {
+        return !com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.bundled().isEmpty();
+    }
+
     static Path dir() {
         return FMLPaths.CONFIGDIR.get().resolve("mc_assistant").resolve("voice");
     }
@@ -35,11 +50,16 @@ public final class PaVoice {
             tts = PaTts.create();
             tts.accent(PaVoice::accent);                        // [pa33b] a British voice for UK
             tts.piper(dir().resolve("piper-voices"));
-            tts.kokoro(dir().resolve("kokoro"));                // [pa33b] the natural voices, once downloaded
+            // [voice37] the voices come inside the mod jar: unpacked (and checked) into the game folder on first use, never downloaded
+            java.util.List<com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.Entry> pack = com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.bundled();
+            Path home = pack.isEmpty() ? dir() : com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.home(FMLPaths.GAMEDIR.get(), modVersion(), pack);
+            if (pack.isEmpty()) tts.kokoro(dir().resolve("kokoro"));   // a development build: only an offline voice pack in config/
+            else tts.kokoro(new com.jrpetty.mcassistant.pa.voice.PaKokoro(home.resolve("kokoro"), com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.parts(pack, "kokoro")));
             tts.onSound(PaVoice::soundStarted);                 // [pa35] the gestures go with the words
-            PaVoiceExpressive.attach(tts, dir());               // [voice37] the expressive voice, its tier and its personality
+            PaVoiceExpressive.attach(tts, home, pack);          // [voice37] the expressive voice, its tier and its personality
             // [pa35] an offline voice pack dropped in the config folder: unpacked and checked, off the game thread
             Thread t = new Thread(() -> {
+                if (!pack.isEmpty()) com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.clean(home);   // [voice37] older versions' unpacked voices go
                 if (tts.kokoro() != null && tts.kokoro().importPack(FMLPaths.CONFIGDIR.get(), dir())) readyNow();
                 PaVoiceExpressive.importPack(FMLPaths.CONFIGDIR.get(), dir());   // [voice37] its optional pack too
             }, "mca-assistant-voice-pack");
@@ -64,16 +84,16 @@ public final class PaVoice {
      */
     static void maybeAutoDownload(boolean hasAssistant) {
         boolean go = com.jrpetty.mcassistant.pa.voice.PaVoiceDefaults.autoDownload(hasAssistant, autoTried, PaClientConfig.get(PaClientConfig.VOICEPACK, "auto"),
-            tts().kokoroReady(), installingVoices);
+            tts().kokoroReady(), installingVoices) && bundled();          // [voice37] only ever from the jar
         if (hasAssistant) autoTried = true;
         PaVoiceExpressive.maybeAutoDownload(hasAssistant);                 // [voice37] on a computer quick enough
         if (!go) return;
         installVoices();
-        try {
+        try {                                                               // [voice37] unpacked from the jar, not downloaded
             net.minecraft.client.gui.components.toasts.SystemToast.add(Minecraft.getInstance().getToasts(),
                 net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                net.minecraft.network.chat.Component.literal("Fetching your assistant's natural voice"),
-                net.minecraft.network.chat.Component.literal("About " + com.jrpetty.mcassistant.pa.voice.PaKokoro.totalMb() + " MB, once. Words show until it's ready."));
+                net.minecraft.network.chat.Component.literal("Unpacking your assistant's voice"),
+                net.minecraft.network.chat.Component.literal("Once, from the mod itself. Words show until it's ready."));
         } catch (Throwable ignored) {
             // no toasts this early: the banner still shows
         }
@@ -85,7 +105,7 @@ public final class PaVoice {
         if (tts().kokoro() != null) tts().kokoro().cancel();
         installingVoices = false;
         packEndedAt = System.currentTimeMillis();
-        packLine = "Natural voice: not downloading. Settings > Voice can fetch it any time.";
+        packLine = "Natural voice: not unpacking. Settings > Voice can unpack it any time.";
     }
 
     /** The natural voice became ready: it says so, once, in its own (new) voice. */
@@ -161,7 +181,7 @@ public final class PaVoice {
         if (id >= 0 && (tts().naturalReady() || basic)) { holdId = id; holdUntil = System.currentTimeMillis() + 2500L; }
         tts().speak(text, new PaTts.Opts(PaClientConfig.get(PaClientConfig.VOICEKEY, ""), PaClientConfig.get(PaClientConfig.RATE, 0),
             PaClientConfig.get(PaClientConfig.PITCH, 0), PaClientConfig.get(PaClientConfig.VOLUME, 80), gloom, fun, accent(),
-            p == null ? Double.NaN : p.getX(), p == null ? Double.NaN : p.getZ(), basic, PaClientConfig.get(PaClientConfig.VOICEWOMAN, false)));
+            p == null ? Double.NaN : p.getX(), p == null ? Double.NaN : p.getZ(), basic, PaClientConfig.get(PaClientConfig.VOICEWOMAN, false)), id);   // [voice37] from the assistant
     }
 
     /** [pa35] With no voice ready, its words show as a subtitle whatever the subtitle setting (text only, never silent). */
@@ -242,12 +262,13 @@ public final class PaVoice {
     /** [pa33b] The player agreed: download the natural (Kokoro) voices, off the game thread. Nothing is fetched before. */
     static void installVoices() {
         if (installingVoices || tts().kokoro() == null) return;
+        if (!bundled()) { say("This build of the mod has no voices inside it. A voice pack zip in your config folder works instead."); return; }   // [voice37]
         installingVoices = true;
         packFailed = false;
         packFraction = 0;
-        packLine = "Natural voice: starting...";
+        packLine = "Natural voice: unpacking...";
         Thread t = new Thread(() -> {
-            boolean ok = tts().kokoro().install(com.jrpetty.mcassistant.pa.voice.PaKokoro.HTTP, (f, l) -> { packFraction = f; packLine = l; });
+            boolean ok = tts().kokoro().install(com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.fromJar(), (f, l) -> { packFraction = f; packLine = l; });   // [voice37] from the jar
             boolean wasCancelled = !installingVoices;
             installingVoices = false;
             packEndedAt = System.currentTimeMillis();

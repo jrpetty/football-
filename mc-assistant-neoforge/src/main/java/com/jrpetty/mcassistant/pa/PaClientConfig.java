@@ -27,6 +27,8 @@ public final class PaClientConfig {
     public static final ModConfigSpec.ConfigValue<String> VOICETIER, EXPRESSIVEPACK;
     public static final ModConfigSpec.IntValue EXPRESSIVENESS;
     public static final ModConfigSpec.DoubleValue EXPRESSIVERTF, KOKORORTF;
+    /** [voice37] Apple's Core ML for the expressive voice (a Mac; opt-in), and its voice heard at full volume wherever it is ("radio"). */
+    public static final ModConfigSpec.BooleanValue COREML, VOICERADIO;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -49,21 +51,24 @@ public final class PaClientConfig {
             .define("talkMode", "hold");
         VASENS = b.comment("[pa33c-2b] Voice activation sensitivity, 0..100 (higher hears quieter speech).").defineInRange("voiceSensitivity", 50, 0, 100);
         VOICEPING = b.comment("[pa33c-2b] Speaking pings what you're looking at when you start, so \"mine that\" means that.").define("voicePings", true);
-        VOICEPACK = b.comment("[pa35] The natural voice (Kokoro, about 220 MB, once, into this config folder): auto (fetched in the background the first time you",
-            "get an assistant) or declined (never fetched; Settings > Voice can still fetch it). Nothing about you is sent.").define("naturalVoice", com.jrpetty.mcassistant.pa.voice.PaVoiceDefaults.NATURAL);
+        VOICEPACK = b.comment("[pa35] The natural voice (Kokoro; [voice37] inside the mod jar, unpacked once into the game folder): auto (unpacked the first time you",
+            "get an assistant) or declined (only when you click Unpack in Settings > Voice). Nothing is downloaded.").define("naturalVoice", com.jrpetty.mcassistant.pa.voice.PaVoiceDefaults.NATURAL);
         BASICVOICE = b.comment("[pa35] Use your computer's basic system voice (Windows' old desktop voices, macOS say) when no natural voice is ready. Off: words only.")
             .define("systemVoiceBasic", com.jrpetty.mcassistant.pa.voice.PaVoiceDefaults.BASIC);
         VOICEWOMAN = b.comment("[pa35] A woman's natural voice (Emma, or Heart in American English) instead of a man's (George, or Michael).").define("womanVoice", false);
         VOICEREADYSAID = b.comment("[pa35] It has told you its natural voice is ready.").define("naturalVoiceAnnounced", false);
         VOICETIER = b.comment("[voice37] Which voice: auto (the best this computer keeps up with, by a quick benchmark), expressive (laughs and sighs; needs a fast",
             "computer), natural (Kokoro, light on any computer) or basic (your computer's own robotic voice).").define("voiceTier", "auto");
-        EXPRESSIVEPACK = b.comment("[voice37] The expressive voice (Chatterbox-Turbo, about 570 MB, once, into this config folder): auto (fetched in the background when",
-            "this computer is quick enough) or declined (never fetched by itself; Settings > Voice can still fetch it).").define("expressiveVoice", "auto");
+        EXPRESSIVEPACK = b.comment("[voice37] The expressive voice (Chatterbox-Turbo, inside the mod jar, about 570 MB unpacked once into the game folder): auto (unpacked",
+            "when this computer is quick enough for it) or declined (only when you click Unpack in Settings > Voice). Nothing is downloaded.").define("expressiveVoice", "auto");
         EXPRESSIVENESS = b.comment("[voice37] How much the expressive voice performs (laughs, sighs, how freely it reads): 0 (the words only) .. 100.")
             .defineInRange("expressiveness", 50, 0, 100);
         EXPRESSIVERTF = b.comment("[voice37] The expressive voice's measured speed on this computer (seconds of work per second of speech; -1 not measured).")
             .defineInRange("expressiveBenchmark", -1.0, -1.0, 1000.0);
         KOKORORTF = b.comment("[voice37] The natural voice's measured speed on this computer (-1 not measured).").defineInRange("naturalBenchmark", -1.0, -1.0, 1000.0);
+        COREML = b.comment("[voice37] On a Mac: let Apple's Core ML run the expressive voice where it can (off: the CPU, which is steady everywhere).").define("coreML", false);
+        VOICERADIO = b.comment("[voice37] Radio: hear your assistant at full volume wherever it is. Off (the default): its voice comes from where it stands,",
+            "quieter with distance and from the left or right.").define("voiceRadio", false);
         b.pop();
         b.push("pings");
         PINGMODE = b.comment("[pa33c-2b] The middle mouse button: both (tap pings when you have an assistant; sneak for pick block), ping, or pick (pick block only).")

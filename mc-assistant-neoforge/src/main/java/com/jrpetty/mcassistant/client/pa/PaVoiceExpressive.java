@@ -4,6 +4,7 @@ import com.jrpetty.mcassistant.pa.PaClientConfig;
 import com.jrpetty.mcassistant.pa.PaLines;
 import com.jrpetty.mcassistant.pa.voice.PaExpressive;
 import com.jrpetty.mcassistant.pa.voice.PaTts;
+import com.jrpetty.mcassistant.pa.voice.PaVoiceAssets;
 import com.jrpetty.mcassistant.pa.voice.PaVoiceTier;
 import net.minecraft.client.Minecraft;
 
@@ -13,9 +14,10 @@ import java.util.List;
 
 /**
  * [voice37] The expressive voice on the player's computer: its tier (Settings > Voice: Auto, Expressive, Natural, Basic),
- * its download (by itself on Auto only when this computer is quick enough, a card with a progress bar and a one-click
- * "Don't download", resumed and checked like the natural voice's), its benchmark, and its personality (corner, humour,
- * expressiveness) handed to PaTts with every line. Client-side only; a server never starts or stops it.
+ * its files (inside the mod jar; unpacked into the game folder only when the tier wants it: on Auto, when the natural
+ * voice's timing says this computer is quick enough), its benchmark (a computer too slow keeps the natural voice and
+ * the models are let go), a warm-up when the player logs in, the common short lines made ahead for every voice, and its
+ * personality (corner, humour, expressiveness, bond, look) handed to PaTts with every line. Client-side only.
  */
 public final class PaVoiceExpressive {
 
@@ -25,16 +27,21 @@ public final class PaVoiceExpressive {
     static volatile double fraction;
     static volatile String line = "";
     static volatile long endedAt;
-    private static boolean started;
+    private static boolean started, warmed;
     private static PaTts tts;
+    private static boolean bundled;
 
-    /** Wire the expressive voice into the speech engine (once, when it is made). */
-    static void attach(PaTts t, Path voiceDir) {
+    /** Wire the expressive voice into the speech engine (once, when it is made); home: where this version unpacks. */
+    static void attach(PaTts t, Path home, List<PaVoiceAssets.Entry> pack) {
         tts = t;
-        t.expressive(voiceDir.resolve("expressive"), voiceDir.resolve("cache"));
+        bundled = !pack.isEmpty();
+        PaExpressive e = bundled ? new PaExpressive(home.resolve("expressive"), PaVoiceAssets.parts(pack, "expressive")) : new PaExpressive(home.resolve("expressive"));
+        t.expressive(e, PaVoice.dir().resolve("cache"));
         t.kokoroRtf(PaClientConfig.get(PaClientConfig.KOKORORTF, -1.0));
         t.onKokoroRtf(r -> Minecraft.getInstance().execute(() -> PaClientConfig.set(PaClientConfig.KOKORORTF, Math.round(r * 1000) / 1000.0)));
         t.prefs(PaVoiceExpressive::prefs);
+        t.sinks(PaVoiceSound.SINKS);                                    // from the assistant, through the game's sound system
+        PaExpressive.coreMl(PaClientConfig.get(PaClientConfig.COREML, false));
     }
 
     public static PaVoiceTier.Setting tier() {
@@ -50,79 +57,94 @@ public final class PaVoiceExpressive {
         return PaClientConfig.get(PaClientConfig.EXPRESSIVERTF, -1.0);
     }
 
-    /** What PaTts asks before each line: the tier, its humour (from the server's settings), the slider, the benchmark. */
+    /** What PaTts asks before each line (from any thread): the tier, humour, slider, benchmark, bond and look. */
     static PaTts.Prefs prefs() {
-        int humour = 0;
+        int humour = 0, bond = 1, look = -1;
         try {
-            var set = PaClient.state.getCompound("set");
-            humour = set.getInt("humour");
+            var st = PaClient.state;
+            humour = st.getCompound("set").getInt("humour");
+            if (st.contains("bondTier")) bond = st.getInt("bondTier");
+            if (st.contains("look")) look = st.getInt("look");
         } catch (Throwable ignored) {
-            // no state yet: Dry
+            // no state yet: Dry, a Mate, no look
         }
-        return new PaTts.Prefs(tier(), humour, PaClientConfig.get(PaClientConfig.EXPRESSIVENESS, 50), rtf());
+        return new PaTts.Prefs(tier(), humour, PaClientConfig.get(PaClientConfig.EXPRESSIVENESS, 50), rtf(), bond, look);
     }
 
     static boolean ready() {
         return tts != null && tts.expressiveReady();
     }
 
-    /** An offline expressive pack in the config folder: unpacked and checked (off the game thread, with the natural one's). */
+    /** An offline expressive pack in the config folder (a development build's way in): unpacked and checked. */
     static void importPack(Path... folders) {
-        if (tts == null || tts.expressive() == null) return;
-        if (tts.expressive().files().importPack(folders) && rtf() < 0) benchmark(false);
+        if (tts == null || tts.expressive() == null || bundled) return;
+        tts.expressive().files().importPack(folders);
     }
 
-    /** On Auto, fetch it by itself when this computer is quick enough (the natural voice's timing is the guess). */
+    /**
+     * Asked whenever the state comes: on login, warm it up (or time it, the first time); and when the tier wants the
+     * expressive voice and it isn't unpacked yet, unpack it from the jar.
+     */
     static void maybeAutoDownload(boolean hasAssistant) {
-        if (tts == null || tts.expressive() == null) return;
-        if (tts.expressiveReady() && rtf() < 0 && !benchmarking) { benchmark(false); return; }
-        boolean go = PaVoiceTier.autoDownload(hasAssistant, started, PaClientConfig.get(PaClientConfig.EXPRESSIVEPACK, "auto"), tier(), tts.kokoroReady(),
-            tts.expressive().downloaded(), installing, tts.kokoroRtf(), rtf());
+        if (tts == null || tts.expressive() == null || !hasAssistant) return;
+        boolean wants = PaVoiceTier.offerExpressive(tier(), tts.kokoroRtf(), rtf());
+        if (tts.expressiveReady()) {
+            if (!wants) return;                                         // lazy: never loaded unless its tier would use it
+            if (rtf() < 0 && !benchmarking) benchmark(false);
+            else if (!warmed && rtf() > 0) warm();
+            return;
+        }
+        boolean go = PaVoiceTier.autoDownload(true, started, PaClientConfig.get(PaClientConfig.EXPRESSIVEPACK, "auto"), tier(), tts.kokoroReady(),
+            tts.expressive().downloaded(), installing, tts.kokoroRtf(), rtf()) && bundled;
         if (!go) return;
         install();
         try {
             net.minecraft.client.gui.components.toasts.SystemToast.add(Minecraft.getInstance().getToasts(),
                 net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                net.minecraft.network.chat.Component.literal("Fetching your assistant's expressive voice"),
-                net.minecraft.network.chat.Component.literal("About " + PaExpressive.totalMb() + " MB, once. Your computer is quick enough for it."));
+                net.minecraft.network.chat.Component.literal("Unpacking your assistant's expressive voice"),
+                net.minecraft.network.chat.Component.literal("Once, from the mod itself: your computer is quick enough for it."));
         } catch (Throwable ignored) {
             // the card still shows
         }
     }
 
-    /** Download it now (Settings' button, or Auto), then time it on this computer. */
+    /** Unpack it now (Settings' button, or Auto), then time it on this computer. Never from the network. */
     static void install() {
         if (installing || tts == null || tts.expressive() == null) return;
+        if (!bundled) { PaVoice.say("This build of the mod has no expressive voice inside it."); return; }
         started = true;
         installing = true;
         failed = false;
         fraction = 0;
-        line = "Expressive voice: starting...";
+        line = "Expressive voice: unpacking...";
         Thread t = new Thread(() -> {
-            boolean ok = tts.expressive().files().install(com.jrpetty.mcassistant.pa.voice.PaKokoro.HTTP, (f, l) -> { fraction = f; line = l; });
+            boolean ok = tts.expressive().files().install(PaVoiceAssets.fromJar(), (f, l) -> { fraction = f; line = l; });
             boolean cancelled = !installing;
             installing = false;
             endedAt = System.currentTimeMillis();
             if (cancelled) return;
             if (!ok) { failed = true; line = tts.expressive().files().why(); PaVoice.say(line); return; }
             fraction = 1;
-            line = "Expressive voice downloaded. Timing it on this computer...";
+            line = "Expressive voice unpacked. Timing it on this computer...";
             benchmark(true);
-        }, "mca-assistant-voice-expressive-download");
+        }, "mca-assistant-voice-expressive-unpack");
         t.setDaemon(true);
         t.start();
     }
 
-    /** "Don't download": stops now (what's down is kept) and never starts by itself again. */
+    /** "Not now": stops now (what's out is kept) and never starts by itself again. */
     static void decline() {
         PaClientConfig.set(PaClientConfig.EXPRESSIVEPACK, "declined");
         if (tts != null && tts.expressive() != null) tts.expressive().files().cancel();
         installing = false;
         endedAt = System.currentTimeMillis();
-        line = "Expressive voice: not downloading. Settings > Voice can fetch it any time.";
+        line = "Expressive voice: not unpacking. Settings > Voice can unpack it any time.";
     }
 
-    /** Time it (a warm-up line and one more), keep the figure, and say how it went; announce it in its new voice if it's chosen. */
+    /**
+     * Time it (a warm-up line and one more) and keep the figure. Too slow for Auto: the models are let go (their memory
+     * freed) and the natural voice speaks. Quick enough: announced in its new voice, and the common lines made ahead.
+     */
     static void benchmark(boolean announce) {
         if (benchmarking || tts == null) return;
         benchmarking = true;
@@ -133,14 +155,17 @@ public final class PaVoiceExpressive {
                 Minecraft.getInstance().execute(() -> PaClientConfig.set(PaClientConfig.EXPRESSIVERTF, Math.round(r * 1000) / 1000.0));
                 line = PaVoiceTier.verdict(r, tts.kokoroRtf());
                 endedAt = System.currentTimeMillis();
-                if (announce && (tier() == PaVoiceTier.Setting.EXPRESSIVE || r <= PaVoiceTier.EXPRESSIVE_RTF)) {
-                    PaClientConfig.set(PaClientConfig.VOICEREADYSAID, false);
-                    PaVoice.readyNow();
+                boolean use = tier() == PaVoiceTier.Setting.EXPRESSIVE || tier() == PaVoiceTier.Setting.AUTO && r <= PaVoiceTier.EXPRESSIVE_RTF;
+                if (!use) { tts.expressive().unload(); return; }
+                warmed = true;
+                if (announce) {
+                    Minecraft.getInstance().execute(() -> { PaClientConfig.set(PaClientConfig.VOICEREADYSAID, false); PaVoice.readyNow(); });
                 }
                 Minecraft.getInstance().execute(PaVoiceExpressive::prewarm);
-            } catch (Throwable e) {
+            } catch (Throwable e) {                                     // out of memory included: the natural voice carries on
                 failed = true;
-                line = "Couldn't time the expressive voice: " + e.getMessage();
+                line = "Couldn't time the expressive voice: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+                try { tts.expressive().unload(); } catch (Throwable ignored) { }
             } finally {
                 benchmarking = false;
             }
@@ -150,21 +175,45 @@ public final class PaVoiceExpressive {
         t.start();
     }
 
-    /** Make its most common short lines ahead (acknowledgements, greetings), so they play at once. */
+    /** At login: load the models and make one short line, so the first real line isn't kept waiting. */
+    static void warm() {
+        warmed = true;
+        Thread t = new Thread(() -> {
+            try {
+                if (!tts.expressive().load(tts.kokoro().dir().resolve("onnxruntime.jar"))) return;
+                tts.expressive().synth("Right.", PaExpressive.VOICES.get(0), new PaExpressive.Read(0.7f, 1), () -> false);
+                Minecraft.getInstance().execute(PaVoiceExpressive::prewarm);
+            } catch (Throwable ignored) {
+                // the first line pays instead
+            }
+        }, "mca-assistant-voice-warm");
+        t.setDaemon(true);
+        t.setPriority(Thread.MIN_PRIORITY);
+        t.start();
+    }
+
+    /** The most common short lines (acknowledgements, greetings), made ahead for every voice, the player's own first. */
     static void prewarm() {
         if (tts == null) return;
         List<String> lines = new ArrayList<>();
-        for (String key : new String[]{"say.ok", "say.follow", "say.stay", "say.come", "say.stop", "say.done", "say.thanks", "say.greet"}) {
-            for (String l : PaLines.get(key)) if (!l.contains("{") && l.length() <= 60 && lines.size() < 24) { lines.add(l); break; }
+        for (String key : new String[]{"say.ok", "say.follow", "say.stay", "say.come", "say.stop", "say.done", "say.thanks", "say.greet", "say.guard", "say.bye"}) {
+            int n = 0;
+            for (String l : PaLines.get(key)) if (!l.contains("{") && l.length() <= 60 && n < 2) { lines.add(l); n++; }
         }
         var set = PaClient.state.getCompound("set");
         var tri = com.jrpetty.mcassistant.pa.PaPersona.Tri.of(set.contains("funny") ? set.getFloat("funny") : 0.5, set.contains("gloomy") ? set.getFloat("gloomy") : 0.2);
-        tts.prewarm(lines, new PaTts.Opts(PaClientConfig.get(PaClientConfig.VOICEKEY, ""), 0, PaClientConfig.get(PaClientConfig.PITCH, 0),
-            PaClientConfig.get(PaClientConfig.VOLUME, 80), tri.gloomy(), tri.funny(), PaVoice.accent(), Double.NaN, Double.NaN,
-            PaClientConfig.get(PaClientConfig.BASICVOICE, false), PaClientConfig.get(PaClientConfig.VOICEWOMAN, false)));
+        boolean woman = PaClientConfig.get(PaClientConfig.VOICEWOMAN, false);
+        String mine = PaClientConfig.get(PaClientConfig.VOICEKEY, "");
+        List<String> keys = new ArrayList<>();
+        keys.add(mine.startsWith("expressive:") ? mine : "expressive:" + PaExpressive.pick(mine, woman, prefs().look()).label());
+        for (PaExpressive.Voice v : PaExpressive.VOICES) if (!keys.contains("expressive:" + v.label())) keys.add("expressive:" + v.label());
+        for (String k : keys) {
+            tts.prewarm(lines, new PaTts.Opts(k, 0, PaClientConfig.get(PaClientConfig.PITCH, 0), PaClientConfig.get(PaClientConfig.VOLUME, 80), tri.gloomy(), tri.funny(),
+                PaVoice.accent(), Double.NaN, Double.NaN, false, woman));
+        }
     }
 
-    /** The card is up (downloading, or a few seconds after). */
+    /** The card is up (unpacking, or a few seconds after). */
     static boolean showing() {
         return installing || endedAt > 0 && System.currentTimeMillis() - endedAt < 6000L;
     }
@@ -178,6 +227,9 @@ public final class PaVoiceExpressive {
         if (!trouble.isEmpty()) return trouble + " The natural voice is speaking instead.";
         if (tts.expressiveReady()) return PaVoiceTier.verdict(rtf(), tts.kokoroRtf());
         if (failed) return line;
+        if (!bundled) return "This build has no expressive voice inside it (a release build does).";
         return PaVoiceTier.verdict(-1, tts.kokoroRtf());
     }
+
+    static boolean bundled() { return bundled; }
 }

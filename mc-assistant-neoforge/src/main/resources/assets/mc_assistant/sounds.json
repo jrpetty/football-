@@ -15,5 +15,11 @@
       {"name": "mc_assistant:ambient/birds3", "stream": false},
       {"name": "mc_assistant:ambient/birds4", "stream": false}
     ]
+  },
+  "pa_voice": {
+    "subtitle": "subtitles.mc_assistant.pa_voice",
+    "sounds": [
+      {"name": "mc_assistant:pa_voice", "stream": true, "attenuation_distance": 32}
+    ]
   }
 }

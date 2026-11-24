@@ -105,6 +105,49 @@ public final class PaAudio {
         return out;
     }
 
+    /**
+     * [voice37] The true peak in dBFS (ITU-R BS.1770-4 style: four times oversampled, a windowed-sinc between samples), so a
+     * peak that falls between two samples is found too; -inf for silence.
+     */
+    public static double truePeakDb(float[] a) {
+        double peak = 0;
+        for (int i = 0; i < a.length; i++) {
+            peak = Math.max(peak, Math.abs(a[i]));
+            for (int k = 0; k < TP_OVER - 1; k++) {
+                double v = 0;
+                double[] c = TP_KERNEL[k];
+                for (int j = 0; j < c.length; j++) {
+                    int n = i + j - TP_TAPS + 1;
+                    if (n >= 0 && n < a.length) v += a[n] * c[j];
+                }
+                peak = Math.max(peak, Math.abs(v));
+            }
+        }
+        return peak <= 0 ? Double.NEGATIVE_INFINITY : 20 * Math.log10(peak);
+    }
+
+    private static final int TP_OVER = 4, TP_TAPS = 8;
+    /** The interpolation weights for each in-between point (a Hann-windowed sinc), worked out once. */
+    private static final double[][] TP_KERNEL = new double[TP_OVER - 1][2 * TP_TAPS];
+    static {
+        for (int k = 1; k < TP_OVER; k++)
+            for (int j = -TP_TAPS + 1; j <= TP_TAPS; j++) {
+                double x = k / (double) TP_OVER - j;
+                double sinc = Math.abs(x) < 1e-9 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x);
+                TP_KERNEL[k - 1][j + TP_TAPS - 1] = sinc * (0.5 + 0.5 * Math.cos(Math.PI * x / TP_TAPS));
+            }
+    }
+
+    /** [voice37] Turned down just enough that the true peak is at or under the ceiling (a whole-clip gain: no distortion). */
+    public static float[] truePeakCeiling(float[] a, double ceilingDb) {
+        double tp = truePeakDb(a);
+        if (!(tp > ceilingDb - 0.05)) return a;
+        double g = Math.pow(10, (ceilingDb - 0.1 - tp) / 20);
+        float[] out = new float[a.length];
+        for (int i = 0; i < a.length; i++) out[i] = (float) (a[i] * g);
+        return out;
+    }
+
     /** Raised-cosine fades in and out (milliseconds): no click at either end. */
     public static float[] fade(float[] a, int rate, double inMs, double outMs) {
         float[] out = a.clone();
@@ -158,6 +201,7 @@ public final class PaAudio {
         float[] a = trim(raw, rate, 25);
         a = resample(a, pitch);
         a = normalise(a, rate, TARGET_LUFS);
+        a = truePeakCeiling(a, CEILING_DB);                                 // [voice37] between the samples too, not only on them
         return fade(a, rate, 6, 18);
     }
 

@@ -140,13 +140,22 @@ public final class PaTts {
         kokoro = new PaKokoro(dir);
     }
 
+    /** [voice37] The natural voice with its own file list (the files unpacked from the mod jar). */
+    public void kokoro(PaKokoro k) {
+        kokoro = k;
+    }
+
     public PaKokoro kokoro() { return kokoro; }
 
     // ------------------------------------------------------------------ [voice37] the expressive voice, first where it suits
 
     /** The player's choices for the expressive voice: the tier, humour (0 Dry, 1 Daft, 2 Sincere), expressiveness 0..100, its benchmark. */
-    public record Prefs(PaVoiceTier.Setting tier, int humour, int expressiveness, double expressiveRtf) {
-        public static final Prefs DEFAULT = new Prefs(PaVoiceTier.Setting.AUTO, 0, 50, PaVoiceTier.UNKNOWN);
+    public record Prefs(PaVoiceTier.Setting tier, int humour, int expressiveness, double expressiveRtf, int bondTier, int look) {
+        public static final Prefs DEFAULT = new Prefs(PaVoiceTier.Setting.AUTO, 0, 50, PaVoiceTier.UNKNOWN, 1, -1);
+
+        public Prefs(PaVoiceTier.Setting tier, int humour, int expressiveness, double expressiveRtf) {
+            this(tier, humour, expressiveness, expressiveRtf, 1, -1);
+        }
     }
 
     private PaExpressive expressive;
@@ -158,7 +167,11 @@ public final class PaTts {
 
     /** Where the expressive voice lives once downloaded, and where its made lines are kept. */
     public void expressive(Path dir, Path cacheDir) {
-        expressive = new PaExpressive(dir);
+        expressive(new PaExpressive(dir), cacheDir);
+    }
+
+    public void expressive(PaExpressive e, Path cacheDir) {
+        expressive = e;
         cache = new PaLineCache(cacheDir, PaLineCache.DEFAULT_LIMIT);
     }
 
@@ -214,7 +227,55 @@ public final class PaTts {
     public void onSound(java.util.function.LongConsumer c) { if (c != null) onSound = c; }
 
     private final java.util.concurrent.atomic.AtomicInteger gen = new java.util.concurrent.atomic.AtomicInteger();
-    private volatile javax.sound.sampled.SourceDataLine line;
+    /** [voice37] Where the sound goes: a stream of 16-bit mono PCM (the game's positional sound, or the computer's own audio). */
+    public interface Sink {
+        void write(byte[] pcm) throws Exception;
+
+        /** Wait until what was written has been heard (or stop() was called). */
+        void drain() throws InterruptedException;
+
+        /** Stop at once, dropping what is still to play. */
+        void stop();
+
+        void close();
+    }
+
+    /** Opens a sink for a line at this sample rate, said by this assistant (its entity id, or -1). */
+    public interface Sinks {
+        Sink open(int rate, int speaker) throws Exception;
+    }
+
+    /** The computer's own audio output (Java Sound): no position, the fallback when the game's sound system isn't there. */
+    public static final Sinks JAVA_SOUND = (rate, speaker) -> {
+        javax.sound.sampled.AudioFormat fmt = new javax.sound.sampled.AudioFormat(rate, 16, 1, true, false);
+        javax.sound.sampled.SourceDataLine l = javax.sound.sampled.AudioSystem.getSourceDataLine(fmt);
+        l.open(fmt, rate * 2 * 15);                                   // fifteen seconds of room: the next sentence is made while this one plays
+        l.start();
+        return new Sink() {
+            public void write(byte[] pcm) { l.write(pcm, 0, pcm.length); }
+            public void drain() { l.drain(); }
+            public void stop() { try { l.stop(); l.flush(); } catch (Throwable ignored) { } }
+            public void close() { l.close(); }
+        };
+    };
+
+    private volatile Sinks sinks = JAVA_SOUND;
+    private volatile Sink sink;
+    private volatile int speaker = -1;
+
+    /** [voice37] Send the sound somewhere else (the client: the game's sound system, from the assistant). */
+    public void sinks(Sinks s) { if (s != null) sinks = s; }
+
+    // [voice37] one line at a time, the stale ones dropped (PaSpeechQueue); the words classified off the game thread
+    private record Req(String written, String line, Opts o, int speaker) {}
+    private final PaSpeechQueue<Req> queue = new PaSpeechQueue<>();
+    private final ExecutorService intake = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "mca-assistant-voice-intake");
+        t.setDaemon(true);
+        return t;
+    });
+
+    public PaSpeechQueue<?> queue() { return queue; }
 
     public static Kind pick(String osName, Predicate<String> onPath) {
         String os = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
@@ -298,23 +359,49 @@ public final class PaTts {
 
     /** [pa33b] Say a line, shaped to sound spoken; queued on the voice's thread; a new line cuts off the one before. */
     public void speak(String text, Opts o) {
+        speak(text, o, -1);
+    }
+
+    /**
+     * [voice37] Say a line as this assistant (entity id; -1 none). Lines wait their turn (speech never overlaps); a
+     * warning cuts in; a line gone stale while waiting is dropped (PaSpeechQueue). Never blocks the game thread.
+     */
+    public void speak(String text, Opts o, int speakerId) {
         if (text == null || text.isBlank()) return;
         String line = clean(PaSpeech.speakable(text, o.px(), o.pz()));
         if (line.isEmpty()) return;
-        int mine = gen.incrementAndGet();                         // [pa35] a new line cuts off the one before, at once
-        javax.sound.sampled.SourceDataLine l = this.line;
-        if (l != null) { try { l.stop(); l.flush(); } catch (Throwable ignored) { } }
+        long at = System.currentTimeMillis();
         try {
-            worker.submit(() -> { if (gen.get() == mine) speak0(text, line, o, mine); });   // [voice37] the words as written too (to find the line's kind)
+            intake.submit(() -> {
+                String key = PaVoiceStyle.keyOf(text);
+                boolean urgent = (key != null ? PaVoiceStyle.kindOf(key) : PaVoiceStyle.guess(line)) == PaVoiceStyle.Kind.WARNING;
+                if (queue.offer(new PaSpeechQueue.Item<>(new Req(text, line, o, speakerId), PaSpeechQueue.family(key), urgent, at)) == PaSpeechQueue.Action.INTERRUPT) {
+                    gen.incrementAndGet();
+                    Sink s = sink;
+                    if (s != null) s.stop();
+                }
+                worker.submit(this::pump);
+            });
         } catch (Throwable ignored) {
             // the worker has gone: stay silent
         }
     }
 
+    /** The worker: the waiting lines, one after another, each to its end (or until a warning or hush cuts it). */
+    private void pump() {
+        PaSpeechQueue.Item<Req> it;
+        while ((it = queue.next(System.currentTimeMillis())) != null) {
+            Req r = it.line();
+            speaker = r.speaker();
+            speak0(r.written(), r.line(), r.o(), gen.get());
+        }
+    }
+
     public void hush() {
+        queue.clear();                                                // [voice37] and nothing waiting either
         gen.incrementAndGet();
-        javax.sound.sampled.SourceDataLine l = this.line;
-        if (l != null) { try { l.stop(); l.flush(); } catch (Throwable ignored) { } }
+        Sink l = this.sink;
+        if (l != null) l.stop();
         try {
             worker.submit(this::stopCurrent);
         } catch (Throwable ignored) {
@@ -329,7 +416,7 @@ public final class PaTts {
 
     /** [pa35] What it sounds like just now, for Settings: "George (natural)", "Subtitles only", "Microsoft Hazel (basic)". */
     public String voiceInUse(String key, boolean basic, PaAccent a, boolean female) {
-        if (expressiveFirst(key, basic)) return PaExpressive.pick(key, female).label() + " (expressive)";   // [voice37]
+        if (expressiveFirst(key, basic)) return PaExpressive.pick(key, female, prefs.get().look()).label() + " (expressive)";   // [voice37]
         String e = engineFor(key, basic, kokoroReady(), piperReady(), catalogue, kind);
         return switch (e) {
             case "kokoro" -> kokoroVoice(key, a, female).label() + " (natural)";
@@ -433,8 +520,8 @@ public final class PaTts {
     }
 
     private void stopCurrent() {
-        javax.sound.sampled.SourceDataLine l = line;                 // [pa35] the natural voice's stream
-        if (l != null) { try { l.stop(); l.flush(); } catch (Throwable ignored) { } }
+        Sink l = sink;                                                // [pa35] the natural voice's stream
+        if (l != null) l.stop();
         if (current != null && current.isAlive()) current.destroy();
         current = null;
         javax.sound.sampled.Clip c = clip;
@@ -585,8 +672,7 @@ public final class PaTts {
         });
         double pitch = PaAudio.pitchFactor(o.gloom(), o.fun(), o.pitch());
         float speed = (float) Math.max(0.5, Math.min(2.0, PaKokoro.speed(o.gloom(), o.rate()) / pitch));   // asked slower by the pitch lift, so the pace is kept
-        javax.sound.sampled.AudioFormat fmt = new javax.sound.sampled.AudioFormat(PaKokoro.SAMPLE_RATE, 16, 1, true, false);
-        javax.sound.sampled.SourceDataLine out = null;
+        Sink out = null;
         try {
             boolean first = true;
             for (String sentence : PaSpeech.sentences(line)) {
@@ -603,18 +689,16 @@ public final class PaTts {
                     byte[] pcm = PaAudio.pcm16(concat(done, gap), o.volume());
                     if (out == null) {
                         stopCurrent();
-                        out = javax.sound.sampled.AudioSystem.getSourceDataLine(fmt);
-                        out.open(fmt, PaKokoro.SAMPLE_RATE * 2 * 12);           // twelve seconds of room: the next sentence is made while this one plays
-                        out.start();
-                        this.line = out;
+                        out = sinks.open(PaKokoro.SAMPLE_RATE, speaker);     // [voice37] the game's sound, from the assistant
+                        this.sink = out;
                     }
                     if (first) { first = false; onSound.accept(Math.round(done.length * 1000.0 / PaKokoro.SAMPLE_RATE)); }
-                    out.write(pcm, 0, pcm.length);
+                    out.write(pcm);
                 }
             }
             if (out != null && gen.get() == mine) out.drain();
         } finally {
-            if (out != null) { out.close(); if (this.line == out) this.line = null; }
+            if (out != null) { out.close(); if (this.sink == out) this.sink = null; }
         }
     }
 
@@ -657,16 +741,15 @@ public final class PaTts {
      */
     private boolean expressiveLine(String written, String line, Opts o, int mine) {
         Prefs p = prefs.get();
-        javax.sound.sampled.SourceDataLine out = null;
+        Sink out = null;
         boolean played = false;
         try {
             if (!expressive.load(kokoro.dir().resolve("onnxruntime.jar"))) { expressiveFailed = true; status = expressive.why(); return false; }
-            PaExpressive.Voice v = PaExpressive.pick(o.voiceKey(), o.female());
+            PaExpressive.Voice v = PaExpressive.pick(o.voiceKey(), o.female(), prefs.get().look());
             String key = PaVoiceStyle.keyOf(written);
             PaVoiceStyle.Kind kind = key != null ? PaVoiceStyle.kindOf(key) : PaVoiceStyle.guess(line);
-            PaVoiceStyle.Style st = PaVoiceStyle.perform(line, kind, o.gloom(), o.fun(), p.humour(), p.expressiveness(), key != null && key.endsWith("@gloomy"));
+            PaVoiceStyle.Style st = PaVoiceStyle.perform(line, kind, o.gloom(), o.fun(), p.humour(), p.expressiveness(), key != null && key.endsWith("@gloomy"), p.bondTier());
             double pitch = PaAudio.pitchFactor(0, 0, o.pitch());                   // its own performance carries the mood
-            javax.sound.sampled.AudioFormat fmt = new javax.sound.sampled.AudioFormat(PaExpressive.SAMPLE_RATE, 16, 1, true, false);
             boolean first = true;
             for (String piece : PaVoiceStyle.chunks(st.text())) {
                 if (gen.get() != mine) return true;
@@ -679,17 +762,15 @@ public final class PaTts {
                     if (cache != null) cache.put(v.id(), piece, st.temperature(), done);
                 }
                 char end = piece.charAt(piece.length() - 1);
-                float[] gap = PaAudio.silence(PaExpressive.SAMPLE_RATE, end == '?' || end == '!' ? 240 : end == '.' ? 200 : 120);
+                float[] gap = PaAudio.silence(PaExpressive.SAMPLE_RATE, (int) Math.round((end == '?' || end == '!' ? 240 : end == '.' ? 200 : 120) * st.gapScale()));
                 byte[] pcm = PaAudio.pcm16(concat(done, gap), o.volume());
                 if (out == null) {
                     stopCurrent();
-                    out = javax.sound.sampled.AudioSystem.getSourceDataLine(fmt);
-                    out.open(fmt, PaExpressive.SAMPLE_RATE * 2 * 15);
-                    out.start();
-                    this.line = out;
+                    out = sinks.open(PaExpressive.SAMPLE_RATE, speaker);
+                    this.sink = out;
                 }
                 if (first) { first = false; onSound.accept(Math.round(done.length * 1000.0 / PaExpressive.SAMPLE_RATE)); }
-                out.write(pcm, 0, pcm.length);
+                out.write(pcm);
                 played = true;
             }
             if (out != null && gen.get() == mine) out.drain();
@@ -699,7 +780,7 @@ public final class PaTts {
             status = "The expressive voice stopped (" + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()) + "); the natural voice speaks instead.";
             return played;
         } finally {
-            if (out != null) { out.close(); if (this.line == out) this.line = null; }
+            if (out != null) { out.close(); if (this.sink == out) this.sink = null; }
         }
     }
 
@@ -714,7 +795,7 @@ public final class PaTts {
             try {
                 if (!expressiveFirst(o.voiceKey(), o.basic()) || !expressive.load(kokoro.dir().resolve("onnxruntime.jar"))) return;
                 Prefs p = prefs.get();
-                PaExpressive.Voice v = PaExpressive.pick(o.voiceKey(), o.female());
+                PaExpressive.Voice v = PaExpressive.pick(o.voiceKey(), o.female(), prefs.get().look());
                 for (String l : lines) {
                     if (gen.get() != startGen) return;
                     String key = PaVoiceStyle.keyOf(l);

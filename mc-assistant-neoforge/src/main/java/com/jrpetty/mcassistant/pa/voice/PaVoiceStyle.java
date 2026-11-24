@@ -33,59 +33,65 @@ public final class PaVoiceStyle {
     /** The model's own sounds this mapping uses (all are single tokens of its tokenizer). */
     public static final List<String> TAGS = List.of("[laugh]", "[chuckle]", "[sigh]", "[groan]", "[gasp]");
 
-    /** The line to say (with its sounds in place) and how freely to read it. */
-    public record Style(String text, float temperature) {}
+    /**
+     * The line to say (with its one sound in place, if any), how freely to read it (the sampling temperature), and the
+     * pause between its sentences (gloom lingers, Daft and the Funny corner keep it moving).
+     */
+    public record Style(String text, float temperature, double gapScale) {
+        public Style(String text, float temperature) { this(text, temperature, 1.0); }
+    }
+
+    /** As below, at an ordinary bond (Mate). */
+    public static Style perform(String line, Kind kind, double gloom, double fun, int humour, int expressiveness, boolean gloomyLine) {
+        return perform(line, kind, gloom, fun, humour, expressiveness, gloomyLine, 1);
+    }
 
     /**
      * Perform a line. gloom and fun are the corner's weights (0..1, serious is the rest), humour 0..2, expressiveness
-     * 0..100 (50 the default), gloomyLine when the line itself is a gloomy one (its key ends "@gloomy").
+     * 0..100 (50 the default), gloomyLine when the line itself is a gloomy one (its key ends "@gloomy"), bondTier 0
+     * (Stranger) .. 4 (Ride or Die): affection shows in the voice only between friends.
+     *
+     * <p>At most one sound a line, never on a plain answer or a warning. Dry: a chuckle (never a laugh), deaths deadpan,
+     * affection kept to itself until Best Mate. Daft: a real laugh at a joke, a roast, even a death. Sincere: no mockery,
+     * a gasp of concern at a death, a warm chuckle with a friend. Serious: says it straight. A gloomy line sighs first.
      */
-    public static Style perform(String line, Kind kind, double gloom, double fun, int humour, int expressiveness, boolean gloomyLine) {
+    public static Style perform(String line, Kind kind, double gloom, double fun, int humour, int expressiveness, boolean gloomyLine, int bondTier) {
         String t = strip(line);
         double e = Math.max(0, Math.min(100, expressiveness)) / 100.0;
         double serious = Math.max(0, 1 - gloom - fun);
         int h = Math.max(0, Math.min(2, humour));
-        float temp = (float) (0.62 + 0.22 * e + (h == DAFT ? 0.08 : 0) - (kind == Kind.WARNING ? 0.12 : 0) - (serious > 0.6 ? 0.05 : 0));
-        temp = Math.max(0.5f, Math.min(0.95f, temp));
-        if (e < 0.15 || t.isEmpty()) return new Style(t, temp);
-        int budget = h == DAFT ? 2 : 1;
         boolean gloomy = gloomyLine || gloom >= 0.55;
         boolean funny = fun >= 0.35 || h == DAFT;
         boolean straight = serious >= 0.7 && h != DAFT;                 // a professional says it straight
+        float temp = (float) (0.62 + 0.22 * e + (h == DAFT ? 0.08 : 0) - (kind == Kind.WARNING ? 0.12 : 0) - (serious > 0.6 ? 0.05 : 0));
+        temp = Math.max(0.5f, Math.min(0.95f, temp));
+        double gap = kind == Kind.WARNING ? 0.8 : gloomy ? 1.3 : (h == DAFT || fun >= 0.6) ? 0.85 : 1.0;
+        if (e < 0.15 || t.isEmpty() || kind == Kind.WARNING || kind == Kind.PLAIN) return new Style(t, temp, gap);
         String laugh = h == DAFT && e >= 0.35 ? "[laugh]" : "[chuckle]";
-        String out = t;
+        String out = null;
         switch (kind) {
-            case WARNING -> { return new Style(t, temp); }               // never a sound on a warning
-            case JOKE -> {
-                if (straight && e < 0.6) break;
-                out = afterPunchline(t, laugh);
-                budget--;
-            }
-            case LAUGH -> {
-                out = laugh + " " + t;
-                budget--;
-            }
+            case JOKE -> { if (!(straight && e < 0.6) && (funny || e >= 0.6)) out = afterPunchline(t, laugh); }
+            case LAUGH -> { if (!straight || e >= 0.6) out = laugh + " " + t; }
             case ROAST, QUIP -> {
-                if (h == SINCERE || straight) break;
-                if (funny && e >= (kind == Kind.ROAST ? 0.35 : 0.55)) { out = afterSentence(t, 1, h == DAFT ? "[laugh]" : "[chuckle]"); budget--; }
+                if (h != SINCERE && !straight && funny && e >= (kind == Kind.ROAST ? 0.35 : 0.55))
+                    out = afterSentence(t, 1, h == DAFT && kind == Kind.ROAST ? "[laugh]" : "[chuckle]");
             }
             case DEATH -> {
-                if (gloomy && e >= 0.3) { out = "[sigh] " + t; budget--; }
-                else if (h == SINCERE && e >= 0.45) { out = "[gasp] " + t; budget--; }
-                else if (h == DAFT && e >= 0.35) { out = afterSentence(t, 1, "[laugh]"); budget--; }
-                else if (h == DRY && funny && e >= 0.8) { out = afterSentence(t, 1, "[chuckle]"); budget--; }
+                if (gloomy && e >= 0.3) out = "[sigh] " + t;
+                else if (h == SINCERE && e >= 0.45) out = "[gasp] " + t;
+                else if (h == DAFT && e >= 0.35) out = afterSentence(t, 1, "[laugh]");
+                else if (h == DRY && funny && e >= 0.8) out = afterSentence(t, 1, "[chuckle]");
             }
             case AFFECTION -> {
-                if (h != DRY && e >= 0.5 && !gloomy) { out = t + " [chuckle]"; budget--; }
-                else if (h == DRY && e >= 0.85) { out = t + " [chuckle]"; budget--; }
+                boolean friends = bondTier >= (h == DRY ? 3 : 2);
+                if (friends && !gloomy && e >= (h == DRY ? 0.5 : 0.4)) out = t + " [chuckle]";
+                else if (gloomy && friends && e >= 0.5) out = "[sigh] " + t;   // a gloomy one's fondness: a sigh, then the kind word
             }
-            case GREETING, PLAIN -> { }
+            case GREETING -> { if (gloomy && e >= 0.3 && !straight) out = (gloom >= 0.8 && e >= 0.75 && h == DAFT ? "[groan] " : "[sigh] ") + t; }
+            default -> { }
         }
-        // a gloomy line sighs first (understated enough for Dry); the gloomiest groan, if the humour has room
-        if (budget > 0 && gloomy && kind != Kind.LAUGH && !out.startsWith("[") && e >= 0.3 && !straight) {
-            out = (gloom >= 0.8 && e >= 0.75 && h == DAFT ? "[groan] " : "[sigh] ") + out;
-        }
-        return new Style(out.replaceAll("\\s+", " ").trim(), temp);
+        if (out == null && gloomy && e >= 0.3 && !straight && (kind == Kind.QUIP || kind == Kind.ROAST)) out = "[sigh] " + t;   // weary wit
+        return new Style((out == null ? t : out).replaceAll("\\s+", " ").trim(), temp, gap);
     }
 
     /** The same line for a voice without these sounds: the tags taken out. */

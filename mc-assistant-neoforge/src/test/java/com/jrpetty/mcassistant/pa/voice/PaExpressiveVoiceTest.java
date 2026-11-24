@@ -130,7 +130,7 @@ class PaExpressiveVoiceTest {
         float big = PaVoiceStyle.perform(JOKE, PaVoiceStyle.Kind.JOKE, 0.1, 0.7, PaVoiceStyle.DAFT, 60, false).temperature();
         assertTrue(big > dry, "Daft reads more freely");
         for (int e = 0; e <= 100; e += 10)
-            assertTrue(tags(PaVoiceStyle.perform(JOKE + " " + ROAST, PaVoiceStyle.Kind.JOKE, 0.9, 0.9, PaVoiceStyle.DAFT, e, true).text()) <= 2, "Daft: two at most");
+            assertTrue(tags(PaVoiceStyle.perform(JOKE + " " + ROAST, PaVoiceStyle.Kind.JOKE, 0.9, 0.9, PaVoiceStyle.DAFT, e, true).text()) <= 1, "even Daft: one sound a line");
     }
 
     @Test
