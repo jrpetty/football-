@@ -300,6 +300,15 @@ final class PaLogiPlan {
         List<BlockPos> all = PaLogistics.resolve(p, a, r, look, k);
         List<BlockPos> ok = new ArrayList<>();
         String firstWhy = null;
+        // a container its player pointed at or pinged for this order is theirs to use (unless another player's: refuse() still says no)
+        if (r.pointed() || r.kind() == Ref.Kind.IT) {
+            List<BlockPos> pinged = p == null ? List.of() : PaLogistics.recent(p, PaLogistics.SEEN_MS);
+            for (BlockPos b : all) {
+                boolean pointedNow = (look != null && (b.equals(look.block()) || look.more().contains(b))) || pinged.contains(b);
+                UUID placer = PaStore.placedBy(a.level().dimension().location().toString(), b);
+                if (pointedNow && (placer == null || placer.equals(a.getOwnerId()))) PaOrders.point(a, b);
+            }
+        }
         for (BlockPos b : all) {
             String why = PaContainers.refuse(a, b);
             if (why == null) ok.add(b);
