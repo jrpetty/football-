@@ -1792,6 +1792,7 @@ public final class TerraceRows {
                     if (!there.is(Blocks.COBBLESTONE) && !there.is(Blocks.MOSSY_COBBLESTONE)) continue;
                     boolean open = false;                                  // open to the street or the yard (under the sky)
                     for (Direction d : Direction.Plane.HORIZONTAL) if (level.getBlockState(q.relative(d)).isAir() && level.canSeeSky(q.relative(d))) open = true;
+                    if (level.getBlockState(q.above()).isAir() && level.canSeeSky(q.above())) open = true;   // a floor open to the sky (an area's flags)
                     if (open) out.add(q);
                 }
             }
