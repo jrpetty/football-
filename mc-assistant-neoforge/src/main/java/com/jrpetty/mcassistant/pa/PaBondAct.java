@@ -36,8 +36,12 @@ public final class PaBondAct {
     public static PaBond.State state(PaData.Rec r) {
         PaBond.State s = r.bond;
         if (s.favourites.isEmpty()) s.favourites.addAll(PaBond.favouritesFor(r.owner.getMostSignificantBits() ^ r.made ^ r.slot));
+        String film = System.getProperty("mca.pa.filmBond", "");             // filming only: a server started with a bond to show
+        if (!film.isEmpty() && FILMED.add(r.owner)) { try { s.bond = Double.parseDouble(film); } catch (NumberFormatException ignored) { } }
         return s;
     }
+
+    private static final java.util.Set<UUID> FILMED = new java.util.HashSet<>();
 
     static long day(PlayerAssistantEntity a) {
         return a.level().getDayTime() / 24000L;
@@ -166,7 +170,8 @@ public final class PaBondAct {
         // a small gift now and then (Best Mate up), once a game day at most
         if (near && w.giftDay != day(a) && owner.distanceToSqr(a) < 8 * 8 && a.plan.idle()) {
             w.giftDay = day(a);
-            if (a.getRandom().nextDouble() < PaBond.giftChance(tier)) gift(a, owner, r, s);
+            boolean film = Boolean.getBoolean("mca.pa.filmGift");           // filming only: today's gift for certain (a flower)
+            if (film && tier >= 3 || a.getRandom().nextDouble() < PaBond.giftChance(tier)) gift(a, owner, r, s);
         }
         // anniversaries, and now and then a memory from our story
         long days = (a.level().getGameTime() - r.made) / 24000L;
@@ -231,7 +236,7 @@ public final class PaBondAct {
     }
 
     static void gift(PlayerAssistantEntity a, ServerPlayer owner, PaData.Rec r, PaBond.State s) {
-        int pick = a.getRandom().nextInt(3);
+        int pick = Boolean.getBoolean("mca.pa.filmGift") ? 0 : a.getRandom().nextInt(3);
         ItemStack g;
         if (pick == 0) g = new ItemStack(Items.POPPY);
         else if (pick == 1) g = new ItemStack(Items.COOKED_BEEF, 2);
