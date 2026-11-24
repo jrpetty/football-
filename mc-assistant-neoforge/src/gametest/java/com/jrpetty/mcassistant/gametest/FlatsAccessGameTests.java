@@ -192,6 +192,16 @@ public class FlatsAccessGameTests {
         level.setDayTime(24000L * 2 + 2500);
         Kit.hold(level, x + 70, Z, 120);
         Kit.prepare(level, x + 70, Z, 120);
+        // [house34d] Its whole square live before anybody is set down on it. West's walker starts one chunk in from the held
+        // square's edge, and a chunk there only comes alive once the ground two chunks round it is made, in the game's own
+        // time: with the server's chunk work backed up by the tests run before it (a batch with BuildWorld's), it stood
+        // there un-ticked, never on the ground, so every way asked for it came back null and the walk was failed.
+        int dead = Kit.notLive(level, x + 70, Z, 120);
+        long t0 = System.nanoTime();
+        boolean live = Kit.live(level, x + 70, Z, 120);
+        Kit.log("fa21 the held square: " + dead + " chunks not yet live at the start, live " + live + " after "
+            + (System.nanoTime() - t0) / 1_000_000L + " ms");
+        helper.assertTrue(live, "fa21's ground live within ten seconds: " + Kit.notLive(level, x + 70, Z, 120) + " chunks still not");
         int y = Math.max(70, Kit.surface(level, x, Z).getY());
         ground(level, x - 24, x + 175, Z - 40, Z + 40, y, 34);
         BlockPos heart = new BlockPos(x, y, Z);
@@ -279,7 +289,9 @@ public class FlatsAccessGameTests {
                     if (p == null || !p.canReach()) {
                         if (++refused[k] > 40) {
                             helper.fail(who + " finds no way from " + w.blockPosition().toShortString() + " to " + stop.what() + " (" + stop.at().toShortString()
-                                + "): " + (p == null ? "no path" : "the path ends at " + p.getEndNode()));
+                                + "): " + (p == null ? "no path" : "the path ends at " + p.getEndNode())
+                                + " [on the ground " + w.onGround() + ", its chunk live " + level.isPositionEntityTicking(w.blockPosition())
+                                + ", the held square's chunks not live " + Kit.notLive(level, x + 70, Z, 120) + ", tick " + t + ", its age " + w.tickCount + "]");
                         }
                         continue;
                     }
