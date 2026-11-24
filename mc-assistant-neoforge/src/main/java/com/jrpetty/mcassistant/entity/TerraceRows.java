@@ -281,6 +281,7 @@ public final class TerraceRows {
         PIECES.clear();
         WORTH.clear();
         WANT.clear();
+        WANTS.clear();
     }
 
     /** The steps of the row at this anchor (the floor of each house over the anchor's), or an empty array if level. */
@@ -1136,9 +1137,80 @@ public final class TerraceRows {
         if (!(Long.toString(day)).equals(Ledger.note(id, COST + "day"))) {
             cost(level, id);
             Ledger.note(id, COST + "day", Long.toString(day));
+            reckonWants(level, v);
+        } else if (!WANTS.containsKey(id)) {
+            reckonWants(level, v);                                               // [house34c] after a restart
         }
         opened(id, day);
         moveUp(level, v, day);
+    }
+
+    /**
+     * [house34c] What the town's standing rows still want for their finishing, reckoned once a day: blocks of brick for the
+     * brick the builders laid in whatever they had, stone bricks for the rough cobble in their dressed stone, and slate
+     * (deepslate tiles, dressed from cobbled deepslate) for their wooden roofs once the town is in the Iron Age. The
+     * mason keeps that much more by (Masonry.keep: the kiln fires clay for it, the bench cuts the stone), and what the
+     * town's own trades have not made, the traders sell it each morning (buyForFinishing). The finishing waited on stock
+     * nobody had been asked for: a grand row stood four storeys up in cobble with its top floors never faced, the brick
+     * laid only as fast as the masons happened to keep their usual stock by.
+     */
+    private static final Map<UUID, Map<Item, Integer>> WANTS = new ConcurrentHashMap<>();
+
+    /** [house34c] How many of this (BRICKS, STONE_BRICKS, DEEPSLATE_TILES) the town's rows still want for their finishing. */
+    public static int finishingWant(@Nullable UUID village, Item it) {
+        if (village == null) return 0;
+        Map<Item, Integer> w = WANTS.get(village);
+        return w == null ? 0 : Math.min(256, w.getOrDefault(it, 0));
+    }
+
+    static void reckonWants(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        Map<Item, Integer> w = new HashMap<>();
+        boolean iron = Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal();
+        for (Ledger.Building b : rows(id)) {
+            if (!Land.areaLoaded(level, b.anchor(), 12) || Ledger.raising(id, b.anchor()) || !standing(level, id, b)) continue;
+            Shape sh = shape(b.structure());
+            int[] steps = steps(b.anchor());
+            for (BuildGoal.Placement pl : plan(id, b)) {
+                if (pl.part() != BuildGoal.Part.BLOCK) continue;
+                BlockState there = level.getBlockState(pl.pos());
+                if (pl.style() == Blueprints.Style.BRICK) {
+                    if (!there.is(Blocks.BRICKS) && there.isCollisionShapeFullBlock(level, pl.pos()) && !there.hasBlockEntity()) w.merge(Items.BRICKS, 1, Integer::sum);
+                } else if (pl.style() == Blueprints.Style.MASONRY) {
+                    if (there.is(Blocks.COBBLESTONE) || there.is(Blocks.MOSSY_COBBLESTONE)) w.merge(Items.STONE_BRICKS, 1, Integer::sum);
+                } else if (iron && BuildGoal.isRoof(pl.style()) && !indoors(b, sh, steps, pl.pos())
+                        && (there.is(net.minecraft.tags.BlockTags.WOODEN_STAIRS) || there.is(net.minecraft.tags.BlockTags.WOODEN_SLABS)
+                            || there.is(net.minecraft.tags.BlockTags.PLANKS))) {
+                    w.merge(Items.DEEPSLATE_TILES, 1, Integer::sum);
+                }
+            }
+        }
+        WANTS.put(id, w);
+    }
+
+    /**
+     * [house34c] Each morning (Market's, on the works' account): what the rows' finishing wants and the town's own trades
+     * have not made, from the traders, a lot or two a day: clay for the kiln (four balls a block of brick) when the stores
+     * have none to fire, stone bricks when there is no stone to spare to cut, and cobbled deepslate for the slate when the
+     * mine has sent up none.
+     */
+    public static void buyForFinishing(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        Map<Item, Integer> w = WANTS.get(id);
+        if (w == null || w.isEmpty()) return;
+        int bricks = finishingWant(id, Items.BRICKS) - Market.stock(level, id, st -> st.is(Items.BRICKS));
+        int clay = Market.stock(level, id, st -> st.is(Items.CLAY_BALL)), fired = Market.stock(level, id, st -> st.is(Items.BRICK));
+        if (bricks > 0 && clay < 16) Market.importFor(level, v, day, Items.CLAY_BALL, Math.min(64, 4 * bricks) - clay - fired, "the kiln's bricks for the terraces");
+        int dressed = finishingWant(id, Items.STONE_BRICKS) - Market.stock(level, id, st -> st.is(Items.STONE_BRICKS));
+        if (dressed > 0 && Masonry.plainToSpare(level, v) < 16) Market.importFor(level, v, day, Items.STONE_BRICKS, Math.min(64, dressed), "the terraces' dressed stone");
+        int slate = finishingWant(id, Items.DEEPSLATE_TILES) - Market.stock(level, id, st -> st.is(Items.DEEPSLATE_TILES) || st.is(Items.COBBLED_DEEPSLATE));
+        if (slate > 0) Market.importFor(level, v, day, Items.COBBLED_DEEPSLATE, Math.min(64, slate), "the terraces' slate");
+    }
+
+    /** [house34c] Tests: the rows' wants reckoned now. */
+    public static Map<Item, Integer> wantsForTests(ServerLevel level, Villages.Village v) {
+        reckonWants(level, v);
+        return Map.copyOf(WANTS.get(v.id()));
     }
 
     private static final Map<UUID, Long> FINISHED = new ConcurrentHashMap<>();

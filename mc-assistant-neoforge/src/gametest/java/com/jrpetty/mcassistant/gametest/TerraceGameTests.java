@@ -626,4 +626,56 @@ public class TerraceGameTests {
             helper.succeed();
         });
     }
+
+    // ============================================================ th09: the finishing asks the town for what it lacks
+
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "th09_finishing_asks_for_its_stock")
+    public static void th09_finishing_asks_for_its_stock(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 9132000;
+        Town t = town(helper, level, x, 2, Villages.Age.IRON, 70);
+        UUID id = t.id();
+        int y = t.heart().getY();
+        BlockPos a = new BlockPos(x, y, Z + 40);
+        Direction f = Direction.SOUTH;
+        helper.runAtTickTime(10, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            flat(level, x - 13, x + 13, Z + 32, Z + 48, y);
+            TerraceRows.stampForTests(level, "terrace3", a, f, new int[0], id);
+            Ledger.built(id, "terrace3", a, f);
+            Ledger.Building b = new Ledger.Building("terrace3", a, f);
+            // as the builders leave it when the stores are short: its brick in cobble, its roof in timber
+            int brick = 0, roof = 0;
+            for (BuildGoal.Placement pl : BuildGoal.plan("terrace3", a, f, 13)) {
+                if (pl.part() != BuildGoal.Part.BLOCK) continue;
+                BlockState there = level.getBlockState(pl.pos());
+                if (there.is(Blocks.BRICKS)) { level.setBlock(pl.pos(), Blocks.COBBLESTONE.defaultBlockState(), 2); brick++; }
+                else if (there.is(Blocks.DEEPSLATE_TILE_STAIRS)) {
+                    level.setBlock(pl.pos(), Blocks.OAK_STAIRS.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.StairBlock.FACING, there.getValue(net.minecraft.world.level.block.StairBlock.FACING)), 2);
+                    roof++;
+                }
+            }
+            Homes.tickForTests(level, t.v());
+            var wants = TerraceRows.wantsForTests(level, t.v());
+            int wb = wants.getOrDefault(net.minecraft.world.item.Items.BRICKS, 0), wt = wants.getOrDefault(net.minecraft.world.item.Items.DEEPSLATE_TILES, 0);
+            Kit.log("th09 laid in cobble " + brick + ", timber roof " + roof + "; wants " + wants);
+            ok.that(wb >= brick / 2 && wb > 0, "the brick it wants for its fronts: " + wb + " (of " + brick + " in cobble)");
+            ok.that(wt > 0, "the slate it wants for its roof: " + wt);
+            int shortBricks = com.jrpetty.mcassistant.entity.Masonry.shortOfForTests(level, t.v(), net.minecraft.world.item.Items.BRICKS);
+            ok.that(shortBricks >= Math.min(256, wb), "the mason asked for it (Masonry.keep): short of " + shortBricks + " blocks of brick");
+            // nothing in the stores to fire or dress: the traders sell it the makings in the morning
+            Ledger.addCoins(id, 2000);
+            int clay0 = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.CLAY_BALL));
+            int deep0 = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE));
+            TerraceRows.buyForFinishing(level, t.v(), level.getDayTime() / 24000L);
+            int clay = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.CLAY_BALL));
+            int deep = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE));
+            Kit.log("th09 bought: clay " + clay0 + " -> " + clay + ", cobbled deepslate " + deep0 + " -> " + deep + "; treasury " + Ledger.coins(id));
+            ok.that(clay > clay0, "clay bought for the kiln: " + clay0 + " -> " + clay);
+            ok.that(deep > deep0, "cobbled deepslate bought for the slate: " + deep0 + " -> " + deep);
+            if (!ok.clean()) helper.fail(ok.summary());
+            helper.succeed();
+        });
+    }
 }

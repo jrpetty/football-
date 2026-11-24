@@ -212,6 +212,7 @@ public final class Market {
         good("Dried kelp blocks", Items.DRIED_KELP_BLOCK, 0.9, 4, Villages.Task.NONE),
         good("Dried kelp", Items.DRIED_KELP, 0.08, 16, Villages.Task.FOOD),
         good("Clay", Items.CLAY_BALL, 0.05, 16, Villages.Task.NONE),
+        good("Cobbled deepslate", Items.COBBLED_DEEPSLATE, 0.05, 32, Villages.Task.NONE),   // [house34c] dressed into slate
         good("Turtle scutes", Items.TURTLE_SCUTE, 3.0, 1, Villages.Task.NONE),
         good("Turtle helmet", Items.TURTLE_HELMET, 18.0, 1, Villages.Task.NONE),
         // What the crafts make, sold one at a time at the shop and the café.
@@ -556,6 +557,8 @@ public final class Market {
         if (CoinCensus.probing()) CoinCensus.probe("the morning, after takings");   // [econ-1a] the drift hunt (tests)
         try (Accounts.Scope market = Accounts.as(Accounts.Dept.MARKET, Accounts.Purpose.WORK)) { buyWool(level, v, day); }   // the beds, out of half of it at most
         if (CoinCensus.probing()) CoinCensus.probe("the morning, after buyWool");   // [econ-1a] the drift hunt (tests)
+        try (Accounts.Scope works = Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.WORK)) { TerraceRows.buyForFinishing(level, v, day); }   // [house34c] the rows' brick and slate
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after the rows' imports");
         MarketMaker.morning(level, v, day);              // [econ-1a] the market's morning: Market Opening Day, store credit, its surplus, the privatisation
         if (CoinCensus.probing()) CoinCensus.probe("the morning, after MarketMaker.morning");   // [econ-1a] the drift hunt (tests)
         Businesses.morning(level, v, day);              // [business-books] every business's morning: its stock, rent, credit, drawings, orders
@@ -1161,6 +1164,33 @@ public final class Market {
         ItemStack left = intoStores(level, id, new ItemStack(Items.WHITE_WOOL, lots * g.bundle()));
         if (!left.isEmpty()) { /* the stores are full: the rest is left with the traders */ }
         Villages.tell(id, day, "bought " + lots * g.bundle() + " wool from the traders for " + paid + " coin, for the beds");
+        return paid;
+    }
+
+    /**
+     * [house34c] As buyWool, for the town's works: a lot or two a day from the traders of a good its works are short of and
+     * its own trades have not made (the rows' finishing: clay for the kiln's bricks, stone bricks, cobbled deepslate for the
+     * mason's slate), at the town's price, out of a quarter of what the treasury has free at most (the beds and the wages
+     * come first); never while the town is short (TownBudget: "its buildings plain"). Returns the coin spent.
+     */
+    public static int importFor(ServerLevel level, Villages.Village v, long day, Item item, int want, String forWhat) {
+        UUID id = v.id();
+        if (want <= 0 || TownBudget.pressure(id) >= 2) return 0;
+        Good g = goodFor(new ItemStack(item));
+        if (g == null) return 0;
+        long now = level.getGameTime();
+        int lots = Math.min(2, (want + g.bundle() - 1) / g.bundle());
+        int price = sellPrice(level, id, g, marketDay(id, day));
+        int can = Math.max(0, (Ledger.coins(id) - saved(id, now)) / 4) / Math.max(1, price);
+        lots = Math.min(lots, can);
+        if (lots <= 0) return 0;
+        int paid = Ledger.takeCoins(id, lots * price);
+        CoinCensus.flow(id, CoinCensus.Flow.IMPORT, paid);
+        Businesses.storesIn(id, new ItemStack(item), (long) lots * g.bundle(), paid * 100L);
+        Economy.spent(id, paid);
+        intoStores(level, id, new ItemStack(item, lots * g.bundle()));
+        Villages.tell(id, day, "bought " + lots * g.bundle() + " " + g.name().toLowerCase(java.util.Locale.ROOT) + " from the traders for "
+            + paid + " coin, for " + forWhat);
         return paid;
     }
 
