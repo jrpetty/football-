@@ -77,6 +77,7 @@ public final class PaServer {
                 if (args.contains("language")) r.language = Math.max(0, Math.min(2, args.getInt("language")));     // [pa33b] match my energy
                 if (args.contains("roastBack")) r.roastBack = Math.max(0, Math.min(2, args.getInt("roastBack")));
                 if (args.contains("defend")) r.defend = args.getBoolean("defend");
+                if (args.contains("pingLocked")) r.pingLocked = args.getBoolean("pingLocked");      // [pa35]
                 if (args.contains("spend")) r.spend = Math.max(0, Math.min(PaConfig.spendMax(), args.getInt("spend")));
                 if (args.getBoolean("reset")) {                     // [pa33c-2b] Settings, Advanced: its settings as they came
                     r.autoHelp = true; r.useChests = true; r.breakNearBuilds = false; r.confirm = true; r.sleepAtNight = false;
@@ -116,6 +117,8 @@ public final class PaServer {
                 if (!p.hasPermissions(2)) { PaNet.note(p, "Only an operator can change that."); return; }
                 if (args.contains("xpMult")) PaConfig.setXpMultiplier(args.getDouble("xpMult"));
                 if (args.contains("memCap")) PaConfig.setMemoryCap(args.getInt("memCap"));          // [pa35] how much each may remember
+                if (args.contains("ladderOn")) PaConfig.setLadder(args.getBoolean("ladderOn"), null, 0);   // [pa35] the mining and gear ladders
+                if (args.contains("rung")) PaConfig.setLadder(null, args.getString("rung"), args.getInt("rungLevel"));
                 PaConfig.setChunks(args.contains("chunksOn") ? args.getBoolean("chunksOn") : null,                 // [pa33g] its chunks
                     args.contains("chunkRadius") ? args.getInt("chunkRadius") : null,
                     args.contains("chunkCap") ? args.getInt("chunkCap") : null,

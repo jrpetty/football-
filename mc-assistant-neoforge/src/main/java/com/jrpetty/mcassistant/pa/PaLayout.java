@@ -30,7 +30,11 @@ public final class PaLayout {
     // ------------------------------------------------------------------ the panel's boxes, for the layout test
 
     /** The panel's tabs, as their labels read (Jobs may carry a count). */
-    public static final String[] TABS = {"Talk", "Orders", "Jobs (99)", "Pack", "Stats", "Look", "Settings"};
+    public static final String[] TABS = {"Talk", "Orders", "Jobs (99)", "Pack", "Stats", "Memory", "Look", "Settings"};   // [pa35] Memory
+    /** [pa35] A tab's padding beside its label (10: eight tabs fit the smallest panel). */
+    public static final int TAB_PAD = 10;
+    /** [pa35] The Memory tab's buttons and foot. */
+    public static final String[] MEMORY_BUTTONS = {"Keep", "Forget everything...", "Yes, forget it all", "Keep it", "Save", "Cancel"};
     public static final String[] SECTIONS = {"Personality", "Voice", "Behaviour", "Look", "Keys", "Advanced"};
     public static final String[] PACK_BUTTONS = {"Equip best", "Give me everything", "Dump junk", "Sort", "Keep: click items", "Open full pack"};
     public static final String[] ADVANCED_BUTTONS = {"Use the bed I look at", "Clear its bed", "Set home here", "Replay the tour", "Reset settings...",
@@ -68,7 +72,7 @@ public final class PaLayout {
     /** One tab's width (its label and padding), and a row of tabs. */
     public static int tabsW(String[] labels) {
         int w = 0;
-        for (String l : labels) w += textW(l) + 14 + 2;
+        for (String l : labels) w += textW(l) + TAB_PAD + 2;
         return w;
     }
 

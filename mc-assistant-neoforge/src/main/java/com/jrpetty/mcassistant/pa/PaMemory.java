@@ -1,9 +1,5 @@
 package com.jrpetty.mcassistant.pa;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +13,7 @@ import java.util.Locale;
  * PaMemoryAct carries them out.
  */
 public final class PaMemory {
+    // (saved and loaded by PaMemoryNbt, so this stays plain Java)
 
     private PaMemory() {}
 
@@ -141,45 +138,11 @@ public final class PaMemory {
             };
         }
 
-        CompoundTag save() {
-            CompoundTag t = new CompoundTag();
-            t.putInt("Id", id);
-            t.putString("K", kind.name());
-            t.putString("S", subject);
-            if (!value.isEmpty()) t.putString("V", value);
-            if (when != When.NONE) t.putString("W", when.name());
-            if (!extra.isEmpty()) t.putString("X", extra);
-            if (n != 0) t.putInt("N", n);
-            if (due >= 0) t.putLong("Due", due);
-            t.putString("Said", said);
-            t.putLong("Made", made);
-            return t;
-        }
-
-        @Nullable
-        static Entry load(CompoundTag t) {
-            Entry e = new Entry();
-            try {
-                e.kind = Kind.valueOf(t.getString("K"));
-            } catch (Exception ex) {
-                return null;
-            }
-            e.id = t.getInt("Id");
-            e.subject = t.getString("S");
-            e.value = t.getString("V");
-            e.when = t.contains("W") ? When.of(t.getString("W")) : When.NONE;
-            e.extra = t.getString("X");
-            e.n = t.getInt("N");
-            e.due = t.contains("Due") ? t.getLong("Due") : -1;
-            e.said = t.getString("Said");
-            e.made = t.getLong("Made");
-            return e;
-        }
     }
 
     /** A plural's s off ("creepers" and "creeper" are the same dislike). */
     public static String stem(String k) {
-        if (k.matches(".*(?:zombies|cookies|pies|movies|ties|lies|brownies|hoodies|rookies|budgies|selfies)$")) return k.substring(0, k.length() - 1);
+        if (k.matches("(?:.* )?(?:zombies|cookies|pies|movies|ties|lies|brownies|hoodies|rookies|budgies|selfies)$")) return k.substring(0, k.length() - 1);
         if (k.endsWith("ies") && k.length() > 4) return k.substring(0, k.length() - 3) + "y";
         if (k.endsWith("ches") || k.endsWith("shes") || k.endsWith("xes")) return k.substring(0, k.length() - 2);
         if (k.endsWith("s") && !k.endsWith("ss") && k.length() > 3) return k.substring(0, k.length() - 1);
@@ -279,24 +242,5 @@ public final class PaMemory {
             return first(Kind.ONLY_ME) != null;
         }
 
-        public CompoundTag save() {
-            CompoundTag t = new CompoundTag();
-            t.putInt("Next", next);
-            t.putBoolean("Paused", paused);
-            ListTag l = new ListTag();
-            for (Entry e : entries) l.add(e.save());
-            t.put("E", l);
-            return t;
-        }
-
-        public void load(CompoundTag t) {
-            entries.clear();
-            next = Math.max(1, t.getInt("Next"));
-            paused = t.getBoolean("Paused");
-            for (Tag x : t.getList("E", Tag.TAG_COMPOUND)) {
-                Entry e = Entry.load((CompoundTag) x);
-                if (e != null) { entries.add(e); next = Math.max(next, e.id + 1); }
-            }
-        }
     }
 }

@@ -180,7 +180,7 @@ public final class PaData extends SavedData {
             }
             t.put("Log", lines);
             t.putLongArray("Pointed", pointed.stream().mapToLong(Long::longValue).toArray());
-            t.put("Mem", memory.save());                                // [pa35]
+            t.put("Mem", PaMemoryNbt.save(memory));                                // [pa35]
             return t;
         }
 
@@ -233,7 +233,7 @@ public final class PaData extends SavedData {
                 r.log.addLast(new Line(c.getInt("W"), c.getString("T"), c.getLong("At"), Math.max(1, c.getInt("N")), c.getBoolean("G")));
             }
             for (long p : t.getLongArray("Pointed")) r.pointed.add(p);
-            if (t.contains("Mem")) r.memory.load(t.getCompound("Mem"));    // [pa35]
+            if (t.contains("Mem")) PaMemoryNbt.load(r.memory, t.getCompound("Mem"));    // [pa35]
             return r;
         }
     }

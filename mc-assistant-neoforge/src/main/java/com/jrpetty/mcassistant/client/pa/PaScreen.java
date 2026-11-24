@@ -29,8 +29,8 @@ import java.util.List;
 public class PaScreen extends Screen {
 
     static final int BRAND = 0xFF1F8A7A, BRAND_LIGHT = 0xFF2BB5A0, BRAND_WASH = 0xFFD7EEEA, HEADER = 0xFF173B40;
-    private static final String[] TABS = {"talk", "orders", "jobs", "pack", "stats", "look", "settings"};          // [pa33c-2b]
-    private static final String[] TAB_LABELS = {"Talk", "Orders", "Jobs", "Pack", "Stats", "Look", "Settings"};
+    private static final String[] TABS = {"talk", "orders", "jobs", "pack", "stats", "memory", "look", "settings"};          // [pa33c-2b] [pa35] Memory
+    private static final String[] TAB_LABELS = {"Talk", "Orders", "Jobs", "Pack", "Stats", "Memory", "Look", "Settings"};
     /** [pa33b] The personality triangle (About) and the look preview's turn (Look). */
     private final PaTriangle triangle = new PaTriangle();
     private float lookYaw;
@@ -85,6 +85,16 @@ public class PaScreen extends Screen {
         nameBox = new EditBox(font, 0, 0, 90, 14, Component.literal("Name"));
         nameBox.setMaxLength(16);
         addWidget(nameBox);
+        String keepMem = memBox == null ? "" : memBox.getValue(), keepEdit = memEdit == null ? "" : memEdit.getValue();
+        memBox = new EditBox(font, 0, 0, 200, 14, Component.literal("Tell it something to remember"));   // [pa35] the Memory tab
+        memBox.setMaxLength(160);
+        memBox.setHint(Component.literal("Tell it something: \"my favourite food is steak\""));
+        memBox.setValue(keepMem);
+        addWidget(memBox);
+        memEdit = new EditBox(font, 0, 0, 200, 12, Component.literal("Edit this memory"));
+        memEdit.setMaxLength(160);
+        memEdit.setValue(keepEdit);
+        addWidget(memEdit);
         if (tab.equals("talk")) setInitialFocus(input);
     }
 
@@ -115,6 +125,8 @@ public class PaScreen extends Screen {
         UiStyle.panel(g, left, top, w, h);
         input.visible = false;
         nameBox.visible = false;
+        memBox.visible = false;                                          // [pa35]
+        memEdit.visible = false;
         if (!s.getBoolean("has")) {
             welcome(g, mx, my);
             footer(g, mx, my);
@@ -136,6 +148,7 @@ public class PaScreen extends Screen {
             case "jobs" -> scrolled(g, by, bh, mx, my, (y) -> jobs(g, s, left + 8, y, w - 22, mx, my));
             case "pack" -> scrolled(g, by, bh, mx, my, (y) -> pack(g, s, left + 8, y, w - 22, mx, my));
             case "stats" -> scrolled(g, by, bh, mx, my, (y) -> stats(g, s, left + 8, y, w - 22, mx, my));
+            case "memory" -> memory(g, s, left + 6, by, w - 12, bh, mx, my);               // [pa35]
             case "settings" -> {
                 int sw = com.jrpetty.mcassistant.pa.PaLayout.sectionListW(w);
                 sections(g, left + 6, by, sw, bh, mx, my);
@@ -202,11 +215,11 @@ public class PaScreen extends Screen {
                 int n = s.getList("steps", Tag.TAG_COMPOUND).size();
                 if (n > 0) label += " (" + n + ")";
             }
-            int tw = font.width(label) + 14;
+            int tw = font.width(label) + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD;   // [pa35] eight tabs fit the smallest panel
             boolean on = tab.equals(TABS[i]);
             boolean over = in(mx, my, tx, top + 29, tw, 14);
             UiStyle.topTab(g, tx, top + 29, tw, 14, UiStyle.State.of(true, on, over));
-            g.drawString(font, label, tx + 7, top + 32, on ? UiStyle.TEXT : muted(), false);
+            g.drawString(font, label, tx + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD / 2, top + 32, on ? UiStyle.TEXT : muted(), false);
             final String t = TABS[i];
             zone(tx, top + 29, tw, 14, () -> { tab = t; scroll = 0; picker = ""; pick.clear(); confirmDismiss = false; PaClientConfig.set(PaClientConfig.LASTTAB, t); }, "");
             tx += tw + 2;
@@ -864,6 +877,147 @@ public class PaScreen extends Screen {
         return Math.max(leftEnd, cy) - y + 4;
     }
 
+    // ------------------------------------------------------------------ [pa35] the Memory tab
+
+    private EditBox memBox, memEdit;
+    /** The entry being edited: its id (or its place's name), or null. */
+    private String memEditing;
+    private boolean memConfirmForget;
+    private static final String[][] MEM_GROUPS = {{"ME", "Me", "Your name, what you like and can't stand, favourites, what you've said about it"},
+        {"PLACES", "Places", "Your base, the farm, the mine: say \"go to the farm\" to send it"},
+        {"PEOPLE", "People", "Friends it helps, people it doesn't trust, whose orders it takes"},
+        {"RULES", "Rules", "Standing orders on their triggers, things it never touches, things it always keeps"},
+        {"REMINDERS", "Reminders", "Said aloud with a toast when they're due"}};
+    private static final String[] MEM_EMPTY = {"Try \"my favourite food is steak\" or \"I hate creepers\".", "Stand somewhere and say \"this is my base\".",
+        "Try \"Sam is my friend, help him\".", "Try \"every morning, refill the furnace\" or \"never touch my chests\".", "Try \"remind me in 10 minutes to check the furnace\"."};
+
+    private void memory(GuiGraphics g, CompoundTag s, int x, int y, int iw, int ih, int mx, int my) {
+        boolean paused = s.getBoolean("memPaused");
+        int n = s.getInt("memN"), cap = Math.max(1, s.getInt("memCap"));
+        // the top: what it is, how full, and remembering on or off
+        g.drawString(font, UiStyle.clip(font, "What " + s.getString("name") + " remembers", iw - 150), x + 2, y + 3, UiStyle.TEXT, false);
+        String count = n + " of " + cap;
+        g.drawString(font, count, x + iw - 112 - font.width(count), y + 3, n >= cap ? UiStyle.DANGER : faint(), false);
+        if (in(mx, my, x + iw - 112 - font.width(count), y, font.width(count), 12))
+            tipNow = "Things kept (places are kept apart, up to 32). The server's operators set the limit.";
+        toggleAt(g, "Remembering", !paused, x + iw - 104, y, 104, mx, my,
+            paused ? "Paused: it keeps nothing new until you turn this on. What it knows still counts." : "On: it keeps what you tell it. Off pauses that; what it knows still counts.",
+            () -> { CompoundTag t = new CompoundTag(); t.putString("op", "pause"); t.putBoolean("on", !paused); PaClient.send("memop", t); });
+        int cy = y + 16;
+        memBox.visible = true;
+        memBox.setX(x + 2);
+        memBox.setY(cy);
+        memBox.setWidth(iw - 58);
+        memBox.render(g, mx, my, 0);
+        button(g, "Keep", x + iw - 52, cy, 50, 14, mx, my, !memBox.getValue().isBlank() && !paused, true,
+            paused ? "Memory's paused" : "It reads it as you'd say it: a like, a place, a person, a rule, a reminder", this::memAdd);
+        cy += 18;
+        int listH = ih - (cy - y) - 18;
+        final int listY = cy;
+        scrolledIn(g, x, listY, iw, listH, mx, my, (yy) -> memList(g, s, x + 4, yy, iw - 14, mx, my));
+        // the foot: forget everything (asked twice)
+        int fy = y + ih - 15;
+        if (!memConfirmForget) button(g, "Forget everything...", x + 2, fy, 112, 13, mx, my, n > 0 || hasPlaces(s), false, "You'll be asked again", () -> memConfirmForget = true);
+        else {
+            button(g, "Yes, forget it all", x + 2, fy, 104, 13, mx, my, true, true, "Everything it remembers, places too. This can't be undone.",
+                () -> { CompoundTag t = new CompoundTag(); t.putString("op", "forgetAll"); PaClient.send("memop", t); memConfirmForget = false; });
+            button(g, "Keep it", x + 110, fy, 60, 13, mx, my, true, false, "", () -> memConfirmForget = false);
+        }
+        String hint = "Say it in Talk, or type it here. \"Forget that\" undoes the last.";
+        g.drawString(font, UiStyle.clip(font, hint, iw - 190), x + iw - Math.min(iw - 190, font.width(hint)), fy + 3, faint(), false);
+    }
+
+    private static boolean hasPlaces(CompoundTag s) {
+        for (Tag t : s.getList("mem", Tag.TAG_COMPOUND)) if (((CompoundTag) t).contains("place")) return true;
+        return false;
+    }
+
+    private int memList(GuiGraphics g, CompoundTag s, int x, int y, int iw, int mx, int my) {
+        int cy = y;
+        ListTag all = s.getList("mem", Tag.TAG_COMPOUND);
+        for (int gi = 0; gi < MEM_GROUPS.length; gi++) {
+            String[] grp = MEM_GROUPS[gi];
+            List<CompoundTag> rows = new ArrayList<>();
+            for (Tag t : all) if (((CompoundTag) t).getString("g").equals(grp[0])) rows.add((CompoundTag) t);
+            UiStyle.heading(g, font, grp[1] + (rows.isEmpty() ? "" : "  (" + rows.size() + ")"), x, cy, iw);
+            if (in(mx, my, x, cy, iw, 10)) tipNow = grp[2];
+            cy += 13;
+            if (rows.isEmpty()) {
+                g.drawString(font, UiStyle.clip(font, MEM_EMPTY[gi], iw), x + 4, cy, faint(), false);
+                cy += 14;
+                continue;
+            }
+            for (CompoundTag row : rows) {
+                String key = row.contains("place") ? "p:" + row.getString("place") : "i:" + row.getInt("id");
+                boolean editing = key.equals(memEditing);
+                boolean over = in(mx, my, x, cy - 1, iw, 13);
+                if (over) g.fill(x - 2, cy - 1, x + iw + 2, cy + 12, BRAND_WASH);
+                if (editing) {
+                    memEdit.visible = true;
+                    memEdit.setX(x + 2);
+                    memEdit.setY(cy - 1);
+                    memEdit.setWidth(iw - 92);
+                    memEdit.render(g, mx, my, 0);
+                    button(g, "Save", x + iw - 86, cy - 1, 42, 13, mx, my, !memEdit.getValue().isBlank(), true, "Read afresh, as if you'd said it", this::memSave);
+                    button(g, "Cancel", x + iw - 42, cy - 1, 42, 13, mx, my, true, false, "Esc", () -> memEditing = null);
+                    cy += 15;
+                    continue;
+                }
+                String detail = row.getString("d");
+                int dw = detail.isEmpty() ? 0 : Math.min(110, font.width(detail)) + 8;
+                int textW = iw - 44 - dw;
+                g.drawString(font, UiStyle.clip(font, row.getString("t"), textW), x + 4, cy + 2, UiStyle.TEXT, false);
+                if (!detail.isEmpty()) g.drawString(font, UiStyle.clip(font, detail, 110), x + iw - 40 - dw + 4, cy + 2, faint(), false);
+                if (over && !in(mx, my, x + iw - 40, cy - 1, 40, 13))
+                    tipNow = row.getString("t") + (row.getString("s").isEmpty() ? "" : "  ·  You said: \"" + row.getString("s") + "\"") + (detail.isEmpty() ? "" : "  ·  " + detail);
+                final CompoundTag r = row;
+                button(g, "\u270E", x + iw - 38, cy - 1, 18, 13, mx, my, true, false, row.contains("place") ? "Rename this place" : "Edit: change the words and it reads them afresh", () -> {
+                    memEditing = key;
+                    memEdit.setValue(r.contains("place") ? r.getString("place") : r.getString("s").isEmpty() ? r.getString("t") : r.getString("s"));
+                    memEdit.moveCursorToEnd(false);
+                    setFocused(memEdit);
+                });
+                button(g, "\u2715", x + iw - 18, cy - 1, 18, 13, mx, my, true, false, "Forget this one", () -> {
+                    CompoundTag t = new CompoundTag();
+                    if (r.contains("place")) { t.putString("op", "deletePlace"); t.putString("place", r.getString("place")); }
+                    else { t.putString("op", "delete"); t.putInt("id", r.getInt("id")); }
+                    PaClient.send("memop", t);
+                });
+                cy += 14;
+            }
+            cy += 4;
+        }
+        return cy - y + 4;
+    }
+
+    private void memAdd() {
+        String text = memBox.getValue().trim();
+        if (text.isEmpty()) return;
+        CompoundTag t = new CompoundTag();
+        t.putString("op", "add");
+        t.putString("text", text);
+        PaClient.send("memop", t);
+        memBox.setValue("");
+    }
+
+    private void memSave() {
+        if (memEditing == null) return;
+        String text = memEdit.getValue().trim();
+        if (text.isEmpty()) return;
+        CompoundTag t = new CompoundTag();
+        if (memEditing.startsWith("p:")) { t.putString("op", "renamePlace"); t.putString("place", memEditing.substring(2)); }
+        else { t.putString("op", "edit"); t.putInt("id", Integer.parseInt(memEditing.substring(2))); }
+        t.putString("text", text);
+        PaClient.send("memop", t);
+        memEditing = null;
+        setFocused(null);
+    }
+
+    /** A labelled on/off switch drawn at a given width (the Memory tab's top). */
+    private void toggleAt(GuiGraphics g, String label, boolean on, int x, int y, int w, int mx, int my, String tip, Runnable flip) {
+        toggle(g, label, on, x, y, w, mx, my, tip, flip);
+    }
+
     // ------------------------------------------------------------------ about and settings
 
     // ------------------------------------------------------------------ [pa33c-2b] settings, in sections; stats
@@ -1061,9 +1215,19 @@ public class PaScreen extends Screen {
         cy += 15;
         cy = toggle(g, "Defend me", !set.contains("defend") || set.getBoolean("defend"), sx, cy, half, mx, my,
             "When someone else says you're rubbish, it sticks up for you", () -> setting("defend", !(!set.contains("defend") || set.getBoolean("defend"))));
+        cy = toggle(g, "Ping ores I can't mine yet", !set.contains("pingLocked") || set.getBoolean("pingLocked"), sx, cy, half, mx, my,      // [pa35]
+            "When it meets an ore above its level it leaves it be, says so once, and marks it for you",
+            () -> setting("pingLocked", !(!set.contains("pingLocked") || set.getBoolean("pingLocked"))));
         int spend = set.getInt("spend");
         cy = stepper(g, "Spend limit", spend + " coins", sx, cy, mx, my, () -> settingInt("spend", spend - 16), () -> settingInt("spend", spend + 16));
         return cy;
+    }
+
+    /** [pa35] An operator's whole-number setting. */
+    private void adminInt(String key, int v) {
+        CompoundTag t = new CompoundTag();
+        t.putInt(key, v);
+        PaClient.send("admin", t);
     }
 
     private void admin(double mult) {
@@ -1135,6 +1299,14 @@ public class PaScreen extends Screen {
             String shown = (m == Math.floor(m) ? String.valueOf((int) m) : String.format(java.util.Locale.ROOT, "%.2f", m)) + "\u00D7 xp";
             cy = stepper(g, "Levelling", shown, sx, cy, mx, my, () -> admin(m <= 1 ? Math.max(0, m - 0.25) : m - 1), () -> admin(m < 1 ? m + 0.25 : m + 1));
             cy = para(g, "Every assistant's experience on this server is multiplied by this (1: the intended grind, many game days to level 10).", sx, cy, half, faint());
+            cy += 4;
+            int memCap = s.getInt("memCap");                                                    // [pa35] memory, and the ladders
+            cy = stepper(g, "Memory", memCap + " things", sx, cy, mx, my, () -> adminInt("memCap", memCap - (memCap > 100 ? 50 : 10)), () -> adminInt("memCap", memCap + (memCap >= 100 ? 50 : 10)));
+            cy = para(g, "How many things each assistant may remember for its player (places are kept apart, up to 32).", sx, cy, half, faint());
+            boolean ladder = s.getCompound("set").getBoolean("ladderOn");
+            cy = toggle(g, "Mining and gear ladders", ladder, sx, cy, half, mx, my,
+                "On: ores and kit open by level (iron at 4, crossbow at 5, diamond at 6...). Off: every assistant may mine and use anything. Each rung can be moved on the Progress tab.",
+                () -> { CompoundTag t = new CompoundTag(); t.putBoolean("ladderOn", !ladder); PaClient.send("admin", t); });
             cy += 4;
             // [pa33g] its chunks: an assistant told to stay, on guard, at work or walking over keeps the ground round it loaded
             boolean on = s.getBoolean("chunksOn"), offline = s.getBoolean("chunksOffline");
@@ -1496,6 +1668,15 @@ public class PaScreen extends Screen {
             if (key != GLFW.GLFW_KEY_ESCAPE) return input.keyPressed(key, scan, mods) || true;
         }
         if (nameBox.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) return nameBox.keyPressed(key, scan, mods) || true;
+        if (memBox.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) {        // [pa35] Enter keeps it
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { memAdd(); return true; }
+            return memBox.keyPressed(key, scan, mods) || true;
+        }
+        if (memEdit.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) {
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { memSave(); return true; }
+            return memEdit.keyPressed(key, scan, mods) || true;
+        }
+        if (key == GLFW.GLFW_KEY_ESCAPE && memEditing != null) { memEditing = null; return true; }
         if (tab.equals("settings") && (mods & GLFW.GLFW_MOD_CONTROL) != 0 && (key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_DOWN)) {
             section = Math.floorMod(section + (key == GLFW.GLFW_KEY_UP ? -1 : 1), SECTIONS.length);   // [pa33c-2b] always, even with the triangle in hand
             scroll = 0;
@@ -1531,6 +1712,8 @@ public class PaScreen extends Screen {
     public boolean charTyped(char c, int mods) {
         if (input.isFocused()) return input.charTyped(c, mods);
         if (nameBox.isFocused()) return nameBox.charTyped(c, mods);
+        if (memBox.isFocused()) return memBox.charTyped(c, mods);      // [pa35]
+        if (memEdit.isFocused()) return memEdit.charTyped(c, mods);
         return super.charTyped(c, mods);
     }
 

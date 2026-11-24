@@ -183,6 +183,8 @@ public final class PaNet {
         set.putInt("langCap", PaConfig.maxLanguage());
         set.putInt("roastBack", r.roastBack);
         set.putBoolean("defend", r.defend);
+        set.putBoolean("pingLocked", r.pingLocked);                                                 // [pa35]
+        set.putBoolean("ladderOn", PaConfig.ladderOn());
         set.putBoolean("roastAllowed", PaConfig.allowRoastOthers());                               // [pa33b] 0 talking, 1 no jokes, 2 quiet
         set.putInt("spend", r.spend);
         set.putInt("roamMax", PaConfig.roamMax());

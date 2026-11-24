@@ -69,7 +69,7 @@ New: {what}.
 {what}, unlocked.
 
 == say.gear.locked
-{item}? Level {level}, mate. I'd hurt myself. I'll hold it for you.
+{item}? Level {level}, mate. I'd shoot my own foot. I'll hold it for you.
 That's a level {level} thing, the {item}. I'll carry it, not use it.
 {item}. Lovely. Not till level {level}, though. It's in my pack, untouched.
 I'm not allowed the {item} till level {level}. I'll mind it.
