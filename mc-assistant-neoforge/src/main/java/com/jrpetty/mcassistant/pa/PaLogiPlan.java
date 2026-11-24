@@ -54,7 +54,7 @@ final class PaLogiPlan {
             case DEATH -> { return death(p, a, o, look, out); }
             case RECIPE -> { PaCraft.recipe(p, a, o.item(), true); return null; }
             case CANMAKE -> { PaCraft.canMake(p, a); return null; }
-            default -> { return work(p, a, o, look, out); }
+            default -> { return work(p, a, o, look, out, said); }
         }
     }
 
@@ -69,7 +69,7 @@ final class PaLogiPlan {
     // ------------------------------------------------------------------ work
 
     @Nullable
-    private static String work(@Nullable ServerPlayer p, PlayerAssistantEntity a, PaLogiOrder o, PaOrders.Look look, List<PaPlan.Step> out) {
+    private static String work(@Nullable ServerPlayer p, PlayerAssistantEntity a, PaLogiOrder o, PaOrders.Look look, List<PaPlan.Step> out, String said) {
         PaLogiJob j = PaLogiJob.of(o);
         String item = o.item();
         String thing = PaLogiItems.name(item, 2);
