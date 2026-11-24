@@ -32,7 +32,7 @@ layer 1
 ......................
 SZGGZZ.ZZGGZZ.ZZGGZZ.S
 S......Z......Z......S
-Z......Z......Z......Z
+G......Z......Z......G
 ZWWW.^.ZWWW.^.ZWWW.^.Z
 ZK.....ZK.....ZK.....Z
 G......Z......Z......G
@@ -44,7 +44,7 @@ layer 2
 ......................
 SZGGZZZZZGGZZZZZGGZZZS
 Z......Z......Z......Z
-Z.j..^jZ.j..^jZ.j..^jZ
+G.j..^jZ.j..^jZ.j..^jG
 ZWWWW..ZWWWW..ZWWWW..Z
 Z.....jZ.....jZ.....jZ
 G..j...Z..j...Z..j...G

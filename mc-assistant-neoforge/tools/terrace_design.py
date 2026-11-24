@@ -314,6 +314,7 @@ def bayfronted():
             x = -10 if i == 0 else 11
             for h in (1, 2):
                 d.put(x, h, -1, 'G')
+                d.put(x, h, 2, 'G')                              # the end house's kitchen lit from the side street too
             for h in (5, 6):
                 d.put(x, h, 3 if i == 0 else 0, 'G')
     roof(d, FRONT, BACK, EAVES, True)
