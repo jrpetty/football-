@@ -504,6 +504,9 @@ public class PaMemoryGameTests {
                     a.teleportTo(x + 0.5, y, Z + 0.5);
                     a.setPaXpForTests(PaLevels.xpFor(4));
                     helper.assertTrue(!com.jrpetty.mcassistant.pa.PaCrossbow.atBlock(a, tgt, null) && !a.mayShoot(new ItemStack(Items.CROSSBOW)), "level 4: it won't shoot a crossbow");
+                    String kept = com.jrpetty.mcassistant.pa.PaPack.equipBest(a);
+                    helper.assertTrue(kept.toLowerCase(java.util.Locale.ROOT).contains("crossbow (level 5)"), "equip best says what it kept back: " + kept);
+                    log.append("kept: ").append(kept).append("; ");
                     a.setPaXpForTests(PaLevels.xpFor(5));
                     arrows[0] = a.countMatching(st -> st.is(Items.ARROW));
                     usingFrom[0] = -1; chargedAt[0] = -1; shot[0] = false;

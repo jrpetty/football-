@@ -529,3 +529,25 @@ Firing a rocket.
 Firework.
 Rocket out.
 Rocket.
+
+== say.gear.kept
+Left {item} in my pack. Not my level yet.
+Kept back {item}. Rules are rules, and these ones are mine.
+In the pack for now: {item}. I'd only embarrass us.
+Not using {item} yet. Give it time.
+{item}: packed, not used. I know my limits. Roughly.
+Everything else is on. {item} can wait.
+== say.gear.kept@gloomy
+Left {item} in the pack. I'm not ready.
+I can't use {item} yet. One day. Maybe.
+Left {item} packed. Too good for me, for now.
+{item}. Not yet. Nothing ever is.
+Kept {item} back. I'd only ruin it all.
+{item} will have to wait for a better me.
+== say.gear.kept@serious
+Kept in my pack: {item}.
+Not yet used: {item}.
+Packed until I reach the level: {item}.
+Left {item} in my pack.
+Can't use {item} yet.
+Packed for later: {item}.

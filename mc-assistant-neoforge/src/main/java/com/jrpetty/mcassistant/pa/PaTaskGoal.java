@@ -108,7 +108,7 @@ public class PaTaskGoal extends Goal {
             case BUY, SELL -> trade();
             case TAME -> tame();                                 // [pa33d]
             case VTRADE -> villagerTrade();
-            case EQUIP -> { PaPack.equipBest(a); finish("Kitted out.", false); }
+            case EQUIP -> { String kept = PaPack.equipBest(a); finish(kept.isEmpty() ? "Kitted out." : "Kitted out. " + kept, false); }   // [pa35] what it kept back
             case MAP -> map();
             case PILLAR -> pillar();
             case SHOOT -> shoot();

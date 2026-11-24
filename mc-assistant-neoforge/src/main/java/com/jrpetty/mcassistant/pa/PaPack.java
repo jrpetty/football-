@@ -145,7 +145,7 @@ public final class PaPack {
                 a.setItemSlot(e, worn);
                 return worn.isEmpty() ? "" : "No room for it.";
             }
-            case "best" -> { equipBest(a); return ""; }
+            case "best" -> { return equipBest(a); }                     // [pa35] and what it kept back, and why
             case "all" -> {                                           // everything but its gear and what it keeps
                 if (!near) return far(a, p);
                 int given = 0;
@@ -194,7 +194,7 @@ public final class PaPack {
     }
 
     /** The best armour in its pack on, piece by piece; its best weapon in hand; a shield in the other. */
-    public static void equipBest(PlayerAssistantEntity a) {
+    public static String equipBest(PlayerAssistantEntity a) {
         NonNullList<ItemStack> inv = a.getInventoryItems();
         for (EquipmentSlot e : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
             if (a.getItemBySlot(e).is(net.minecraft.world.item.Items.ELYTRA) && (a.isFallFlying() || a.mind.wingsOn)) continue;   // [pa33g] not mid-flight
@@ -213,13 +213,32 @@ public final class PaPack {
         a.equipBestWeapon();
         if (a.getOffhandItem().isEmpty()) {
             for (int k = 0; k < inv.size(); k++) {
-                if (inv.get(k).getItem() instanceof ShieldItem) {
+                if (inv.get(k).getItem() instanceof ShieldItem && PaLevels.canUse(a, inv.get(k))) {   // [pa35] the shield at level 2
                     a.setItemSlot(EquipmentSlot.OFFHAND, inv.get(k).copy());
                     inv.set(k, ItemStack.EMPTY);
                     break;
                 }
             }
         }
+        return keptBack(a);
+    }
+
+    /** [pa35] What "equip best" left in its pack for the gear ladder, said in its voice ("" when nothing): which, and the level each needs. */
+    public static String keptBack(PlayerAssistantEntity a) {
+        java.util.Map<String, Integer> kept = new java.util.LinkedHashMap<>();
+        for (ItemStack s : a.getInventoryItems()) {
+            if (s.isEmpty() || PaLevels.canUse(a, s)) continue;
+            boolean gear = s.getItem() instanceof ArmorItem || s.getItem() instanceof TieredItem || s.getItem() instanceof ShieldItem
+                || s.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem || s.getItem() instanceof net.minecraft.world.item.TridentItem
+                || s.getItem() instanceof net.minecraft.world.item.MaceItem || s.is(net.minecraft.world.item.Items.ELYTRA);
+            if (gear) kept.putIfAbsent(s.getHoverName().getString().toLowerCase(java.util.Locale.ROOT), PaLevels.gearLevel(s));
+        }
+        if (kept.isEmpty()) return "";
+        List<String> parts = new ArrayList<>();
+        for (var e : kept.entrySet()) { if (parts.size() == 3) break; parts.add("the " + e.getKey() + " (level " + e.getValue() + ")"); }
+        String list = parts.size() == 1 ? parts.get(0) : String.join(", ", parts.subList(0, parts.size() - 1)) + " and " + parts.get(parts.size() - 1);
+        if (kept.size() > 3) list += ", and more";
+        return PaTalk.line(a, "gear.kept", "item", list);
     }
 
     /** Piles merged, then laid out by kind and name in the open slots. */
