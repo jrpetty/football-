@@ -173,6 +173,81 @@ class PaVoiceDeliveryTest {
         assertTrue(PaVoiceAssets.bundled(p -> null).isEmpty(), "a development build has no voicepack");
     }
 
+    /** Listening's model and library come out of the jar (a fake one here): the archives checked, this computer's library and the model taken out. */
+    @Test
+    void speechModelFromAFakeJar(@TempDir Path game) throws Exception {
+        String plat = PaVosk.platform(), lib = PaVosk.libName();
+        java.io.ByteArrayOutputStream jarBytes = new java.io.ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(jarBytes)) {
+            for (String n : new String[]{plat + "/" + lib, "other-os/libvosk.so", "org/vosk/LibVosk.class"}) { z.putNextEntry(new java.util.zip.ZipEntry(n)); z.write(n.getBytes(StandardCharsets.UTF_8)); z.closeEntry(); }
+        }
+        java.io.ByteArrayOutputStream modelBytes = new java.io.ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(modelBytes)) {
+            for (String n : new String[]{PaVosk.MODEL + "/am/final.mdl", PaVosk.MODEL + "/conf/model.conf", "../escape.txt"}) { z.putNextEntry(new java.util.zip.ZipEntry(n)); z.write(1); z.closeEntry(); }
+        }
+        byte[] jb = jarBytes.toByteArray(), mb = modelBytes.toByteArray();
+        Map<String, byte[]> jar = new HashMap<>();
+        jar.put("/assets/mc_assistant/voicepack/stt/" + PaVosk.LIB_JAR, jb);
+        jar.put("/assets/mc_assistant/voicepack/stt/" + PaVosk.MODEL_ZIP, mb);
+        jar.put(PaVoiceAssets.MANIFEST, ("stt\t" + PaVosk.LIB_JAR + "\t" + jb.length + "\t" + sha(jb) + "\nstt\t" + PaVosk.MODEL_ZIP + "\t" + mb.length + "\t" + sha(mb) + "\n").getBytes(StandardCharsets.UTF_8));
+        java.util.function.Function<String, InputStream> open = p -> jar.containsKey(p) ? new ByteArrayInputStream(jar.get(p)) : null;
+        List<PaVoiceAssets.Entry> pack = PaVoiceAssets.bundled(open);
+        Path home = PaVoiceAssets.home(game, "0.400.0", pack);
+        PaVosk v = new PaVosk(home.resolve("stt"), PaVoiceAssets.parts(pack, "stt"));
+        assertFalse(v.installed());
+        assertTrue(v.unpack(PaVoiceAssets.fromJar(open), s -> { }), v.status());
+        assertTrue(v.installed(), "model and library out");
+        assertTrue(Files.isRegularFile(home.resolve("stt").resolve(lib)) && Files.isDirectory(v.modelDir().resolve("am")));
+        assertFalse(Files.exists(home.resolve("stt/libvosk.so")) && !lib.equals("libvosk.so"), "only this computer's library");
+        assertFalse(Files.exists(game.resolve("mc_assistant-cache/voice/escape.txt")) || Files.exists(home.resolve("escape.txt")), "a zip slip never written");
+        assertTrue(v.unpack(PaVoiceAssets.fromJar(p -> null), s -> { }), "already there: nothing read again");
+        // a tampered archive is refused
+        jar.put("/assets/mc_assistant/voicepack/stt/" + PaVosk.MODEL_ZIP, "tampered".getBytes(StandardCharsets.UTF_8));
+        PaVosk bad = new PaVosk(game.resolve("bad/stt"), PaVoiceAssets.parts(pack, "stt"));
+        assertFalse(bad.unpack(PaVoiceAssets.fromJar(open), s -> { }));
+        assertFalse(bad.installed());
+    }
+
+    /** Nothing in the mod fetches anything: no HTTP client left in the voice code (the build's download is in build.gradle only). */
+    @Test
+    void noNetworkInTheVoiceCode() throws Exception {
+        for (String f : new String[]{"PaKokoro", "PaExpressive", "PaVosk", "PaVoiceAssets", "PaTts", "PaStt"}) {
+            String src = Files.readString(Path.of("src/main/java/com/jrpetty/mcassistant/pa/voice/" + f + ".java"));
+            assertFalse(src.contains("HttpClient") || src.contains("openConnection") || src.contains("HttpURLConnection"), f + " reaches the network");
+        }
+        for (String f : new String[]{"PaVoice", "PaVoiceExpressive"}) {
+            String src = Files.readString(Path.of("src/main/java/com/jrpetty/mcassistant/client/pa/" + f + ".java"));
+            assertFalse(src.contains("PaKokoro.HTTP") || src.contains("HttpClient"), f + " reaches the network");
+        }
+    }
+
+    /** The folder older versions downloaded Kokoro into goes on first unpack, but only when it is plainly that folder. */
+    @Test
+    void oldKokoroFolder(@TempDir Path cfg) throws Exception {
+        List<String> known = new ArrayList<>();
+        for (PaKokoro.Part p : PaKokoro.PARTS) known.add(p.file());
+        Path k = cfg.resolve("mc_assistant/voice/kokoro");
+        Files.createDirectories(k);
+        for (String n : new String[]{"kokoro-v1.0.int8.onnx", "voices-v1.0.bin", "gb_gold.json", "onnxruntime.jar.part", "verified.sha256"}) Files.write(k.resolve(n), new byte[3]);
+        Path mine = cfg.resolve("mc_assistant/voice/kokoro2");
+        Files.createDirectories(mine);
+        Files.write(mine.resolve("kokoro-v1.0.int8.onnx"), new byte[3]);
+        assertFalse(PaVoiceAssets.removeOldKokoro(mine, known), "only the folder named kokoro");
+        Path other = cfg.resolve("x/kokoro");
+        Files.createDirectories(other);
+        Files.write(other.resolve("kokoro-v1.0.int8.onnx"), new byte[3]);
+        Files.write(other.resolve("my-notes.txt"), new byte[3]);
+        assertFalse(PaVoiceAssets.removeOldKokoro(other, known), "something not ours in it: left alone");
+        assertTrue(Files.exists(other.resolve("my-notes.txt")));
+        Path empty = cfg.resolve("y/kokoro");
+        Files.createDirectories(empty);
+        Files.write(empty.resolve("verified.sha256"), new byte[3]);
+        assertFalse(PaVoiceAssets.removeOldKokoro(empty, known), "not the old layout (no model or voice pack)");
+        assertTrue(PaVoiceAssets.removeOldKokoro(k, known), "the old download, all known files");
+        assertFalse(Files.exists(k));
+        assertTrue(Files.exists(cfg.resolve("mc_assistant/voice")), "nothing above it touched");
+    }
+
     @Test
     void manifestRefusesPathTricks() {
         for (String bad : new String[]{"kokoro\t../evil.dll\t10\t" + "a".repeat(64), "kokoro\tx/y.onnx\t10\t" + "a".repeat(64), "kokoro\tm.onnx\t10\tnot-a-sum"}) {
@@ -191,11 +266,17 @@ class PaVoiceDeliveryTest {
         List<String> tsv = new ArrayList<>();
         try (InputStream in = PaVoiceDeliveryTest.class.getResourceAsStream("/assets/mc_assistant/voice/parts.tsv")) {
             assertNotNull(in, "parts.tsv ships with the sources");
-            for (String l : new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n")) if (!l.isBlank() && !l.startsWith("#")) tsv.add(l.strip());
+            for (String l : new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n")) {
+                if (l.isBlank() || l.startsWith("#")) continue;
+                String[] f = l.strip().split("\t");
+                assertTrue(f.length == 6 || f.length == 7 && f[6].startsWith("https://") && !f[6].equals(f[5]), "a source and at most one mirror: " + l);
+                tsv.add(String.join("\t", java.util.Arrays.copyOf(f, 6)));
+            }
         }
         List<String> code = new ArrayList<>();
         for (PaKokoro.Part p : PaKokoro.PARTS) code.add(String.join("\t", "kokoro", p.file(), Long.toString(p.bytes()), p.sha256(), p.licence(), p.url()));
         for (PaKokoro.Part p : PaExpressive.PARTS) code.add(String.join("\t", "expressive", p.file(), Long.toString(p.bytes()), p.sha256(), p.licence(), p.url()));
+        for (PaKokoro.Part p : PaVosk.PARTS) code.add(String.join("\t", "stt", p.file(), Long.toString(p.bytes()), p.sha256(), p.licence(), p.url()));   // listening too
         assertEquals(code, tsv);
         long total = 0;
         for (String l : tsv) total += Long.parseLong(l.split("\t")[2]);
@@ -209,5 +290,6 @@ class PaVoiceDeliveryTest {
         assertTrue(gradle.contains("project.findProperty('bundleVoice') in ['true', true]"));
         assertTrue(gradle.contains("tasks.register('voiceAssets')") && gradle.contains("tasks.register('checkVoiceBundle')"));
         assertTrue(gradle.contains("assets/mc_assistant/voicepack/manifest.tsv"));
+        assertTrue(gradle.contains("['kokoro', 'expressive', 'stt']") && gradle.contains("n < 17"), "the jar check covers all three groups");
     }
 }

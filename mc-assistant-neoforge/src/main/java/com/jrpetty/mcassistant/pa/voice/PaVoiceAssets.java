@@ -107,6 +107,31 @@ public final class PaVoiceAssets {
         return gameDir.resolve("mc_assistant-cache").resolve("voice").resolve((version == null || version.isBlank() ? "dev" : version.replaceAll("[^A-Za-z0-9._-]", "_")) + "-" + tag);
     }
 
+    /**
+     * The natural voice as older versions downloaded it (config/mc_assistant/voice/kokoro), unused now the voices come in
+     * the jar: removed, but only when it is plainly that folder (its model and voice pack there, and nothing in it but
+     * the files that download wrote: the known names, their ".part" leftovers and the check marker). Anything else in
+     * it and it is left alone. True when it was removed.
+     */
+    public static boolean removeOldKokoro(Path dir, java.util.Collection<String> known) {
+        try {
+            if (dir == null || !Files.isDirectory(dir) || !dir.getFileName().toString().equals("kokoro")) return false;
+            if (!Files.isRegularFile(dir.resolve("kokoro-v1.0.int8.onnx")) && !Files.isRegularFile(dir.resolve("voices-v1.0.bin"))) return false;
+            List<Path> files;
+            try (java.util.stream.Stream<Path> st = Files.list(dir)) { files = st.toList(); }
+            for (Path f : files) {
+                String n = f.getFileName().toString();
+                String base = n.endsWith(".part") ? n.substring(0, n.length() - 5) : n.endsWith(".pack") ? n.substring(0, n.length() - 5) : n;
+                if (!Files.isRegularFile(f) || !(known.contains(base) || n.equals("verified.sha256"))) return false;   // not only ours: leave it
+            }
+            for (Path f : files) Files.deleteIfExists(f);
+            Files.deleteIfExists(dir);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     /** Remove the unpacked voices of other versions (only folders beside this one, in mc_assistant-cache/voice). */
     public static int clean(Path home) {
         Path parent = home.getParent();

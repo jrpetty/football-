@@ -180,15 +180,7 @@ public final class PaKokoro {
         Reply get(java.net.URI uri, long from) throws Exception;
     }
 
-    /** The real network: a plain GET with a generic user agent; nothing about the player or their world is sent. */
-    public static final Fetcher HTTP = (uri, from) -> {
-        java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
-            .connectTimeout(java.time.Duration.ofSeconds(20)).build();
-        java.net.http.HttpRequest.Builder rb = java.net.http.HttpRequest.newBuilder(uri).timeout(java.time.Duration.ofMinutes(30)).header("User-Agent", "minecraft-mod");
-        if (from > 0) rb.header("Range", "bytes=" + from + "-");
-        java.net.http.HttpResponse<InputStream> res = http.send(rb.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());
-        return new Fetcher.Reply(res.statusCode(), res.headers().firstValueAsLong("Content-Length").orElse(-1L), res.body());
-    };
+    // [voice37] No network fetcher any more: the files come from inside the mod jar (PaVoiceAssets.fromJar) or an offline pack.
 
     /** [pa35] Progress as it goes: a fraction of the whole (by bytes) and a line to show. */
     public interface Progress {
@@ -203,11 +195,6 @@ public final class PaKokoro {
 
     /** Stop a download under way (it carries on from where it was next time). */
     public void cancel() { cancel = true; }
-
-    /** Download what is missing, off the game thread: resumed where it stopped, each file checked by its SHA-256. */
-    public boolean install(java.util.function.Consumer<String> progress) {
-        return install(HTTP, (f, l) -> progress.accept(l));
-    }
 
     public boolean install(Fetcher net, Progress progress) {
         cancel = false;

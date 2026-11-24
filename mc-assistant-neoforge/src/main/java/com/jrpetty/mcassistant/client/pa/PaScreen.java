@@ -1356,7 +1356,7 @@ public class PaScreen extends Screen {
                 });
                 cy += 14;
             }
-            if (cat.isEmpty()) cy = para(g, "No voices yet: the natural voice is " + (PaVoice.installingVoices ? "on its way." : "not downloaded."), sx, cy, half, faint());
+            if (cat.isEmpty()) cy = para(g, "No voices yet: the natural voice is " + (PaVoice.installingVoices ? "on its way." : "not unpacked yet."), sx, cy, half, faint());
         }
         int rate = PaClientConfig.get(PaClientConfig.RATE, 0), vol = PaClientConfig.get(PaClientConfig.VOLUME, 80), pitch = PaClientConfig.get(PaClientConfig.PITCH, 0);
         cy = stepper(g, "Speed", rate + "", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.RATE, Math.max(-5, rate - 1)),
@@ -1366,15 +1366,12 @@ public class PaScreen extends Screen {
         cy = stepper(g, "Volume", vol + "%", sx, cy, mx, my, () -> PaClientConfig.set(PaClientConfig.VOLUME, Math.max(0, vol - 10)),
             () -> PaClientConfig.set(PaClientConfig.VOLUME, Math.min(100, vol + 10)));
         boolean listen = PaClientConfig.get(PaClientConfig.LISTEN, false);
-        cy = toggle(g, "Listen (hold " + PaClient.TALK.getTranslatedKeyMessage().getString() + " to talk)", listen, sx, cy, half, mx, my, PaVoice.stt().status(),
-            () -> PaClientConfig.set(PaClientConfig.LISTEN, !listen));
+        // [voice37] a plain switch: the offline speech model is inside the mod and unpacked when listening is turned on (nothing downloaded)
+        cy = toggle(g, "Turn on listening (hold " + PaClient.TALK.getTranslatedKeyMessage().getString() + " to talk)", listen, sx, cy, half, mx, my, PaVoice.stt().status(),
+            () -> { PaClientConfig.set(PaClientConfig.LISTEN, !listen); if (!listen && !PaVoice.stt().vosk().installed()) PaVoice.install(); });
         if (listen && !PaVoice.stt().ready()) {
-            boolean agreed = PaClientConfig.get(PaClientConfig.AGREED, false);
-            cy = para(g, "Listening needs the offline speech model (Vosk, about 40 MB), downloaded once into your config folder. Only the words you say go to the server.",
-                sx, cy, half, faint());
-            button(g, PaVoice.installing ? "Downloading..." : agreed ? "Download again" : "I agree: download it", sx, cy, 120, 14, mx, my, !PaVoice.installing, true, "",
-                () -> { PaClientConfig.set(PaClientConfig.AGREED, true); PaVoice.install(); });
-            cy += 18;
+            cy = para(g, PaVoice.installing ? "Unpacking the offline speech model (Vosk) from the mod..." : PaVoice.stt().vosk().status()
+                + " Only the words you say go to the server.", sx, cy, half, faint());
         }
         return cy;
     }

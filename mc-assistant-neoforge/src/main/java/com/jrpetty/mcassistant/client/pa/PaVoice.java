@@ -148,8 +148,15 @@ public final class PaVoice {
     }
 
     public static PaStt stt() {
-        if (stt == null) stt = new PaStt(dir(), PaClientConfig.get(PaClientConfig.ENGINE, "auto"), System.getProperty("os.name"), PaTts::onPath,
-            PaVoice::accent);                                   // [pa33b] en-GB recogniser for UK
+        if (stt == null) {
+            // [voice37] the speech model is inside the mod jar too: unpacked into the game folder when listening is turned on
+            java.util.List<com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.Entry> pack = com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.bundled();
+            com.jrpetty.mcassistant.pa.voice.PaVosk vosk = pack.isEmpty() ? new com.jrpetty.mcassistant.pa.voice.PaVosk(dir().resolve("vosk"))
+                : new com.jrpetty.mcassistant.pa.voice.PaVosk(com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.home(FMLPaths.GAMEDIR.get(), modVersion(), pack).resolve("stt"),
+                    com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.parts(pack, "stt"));
+            stt = new PaStt(dir(), PaClientConfig.get(PaClientConfig.ENGINE, "auto"), System.getProperty("os.name"), PaTts::onPath,
+                PaVoice::accent, vosk);                         // [pa33b] en-GB recogniser for UK
+        }
         return stt;
     }
 
@@ -201,6 +208,7 @@ public final class PaVoice {
             return;
         }
         if (!stt().ready()) {
+            if (bundled() && !stt().vosk().installed()) { install(); say("Unpacking the speech model, a moment..."); return; }   // [voice37] from the jar
             say(stt().status());
             return;
         }
@@ -244,12 +252,13 @@ public final class PaVoice {
         return MIC.level();
     }
 
-    /** The player agreed: download the offline model, off the game thread. */
+    /** [voice37] Listening was turned on: unpack the offline speech model from the mod jar, off the game thread (never downloaded). */
     static void install() {
         if (installing) return;
+        if (!bundled()) { say("This build of the mod has no speech model inside it; Windows' own recogniser or typing instead."); return; }
         installing = true;
         Thread t = new Thread(() -> {
-            boolean ok = stt().vosk().install(PaVoice::say);
+            boolean ok = stt().vosk().unpack(com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.fromJar(), PaVoice::say);
             installing = false;
             say(ok ? "The speech model is ready. Hold Z and speak." : stt().vosk().status() + " Typing still works.");
         }, "mca-assistant-voice-install");
@@ -274,7 +283,13 @@ public final class PaVoice {
             packEndedAt = System.currentTimeMillis();
             if (wasCancelled) return;
             if (!ok) { packFailed = true; packLine = tts().kokoro().why(); say(tts().kokoro().why()); }
-            else { packFraction = 1; packLine = "Natural voice ready."; say("The natural voice is ready."); readyNow(); }
+            else {
+                packFraction = 1; packLine = "Natural voice ready."; say("The natural voice is ready."); readyNow();
+                // [voice37] the folder older versions downloaded the natural voice into, now unused: only that known layout
+                java.util.List<String> known = new java.util.ArrayList<>();
+                for (com.jrpetty.mcassistant.pa.voice.PaKokoro.Part kp : com.jrpetty.mcassistant.pa.voice.PaKokoro.PARTS) known.add(kp.file());
+                com.jrpetty.mcassistant.pa.voice.PaVoiceAssets.removeOldKokoro(dir().resolve("kokoro"), known);
+            }
         }, "mca-assistant-voice-download");
         t.setDaemon(true);
         t.start();
