@@ -1266,9 +1266,9 @@ public class PlayerAssistantGameTests {
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
         a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
-        a.setPaXpForTests(0);                                     // [pa35] level 1, whatever an earlier test left on this player's record
-        helper.runAfterDelay(25, () -> {
-            helper.assertTrue(Math.abs(a.getMaxHealth() - 20.0F) < 0.01F, "[pa35] ten hearts at level 1, like a player: " + a.getMaxHealth());
+        helper.runAfterDelay(20, () -> a.setPaXpForTests(0));     // [pa35] level 1, whatever an earlier test (or a first on a shared record) left
+        helper.runAfterDelay(32, () -> {
+            helper.assertTrue(Math.abs(a.getMaxHealth() - 20.0F) < 0.01F, "[pa35] ten hearts at level 1, like a player: " + a.getMaxHealth() + " at level " + a.veteranLevel());
             int before = a.hunger.food();
             for (int i = 0; i < 40; i++) a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             a.hunger.exhaust(30F);                                // a hard stint
