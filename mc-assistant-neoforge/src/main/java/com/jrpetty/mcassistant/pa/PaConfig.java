@@ -50,8 +50,8 @@ public final class PaConfig {
             "clean (never swears), cheeky (bloody, damn, arse, git), or unfiltered (swears). A player's own Language setting can't go past this.")
             .define("maxLanguage", "cheeky");
         START_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 1 (it gains more as it levels up, to maxHearts at level 10).")
-            .defineInRange("startHearts", 3, 1, 50);
-        MAX_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 10.").defineInRange("maxHearts", 10, 1, 50);
+            .defineInRange("startHearts", 10, 1, 50);                    // [pa35] ten hearts at level 1, like a player
+        MAX_HEARTS = b.comment("[pa33c-2b] Hearts an assistant has at level 10.").defineInRange("maxHearts", 20, 1, 50);   // [pa35] twenty (two rows) at level 10
         KEEP_PACK = b.comment("[pa33c-2b] Does a fallen assistant keep its pack (true), or drop it where it fell like a player (false)?")
             .define("keepPackOnDeath", true);
         XP_MULT = b.comment("[pa33d] How fast assistants level up: their experience is multiplied by this (1 = the intended grind, many game days to level 10).",
@@ -117,9 +117,9 @@ public final class PaConfig {
     /** [pa33b] The language cap: 0 clean, 1 cheeky, 2 unfiltered. */
     public static int maxLanguage() { return PaTone.cap(read(MAX_LANGUAGE, "cheeky")); }
 
-    public static int startHearts() { return read(START_HEARTS, 3); }
+    public static int startHearts() { return read(START_HEARTS, 10); }
 
-    public static int maxHearts() { return read(MAX_HEARTS, 10); }
+    public static int maxHearts() { return read(MAX_HEARTS, 20); }
 
     public static boolean keepPack() { return read(KEEP_PACK, true); }
 

@@ -919,7 +919,7 @@ public class PlayerAssistantGameTests {
         a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
         a.insertGiven(new ItemStack(Items.BREAD, 4));
         a.hunger.set(12, 0, 0);                                   // [pa33c-2b] peckish (player rules: a full bar heals without eating)
-        float low = 3.0F;                                         // of its three hearts at level 1
+        float low = 3.0F;                                         // [pa35] of its ten hearts at level 1
         a.setHealth(low);
         helper.runAfterDelay(400, () -> {
             int bread = a.countMatching(st -> st.is(Items.BREAD));
@@ -1267,7 +1267,7 @@ public class PlayerAssistantGameTests {
         PlayerAssistantEntity a = assistant(helper, p);
         a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
         helper.runAfterDelay(25, () -> {
-            helper.assertTrue(Math.abs(a.getMaxHealth() - 6.0F) < 0.01F, "three hearts at level 1: " + a.getMaxHealth());
+            helper.assertTrue(Math.abs(a.getMaxHealth() - 20.0F) < 0.01F, "[pa35] ten hearts at level 1, like a player: " + a.getMaxHealth());
             int before = a.hunger.food();
             for (int i = 0; i < 40; i++) a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             a.hunger.exhaust(30F);                                // a hard stint
@@ -1542,9 +1542,9 @@ public class PlayerAssistantGameTests {
             helper.assertTrue((a.animValue() & 0xFF) == com.jrpetty.mcassistant.entity.FolkAction.Act.CHEER.ordinal(), "a cheer");
             helper.assertTrue(said(a) > said && fromLists(lastWords(a), "say.levelup") && lastWords(a).contains("4"), "a line for it: " + lastWords(a));
             helper.runAfterDelay(25, () -> {
-                helper.assertTrue(a.getMaxHealth() > 6.0F, "more hearts: " + a.getMaxHealth());
+                helper.assertTrue(a.getMaxHealth() > 20.0F, "more hearts: " + a.getMaxHealth());   // [pa35] ten hearts at level 1, more by level 4
                 helper.assertTrue(a.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) > speed1, "quicker on its feet");
-                helper.assertTrue(a.experiencePercent() > 0, "quicker at the work");
+                helper.assertTrue(a.experiencePercent() == 0, "[pa35] never quicker at the work itself: a player's pace (PaPace)");
                 // the multiplier: three times the pay
                 long b2 = a.paXp();
                 a.earn("build");

@@ -28,16 +28,30 @@ final class PaHud {
 
     /** [pa33c-2b] Its hearts as a player's, right-aligned to {@code right}: one container per two health. Returns the left edge. */
     static int hearts(GuiGraphics g, int right, int y, float hp, float max) {
-        int n = Math.max(1, (int) Math.ceil(max / 2.0F)), step = n > 10 ? 6 : 8;
-        int x0 = right - (n - 1) * step - 9;
+        return hearts(g, right, y, hp, max, 10);
+    }
+
+    /**
+     * [pa35] Ten hearts to a row, as a player's; past twenty health a second row (to forty at level 10), {@code rowGap}
+     * apart: positive below the first, negative above it (as vanilla stacks extra hearts). Returns the left edge.
+     */
+    static int hearts(GuiGraphics g, int right, int y, float hp, float max, int rowGap) {
+        int n = Math.max(1, (int) Math.ceil(max / 2.0F)), perRow = Math.min(10, n), step = 8;
+        int x0 = right - (perRow - 1) * step - 9;
         for (int i = 0; i < n; i++) {
-            int x = x0 + i * step;
-            g.blitSprite(HEART_BOX, x, y, 9, 9);
+            int row = i / 10, col = i % 10;
+            int x = x0 + col * step, yy = y + row * rowGap;
+            g.blitSprite(HEART_BOX, x, yy, 9, 9);
             float v = hp - i * 2;
-            if (v >= 2) g.blitSprite(HEART, x, y, 9, 9);
-            else if (v >= 1) g.blitSprite(HEART_HALF, x, y, 9, 9);
+            if (v >= 2) g.blitSprite(HEART, x, yy, 9, 9);
+            else if (v >= 1) g.blitSprite(HEART_HALF, x, yy, 9, 9);
         }
         return x0;
+    }
+
+    /** [pa35] How many rows of hearts this much health takes (ten hearts a row). */
+    static int heartRows(float max) {
+        return Math.max(1, (int) Math.ceil(Math.ceil(max / 2.0F) / 10.0));
     }
 
     /** [pa33c-2b] Its hunger as a player's: ten drumsticks, right-aligned. */

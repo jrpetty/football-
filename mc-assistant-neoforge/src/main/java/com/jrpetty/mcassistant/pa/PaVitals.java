@@ -34,8 +34,11 @@ final class PaVitals {
             var hp = a.getAttribute(Attributes.MAX_HEALTH);
             float want = PaHunger.maxHealth(level(a), PaConfig.startHearts(), PaConfig.maxHearts());
             if (hp != null && Math.abs(hp.getBaseValue() - want) > 0.01) {
+                double was = Math.max(1.0, a.getMaxHealth());
+                float frac = (float) Math.max(0.0, Math.min(1.0, a.getHealth() / was));
                 hp.setBaseValue(want);
-                if (a.getHealth() > a.getMaxHealth()) a.setHealth(a.getMaxHealth());
+                // [pa35] its health keeps its share of the new maximum (an old six-health assistant at full comes back at full twenty)
+                if (a.isAlive()) a.setHealth(Math.max(1.0F, Math.min(a.getMaxHealth(), frac * a.getMaxHealth())));
             }
             levelPerks(a, level(a));                                   // [pa33d] quicker on its feet, harder hits, a longer look ahead
         }

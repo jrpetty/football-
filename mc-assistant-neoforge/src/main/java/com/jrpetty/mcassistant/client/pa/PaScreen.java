@@ -202,8 +202,13 @@ public class PaScreen extends Screen {
         // [pa33c-2b] hearts and hunger as a player's, from its right
         int food = a != null ? a.food() : s.getInt("hunger");
         int bx = left + w - 24;
-        PaHud.hearts(g, bx, top + 4, hp, max);
-        PaHud.food(g, bx, top + 15, food);
+        if (PaHud.heartRows(max) > 1) {                                     // [pa35] two rows from twenty health: the second above, as vanilla stacks them
+            PaHud.hearts(g, bx, top + 9, hp, max, -6);
+            PaHud.food(g, bx, top + 17, food);
+        } else {
+            PaHud.hearts(g, bx, top + 4, hp, max);
+            PaHud.food(g, bx, top + 15, food);
+        }
         if (in(mx, my, bx - 80, top + 3, 80, 22))
             g.renderTooltip(font, net.minecraft.network.chat.Component.literal((int) Math.ceil(hp) + " of " + (int) max + " health, food " + food + " of 20"), mx, my);
         button(g, "✕", left + w - 20, top + 6, 14, 14, mx, my, true, false, "Close (Esc)", this::onClose);
@@ -827,14 +832,14 @@ public class PaScreen extends Screen {
         float hp = a != null ? a.getHealth() : s.getFloat("hp"), max = a != null ? a.getMaxHealth() : Math.max(1, s.getFloat("maxHp"));
         int food = a != null ? a.food() : s.getInt("hunger");
         g.drawString(font, "Health", x, cy + 1, muted(), false);
-        PaHud.hearts(g, x + 50 + 81, cy, hp, max);
+        PaHud.hearts(g, x + 50 + 81, cy, hp, max, 10);
         g.drawString(font, (int) Math.ceil(hp) + "/" + (int) max, x + 140, cy + 1, UiStyle.TEXT, false);
-        cy += 12;
+        cy += 2 + 10 * PaHud.heartRows(max);                           // [pa35] a second row from twenty health
         g.drawString(font, "Food", x, cy + 1, muted(), false);
         PaHud.food(g, x + 50 + 81, cy, food);
         g.drawString(font, food + "/20", x + 140, cy + 1, UiStyle.TEXT, false);
         cy += 14;
-        cy = line(g, "Hearts grow with its level, from 3 to 10. Food in its pack: " + s.getInt("food") + ".", x, cy, half);
+        cy = line(g, "Hearts grow with its level, from 10 to 20 (a second row). Food in its pack: " + s.getInt("food") + ".", x, cy, half);
         String where = s.getString("dim").replace("_", " ") + ", " + s.getInt("dist") + " blocks from you";
         cy = line(g, "Where: " + where + "  ·  " + s.getString("mode"), x, cy, half);
         if (!s.getString("bed").isEmpty()) cy = line(g, "Its bed: " + s.getString("bed"), x, cy, half);
