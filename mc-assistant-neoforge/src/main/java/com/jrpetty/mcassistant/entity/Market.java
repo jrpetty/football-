@@ -213,6 +213,7 @@ public final class Market {
         good("Dried kelp", Items.DRIED_KELP, 0.08, 16, Villages.Task.FOOD),
         good("Clay", Items.CLAY_BALL, 0.05, 16, Villages.Task.NONE),
         good("Cobbled deepslate", Items.COBBLED_DEEPSLATE, 0.05, 32, Villages.Task.NONE),   // [house34c] dressed into slate
+        good("Bricks", Items.BRICKS, 0.3, 16, Villages.Task.NONE),                          // [house34c] blocks of brick
         good("Turtle scutes", Items.TURTLE_SCUTE, 3.0, 1, Villages.Task.NONE),
         good("Turtle helmet", Items.TURTLE_HELMET, 18.0, 1, Villages.Task.NONE),
         // What the crafts make, sold one at a time at the shop and the café.
@@ -1168,7 +1169,7 @@ public final class Market {
     }
 
     /**
-     * [house34c] As buyWool, for the town's works: a lot or two a day from the traders of a good its works are short of and
+     * [house34c] As buyWool, for the town's works: up to four lots a day from the traders of a good its works are short of and
      * its own trades have not made (the rows' finishing: clay for the kiln's bricks, stone bricks, cobbled deepslate for the
      * mason's slate), at the town's price, out of a quarter of what the treasury has free at most (the beds and the wages
      * come first); never while the town is short (TownBudget: "its buildings plain"). Returns the coin spent.
@@ -1179,7 +1180,7 @@ public final class Market {
         Good g = goodFor(new ItemStack(item));
         if (g == null) return 0;
         long now = level.getGameTime();
-        int lots = Math.min(2, (want + g.bundle() - 1) / g.bundle());
+        int lots = Math.min(4, (want + g.bundle() - 1) / g.bundle());
         int price = sellPrice(level, id, g, marketDay(id, day));
         int can = Math.max(0, (Ledger.coins(id) - saved(id, now)) / 4) / Math.max(1, price);
         lots = Math.min(lots, can);

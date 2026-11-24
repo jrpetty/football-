@@ -1191,8 +1191,8 @@ public final class TerraceRows {
     /**
      * [house34c] Each morning (Market's, on the works' account): what the rows' finishing wants and the town's own trades
      * have not made, from the traders, a lot or two a day: clay for the kiln (four balls a block of brick) when the stores
-     * have none to fire, stone bricks while the bench is behind, and cobbled deepslate for the slate when the mine has sent
-     * up none.
+     * have none to fire and blocks of brick for what it cannot fire, stone bricks while the bench is behind, and cobbled
+     * deepslate for the slate when the mine has sent up none.
      */
     public static void buyForFinishing(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
@@ -1201,12 +1201,15 @@ public final class TerraceRows {
         int bricks = finishingWant(id, Items.BRICKS) - Market.stock(level, id, st -> st.is(Items.BRICKS));
         int clay = Market.stock(level, id, st -> st.is(Items.CLAY_BALL)), fired = Market.stock(level, id, st -> st.is(Items.BRICK));
         if (bricks > 0 && clay < 16) Market.importFor(level, v, day, Items.CLAY_BALL, Math.min(64, 4 * bricks) - clay - fired, "the kiln's bricks for the terraces");
+        // what the kiln cannot fire in a day or two of what it has, the brickworks' blocks from the traders
+        int behind = bricks - (clay + fired) / 4;
+        if (behind > 0) Market.importFor(level, v, day, Items.BRICKS, Math.min(64, behind), "the terraces' brick");
         // the stone bricks bought too while the bench has not caught up (it cuts the town's own stone between its iron runs,
         // and kept up only with the builders: the grand row's cornice stood in cobble for days with cobble in the stores)
         int dressed = finishingWant(id, Items.STONE_BRICKS) - Market.stock(level, id, st -> st.is(Items.STONE_BRICKS));
-        if (dressed > 0) Market.importFor(level, v, day, Items.STONE_BRICKS, Math.min(64, dressed), "the terraces' dressed stone");
+        if (dressed > 0) Market.importFor(level, v, day, Items.STONE_BRICKS, Math.min(128, dressed), "the terraces' dressed stone");
         int slate = finishingWant(id, Items.DEEPSLATE_TILES) - Market.stock(level, id, st -> st.is(Items.DEEPSLATE_TILES) || st.is(Items.COBBLED_DEEPSLATE));
-        if (slate > 0) Market.importFor(level, v, day, Items.COBBLED_DEEPSLATE, Math.min(64, slate), "the terraces' slate");
+        if (slate > 0) Market.importFor(level, v, day, Items.COBBLED_DEEPSLATE, Math.min(128, slate), "the terraces' slate");
     }
 
     /** [house34c] The command (/village terrace rows): the nearest town's rows, where they stand, and their wants. */
