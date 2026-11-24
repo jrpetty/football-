@@ -52,4 +52,22 @@ public final class PaGearLadder {
         }
         return b.toString();
     }
+
+    /** [pa35] The guide's sentence for both ladders at their defaults, written from the rungs (a unit test holds the guide to it). */
+    public static String guideSentence() {
+        java.util.List<String> ores = new java.util.ArrayList<>(), gear = new java.util.ArrayList<>();
+        for (int l = 2; l <= PaLevels.MAX; l++) {
+            java.util.List<String> o = new java.util.ArrayList<>(), g = new java.util.ArrayList<>();
+            for (PaMineLadder.Rung r : PaMineLadder.RUNGS) if (r.level() == l) o.add(r.says());
+            for (Rung r : RUNGS) if (r.level() == l) g.add(r.says());
+            if (!o.isEmpty()) ores.add(and(o) + " at " + l);
+            if (!g.isEmpty()) gear.add(and(g) + " at " + l);
+        }
+        return "Ores and gear open by level too (an operator can move a rung or switch the ladders off): " + String.join(", ", ores) + "; "
+            + String.join(", ", gear) + ".";
+    }
+
+    private static String and(java.util.List<String> l) {
+        return l.size() == 1 ? l.get(0) : String.join(", ", l.subList(0, l.size() - 1)) + " and " + l.get(l.size() - 1);
+    }
 }

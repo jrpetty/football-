@@ -634,4 +634,51 @@ public class PaMemoryGameTests {
             }
         });
     }
+
+    /** pam13: building goes at a hand's pace too: thirty blocks placed (two small walls) never quicker than half a second
+     *  apart on average, and no two in the same tick, at level 10 as at level 1. */
+    @GameTest(template = EMPTY, timeoutTicks = 3600, batch = "pam13_place_pace")
+    public static void pam13_place_pace(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_536_000, y = ground(level, x);
+        for (int dx = -8; dx <= 8; dx++) for (int dz = -8; dz <= 8; dz++) for (int dy = 0; dy <= 4; dy++)
+            level.setBlock(new BlockPos(x + dx, y + dy, Z + dz), Blocks.AIR.defaultBlockState(), 2);
+        ServerPlayer p = player(helper, level, new BlockPos(x - 6, y, Z - 6));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.setPaXpForTests(PaLevels.xpFor(10));
+        a.insertGiven(new ItemStack(Items.COBBLESTONE, 64));
+        a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.STAY);
+        java.util.List<Long> placed = new java.util.ArrayList<>();
+        int[] seen = {0}, phase = {0};
+        helper.runAfterDelay(10, () -> {
+            a.teleportTo(x + 0.5, y, Z + 0.5);
+            a.setYRot(0); a.setYHeadRot(0); a.yBodyRot = 0;
+            a.enqueue(com.jrpetty.mcassistant.entity.Job.build("wall"));
+            phase[0] = 1;
+        });
+        helper.onEachTick(() -> {
+            if (phase[0] == 0) return;
+            int n = 0;
+            for (int dx = -8; dx <= 8; dx++) for (int dz = -8; dz <= 8; dz++) for (int dy = 0; dy <= 4; dy++)
+                if (level.getBlockState(new BlockPos(x + dx, y + dy, Z + dz)).is(Blocks.COBBLESTONE)) n++;
+            for (int k = seen[0]; k < n; k++) placed.add(level.getGameTime());
+            seen[0] = Math.max(seen[0], n);
+            if (phase[0] == 1 && n >= 15 && a.peekJob() == null && a.task == null) {       // the first wall up: a second, the other way
+                a.setYRot(180); a.setYHeadRot(180); a.yBodyRot = 180;
+                a.enqueue(com.jrpetty.mcassistant.entity.Job.build("wall"));
+                phase[0] = 2;
+            }
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(placed.size() >= 30, "thirty placed: " + placed.size());
+            long span = placed.get(29) - placed.get(0);
+            int sameTick = 0;
+            for (int i = 1; i < 30; i++) if (placed.get(i).equals(placed.get(i - 1))) sameTick++;
+            long firstWall = placed.get(14) - placed.get(0);
+            helper.assertTrue(firstWall >= 14 * 10, "fifteen placements took at least 14 x 0.5 s: " + firstWall);
+            helper.assertTrue(sameTick == 0, "never two in one tick: " + sameTick);
+            Kit.log("[VT] pam13 thirty placements over " + span + " ticks; the first wall's fifteen over " + firstWall + " ("
+                + String.format(java.util.Locale.ROOT, "%.2f", firstWall / 14.0 / 20.0) + " s each)");
+        });
+    }
 }
