@@ -589,20 +589,20 @@ Hauling everything from {from} to {to}.
 == logi.haul_trip
 Trip {trip} done. {n} moved so far.
 That's trip {trip}. {n} in total.
-Another load in. {n} so far, {trip} trips.
+Another load in. {n} so far, {trip} trip(s).
 Trip {trip}. Going back for more.
-{n} moved over {trip} trips. Back I go.
+{n} moved over {trip} trip(s). Back I go.
 Trip {trip} unloaded.
 == logi.haul_trip@gloomy
 Trip {trip}. {n} moved. My feet have opinions.
-{trip} trips. {n} things. Back again.
+{trip} trip(s). {n} things. Back again.
 Trip {trip}. The road knows me by name now.
 Another one done. {n} in all. More to come.
-{trip} trips. Still going. Still hauling.
+{trip} trip(s). Still going. Still hauling.
 Trip {trip}. Don't count the steps. I do, and I regret it.
 == logi.haul_trip@serious
 Trip {trip} complete: {n} moved.
-{n} moved in {trip} trips.
+{n} moved in {trip} trip(s).
 Trip {trip} done.
 Load delivered. Total {n}.
 Trip {trip}: unloaded.

@@ -89,7 +89,7 @@ public final class PaChestScreen extends PaLogiBase {
         int colW = (w - 30) / 2;
         int y0 = top + 30;
         list(g, "Its pack", its, left + 10, y0, colW, mx, my, "pack");
-        list(g, "Yours (handed over when you pick)", yours, left + 20 + colW, y0, colW, mx, my, "me");
+        list(g, "Yours (handed over)", yours, left + 20 + colW, y0, colW, mx, my, "me");
         g.drawString(font, UiStyle.clip(font, "It walks over and puts them in at a player's pace.", w - 20), left + 10, top + h - 26, UiStyle.TEXT_FAINT, false);
     }
 
@@ -106,7 +106,7 @@ public final class PaChestScreen extends PaLogiBase {
             int max = new ItemStack(item(id)).getMaxStackSize();
             g.drawString(font, UiStyle.clip(font, nameOf(id), cw - 80), x + 19, ry + 5, UiStyle.TEXT, false);
             int bx = x + cw - 58;
-            if (n > max) button(g, "Stack", bx, ry + 1, 28, 15, mx, my, true, false, "Put in one stack (" + max + ")", () -> sendPut(id, max, src));
+            if (n > max) button(g, String.valueOf(max), bx, ry + 1, 28, 15, mx, my, true, false, "Put in one stack (" + max + ")", () -> sendPut(id, max, src));
             button(g, "All", bx + 30, ry + 1, 28, 15, mx, my, true, true, "Put in all " + n, () -> sendPut(id, n, src));
             ry += 18;
         }

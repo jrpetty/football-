@@ -531,4 +531,23 @@ public class PaLogisticsGameTests {
             Kit.log("[VT] logi16 chest " + n + "; said " + allWords(a));
         });
     }
+
+    /** "make me a full set of iron armour": four pieces from 24 ingots at a table, handed over together. */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "logi17_armour_set")
+    public static void logi17_armour_set(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 9_648_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        level.setBlock(new BlockPos(x + 3, y, Z + 2), Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
+        a.insertGiven(new ItemStack(Items.IRON_INGOT, 24));
+        say(p, a, "make me a full set of iron armour", null);
+        helper.succeedWhen(() -> {
+            int got = 0;
+            for (Item piece : new Item[]{Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS})
+                if (p.getInventory().countItem(piece) > 0) got++;
+            helper.assertTrue(got == 4 && a.plan.idle(), "the set handed over: " + got + "/4 (" + a.state() + "; " + lastWords(a) + ")");
+            Kit.log("[VT] logi17 pieces " + got + "; said " + allWords(a));
+        });
+    }
 }

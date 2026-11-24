@@ -57,6 +57,18 @@ public final class PaLogiTalk {
         if (pool.isEmpty()) pool = lines(key, "", false);
         String raw = PaPersona.from(pool, a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) return fill.getOrDefault("what", "");
-        return PaTalk.sentences(PaPersona.fill(raw, fill));
+        return PaTalk.sentences(plurals(PaPersona.fill(raw, fill)));
+    }
+
+    private static final java.util.regex.Pattern MAYBE_PLURAL = java.util.regex.Pattern.compile("\\b(\\d+) (\\w+)\\(s\\)");
+
+    /** "1 trip(s)" reads "1 trip", "3 chest(s)" reads "3 chests". */
+    static String plurals(String s) {
+        if (s == null || !s.contains("(s)")) return s;
+        java.util.regex.Matcher m = MAYBE_PLURAL.matcher(s);
+        StringBuilder out = new StringBuilder();
+        while (m.find()) m.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(m.group(1) + " " + m.group(2) + ("1".equals(m.group(1)) ? "" : "s")));
+        m.appendTail(out);
+        return out.toString();
     }
 }

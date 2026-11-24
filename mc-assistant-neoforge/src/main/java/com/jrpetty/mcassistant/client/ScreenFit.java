@@ -61,6 +61,7 @@ public final class ScreenFit {
         int widest = 0;
         for (int w : boxW) widest = Math.max(widest, w);
         int cx = width / 2, gap = 32 + 8 + widest / 2;
+        gap = Math.max(gap, Math.min(60 + widest / 2, width / 2 - widest / 2 - 4));   // [pa36] room for the middle panel between the columns
         int top = Math.max(2, (height - HOTBAR - right * rowH) / 2);
         int[][] out = new int[n][];
         for (int i = 0; i < n; i++) {

@@ -267,6 +267,72 @@ public final class PaCraft {
         return null;
     }
 
+    // ---- a set of armour: "make me a full set of iron armour"
+
+    private static final String[] PIECES = {"helmet", "chestplate", "leggings", "boots"};
+    private static final int[] PIECE_COST = {5, 8, 7, 4};
+
+    /** The four pieces when the thing asked for is a whole set of armour (its material picked from what it has when unsaid); else null. */
+    @Nullable
+    public static List<PaIntent> pieces(PlayerAssistantEntity a, PaIntent i) {
+        String it = i.item() == null ? "" : i.item().toLowerCase(Locale.ROOT).trim();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(?:(leather|iron|golden|gold|diamond|netherite|chainmail) )?armou?r(?: set| suit)?$").matcher(it);
+        if (!m.matches()) return null;
+        String mat = m.group(1) == null ? "" : m.group(1).equals("gold") ? "golden" : m.group(1);
+        if (mat.isEmpty()) {
+            Map<Item, Integer> av = available(a, true);
+            mat = av.getOrDefault(Items.DIAMOND, 0) >= 24 ? "diamond" : av.getOrDefault(Items.IRON_INGOT, 0) >= 24 ? "iron"
+                : av.getOrDefault(Items.LEATHER, 0) >= 24 ? "leather" : "iron";
+        }
+        List<PaIntent> out = new ArrayList<>();
+        for (String piece : PIECES) out.add(new PaIntent(PaIntent.Kind.CRAFT, mat + " " + piece, 1, PaIntent.Place.NONE, ""));
+        return out;
+    }
+
+    /** What the set needs in all, short of what it has (pack and chests), checked before any piece is begun; null when it has enough. */
+    @Nullable
+    public static String setShort(PlayerAssistantEntity a, PaIntent i, List<PaIntent> set) {
+        if (!a.plan.idle() || !PaLogiPlan.alone(i.raw()) || (i.raw() != null && i.raw().startsWith("#go "))) return null;
+        String mat = set.get(0).item().split(" ")[0];
+        Item stuff = switch (mat) {
+            case "iron" -> Items.IRON_INGOT;
+            case "golden" -> Items.GOLD_INGOT;
+            case "diamond" -> Items.DIAMOND;
+            case "leather" -> Items.LEATHER;
+            default -> null;
+        };
+        if (stuff == null) return null;                                    // netherite / chainmail: the usual planner says what it can't do
+        Map<Item, Integer> av = available(a, true);
+        int want = 0;
+        for (int k = 0; k < PIECES.length; k++) {
+            Item made = itemFor(a.level(), mat + " " + PIECES[k]);
+            if (made == null || av.getOrDefault(made, 0) == 0) want += PIECE_COST[k];
+        }
+        int have = av.getOrDefault(stuff, 0);
+        if (stuff == Items.IRON_INGOT) have += av.getOrDefault(Items.RAW_IRON, 0);
+        if (stuff == Items.GOLD_INGOT) have += av.getOrDefault(Items.RAW_GOLD, 0);
+        if (have >= want) return null;
+        Map<Item, Integer> miss = new LinkedHashMap<>();
+        miss.put(stuff, want - have);
+        String raw = i.raw() == null ? "" : i.raw();
+        PaTalk.reply(a, PaLogiTalk.line(a, "craft.short", "need", list(miss)), List.of(new Choice("Go and get them", "#go " + raw), new Choice("Leave it", "no")));
+        return "";
+    }
+
+    /** After the pieces' own steps: the set handed over in one go, or put on. */
+    public static void deliverSet(PlayerAssistantEntity a, PaIntent i, List<PaPlan.Step> out, List<PaIntent> set) {
+        String raw = i.raw() == null ? "" : i.raw().toLowerCase(Locale.ROOT);
+        if (raw.matches(".*\\b(?:make|craft|build|forge) me\\b.*|.*\\bfor me\\b.*|.*\\bgive (?:it|them) to me\\b.*")) {
+            PaPlan.Step give = PaOrders.step("bring you the " + set.get(0).item().split(" ")[0] + " armour", PaIntent.Kind.GIVE, 20);
+            for (PaIntent piece : set) give.jobs.add(Job.give(piece.item(), 1));
+            out.add(give);
+        } else if (raw.matches(".*\\b(?:make|craft|forge) yourself\\b.*|.*\\bfor yourself\\b.*")) {
+            PaPlan.Step eq = PaOrders.step("put it on", PaIntent.Kind.CRAFT, 5);
+            eq.task = new PaTask(PaTask.Kind.EQUIP, null, "", 0);
+            out.add(eq);
+        }
+    }
+
     /** After the usual plan: "make me ..." hands it over, "make yourself ..." puts it on. */
     public static void deliver(PlayerAssistantEntity a, PaIntent i, List<PaPlan.Step> out, String what, int n) {
         String raw = i.raw() == null ? "" : i.raw().toLowerCase(Locale.ROOT);

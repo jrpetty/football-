@@ -121,6 +121,13 @@ public final class PaLogistics {
         return j != null && j.ownWords;
     }
 
+    /** Work that announces itself (a fill says how many for which chest; a stock rule was just confirmed): no "Right you are" on top. PaOrders hook. */
+    public static boolean ownStart(PlayerAssistantEntity a, List<PaPlan.Step> work) {
+        if (work.size() != 1) return false;
+        PaLogiJob j = jobOf(a, work.get(0));
+        return j != null && ((j.o.op() == PaLogiOrder.Op.FILL && (j.rule != null || !j.quietStart)) || j.o.op() == PaLogiOrder.Op.HAUL);
+    }
+
     // ------------------------------------------------------------------ recent pings and looks (what "this" and "that" mean)
 
     private record Seen(BlockPos pos, String dim, long at) {}
@@ -216,6 +223,9 @@ public final class PaLogistics {
             case STORAGE, HOME -> {
                 BlockPos home = r.kind() == Ref.Kind.HOME && PaOrders.homeOf(a) != null ? PaOrders.homeOf(a) : centre;
                 for (PaStore.Known kn : st.known) if (kn.dim.equals(dim) && (kn.storage || "storage".equals(kn.name))) out.add(kn.at());
+                out.sort(Comparator.comparingDouble(b -> b.distSqr(home)));          // the storage nearest where it's wanted first
+                BlockPos wp = waypoint(a, "storage");                                   // a place called the storage: its chests
+                if (wp != null) for (BlockPos b : containersAround(level, wp, 6, "")) if (!out.contains(b)) out.add(b);
                 if (out.isEmpty()) { PaStore.Known d = st.dropoff(dim); if (d != null) out.add(d.at()); }
                 List<BlockPos> rest = nearest(a, st, dim, home, r.type().isEmpty() || r.type().equals("chest") ? "chest" : r.type(), 48, true);
                 for (BlockPos b : rest) if (!out.contains(b)) out.add(b);
@@ -251,6 +261,25 @@ public final class PaLogistics {
 
     /** The containers at or right beside a block looked at (a chest's side, the block under a barrel). */
     @Nullable
+    /**
+     * "This is my storage" said at a chest is kept as a place by the memory reader; the chest itself is learnt too, under
+     * that name ("storage" marks it as storage), so the orders that name it find it. PaMemoryAct hook.
+     */
+    public static void placeNamed(ServerPlayer p, PlayerAssistantEntity a, String name, BlockPos at) {
+        UUID owner = a.getOwnerId();
+        if (owner == null || at == null || !PaContainers.is(a.level(), at)) return;
+        UUID placer = PaStore.placedBy(a.level().dimension().location().toString(), at);
+        if (placer != null && !placer.equals(owner)) return;
+        String n = name.toLowerCase(java.util.Locale.ROOT).replaceAll("^(?:the|my|our) ", "").trim();
+        PaStore.Known k = PaStore.learn(owner, a.level().dimension().location().toString(), at, PaContainers.blockId(a.level(), at), a.level().getGameTime());
+        if (n.matches("(?:main )?storage(?: chest| room| area)?|stores?")) { k.storage = true; k.name = "storage"; }
+        else if (n.matches("drop ?off|drop-off")) { for (PaStore.Known o : PaStore.of(owner).known) o.dropoff = false; k.dropoff = true; }
+        else k.name = n;
+        PaOrders.point(a, at);
+        seen(p, at);
+        PaStore.touch();
+    }
+
     static BlockPos containerAt(Level level, BlockPos b) {
         if (PaContainers.is(level, b)) return b;
         return null;
@@ -513,11 +542,12 @@ public final class PaLogistics {
     }
 
     /** Its player said stop: what the job under way had moved, said once (PaOrders hook, before everything stops). */
-    public static void stopping(PlayerAssistantEntity a) {
+    @Nullable
+    public static String stopping(PlayerAssistantEntity a) {
         PaLogiJob j = jobOf(a, a.plan.current);
-        if (j == null) return;
+        if (j == null) return null;
         j.abandon(a);
-        if (j.moved > 0) PaTalk.reply(a, PaLogiTalk.line(a, "logi.stopped", "n", String.valueOf(j.moved)));
+        return j.moved > 0 ? PaLogiTalk.line(a, "logi.stopped", "n", String.valueOf(j.moved)) : null;
     }
 
     // ------------------------------------------------------------------ counts across storage

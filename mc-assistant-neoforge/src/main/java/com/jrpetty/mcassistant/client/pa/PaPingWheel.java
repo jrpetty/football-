@@ -77,6 +77,14 @@ public final class PaPingWheel extends Screen {
         String mid = hovered >= 0 ? options.get(hovered).label() : aim.label();
         String sub = corner != null ? "the area between the corners" : hovered >= 0 ? "for " + PaClient.name() : "let go here: just a marker";
         int w = Math.max(96, Math.max(font.width(mid), font.width(sub)) + 16);
+        int room = width;                                                   // [pa36] the middle panel stays clear of the boxes beside it
+        for (int i = 0; i < n; i++) if (Math.abs(laid[i][1] - cy) < BOX_H / 2 + 14) room = Math.min(room, 2 * (Math.abs(laid[i][0] - cx) - bw[i] / 2) - 6);
+        if (w > room && room >= 40) {
+            w = room;
+            mid = font.plainSubstrByWidth(mid, w - 8);
+            if (font.width(sub) > w - 8) sub = hovered >= 0 || corner != null ? font.plainSubstrByWidth(sub, w - 8) : "let go: a marker";
+            if (font.width(sub) > w - 8) sub = font.plainSubstrByWidth(sub, w - 8);
+        }
         g.fill(cx - w / 2 - 1, cy - 13, cx + w / 2 + 1, cy + 13, RIM);
         g.fill(cx - w / 2, cy - 12, cx + w / 2, cy + 12, PANEL);
         g.drawCenteredString(font, mid, cx, cy - 9, hovered >= 0 ? 0xFF8FE3D3 : INK);

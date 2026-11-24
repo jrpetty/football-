@@ -34,6 +34,11 @@ class PaLogiLinesTest {
     }
 
     @Test
+    void countsReadAsEnglish() {
+        org.junit.jupiter.api.Assertions.assertEquals("Took 1 trip, 3 chests.", PaLogiTalk.plurals("Took 1 trip(s), 3 chest(s)."));
+    }
+
+    @Test
     void dryByDefault() {
         int daft = 0, all = 0;
         for (String key : keys()) {

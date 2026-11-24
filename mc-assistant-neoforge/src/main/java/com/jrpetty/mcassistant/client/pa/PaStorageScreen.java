@@ -68,16 +68,17 @@ public final class PaStorageScreen extends PaLogiBase {
         }
         // the header line: a count, the search total, the drop-off toggle, refresh
         String head = q.isEmpty() ? all.size() + " container" + (all.size() == 1 ? "" : "s") : rows.size() + " with \"" + q + "\": " + total + " in all";
-        g.drawString(font, UiStyle.clip(font, head, 140), left + 168, top + 31, muted(), false);
         boolean auto = s.getBoolean("autoDrop");
         String ad = auto ? "Auto drop-off: on" : "Auto drop-off: off";
-        button(g, ad, left + w - bw(ad) - 54, top + 27, bw(ad), 15, mx, my, true, auto, "When its pack fills while working, it unloads at the drop-off and goes back to it", () -> {
+        int rw = bw("Refresh");
+        g.drawString(font, UiStyle.clip(font, head, Math.max(40, w - bw(ad) - rw - 182)), left + 168, top + 31, muted(), false);
+        button(g, ad, left + w - bw(ad) - rw - 12, top + 27, bw(ad), 15, mx, my, true, auto, "When its pack fills while working, it unloads at the drop-off and goes back to it", () -> {
             CompoundTag t = new CompoundTag();
             t.putBoolean("on", !auto);
             PaLogiClient.send("autodrop", t);
             PaLogiClient.send("storage", new CompoundTag());
         });
-        button(g, "Refresh", left + w - 50, top + 27, 42, 15, mx, my, true, false, "Look again", () -> PaLogiClient.send("storage", new CompoundTag()));
+        button(g, "Refresh", left + w - rw - 8, top + 27, rw, 15, mx, my, true, false, "Look again", () -> PaLogiClient.send("storage", new CompoundTag()));
         int listTop = top + 48, listBottom = top + h - 8, rowH = 38;
         contentH = Math.max(0, rows.size() * rowH - (listBottom - listTop));
         scroll = Math.min(scroll, contentH);

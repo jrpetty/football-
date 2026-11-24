@@ -107,6 +107,7 @@ public final class PaMemoryAct {
                 if (r.waypoints.size() >= 32 && !r.waypoints.containsKey(name)) { say(a, "I can only remember 32 places. Forget one first, in the Memory tab."); break; }
                 r.waypoints.put(name, at.immutable());
                 r.waypointDims.put(name, p.level().dimension().location().toString());
+                PaLogistics.placeNamed(p, a, name, at);                        // [pa36] said at a chest: the chest is learnt by that name too
                 if (name.matches("base|home|house|my house|camp|hideout")) a.setHome(at.immutable());
                 b.lastId = -1;
                 lastPlace.put(r.owner, name);
