@@ -129,10 +129,11 @@ public final class PaVoiceStyle {
         List<String> out = new java.util.ArrayList<>();
         StringBuilder cur = new StringBuilder();
         for (String s : sentences) {
-            int want = out.isEmpty() ? 25 : 80;
-            if (cur.length() > 0 && (cur.length() >= want || cur.length() + s.length() > 240)) { out.add(cur.toString()); cur.setLength(0); }
+            boolean firstPiece = out.isEmpty();
+            if (cur.length() > 0 && (cur.length() + 1 + s.length() > (firstPiece ? 60 : 240))) { out.add(cur.toString()); cur.setLength(0); }
             if (cur.length() > 0) cur.append(' ');
             cur.append(s);
+            if (cur.length() >= (out.isEmpty() ? 25 : 80)) { out.add(cur.toString()); cur.setLength(0); }
         }
         if (cur.length() > 0) out.add(cur.toString());
         return out;
@@ -193,11 +194,13 @@ public final class PaVoiceStyle {
         String want = norm(spoken);
         List<Object[]> idx = index;
         if (idx == null) idx = build(PaLines.all());
+        String best = null;
+        int bestLiteral = Math.max(6, (int) (want.replace(" ", "").length() * 0.4)) - 1;   // a template mostly {placeholders} proves nothing
         for (Object[] e : idx) {
             if (e[2] instanceof String exact) { if (exact.equals(want)) return (String) e[0]; }
-            else if (((Pattern) e[2]).matcher(want).matches()) return (String) e[0];
+            else if ((int) e[3] > bestLiteral && ((Pattern) e[2]).matcher(want).matches()) { best = (String) e[0]; bestLiteral = (int) e[3]; }
         }
-        return null;
+        return best;                                                        // the template with the most of its own words wins
     }
 
     /** Build the reverse index from banks (key to lines); kept for every later lookup. */
@@ -209,11 +212,11 @@ public final class PaVoiceStyle {
             for (String line : b.getValue()) {
                 String n = norm(line.replaceAll("\\{[a-z_]+}", "\u0001"));
                 if (n.length() < 3 || seen.putIfAbsent(n, true) != null) continue;
-                if (n.indexOf('\u0001') < 0) out.add(new Object[]{b.getKey(), line, n});
+                if (n.indexOf('\u0001') < 0) out.add(new Object[]{b.getKey(), line, n, n.length()});
                 else {
                     StringBuilder re = new StringBuilder();
                     for (String part : n.split("\u0001", -1)) { if (re.length() > 0) re.append(".{1,60}?"); re.append(Pattern.quote(part)); }
-                    out.add(new Object[]{b.getKey(), line, Pattern.compile(re.toString())});
+                    out.add(new Object[]{b.getKey(), line, Pattern.compile(re.toString()), n.replace("\u0001", "").replace(" ", "").length()});
                 }
             }
         }
@@ -225,6 +228,6 @@ public final class PaVoiceStyle {
     static synchronized void reset() { index = null; }
 
     static String norm(String s) {
-        return s.toLowerCase(Locale.ROOT).replaceAll("\\[[^\\]]*]", " ").replaceAll("[^a-z0-9\u0001]+", " ").trim();
+        return s.toLowerCase(Locale.ROOT).replaceAll("\\[[^\\]]*]", " ").replaceAll("[^a-z0-9\u0001]+", " ").strip();   // strip, not trim: trim eats the \u0001 marks
     }
 }
