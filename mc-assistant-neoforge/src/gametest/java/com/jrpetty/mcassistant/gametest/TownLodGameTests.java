@@ -305,7 +305,7 @@ public class TownLodGameTests {
             ChunkLoad.setLoaded(level, trip, a, 1, false);              // on to the next stretch of road
             ChunkLoad.setLoaded(level, trip, b, 1, true);
             int moved = TownLod.parkedForTests(id, trip);
-            Kit.log("[VT] lod05 parked for the traveller: " + first + " at its first window, " + moved + " once it moved on");
+            Kit.log("lod05 parked for the traveller: " + first + " at its first window, " + moved + " once it moved on");
             helper.assertTrue(moved == 9, "only the window it is in now is kept, not the road behind it: " + moved);
             ChunkLoad.setLoaded(level, trip, b, 1, false);              // its trip over
             helper.assertTrue(TownLod.parkedForTests(id, trip) == 0, "its trip over, nothing of it kept: " + TownLod.parkedForTests(id, trip));

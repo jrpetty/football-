@@ -442,8 +442,8 @@ public class StorehouseGameTests {
     }
 
     /**
-     * [soak40] A city's storehouse tidied in good time: three thousand stacks — a thousand five hundred part stacks
-     * of cobblestone and a thousand five hundred loaves each marked as its own (named, so none may join another) —
+     * [soak40] A city's storehouse tidied in good time: six thousand stacks — three thousand part stacks of
+     * cobblestone and three thousand loaves each marked as its own (named, so none may join another) —
      * come out as whole cobblestone stacks and every marked loaf on its own, nothing lost, well inside a tick. Set
      * each against every stack kept so far, this took seconds, and a big town tidied every ten seconds.
      */
@@ -456,24 +456,24 @@ public class StorehouseGameTests {
         Kit.prepare(level, x, z, 16);
         BlockPos heart = Kit.surface(level, x, z);
         StorehouseBlockEntity store = storehouse(helper, level, heart, 4, 4);
-        for (int i = 0; i < 1500; i++) {
+        for (int i = 0; i < 3000; i++) {
             store.setItem(2 * i, new ItemStack(Items.COBBLESTONE, 10));
             ItemStack loaf = new ItemStack(Items.BREAD, 1);
             loaf.set(DataComponents.CUSTOM_NAME, Component.literal("Loaf " + i));
             store.setItem(2 * i + 1, loaf);
         }
-        helper.assertTrue(store.used() == 3000, "three thousand stacks in: " + store.used());
+        helper.assertTrue(store.used() == 6000, "six thousand stacks in: " + store.used());
         long t0 = System.nanoTime();
         int[] r = store.tidy();
         long ms = (System.nanoTime() - t0) / 1_000_000L;
-        int whole = 15000 / 64, part = 15000 % 64;
-        Kit.log("[VT] st07 tidied " + r[0] + " -> " + r[1] + " stacks in " + ms + " ms; cobblestone " + count(store, Items.COBBLESTONE)
+        int whole = 30000 / 64, part = 30000 % 64;
+        Kit.log("st07 tidied " + r[0] + " -> " + r[1] + " stacks in " + ms + " ms; cobblestone " + count(store, Items.COBBLESTONE)
             + " in " + stacks(store, Items.COBBLESTONE) + ", bread " + count(store, Items.BREAD) + " in " + stacks(store, Items.BREAD));
-        helper.assertTrue(count(store, Items.COBBLESTONE) == 15000 && stacks(store, Items.COBBLESTONE) == whole + (part > 0 ? 1 : 0),
+        helper.assertTrue(count(store, Items.COBBLESTONE) == 30000 && stacks(store, Items.COBBLESTONE) == whole + (part > 0 ? 1 : 0),
             "the cobblestone whole and none lost: " + count(store, Items.COBBLESTONE) + " in " + stacks(store, Items.COBBLESTONE));
-        helper.assertTrue(count(store, Items.BREAD) == 1500 && stacks(store, Items.BREAD) == 1500, "every marked loaf on its own: "
+        helper.assertTrue(count(store, Items.BREAD) == 3000 && stacks(store, Items.BREAD) == 3000, "every marked loaf on its own: "
             + stacks(store, Items.BREAD));
-        helper.assertTrue(r[0] == 3000 && r[1] == 1500 + whole + 1, "the books: " + java.util.Arrays.toString(r));
+        helper.assertTrue(r[0] == 6000 && r[1] == 3000 + whole + 1, "the books: " + java.util.Arrays.toString(r));
         helper.assertTrue(ms < 250, "a big tidy well inside a tick or two: " + ms + " ms");
         helper.succeed();
     }

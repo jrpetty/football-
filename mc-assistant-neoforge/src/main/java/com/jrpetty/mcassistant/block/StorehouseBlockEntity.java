@@ -183,9 +183,16 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
                 if (left.getCount() < Math.min(left.getMaxStackSize(), getMaxStackSize())) open.put(like, left);
             }
         }
+        // [soak40] Each stack's kind and name worked out once, not again at every comparison of the sort.
+        java.util.Map<net.minecraft.world.item.Item, String> names = new java.util.HashMap<>();
+        java.util.Map<ItemStack, Integer> kinds = new java.util.IdentityHashMap<>();
+        for (ItemStack s : merged) {
+            kinds.put(s, com.jrpetty.mcassistant.entity.Stacking.kind(s));
+            names.computeIfAbsent(s.getItem(), it -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).toString());
+        }
         merged.sort(java.util.Comparator
-            .comparingInt(com.jrpetty.mcassistant.entity.Stacking::kind)
-            .thenComparing((ItemStack s) -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).toString())
+            .comparingInt((ItemStack s) -> kinds.get(s))
+            .thenComparing((ItemStack s) -> names.get(s.getItem()))
             .thenComparing(s -> -s.getCount()));
         NonNullList<ItemStack> into = items();
         while (into.size() < merged.size()) into.add(ItemStack.EMPTY);
