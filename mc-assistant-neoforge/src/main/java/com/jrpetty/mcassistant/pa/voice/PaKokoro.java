@@ -31,7 +31,8 @@ import java.util.zip.ZipInputStream;
  * frozen 200 MB+ interpreter. ONNX Runtime's jar carries its own Windows, macOS and Linux libraries, loads like the
  * speech library already does (its own class loader, so nothing joins the mod's classpath), and fails into a message.
  *
- * <p>Nothing ships in the mod jar. [pa35] The first time an assistant is summoned on a computer (unless the player says
+ * <p>[voice37] Now everything below ships inside the release jar instead and is unpacked, not downloaded (PaVoiceAssets);
+ * the list and checks are the same. [pa35] The first time an assistant is summoned on a computer (unless the player says
  * not to), these are downloaded once into the config folder, in the background, from GitHub and Maven Central (reachable
  * where Hugging Face often isn't), each resumed where it stopped and checked by its SHA-256 before use: the int8 model
  * (about 92 MB) and the voice pack (about 28 MB) from kokoro-onnx's model-files-v1.0 release, its vocabulary, misaki's

@@ -21,10 +21,11 @@ import java.util.function.BooleanSupplier;
  * once from a licensed recording, shipped in the mod jar) goes in front, a 24-layer language model writes speech tokens
  * one at a time (sampled, so no two readings are quite the same), and a one-step decoder turns them into 24 kHz sound.
  *
- * <p>Nothing heavy ships in the jar. On a computer fast enough (PaVoiceTier's benchmark) and with the player's go-ahead,
- * three model files (about 570 MB) are downloaded once from the model's own page on Hugging Face, pinned to one
- * revision, resumed where they stop and checked by SHA-256 before use, or come from an offline pack. ONNX Runtime is the
- * one downloaded for Kokoro. Any failure falls back to Kokoro at once; the words always show.
+ * <p>[voice37] Everything ships inside the release jar (PaVoiceAssets): the build fetches the three model files (about
+ * 570 MB) from the model's own page on Hugging Face, pinned to one revision and checked by SHA-256, and the mod unpacks
+ * them into the game folder the first time its tier wants them (a computer fast enough, by PaVoiceTier's benchmark).
+ * Nothing is downloaded while playing. ONNX Runtime is the one the natural voice (Kokoro) uses. Any failure falls back
+ * to Kokoro at once; the words always show.
  *
  * <p>The voices (conditioning made from the CSTR VCTK Corpus, CC BY 4.0; see VOICES) are of consenting corpus speakers,
  * never a celebrity or a real person by name.
