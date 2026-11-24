@@ -31,6 +31,7 @@ public final class PaMoves {
         if (a.tickCount % 20 == 13) PaChunks.tick(a);                     // [pa33g] the ground round it kept awake when it has reason
         PaBow.tick(a);                                                     // [pa33g] a draw under way: its head on the mark, the pull, the loose
         PaCrossbow.tick(a);                                                // [pa35] a crossbow spanning or aiming
+        PaTrident.tick(a);                                                 // [pa35] a Loyalty trident caught on its way back
         if (a.tickCount % 10 == 3) PaCrossbowGoal.prefer(a);               // [pa35] the crossbow over the bow for a ranged fight, once it may
         PaShots.aimTick(a);                                                // [pa33f] eyes on its target a moment after it shoots
         // [pa33g] the shield comes up as quick as it reacts (its level): every eighth of a second at the top, slower below

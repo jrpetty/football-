@@ -67,6 +67,9 @@ public final class PaBrain {
         /** [pa35] A crossbow shot under way (spanning or aiming, PaCrossbow), or null; loads and shots so far (the tests read them). */
         @Nullable public PaCrossbow.Job xbow;
         public int xbowLoads, xbowShots;
+        /** [pa35] A trident in the air (PaTrident), or null; throws and catches so far. */
+        @Nullable public PaTrident.Out trident;
+        public int tridentThrows, tridentCatches;
         /** [pa33g] A come-here under way (PaCome), or null. */
         @Nullable public PaCome.Trip come;
         /** [pa33g] Its window of awake chunks (PaChunks), or null. */

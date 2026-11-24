@@ -681,4 +681,53 @@ public class PaMemoryGameTests {
                 + String.format(java.util.Locale.ROOT, "%.2f", firstWall / 14.0 / 20.0) + " s each)");
         });
     }
+
+    /** pam14: the trident from level 7: with no bow, a Loyalty trident is raised, thrown at a husk a dozen blocks off,
+     *  and caught on its way back; at level 6 it stays in the pack. */
+    @GameTest(template = EMPTY, timeoutTicks = 1400, batch = "pam14_trident")
+    public static void pam14_trident(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_539_000, y = ground(level, x);
+        for (int dx = -2; dx <= 14; dx++) for (int dy = 0; dy <= 3; dy++) level.setBlock(new BlockPos(x + dx, y + dy, Z), Blocks.AIR.defaultBlockState(), 3);
+        ServerPlayer p = player(helper, level, new BlockPos(x - 4, y, Z + 4));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.removeMatching(st -> st.is(Items.BOW) || st.is(Items.CROSSBOW) || st.is(Items.ARROW), 999);
+        var ench = level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
+        ItemStack tri = new ItemStack(Items.TRIDENT);
+        tri.enchant(ench.getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.LOYALTY), 3);
+        a.insertGiven(tri);
+        a.setPaXpForTests(PaLevels.xpFor(6));
+        net.minecraft.world.entity.monster.Husk husk = EntityType.HUSK.create(level);
+        husk.moveTo(x + 12.5, y, Z + 0.5, 90, 0);
+        husk.setNoAi(true);
+        husk.setHealth(husk.getMaxHealth());
+        level.addFreshEntity(husk);
+        int[] phase = {0}, at = {0};
+        helper.onEachTick(() -> {
+            at[0]++;
+            switch (phase[0]) {
+                case 0 -> {
+                    if (at[0] < 10) return;
+                    a.teleportTo(x + 0.5, y, Z + 0.5);
+                    a.setTarget(husk);
+                    if (at[0] < 120) { helper.assertTrue(a.mind.tridentThrows == 0, "level 6: no throw"); return; }
+                    a.setPaXpForTests(PaLevels.xpFor(7));
+                    a.setTarget(null);
+                    a.setTarget(husk);
+                    phase[0] = 1; at[0] = 0;
+                }
+                case 1 -> {
+                    if (a.getTarget() == null && husk.isAlive()) a.setTarget(husk);
+                    boolean hit = husk.getHealth() < husk.getMaxHealth() || !husk.isAlive();
+                    if (a.mind.tridentCatches == 0 || !hit || a.mind.trident != null) { if (at[0] > 1000) helper.fail("no hit and catch: throws " + a.mind.tridentThrows + ", caught " + a.mind.tridentCatches + ", hand " + a.getMainHandItem()); return; }
+                    helper.assertTrue(a.getMainHandItem().is(Items.TRIDENT) || a.countMatching(st -> st.is(Items.TRIDENT)) == 1, "caught: back in hand or pack");
+                    helper.assertTrue(husk.getHealth() < husk.getMaxHealth() || !husk.isAlive(), "the husk was hit at least once in " + a.mind.tridentThrows + " throws");
+                    Kit.log("[VT] pam14 trident: " + a.mind.tridentThrows + " throws, " + a.mind.tridentCatches + " caught, husk at " + husk.getHealth());
+                    phase[0] = 2;
+                    helper.succeed();
+                }
+                default -> { }
+            }
+        });
+    }
 }
