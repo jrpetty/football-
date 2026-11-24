@@ -179,6 +179,7 @@ public final class PaBrain {
             return false;
         }
         if (r.entity == null || !r.entity.equals(a.getUUID())) { r.entity = a.getUUID(); PaData.touch(); }
+        a.mind.recent.humour = PaPersona.Humour.of(r.humour);   // [pa35] its sense of humour, as its player set it
         return true;
     }
 

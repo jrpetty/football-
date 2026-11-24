@@ -173,7 +173,7 @@ public final class PaBanter {
 
     /** A line back in kind for an order's tone, at its corner of the triangle (null when there are none). */
     public static String toneLine(PlayerAssistantEntity a, String key, String thing) {
-        String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt), a.getRandom()::nextInt, a.mind.recent);
+        String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt, a.mind.recent), a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) raw = PaPersona.from(PaLines.get(key), a.getRandom()::nextInt, a.mind.recent);   // a corner with nothing written: the list itself
         String film = System.getProperty("mca.pa.filmLine", "");          // [pa33c-2b] filming only: a chosen line, when the server is started with it
         if (!film.isEmpty()) for (String k : PaLines.keys()) if (k.startsWith("tone.rude")) for (String l : PaLines.get(k)) if (l.contains(film)) raw = l;
@@ -225,7 +225,7 @@ public final class PaBanter {
         int heat = 0;
         if (roast) heat = a.mind.strangers.heat(p.getUUID()).take(new PaTone.Read(PaTone.Tone.RUDE, 1, false, false, ""), now) + 1;
         String who = p.getGameProfile().getName();
-        String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt), a.getRandom()::nextInt, a.mind.recent);
+        String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt, a.mind.recent), a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) raw = PaPersona.from(PaLines.get(key), a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) return;
         String line = fill(a, raw, "player", who);   // [pa35] its player's own name to others: a nickname they asked for is private

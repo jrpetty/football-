@@ -1413,6 +1413,13 @@ public class PaScreen extends Screen {
             () -> settingInt("language", (lang + 1) % 3));
         cy += 15;
         if (lang > cap) { g.drawString(font, UiStyle.clip(font, "* This server allows up to " + com.jrpetty.mcassistant.pa.PaTone.LANGUAGE[cap] + ".", half), sx, cy, faint(), false); cy += 11; }
+        // [pa35] its sense of humour: Dry by default; the puns and cheese only if you ask for them
+        var hu = com.jrpetty.mcassistant.pa.PaPersona.Humour.of(set.getInt("humour"));
+        g.drawString(font, "Humour", sx, cy + 3, muted(), false);
+        button(g, hu.label, sx + 60, cy, 76, 13, mx, my, true, false,
+            "Dry: understated, affection shown sideways. Daft: puns and cheese. Sincere: warmer, still not soppy. Now: " + hu.tip,
+            () -> settingInt("humour", (hu.ordinal() + 1) % 3));
+        cy += 15;
         int rb = Math.max(0, Math.min(2, set.getInt("roastBack")));
         g.drawString(font, "Others", sx, cy + 3, muted(), false);
         button(g, UiStyle.clip(font, "Roast back: " + com.jrpetty.mcassistant.pa.PaStrangers.ROAST_BACK[rb], 110), sx + 60, cy, 112, 13, mx, my, true, false,

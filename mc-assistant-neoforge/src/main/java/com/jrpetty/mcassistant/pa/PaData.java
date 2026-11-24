@@ -52,6 +52,8 @@ public final class PaData extends SavedData {
         public int mute;
         /** [pa33b] Match my energy: its language back (0 Clean, 1 Cheeky, 2 Unfiltered; never past the server cap), roasting others back (0 On, 1 only when they insult it, 2 Off), defending its player. */
         public int language, roastBack;
+        /** [pa35] Its sense of humour: 0 Dry (default), 1 Daft, 2 Sincere. */
+        public int humour;
         public boolean defend = true;
         /** [pa35] Ping an ore it may not mine yet when it meets one (Settings, Behaviour). */
         public boolean pingLocked = true;
@@ -145,6 +147,7 @@ public final class PaData extends SavedData {
             t.putInt("Mute", mute);
             t.putInt("Lang", language);
             t.putInt("RoastBack", roastBack);
+            t.putInt("Humour", humour);
             t.putBoolean("Defend", defend);
             t.putBoolean("PingLocked", pingLocked);
             if (bed != null) { t.putLong("Bed", bed.asLong()); t.putString("BedDim", bedDim); }
@@ -209,6 +212,7 @@ public final class PaData extends SavedData {
             r.mute = Math.max(0, Math.min(2, t.getInt("Mute")));
             r.language = Math.max(0, Math.min(2, t.getInt("Lang")));
             r.roastBack = Math.max(0, Math.min(2, t.getInt("RoastBack")));
+            r.humour = Math.max(0, Math.min(2, t.getInt("Humour")));
             r.defend = !t.contains("Defend") || t.getBoolean("Defend");
             r.pingLocked = !t.contains("PingLocked") || t.getBoolean("PingLocked");
             if (t.contains("Bed")) { r.bed = BlockPos.of(t.getLong("Bed")); r.bedDim = t.getString("BedDim"); }

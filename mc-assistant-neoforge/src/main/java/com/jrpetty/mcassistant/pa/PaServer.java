@@ -75,6 +75,7 @@ public final class PaServer {
                 if (args.contains("mute") && a != null && args.getInt("mute") != r.mute) PaOrders.hush(a, args.getInt("mute"));   // [pa33b] About, Orders, wheel
                 else if (args.contains("mute")) r.mute = Math.max(0, Math.min(2, args.getInt("mute")));
                 if (args.contains("language")) r.language = Math.max(0, Math.min(2, args.getInt("language")));     // [pa33b] match my energy
+                if (args.contains("humour")) r.humour = Math.max(0, Math.min(2, args.getInt("humour")));     // [pa35] Dry, Daft, Sincere
                 if (args.contains("roastBack")) r.roastBack = Math.max(0, Math.min(2, args.getInt("roastBack")));
                 if (args.contains("defend")) r.defend = args.getBoolean("defend");
                 if (args.contains("pingLocked")) r.pingLocked = args.getBoolean("pingLocked");      // [pa35]
@@ -177,7 +178,7 @@ public final class PaServer {
         switch (o.id()) {
             case "look" -> {
                 String key = "ping.look." + target.name().toLowerCase(java.util.Locale.ROOT);
-                String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt), a.getRandom()::nextInt, a.mind.recent);
+                String raw = PaPersona.from(PaPersona.linesFor(key, a.tri(), a.getRandom()::nextInt, a.mind.recent), a.getRandom()::nextInt, a.mind.recent);
                 if (raw == null) raw = PaPersona.from(PaLines.get(key), a.getRandom()::nextInt, a.mind.recent);
                 PaTalk.reply(a, raw == null ? "Yes. I see it." : PaBanter.fill(a, raw, "what", label.isEmpty() ? "that" : label));
                 return;

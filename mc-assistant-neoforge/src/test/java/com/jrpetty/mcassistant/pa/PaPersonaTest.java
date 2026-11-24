@@ -381,4 +381,55 @@ class PaPersonaTest {
         }
         assertNotNull(PaLines.get("say.ok"));
     }
+
+    // ------------------------------------------------------------------ [pa35] its sense of humour
+
+    /** Under Dry (the default) no corny line is ever picked, by any route, at any blend, for any key or look. */
+    @Test
+    void dryNeverPicksCorny() {
+        Random rnd = new Random(35);
+        PaPersona.Recent rec = new PaPersona.Recent(400);
+        assertEquals(PaPersona.Humour.DRY, rec.humour, "Dry is the default");
+        int corny = 0, picks = 0;
+        for (String k : PaLines.keys()) for (String l : PaLines.get(k)) if (PaPersona.corny(l)) corny++;
+        assertTrue(corny >= 100, "the corny lines are tagged: " + corny);
+        PaPersona.Tri[] blends = {PaPersona.Tri.of(1, 0), PaPersona.Tri.of(0.6, 0.2), PaPersona.Tri.of(0.34, 0.33), PaPersona.Tri.of(0, 1), PaPersona.Tri.of(0, 0)};
+        for (String k : PaLines.keys()) {
+            if (k.contains("@")) continue;
+            for (PaPersona.Tri t : blends) for (int i = 0; i < 12; i++) {
+                String a = PaPersona.from(PaLines.get(k), rnd::nextInt, rec);
+                String b = PaPersona.from(PaPersona.linesFor(k, t, rnd::nextInt, rec), rnd::nextInt, rec);
+                String c = PaPersona.remark(k, t, rnd.nextInt(18), null, rnd::nextInt, rec);
+                for (String x : new String[]{a, b, c}) if (x != null) { picks++; assertFalse(PaPersona.corny(x), "Dry said a corny line for " + k + ": " + x); }
+            }
+        }
+        assertTrue(picks > 10000, "picked " + picks);
+        // asked for a joke under Dry: still a joke, just not a pun
+        for (int i = 0; i < 200; i++) { String j = PaPersona.from(PaLines.get("joke"), rnd::nextInt, rec); assertNotNull(j); assertFalse(PaPersona.corny(j)); }
+    }
+
+    @Test
+    void daftBringsTheCheeseAndSincereTheWarmth() {
+        Random rnd = new Random(7);
+        PaPersona.Recent daft = new PaPersona.Recent(400);
+        daft.humour = PaPersona.Humour.DAFT;
+        int cheese = 0;
+        for (int i = 0; i < 400; i++) if (PaPersona.corny(PaPersona.from(PaLines.get("joke"), rnd::nextInt, daft))) cheese++;
+        assertTrue(cheese > 200, "Daft: puns most of the time when asked for a joke: " + cheese);
+        PaPersona.Recent sincere = new PaPersona.Recent(400);
+        sincere.humour = PaPersona.Humour.SINCERE;
+        int warm = 0, n = 0;
+        for (int i = 0; i < 400; i++) {
+            String l = PaPersona.from(PaPersona.linesFor("say.thanks", PaPersona.Tri.of(1, 0), rnd::nextInt, sincere), rnd::nextInt, sincere);
+            assertFalse(PaPersona.corny(l));
+            n++;
+            if (PaLines.get("say.thanks@sincere").contains(l) || PaLines.get("say.thanks@serious").contains(l)) warm++;
+        }
+        assertTrue(warm > n * 0.6, "Sincere: mostly the warm lines at the Funny corner: " + warm + "/" + n);
+        for (String k : PaLines.keys()) if (k.endsWith("@sincere")) {
+            assertTrue(PaLines.get(k).size() >= 6, k + " has six or more");
+            assertTrue(PaLines.has(k.substring(0, k.length() - "@sincere".length())), k + " stands in for a real key");
+            for (String l : PaLines.get(k)) assertFalse(PaPersona.corny(l), "sincere is never corny: " + l);
+        }
+    }
 }
