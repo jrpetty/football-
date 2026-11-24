@@ -1175,6 +1175,11 @@ public final class Market {
      * come first); never while the town is short (TownBudget: "its buildings plain"). Returns the coin spent.
      */
     public static int importFor(ServerLevel level, Villages.Village v, long day, Item item, int want, String forWhat) {
+        return importFor(level, v, day, item, want, forWhat, true);
+    }
+
+    /** As importFor; {@code toStores} false: delivered to the works' site, not into the stores (returns how many came). */
+    public static int importFor(ServerLevel level, Villages.Village v, long day, Item item, int want, String forWhat, boolean toStores) {
         UUID id = v.id();
         if (want <= 0 || TownBudget.pressure(id) >= 2) return 0;
         Good g = goodFor(new ItemStack(item));
@@ -1187,12 +1192,15 @@ public final class Market {
         if (lots <= 0) return 0;
         int paid = Ledger.takeCoins(id, lots * price);
         CoinCensus.flow(id, CoinCensus.Flow.IMPORT, paid);
-        Businesses.storesIn(id, new ItemStack(item), (long) lots * g.bundle(), paid * 100L);
         Economy.spent(id, paid);
-        intoStores(level, id, new ItemStack(item, lots * g.bundle()));
+        if (toStores) {
+            Businesses.storesIn(id, new ItemStack(item), (long) lots * g.bundle(), paid * 100L);
+            intoStores(level, id, new ItemStack(item, lots * g.bundle()));
+        }
         Villages.tell(id, day, "bought " + lots * g.bundle() + " " + g.name().toLowerCase(java.util.Locale.ROOT) + " from the traders for "
             + paid + " coin, for " + forWhat);
-        return paid;
+        com.mojang.logging.LogUtils.getLogger().info("[MCA-WORKS] {}: bought {} {} from the traders for {} coin, for {}", Villages.name(id), lots * g.bundle(), g.name(), paid, forWhat);
+        return toStores ? paid : lots * g.bundle();
     }
 
     // ------------------------------------------------------------------ folk at the market

@@ -1167,6 +1167,30 @@ public final class TerraceRows {
      * laid only as fast as the masons happened to keep their usual stock by.
      */
     private static final Map<UUID, Map<Item, Integer>> WANTS = new ConcurrentHashMap<>();
+    /** [house34c] What the traders delivered to the rows' finishing (by item, on the town's books): not into the stores, where
+     *  the builders drew the stone bricks for the next house the morning they came, and the rows waited on. */
+    private static final String SITE_STOCK = "terrace/site/";
+
+    static int siteStock(UUID village, Item it) {
+        String raw = Ledger.note(village, SITE_STOCK + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).getPath());
+        try { return raw == null || raw.isEmpty() ? 0 : Integer.parseInt(raw); } catch (NumberFormatException e) { return 0; }
+    }
+
+    static void siteStock(UUID village, Item it, int n) {
+        Ledger.note(village, SITE_STOCK + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).getPath(), Integer.toString(Math.max(0, n)));
+    }
+
+    /** One of this for the rows' finishing: off the site first, then out of the stores, then made there of the stores' makings. */
+    private static boolean takeForRows(ServerLevel level, Villages.Village v, Item it) {
+        int site = siteStock(v.id(), it);
+        if (site > 0) { siteStock(v.id(), it, site - 1); return true; }
+        return !Crafts.takeOne(level, v, st -> st.is(it)).isEmpty() || Masonry.take(level, v, it, 1);
+    }
+
+    private static boolean canForRows(ServerLevel level, Villages.Village v, Item it) {
+        return siteStock(v.id(), it) > 0 || Crafts.stock(level, v, st -> st.is(it)) > 0 || Masonry.can(level, v, it, 1);
+    }
+
     /** [house34c] Each row's own share of the wants (by its anchor): the finishing takes the row nearest done first. */
     private static final Map<Long, Integer> LEFT = new ConcurrentHashMap<>();
 
@@ -1219,21 +1243,27 @@ public final class TerraceRows {
      */
     public static void buyForFinishing(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
+        if (!WANTS.containsKey(id)) reckonWants(level, v);
         Map<Item, Integer> w = WANTS.get(id);
         if (w == null || w.isEmpty()) return;
-        int bricks = finishingWant(id, Items.BRICKS) - Market.stock(level, id, st -> st.is(Items.BRICKS));
+        LOG.info("[MCA-TERRACE] {}: the rows' finishing wants {} this morning (treasury {}, put by {}, budget pressure {})", Villages.name(id), w,
+            Ledger.coins(id), Market.saved(id, level.getGameTime()), TownBudget.pressure(id));
+        // the brick: clay for the kiln into the stores (it fires for the stores' keep), and what it cannot fire, blocks of brick
+        // delivered to the site
+        int bricks = finishingWant(id, Items.BRICKS) - Market.stock(level, id, st -> st.is(Items.BRICKS)) - siteStock(id, Items.BRICKS);
         int clay = Market.stock(level, id, st -> st.is(Items.CLAY_BALL)), fired = Market.stock(level, id, st -> st.is(Items.BRICK));
         if (bricks > 0 && clay < 16) Market.importFor(level, v, day, Items.CLAY_BALL, Math.min(64, 4 * bricks) - clay - fired, "the kiln's bricks for the terraces");
-        // what the kiln cannot fire in a day or two of what it has, the brickworks' blocks from the traders
         int behind = bricks - (clay + fired) / 4;
-        if (behind > 0) Market.importFor(level, v, day, Items.BRICKS, Math.min(64, behind), "the terraces' brick");
-        // the stone bricks bought too while the bench has not caught up (it cuts the town's own stone between its iron runs,
-        // and kept up only with the builders: the grand row's cornice stood in cobble for days with cobble in the stores)
-        int dressed = finishingWant(id, Items.STONE_BRICKS) - Market.stock(level, id, st -> st.is(Items.STONE_BRICKS));
-        if (dressed > 0) Market.importFor(level, v, day, Items.STONE_BRICKS, Math.min(128, dressed), "the terraces' dressed stone");
+        if (behind > 0) siteStock(id, Items.BRICKS, siteStock(id, Items.BRICKS)
+            + Market.importFor(level, v, day, Items.BRICKS, Math.min(64, behind), "the terraces' brick", false));
+        // the town's dressed stone: stone bricks delivered while the bench is behind; a deepslate town's dressed from cobbled
+        // deepslate bought into the stores when it has none of its own
         Item own = dressedStone(id).asItem();
-        if (own != Items.STONE_BRICKS) {
-            int deep = w.getOrDefault(own, 0) - Market.stock(level, id, st -> st.is(own) || st.is(Items.COBBLED_DEEPSLATE) || st.is(Items.POLISHED_DEEPSLATE));
+        int dressed = w.getOrDefault(own, 0) - Market.stock(level, id, st -> st.is(own)) - siteStock(id, own);
+        if (dressed > 0 && own == Items.STONE_BRICKS) {
+            siteStock(id, own, siteStock(id, own) + Market.importFor(level, v, day, Items.STONE_BRICKS, Math.min(128, dressed), "the terraces' dressed stone", false));
+        } else if (dressed > 0) {
+            int deep = dressed - Market.stock(level, id, st -> st.is(Items.COBBLED_DEEPSLATE) || st.is(Items.POLISHED_DEEPSLATE));
             if (deep > 0) Market.importFor(level, v, day, Items.COBBLED_DEEPSLATE, Math.min(128, deep), "the terraces' dressed stone");
         }
         int slate = finishingWant(id, Items.DEEPSLATE_TILES) - Market.stock(level, id, st -> st.is(Items.DEEPSLATE_TILES) || st.is(Items.COBBLED_DEEPSLATE));
@@ -1252,7 +1282,8 @@ public final class TerraceRows {
                 .append(" back ").append(b.facing()).append(standing(level, v.id(), b) ? " up" : " going up");
             for (Spot s : spots(b)) sb.append(" door").append(s.index() + 1).append('@').append(s.door().toShortString());
         }
-        sb.append(" | wants ").append(WANTS.get(v.id())).append(" | stores: bricks ").append(Market.stock(level, v.id(), st -> st.is(Items.BRICKS)))
+        sb.append(" | wants ").append(WANTS.get(v.id())).append(" | on site: bricks ").append(siteStock(v.id(), Items.BRICKS))
+            .append(", dressed stone ").append(siteStock(v.id(), dressedStone(v.id()).asItem())).append(" | stores: bricks ").append(Market.stock(level, v.id(), st -> st.is(Items.BRICKS)))
             .append(", stone bricks ").append(Market.stock(level, v.id(), st -> st.is(Items.STONE_BRICKS)))
             .append(", clay ").append(Market.stock(level, v.id(), st -> st.is(Items.CLAY_BALL)))
             .append(", cobbled deepslate ").append(Market.stock(level, v.id(), st -> st.is(Items.COBBLED_DEEPSLATE)))
@@ -1421,8 +1452,7 @@ public final class TerraceRows {
         // ([house34c] or the makings to hand to make them there and then, as the builders do: loose bricks, fired stone)
         Block dressed = dressedStone(id);
         Item dressedItem = dressed.asItem();
-        boolean[] have = { free || Crafts.stock(level, v, st -> st.is(Items.BRICKS)) > 0 || Masonry.can(level, v, Items.BRICKS, 1),
-            free || Crafts.stock(level, v, st -> st.is(dressedItem)) > 0 || Masonry.can(level, v, dressedItem, 1) };
+        boolean[] have = { free || canForRows(level, v, Items.BRICKS), free || canForRows(level, v, dressedItem) };
         for (BuildGoal.Placement pl : plan(id, b)) {
             if (pl.part() != BuildGoal.Part.BLOCK) continue;
             // the brick in brick; and ([house34b]) the dressed stone (the grand row's ground floors, the bands, the quoins) in
@@ -1437,7 +1467,7 @@ public final class TerraceRows {
             if (!have[brick ? 0 : 1]) continue;
             if (!free) {
                 if (laid == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, pl.pos()), "facing " + name(id, b) + (brick ? " in brick" : " in dressed stone"))) break;
-                if (Crafts.takeOne(level, v, st -> st.is(faceItem)).isEmpty() && !Masonry.take(level, v, faceItem, 1)) { have[brick ? 0 : 1] = false; continue; }
+                if (!takeForRows(level, v, faceItem)) { have[brick ? 0 : 1] = false; continue; }
                 Crafts.giveBack(level, v, there.getBlock().asItem(), 1);                  // what came off goes back into the stores
             }
             level.setBlock(pl.pos(), face.defaultBlockState(), 2);
@@ -1459,7 +1489,7 @@ public final class TerraceRows {
                     : there.getBlock() instanceof net.minecraft.world.level.block.StairBlock ? cut[1] : dressed;
                 if (!free) {
                     if (faced == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, q), "dressing the stone of " + name(id, b))) break;
-                    if (Crafts.takeOne(level, v, st -> st.is(dressedItem)).isEmpty() && !Masonry.take(level, v, dressedItem, 1)) break;
+                    if (!takeForRows(level, v, dressedItem)) break;
                     Crafts.giveBack(level, v, there.getBlock().asItem(), 1);
                 }
                 level.setBlock(q, copy(there, to.defaultBlockState()), 2);
