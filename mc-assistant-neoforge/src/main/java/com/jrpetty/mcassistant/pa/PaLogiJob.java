@@ -908,7 +908,10 @@ public final class PaLogiJob {
                 if (run != null) { run.close(a); run = null; }
                 if (!to.isEmpty()) {
                     BlockPos first = to.get(0);
-                    if (a.distanceToSqr(Vec3.atCenterOf(first)) > 4 * 4 && a.tickCount % 20 == 0) a.walkTo(PaBrain.beside(a, first), 1.0);
+                    if (a.distanceToSqr(Vec3.atCenterOf(first)) > 4 * 4 && a.tickCount % 20 == 0) {
+                        BlockPos to = PaBrain.beside(a, first);
+                        a.getNavigation().moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, 1.0);
+                    }
                     a.getLookControl().setLookAt(Vec3.atCenterOf(first));
                 }
                 if (!busy || a.level().getGameTime() > smeltDeadline) {
@@ -1201,7 +1204,12 @@ public final class PaLogiJob {
                 return 1;
             }
             double d = a.distanceToSqr(c);
-            if (walk % 20 == 0) a.walkTo(PaBrain.beside(a, at), 1.0);
+            // the navigation itself, not walkTo: the engine's stuck-watch benches walkTo for ten seconds at a time while it
+            // stands at a chest with its player a few blocks off (it reads as "trailing, but pinned"), which is just a job being done
+            if (walk % 20 == 0) {
+                BlockPos to = PaBrain.beside(a, at);
+                a.getNavigation().moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, 1.0);
+            }
             walk++;
             if (d < best - 0.5) { best = d; stall = 0; } else stall++;
             if (stall > 20 * 15 || walk > 20 * 120) {

@@ -284,7 +284,8 @@ public class PlayerAssistantEntity extends AssistantEntity {
     /** [pa36] Torches it carries for a delivery (a fetch, a fill, a craft into a chest) aren't for lighting its way. */
     @Override
     protected boolean keepsItsLights() {
-        return (task != null && task.kind == PaTask.Kind.LOGI) || plan.all().stream().anyMatch(s -> s.task != null && s.task.kind == PaTask.Kind.LOGI);
+        return (task != null && task.kind == PaTask.Kind.LOGI) || plan.all().stream().anyMatch(s -> (s.task != null && s.task.kind == PaTask.Kind.LOGI)
+            || (!"LIGHT_AREA".equals(s.kind) && (s.label.contains("torch") || s.count.contains("torch"))));   // making or bringing torches: they're the order's
     }
 
     @Override
