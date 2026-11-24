@@ -205,7 +205,15 @@ public class TerraceGameTests {
                 ok.that(beds == 4, "four beds in " + TerraceRows.addressForTests(id, h) + ": " + beds);
                 ok.that("WORKERS".equals(TerraceRows.tierForTests(id, h)), "a workers' cottage on the books");
                 ok.that(TerraceRows.addressForTests(id, h).matches("No\\. [1-4], .* (Cottages|Row|Yard)"), "its address: " + TerraceRows.addressForTests(id, h));
-                for (VillageFolkEntity fo : t.folk()) if (h.equals(Homes.homeOf(fo))) { housed++; break; }
+                for (VillageFolkEntity fo : t.folk()) if (h.equals(Homes.homeOf(fo))) {
+                    housed++;
+                    // [house34c] it sits out on its own front step, on the street (not at its bed upstairs)
+                    BlockPos step = TerraceRows.doorstepForTests(fo);
+                    int i = houses.indexOf(h);
+                    ok.that(step != null && step.equals(TerraceRows.doorForTests(b, i).relative(f.getOpposite())),
+                        "its evening on its own front step: " + step + " (door " + TerraceRows.doorForTests(b, i) + ")");
+                    break;
+                }
             }
             ok.that(housed == 4, "a waiting household in each: " + housed);
             if (!ok.clean()) helper.fail(ok.summary());

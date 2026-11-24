@@ -787,6 +787,17 @@ public final class TerraceRows {
         return s == null ? null : s.door();
     }
 
+    /** [house34c] Habits: where a folk of a house of a row sits out of an evening, the step outside its front door; or null. */
+    @Nullable
+    static BlockPos doorstepFor(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null) return null;
+        Homes.Home h = Homes.homeOf(village, f.getUUID());
+        if (h == null || !isHouse(h)) return null;
+        Spot s = spotAt(village, h.anchor);
+        return s == null ? null : s.door().relative(s.frame().facing().getOpposite());
+    }
+
     /** Decor: the row a house is in (its register entry), or null. */
     @Nullable
     static Ledger.Building rowOf(UUID village, BlockPos houseAnchor) {
@@ -1171,6 +1182,8 @@ public final class TerraceRows {
             if (!Land.areaLoaded(level, b.anchor(), 12) || Ledger.raising(id, b.anchor()) || !standing(level, id, b)) continue;
             Shape sh = shape(b.structure());
             int[] steps = steps(b.anchor());
+            int rough = roughFaces(level, b, sh).size();
+            if (rough > 0) w.merge(Items.STONE_BRICKS, rough, Integer::sum);
             for (BuildGoal.Placement pl : plan(id, b)) {
                 if (pl.part() != BuildGoal.Part.BLOCK) continue;
                 BlockState there = level.getBlockState(pl.pos());
@@ -1409,6 +1422,28 @@ public final class TerraceRows {
         if (laid > 0) {
             done += laid;
             if (!free) return done;
+        }
+        // [house34c] the made ground the row stands on (a stepped row's floors banked up on cobble, its faces to the street) and
+        // its copings (cobble slabs) dressed in stone bricks as well: a grand row up and faced stood on a bank of rough cobble
+        if (have[1]) {
+            int faced = 0;
+            for (BlockPos q : roughFaces(level, b, sh)) {
+                BlockState there = level.getBlockState(q);
+                boolean slab = there.is(Blocks.COBBLESTONE_SLAB) || there.is(Blocks.MOSSY_COBBLESTONE_SLAB);
+                Item want = slab ? Items.STONE_BRICK_SLAB : Items.STONE_BRICKS;
+                if (!free) {
+                    if (faced == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, q), "dressing the stone of " + name(id, b))) break;
+                    if (Crafts.takeOne(level, v, st -> st.is(want)).isEmpty() && !Masonry.take(level, v, want, 1)) break;
+                    Crafts.giveBack(level, v, there.getBlock().asItem(), 1);
+                }
+                level.setBlock(q, slab ? copy(there, Blocks.STONE_BRICK_SLAB.defaultBlockState()) : Blocks.STONE_BRICKS.defaultBlockState(), 2);
+                faced++;
+                if (!free && faced >= REFACE) break;
+            }
+            if (faced > 0) {
+                done += faced;
+                if (!free) return done;
+            }
         }
         // the roofs slated (the Iron Age's make-over of the town's roofs): the wood of every roof, porch and privy in slate
         if (id == null || Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal()) {
@@ -1676,6 +1711,37 @@ public final class TerraceRows {
         };
     }
 
+    /**
+     * [house34c] The rough stone of a row to dress: cobble slabs on its copings and its parapet, and the cobble faces of the
+     * ground under it (a stepped row's floors banked up, the footings showing at its area and its ends) open to the air at
+     * the side, from its lowest floor down; within its own ground.
+     */
+    static List<BlockPos> roughFaces(ServerLevel level, Ledger.Building b, Shape sh) {
+        List<BlockPos> out = new ArrayList<>();
+        int top = 0;
+        for (int s : steps(b.anchor())) top = Math.max(top, s);
+        for (BuildGoal.Placement pl : plan(null, b)) {
+            if (pl.part() == BuildGoal.Part.BLOCK && pl.style() == Blueprints.Style.STONE_SLAB) {
+                BlockState there = level.getBlockState(pl.pos());
+                if (there.is(Blocks.COBBLESTONE_SLAB) || there.is(Blocks.MOSSY_COBBLESTONE_SLAB)) out.add(pl.pos());
+            }
+        }
+        for (int dx = sh.ground[0]; dx <= sh.ground[1]; dx++) {
+            for (int dz = sh.ground[2]; dz <= sh.ground[3]; dz++) {
+                if (!sh.covers(dx, dz)) continue;
+                for (int h = top + 1; h >= -6; h--) {
+                    BlockPos q = cell(b, dx, h, dz);
+                    BlockState there = level.getBlockState(q);
+                    if (!there.is(Blocks.COBBLESTONE) && !there.is(Blocks.MOSSY_COBBLESTONE)) continue;
+                    boolean open = false;
+                    for (Direction d : Direction.Plane.HORIZONTAL) if (level.getBlockState(q.relative(d)).isAir()) open = true;
+                    if (open) out.add(q);
+                }
+            }
+        }
+        return out;
+    }
+
     /** [house34c] Is this spot of a row out in front of its houses' fronts (its railings, not its banisters and tables)? */
     static boolean outFront(Ledger.Building b, Shape sh, BlockPos p) {
         int[] d = local(b, p);
@@ -1929,6 +1995,12 @@ public final class TerraceRows {
     /** [house34c] Tests: the way house i of a row faces (its back's way). */
     public static Direction facingForTests(Ledger.Building b, int i) {
         return spots(b).get(i).frame().facing();
+    }
+
+    /** [house34c] Tests: where this folk sits out on its step of an evening (Habits.doorstep), or null. */
+    @Nullable
+    public static BlockPos doorstepForTests(VillageFolkEntity f) {
+        return doorstepFor(f);
     }
 
     /** [house34c] Tests: the form the town's next row of this standing ("WORKERS"...) would take. */
