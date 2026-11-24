@@ -34,7 +34,10 @@ public final class PaAnims {
         boolean talking = PaClient.BUBBLES.containsKey(a.getId()) && PaClient.bubble(a.getId(), a.level().getGameTime()) != null;
         int want = act != 0 ? act : talking && !a.isAggressive() && a.walkAnimation.speed() < 0.2F ? FolkAction.Act.TALK.ordinal() : 0;
         if ((was != null && was != v && act != 0) || want != s.act) s.begin(want, a.tickCount);
-        if (!(m.crouching || m.riding) && (s.act != 0 || age - s.changed <= 8)) {
+        // [pa33g] a bow drawn, a crossbow, a shield up or gliding: the pose is the game's, and no gesture or talking hands break it
+        boolean busyArms = a.isUsingItem() || a.isFallFlying() || m.rightArmPose.isTwoHanded() || m.leftArmPose.isTwoHanded()
+            || m.rightArmPose == HumanoidModel.ArmPose.CROSSBOW_HOLD || m.leftArmPose == HumanoidModel.ArmPose.CROSSBOW_HOLD;
+        if (!busyArms && !(m.crouching || m.riding) && (s.act != 0 || age - s.changed <= 8)) {
             STYLE.mirror = a.getMainArm() == HumanoidArm.LEFT;
             STYLE.speed = 1.0F;
             STYLE.phase = a.getId() * 7919L;
@@ -43,7 +46,7 @@ public final class PaAnims {
             STYLE.keepMain = m.attackTime > 0.0F;
             FolkAnimations.play(rig, s, age, STYLE);
         }
-        bearing(m, a, age);
+        if (!busyArms) bearing(m, a, age);
         if (m instanceof PlayerModel<?> pm) {
             pm.hat.copyFrom(pm.head);
             pm.jacket.copyFrom(pm.body);

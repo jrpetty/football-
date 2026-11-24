@@ -58,7 +58,13 @@ public final class PaBrain {
         @Nullable public net.minecraft.world.entity.Entity aimEntity;
         @Nullable public net.minecraft.world.phys.Vec3 aimSpot;
         public int aimUntil;
-        public int takeoffAt, rocketAt = -1000, flightSaidAt = -100000;
+        /** [pa33g] A bow drawn (PaBow), or null. */
+        @Nullable public PaBow.Draw bow;
+        /** [pa33g] A come-here under way (PaCome), or null. */
+        @Nullable public PaCome.Trip come;
+        /** [pa33g] Its window of awake chunks (PaChunks), or null. */
+        @Nullable public PaChunks.Held chunks;
+        public int takeoffAt, rocketAt = -1000, flightSaidAt = -100000, wingsAt = -1000;
         /** [pa33e] Parkour: a jump in the air (from, to, the gap), a gap it fell short at, a bridge or pillar under way. */
         public int leapAt, pkStuck, pkMode, pkLaid, pkRestUntil, pkSaidAt = -100000;
         public double pkDist;

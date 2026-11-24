@@ -173,7 +173,7 @@ public class DepositGoal extends Goal {
         assistant.getLookControl().setLookAt(
             chestPos.getX() + 0.5, chestPos.getY() + 0.5, chestPos.getZ() + 0.5);
 
-        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+        if (distSq > assistant.reach() * assistant.reach()) {
             if (assistant.getNavigation().isDone()) {
                 BlockPos walkTo = com.jrpetty.mcassistant.block.StorehouseBlock.approach(assistant.level(), chestPos);
                 assistant.getNavigation().moveTo(

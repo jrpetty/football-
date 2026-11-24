@@ -194,6 +194,7 @@ public final class PaPack {
     public static void equipBest(PlayerAssistantEntity a) {
         NonNullList<ItemStack> inv = a.getInventoryItems();
         for (EquipmentSlot e : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            if (a.getItemBySlot(e).is(net.minecraft.world.item.Items.ELYTRA) && (a.isFallFlying() || a.mind.wingsOn)) continue;   // [pa33g] not mid-flight
             int best = -1;
             int bestDef = a.getItemBySlot(e).getItem() instanceof ArmorItem w ? w.getDefense() : -1;
             for (int k = 0; k < inv.size(); k++) {

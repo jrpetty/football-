@@ -30,6 +30,8 @@ public final class PaChallenge {
         @Nullable com.jrpetty.mcassistant.entity.AssistantEntity.Mode before;
         String scoreShown = "";
         int mineShots;
+        /** [pa33g] When its arrows that will hit land (the point counts then). */
+        final java.util.List<Integer> hitsDue = new java.util.ArrayList<>();
 
         Game(String kind, @Nullable BlockPos goal, long start, long end, int ownerBase, int mineBase) {
             this.kind = kind;
@@ -93,7 +95,11 @@ public final class PaChallenge {
                 if (target == null || !a.level().getBlockState(target).is(net.minecraft.world.level.block.Blocks.TARGET))
                     return "Point at a target block (or ping one) and say \"shooting contest\". Ten shots each.";
                 if (a.countMatching(s -> s.is(net.minecraft.world.item.Items.ARROW)) < 5 || !PaShots.hasBow(a)) return PaTalk.line(a, "need_bow");
-                GAMES.put(p.getUUID(), new Game("shoot", target.immutable(), now + COUNT, now + COUNT + 20 * 60, 0, 0));
+                Game shoot = new Game("shoot", target.immutable(), now + COUNT, now + COUNT + 20 * 60, 0, 0);
+                shoot.before = a.getMode();
+                a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.STAY);   // [pa33g] it stands and shoots: walking spoils an aim
+                a.getNavigation().stop();
+                GAMES.put(p.getUUID(), shoot);
                 a.plan.paused = true;
                 return PaTalk.line(a, "challenge_shoot");
             }
@@ -144,11 +150,12 @@ public final class PaChallenge {
             }
             case "shoot" -> {
                 int due = (int) Math.min(10, (now - g.start) / 40 + 1);         // [pa33e] a shot every two seconds, counted (not on a tick it might never see)
-                if (g.mineShots < due) {
+                // [pa33g] each of its ten drawn as a player's: bow up, head round onto the target, a full pull, the loose
+                if (g.mineShots < due && !PaBow.drawing(a)) {
                     g.mineShots++;
-                    a.getLookControl().setLookAt(g.goal.getX() + 0.5, g.goal.getY() + 0.5, g.goal.getZ() + 0.5);
-                    if (PaShots.shootAt(a, g.goal)) g.mineScore++;
+                    PaShots.shootAt(a, g.goal, shot -> { if (shot.willHit()) g.hitsDue.add(a.tickCount + shot.flightTicks()); });
                 }
+                for (java.util.Iterator<Integer> it = g.hitsDue.iterator(); it.hasNext(); ) if (it.next() <= a.tickCount) { it.remove(); g.mineScore++; }   // counted as it lands
                 String score = "You " + g.ownerScore + ", " + a.displayNameCap() + " " + g.mineScore;   // [pa33e] the score as it goes
                 if (!score.equals(g.scoreShown)) { g.scoreShown = score; PaNet.note(p, score); }
                 if (now > g.end || now > g.start + 360 + 100) finish(a, p, g, Integer.compare(g.ownerScore, g.mineScore));   // its ten shots, then a moment for your last
@@ -167,6 +174,7 @@ public final class PaChallenge {
     static void finish(PlayerAssistantEntity a, ServerPlayer p, Game g, int result) {
         g.over = true;
         GAMES.remove(p.getUUID());
+        if (g.kind.equals("shoot")) PaBow.cancel(a);
         a.plan.paused = false;
         a.setSprinting(false);
         a.getNavigation().stop();

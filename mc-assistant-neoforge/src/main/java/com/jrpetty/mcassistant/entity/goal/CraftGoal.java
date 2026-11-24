@@ -176,7 +176,7 @@ public class CraftGoal extends Goal {
                 tablePos.getX() + 0.5, tablePos.getY() + 0.5, tablePos.getZ() + 0.5);
             assistant.getLookControl().setLookAt(
                 tablePos.getX() + 0.5, tablePos.getY() + 0.5, tablePos.getZ() + 0.5);
-            if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+            if (distSq > assistant.reach() * assistant.reach()) {
                 if (assistant.getNavigation().isDone()) {
                     assistant.getNavigation().moveTo(
                         tablePos.getX() + 0.5, tablePos.getY(), tablePos.getZ() + 0.5, 1.1D);
@@ -189,7 +189,7 @@ public class CraftGoal extends Goal {
         }
 
         // Put in the work, then produce.
-        if (++workTicks < 20) {
+        if (++workTicks < Math.max(8, assistant.pacedTicks(20, 100))) {     // [pa33g] a second at the bench, quicker with practice (its level)
             if (workTicks % 6 == 0) assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             return;
         }

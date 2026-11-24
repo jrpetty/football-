@@ -297,6 +297,7 @@ public final class PaOrders {
             a.plan.dropAuto();
         }
         for (PaPlan.Step s : work) s.said = said;
+        PaCome.end(a);                                                    // [pa33g] work ends a come-here
         a.plan.steps.addAll(work);
         a.plan.paused = false;
         if (a.getMode() == AssistantEntity.Mode.STAY) a.setMode(AssistantEntity.Mode.FOLLOW);   // it has work: it is not standing still
@@ -312,30 +313,30 @@ public final class PaOrders {
         PaPhrases.Dice rnd = a.getRandom()::nextInt;
         switch (i.kind()) {
             case FOLLOW -> {
+                PaCome.end(a);                                            // [pa33g] another order ends a come-here
                 a.mind.post = null;
                 a.setMode(AssistantEntity.Mode.FOLLOW);
                 return PaTalk.line(a, "follow");
             }
             case STAY -> {
+                PaCome.end(a);                                            // [pa33g] another order ends a come-here
                 a.mind.post = null;
                 a.getNavigation().stop();
                 a.setMode(AssistantEntity.Mode.STAY);
                 return PaTalk.line(a, "stay");
             }
             case COME -> {
-                a.mind.post = null;
-                a.setMode(AssistantEntity.Mode.FOLLOW);
-                if (a.level() == p.level() && a.distanceToSqr(p) > 40 * 40) PaLife.bringTo(a, p);
-                else a.getNavigation().moveTo(p, 1.3D);
-                return PaTalk.line(a, "come");
+                return PaCome.start(a, p);                                // [pa33g] on foot the whole way, running while it's far
             }
             case GUARD_ME -> {
+                PaCome.end(a);                                            // [pa33g] another order ends a come-here
                 a.mind.post = null;
                 a.setMode(AssistantEntity.Mode.GUARD);
                 a.equipBestWeapon();
                 return PaTalk.line(a, "guard");
             }
             case GUARD_HERE -> {
+                PaCome.end(a);                                            // [pa33g] another order ends a come-here
                 BlockPos at = where(p, a, i.place(), look);
                 a.mind.post = at;
                 a.setMode(AssistantEntity.Mode.GUARD);
@@ -343,6 +344,7 @@ public final class PaOrders {
                 return "I'll guard " + (i.item().equals("here") ? "this spot" : "the " + i.item()) + ". Nothing gets past me.";
             }
             case FIGHT -> {
+                PaCome.end(a);                                            // [pa33g] another order ends a come-here
                 LivingEntity target = null;
                 if (look.entity() >= 0 && a.level().getEntity(look.entity()) instanceof LivingEntity le && le != a && !(le instanceof ServerPlayer)) target = le;
                 if (target == null) {
@@ -442,6 +444,7 @@ public final class PaOrders {
                 return "Home is here now.";
             }
             case STOP -> {
+                PaCome.end(a);                                            // [pa33g] another order ends a come-here
                 stopAll(a);
                 return PaTalk.line(a, "stop");
             }

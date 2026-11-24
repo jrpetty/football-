@@ -54,9 +54,9 @@ public final class PaLevels {
         return Math.round((Math.max(1, Math.min(MAX, level)) - 1) * 40F / 9F);
     }
 
-    /** Its bow's spread (lower is steadier): 7 at level 1 down to 1.6 at level 10. */
+    /** [pa33g] Its hands' shake on a settled full draw (degrees, one sigma): from the archery table (PaArchery.TABLE). */
     public static float spread(int level) {
-        return 7.0F - 0.6F * (Math.max(1, Math.min(MAX, level)) - 1);
+        return (float) PaArchery.row(level).swayDeg();
     }
 
     /** Does it lead a moving target? From level 4. */
@@ -64,9 +64,32 @@ public final class PaLevels {
         return level >= 4;
     }
 
-    /** How far it will shoot (blocks): 12 at level 1 to 30 at level 10. */
+    /** [pa33g] How far it will shoot (blocks), from the archery table: 16 at level 1 to 43 at level 10. */
     public static int range(int level) {
-        return 12 + 2 * (Math.max(1, Math.min(MAX, level)) - 1);
+        return PaArchery.row(level).range();
+    }
+
+    /** [pa33g] Its reach for a block: a player's 4.5 at level 1, a tenth more a level (5.4 at level 10). */
+    public static double reach(int level) {
+        return 4.5 + 0.1 * (Math.max(1, Math.min(MAX, level)) - 1);
+    }
+
+    /** [pa33g] How long it takes to react (ticks): to a target changing course (its bow) and to a threat (its shield). */
+    public static int reactTicks(int level) {
+        return PaArchery.row(level).reactionTicks();
+    }
+
+    /** [pa33g] How fast its head turns (degrees a tick) when it aims: no snapping onto a target. */
+    public static double turnDegrees(int level) {
+        return PaArchery.row(level).turnDeg();
+    }
+
+    /** [pa33g] One row of the level table the guide and the Stats tab show: what each level does, all of it real. */
+    public static String tableRow(int level) {
+        int[][] all = PaArchery.at30();
+        String bow = all == null ? "bow ..." : "bow " + all[Math.max(1, Math.min(MAX, level)) - 1][0] + "%/" + all[Math.max(1, Math.min(MAX, level)) - 1][1] + "% at 30";
+        return "L" + level + "  work -" + workPercent(level) + "%  walk +" + speedPercent(level) + "%  reach " + String.format(java.util.Locale.ROOT, "%.1f", reach(level))
+            + "  react " + reactTicks(level) * 50 + "ms  " + bow + "  range " + range(level);
     }
 
     /** Extra walking speed, percent: 2 a level. */
@@ -97,7 +120,7 @@ public final class PaLevels {
         new Skill("pack3", "a third row in its pack", 3),
         new Skill("trade", "trading with villagers (your emeralds)", 3),
         new Skill("shield", "blocking with a shield", 4),
-        new Skill("lead", "leading moving targets with the bow", 4),
+        new Skill("lead", "reading a moving target's lead (the bow)", 4),
         new Skill("redstone", "levers, buttons and doors on order", 4),
         new Skill("potions", "drinking healing potions", 5),
         new Skill("brew", "brewing basic potions", 5),

@@ -1913,6 +1913,9 @@ public class PlayerAssistantGameTests {
             if (!p.isFallFlying()) p.startFallFlying();
             if (a.isFallFlying()) flew[0] = true;
             nearest[0] = Math.min(nearest[0], a.distanceTo(p));
+            if (tt % 5 == 0) Kit.log("pai52 t" + tt + " at " + String.format("%.1f %.1f %.1f", a.getX(), a.getY(), a.getZ()) + " fly " + a.isFallFlying() + " fall " + a.fallDistance
+                + " hp " + a.getHealth() + " chest " + a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).getItem() + " v " + String.format("%.2f %.2f %.2f", a.getDeltaMovement().x, a.getDeltaMovement().y, a.getDeltaMovement().z)
+                + " pitch " + (int) a.getXRot());
         });
         helper.runAfterDelay(20, () -> {
             a.setHealth(a.getMaxHealth());
@@ -2047,6 +2050,15 @@ public class PlayerAssistantGameTests {
         level.setBlock(target, Blocks.TARGET.defaultBlockState(), 3);
         a.teleportTo(x + 0.5, y, Z + 2.5);
         say(p, a, "stay here");
+        // [pa33g] every shot visibly drawn (the bow used, a full pull) with its head on the target (not its player) as it looses
+        int[] draws = {0}, fullDraws = {0}, lastUse = {0};
+        double[] offAtLoose = {0};
+        helper.onEachTick(() -> {
+            int use = a.isUsingItem() && a.getUseItem().is(Items.BOW) ? a.getTicksUsingItem() : 0;
+            if (use >= 18) offAtLoose[0] = Math.max(offAtLoose[0], offAim(a, Vec3.atCenterOf(target)));
+            if (use == 0 && lastUse[0] > 0) { draws[0]++; if (lastUse[0] >= 18) fullDraws[0]++; }
+            lastUse[0] = use;
+        });
         helper.runAfterDelay(10, () -> {
             say(p, a, "shooting contest", target, -1);
             helper.assertTrue(fromLists(lastWords(a), "say.challenge_shoot"), "on your marks: " + lastWords(a));
@@ -2055,8 +2067,262 @@ public class PlayerAssistantGameTests {
             helper.runAfterDelay(560, () -> {
                 helper.assertTrue(arrows - a.countMatching(st -> st.is(Items.ARROW)) == 10, "its ten shots: " + (arrows - a.countMatching(st -> st.is(Items.ARROW))));
                 helper.assertTrue(lastWords(a).matches(".*\\(3 to [1-9][0-9]?\\)\\s*$"), "the verdict with the score (three to its hits): " + lastWords(a));
+                helper.assertTrue(fullDraws[0] >= 10, "each of its ten drawn in full, the bow used (seen): " + fullDraws[0] + " full of " + draws[0]);
+                helper.assertTrue(offAtLoose[0] < 8.0, "facing the target (not you) as it loosed: at worst " + String.format("%.1f", offAtLoose[0]) + " degrees off");
                 Kit.log("pai55 contest: " + lastWords(a));
                 helper.succeed();
+            });
+        });
+    }
+
+    // ------------------------------------------------------------------ [pa33g] archery, level scaling, chunks, come here
+
+    /** The angle (degrees) between where it faces and a point. */
+    private static double offAim(PlayerAssistantEntity a, Vec3 at) {
+        Vec3 to = at.subtract(a.getEyePosition());
+        double want = Math.toDegrees(Math.atan2(to.z, to.x)) - 90.0;
+        return Math.abs(net.minecraft.util.Mth.wrapDegrees(want - a.getYHeadRot()));
+    }
+
+    /** pai56: a trick shot drawn as a player draws: the bow into its hand, the item used for a full pull (both arms up,
+     *  the bow bending), its head brought round no faster than its level allows (never a snap) and on the target when it
+     *  looses, and a real arrow that flies by the game's own drag and gravity (never steered). [pa33g] */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pai56_bow_draw")
+    public static void pai56_bow_draw(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_165_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x - 3, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 7);
+        a.insertGiven(new ItemStack(Items.BOW));
+        a.insertGiven(new ItemStack(Items.ARROW, 16));
+        BlockPos target = new BlockPos(x + 10, y + 1, Z + 14);
+        level.setBlock(target.below(), Blocks.STONE.defaultBlockState(), 3);
+        level.setBlock(target, Blocks.TARGET.defaultBlockState(), 3);
+        a.teleportTo(x + 0.5, y, Z + 0.5);
+        say(p, a, "stay here");
+        a.setYRot(180.0F);
+        a.setYHeadRot(180.0F);                                           // facing away (north): the target is south-east
+        int[] pulled = {0}, maxPull = {0};
+        double[] maxTurn = {0}, offAtLoose = {-1}, worstFlight = {0};
+        float[] lastYaw = {Float.NaN};
+        java.util.Map<Integer, Vec3> lastVel = new java.util.HashMap<>();
+        int[] flightTicks = {0};
+        helper.onEachTick(() -> {
+            if (a.isUsingItem() && a.getUseItem().is(Items.BOW)) {
+                pulled[0]++;
+                maxPull[0] = Math.max(maxPull[0], a.getTicksUsingItem());
+                if (a.getTicksUsingItem() >= 18) offAtLoose[0] = Math.max(offAtLoose[0], offAim(a, Vec3.atCenterOf(target)));
+            }
+            if (com.jrpetty.mcassistant.pa.PaBow.drawing(a) && !Float.isNaN(lastYaw[0]))
+                maxTurn[0] = Math.max(maxTurn[0], Math.abs(net.minecraft.util.Mth.wrapDegrees(a.getYHeadRot() - lastYaw[0])));
+            lastYaw[0] = a.getYHeadRot();
+            for (net.minecraft.world.entity.projectile.Arrow ar : level.getEntitiesOfClass(net.minecraft.world.entity.projectile.Arrow.class, a.getBoundingBox().inflate(40))) {
+                if (ar.getOwner() != a) continue;
+                Vec3 v = ar.getDeltaMovement(), was = lastVel.put(ar.getId(), v);
+                if (was == null || ar.isInWater() || v.lengthSqr() < 0.01 || was.lengthSqr() < 0.01) continue;
+                if (ar.getPersistentData().getBoolean("pa_counted") || ar.position().y < y) continue;
+                Vec3 want = new Vec3(was.x * 0.99, was.y * 0.99 - 0.05, was.z * 0.99);   // the game's flight, nothing more
+                if (v.distanceTo(want) < 0.5) { worstFlight[0] = Math.max(worstFlight[0], v.distanceTo(want)); flightTicks[0]++; }
+            }
+        });
+        helper.runAfterDelay(10, () -> {
+            say(p, a, "shoot that target", target, -1);
+            helper.runAfterDelay(160, () -> {
+                double cap = com.jrpetty.mcassistant.pa.PaLevels.turnDegrees(7);
+                helper.assertTrue(a.getMainHandItem().is(Items.BOW), "the bow in its hand: " + a.getMainHandItem());
+                helper.assertTrue(maxPull[0] >= 18 && pulled[0] >= 18, "a full pull, the bow used as an item (seen by all): " + maxPull[0] + " ticks drawn");
+                helper.assertTrue(maxTurn[0] <= cap + 0.5, "its head turned at its level's pace, never a snap: " + String.format("%.1f", maxTurn[0]) + " degrees in a tick (cap " + cap + ")");
+                helper.assertTrue(offAtLoose[0] >= 0 && offAtLoose[0] < 8, "on the target as it loosed: " + String.format("%.1f", offAtLoose[0]) + " degrees off");
+                helper.assertTrue(flightTicks[0] >= 3 && worstFlight[0] < 0.02, "the arrow flew by the game's own drag and gravity: " + flightTicks[0] + " ticks watched, off by " + worstFlight[0]);
+                Kit.log("pai56 bow: pulled " + maxPull[0] + " ticks, head at most " + String.format("%.1f", maxTurn[0]) + " deg/tick, " + String.format("%.1f", offAtLoose[0])
+                    + " deg off at the loose; " + lastWords(a));
+                helper.succeed();
+            });
+        });
+    }
+
+    /** pai57: archery by level, in the game: level 1 and level 10 each loose sixteen arrows at a target block thirty
+     *  blocks off. Level 10 lands far more; neither is shown where the arrow will go. [pa33g] */
+    @GameTest(template = EMPTY, timeoutTicks = 1400, batch = "pai57_archery_levels")
+    public static void pai57_archery_levels(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_168_000, y = ground(level, x);
+        PlayerAssistantEntity[] who = new PlayerAssistantEntity[2];
+        BlockPos[] marks = new BlockPos[2];
+        int[] shots = new int[2], hits = new int[2];
+        for (int k = 0; k < 2; k++) {
+            int zz = Z - 14 + k * 28;
+            ServerPlayer p = player(helper, level, new BlockPos(x - 4, y, zz));
+            PlayerAssistantEntity a = assistant(helper, p);
+            atLevel(a, k == 0 ? 1 : 10);
+            a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+            a.insertGiven(new ItemStack(Items.ARROW, 32));
+            a.teleportTo(x + 0.5, y, zz + 0.5);
+            say(p, a, "stay here");
+            marks[k] = new BlockPos(x + 30, y + 1, zz);
+            level.setBlock(marks[k].below(), Blocks.STONE.defaultBlockState(), 3);
+            level.setBlock(marks[k], Blocks.TARGET.defaultBlockState(), 3);
+            who[k] = a;
+        }
+        helper.onEachTick(() -> {
+            for (int k = 0; k < 2; k++) {
+                final int kk = k;
+                PlayerAssistantEntity a = who[k];
+                if (shots[k] >= 16 || com.jrpetty.mcassistant.pa.PaBow.drawing(a)) continue;
+                if (com.jrpetty.mcassistant.pa.PaShots.shootAt(a, marks[k], shot -> { if (shot.willHit()) hits[kk]++; })) shots[k]++;
+            }
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(shots[0] >= 16 && shots[1] >= 16 && !com.jrpetty.mcassistant.pa.PaBow.drawing(who[0]) && !com.jrpetty.mcassistant.pa.PaBow.drawing(who[1]),
+                "both loosed sixteen: " + shots[0] + ", " + shots[1]);
+            helper.assertTrue(hits[1] >= hits[0] + 5, "level 10 lands far more at 30 blocks: " + hits[1] + " of 16 against level 1's " + hits[0]);
+            helper.assertTrue(hits[0] < 12, "level 1 is no marksman at 30: " + hits[0] + " of 16");
+            Kit.log("pai57 archery at 30 blocks: level 1 " + hits[0] + "/16, level 10 " + hits[1] + "/16");
+        });
+    }
+
+    /** pai58: work by level, timed: two assistants at the same rock face (level 1 and level 10, the same stone pick) each
+     *  mine until they have three iron. Level 10 is done well before level 1, its clock quicker by its level. [pa33g] */
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "pai58_work_by_level")
+    public static void pai58_work_by_level(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_171_000, y = ground(level, x);
+        PlayerAssistantEntity[] who = new PlayerAssistantEntity[2];
+        long[] doneAt = {-1, -1};
+        for (int k = 0; k < 2; k++) {
+            int zz = Z - 14 + k * 28;
+            for (int dx = 4; dx < 14; dx++) for (int dz = -6; dz <= 6; dz++) for (int dy = 0; dy < 6; dy++) {
+                boolean ore = dx == 4 && (dz + dy) % 3 == 0;
+                level.setBlock(new BlockPos(x + dx, y + dy, zz + dz), (ore ? Blocks.IRON_ORE : Blocks.STONE).defaultBlockState(), 2);
+            }
+            ServerPlayer p = player(helper, level, new BlockPos(x, y, zz));
+            PlayerAssistantEntity a = assistant(helper, p);
+            atLevel(a, k == 0 ? 1 : 10);
+            a.insertGiven(new ItemStack(Items.STONE_PICKAXE));
+            a.teleportTo(x + 0.5, y, zz + 0.5);
+            who[k] = a;
+        }
+        int t1 = who[0].workTicksFor(Blocks.IRON_ORE.defaultBlockState()), t10 = who[1].workTicksFor(Blocks.IRON_ORE.defaultBlockState());
+        long start = helper.getTick();
+        for (int k = 0; k < 2; k++) say(who[k].getOwnerPlayer() instanceof ServerPlayer sp ? sp : null, who[k], "mine iron until you have 3");
+        helper.onEachTick(() -> {
+            for (int k = 0; k < 2; k++) if (doneAt[k] < 0 && who[k].countMatching(s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE)) >= 3) doneAt[k] = helper.getTick() - start;
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(doneAt[1] >= 0, "level 10 has its three iron");
+            helper.assertTrue(t10 * 100 <= t1 * 70, "level 10's clock at the rock is a good deal quicker: " + t10 + " ticks a block against " + t1);
+            helper.assertTrue(who[1].reach() > who[0].reach(), "and it reaches further: " + who[1].reach() + " against " + who[0].reach());
+            helper.assertTrue(who[1].pacedTicks(20, 100) < who[0].pacedTicks(20, 100), "and crafts quicker: " + who[1].pacedTicks(20, 100) + " against " + who[0].pacedTicks(20, 100));
+            helper.assertTrue(doneAt[0] < 0 || doneAt[1] * 100 <= doneAt[0] * 90, "level 10 done well before level 1: " + doneAt[1] + " ticks against " + doneAt[0]);
+            if (doneAt[0] < 0) helper.assertTrue(helper.getTick() - start >= doneAt[1] * 100 / 90, "level 1 still at it well after level 10 finished");
+            Kit.log("pai58 work by level: three iron at level 10 in " + doneAt[1] + " ticks, level 1 " + (doneAt[0] < 0 ? "still at it" : doneAt[0] + " ticks")
+                + "; a block of ore " + t10 + " against " + t1 + " ticks");
+        });
+    }
+
+    /** pai59: "come here" from 160 blocks: it walks the whole way (running while far, walking at the end), keeping its own
+     *  chunks awake as it goes, with a word on the distance; every tick's step is a step (no jump), and no shortcut. [pa33g] */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "pai59_come_far")
+    public static void pai59_come_far(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_174_000, y = ground(level, x);
+        Kit.hold(level, x + 160, Z, 16);
+        Kit.prepare(level, x + 160, Z, 16);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.teleportTo(x + 0.5, y, Z + 0.5);
+        say(p, a, "stay here");                                          // left here while its player walks off
+        int py = Kit.surface(level, x + 160, Z).getY();
+        p.teleportTo(level, x + 160.5, py, Z + 0.5, Set.of(), 90.0F, 0.0F);
+        double[] maxStep = {0};
+        boolean[] ran = {false}, walkedEnd = {false}, held = {false};
+        Vec3[] last = {null};
+        com.jrpetty.mcassistant.pa.PaCome.Trip[] trip = {null};
+        helper.onEachTick(() -> {
+            if (trip[0] == null) return;
+            Vec3 now = a.position();
+            if (last[0] != null) maxStep[0] = Math.max(maxStep[0], now.distanceTo(last[0]));
+            last[0] = now;
+            double d = a.distanceTo(p);
+            if (d > 30 && a.isSprinting()) ran[0] = true;
+            if (d < 8 && !a.isSprinting() && a.getDeltaMovement().horizontalDistance() > 0.02) walkedEnd[0] = true;
+            if (com.jrpetty.mcassistant.pa.PaChunks.heldForTests(a) != null) held[0] = true;
+        });
+        helper.runAfterDelay(5, () -> {
+            say(p, a, "come here");
+            String said = lastWords(a);
+            helper.assertTrue(fromLists(said, "say.come_far") && said.contains("16"), "on its way, with the distance: " + said);
+            trip[0] = a.mind.come;
+            helper.assertTrue(trip[0] != null, "a trip on foot under way");
+            last[0] = a.position();
+            helper.succeedWhen(() -> {
+                helper.assertTrue(a.distanceTo(p) < 4.0F && a.mind.come == null, "it got to its player: " + String.format("%.1f", a.distanceTo(p)) + " at " + a.blockPosition().toShortString());
+                helper.assertTrue(trip[0].shortcuts == 0, "no shortcut taken");
+                helper.assertTrue(maxStep[0] < 1.0, "every tick a step, never a jump: the longest " + String.format("%.2f", maxStep[0]));
+                helper.assertTrue(ran[0], "it ran while it was far");
+                helper.assertTrue(held[0], "it kept its own chunks awake on the way");
+                Kit.log("pai59 come far: walked 160 blocks, longest step " + String.format("%.2f", maxStep[0]) + ", ran " + ran[0] + ", walked the end " + walkedEnd[0]
+                    + "; " + said + " | " + lastWords(a));
+            });
+        });
+    }
+
+    /** pai60: told to stay with its player 200 blocks off, it keeps a 3x3 of chunks loaded round it (a forced, ticking
+     *  ticket) and goes on working there; dismissed, the chunks are let go. [pa33g] */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "pai60_stay_far")
+    public static void pai60_stay_far(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_177_000, y = ground(level, x);
+        PaConfig.chunksForTests();
+        for (int dx = 4; dx < 14; dx++) for (int dz = -6; dz <= 6; dz++) for (int dy = 0; dy < 6; dy++) {
+            boolean ore = dx == 4 && (dz + dy) % 3 == 0;
+            level.setBlock(new BlockPos(x + dx, y + dy, Z + dz), (ore ? Blocks.IRON_ORE : Blocks.STONE).defaultBlockState(), 2);
+        }
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 5);
+        a.insertGiven(new ItemStack(Items.STONE_PICKAXE));
+        a.teleportTo(x + 0.5, y, Z + 0.5);
+        say(p, a, "stay here");
+        p.teleportTo(level, x + 200.5, y, Z + 0.5, Set.of(), 0.0F, 0.0F);
+        java.util.UUID ticket = com.jrpetty.mcassistant.pa.PaChunks.ticketOwner(a.getUUID());
+        int cx = a.getBlockX() >> 4, cz = a.getBlockZ() >> 4;
+        Waiter w = Waiter.on(helper);
+        boolean[] heldAll = {true}, working = {false};
+        helper.onEachTick(() -> {
+            if (working[0] && a.isAlive() && !a.plan.idle() && com.jrpetty.mcassistant.pa.PaChunks.heldForTests(a) == null) heldAll[0] = false;
+            if (working[0] && helper.getTick() % 200 == 0) Kit.log("pai60 " + a.getMode() + " " + a.state() + " at " + a.blockPosition().toShortString() + " alive " + a.isAlive()
+                + " plan idle " + a.plan.idle() + " held " + (com.jrpetty.mcassistant.pa.PaChunks.heldForTests(a) != null));
+        });
+        helper.runAfterDelay(80, () -> {
+            com.jrpetty.mcassistant.pa.PaChunks.Held h = com.jrpetty.mcassistant.pa.PaChunks.heldForTests(a);
+            helper.assertTrue(h != null && h.r() == 1, "staying put, its player 200 off: a 3x3 of chunks held: " + h);
+            int forced = 0;
+            for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++)
+                if (com.jrpetty.mcassistant.ChunkLoad.ownersForTests(level, net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz)).contains(ticket + "+")) forced++;
+            helper.assertTrue(forced == 9, "all nine forced (ticking tickets): " + forced);
+            helper.assertTrue(a.distanceToSqr(x + 0.5, y, Z + 0.5) < 4, "still where it was told to stay: " + a.blockPosition().toShortString());
+            p.teleportTo(level, x + 0.5, y, Z - 2.5, Set.of(), 0.0F, 0.0F);   // back to give it a job, then off again
+            say(p, a, "mine iron until you have 2");
+            p.teleportTo(level, x + 200.5, y, Z + 0.5, Set.of(), 0.0F, 0.0F);
+            working[0] = true;
+            w.await(helper, 2600, () -> a.countMatching(s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE)) >= 2, () -> {
+                helper.assertTrue(a.countMatching(s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE)) >= 2, "it worked on, its player 200 blocks away ("
+                    + a.state() + "; " + lastWords(a) + ")");
+                helper.assertTrue(heldAll[0], "its chunks held all the while it worked");
+                working[0] = false;
+                PaServer.act(p, "dismiss", new CompoundTag());
+                long t0 = helper.getTick();
+                w.await(helper, 10, () -> helper.getTick() > t0 + 4, () -> {
+                    int still = 0;
+                    for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++)
+                        if (!com.jrpetty.mcassistant.ChunkLoad.ownersForTests(level, net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz)).isEmpty()
+                            && com.jrpetty.mcassistant.ChunkLoad.ownersForTests(level, net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz)).stream().anyMatch(o -> o.startsWith(ticket.toString()))) still++;
+                    helper.assertTrue(still == 0, "dismissed: its chunks let go (" + still + " still held)");
+                    Kit.log("pai60 stay far: 9 chunks held, mined 2 iron with its player 200 off; dismissed and let go");
+                    helper.succeed();
+                });
             });
         });
     }

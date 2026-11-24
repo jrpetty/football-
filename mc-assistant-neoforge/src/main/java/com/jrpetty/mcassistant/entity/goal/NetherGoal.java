@@ -274,7 +274,7 @@ public class NetherGoal extends Goal {
             target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5);
         assistant.getLookControl().setLookAt(
             target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5);
-        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+        if (distSq > assistant.reach() * assistant.reach()) {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(
                     target.getX() + 0.5, target.getY(), target.getZ() + 0.5, 1.1D);

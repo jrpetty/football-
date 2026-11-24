@@ -128,7 +128,7 @@ public class TorchAreaGoal extends Goal {
             current.getX() + 0.5, current.getY() + 0.5, current.getZ() + 0.5);
         assistant.getLookControl().setLookAt(
             current.getX() + 0.5, current.getY() + 0.5, current.getZ() + 0.5);
-        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+        if (distSq > assistant.reach() * assistant.reach()) {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(
                     current.getX() + 0.5, current.getY(), current.getZ() + 0.5, 1.1D);

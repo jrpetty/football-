@@ -1083,7 +1083,7 @@ public class BuildGoal extends Goal {
         double distSq = assistant.getEyePosition().distanceToSqr(
             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         assistant.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-        double reach2 = AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH;
+        double reach2 = assistant.reach() * assistant.reach();
         boolean inReach = handsForTests || distSq <= reach2;                    // [build-world] tests: every cell to hand
         if (!inReach && assistant.isSettler()) {
             // A village's builder works off its scaffolding: a roof or a tower top within arm's

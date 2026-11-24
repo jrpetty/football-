@@ -284,6 +284,21 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
     public static final double BLOCK_REACH = 4.5;
 
+    /** [pa33g] Does it draw its bow its own way (the Player AI Assistant's archery) rather than through BowAttackGoal? */
+    public boolean ownBow() {
+        return false;
+    }
+
+    /** [pa33g] Is it walking to its owner on foot just now (told to come): no catching up by teleport meanwhile. */
+    public boolean walkingToOwner() {
+        return false;
+    }
+
+    /** [pa33g] How far its hands reach for a block (a player's 4.5; a Player AI Assistant's grows with its level). */
+    public double reach() {
+        return BLOCK_REACH;
+    }
+
     // Owner UUID -> (lowercase name -> live assistant). One owner can run a
     // whole crew; commands route by name or to the nearest one.
     private static final Map<UUID, Register> BY_OWNER = new ConcurrentHashMap<>();
@@ -5449,6 +5464,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
                     && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;
                 ItemStack worn = this.getItemBySlot(slot);
+                if (worn.is(Items.ELYTRA)) continue;                    // [pa33g] wings worn stay worn
                 int wornDefense = worn.getItem() instanceof ArmorItem w ? w.getDefense() : -1;
                 if (candidate.getDefense() <= wornDefense) continue;
                 ItemStack take = s.copy();
@@ -5472,6 +5488,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
                 && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;
             ItemStack current = this.getItemBySlot(slot);
+            if (current.is(Items.ELYTRA)) continue;                    // [pa33g] wings worn stay worn (no armour value, but never "nothing": it falls)
             if (this instanceof VillageFolkEntity vf && NetherRunners.keepsGold(vf, current)) continue;   // [nether] its gold stays on
             int currentDefense = current.getItem() instanceof ArmorItem worn ? worn.getDefense() : -1;
             if (current.isEmpty() || candidate.getDefense() > currentDefense) {

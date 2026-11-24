@@ -28,13 +28,16 @@ public final class PaMoves {
         if (lv >= PaLevels.levelOf("clutch")) clutch(a);
         PaParkour.tick(a);                                                 // [pa33e] jumps of one to three, a bridge or a pillar when one falls short
         PaFlight.tick(a);
-        PaShots.aimTick(a);                                                // [pa33f] eyes on its target while it shoots                                                  // [pa33e] elytra following (it checks its level itself: putting the wings away never waits)
-        if (a.tickCount % 4 == 0 && lv >= PaLevels.levelOf("shield")) shield(a);
+        if (a.tickCount % 20 == 13) PaChunks.tick(a);                     // [pa33g] the ground round it kept awake when it has reason
+        PaBow.tick(a);                                                     // [pa33g] a draw under way: its head on the mark, the pull, the loose
+        PaShots.aimTick(a);                                                // [pa33f] eyes on its target a moment after it shoots
+        // [pa33g] the shield comes up as quick as it reacts (its level): every eighth of a second at the top, slower below
+        if (a.tickCount % Math.max(2, PaLevels.reactTicks(lv) / 2) == 0 && lv >= PaLevels.levelOf("shield") && a.mind.bow == null) shield(a);
         if (a.tickCount % 20 == 7) {
             if (lv >= PaLevels.levelOf("parkour")) sprintAfter(a);
             if (lv >= PaLevels.levelOf("pearl")) pearl(a);
         }
-        if (a.tickCount % 30 == 11 && lv >= PaLevels.levelOf("end") && a.level().dimension() == net.minecraft.world.level.Level.END) end(a);
+        if (a.tickCount % 10 == 1 && lv >= PaLevels.levelOf("end") && a.level().dimension() == net.minecraft.world.level.Level.END) end(a);
     }
 
     // ------------------------------------------------------------------ the shield
@@ -197,20 +200,13 @@ public final class PaMoves {
         }
     }
 
+    /** [pa33g] An arrow at a crystal or the dragon, drawn and loosed as any other (PaBow). The dragon only feels a
+     *  player's arrows (the game's rule), so at the dragon it shoots as its player's second bow. */
     static void shootAtEntity(PlayerAssistantEntity a, net.minecraft.world.entity.Entity e) {
-        if (a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return;
-        PaShots.drawBow(a);
-        PaShots.holdAim(a, e, e.position());                               // [pa33f] facing what it shoots, not its player
-        net.minecraft.world.entity.projectile.Arrow arrow = new net.minecraft.world.entity.projectile.Arrow(a.level(), a, new ItemStack(Items.ARROW), a.getMainHandItem().copy());
-        // [pa33e] the dragon only feels a player's arrows (the game's rule): at the dragon it shoots as its player's second bow
-        if ((e instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon || e instanceof net.minecraft.world.entity.boss.EnderDragonPart) && a.getOwnerPlayer() != null) arrow.setOwner(a.getOwnerPlayer());
-        Vec3 aim = e.position().add(0, e.getBbHeight() * 0.5, 0).add(e.getDeltaMovement().scale(Math.sqrt(a.distanceToSqr(e)) / 3.0));
-        double dx = aim.x - a.getX(), dy = aim.y - arrow.getY(), dz = aim.z - a.getZ(), horiz = Math.sqrt(dx * dx + dz * dz);
-        a.getLookControl().setLookAt(aim.x, aim.y, aim.z);
-        arrow.shoot(dx, dy + horiz * 0.15, dz, 3.0F, PaLevels.spread(a.veteranLevel()));
-        a.level().addFreshEntity(arrow);
-        a.swing(InteractionHand.MAIN_HAND);
-        a.playSound(net.minecraft.sounds.SoundEvents.ARROW_SHOOT, 1.0F, 1.0F);
+        if (PaBow.drawing(a)) return;
+        boolean dragon = e instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon || e instanceof net.minecraft.world.entity.boss.EnderDragonPart;
+        net.minecraft.world.entity.player.Player owner = a.getOwnerPlayer();
+        PaBow.atEntity(a, e, null, dragon && owner != null ? arrow -> arrow.setOwner(owner) : null, null);
     }
 
     /** Tests: a pearl at a spot, now. */

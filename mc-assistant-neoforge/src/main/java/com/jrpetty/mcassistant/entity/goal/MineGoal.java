@@ -1513,7 +1513,7 @@ public class MineGoal extends Goal {
 
     /** Within a player's reach of its eyes. */
     private boolean inReach(BlockPos p) {
-        double r = AssistantEntity.BLOCK_REACH;
+        double r = assistant.reach();
         return assistant.getEyePosition().distanceToSqr(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5) <= r * r;
     }
 
