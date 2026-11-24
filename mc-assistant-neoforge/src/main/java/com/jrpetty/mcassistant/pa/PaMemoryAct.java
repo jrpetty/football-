@@ -718,6 +718,7 @@ public final class PaMemoryAct {
     static void run(ServerPlayer owner, PlayerAssistantEntity a, PaData.Rec r, Entry e) {
         String act = e.value;
         if (act.equals("#clean")) return;
+        PaBondAct.event(a, PaBond.Event.PROMISE_KEPT);                 // [pa35] keeping a standing rule it was given (capped a day)
         if (act.equals("#warn")) {
             PaTalk.reply(a, PaTalk.line(a, "mem.rule.warn", "who", e.extra.isEmpty() ? "someone" : e.extra), null, true);
             return;

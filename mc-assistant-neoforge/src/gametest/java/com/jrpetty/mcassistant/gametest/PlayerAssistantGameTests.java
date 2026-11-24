@@ -1266,6 +1266,7 @@ public class PlayerAssistantGameTests {
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
         a.removeMatching(st -> st.has(net.minecraft.core.component.DataComponents.FOOD), 999);
+        a.setPaXpForTests(0);                                     // [pa35] level 1, whatever an earlier test left on this player's record
         helper.runAfterDelay(25, () -> {
             helper.assertTrue(Math.abs(a.getMaxHealth() - 20.0F) < 0.01F, "[pa35] ten hearts at level 1, like a player: " + a.getMaxHealth());
             int before = a.hunger.food();
@@ -1543,7 +1544,7 @@ public class PlayerAssistantGameTests {
             helper.assertTrue(said(a) > said && fromLists(lastWords(a), "say.levelup") && lastWords(a).contains("4"), "a line for it: " + lastWords(a));
             helper.runAfterDelay(25, () -> {
                 helper.assertTrue(a.getMaxHealth() > 20.0F, "more hearts: " + a.getMaxHealth());   // [pa35] ten hearts at level 1, more by level 4
-                helper.assertTrue(a.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) > speed1, "quicker on its feet");
+                helper.assertTrue(Math.abs(a.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) - speed1) < 1e-6, "[pa35] a player's legs at every level");
                 helper.assertTrue(a.experiencePercent() == 0, "[pa35] never quicker at the work itself: a player's pace (PaPace)");
                 // the multiplier: three times the pay
                 long b2 = a.paXp();
@@ -1552,7 +1553,8 @@ public class PlayerAssistantGameTests {
                 com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(3.0);
                 long b3 = a.paXp();
                 a.earn("build");
-                helper.assertTrue(a.paXp() - b3 == one * 3, "the multiplier: " + one + " then " + (a.paXp() - b3));
+                long three = a.paXp() - b3;                       // [pa35] the second "build" in a row earns a touch less (repetition), so within a tenth
+                helper.assertTrue(three <= one * 3 && three >= Math.round(one * 3 * 0.9), "the multiplier: " + one + " then " + three);
                 com.jrpetty.mcassistant.pa.PaConfig.xpMultiplierForTests(null);
                 // only an operator may change it
                 CompoundTag ad = new CompoundTag();

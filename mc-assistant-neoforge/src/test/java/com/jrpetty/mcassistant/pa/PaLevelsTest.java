@@ -46,7 +46,7 @@ class PaLevelsTest {
         for (int l = 2; l <= 10; l++) {
             assertTrue(PaLevels.workPercent(l) > PaLevels.workPercent(l - 1));
             assertTrue(PaLevels.spread(l) < PaLevels.spread(l - 1));
-            assertTrue(PaLevels.speedPercent(l) > PaLevels.speedPercent(l - 1));
+            assertEquals(0, PaLevels.speedPercent(l), "[pa35] a player's legs at every level");
             assertTrue(PaLevels.damage(l) > PaLevels.damage(l - 1));
             assertTrue(PaLevels.range(l) > PaLevels.range(l - 1));
         }

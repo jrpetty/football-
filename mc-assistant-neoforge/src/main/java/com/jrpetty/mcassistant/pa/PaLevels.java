@@ -138,13 +138,14 @@ public final class PaLevels {
     public static String tableRow(int level) {
         int[][] all = PaArchery.at30();
         String bow = all == null ? "bow ..." : "bow " + all[Math.max(1, Math.min(MAX, level)) - 1][0] + "%/" + all[Math.max(1, Math.min(MAX, level)) - 1][1] + "% at 30";
-        return "L" + level + "  work -" + workPercent(level) + "%  walk +" + speedPercent(level) + "%  reach " + String.format(java.util.Locale.ROOT, "%.1f", reach(level))
+        return "L" + level + "  hands " + String.format(java.util.Locale.ROOT, "%.2f", PaHand.seconds(level)) + " s  reach " + String.format(java.util.Locale.ROOT, "%.1f", reach(level))   // [pa35] a player's pace: no work or walking bonus
             + "  react " + reactTicks(level) * 50 + "ms  " + bow + "  range " + range(level);
     }
 
-    /** Extra walking speed, percent: 2 a level. */
+    /** Extra walking speed, percent: [pa35] none. It walks (and sprints) at a player's pace at every level; levels buy
+     *  planning (routes, fewer idle gaps), never legs. */
     public static int speedPercent(int level) {
-        return 2 * (Math.max(1, Math.min(MAX, level)) - 1);
+        return 0;
     }
 
     /** Extra damage in a fight: a third of a heart a level. */

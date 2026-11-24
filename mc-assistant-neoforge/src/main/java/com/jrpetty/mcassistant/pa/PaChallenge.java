@@ -59,9 +59,9 @@ public final class PaChallenge {
         return Math.hypot(at.x - (goal.getX() + 0.5), at.z - (goal.getZ() + 0.5)) - 0.5;
     }
 
-    /** Its walking speed in a race, from its level (it sprints like a player; a better runner each level). */
+    /** Its speed in a race: [pa35] a player's sprint (thirty per cent over a walk) at every level; a higher level picks a better line, not faster legs. */
     public static double raceSpeed(int level) {
-        return 1.15 + 0.035 * (Math.max(1, Math.min(10, level)) - 1);
+        return 1.3;
     }
 
     static String start(ServerPlayer p, PlayerAssistantEntity a, String kind, PaOrders.Look look) {
