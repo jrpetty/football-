@@ -151,6 +151,7 @@ public final class TownLod {
     /** Forget every town's level (a world closing, or a test). */
     public static void reset() {
         TOWNS.clear();
+        SleepClaims.reset();                                             // [soak40]
         TownScheduler.reset();
         asleep = 0;
         liveInTests = false;

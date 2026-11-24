@@ -158,6 +158,7 @@ public final class ChunkLoad {
             }
             return;
         }
+        com.jrpetty.mcassistant.entity.SleepClaims.asking(owner);   // [soak40] whose folk asks, for a sleeping town's sorting
         // The centre first, then outward: the heart of a village is awake in a
         // moment and its far fields follow.
         List<int[]> cells = new ArrayList<>((2 * radius + 1) * (2 * radius + 1));

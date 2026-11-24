@@ -102,4 +102,69 @@ public class SoakGameTests {
             helper.succeed();
         });
     }
+
+    /**
+     * A caravan of an awake town crossing a sleeping town's ground keeps the ground round it awake: its window, asked for
+     * in its own folk's tick under a name of the trip's own, is its town's, not the sleeper's (whose ground it lies on).
+     * Before, the sleeper let it go as it slept (and parked any it asked for after), and the caravan stood frozen there.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "soak_sk03_trip_window")
+    public static void sk03_trip_window(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int ax = 9_438_000, bx = ax + 120, z = 92000;
+        Kit.hold(level, ax + 60, z, 110);
+        Kit.prepare(level, ax + 60, z, 110);
+        BlockPos ah = Kit.surface(level, ax, z), bh = Kit.surface(level, bx, z);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, ah, 0.0F);
+        com.jrpetty.mcassistant.entity.Villages.Village bv = com.jrpetty.mcassistant.entity.Villages.found(level, bh);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, bh, 0.0F);
+        helper.assertTrue(a != null && b != null && bv != null && !a.ownerId().equals(b.ownerId()), "two towns");
+        java.util.UUID av = a.ownerId(), bid = b.ownerId();
+        com.jrpetty.mcassistant.entity.TownLod.ratesForTests(bid, new com.jrpetty.mcassistant.entity.TownLod.Rates(java.util.Map.of("bread", 1.0), 1.0, 0.0, 5.0));
+        java.util.UUID trip = java.util.UUID.nameUUIDFromBytes(("sk03-caravan-" + a.getUUID()).getBytes());
+        BlockPos road = bh.offset(-20, 0, 6);
+        int depth = com.jrpetty.mcassistant.entity.Accounts.enter(a);       // as in the caravan's own tick
+        com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, trip, road, 1, true);
+        com.jrpetty.mcassistant.entity.Accounts.leave(depth);
+        helper.runAfterDelay(200, () -> {
+            for (int x = (ax + 60 - 110) >> 4; x <= (ax + 60 + 110) >> 4; x++)
+                for (int zz = (z - 110) >> 4; zz <= (z + 110) >> 4; zz++) level.setChunkForced(x, zz, false);
+            level.setChunkForced(ah.getX() >> 4, ah.getZ() >> 4, true);        // the awake town's heart held
+            com.jrpetty.mcassistant.entity.TownLod.liveForTests(true);
+            com.jrpetty.mcassistant.entity.TownWake.liveForTests(true);
+            com.jrpetty.mcassistant.entity.TownLod.lookForTests(level.getServer());
+            boolean aAway = com.jrpetty.mcassistant.entity.TownLod.away(av), bAway = com.jrpetty.mcassistant.entity.TownLod.away(bid);
+            int held = 0;
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dz = -1; dz <= 1; dz++) if (com.jrpetty.mcassistant.ChunkLoad.holds(level, trip, (road.getX() >> 4) + dx, (road.getZ() >> 4) + dz)) held++;
+            // And a window asked for now, on the sleeper's ground, is forced, not parked for its waking.
+            BlockPos on = bh.offset(4, 0, -20);
+            askAs(a, level, trip, on);
+            int parked = com.jrpetty.mcassistant.entity.TownLod.parkedForTests(bid, trip);
+            boolean asked = com.jrpetty.mcassistant.ChunkLoad.holds(level, trip, on.getX() >> 4, on.getZ() >> 4);
+            Kit.log("sk03 the awake town " + (aAway ? "asleep" : "awake") + ", the other " + (bAway ? "asleep" : "awake") + "; the caravan's window "
+                + held + " of 9 chunks held; a new one parked " + parked + ", asked for " + asked);
+            com.jrpetty.mcassistant.entity.TownLod.liveForTests(false);
+            com.jrpetty.mcassistant.entity.TownWake.liveForTests(false);
+            com.jrpetty.mcassistant.entity.TownLod.forceForTests(level.getServer(), null);
+            level.setChunkForced(ah.getX() >> 4, ah.getZ() >> 4, false);
+            com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, trip, road, 1, false);
+            com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, trip, on, 1, false);
+            helper.assertTrue(!aAway && bAway, "the held town awake, the other asleep");
+            helper.assertTrue(held == 9, "the caravan's window kept as the town whose ground it is on sleeps: " + held + " of 9");
+            helper.assertTrue(parked == 0 && asked, "a window it asks for there now is its own town's: parked " + parked + ", asked for " + asked);
+            helper.succeed();
+        });
+    }
+
+    /** A window asked for in this folk's tick, as its own systems ask. */
+    private static void askAs(VillageFolkEntity a, ServerLevel level, java.util.UUID trip, BlockPos at) {
+        int depth = com.jrpetty.mcassistant.entity.Accounts.enter(a);
+        try {
+            com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, trip, at, 1, true);
+        } finally {
+            com.jrpetty.mcassistant.entity.Accounts.leave(depth);
+        }
+    }
 }
