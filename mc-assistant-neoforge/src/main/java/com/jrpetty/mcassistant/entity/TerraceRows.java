@@ -209,12 +209,14 @@ public final class TerraceRows {
         if (s != null) recordSteps(village, site.anchor(), s);
         LOG.info("[MCA-TERRACE] {}: {} on the lot at {} (its back {}), its houses' floors {}", Villages.name(village), project,
             site.anchor().toShortString(), site.facing(), s == null ? "level" : Arrays.toString(s));
+        for (Tier o : Tier.values()) if (!o.structure.equals(project)) Ledger.forget(village, SITE_NOTE + o.structure);   // one row at a time
         Ledger.note(village, SITE_NOTE + project, site.anchor().getX() + "," + site.anchor().getY() + "," + site.anchor().getZ() + ","
-            + site.facing().get3DDataValue() + "," + site.radius());
+            + site.facing().get3DDataValue() + "," + site.radius() + "," + (++NOTED));
     }
 
-    /** [house34b] The lot a row was going up on, kept over a restart (Ledger note). */
+    /** [house34b] The lot a row was going up on, kept over a restart (Ledger note): x,y,z,facing,radius,order. */
     static final String SITE_NOTE = "terrace/site/";
+    private static long NOTED = System.currentTimeMillis();
 
     /**
      * [house34b] Villages.siteFor: a row begun before a restart, its ground again. The town's chosen lots live only in
@@ -789,6 +791,22 @@ public final class TerraceRows {
         // from the list the moment its lot was chosen, and the builders went on raising houses while the row's lot waited)
         for (String k : Villages.sitesOf(village).keySet()) {
             if (isRow(k)) { projects.add(house < 0 ? projects.size() : house, k); return projects; }
+        }
+        // and one begun and left (its builder taken off it, a restart): finished before anything new, whether or not the
+        // town's households still want it (a half-built row stood for good once the town had beds enough elsewhere)
+        Tier newest = null;
+        long when = Long.MIN_VALUE;
+        for (Tier t : Tier.values()) {
+            String raw = Ledger.note(village, SITE_NOTE + t.structure);
+            if (raw == null || raw.isEmpty()) continue;
+            String[] p = raw.split(",");
+            long w = p.length > 5 ? Long.parseLong(p[5]) : 0L;
+            if (w >= when) { when = w; newest = t; }
+        }
+        if (newest != null) {
+            for (Tier t : Tier.values()) if (t != newest) Ledger.forget(village, SITE_NOTE + t.structure);   // an older one, its lot taken since
+            projects.add(house < 0 ? 0 : house, newest.structure);
+            return projects;
         }
         if (house < 0) { WANT.remove(village); return projects; }
         Villages.Age age = Villages.ageOf(village);
