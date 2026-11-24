@@ -3044,6 +3044,11 @@ public final class Villages {
             holdPrivateSite(villageId, project, kept);
             return kept;
         }
+        Site row = TerraceRows.kept(level, villageId, project);                    // [house34b] a row begun before a restart: its lot again
+        if (row != null) {
+            pending.put(project, row);
+            return row;
+        }
         // [city26] No lot is chosen while the founding is still making the town's ground: a site claimed then stood on the
         // ground as it was (its floor measured from it), and the way in to its door kept the levelling off that street.
         if (Founding.shaping(level, v.centre(), 16)) return null;

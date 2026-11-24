@@ -209,6 +209,45 @@ public final class TerraceRows {
         if (s != null) recordSteps(village, site.anchor(), s);
         LOG.info("[MCA-TERRACE] {}: {} on the lot at {} (its back {}), its houses' floors {}", Villages.name(village), project,
             site.anchor().toShortString(), site.facing(), s == null ? "level" : Arrays.toString(s));
+        Ledger.note(village, SITE_NOTE + project, site.anchor().getX() + "," + site.anchor().getY() + "," + site.anchor().getZ() + ","
+            + site.facing().get3DDataValue() + "," + site.radius());
+    }
+
+    /** [house34b] The lot a row was going up on, kept over a restart (Ledger note). */
+    static final String SITE_NOTE = "terrace/site/";
+
+    /**
+     * [house34b] Villages.siteFor: a row begun before a restart, its ground again. The town's chosen lots live only in
+     * memory: a row half up when the server stopped was left standing half built, and the town chose another lot for its
+     * next and began again there. Only a row actually begun (a good part of its footing laid) is taken up again; one not
+     * yet started may go wherever the town now likes, and the note is let go.
+     */
+    @Nullable
+    public static Villages.Site kept(ServerLevel level, UUID village, String project) {
+        if (!isRow(project)) return null;
+        String raw = Ledger.note(village, SITE_NOTE + project);
+        if (raw == null || raw.isEmpty()) return null;
+        Villages.Site site;
+        try {
+            String[] p = raw.split(",");
+            site = new Villages.Site(new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2])),
+                Direction.from3DDataValue(Integer.parseInt(p[3])), Integer.parseInt(p[4]));
+        } catch (RuntimeException e) {
+            Ledger.forget(village, SITE_NOTE + project);
+            return null;
+        }
+        for (Ledger.Building b : Ledger.buildings(village)) {
+            if (b.anchor().equals(site.anchor())) { Ledger.forget(village, SITE_NOTE + project); return null; }   // built
+        }
+        if (!level.isLoaded(site.anchor())) return null;
+        int footing = 0, laid = 0;
+        for (BuildGoal.Placement pl : BuildGoal.plan(project, site.anchor(), site.facing(), 13)) {
+            if (pl.part() != BuildGoal.Part.BLOCK || pl.pos().getY() > site.anchor().getY()) continue;
+            footing++;
+            if (!level.getBlockState(pl.pos()).isAir() && !BuildGoal.soft(level.getBlockState(pl.pos()))) laid++;
+        }
+        if (footing == 0 || laid * 2 < footing) { Ledger.forget(village, SITE_NOTE + project); return null; }
+        return site;
     }
 
     private static int step(int[] steps, int i) {
@@ -909,6 +948,7 @@ public final class TerraceRows {
             String key = OPENED + b.anchor().asLong();
             if (Ledger.note(id, key) != null) continue;
             Ledger.note(id, key, Long.toString(day));
+            Ledger.forget(id, SITE_NOTE + b.structure());                    // [house34b] up: its lot no longer kept
             Tier t = tier(b.structure());
             Villages.tell(id, day, name(id, b) + " was built: " + t.a + ", " + t.count() + " homes in a row, " + t.looks);
         }
