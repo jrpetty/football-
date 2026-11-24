@@ -923,7 +923,7 @@ public final class TownLife {
             case "postoffice" -> "The Post Office";            // [batchF] (Post)
             case "firestation" -> "The Fire Station";          // [disasters] (FireSafety)
             case "powderhut" -> "The Powder Hut";              // [fireworks] (FireworksMaker)
-            case "terrace", "terrace2", "terrace3" -> TerraceRows.title(structure);   // [house34] "The Workers' Terrace"
+            case "terrace", "terrace2", "terrace3", "terrace4", "terrace5" -> TerraceRows.title(structure);   // [house34] "The Workers' Terrace"
             default -> "The " + Character.toUpperCase(structure.charAt(0)) + structure.substring(1);
         };
     }

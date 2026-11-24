@@ -75,7 +75,7 @@ public final class Pledges {
                 case "hall", "townhall", "court", "chapel", "graveyard", "belltower" -> Values.Value.TRADITION;
                 case "windmill", "bakery", "orchard", "allotments", "pen", "farm" -> Values.Value.FOOD;
                 case "house", "manor", "flats", "flats4", "flats_old", "flats4_old", "guesthouse",
-                     "terrace", "terrace2", "terrace3" -> Values.Value.HOMES;   // [flats-access] [house34]
+                     "terrace", "terrace2", "terrace3", "terrace4", "terrace5" -> Values.Value.HOMES;   // [flats-access] [house34]
                 case "market", "shop", "store", "bank" -> Values.Value.WEALTH;
                 default -> Values.Value.PROGRESS;
             };

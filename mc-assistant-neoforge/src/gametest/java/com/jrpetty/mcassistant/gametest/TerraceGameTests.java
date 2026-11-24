@@ -205,7 +205,15 @@ public class TerraceGameTests {
                 ok.that(beds == 4, "four beds in " + TerraceRows.addressForTests(id, h) + ": " + beds);
                 ok.that("WORKERS".equals(TerraceRows.tierForTests(id, h)), "a workers' cottage on the books");
                 ok.that(TerraceRows.addressForTests(id, h).matches("No\\. [1-4], .* (Cottages|Row|Yard)"), "its address: " + TerraceRows.addressForTests(id, h));
-                for (VillageFolkEntity fo : t.folk()) if (h.equals(Homes.homeOf(fo))) { housed++; break; }
+                for (VillageFolkEntity fo : t.folk()) if (h.equals(Homes.homeOf(fo))) {
+                    housed++;
+                    // [house34c] it sits out on its own front step, on the street (not at its bed upstairs)
+                    BlockPos step = TerraceRows.doorstepForTests(fo);
+                    int i = houses.indexOf(h);
+                    ok.that(step != null && step.equals(TerraceRows.doorForTests(b, i).relative(f.getOpposite())),
+                        "its evening on its own front step: " + step + " (door " + TerraceRows.doorForTests(b, i) + ")");
+                    break;
+                }
             }
             ok.that(housed == 4, "a waiting household in each: " + housed);
             if (!ok.clean()) helper.fail(ok.summary());
@@ -376,7 +384,8 @@ public class TerraceGameTests {
             List<String> wanted = Villages.projectsWanted(id);
             Kit.log("th04 three wealthy too: " + java.util.Arrays.toString(rich) + " | wanted " + wanted);
             ok.that(rich != null && rich[0].equals("terrace3"), "well-off households waiting in a town: a grand terrace");
-            ok.that(wanted.contains("terrace3") && (wanted.indexOf("house") < 0 || wanted.indexOf("terrace3") < wanted.indexOf("house")),
+            String grand = wanted.contains("terrace5") ? "terrace5" : "terrace3";      // [house34c] a crescent where a block is free
+            ok.that(wanted.contains(grand) && (wanted.indexOf("house") < 0 || wanted.indexOf(grand) < wanted.indexOf("house")),
                 "on the builders' list ahead of the next house: " + wanted);
             // a village (not a town) builds no grand terrace however rich its folk
             Villages.ageForTests(id, Villages.Age.STONE);
@@ -436,6 +445,243 @@ public class TerraceGameTests {
                 ok.that(pots >= houses.size(), "a chimney pot (or a fire) for every house: " + pots);
                 if (kinds[k].equals("terrace3")) ok.that(bars >= 15 && fences == 0, "the grand row's railings all in iron: " + bars + " bars, " + fences + " fences out front");
             }
+            if (!ok.clean()) helper.fail(ok.summary());
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ th06: a corner terrace, round where two streets meet
+
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "th06_corner_terrace")
+    public static void th06_corner_terrace(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 9120000;
+        Town t = town(helper, level, x, 2, Villages.Age.IRON, 70);
+        UUID id = t.id();
+        int y = t.heart().getY();
+        BlockPos a = new BlockPos(x, y, Z + 40);
+        Direction f = Direction.SOUTH;
+        helper.runAtTickTime(10, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            flat(level, x - 16, x + 16, Z + 30, Z + 62, y);
+            TerraceRows.stampForTests(level, "terrace4", a, f, new int[0], id);
+            Ledger.built(id, "terrace4", a, f);
+            Ledger.Building b = new Ledger.Building("terrace4", a, f);
+            Homes.tickForTests(level, t.v());
+            List<BlockPos> houses = TerraceRows.housesForTests(b);
+            ok.that(houses.size() == 6, "six houses: " + houses.size());
+            ok.that(new java.util.HashSet<>(houses).size() == houses.size(), "each on its own anchor: " + houses);
+            for (int i = 0; i < houses.size(); i++) {
+                BlockPos door = TerraceRows.doorForTests(b, i);
+                Direction way = TerraceRows.facingForTests(b, i);
+                BlockPos out = door.relative(way.getOpposite());
+                ok.that(way == (i < 4 ? f : f.getCounterClockWise()), "house " + (i + 1) + " faces " + (i < 4 ? "the first street" : "the side street") + ": " + way);
+                ok.that(level.getBlockState(door).getBlock() instanceof DoorBlock, "house " + (i + 1) + "'s front door hung at " + door);
+                ok.that(level.getBlockState(out).isAir() && level.getBlockState(out.above()).isAir(), "and it opens onto its street: " + out);
+                for (int j = 0; j < houses.size(); j++) {
+                    boolean in = TerraceRows.insideForTests(b, j, houses.get(i));
+                    ok.that(in == (i == j), "house " + (i + 1) + "'s hall " + (i == j ? "in its own house" : "not in house " + (j + 1)));
+                }
+                int beds = Homes.bedsForTests(level, id, houses.get(i)).size();
+                ok.that(beds == 4, "four beds in house " + (i + 1) + ": " + beds);
+            }
+            // the corner house: a front door on each street
+            BlockPos side = cell(a, f, 11, 0, -1);
+            ok.that(level.getBlockState(side).getBlock() instanceof DoorBlock, "the corner house's door on the side street at " + side);
+            ok.that(level.getBlockState(side.relative(f.getClockWise())).isAir(), "opening onto the side street");
+            // one roof turning the corner: hipped at the outer corner (no gable over either street), a roof over every room
+            int gable = 0;
+            for (int h = 8; h <= 10; h++) {
+                for (int dz = -4; dz <= 1; dz++) if (level.getBlockState(cell(a, f, 11, h, dz)).is(Blocks.BRICKS)) gable++;
+                for (int dx = 5; dx <= 10; dx++) if (level.getBlockState(cell(a, f, dx, h, -5)).is(Blocks.BRICKS)) gable++;
+            }
+            ok.that(gable == 0, "hipped at the corner: no gable over either street (" + gable + " bricks)");
+            int open = 0;
+            String firstOpen = "";
+            for (int dx = -10; dx <= 11; dx++) for (int dz = -4; dz <= 14; dz++) {
+                boolean roofed = dz <= 1 || (dx >= 5 && dx <= 10);
+                if (!roofed) continue;
+                boolean any = false;
+                for (int h = 7; h <= 10; h++) if (solid(level, cell(a, f, dx, h, dz))) any = true;
+                if (!any) { open++; if (firstOpen.isEmpty()) firstOpen = dx + "," + dz; }
+            }
+            ok.that(open == 0, "a roof over every room of the L: " + open + " open" + (firstOpen.isEmpty() ? "" : " (first " + firstOpen + ")"));
+            // finished: a sign by every door, a pot on every flue
+            int n = TerraceRows.dress(level, t.v(), b, true);
+            int signs = 0, pots = 0;
+            for (int dx = -12; dx <= 13; dx++) for (int dz = -7; dz <= 17; dz++) for (int h = 0; h <= 14; h++) {
+                BlockState st = level.getBlockState(cell(a, f, dx, h, dz));
+                if (st.getBlock() instanceof WallSignBlock) signs++;
+                if (st.is(Blocks.FLOWER_POT) || st.is(Blocks.DECORATED_POT) || st.is(Blocks.CAMPFIRE)) pots++;
+            }
+            Kit.log("th06 " + n + " pieces; " + signs + " signs, " + pots + " pots; addresses " + TerraceRows.addressForTests(id, houses.get(3))
+                + " / " + TerraceRows.addressForTests(id, houses.get(5)));
+            ok.that(signs == 6, "a sign by every door: " + signs);
+            ok.that(pots >= 6, "a chimney pot for every house: " + pots);
+            ok.that(TerraceRows.addressForTests(id, houses.get(5)).matches("No\\. 6, .* (Corner|Buildings)"), "its address: " + TerraceRows.addressForTests(id, houses.get(5)));
+            if (!ok.clean()) helper.fail(ok.summary());
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ th07: a crescent round its lawn
+
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "th07_crescent")
+    public static void th07_crescent(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 9124000;
+        Town t = town(helper, level, x, 2, Villages.Age.IRON, 70);
+        UUID id = t.id();
+        int y = t.heart().getY();
+        BlockPos a = new BlockPos(x, y, Z + 40);
+        Direction f = Direction.SOUTH;
+        helper.runAtTickTime(10, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            flat(level, x - 16, x + 16, Z + 30, Z + 60, y);
+            TerraceRows.stampForTests(level, "terrace5", a, f, new int[0], id);
+            Ledger.built(id, "terrace5", a, f);
+            Ledger.Building b = new Ledger.Building("terrace5", a, f);
+            Homes.tickForTests(level, t.v());
+            List<BlockPos> houses = TerraceRows.housesForTests(b);
+            ok.that(houses.size() == 3, "three houses: " + houses.size());
+            for (int i = 0; i < houses.size(); i++) {
+                BlockPos door = TerraceRows.doorForTests(b, i);
+                ok.that(level.getBlockState(door).getBlock() instanceof DoorBlock, "house " + (i + 1) + "'s front door hung at " + door);
+                ok.that(level.getBlockState(door.relative(f.getOpposite())).isAir(), "its steps up to it from the area");
+                int beds = Homes.bedsForTests(level, id, houses.get(i)).size();
+                ok.that(beds >= 4, "a town house's beds in house " + (i + 1) + ": " + beds);
+                ok.that("GRAND".equals(TerraceRows.tierForTests(id, houses.get(i))), "a town house on the books");
+            }
+            // the arc: the first floor's front further back toward the middle, a block at a time
+            int[] front = new int[3];
+            int[] cols = { -9, -5, 0 };
+            for (int k = 0; k < 3; k++) {
+                front[k] = 99;
+                for (int dz = -5; dz <= 8; dz++) if (solid(level, cell(a, f, cols[k], 8, dz))) { front[k] = dz; break; }
+            }
+            ok.that(front[0] < front[1] && front[1] < front[2] && front[2] - front[0] <= 3, "the fronts on an arc, the ends forward: " + java.util.Arrays.toString(front));
+            int mirror = 99;
+            for (int dz = -5; dz <= 8; dz++) if (solid(level, cell(a, f, 1 - cols[1], 8, dz))) { mirror = dz; break; }
+            ok.that(mirror == front[1], "the same each side of the middle: " + mirror + " and " + front[1]);
+            // finished: the lawn's railings and the areas' in iron, a sign by every door
+            int n = TerraceRows.dress(level, t.v(), b, true);
+            int bars = 0, fences = 0, street = 0, signs = 0;
+            for (int dx = -11; dx <= 12; dx++) for (int dz = -6; dz <= 14; dz++) for (int h = 0; h <= 24; h++) {
+                BlockState st = level.getBlockState(cell(a, f, dx, h, dz));
+                if (st.is(Blocks.IRON_BARS)) { bars++; if (dz == -5) street++; }
+                if (st.getBlock() instanceof net.minecraft.world.level.block.FenceBlock && dz <= 3) fences++;
+                if (st.getBlock() instanceof WallSignBlock) signs++;
+            }
+            Kit.log("th07 " + n + " pieces; " + bars + " iron bars (" + street + " along the street), " + fences + " fences; "
+                + signs + " signs; " + TerraceRows.addressForTests(id, houses.get(0)));
+            ok.that(street >= 15 && fences == 0, "the railings all in iron, the lawn's along the street too: " + street + " there, " + fences + " fences");
+            ok.that(signs == 3, "a sign by every door: " + signs);
+            ok.that(TerraceRows.addressForTests(id, houses.get(0)).matches("No\\. 1, .* (Crescent|Circus)"), "a crescent's address: "
+                + TerraceRows.addressForTests(id, houses.get(0)));
+            if (!ok.clean()) helper.fail(ok.summary());
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ th08: the plan chooses the corner and the crescent where they fit
+
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "th08_forms_where_they_fit")
+    public static void th08_forms_where_they_fit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 9128000;
+        Town t = town(helper, level, x, 32, Villages.Age.IRON, 80);
+        UUID id = t.id();
+        helper.runAtTickTime(20, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            ok.that(Villages.rank(id) == Villages.Rank.TOWN, "a town: " + Villages.rank(id));
+            // the well-off of a town: a crescent, on a whole block of the plan
+            ok.that("terrace5".equals(TerraceRows.formForTests(id, "GRAND")), "a crescent for the well-off of a town with a block free: "
+                + TerraceRows.formForTests(id, "GRAND"));
+            Villages.Site cres = Villages.siteFor(level, id, "terrace5");
+            Kit.log("th08 crescent site: " + cres + " | " + Villages.lotReport(id));
+            ok.that(cres != null, "a block for it");
+            if (cres != null) {
+                int ox = cres.anchor().getX() - t.heart().getX(), oz = cres.anchor().getZ() - t.heart().getZ();
+                TownPlan.Lot lot = null;
+                for (TownPlan.Lot l : TerraceLots.blocks()) if (l.x() == ox && l.z() == oz) lot = l;
+                ok.that(lot != null && lot.cells().length == 4, "on a whole block of the plan: " + ox + ", " + oz);
+                Ledger.built(id, "terrace5", cres.anchor(), cres.facing());
+            }
+            ok.that("terrace3".equals(TerraceRows.formForTests(id, "GRAND")), "one crescent to a town; then the grand terrace: "
+                + TerraceRows.formForTests(id, "GRAND"));
+            // the working households: the first row straight, the next round a corner where three lots of a block are free
+            ok.that("terrace".equals(TerraceRows.formForTests(id, "WORKERS")), "the first workers' row straight: " + TerraceRows.formForTests(id, "WORKERS"));
+            Ledger.built(id, "terrace", new BlockPos(x + 2000, t.heart().getY(), Z), Direction.NORTH);
+            ok.that("terrace4".equals(TerraceRows.formForTests(id, "WORKERS")), "the next round a corner: " + TerraceRows.formForTests(id, "WORKERS"));
+            Villages.Site cor = Villages.siteFor(level, id, "terrace4");
+            Kit.log("th08 corner site: " + cor + " | " + Villages.lotReport(id));
+            ok.that(cor != null, "a corner for it");
+            if (cor != null) {
+                int ox = cor.anchor().getX() - t.heart().getX(), oz = cor.anchor().getZ() - t.heart().getZ();
+                TownPlan.Lot lot = null;
+                for (TownPlan.Lot l : TerraceLots.corners()) if (l.x() == ox && l.z() == oz) lot = l;
+                ok.that(lot != null && lot.cells().length == 3, "on three lots of a corner of a block: " + ox + ", " + oz);
+                if (lot != null) {
+                    // its side street down its right: the street before the side houses' doors
+                    Direction r = cor.facing().getClockWise();
+                    int sx = ox + 12 * r.getStepX(), sz = oz + 12 * r.getStepZ();
+                    ok.that(TownPlan.isStreet(sx, sz), "the side street down its right: " + sx + ", " + sz);
+                    int fx = ox - 6 * cor.facing().getStepX(), fz = oz - 6 * cor.facing().getStepZ();
+                    ok.that(TownPlan.isStreet(fx, fz), "the first street before it: " + fx + ", " + fz);
+                }
+            }
+            if (!ok.clean()) helper.fail(ok.summary());
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ th09: the finishing asks the town for what it lacks
+
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "th09_finishing_asks_for_its_stock")
+    public static void th09_finishing_asks_for_its_stock(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 9132000;
+        Town t = town(helper, level, x, 2, Villages.Age.IRON, 70);
+        UUID id = t.id();
+        int y = t.heart().getY();
+        BlockPos a = new BlockPos(x, y, Z + 40);
+        Direction f = Direction.SOUTH;
+        helper.runAtTickTime(10, () -> {
+            Kit.Expect ok = new Kit.Expect();
+            flat(level, x - 13, x + 13, Z + 32, Z + 48, y);
+            TerraceRows.stampForTests(level, "terrace3", a, f, new int[0], id);
+            Ledger.built(id, "terrace3", a, f);
+            Ledger.Building b = new Ledger.Building("terrace3", a, f);
+            // as the builders leave it when the stores are short: its brick in cobble, its roof in timber
+            int brick = 0, roof = 0;
+            for (BuildGoal.Placement pl : BuildGoal.plan("terrace3", a, f, 13)) {
+                if (pl.part() != BuildGoal.Part.BLOCK) continue;
+                BlockState there = level.getBlockState(pl.pos());
+                if (there.is(Blocks.BRICKS)) { level.setBlock(pl.pos(), Blocks.COBBLESTONE.defaultBlockState(), 2); brick++; }
+                else if (there.is(Blocks.DEEPSLATE_TILE_STAIRS)) {
+                    level.setBlock(pl.pos(), Blocks.OAK_STAIRS.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.StairBlock.FACING, there.getValue(net.minecraft.world.level.block.StairBlock.FACING)), 2);
+                    roof++;
+                }
+            }
+            Homes.tickForTests(level, t.v());
+            var wants = TerraceRows.wantsForTests(level, t.v());
+            int wb = wants.getOrDefault(net.minecraft.world.item.Items.BRICKS, 0), wt = wants.getOrDefault(net.minecraft.world.item.Items.DEEPSLATE_TILES, 0);
+            Kit.log("th09 laid in cobble " + brick + ", timber roof " + roof + "; wants " + wants);
+            ok.that(wb >= brick / 2 && wb > 0, "the brick it wants for its fronts: " + wb + " (of " + brick + " in cobble)");
+            ok.that(wt > 0, "the slate it wants for its roof: " + wt);
+            int shortBricks = com.jrpetty.mcassistant.entity.Masonry.shortOfForTests(level, t.v(), net.minecraft.world.item.Items.BRICKS);
+            ok.that(shortBricks >= Math.min(256, wb), "the mason asked for it (Masonry.keep): short of " + shortBricks + " blocks of brick");
+            // nothing in the stores to fire or dress: the traders sell it the makings in the morning
+            Ledger.addCoins(id, 2000);
+            int clay0 = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.CLAY_BALL));
+            int deep0 = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE));
+            TerraceRows.buyForFinishing(level, t.v(), level.getDayTime() / 24000L);
+            int clay = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.CLAY_BALL));
+            int deep = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE));
+            Kit.log("th09 bought: clay " + clay0 + " -> " + clay + ", cobbled deepslate " + deep0 + " -> " + deep + "; treasury " + Ledger.coins(id));
+            ok.that(clay > clay0, "clay bought for the kiln: " + clay0 + " -> " + clay);
+            ok.that(deep > deep0, "cobbled deepslate bought for the slate: " + deep0 + " -> " + deep);
             if (!ok.clean()) helper.fail(ok.summary());
             helper.succeed();
         });

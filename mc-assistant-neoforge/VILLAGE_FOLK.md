@@ -3677,6 +3677,22 @@ every party wall. There are three kinds, so a town's streets show who lives wher
   Inside: the hall up the side and the stair in two flights up the back, the dining room (a long
   table under a chandelier, four chairs, shelves) and the kitchen on the raised ground floor, the
   master bedroom on the first floor, and the children's and a servant's room on the second.
+* **The corner terrace** (a village and up, every other workers' row, where the plan has a corner
+  free): an L of six homes where two streets meet. Three cottages along the first street, the
+  corner house on the corner (a front door on each street, a shop window carried round the corner,
+  its rooms deeper than its neighbours', the shop in front and the kitchen behind, two bedrooms
+  over), and two cottages round the corner along the side street, turned to face it. One slate
+  roof turns the corner: the two ridges meet over the corner house, hipped down to both streets at
+  the outer corner and in a valley over the yards; a back passage runs through the side yards to
+  the end of the side street. It takes three lots of a block: the pair along the first street and
+  the lot behind the corner one (the fourth is left alone, the yards backing onto it).
+* **The crescent** (a town's first grand row, where a whole block is free): three grand town houses
+  on a shallow arc round a lawn, their fronts stepping back a block at a time toward the middle,
+  the railings, the area, the bands, the balconies, the cornice and the parapet all following the
+  curve, the end houses' rooms deeper toward the street. Before them a lawn with a flower border,
+  a curving pavement before the railings, iron railings along the street with two gates and paths
+  in, and lamps on piers at its corners. It takes a whole block of the plan. Its houses are named
+  "No. 1, Oakmere Crescent" and the like.
 * **Where.** A row needs a long street front: one of the long lots out along the avenues, turned
   to face the avenue (its front doors on the avenue, its yards on the street behind), or two home
   lots side by side facing the same street (every block of homes has a pair on its outer street).

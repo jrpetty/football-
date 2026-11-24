@@ -376,6 +376,8 @@ public final class Villages {
             case "terrace" -> "a workers' terrace";               // [house34] (TerraceRows)
             case "terrace2" -> "a bay-fronted terrace";           // [house34]
             case "terrace3" -> "a grand terrace";                 // [house34]
+            case "terrace4" -> "a corner terrace";                // [house34c]
+            case "terrace5" -> "a crescent";                      // [house34c]
             case "pitch" -> "the football pitch";                 // [batchC]
             case "range" -> "the archery range";                  // [batchC]
             case "postoffice" -> "the post office";               // [batchF]
@@ -1785,6 +1787,17 @@ public final class Villages {
     }
 
     /** Not set aside: the village may take this project on now. */
+    /** [house34c] Is this project set aside just now (no lot, cannot afford it...)? */
+    public static boolean setAsideNow(UUID villageId, String project) {
+        return !open(villageId, project);
+    }
+
+    /** [house34c] Is this lot of the plan (TownPlan.cellKey) spoken for by something going up or put up since the start? */
+    public static boolean lotTaken(UUID villageId, long cell) {
+        java.util.Set<Long> taken = LOT_TAKEN.get(villageId);
+        return taken != null && taken.contains(cell);
+    }
+
     private static boolean open(UUID villageId, String project) {
         Map<String, Long> d = DEFERRED.get(villageId);
         if (d == null) return true;
@@ -2369,7 +2382,7 @@ public final class Villages {
                 + folk + " folk";
             case "manor" -> "a manor house, six beds under a slate roof: the best homes a town of the Iron Age has";
             case "flats" -> Flats.why(villageId);                  // [flats]
-            case "terrace", "terrace2", "terrace3" -> TerraceRows.why(villageId, project);   // [house34]
+            case "terrace", "terrace2", "terrace3", "terrace4", "terrace5" -> TerraceRows.why(villageId, project);   // [house34]
             case "pitch" -> Pitch.why(villageId);                  // [batchC]
             case "range" -> Archery.why(villageId);                // [batchC]
             case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";

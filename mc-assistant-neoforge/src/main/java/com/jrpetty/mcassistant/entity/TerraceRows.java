@@ -127,14 +127,130 @@ public final class TerraceRows {
         }
     }
 
-    /** The row this register name (or drawing, a theme's "x/terrace2" too) is, or null. */
+    /** [house34c] The form a row takes on its ground: straight along its street, an L round a corner, or an arc. */
+    public enum Form { STRAIGHT, CORNER, CRESCENT }
+
+    /**
+     * [house34c] A row as its drawing has it: its register name, the Tier it is for (its standing, its houses' plan: the
+     * door's column in a house, its front and back, its floor), what it is called, its houses ({left, right, mirrored}
+     * columns, each in its own frame) and each house's frame in the drawing ({ox, oz, turn}: its own columns shifted by
+     * ox across and oz back, and, turn 1, turned to front the row's right side, as the corner's side street houses are),
+     * and the drawing's ground {least dx, most dx, least dz, most dz}. The straight rows are their Tiers' own.
+     */
+    public enum Shape {
+        WORKERS(Tier.WORKERS), BAY(Tier.BAY), GRAND(Tier.GRAND),
+        CORNER("terrace4", Tier.WORKERS, Form.CORNER, "corner terrace", "a corner terrace", new String[]{ "Corner", "Buildings" },
+            new int[][]{ { -9, -6, 0 }, { -4, -1, 1 }, { 1, 4, 0 }, { 6, 10, 1 }, { 6, 9, 0 }, { 11, 14, 1 } },
+            new int[][]{ { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 6, 0, 1 }, { 6, 0, 1 } },
+            new int[]{ 2, 2, 2, 4, 2, 2 }, new int[]{ -10, 11, -5, 16 },
+            "cottages in an L where two streets meet, the corner house with a front door on each street and a shop window "
+                + "round the corner, one roof turning the corner"),
+        CRESCENT("terrace5", Tier.GRAND, Form.CRESCENT, "crescent", "a crescent", new String[]{ "Crescent", "Circus" },
+            new int[][]{ { -9, -4, 0 }, { -2, 3, 0 }, { 5, 10, 1 } },
+            new int[][]{ { 0, 7, 0 }, { 0, 8, 0 }, { 0, 7, 0 } },
+            new int[]{ 5, 4, 5 }, new int[]{ -10, 11, -5, 13 },
+            "Regency town houses four storeys high on a shallow arc round a lawn, railings, balconies and cornice following "
+                + "the curve");
+
+        public final String structure, word, a, looks;
+        public final Tier tier;
+        public final Form form;
+        final String[] names;
+        final int[][] houses, frames;
+        final int[] backs, ground;
+
+        Shape(Tier t) {
+            this(t.structure, t, Form.STRAIGHT, t.word, t.a, t.names, t.houses, null, null,
+                new int[]{ t.walls[0], t.walls[t.walls.length - 1], -5, 5 }, t.looks);
+        }
+
+        Shape(String structure, Tier tier, Form form, String word, String a, String[] names, int[][] houses,
+              @Nullable int[][] frames, @Nullable int[] backs, int[] ground, String looks) {
+            this.structure = structure;
+            this.tier = tier;
+            this.form = form;
+            this.word = word;
+            this.a = a;
+            this.names = names;
+            this.houses = houses;
+            this.frames = frames;
+            this.backs = backs;
+            this.ground = ground;
+            this.looks = looks;
+        }
+
+        public int count() { return houses.length; }
+        int left(int i) { return houses[i][0]; }
+        int right(int i) { return houses[i][1]; }
+        boolean mirrored(int i) { return houses[i][2] == 1; }
+        boolean straight() { return form == Form.STRAIGHT; }
+
+        /** The column of house i's front door, in its own frame. */
+        int doorDx(int i) { return mirrored(i) ? right(i) - tier.door : left(i) + tier.door; }
+
+        /** House i's frame: {ox, oz, turn}. */
+        int[] frame(int i) { return frames == null ? NO_FRAME : frames[i]; }
+
+        /** The row of house i's back wall's inside, in its own frame (the corner house runs deeper than its neighbours). */
+        int back(int i) { return backs == null ? tier.back : backs[i]; }
+
+        /** How far back of its front a house of this row reaches (its yard or garden), in its own frame. */
+        int reach(int i) { return form == Form.CRESCENT ? 6 : 5; }
+
+        /** Is this column of the drawing's ground the row's (the corner leaves the block's fourth lot alone)? */
+        boolean covers(int dx, int dz) {
+            if (dx < ground[0] || dx > ground[1] || dz < ground[2] || dz > ground[3]) return false;
+            return form != Form.CORNER || dx > 0 || dz < 6;
+        }
+
+        /** The row of the front wall at this column of the drawing (the crescent's steps back toward its middle). */
+        int frontAt(int dx) {
+            return form == Form.CRESCENT ? tier.front + LAWN + arc(dx) : tier.front;
+        }
+
+        /** Where the street is before house i's door, in the drawing: {dx, dz}. */
+        int[] street(int i) {
+            int[] f = frame(i);
+            return f[2] == 1 ? new int[]{ f[0] + 6, f[1] + doorDx(i) } : new int[]{ f[0] + doorDx(i), -6 };
+        }
+    }
+
+    private static final int[] NO_FRAME = { 0, 0, 0 };
+    /** [house34c] The crescent: how far each column's front stands back from its ends (dx -10 to 11), and its lawn's depth
+     *  (tools/terrace_design.py draws it from the same numbers). */
+    private static final int[] ARC = { 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1, 0, 0 };
+    static final int LAWN = 5;
+
+    static int arc(int dx) {
+        return ARC[Math.max(0, Math.min(ARC.length - 1, dx + 10))];
+    }
+
+    /** [house34c] The shape of a row by its register name (or drawing, a theme's "x/terrace2" too), or null. */
     @Nullable
-    public static Tier tier(@Nullable String structure) {
+    public static Shape shape(@Nullable String structure) {
         if (structure == null) return null;
         int slash = structure.indexOf('/');
         String s = slash >= 0 ? structure.substring(slash + 1) : structure;
-        for (Tier t : Tier.values()) if (t.structure.equals(s)) return t;
+        for (Shape sh : Shape.values()) if (sh.structure.equals(s)) return sh;
         return null;
+    }
+
+    /** The row's Tier by its register name (or drawing), or null. */
+    @Nullable
+    public static Tier tier(@Nullable String structure) {
+        Shape sh = shape(structure);
+        return sh == null ? null : sh.tier;
+    }
+
+    /**
+     * [house34c] House i of a row as a building of its own: the row's register entry with its anchor shifted to the
+     * house's frame and its facing turned with it. Its own cells and spots (cell, local) are then its frame's, as a house
+     * of a straight row's are its row's.
+     */
+    static Ledger.Building frame(Ledger.Building b, Shape sh, int i) {
+        int[] f = sh.frame(i);
+        if (f[0] == 0 && f[1] == 0 && f[2] == 0) return b;
+        return new Ledger.Building(b.structure(), cell(b, f[0], 0, f[1]), f[2] == 1 ? b.facing().getCounterClockWise() : b.facing());
     }
 
     public static boolean isRow(@Nullable String structure) {
@@ -165,6 +281,8 @@ public final class TerraceRows {
         PIECES.clear();
         WORTH.clear();
         WANT.clear();
+        WANTS.clear();
+        LEFT.clear();
     }
 
     /** The steps of the row at this anchor (the floor of each house over the anchor's), or an empty array if level. */
@@ -209,7 +327,7 @@ public final class TerraceRows {
         if (s != null) recordSteps(village, site.anchor(), s);
         LOG.info("[MCA-TERRACE] {}: {} on the lot at {} (its back {}), its houses' floors {}", Villages.name(village), project,
             site.anchor().toShortString(), site.facing(), s == null ? "level" : Arrays.toString(s));
-        for (Tier o : Tier.values()) if (!o.structure.equals(project)) Ledger.forget(village, SITE_NOTE + o.structure);   // one row at a time
+        for (Shape o : Shape.values()) if (!o.structure.equals(project)) Ledger.forget(village, SITE_NOTE + o.structure);   // one row at a time
         Ledger.note(village, SITE_NOTE + project, site.anchor().getX() + "," + site.anchor().getY() + "," + site.anchor().getZ() + ","
             + site.facing().get3DDataValue() + "," + site.radius() + "," + (++NOTED));
     }
@@ -257,7 +375,7 @@ public final class TerraceRows {
     }
 
     /** The houses whose ground a column of the drawing is part of: its own house, or both, for a party wall. */
-    private static int[] owners(Tier t, int dx) {
+    private static int[] owners(Shape t, int dx) {
         int a = -1, b = -1;
         for (int i = 0; i < t.count(); i++) {
             if (dx >= t.left(i) - 1 && dx <= t.right(i) + 1) {
@@ -285,10 +403,10 @@ public final class TerraceRows {
      * above it, and a higher house's footing sits on its lower neighbour's wall.
      */
     static List<Blueprints.Cell> stepped(String drawing, int[] steps) {
-        Tier t = tier(drawing);
+        Shape t = shape(drawing);
         boolean level = true;
         for (int s : steps) if (s != 0) level = false;
-        if (t == null || level) return Blueprints.cells(drawing);
+        if (t == null || level || !t.straight()) return Blueprints.cells(drawing);
         String key = drawing + "|" + Arrays.toString(steps);
         if (STEPPED.size() > 256) STEPPED.clear();
         return STEPPED.computeIfAbsent(key, k -> {
@@ -336,8 +454,9 @@ public final class TerraceRows {
      */
     @Nullable
     public static BlockPos ground(ServerLevel level, UUID village, String project, int x, int z, Direction back) {
-        Tier t = tier(project);
+        Shape t = shape(project);
         if (t == null) return null;
+        if (!t.straight()) return groundLevel(level, village, t, x, z, back);
         Direction right = back.getClockWise();
         BlockPos base = new BlockPos(x, 0, z);
         int n = t.count();
@@ -378,19 +497,63 @@ public final class TerraceRows {
     }
 
     /**
+     * [house34c] Villages.siteFor, for a corner terrace or a crescent: one floor for the whole row (an L or an arc does not
+     * step), at the middle of its streets' heights before its doors, which may differ by STEP_MOST at the most; its ground
+     * dry, within CUT_MOST of the floor, and nothing of the town's already standing on it.
+     */
+    @Nullable
+    private static BlockPos groundLevel(ServerLevel level, UUID village, Shape sh, int x, int z, Direction back) {
+        Direction right = back.getClockWise();
+        BlockPos base = new BlockPos(x, 0, z);
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int i = 0; i < sh.count(); i++) {
+            int[] st = sh.street(i);
+            BlockPos street = base.relative(right, st[0]).relative(back, st[1]);
+            if (!level.hasChunk(street.getX() >> 4, street.getZ() >> 4)) return null;
+            int top = BuildGoal.groundTop(level, street.getX(), street.getZ());
+            if (!level.getFluidState(new BlockPos(street.getX(), top - 1, street.getZ())).isEmpty()
+                    || !level.getFluidState(new BlockPos(street.getX(), top, street.getZ())).isEmpty()) return null;
+            lo = Math.min(lo, top);
+            hi = Math.max(hi, top);
+        }
+        if (hi - lo > STEP_MOST) return null;
+        int floor = (lo + hi + 1) / 2;
+        for (int dx = sh.ground[0]; dx <= sh.ground[1]; dx++) {
+            for (int dz = sh.ground[2]; dz <= sh.ground[3]; dz++) {
+                if (!sh.covers(dx, dz)) continue;
+                BlockPos c = base.relative(right, dx).relative(back, dz);
+                if (!level.hasChunk(c.getX() >> 4, c.getZ() >> 4)) return null;
+                int top = BuildGoal.groundTop(level, c.getX(), c.getZ());
+                if (!level.getFluidState(new BlockPos(c.getX(), top - 1, c.getZ())).isEmpty()) return null;
+                if (Math.abs(top - floor) > CUT_MOST) return null;
+            }
+        }
+        BlockPos anchor = new BlockPos(x, floor, z);
+        int[] mine = BuildGoal.box(sh.structure, anchor, back, false);
+        for (Ledger.Building o : Ledger.buildings(village)) {
+            if (Math.abs(o.anchor().getX() - x) > 48 || Math.abs(o.anchor().getZ() - z) > 48) continue;
+            int[] theirs = BuildGoal.box(o.structure(), o.anchor(), o.facing(), false);
+            if (theirs[0] <= mine[1] && mine[0] <= theirs[1] && theirs[2] <= mine[3] && mine[2] <= theirs[3]) return null;
+        }
+        PROPOSED.put(village + "|" + anchor.asLong(), new int[sh.count()]);
+        if (PROPOSED.size() > 512) PROPOSED.clear();
+        return anchor;
+    }
+
+    /**
      * BuildGoal.addTerrainWork, for a row: each house's ground made to its own floor (made up under it, its outer faces in
      * stone, earth under its rooms; the ground standing in its rooms, its yard and its garden dug out), the trees on it
      * felled and what grows wild in it taken up. Only within the row's own columns: never the street at its ends.
      */
     public static void terrainWork(net.minecraft.world.level.Level level, BlockPos base, Direction facing, String structure,
                                    List<BuildGoal.Placement> plan) {
-        Tier t = tier(structure);
+        Shape t = shape(structure);
         if (t == null) return;
-        int[] steps = steps(base);
+        int[] steps = t.straight() ? steps(base) : new int[0];
         Direction right = facing.getClockWise();
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (BuildGoal.Placement p : plan) taken.add(p.pos());
-        int x0 = t.walls[0], x1 = t.walls[t.walls.length - 1];
+        int x0 = t.ground[0], x1 = t.ground[1], z0 = t.ground[2], z1 = t.ground[3];
         for (int dx = x0; dx <= x1; dx++) {
             int[] own = owners(t, dx);
             int s = Integer.MAX_VALUE;
@@ -398,11 +561,12 @@ public final class TerraceRows {
             int floorY = base.getY() + s;
             int top = 0;
             for (int i : own) top = Math.max(top, step(steps, i));
-            for (int dz = -5; dz <= 5; dz++) {
+            for (int dz = z0; dz <= z1; dz++) {
+                if (!t.covers(dx, dz)) continue;                                   // [house34c] the corner's fourth lot not its own
                 BlockPos col = base.relative(right, dx).relative(facing, dz);
                 if (!level.hasChunk(col.getX() >> 4, col.getZ() >> 4)) continue;
                 int g = BuildGoal.groundTop(level, col.getX(), col.getZ());
-                boolean face = dx == x0 || dx == x1 || dz == -5 || dz == 5;
+                boolean face = !t.covers(dx - 1, dz) || !t.covers(dx + 1, dz) || !t.covers(dx, dz - 1) || !t.covers(dx, dz + 1);
                 for (int y = Math.max(g, floorY - 8); y < floorY; y++) {
                     BlockPos c = new BlockPos(col.getX(), y, col.getZ());
                     if (taken.add(c)) plan.add(new BuildGoal.Placement(c, BuildGoal.Part.BLOCK,
@@ -438,7 +602,12 @@ public final class TerraceRows {
     // ------------------------------------------------------------------ the rows and their houses
 
     /** One house of a row: the row, which house, and its anchor on the homes' books. */
-    record Spot(Ledger.Building row, Tier tier, int index, BlockPos anchor) {}
+    record Spot(Ledger.Building row, Tier tier, int index, BlockPos anchor, Shape shape, Ledger.Building frame) {
+        /** [house34c] Its front door, in the world. */
+        BlockPos door() {
+            return cell(frame, shape.doorDx(index), tier.stand + step(steps(row.anchor()), index), tier.front);
+        }
+    }
 
     /** The town's rows, in the order they went up. */
     static List<Ledger.Building> rows(UUID village) {
@@ -460,12 +629,14 @@ public final class TerraceRows {
 
     /** Every house of a row, left to right along its front. */
     static List<Spot> spots(Ledger.Building b) {
-        Tier t = tier(b.structure());
+        Shape sh = shape(b.structure());
         List<Spot> out = new ArrayList<>();
-        if (t == null) return out;
+        if (sh == null) return out;
+        Tier t = sh.tier;
         int[] steps = steps(b.anchor());
-        for (int i = 0; i < t.count(); i++) {
-            out.add(new Spot(b, t, i, cell(b, t.doorDx(i), t.stand + step(steps, i), t.front + 1)));
+        for (int i = 0; i < sh.count(); i++) {
+            Ledger.Building f = frame(b, sh, i);
+            out.add(new Spot(b, t, i, cell(f, sh.doorDx(i), t.stand + step(steps, i), t.front + 1), sh, f));
         }
         return out;
     }
@@ -473,7 +644,7 @@ public final class TerraceRows {
     @Nullable
     static Spot spotAt(UUID village, BlockPos anchor) {
         for (Ledger.Building b : rows(village)) {
-            if (Math.abs(anchor.getX() - b.anchor().getX()) > 12 || Math.abs(anchor.getZ() - b.anchor().getZ()) > 12) continue;
+            if (Math.abs(anchor.getX() - b.anchor().getX()) > 18 || Math.abs(anchor.getZ() - b.anchor().getZ()) > 18) continue;
             for (Spot s : spots(b)) if (s.anchor().equals(anchor)) return s;
         }
         return null;
@@ -497,15 +668,15 @@ public final class TerraceRows {
 
     /** Is this spot in this house: between its party walls, from the street to the back of its yard, footing to chimney? */
     static boolean inside(Spot s, BlockPos p) {
-        int[] d = local(s.row(), p);
+        int[] d = local(s.frame(), p);
         int st = step(steps(s.row().anchor()), s.index());
-        return d[0] >= s.tier().left(s.index()) && d[0] <= s.tier().right(s.index()) && d[2] >= -5 && d[2] <= 5
+        return d[0] >= s.shape().left(s.index()) && d[0] <= s.shape().right(s.index()) && d[2] >= -5 && d[2] <= s.shape().reach(s.index())
             && d[1] - st >= -1 && d[1] - st <= 20;
     }
 
     /** Homes.homeAt: is this spot in this house of a row? */
     static boolean inside(UUID village, Homes.Home h, BlockPos p) {
-        if (Math.abs(p.getX() - h.anchor.getX()) > 14 || Math.abs(p.getZ() - h.anchor.getZ()) > 14) return false;
+        if (Math.abs(p.getX() - h.anchor.getX()) > 16 || Math.abs(p.getZ() - h.anchor.getZ()) > 16) return false;
         Spot s = spotAt(village, h.anchor);
         return s != null && inside(s, p);
     }
@@ -614,8 +785,18 @@ public final class TerraceRows {
     @Nullable
     static BlockPos frontDoor(UUID village, BlockPos houseAnchor) {
         Spot s = spotAt(village, houseAnchor);
-        if (s == null) return null;
-        return cell(s.row(), s.tier().doorDx(s.index()), s.tier().stand + step(steps(s.row().anchor()), s.index()), s.tier().front);
+        return s == null ? null : s.door();
+    }
+
+    /** [house34c] Habits: where a folk of a house of a row sits out of an evening, the step outside its front door; or null. */
+    @Nullable
+    static BlockPos doorstepFor(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null) return null;
+        Homes.Home h = Homes.homeOf(village, f.getUUID());
+        if (h == null || !isHouse(h)) return null;
+        Spot s = spotAt(village, h.anchor);
+        return s == null ? null : s.door().relative(s.frame().facing().getOpposite());
     }
 
     /** Decor: the row a house is in (its register entry), or null. */
@@ -629,14 +810,14 @@ public final class TerraceRows {
 
     /** What the town calls a row: its street and its kind, "Mill Lane Cottages", the next of its kind there "Mill Lane Row". */
     public static String name(UUID village, Ledger.Building b) {
-        Tier t = tier(b.structure());
+        Shape t = shape(b.structure());
         if (t == null) return Villages.spoken(b.structure());
         Villages.Village v = Villages.get(village);
         String street = street(village, v, b);
         int i = 0;
         for (Ledger.Building o : rows(village)) {
             if (o.anchor().equals(b.anchor())) break;
-            if (tier(o.structure()) == t && street.equals(street(village, v, o))) i++;
+            if (shape(o.structure()) == t && street.equals(street(village, v, o))) i++;
         }
         return street + " " + t.names[i % t.names.length];
     }
@@ -675,14 +856,14 @@ public final class TerraceRows {
     /** The register's word for a row (Villages.spoken). */
     @Nullable
     public static String spoken(String structure) {
-        Tier t = tier(structure);
+        Shape t = shape(structure);
         return t == null ? null : t.a;
     }
 
     /** For a sign or a title: "The Workers' Terrace". */
     @Nullable
     public static String title(String structure) {
-        Tier t = tier(structure);
+        Shape t = shape(structure);
         if (t == null) return null;
         String w = t.word;
         StringBuilder sb = new StringBuilder("The");
@@ -786,7 +967,7 @@ public final class TerraceRows {
      */
     public static List<String> wanted(UUID village, List<String> projects) {
         int house = projects.indexOf("house");
-        for (Tier t : Tier.values()) if (projects.contains(t.structure)) return projects;
+        for (Shape t : Shape.values()) if (projects.contains(t.structure)) return projects;
         // one going up already: that one stays on the list ahead of the house till it is built ([house34b]: it was dropped
         // from the list the moment its lot was chosen, and the builders went on raising houses while the row's lot waited)
         for (String k : Villages.sitesOf(village).keySet()) {
@@ -794,9 +975,9 @@ public final class TerraceRows {
         }
         // and one begun and left (its builder taken off it, a restart): finished before anything new, whether or not the
         // town's households still want it (a half-built row stood for good once the town had beds enough elsewhere)
-        Tier newest = null;
+        Shape newest = null;
         long when = Long.MIN_VALUE;
-        for (Tier t : Tier.values()) {
+        for (Shape t : Shape.values()) {
             String raw = Ledger.note(village, SITE_NOTE + t.structure);
             if (raw == null || raw.isEmpty()) continue;
             String[] p = raw.split(",");
@@ -804,7 +985,7 @@ public final class TerraceRows {
             if (w >= when) { when = w; newest = t; }
         }
         if (newest != null) {
-            for (Tier t : Tier.values()) if (t != newest) Ledger.forget(village, SITE_NOTE + t.structure);   // an older one, its lot taken since
+            for (Shape t : Shape.values()) if (t != newest) Ledger.forget(village, SITE_NOTE + t.structure);   // an older one, its lot taken since
             projects.add(house < 0 ? 0 : house, newest.structure);
             return projects;
         }
@@ -813,8 +994,52 @@ public final class TerraceRows {
         if (age.ordinal() < Villages.Age.STONE.ordinal() || Villages.headcount(village) < 12) { WANT.remove(village); return projects; }
         Tier t = choose(village);
         if (t == null) { WANT.remove(village); return projects; }
-        projects.add(house, t.structure);
+        projects.add(house, form(village, t).structure);
         return projects;
+    }
+
+    /**
+     * [house34c] The form the town's next row of this Tier takes, where the plan has the ground for it: a crescent for the
+     * well-off of a town (rank TOWN and up) with a whole block free and none of its own yet, a corner terrace for the
+     * working households where a corner's three lots are free (every other workers' row, the first straight), else the
+     * straight row. A form
+     * the town has looked for a lot for and not found (set aside) gives way to the straight row till it comes round again.
+     */
+    static Shape form(UUID village, Tier t) {
+        Villages.Rank rank = Villages.rank(village);
+        int crescents = 0, corners = 0, straight = 0;
+        for (Ledger.Building b : rows(village)) {
+            Shape sh = shape(b.structure());
+            if (sh == Shape.CRESCENT) crescents++;
+            else if (sh == Shape.CORNER) corners++;
+            else if (sh == Shape.WORKERS) straight++;
+        }
+        if (t == Tier.GRAND && rank.ordinal() >= Villages.Rank.TOWN.ordinal() && crescents == 0
+                && !Villages.setAsideNow(village, Shape.CRESCENT.structure) && placeFree(village, Shape.CRESCENT)) return Shape.CRESCENT;
+        if (t == Tier.WORKERS && rank.ordinal() >= Villages.Rank.VILLAGE.ordinal() && corners < straight
+                && !Villages.setAsideNow(village, Shape.CORNER.structure) && placeFree(village, Shape.CORNER)) return Shape.CORNER;
+        return t == Tier.WORKERS ? Shape.WORKERS : t == Tier.BAY ? Shape.BAY : Shape.GRAND;
+    }
+
+    /** [house34c] Has the plan a place for this row laid out, none of its lots spoken for and nothing standing on it? */
+    static boolean placeFree(UUID village, Shape sh) {
+        Villages.Village v = Villages.get(village);
+        if (v == null) return false;
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : com.jrpetty.mcassistant.village.TerraceLots.places(sh.structure)) {
+            if (!CityGrowth.laidOut(village, lot)) continue;
+            boolean spoken = false;
+            for (long c : lot.cells()) if (Villages.lotTaken(village, c)) spoken = true;
+            if (spoken) continue;
+            BlockPos at = new BlockPos(v.centre().getX() + lot.x(), v.centre().getY(), v.centre().getZ() + lot.z());
+            int[] mine = BuildGoal.box(sh.structure, at, Villages.direction(lot.back()), false);
+            boolean built = false;
+            for (Ledger.Building o : Ledger.buildings(village)) {
+                int[] theirs = BuildGoal.box(o.structure(), o.anchor(), o.facing(), false);
+                if (theirs[0] <= mine[1] && mine[0] <= theirs[1] && theirs[2] <= mine[3] && mine[2] <= theirs[3]) { built = true; break; }
+            }
+            if (!built) return true;
+        }
+        return false;
     }
 
     /** Which row the town is short of, and why (kept for Villages.whyBuild), or null. */
@@ -867,11 +1092,12 @@ public final class TerraceRows {
 
     /** Villages.whyBuild: why this row. */
     public static String why(UUID village, String structure) {
-        Tier t = tier(structure);
+        Shape t = shape(structure);
         if (t == null) return structure;
         String[] w = WANT.get(village);
-        return t.a + " of " + (t.count() == 4 ? "four" : "three") + " homes on one lot, " + t.looks
-            + (w != null && w[0].equals(structure) ? ": " + w[1] : "");
+        return t.a + " of " + (t.count() == 6 ? "six" : t.count() == 4 ? "four" : "three") + " homes on "
+            + (t.form == Form.CORNER ? "a corner" : t.form == Form.CRESCENT ? "a block of its own" : "one lot") + ", " + t.looks
+            + (w != null && tier(w[0]) == t.tier ? ": " + w[1] : "");
     }
 
     /** The beds the town's rows hold (Villages.bedsPlanned, Villages.housing). */
@@ -904,7 +1130,7 @@ public final class TerraceRows {
     /** Each row's cost reckoned once a day (its blocks at the town's prices, its builders' hours), shared among its houses. */
     static void cost(ServerLevel level, UUID village) {
         for (Ledger.Building b : rows(village)) {
-            Tier t = tier(b.structure());
+            Shape t = shape(b.structure());
             String key = village + "|" + b.structure();
             int[] r = HousingMarket.replacement(level, village, b.structure());
             double each = Math.max(1, (r[0] + r[1]) / (double) t.count());
@@ -923,9 +1149,162 @@ public final class TerraceRows {
         if (!(Long.toString(day)).equals(Ledger.note(id, COST + "day"))) {
             cost(level, id);
             Ledger.note(id, COST + "day", Long.toString(day));
+            reckonWants(level, v);
+        } else if (!WANTS.containsKey(id)) {
+            reckonWants(level, v);                                               // [house34c] after a restart
         }
         opened(id, day);
         moveUp(level, v, day);
+    }
+
+    /**
+     * [house34c] What the town's standing rows still want for their finishing, reckoned once a day: blocks of brick for the
+     * brick the builders laid in whatever they had, stone bricks for the rough cobble in their dressed stone, and slate
+     * (deepslate tiles, dressed from cobbled deepslate) for their wooden roofs once the town is in the Iron Age. The
+     * mason keeps that much more by (Masonry.keep: the kiln fires clay for it, the bench cuts the stone), and what the
+     * town's own trades have not made, the traders sell it each morning (buyForFinishing). The finishing waited on stock
+     * nobody had been asked for: a grand row stood four storeys up in cobble with its top floors never faced, the brick
+     * laid only as fast as the masons happened to keep their usual stock by.
+     */
+    private static final Map<UUID, Map<Item, Integer>> WANTS = new ConcurrentHashMap<>();
+    /** [house34c] What the traders delivered to the rows' finishing (by item, on the town's books): not into the stores, where
+     *  the builders drew the stone bricks for the next house the morning they came, and the rows waited on. */
+    private static final String SITE_STOCK = "terrace/site/";
+
+    static int siteStock(UUID village, Item it) {
+        String raw = Ledger.note(village, SITE_STOCK + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).getPath());
+        try { return raw == null || raw.isEmpty() ? 0 : Integer.parseInt(raw); } catch (NumberFormatException e) { return 0; }
+    }
+
+    static void siteStock(UUID village, Item it, int n) {
+        Ledger.note(village, SITE_STOCK + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).getPath(), Integer.toString(Math.max(0, n)));
+    }
+
+    /** One of this for the rows' finishing: off the site first, then out of the stores, then made there of the stores' makings. */
+    private static boolean takeForRows(ServerLevel level, Villages.Village v, Item it) {
+        int site = siteStock(v.id(), it);
+        if (site > 0) { siteStock(v.id(), it, site - 1); return true; }
+        return !Crafts.takeOne(level, v, st -> st.is(it)).isEmpty() || Masonry.take(level, v, it, 1);
+    }
+
+    private static boolean canForRows(ServerLevel level, Villages.Village v, Item it) {
+        return siteStock(v.id(), it) > 0 || Crafts.stock(level, v, st -> st.is(it)) > 0 || Masonry.can(level, v, it, 1);
+    }
+
+    /** [house34c] Each row's own share of the wants (by its anchor): the finishing takes the row nearest done first. */
+    private static final Map<Long, Integer> LEFT = new ConcurrentHashMap<>();
+
+    /** [house34c] How many of this (BRICKS, STONE_BRICKS, DEEPSLATE_TILES) the town's rows still want for their finishing. */
+    public static int finishingWant(@Nullable UUID village, Item it) {
+        if (village == null) return 0;
+        Map<Item, Integer> w = WANTS.get(village);
+        return w == null ? 0 : Math.min(256, w.getOrDefault(it, 0));
+    }
+
+    static void reckonWants(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        Map<Item, Integer> w = new HashMap<>();
+        boolean iron = Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal();
+        for (Ledger.Building b : rows(id)) {
+            if (!Land.areaLoaded(level, b.anchor(), 12) || Ledger.raising(id, b.anchor()) || !standing(level, id, b)) continue;
+            Shape sh = shape(b.structure());
+            int[] steps = steps(b.anchor());
+            Item dressedItem = dressedStone(id).asItem();
+            int rough = roughFaces(level, b, sh).size();
+            if (rough > 0) w.merge(dressedItem, rough, Integer::sum);
+            int before = 0;
+            for (int n : w.values()) before += n;
+            before -= rough;
+            for (BuildGoal.Placement pl : plan(id, b)) {
+                if (pl.part() != BuildGoal.Part.BLOCK) continue;
+                BlockState there = level.getBlockState(pl.pos());
+                if (pl.style() == Blueprints.Style.BRICK) {
+                    if (!there.is(Blocks.BRICKS) && there.isCollisionShapeFullBlock(level, pl.pos()) && !there.hasBlockEntity()) w.merge(Items.BRICKS, 1, Integer::sum);
+                } else if (pl.style() == Blueprints.Style.MASONRY) {
+                    if (there.is(Blocks.COBBLESTONE) || there.is(Blocks.MOSSY_COBBLESTONE)) w.merge(dressedItem, 1, Integer::sum);
+                } else if (iron && BuildGoal.isRoof(pl.style()) && !indoors(b, sh, steps, pl.pos())
+                        && (there.is(net.minecraft.tags.BlockTags.WOODEN_STAIRS) || there.is(net.minecraft.tags.BlockTags.WOODEN_SLABS)
+                            || there.is(net.minecraft.tags.BlockTags.PLANKS))) {
+                    w.merge(Items.DEEPSLATE_TILES, 1, Integer::sum);
+                }
+            }
+            int after = 0;
+            for (int n : w.values()) after += n;
+            LEFT.put(b.anchor().asLong(), after - before);
+        }
+        WANTS.put(id, w);
+    }
+
+    /**
+     * [house34c] Each morning (Market's, on the works' account): what the rows' finishing wants and the town's own trades
+     * have not made, from the traders, a lot or two a day: clay for the kiln (four balls a block of brick) when the stores
+     * have none to fire and blocks of brick for what it cannot fire, stone bricks while the bench is behind, and cobbled
+     * deepslate for the slate when the mine has sent up none.
+     */
+    public static void buyForFinishing(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        if (!WANTS.containsKey(id)) reckonWants(level, v);
+        Map<Item, Integer> w = WANTS.get(id);
+        if (w == null || w.isEmpty()) return;
+        LOG.info("[MCA-TERRACE] {}: the rows' finishing wants {} this morning (treasury {}, put by {}, budget pressure {})", Villages.name(id), w,
+            Ledger.coins(id), Market.saved(id, level.getGameTime()), TownBudget.pressure(id));
+        // the brick: clay for the kiln into the stores (it fires for the stores' keep), and what it cannot fire, blocks of brick
+        // delivered to the site
+        int bricks = finishingWant(id, Items.BRICKS) - Market.stock(level, id, st -> st.is(Items.BRICKS)) - siteStock(id, Items.BRICKS);
+        int clay = Market.stock(level, id, st -> st.is(Items.CLAY_BALL)), fired = Market.stock(level, id, st -> st.is(Items.BRICK));
+        if (bricks > 0 && clay < 16) Market.importFor(level, v, day, Items.CLAY_BALL, Math.min(64, 4 * bricks) - clay - fired, "the kiln's bricks for the terraces");
+        int behind = bricks - (clay + fired) / 4;
+        if (behind > 0) siteStock(id, Items.BRICKS, siteStock(id, Items.BRICKS)
+            + Market.importFor(level, v, day, Items.BRICKS, Math.min(64, behind), "the terraces' brick", false));
+        // the town's dressed stone: stone bricks delivered while the bench is behind; a deepslate town's dressed from cobbled
+        // deepslate bought into the stores when it has none of its own
+        Item own = dressedStone(id).asItem();
+        int dressed = w.getOrDefault(own, 0) - Market.stock(level, id, st -> st.is(own)) - siteStock(id, own);
+        if (dressed > 0 && own == Items.STONE_BRICKS) {
+            siteStock(id, own, siteStock(id, own) + Market.importFor(level, v, day, Items.STONE_BRICKS, Math.min(128, dressed), "the terraces' dressed stone", false));
+        } else if (dressed > 0) {
+            int deep = dressed - Market.stock(level, id, st -> st.is(Items.COBBLED_DEEPSLATE) || st.is(Items.POLISHED_DEEPSLATE));
+            if (deep > 0) Market.importFor(level, v, day, Items.COBBLED_DEEPSLATE, Math.min(128, deep), "the terraces' dressed stone");
+        }
+        int slate = finishingWant(id, Items.DEEPSLATE_TILES) - Market.stock(level, id, st -> st.is(Items.DEEPSLATE_TILES) || st.is(Items.COBBLED_DEEPSLATE));
+        if (slate > 0) Market.importFor(level, v, day, Items.COBBLED_DEEPSLATE, Math.min(128, slate), "the terraces' slate");
+    }
+
+    /** [house34c] The command (/village terrace rows): the nearest town's rows, where they stand, and their wants. */
+    public static String list(ServerLevel level, BlockPos at) {
+        Villages.Village v = Villages.nearest(level, at);
+        if (v == null) return "no town";
+        reckonWants(level, v);
+        StringBuilder sb = new StringBuilder(Villages.name(v.id()) + ":");
+        for (Ledger.Building b : rows(v.id())) {
+            sb.append(" | ").append(name(v.id(), b)).append(' ').append(b.structure()).append(" (").append(LEFT.getOrDefault(b.anchor().asLong(), 0))
+                .append(" to finish) at ").append(b.anchor().toShortString())
+                .append(" back ").append(b.facing()).append(standing(level, v.id(), b) ? " up" : " going up");
+            for (Spot s : spots(b)) {
+                Homes.Home h = Homes.homes(v.id()).get(s.anchor().asLong());
+                sb.append(" door").append(s.index() + 1).append('@').append(s.door().toShortString())
+                    .append(h == null ? "(off the books)" : h.members.isEmpty() ? "(to let)" : "(" + h.members.size() + ")");
+                if (h != null) for (VillageFolkEntity f : Homes.loadedMembers(v.id(), h)) {
+                    sb.append("{").append(f.displayNameCap()).append(" ").append(f.blockPosition().toShortString()).append(" ")
+                        .append(f.hobbyNow == null ? "-" : f.hobbyNow).append("}");
+                }
+            }
+        }
+        sb.append(" | wants ").append(WANTS.get(v.id())).append(" | on site: bricks ").append(siteStock(v.id(), Items.BRICKS))
+            .append(", dressed stone ").append(siteStock(v.id(), dressedStone(v.id()).asItem())).append(" | stores: bricks ").append(Market.stock(level, v.id(), st -> st.is(Items.BRICKS)))
+            .append(", stone bricks ").append(Market.stock(level, v.id(), st -> st.is(Items.STONE_BRICKS)))
+            .append(", clay ").append(Market.stock(level, v.id(), st -> st.is(Items.CLAY_BALL)))
+            .append(", cobbled deepslate ").append(Market.stock(level, v.id(), st -> st.is(Items.COBBLED_DEEPSLATE)))
+            .append(" | treasury ").append(Ledger.coins(v.id())).append(", budget pressure ").append(TownBudget.pressure(v.id()));
+        VillageFolkEntity hand = TownJobs.handAt(level, v.id(), ROWS_WORK);
+        sb.append(" | the rows' hand: ").append(hand == null ? "none" : hand.displayNameCap() + " at " + hand.blockPosition().toShortString() + ", " + hand.hobbyNow);
+        return sb.toString();
+    }
+
+    /** [house34c] Tests: the rows' wants reckoned now. */
+    public static Map<Item, Integer> wantsForTests(ServerLevel level, Villages.Village v) {
+        reckonWants(level, v);
+        return Map.copyOf(WANTS.get(v.id()));
     }
 
     private static final Map<UUID, Long> FINISHED = new ConcurrentHashMap<>();
@@ -938,7 +1317,14 @@ public final class TerraceRows {
         Long last = FINISHED.get(id);
         if (last != null && now - last < 100L && now >= last) return;
         FINISHED.put(id, now);
-        for (Ledger.Building b : rows(id)) {
+        // [house34c] the row nearest done first, and on with it till it is: the hand went to whichever row came first on the
+        // books, a cell here and a cell there, and no row was ever quite finished
+        List<Ledger.Building> order = new ArrayList<>(rows(id));
+        order.sort(Comparator.comparingInt((Ledger.Building b) -> {
+            int left = LEFT.getOrDefault(b.anchor().asLong(), 0);
+            return left <= 0 ? Integer.MAX_VALUE : left;
+        }));
+        for (Ledger.Building b : order) {
             if (!Land.areaLoaded(level, b.anchor(), 12) || Ledger.raising(id, b.anchor())) continue;
             if (!standing(level, id, b)) continue;
             int n = dress(level, v, b, false);
@@ -954,11 +1340,7 @@ public final class TerraceRows {
     /** Is the row up (a front door hung)? [house34b] One is enough: a door is a finishing part the builders put in when the
      *  stores have one, and a grand row up four storeys with one house's door still to come was never finished at all. */
     static boolean standing(ServerLevel level, UUID village, Ledger.Building b) {
-        Tier t = tier(b.structure());
-        for (Spot s : spots(b)) {
-            BlockPos door = cell(b, t.doorDx(s.index()), t.stand + step(steps(b.anchor()), s.index()), t.front);
-            if (level.getBlockState(door).getBlock() instanceof DoorBlock) return true;
-        }
+        for (Spot s : spots(b)) if (level.getBlockState(s.door()).getBlock() instanceof DoorBlock) return true;
         return false;
     }
 
@@ -969,8 +1351,9 @@ public final class TerraceRows {
             if (Ledger.note(id, key) != null) continue;
             Ledger.note(id, key, Long.toString(day));
             Ledger.forget(id, SITE_NOTE + b.structure());                    // [house34b] up: its lot no longer kept
-            Tier t = tier(b.structure());
-            Villages.tell(id, day, name(id, b) + " was built: " + t.a + ", " + t.count() + " homes in a row, " + t.looks);
+            Shape t = shape(b.structure());
+            Villages.tell(id, day, name(id, b) + " was built: " + t.a + ", " + t.count() + " homes "
+                + (t.form == Form.CORNER ? "round a corner" : t.form == Form.CRESCENT ? "on an arc" : "in a row") + ", " + t.looks);
         }
     }
 
@@ -1003,6 +1386,28 @@ public final class TerraceRows {
      */
     static BlockPos footOf(Ledger.Building b, BlockPos p) {
         return new BlockPos(p.getX(), b.anchor().getY() + 1, p.getZ());
+    }
+
+    /**
+     * [house34c] As footOf, where a hand can stand: the first open place with a floor under it, below the block in the
+     * column beside it (in front first, then the others). The ground floor at the row's anchor's height was in the made
+     * ground under a row stepping up its hill, and every hand sent to the grand row's upper houses stopped at the end of a
+     * path that could not get there, sixty blocks off, its turn spent walking.
+     */
+    static BlockPos footOf(ServerLevel level, Ledger.Building b, BlockPos p) {
+        Direction out = b.facing().getOpposite();
+        Direction[] round = { out, out.getClockWise(), out.getCounterClockWise(), b.facing() };
+        for (Direction d : round) {
+            BlockPos q = p.relative(d);
+            for (int y = p.getY(); y >= b.anchor().getY() - 3; y--) {
+                BlockPos at = new BlockPos(q.getX(), y, q.getZ());
+                if (!level.isLoaded(at)) break;
+                if (level.getBlockState(at).getCollisionShape(level, at).isEmpty()
+                        && level.getBlockState(at.above()).getCollisionShape(level, at.above()).isEmpty()
+                        && level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) return at;
+            }
+        }
+        return footOf(b, p);
     }
 
     /** [house34b] The wash on the yards' lines: sheets and shirts, white, blue, pink, yellow, grey. */
@@ -1045,13 +1450,17 @@ public final class TerraceRows {
      */
     public static int dress(ServerLevel level, @Nullable Villages.Village v, Ledger.Building b, boolean free) {
         Tier t = tier(b.structure());
+        Shape sh = shape(b.structure());
         if (t == null || (!free && v == null)) return 0;
         UUID id = v == null ? null : v.id();
         int[] steps = steps(b.anchor());
         int done = 0;
         // the brickwork faced in brick where it went up in whatever the builders had (a stretch at a time)
         int laid = 0;
-        boolean[] have = { free || Crafts.stock(level, v, st -> st.is(Items.BRICKS)) > 0, free || Crafts.stock(level, v, st -> st.is(Items.STONE_BRICKS)) > 0 };
+        // ([house34c] or the makings to hand to make them there and then, as the builders do: loose bricks, fired stone)
+        Block dressed = dressedStone(id);
+        Item dressedItem = dressed.asItem();
+        boolean[] have = { free || canForRows(level, v, Items.BRICKS), free || canForRows(level, v, dressedItem) };
         for (BuildGoal.Placement pl : plan(id, b)) {
             if (pl.part() != BuildGoal.Part.BLOCK) continue;
             // the brick in brick; and ([house34b]) the dressed stone (the grand row's ground floors, the bands, the quoins) in
@@ -1060,13 +1469,13 @@ public final class TerraceRows {
             if (!brick && pl.style() != Blueprints.Style.MASONRY) continue;
             BlockState there = level.getBlockState(pl.pos());
             if (!brick && !(there.is(Blocks.COBBLESTONE) || there.is(Blocks.MOSSY_COBBLESTONE))) continue;
-            Block face = brick ? Blocks.BRICKS : Blocks.STONE_BRICKS;
-            Item faceItem = brick ? Items.BRICKS : Items.STONE_BRICKS;
+            Block face = brick ? Blocks.BRICKS : dressed;
+            Item faceItem = brick ? Items.BRICKS : dressedItem;
             if (there.is(face) || !there.isCollisionShapeFullBlock(level, pl.pos()) || there.hasBlockEntity()) continue;
             if (!have[brick ? 0 : 1]) continue;
             if (!free) {
-                if (laid == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "facing " + name(id, b) + (brick ? " in brick" : " in dressed stone"))) break;
-                if (Crafts.takeOne(level, v, st -> st.is(faceItem)).isEmpty()) { have[brick ? 0 : 1] = false; continue; }
+                if (laid == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, pl.pos()), "facing " + name(id, b) + (brick ? " in brick" : " in dressed stone"))) break;
+                if (!takeForRows(level, v, faceItem)) { have[brick ? 0 : 1] = false; continue; }
                 Crafts.giveBack(level, v, there.getBlock().asItem(), 1);                  // what came off goes back into the stores
             }
             level.setBlock(pl.pos(), face.defaultBlockState(), 2);
@@ -1077,15 +1486,35 @@ public final class TerraceRows {
             done += laid;
             if (!free) return done;
         }
+        // [house34c] the made ground the row stands on (a stepped row's floors banked up on cobble, its faces to the street) and
+        // its copings (cobble slabs) dressed in stone bricks as well: a grand row up and faced stood on a bank of rough cobble
+        if (have[1]) {
+            int faced = 0;
+            Block[] cut = DRESSED_CUTS.get(dressed);
+            for (BlockPos q : roughFaces(level, b, sh)) {
+                BlockState there = level.getBlockState(q);
+                Block to = there.getBlock() instanceof net.minecraft.world.level.block.SlabBlock ? cut[0]
+                    : there.getBlock() instanceof net.minecraft.world.level.block.StairBlock ? cut[1] : dressed;
+                if (!free) {
+                    if (faced == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, q), "dressing the stone of " + name(id, b))) break;
+                    if (!takeForRows(level, v, dressedItem)) break;
+                    Crafts.giveBack(level, v, there.getBlock().asItem(), 1);
+                }
+                level.setBlock(q, copy(there, to.defaultBlockState()), 2);
+                faced++;
+                if (!free && faced >= REFACE) break;
+            }
+            if (faced > 0) {
+                done += faced;
+                if (!free) return done;
+            }
+        }
         // the roofs slated (the Iron Age's make-over of the town's roofs): the wood of every roof, porch and privy in slate
         if (id == null || Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal()) {
             int slated = 0;
             for (BuildGoal.Placement pl : plan(id, b)) {
                 if (pl.part() != BuildGoal.Part.BLOCK || !BuildGoal.isRoof(pl.style())) continue;
-                int[] d = local(b, pl.pos());
-                int[] own = owners(t, d[0]);
-                int st = step(steps, own[0]);
-                if (d[1] - st < t.eaves && d[2] >= t.front && d[2] <= t.back) continue;      // the stairs and chairs indoors stay as they are
+                if (indoors(b, sh, steps, pl.pos())) continue;      // the stairs and chairs indoors stay as they are
                 BlockState there = level.getBlockState(pl.pos());
                 Block slate = there.is(net.minecraft.tags.BlockTags.WOODEN_STAIRS) ? Blocks.DEEPSLATE_TILE_STAIRS
                     : there.is(net.minecraft.tags.BlockTags.WOODEN_SLABS) ? Blocks.DEEPSLATE_TILE_SLAB
@@ -1094,7 +1523,7 @@ public final class TerraceRows {
                 if (!free) {
                     java.util.function.Predicate<ItemStack> tile = it -> it.is(Items.DEEPSLATE_TILES) || it.is(Items.COBBLED_DEEPSLATE);
                     if (slated == 0 && (Crafts.stock(level, v, tile) < 1
-                            || !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "slating the roof of " + name(id, b)))) break;
+                            || !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, pl.pos()), "slating the roof of " + name(id, b)))) break;
                     if (Crafts.takeOne(level, v, tile).isEmpty()) break;
                     Crafts.giveBack(level, v, there.getBlock().asItem(), 1);
                 }
@@ -1114,7 +1543,7 @@ public final class TerraceRows {
             BlockState there = level.getBlockState(pl.pos());
             Block slab = SLAB_OF.get(there.getBlock());
             if (slab == null) continue;
-            if (!free && cut == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "cutting the copings of " + name(id, b))) break;
+            if (!free && cut == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, pl.pos()), "cutting the copings of " + name(id, b))) break;
             level.setBlock(pl.pos(), slab.defaultBlockState(), 3);
             cut++;
             if (!free && cut >= REFACE) break;
@@ -1126,24 +1555,42 @@ public final class TerraceRows {
         // [house34b] a front door the builders had none for, hung now as the others hang (a house of a row with no door
         // stood open to the street for good once the row was on the books)
         BlockState hung = null;
+        Direction hungWay = b.facing();
         for (Spot s : spots(b)) {
-            BlockState d = level.getBlockState(cell(b, t.doorDx(s.index()), t.stand + step(steps, s.index()), t.front));
-            if (d.getBlock() instanceof DoorBlock && d.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) { hung = d; break; }
+            BlockState d = level.getBlockState(s.door());
+            if (d.getBlock() instanceof DoorBlock && d.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) {
+                hung = d;
+                hungWay = s.frame().facing();
+                break;
+            }
         }
         if (hung != null) for (Spot s : spots(b)) {
-            BlockPos door = cell(b, t.doorDx(s.index()), t.stand + step(steps, s.index()), t.front);
-            if (!level.getBlockState(door).isAir() || !level.getBlockState(door.above()).isAir()) continue;
-            if (!free && !take(level, v, Items.OAK_DOOR, "hanging the front door of " + address(id, s), door)) continue;
+            BlockPos door = s.door();
+            if (!level.getBlockState(door).isAir()) continue;
+            if (!level.getBlockState(door.above()).isAir()) {
+                // [house34c] a block set in the doorway's head where the drawing has none (a builder's stand-in, a repair's
+                // guess): taken out, into the stores, and the door hung (the grand row's third house stood shut for good)
+                boolean drawn = false;
+                for (BuildGoal.Placement pl : plan(id, b)) if (pl.pos().equals(door.above()) && pl.part() == BuildGoal.Part.BLOCK) { drawn = true; break; }
+                BlockState head = level.getBlockState(door.above());
+                if (drawn || head.hasBlockEntity() || head.getDestroySpeed(level, door.above()) < 0) continue;
+                if (!free && v != null) Crafts.giveBack(level, v, head.getBlock().asItem(), 1);
+                level.setBlock(door.above(), Blocks.AIR.defaultBlockState(), 2 | 16);
+            }
+            if (!free && !takeDoor(level, v, "hanging the front door of " + address(id, s), door)) continue;
             BlockState lower = copy(hung, Blocks.OAK_DOOR.defaultBlockState());
+            Direction hf = hung.getValue(DoorBlock.FACING);                        // [house34c] turned with its house
+            for (Direction w = hungWay; w != s.frame().facing(); w = w.getClockWise()) hf = hf.getClockWise();
+            lower = lower.setValue(DoorBlock.FACING, hf);
             level.setBlock(door, lower, 2 | 16);
             level.setBlock(door.above(), lower.setValue(DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 2 | 16);
             done++;
             if (!free) return done;
         }
         for (Spot s : spots(b)) {
-            int i = s.index(), st = step(steps, i);
+            int i = s.index();
             // the front door, its household's colour
-            BlockPos door = cell(b, t.doorDx(i), t.stand + st, t.front);
+            BlockPos door = s.door();
             BlockState was = level.getBlockState(door);
             Paint p = paint(b, i);
             if (was.getBlock() instanceof DoorBlock && !was.is(p.door())) {
@@ -1157,7 +1604,7 @@ public final class TerraceRows {
         // the grand row's railings and balconettes, the smith's iron
         if (t == Tier.GRAND) {
             for (BuildGoal.Placement pl : plan(id, b)) {
-                if (pl.part() != BuildGoal.Part.FENCE || local(b, pl.pos())[2] >= t.front) continue;   // out front: not the tables, the banisters
+                if (pl.part() != BuildGoal.Part.FENCE || !outFront(b, sh, pl.pos())) continue;   // out front: not the tables, the banisters
                 BlockState there = level.getBlockState(pl.pos());
                 if (!(there.getBlock() instanceof FenceBlock)) continue;
                 if (!free && !take(level, v, Items.IRON_BARS, "putting up the iron railings of " + name(id, b), pl.pos())) break;
@@ -1167,7 +1614,7 @@ public final class TerraceRows {
                 if (!free) return done;
             }
             if (done > 0) for (BuildGoal.Placement pl : plan(id, b)) {
-                if (pl.part() != BuildGoal.Part.FENCE || local(b, pl.pos())[2] >= t.front) continue;
+                if (pl.part() != BuildGoal.Part.FENCE || !outFront(b, sh, pl.pos())) continue;
                 BlockState st = level.getBlockState(pl.pos());
                 BlockState joined = Block.updateFromNeighbourShapes(st, level, pl.pos());
                 if (joined != st) level.setBlock(pl.pos(), joined, 2);
@@ -1208,9 +1655,10 @@ public final class TerraceRows {
         // [house34b] the washing lines across the workers' yards, party wall to party wall, the week's wash pegged out
         if (t == Tier.WORKERS) {
             for (Spot s : spots(b)) {
-                int i = s.index(), st = step(steps, i), z = t.back + 1;
+                int i = s.index(), st = step(steps, i), z = sh.back(i) + 1;
+                Ledger.Building f = s.frame();
                 List<BlockPos> line = new ArrayList<>();
-                for (int dx = t.left(i) - 1; dx <= t.right(i) + 1; dx++) line.add(cell(b, dx, st + 2, z));
+                for (int dx = sh.left(i) - 1; dx <= sh.right(i) + 1; dx++) line.add(cell(f, dx, st + 2, z));
                 boolean up = level.getBlockState(line.get(1)).getBlock() instanceof FenceBlock;
                 if (!up) {
                     boolean clear = true;
@@ -1232,9 +1680,9 @@ public final class TerraceRows {
                 }
                 // the wash: two pieces hung from the line over the middle of the yard
                 for (int k = 1; k <= 2; k++) {
-                    BlockPos p = cell(b, t.left(i) + k, st + 2, z + 1);
+                    BlockPos p = cell(f, sh.left(i) + k, st + 2, z + 1);
                     if (!level.getBlockState(p).isAir() || !level.getBlockState(p.below()).isAir()) continue;
-                    if (!(level.getBlockState(cell(b, t.left(i) + k, st + 2, z)).getBlock() instanceof FenceBlock)) continue;
+                    if (!(level.getBlockState(cell(f, sh.left(i) + k, st + 2, z)).getBlock() instanceof FenceBlock)) continue;
                     Block wash = WASH[(int) ((CityDress.mix(s.anchor(), 0x3a5L + k) >>> 3) % WASH.length)];
                     if (!free) {
                         ItemStack got = Crafts.stock(level, v, it -> it.is(net.minecraft.tags.ItemTags.BANNERS)) < 1 ? ItemStack.EMPTY
@@ -1244,7 +1692,7 @@ public final class TerraceRows {
                         Block wall = wallBanner(got);
                         if (wall != null) wash = wall;
                     }
-                    level.setBlock(p, wash.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, b.facing()), 3);
+                    level.setBlock(p, wash.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, f.facing()), 3);
                     done++;
                     if (!free) return done;
                 }
@@ -1253,8 +1701,12 @@ public final class TerraceRows {
         // the numbers and names by the doors
         for (Spot s : spots(b)) {
             BlockPos at = signSpot(b, s);
+            for (BlockPos other : signSpots(b, s)) {                    // [house34c] beside the door where there is wall to hang it on
+                if (level.getBlockState(other).getBlock() instanceof WallSignBlock) { at = other; break; }
+                if (level.getBlockState(other.relative(s.frame().facing())).isSolid() && level.getBlockState(other).isAir()) { at = other; break; }
+            }
             BlockState there = level.getBlockState(at);
-            BlockPos wall = at.relative(b.facing());
+            BlockPos wall = at.relative(s.frame().facing());
             String[] lines = signLines(id, s);
             if (there.getBlock() instanceof WallSignBlock) {
                 if (level.getBlockEntity(at) instanceof SignBlockEntity sign && !Arrays.equals(lines, read(sign))) TownLife.write(sign, lines);
@@ -1263,7 +1715,7 @@ public final class TerraceRows {
             if (!there.isAir() || !level.getBlockState(wall).isSolid()) continue;
             if (!free && !take(level, v, Items.OAK_SIGN, "putting up the number by the door of " + address(id, s), at)) continue;
             Block signBlock = t == Tier.GRAND ? Blocks.DARK_OAK_WALL_SIGN : t == Tier.BAY ? Blocks.SPRUCE_WALL_SIGN : Blocks.OAK_WALL_SIGN;
-            level.setBlock(at, signBlock.defaultBlockState().setValue(WallSignBlock.FACING, b.facing().getOpposite()), 3);
+            level.setBlock(at, signBlock.defaultBlockState().setValue(WallSignBlock.FACING, s.frame().facing().getOpposite()), 3);
             if (level.getBlockEntity(at) instanceof SignBlockEntity sign) TownLife.write(sign, lines);
             done++;
             if (!free) return done;
@@ -1305,15 +1757,106 @@ public final class TerraceRows {
     /** Where a house's sign hangs, on its front by the door: the pier beside a cottage's door, the bay's pier by the path, by a
      *  town house's door over the area. */
     static BlockPos signSpot(Ledger.Building b, Spot s) {
+        return signSpots(b, s).get(0);
+    }
+
+    /** [house34c] The places for a house's sign, the first the usual: a cottage's either side of its door (the corner
+     *  house's shop window on the one side). */
+    static List<BlockPos> signSpots(Ledger.Building b, Spot s) {
         Tier t = s.tier();
-        int i = s.index(), st = step(steps(b.anchor()), i);
-        boolean m = t.houses[i][2] == 1;
+        Shape sh = s.shape();
+        Ledger.Building f = s.frame();
+        int i = s.index(), st = step(steps(b.anchor()), i), door = sh.doorDx(i);
+        boolean m = sh.mirrored(i);
         return switch (t) {
-            case WORKERS -> cell(b, m ? t.right(i) - 2 : t.left(i) + 2, 1 + st, t.front - 1);
-            case BAY -> cell(b, t.left(i) + 4, 2 + st, t.front - 2);          // on the bay's pier by the path
-            case GRAND -> cell(b, t.left(i) + 4, 3 + st, t.front - 1);
+            case WORKERS -> List.of(cell(f, door + (m ? 1 : -1), 1 + st, t.front - 1), cell(f, door + (m ? -1 : 1), 1 + st, t.front - 1));
+            case BAY -> List.of(cell(f, sh.left(i) + 4, 2 + st, t.front - 2));          // on the bay's pier by the path
+            case GRAND -> List.of(cell(f, m ? sh.right(i) - 4 : sh.left(i) + 4, 3 + st, t.front - 1));
         };
     }
+
+    /**
+     * [house34c] The rough stone of a row to dress: cobble slabs on its copings and its parapet, and the cobble faces of the
+     * ground under it (a stepped row's floors banked up, the footings showing at its area and its ends) open to the air at
+     * the side, from its lowest floor down; within its own ground.
+     */
+    static List<BlockPos> roughFaces(ServerLevel level, Ledger.Building b, Shape sh) {
+        List<BlockPos> out = new ArrayList<>();
+        int top = 0;
+        for (int s : steps(b.anchor())) top = Math.max(top, s);
+        java.util.Set<BlockPos> other = new java.util.HashSet<>();      // the drawing's floors, walls and the rest: not rough stone
+        for (BuildGoal.Placement pl : plan(null, b)) {
+            if (pl.part() != BuildGoal.Part.BLOCK || pl.style() == Blueprints.Style.FOUNDATION || pl.style() == Blueprints.Style.SOIL
+                    || pl.style() == Blueprints.Style.MASONRY) continue;
+            other.add(pl.pos());
+        }
+        int street = b.anchor().getY() - 1;
+        for (BuildGoal.Placement pl : plan(null, b)) {
+            if (pl.part() == BuildGoal.Part.BLOCK && (pl.style() == Blueprints.Style.STONE_SLAB || pl.style() == Blueprints.Style.STONE_STAIR)) {
+                BlockState there = level.getBlockState(pl.pos());
+                if (there.is(Blocks.COBBLESTONE_SLAB) || there.is(Blocks.MOSSY_COBBLESTONE_SLAB)
+                        || there.is(Blocks.COBBLESTONE_STAIRS) || there.is(Blocks.MOSSY_COBBLESTONE_STAIRS)) out.add(pl.pos());
+            }
+        }
+        for (int dx = sh.ground[0]; dx <= sh.ground[1]; dx++) {
+            for (int dz = sh.ground[2]; dz <= sh.ground[3]; dz++) {
+                if (!sh.covers(dx, dz)) continue;
+                for (int h = top + 1; h >= -6; h--) {
+                    BlockPos q = cell(b, dx, h, dz);
+                    BlockState there = level.getBlockState(q);
+                    if (!there.is(Blocks.COBBLESTONE) && !there.is(Blocks.MOSSY_COBBLESTONE) || other.contains(q)) continue;
+                    boolean open = false;                                  // open to the street, the area, the yard (not a hollow underground)
+                    for (Direction d : Direction.Plane.HORIZONTAL) {
+                        BlockPos n = q.relative(d);
+                        if (level.getBlockState(n).isAir() && (level.canSeeSky(n) || n.getY() >= street)) open = true;
+                    }
+                    if (level.getBlockState(q.above()).isAir() && level.canSeeSky(q.above())) open = true;   // a floor open to the sky (an area's flags)
+                    if (open) out.add(q);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** [house34c] The dressed stones a row's finishing lays, each with its slab and its stair. */
+    private static final Map<Block, Block[]> DRESSED_CUTS = Map.of(
+        Blocks.STONE_BRICKS, new Block[]{ Blocks.STONE_BRICK_SLAB, Blocks.STONE_BRICK_STAIRS },
+        Blocks.DEEPSLATE_BRICKS, new Block[]{ Blocks.DEEPSLATE_BRICK_SLAB, Blocks.DEEPSLATE_BRICK_STAIRS },
+        Blocks.DEEPSLATE_TILES, new Block[]{ Blocks.DEEPSLATE_TILE_SLAB, Blocks.DEEPSLATE_TILE_STAIRS },
+        Blocks.POLISHED_DEEPSLATE, new Block[]{ Blocks.POLISHED_DEEPSLATE_SLAB, Blocks.POLISHED_DEEPSLATE_STAIRS },
+        Blocks.POLISHED_BLACKSTONE_BRICKS, new Block[]{ Blocks.POLISHED_BLACKSTONE_BRICK_SLAB, Blocks.POLISHED_BLACKSTONE_BRICK_STAIRS },
+        Blocks.POLISHED_ANDESITE, new Block[]{ Blocks.POLISHED_ANDESITE_SLAB, Blocks.POLISHED_ANDESITE_STAIRS });
+
+    /**
+     * [house34c] The town's own dressed stone (its look's first for the dressed parts: Palettes), which a row's rough cobble is
+     * faced in: stone bricks, or a town that dresses in deepslate its deepslate bricks. Stone bricks laid over a deepslate
+     * town's cobble left its grand row light grey in patches between its dark bands.
+     */
+    static Block dressedStone(@Nullable UUID village) {
+        if (village != null) for (Item it : Palettes.ranked(village, Blueprints.Style.MASONRY)) {
+            Block b = Block.byItem(it);
+            if (DRESSED_CUTS.containsKey(b)) return b;
+        }
+        return Blocks.STONE_BRICKS;
+    }
+
+    /** [house34c] Is this spot of a row out in front of its houses' fronts (its railings, not its banisters and tables)? */
+    static boolean outFront(Ledger.Building b, Shape sh, BlockPos p) {
+        int[] d = local(b, p);
+        return d[2] < sh.frontAt(d[0]);
+    }
+
+    /** [house34c] Is this spot of a row indoors in one of its houses, under its eaves (its stairs, its chairs)? */
+    static boolean indoors(Ledger.Building b, Shape sh, int[] steps, BlockPos p) {
+        Tier t = sh.tier;
+        for (int i = 0; i < sh.count(); i++) {
+            int[] d = local(frame(b, sh, i), p);
+            if (d[0] < sh.left(i) - 1 || d[0] > sh.right(i) + 1) continue;
+            if (d[1] - step(steps, i) < t.eaves && d[2] >= t.front && d[2] <= sh.back(i)) return true;
+        }
+        return false;
+    }
+
 
     /** The tops of a house's flues: the stacks on its party walls, a place on each for it (its left stack's first, the
      *  first it lights). Each stack's top cells, the house to the left of a wall taking the front one, to the right the back. */
@@ -1321,11 +1864,11 @@ public final class TerraceRows {
         Tier t = s.tier();
         int i = s.index();
         List<BlockPos> out = new ArrayList<>();
-        int[] walls = { t.left(i) - 1, t.right(i) + 1 };
+        int[] walls = { s.shape().left(i) - 1, s.shape().right(i) + 1 };
         Map<String, BlockPos> top = new HashMap<>();
         for (BuildGoal.Placement p : plan(null, b)) {
             if (p.part() != BuildGoal.Part.BLOCK || p.style() != Blueprints.Style.BRICK) continue;
-            int[] d = local(b, p.pos());
+            int[] d = local(s.frame(), p.pos());
             if (d[0] != walls[0] && d[0] != walls[1]) continue;
             if (d[1] < (t == Tier.GRAND ? 17 : t == Tier.BAY ? 10 : 10)) continue;
             String k = d[0] + "|" + d[2];
@@ -1349,6 +1892,15 @@ public final class TerraceRows {
         // the stack whose top is highest first: the house's own hearth
         out.sort(Comparator.comparingInt((BlockPos p) -> -p.getY()));
         return out;
+    }
+
+    /** [house34c] A door for a house that has none: one of the stores' doors, or made of six of its planks there and then, as a
+     *  renovation makes one (a row whose stores held no door stood with a house open to the street for good). */
+    private static boolean takeDoor(ServerLevel level, Villages.Village v, String what, BlockPos at) {
+        boolean have = Crafts.stock(level, v, st -> st.is(net.minecraft.tags.ItemTags.WOODEN_DOORS)) > 0;
+        if (!have && Crafts.stock(level, v, st -> st.is(net.minecraft.tags.ItemTags.PLANKS)) < 6) return false;
+        if (!TownJobs.atWork(level, v, "furniture", at, what)) return false;
+        return have ? !Crafts.takeOne(level, v, st -> st.is(net.minecraft.tags.ItemTags.WOODEN_DOORS)).isEmpty() : Crafts.usePlanks(level, v, 6);
     }
 
     private static boolean take(ServerLevel level, Villages.Village v, Item item, String what, BlockPos at) {
@@ -1392,10 +1944,10 @@ public final class TerraceRows {
                 living += h.members.size();
             }
         }
-        c.putString("title", name(village, b) + " (" + t.word + ")");
+        c.putString("title", name(village, b) + " (" + shape(b.structure()).word + ")");
         c.putInt("storeys", t == Tier.GRAND ? 4 : 2);
         c.putInt("living", living);
-        c.putString("tenure", let + " of " + t.count() + " houses lived in");
+        c.putString("tenure", let + " of " + shape(b.structure()).count() + " houses lived in");
     }
 
     /** For the status line (Homes.line): "; terraces: 7 of 10 houses lived in". */
@@ -1418,6 +1970,7 @@ public final class TerraceRows {
      * Age's look (brick, dressed stone, slate), not out of any stores. Returns where each row's anchor is.
      */
     public static String stage(ServerLevel level, BlockPos at, String kind) {
+        if ("corner".equals(kind) || "crescent".equals(kind)) return stageWhole(level, at, "corner".equals(kind) ? Shape.CORNER : Shape.CRESCENT);
         boolean slope = "slope".equals(kind);
         String[] rows = slope ? new String[]{ "terrace", "terrace2" } : new String[]{ "terrace", "terrace2", "terrace3" };
         int x0 = at.getX() - 8, x1 = at.getX() + 25 * rows.length + 8, z0 = at.getZ() - 14, z1 = at.getZ() + 12;
@@ -1441,7 +1994,7 @@ public final class TerraceRows {
         }
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < rows.length; i++) {
-            Tier t = tier(rows[i]);
+            Shape t = shape(rows[i]);
             int cx = at.getX() + 10 + 25 * i;
             Direction back = Direction.SOUTH;
             BlockPos base = new BlockPos(cx, y, at.getZ());
@@ -1456,7 +2009,7 @@ public final class TerraceRows {
             for (int k = 0; k < t.count(); k++) steps[k] -= lo;
             BlockPos anchor = base.atY(lo);
             // the ground under each house made to its floor, as the builders make it
-            for (int dx = t.walls[0]; dx <= t.walls[t.walls.length - 1]; dx++) {
+            for (int dx = t.ground[0]; dx <= t.ground[1]; dx++) {
                 int[] own = owners(t, dx);
                 int s = Integer.MAX_VALUE;
                 for (int o : own) s = Math.min(s, steps[o]);
@@ -1475,6 +2028,37 @@ public final class TerraceRows {
                 .append(' ').append(anchor.getZ()).append(" steps ").append(Arrays.toString(steps));
         }
         return out.toString();
+    }
+
+    /**
+     * [house34c] The pictures of a corner terrace or a crescent (/village terrace stage corner|crescent): a flat stage, the
+     * row stamped with its back south of the spot and dressed, a paved street before it (and, the corner's, the side street
+     * down its right); returns its anchor.
+     */
+    private static String stageWhole(ServerLevel level, BlockPos at, Shape sh) {
+        int y = at.getY();
+        Direction back = Direction.SOUTH, right = back.getClockWise();
+        BlockPos anchor = at.offset(0, 0, 0);
+        int x0 = at.getX() - 16, x1 = at.getX() + 16, z0 = at.getZ() - 12, z1 = at.getZ() + 22;
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                for (int h = -6; h <= 40; h++) {
+                    BlockPos p = new BlockPos(x, y + h, z);
+                    BlockState want = h < -1 ? Blocks.DIRT.defaultBlockState() : h == -1 ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.AIR.defaultBlockState();
+                    if (level.getBlockState(p) != want) level.setBlock(p, want, 2 | 16);
+                }
+            }
+        }
+        // the streets: before the row (dz -6 to -8), and the corner's side street (dx 12 to 14)
+        for (int dx = -14; dx <= 15; dx++) for (int dz = -8; dz <= -6; dz++) {
+            level.setBlock(anchor.relative(right, dx).relative(back, dz).below(), (dz == -6 ? Blocks.SMOOTH_STONE : Blocks.STONE_BRICKS).defaultBlockState(), 2 | 16);
+        }
+        if (sh.form == Form.CORNER) for (int dx = 12; dx <= 14; dx++) for (int dz = -8; dz <= 19; dz++) {
+            level.setBlock(anchor.relative(right, dx).relative(back, dz).below(), (dx == 12 ? Blocks.SMOOTH_STONE : Blocks.STONE_BRICKS).defaultBlockState(), 2 | 16);
+        }
+        Ledger.Building b = stampForTests(level, sh.structure, anchor, back, new int[sh.count()], null);
+        dress(level, null, b, true);
+        return sh.structure + " " + anchor.getX() + " " + anchor.getY() + " " + anchor.getZ();
     }
 
     /** Tests and the camera: a row stamped at once, its steps as given, dressed for nothing. Returns its register entry
@@ -1503,8 +2087,37 @@ public final class TerraceRows {
 
     /** Tests: the front door of house i. */
     public static BlockPos doorForTests(Ledger.Building b, int i) {
-        Tier t = tier(b.structure());
-        return cell(b, t.doorDx(i), t.stand + step(steps(b.anchor()), i), t.front);
+        return spots(b).get(i).door();
+    }
+
+    /** [house34c] Tests: the way house i of a row faces (its back's way). */
+    public static Direction facingForTests(Ledger.Building b, int i) {
+        return spots(b).get(i).frame().facing();
+    }
+
+    /** [house34c] Tests: is this spot on a row's own ground (the corner terrace leaves its block's fourth lot alone)? True for
+     *  anything not a row. */
+    public static boolean onGroundForTests(String structure, BlockPos anchor, Direction facing, BlockPos p) {
+        Shape sh = shape(structure);
+        if (sh == null) return true;
+        int[] d = local(new Ledger.Building(structure, anchor, facing), p);
+        return sh.covers(d[0], d[2]);
+    }
+
+    /** [house34c] Tests: where this folk sits out on its step of an evening (Habits.doorstep), or null. */
+    @Nullable
+    public static BlockPos doorstepForTests(VillageFolkEntity f) {
+        return doorstepFor(f);
+    }
+
+    /** [house34c] Tests: the form the town's next row of this standing ("WORKERS"...) would take. */
+    public static String formForTests(UUID village, String tier) {
+        return form(village, Tier.valueOf(tier)).structure;
+    }
+
+    /** [house34c] Tests: is this spot inside house i of the row? */
+    public static boolean insideForTests(Ledger.Building b, int i, BlockPos p) {
+        return inside(spots(b).get(i), p);
     }
 
     /** Tests: the address of the house at this anchor. */

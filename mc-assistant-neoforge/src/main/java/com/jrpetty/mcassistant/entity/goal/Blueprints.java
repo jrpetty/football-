@@ -109,6 +109,9 @@ public final class Blueprints {
         key('Y', BuildGoal.Part.DOOR, Style.NONE, Way.RIGHT);
         key('P', BuildGoal.Part.FENCE, Style.NONE, Way.UP);
         key('g', BuildGoal.Part.GATE, Style.NONE, Way.BACK);
+        key('9', BuildGoal.Part.GATE, Style.NONE, Way.LEFT);                    // [house34c] a gate turned with its house
+        key('!', BuildGoal.Part.GATE, Style.NONE, Way.FRONT);
+        key('0', BuildGoal.Part.GATE, Style.NONE, Way.RIGHT);
         key('T', BuildGoal.Part.CRAFTING_TABLE, Style.NONE, Way.UP);
         key('U', BuildGoal.Part.FURNACE, Style.NONE, Way.FRONT);
         key('C', BuildGoal.Part.CHEST, Style.NONE, Way.FRONT);

@@ -314,9 +314,10 @@ public final class Masonry {
     static int keep(UUID village, Item it) {
         int age = Villages.ageOf(village).ordinal();
         boolean stoneAge = age >= Villages.Age.STONE.ordinal(), ironAge = age >= Villages.Age.IRON.ordinal();
-        if (it == Items.STONE_BRICKS) return ironAge ? 192 : stoneAge ? 128 : 32;
+        // [house34c] and on top, what the town's rows still want for their finishing (the brick faced, the dressed stone)
+        if (it == Items.STONE_BRICKS) return (ironAge ? 192 : stoneAge ? 128 : 32) + TerraceRows.finishingWant(village, it);
         if (it == Items.SMOOTH_STONE) return stoneAge ? 16 : 6;
-        if (it == Items.BRICKS) return ironAge ? 96 : stoneAge ? 32 : 8;
+        if (it == Items.BRICKS) return (ironAge ? 96 : stoneAge ? 32 : 8) + TerraceRows.finishingWant(village, it);
         if (it == Items.TORCH) return townTorches(village) + CaveDwellers.torchesKept(village);   // [caves] and the cave team's, on top
         if (it == Items.GLASS) return 48;
         return 0;
@@ -327,6 +328,11 @@ public final class Masonry {
      *  the team never draws on these (CaveDwellers.spareTorches). */
     static int townTorches(UUID village) {
         return Math.min(96, 32 + 2 * Villages.headcount(village));
+    }
+
+    /** [house34c] Tests: how many more of this the town would like put by. */
+    public static int shortOfForTests(ServerLevel level, Villages.Village v, Item it) {
+        return shortOf(level, v, it);
     }
 
     static int shortOf(ServerLevel level, Villages.Village v, Item it) {
