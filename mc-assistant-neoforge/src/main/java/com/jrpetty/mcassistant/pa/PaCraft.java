@@ -385,6 +385,6 @@ public final class PaCraft {
         PaData.Rec r = a.rec();
         String words = RecipeBook.words(item);
         if (r != null) { r.say(0, "Craft " + n + " " + words, a.level().getGameTime()); PaData.touch(); }
-        PaOrders.run(p, a, List.of(new PaIntent(PaIntent.Kind.CRAFT, words, n, PaIntent.Place.NONE, "craft " + n + " " + words)), PaOrders.Look.NONE, "craft " + n + " " + words);
+        PaOrders.run(p, a, List.of(new PaIntent(PaIntent.Kind.CRAFT, words, n, PaIntent.Place.NONE, "craft me " + n + " " + words)), PaOrders.Look.NONE, "craft me " + n + " " + words);
     }
 }
