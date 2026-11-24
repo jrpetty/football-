@@ -1112,6 +1112,23 @@ public final class TerraceRows {
             done += cut;
             if (!free) return done;
         }
+        // [house34b] a front door the builders had none for, hung now as the others hang (a house of a row with no door
+        // stood open to the street for good once the row was on the books)
+        BlockState hung = null;
+        for (Spot s : spots(b)) {
+            BlockState d = level.getBlockState(cell(b, t.doorDx(s.index()), t.stand + step(steps, s.index()), t.front));
+            if (d.getBlock() instanceof DoorBlock && d.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) { hung = d; break; }
+        }
+        if (hung != null) for (Spot s : spots(b)) {
+            BlockPos door = cell(b, t.doorDx(s.index()), t.stand + step(steps, s.index()), t.front);
+            if (!level.getBlockState(door).isAir() || !level.getBlockState(door.above()).isAir()) continue;
+            if (!free && !take(level, v, Items.OAK_DOOR, "hanging the front door of " + address(id, s), door)) continue;
+            BlockState lower = copy(hung, Blocks.OAK_DOOR.defaultBlockState());
+            level.setBlock(door, lower, 2 | 16);
+            level.setBlock(door.above(), lower.setValue(DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 2 | 16);
+            done++;
+            if (!free) return done;
+        }
         for (Spot s : spots(b)) {
             int i = s.index(), st = step(steps, i);
             // the front door, its household's colour
