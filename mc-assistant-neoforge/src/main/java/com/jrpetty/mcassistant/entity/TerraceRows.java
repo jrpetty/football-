@@ -950,14 +950,15 @@ public final class TerraceRows {
         }
     }
 
-    /** Is the row up (its doors hung)? */
+    /** Is the row up (a front door hung)? [house34b] One is enough: a door is a finishing part the builders put in when the
+     *  stores have one, and a grand row up four storeys with one house's door still to come was never finished at all. */
     static boolean standing(ServerLevel level, UUID village, Ledger.Building b) {
         Tier t = tier(b.structure());
         for (Spot s : spots(b)) {
             BlockPos door = cell(b, t.doorDx(s.index()), t.stand + step(steps(b.anchor()), s.index()), t.front);
-            if (!(level.getBlockState(door).getBlock() instanceof DoorBlock)) return false;
+            if (level.getBlockState(door).getBlock() instanceof DoorBlock) return true;
         }
-        return true;
+        return false;
     }
 
     /** A row newly up goes into the chronicle. */
