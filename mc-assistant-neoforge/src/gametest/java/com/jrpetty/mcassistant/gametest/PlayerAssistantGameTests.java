@@ -1210,6 +1210,7 @@ public class PlayerAssistantGameTests {
         int x = 7_117_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
+        Waiter w = Waiter.on(helper);
         BlockPos foot = new BlockPos(x + 8, y, Z + 6), head = foot.north();
         level.setBlock(foot, Blocks.RED_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
             .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
@@ -1225,7 +1226,7 @@ public class PlayerAssistantGameTests {
         helper.runAfterDelay(20, () -> {
             PaData.Rec r = a.rec() != null ? a.rec() : PaData.first(p.getUUID());
             r.deadUntil = level.getGameTime();                    // its time is up
-            helper.runAfterDelay(30, () -> {
+            w.await(helper, 200, () -> { PlayerAssistantEntity q = com.jrpetty.mcassistant.pa.PaLife.find(p); return q != null && q.blockPosition().closerThan(head, 3.5); }, () -> {
                 PlayerAssistantEntity b = com.jrpetty.mcassistant.pa.PaLife.find(p);
                 helper.assertTrue(b != null && b.blockPosition().closerThan(head, 3.5), "back at its bed: " + (b == null ? "none" : b.blockPosition().toShortString()));
                 // place a bed: one from its pack, put down near its player, and its spawn after
@@ -1575,12 +1576,13 @@ public class PlayerAssistantGameTests {
 
     /** pai46: bedtime: "go to bed" at night and it walks to its bed and lies down; a monster close by wakes it; "wake up"
      *  gets it up; morning gets it up; in the day "go to bed" waits for dark. [pa33d] */
-    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "pai46_sleep")
+    @GameTest(template = EMPTY, timeoutTicks = 1400, batch = "pai46_sleep")
     public static void pai46_sleep(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_135_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
+        Waiter w = Waiter.on(helper);
         BlockPos foot = new BlockPos(x + 6, y, Z + 3), head = foot.north();
         level.setBlock(foot, Blocks.WHITE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
             .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
@@ -1613,12 +1615,12 @@ public class PlayerAssistantGameTests {
                     helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_danger"), "a monster wakes it: " + lastWords(a));
                     z.discard();
                     say(p, a, "go to bed");
-                    helper.runAfterDelay(120, () -> {
+                    w.await(helper, 400, a::isSleeping, () -> {
                         helper.assertTrue(a.isSleeping(), "back to bed");
                         say(p, a, "wake up");
                         helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_told"), "\"wake up\": " + lastWords(a));
                         say(p, a, "go to bed");
-                        helper.runAfterDelay(120, () -> {
+                        w.await(helper, 400, a::isSleeping, () -> {
                             helper.assertTrue(a.isSleeping(), "to bed a third time");
                             level.setDayTime(24000 + 500);
                             helper.runAfterDelay(30, () -> {
@@ -1792,6 +1794,30 @@ public class PlayerAssistantGameTests {
         });
     }
 
+    /** [pa33e] One wait at a time, checked each tick by a listener set up at the test's start (a full run is slow to settle:
+     *  new chunks, a busy server), so a test waits for what it's waiting for rather than a fixed count. */
+    private static final class Waiter {
+        java.util.function.BooleanSupplier until;
+        Runnable then;
+        long deadline;
+
+        static Waiter on(GameTestHelper h) {
+            Waiter w = new Waiter();
+            h.onEachTick(() -> {
+                if (w.until == null) return;
+                if (w.until.getAsBoolean() || h.getTick() >= w.deadline) { Runnable r = w.then; w.until = null; r.run(); }
+            });
+            return w;
+        }
+
+        /** Then (asserting as it likes) once it holds, or after so many ticks at most. */
+        void await(GameTestHelper h, int most, java.util.function.BooleanSupplier until, Runnable then) {
+            this.then = then;
+            this.deadline = h.getTick() + most;
+            this.until = until;
+        }
+    }
+
     /** The chunks round a spot in another dimension held loaded (a real player's arrival loads them; a mock player's tickets lag). */
     private static void forceAround(ServerLevel l, int bx, int bz, boolean on) {
         for (int cx = (bx >> 4) - 1; cx <= (bx >> 4) + 1; cx++) for (int cz = (bz >> 4) - 1; cz <= (bz >> 4) + 1; cz++) l.setChunkForced(cx, cz, on);
@@ -1800,12 +1826,13 @@ public class PlayerAssistantGameTests {
     /** pai51: through a portal with its player, at once: carried across beside them the moment they arrive, never stood
      *  in the arrival portal (where, as a mob, it would bounce straight back out), the same body a while later, and home
      *  again with them. [pa33e] */
-    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pai51_portal")
+    @GameTest(template = EMPTY, timeoutTicks = 700, batch = "pai51_portal")
     public static void pai51_portal(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_150_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
+        Waiter w = Waiter.on(helper);
         long[] crossedAt = {-1};
         int[] cameAt = {-1};
         helper.onEachTick(() -> {
@@ -1827,7 +1854,7 @@ public class PlayerAssistantGameTests {
             helper.assertTrue(a.level() == level, "it starts beside its player");
             p.teleportTo(nether, nx + 0.5, ny, nz + 0.5, Set.of(), 0.0F, 0.0F);      // arrived in the portal, as through it
             crossedAt[0] = helper.getTick();                                          // watched each tick (the new chunk's tickets take a moment)
-            helper.runAfterDelay(61, () -> {
+            w.await(helper, 300, () -> cameAt[0] >= 0, () -> {
                 PlayerAssistantEntity b = PaLife.find(p);
                 PaData.Rec rr = PaData.first(p.getUUID());
                 Kit.log("pai51 after: came across " + cameAt[0] + " ticks after its player; rec entity " + (rr == null ? null : rr.entity) + ", found " + b);
@@ -1940,6 +1967,7 @@ public class PlayerAssistantGameTests {
         int x = 7_159_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
+        Waiter w = Waiter.on(helper);
         atLevel(a, 10);
         a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
         a.insertGiven(new ItemStack(Items.ARROW, 64));
@@ -1949,8 +1977,9 @@ public class PlayerAssistantGameTests {
         for (BlockPos q : BlockPos.betweenClosed(ex - 8, ey - 1, ez - 8, ex + 16, ey + 12, ez + 8))
             end.setBlock(q, q.getY() == ey - 1 ? Blocks.OBSIDIAN.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
         for (int dy = 0; dy < 5; dy++) end.setBlock(new BlockPos(ex + 12, ey + dy, ez), Blocks.OBSIDIAN.defaultBlockState(), 2);
-        helper.runAfterDelay(10, () -> p.teleportTo(end, ex + 0.5, ey, ez + 0.5, Set.of(), -90.0F, 0.0F));
-        helper.runAfterDelay(40, () -> {
+        helper.runAfterDelay(10, () -> {
+          p.teleportTo(end, ex + 0.5, ey, ez + 0.5, Set.of(), -90.0F, 0.0F);
+          w.await(helper, 300, () -> { PlayerAssistantEntity q = PaLife.find(p); return q != null && q.level() == end; }, () -> {
             PlayerAssistantEntity b = PaLife.find(p);
             helper.assertTrue(b != null && b.level() == end, "it came to the End with its player");
             net.minecraft.world.entity.boss.enderdragon.EndCrystal crystal = new net.minecraft.world.entity.boss.enderdragon.EndCrystal(end, ex + 12.5, ey + 5, ez + 0.5);
@@ -1971,6 +2000,7 @@ public class PlayerAssistantGameTests {
                     helper.succeed();
                 });
             });
+          });
         });
     }
 
