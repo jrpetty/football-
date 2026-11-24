@@ -1682,6 +1682,11 @@ public class PlayerAssistantGameTests {
         int x = 7_141_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
+        // where a pearl lands, watched each tick (it may walk back to its post after, as told to stay); scheduled from the
+        // top, as a test that adds dozens of delayed checks from inside one upsets the test runner's own list
+        net.minecraft.world.phys.Vec3[] pearlTo = {null};
+        double[] pearlNearest = {Double.MAX_VALUE};
+        helper.onEachTick(() -> { if (pearlTo[0] != null) pearlNearest[0] = Math.min(pearlNearest[0], a.position().distanceTo(pearlTo[0])); });
         atLevel(a, 10);
         a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(Items.BOW));
         a.insertGiven(new net.minecraft.world.item.ItemStack(Items.ARROW, 16));
@@ -1714,11 +1719,9 @@ public class PlayerAssistantGameTests {
                 a.teleportTo(x + 0.5, y, Z + 0.5);
                 com.jrpetty.mcassistant.pa.PaMoves.throwPearlForTests(a, new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5));
                 // where it lands (it may walk back to its post after, as told to stay)
-                net.minecraft.world.phys.Vec3 there = new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5);
-                double[] nearest = {Double.MAX_VALUE};
-                for (int t = 2; t <= 78; t += 2) helper.runAfterDelay(t, () -> nearest[0] = Math.min(nearest[0], a.position().distanceTo(there)));
+                pearlTo[0] = new net.minecraft.world.phys.Vec3(x + 16.5, y, Z + 0.5);   // watched each tick (see the top)
                 helper.runAfterDelay(80, () -> {
-                    helper.assertTrue(nearest[0] < 4.0, "pearled across: came within " + nearest[0] + ", now " + a.blockPosition().toShortString());
+                    helper.assertTrue(pearlNearest[0] < 4.0, "pearled across: came within " + pearlNearest[0] + ", now " + a.blockPosition().toShortString());
                     Kit.log("pai48 moves: trick shot hit, clutch, pearl");
                     helper.succeed();
                 });
@@ -1796,6 +1799,13 @@ public class PlayerAssistantGameTests {
         int x = 7_150_000, y = ground(level, x);
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
+        long[] crossedAt = {-1};
+        int[] cameAt = {-1};
+        helper.onEachTick(() -> {
+            if (crossedAt[0] < 0 || cameAt[0] >= 0) return;
+            PlayerAssistantEntity q = PaLife.find(p);
+            if (q != null && q.level() != level) cameAt[0] = (int) (helper.getTick() - crossedAt[0]);
+        });
         ServerLevel nether = level.getServer().getLevel(net.minecraft.world.level.Level.NETHER);
         // an arrival portal on an obsidian ledge in the Nether
         int nx = x / 8, ny = 100, nz = Z / 8;
@@ -1809,11 +1819,7 @@ public class PlayerAssistantGameTests {
         helper.runAfterDelay(20, () -> {
             helper.assertTrue(a.level() == level, "it starts beside its player");
             p.teleportTo(nether, nx + 0.5, ny, nz + 0.5, Set.of(), 0.0F, 0.0F);      // arrived in the portal, as through it
-            int[] cameAt = {-1};
-            for (int t = 1; t <= 60; t++) {                                           // (the new chunk's tickets take a moment to settle)
-                int tt = t;
-                helper.runAfterDelay(t, () -> { PlayerAssistantEntity q = PaLife.find(p); if (cameAt[0] < 0 && q != null && q.level() == nether) cameAt[0] = tt; });
-            }
+            crossedAt[0] = helper.getTick();                                          // watched each tick (the new chunk's tickets take a moment)
             helper.runAfterDelay(61, () -> {
                 PlayerAssistantEntity b = PaLife.find(p);
                 PaData.Rec rr = PaData.first(p.getUUID());
@@ -1856,17 +1862,18 @@ public class PlayerAssistantGameTests {
         p.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(Items.ELYTRA));
         boolean[] flew = {false};
         double[] nearest = {Double.MAX_VALUE};
+        long[] up = {-1};                                                              // its player in the air from this tick, for 240
+        helper.onEachTick(() -> {
+            if (up[0] < 0 || helper.getTick() - up[0] > 240) return;
+            long tt = helper.getTick() - up[0];
+            p.teleportTo(level, x + 14.5 + tt * 0.05, y + 12, Z + 0.5, Set.of(), -90.0F, 0.0F);   // its player gliding east, slowly
+            if (!p.isFallFlying()) p.startFallFlying();
+            if (a.isFallFlying()) flew[0] = true;
+            nearest[0] = Math.min(nearest[0], a.distanceTo(p));
+        });
         helper.runAfterDelay(20, () -> {
             a.setHealth(a.getMaxHealth());
-            for (int t = 0; t <= 240; t += 2) {
-                int tt = t;
-                helper.runAfterDelay(t, () -> {
-                    p.teleportTo(level, x + 14.5 + tt * 0.05, y + 12, Z + 0.5, Set.of(), -90.0F, 0.0F);   // its player gliding east, slowly
-                    if (!p.isFallFlying()) p.startFallFlying();
-                    if (a.isFallFlying()) flew[0] = true;
-                    nearest[0] = Math.min(nearest[0], a.distanceTo(p));
-                });
-            }
+            up[0] = helper.getTick();
             helper.runAfterDelay(242, () -> {
                 helper.assertTrue(flew[0], "it took to the air: chest " + a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST) + ", at " + a.blockPosition().toShortString());
                 helper.assertTrue(nearest[0] < 7.0, "kept up with its player: came within " + nearest[0]);
