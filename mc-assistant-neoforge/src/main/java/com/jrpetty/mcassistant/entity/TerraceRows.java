@@ -994,6 +994,15 @@ public final class TerraceRows {
     /** The rows' own crew (TownJobs): not the walls crew, which the age's make-over of every building keeps at one spot
      *  after another for days, while the rows stood half in cobble and timber waiting on it. */
     static final String ROWS_WORK = "terraces";
+    /**
+     * [house34b] Where a hand stands to work on this block of a row: at the foot of its wall, on the row's own ground floor
+     * (it works off its ladder and scaffold, as the builders do). Sent to the block itself, a hand could never come within
+     * reach of a cornice four storeys up, and every round of the grand row's finishing stopped at its first such block.
+     */
+    static BlockPos footOf(Ledger.Building b, BlockPos p) {
+        return new BlockPos(p.getX(), b.anchor().getY() + 1, p.getZ());
+    }
+
     /** [house34b] The wash on the yards' lines: sheets and shirts, white, blue, pink, yellow, grey. */
     private static final Block[] WASH = { Blocks.WHITE_WALL_BANNER, Blocks.LIGHT_BLUE_WALL_BANNER, Blocks.WHITE_WALL_BANNER,
         Blocks.PINK_WALL_BANNER, Blocks.YELLOW_WALL_BANNER, Blocks.LIGHT_GRAY_WALL_BANNER, Blocks.WHITE_WALL_BANNER };
@@ -1054,7 +1063,7 @@ public final class TerraceRows {
             if (there.is(face) || !there.isCollisionShapeFullBlock(level, pl.pos()) || there.hasBlockEntity()) continue;
             if (!have[brick ? 0 : 1]) continue;
             if (!free) {
-                if (laid == 0 && !TownJobs.atWork(level, v, ROWS_WORK, pl.pos(), "facing " + name(id, b) + (brick ? " in brick" : " in dressed stone"))) break;
+                if (laid == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "facing " + name(id, b) + (brick ? " in brick" : " in dressed stone"))) break;
                 if (Crafts.takeOne(level, v, st -> st.is(faceItem)).isEmpty()) { have[brick ? 0 : 1] = false; continue; }
                 Crafts.giveBack(level, v, there.getBlock().asItem(), 1);                  // what came off goes back into the stores
             }
@@ -1083,7 +1092,7 @@ public final class TerraceRows {
                 if (!free) {
                     java.util.function.Predicate<ItemStack> tile = it -> it.is(Items.DEEPSLATE_TILES) || it.is(Items.COBBLED_DEEPSLATE);
                     if (slated == 0 && (Crafts.stock(level, v, tile) < 1
-                            || !TownJobs.atWork(level, v, ROWS_WORK, pl.pos(), "slating the roof of " + name(id, b)))) break;
+                            || !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "slating the roof of " + name(id, b)))) break;
                     if (Crafts.takeOne(level, v, tile).isEmpty()) break;
                     Crafts.giveBack(level, v, there.getBlock().asItem(), 1);
                 }
@@ -1103,7 +1112,7 @@ public final class TerraceRows {
             BlockState there = level.getBlockState(pl.pos());
             Block slab = SLAB_OF.get(there.getBlock());
             if (slab == null) continue;
-            if (!free && cut == 0 && !TownJobs.atWork(level, v, ROWS_WORK, pl.pos(), "cutting the copings of " + name(id, b))) break;
+            if (!free && cut == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "cutting the copings of " + name(id, b))) break;
             level.setBlock(pl.pos(), slab.defaultBlockState(), 3);
             cut++;
             if (!free && cut >= REFACE) break;
