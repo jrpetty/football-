@@ -1591,8 +1591,8 @@ public class PlayerAssistantGameTests {
         // the night's own monsters kept away (they'd rightly keep it up): only the test's zombie comes near
         net.minecraft.world.entity.Entity[] ours = {null};
         helper.onEachTick(() -> {
-            for (net.minecraft.world.entity.monster.Monster m : level.getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class,
-                    new net.minecraft.world.phys.AABB(head).inflate(24), e -> e != ours[0])) m.discard();
+            for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,      // slimes too (a flat world's night)
+                    new net.minecraft.world.phys.AABB(head).inflate(24), e -> e instanceof net.minecraft.world.entity.monster.Enemy && e != ours[0])) m.discard();
         });
         say(p, a, "use this bed", foot, -1);
         say(p, a, "go to bed");
@@ -1616,7 +1616,7 @@ public class PlayerAssistantGameTests {
                     z.discard();
                     say(p, a, "go to bed");
                     w.await(helper, 400, a::isSleeping, () -> {
-                        helper.assertTrue(a.isSleeping(), "back to bed");
+                        helper.assertTrue(a.isSleeping(), "back to bed (wanted " + a.sleepWanted + ", target " + a.getTarget() + ", at " + a.blockPosition().toShortString() + ", " + lastWords(a) + ")");
                         say(p, a, "wake up");
                         helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_told"), "\"wake up\": " + lastWords(a));
                         say(p, a, "go to bed");
