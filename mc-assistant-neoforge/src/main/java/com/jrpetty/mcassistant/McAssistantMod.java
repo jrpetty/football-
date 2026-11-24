@@ -80,6 +80,16 @@ public final class McAssistantMod {
             .clientTrackingRange(10)
             .build("player_assistant"));
 
+    /** [pa38] The Player AI Assistant's fishing bobber: the game's hook, on an assistant's line (PaFishHook). */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.jrpetty.mcassistant.pa.PaFishHook>>
+        PA_FISH_HOOK = ENTITY_TYPES.register("pa_fishing_bobber", () -> EntityType.Builder
+            .<com.jrpetty.mcassistant.pa.PaFishHook>of(com.jrpetty.mcassistant.pa.PaFishHook::new, MobCategory.MISC)
+            .noSave().noSummon()
+            .sized(0.25F, 0.25F)
+            .clientTrackingRange(4)
+            .updateInterval(5)
+            .build("pa_fishing_bobber"));
+
     // Extended menu type: the entity id travels to the client in the buffer.
     public static final DeferredHolder<MenuType<?>, MenuType<AssistantMenu>> ASSISTANT_MENU =
         MENU_TYPES.register("assistant", () -> IMenuTypeExtension.create(AssistantMenu::new));

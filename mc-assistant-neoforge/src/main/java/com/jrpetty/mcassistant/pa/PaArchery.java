@@ -126,17 +126,27 @@ public final class PaArchery {
 
     /** About how many ticks an arrow at this speed takes to cover so much ground (fired near level). */
     public static int flightTicks(double speed, double horiz) {
+        return flightTicks(speed, horiz, DRAG);
+    }
+
+    /** [pa38] The same for any thrown thing's drag (a snowball 0.99, a fishing hook 0.92). */
+    public static int flightTicks(double speed, double horiz, double drag) {
         double x = 0, v = speed;
         for (int t = 1; t < 200; t++) {
             x += v;
             if (x >= horiz) return t;
-            v *= DRAG;
+            v *= drag;
         }
         return 200;
     }
 
     /** The arrow's height when it has come so far out, fired at this elevation (degrees up); -infinity if it never gets there. */
     static double heightAt(double speed, double elevDeg, double horiz) {
+        return heightAt(speed, elevDeg, horiz, DRAG, GRAVITY);
+    }
+
+    /** [pa38] The same for any thrown thing's drag and gravity (a snowball's 0.99 and 0.03, a hook's 0.92 and 0.03). */
+    static double heightAt(double speed, double elevDeg, double horiz, double drag, double gravity) {
         double r = Math.toRadians(elevDeg);
         double vh = Math.cos(r) * speed, vy = Math.sin(r) * speed, x = 0, y = 0;
         for (int t = 0; t < 300; t++) {
@@ -144,8 +154,8 @@ public final class PaArchery {
             if (nx >= horiz) return y + (ny - y) * ((horiz - x) / Math.max(1e-9, vh));
             x = nx;
             y = ny;
-            vh *= DRAG;
-            vy = vy * DRAG - GRAVITY;
+            vh *= drag;
+            vy = vy * drag - gravity;
             if (y < -300) break;
         }
         return Double.NEGATIVE_INFINITY;
@@ -153,15 +163,28 @@ public final class PaArchery {
 
     /** The pitch (the game's: negative is up) that lands an arrow of this speed so far out and so far up, as the game flies it. */
     public static double solvePitch(double speed, double horiz, double dy) {
+        return solvePitch(speed, horiz, dy, DRAG, GRAVITY);
+    }
+
+    /** [pa38] The same for any thrown thing's drag and gravity. */
+    public static double solvePitch(double speed, double horiz, double dy, double drag, double gravity) {
         double lo = -60, hi = 42;
         if (horiz < 0.5) return -Math.toDegrees(Math.atan2(dy, Math.max(0.01, horiz)));
-        if (heightAt(speed, hi, horiz) < dy) return -hi;                 // out of reach: its best lob
+        if (heightAt(speed, hi, horiz, drag, gravity) < dy) return -hi;  // out of reach: its best lob
         for (int i = 0; i < 30; i++) {
             double mid = (lo + hi) * 0.5;
-            if (heightAt(speed, mid, horiz) < dy) lo = mid; else hi = mid;
+            if (heightAt(speed, mid, horiz, drag, gravity) < dy) lo = mid; else hi = mid;
         }
         return -(lo + hi) * 0.5;
     }
+
+    /** [pa38] A thrown thing's flight, as the game flies it: speed off the hand (blocks a tick), drag and gravity a tick. */
+    public record Flight(double speed, double drag, double gravity) {}
+
+    /** [pa38] A snowball or an egg off a player's arm (1.5 a tick, 0.99 drag, 0.03 gravity). */
+    public static final Flight SNOWBALL = new Flight(1.5, 0.99, 0.03);
+    /** [pa38] A fishing hook's cast (about 0.6 a tick, 0.92 drag, 0.03 gravity). */
+    public static final Flight HOOK = new Flight(0.6, 0.92, 0.03);
 
     /**
      * One draw, tick by tick: what it has seen of the target, where it means to aim, where its head points, how long
@@ -178,6 +201,8 @@ public final class PaArchery {
         /** [pa35] A crossbow's: the speed it shoots at, whatever the "draw" (0 for a bow, whose pull sets it). */
         public final double fixedSpeed;
         private final double rangeJudge, leadJudge;
+        /** [pa38] What it is throwing flies by these (an arrow's unless told otherwise). */
+        private double drag = DRAG, gravity = GRAVITY;
         private final double[][] seen = new double[64][];
         private int n;
         private double angSpeed, lastBearing = Double.NaN;
@@ -198,6 +223,13 @@ public final class PaArchery {
             this.plannedDraw = fixedSpeed > 0 ? row.drawTicks() : dist < CLOSE ? Math.max(10, row.drawTicks() / 2) : row.drawTicks();
             this.rangeJudge = Math.max(0.6, 1.0 + rnd.nextGaussian() * row.rangeErr());
             this.leadJudge = row.leadMean() + rnd.nextGaussian() * row.leadSigma();
+        }
+
+        /** [pa38] Aim a thrown thing (a snowball, a hook): its own drag and gravity, the same eyes and hands. */
+        public Shooter flight(Flight f) {
+            this.drag = f.drag();
+            this.gravity = f.gravity();
+            return this;
         }
 
         /** What it saw k ticks ago (k=0: just now). */
@@ -230,13 +262,13 @@ public final class PaArchery {
             }
             double px = p[0] + vx * a, py = p[1] + vy * a, pz = p[2] + vz * a;
             double sp = speed();
-            int fly = flightTicks(sp, Math.hypot(px - ex, pz - ez) * rangeJudge);
+            int fly = flightTicks(sp, Math.hypot(px - ex, pz - ez) * rangeJudge, drag);
             px += vx * fly * leadJudge;
             py += vy * fly * leadJudge;
             pz += vz * fly * leadJudge;
             double dx = px - ex, dz = pz - ez;
             wantYaw = yawTo(dx, dz);
-            wantPitch = solvePitch(sp, Math.hypot(dx, dz) * rangeJudge, py - (ey - EYE_DROP));
+            wantPitch = solvePitch(sp, Math.hypot(dx, dz) * rangeJudge, py - (ey - EYE_DROP), drag, gravity);
             double bearing = yawTo(tx - ex, tz - ez);
             angSpeed = Double.isNaN(lastBearing) ? 0 : angSpeed * 0.7 + 0.3 * Math.abs(wrap(bearing - lastBearing));
             lastBearing = bearing;

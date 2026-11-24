@@ -80,6 +80,12 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.goalSelector.addGoal(3, new PaCrossbowGoal(this));            // [pa35] and its crossbow (PaCrossbow)
         this.goalSelector.addGoal(3, new PaTrident(this));                 // [pa35] and a Loyalty trident, thrown, from level 7
         this.goalSelector.addGoal(2, new PaLogiGoal(this));                // [pa36] chests and logistics
+        this.goalSelector.addGoal(2, new PaFishGoal(this));                // [pa38] a real rod and line
+        this.goalSelector.addGoal(2, new PaEnchantGoal(this));             // [pa38] the table's real offers, judged by its level
+        this.goalSelector.addGoal(2, new PaThrowGoal(this));               // [pa38] snowballs and eggs: a mob pulled off its player
+        this.goalSelector.addGoal(2, new PaRodPull(this));                 // [pa38] the rod in a fight
+        this.goalSelector.addGoal(2, new PaMace(this));
+        this.goalSelector.addGoal(2, new PaCureGoal(this));                // [pa38] a zombie villager cured when asked                    // [pa38] the mace's smash from height
     }
 
     /** Tests: the goals running just now, by name. */
@@ -226,13 +232,13 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public void setTarget(@Nullable net.minecraft.world.entity.LivingEntity target) {
         boolean fresh = target != null && fairGame(target) && target != getTarget();
-        super.setTarget(fairGame(target) && !PaMemoryAct.sparesEntity(this, target) ? target : null);   // [pa35] "don't kill my cows"
+        super.setTarget(fairGame(target) && !PaMemoryAct.sparesEntity(this, target) && !PaTrade.curing(this, target) ? target : null);   // [pa35] "don't kill my cows"; [pa38] nor the one it's curing
         if (fresh && !level().isClientSide) equipBestWeapon();      // [pa33b] sword out for a fight, as a player would
     }
 
     @Override
     public boolean canAttack(net.minecraft.world.entity.LivingEntity target) {
-        return fairGame(target) && !PaMemoryAct.sparesEntity(this, target) && super.canAttack(target);   // [pa35]
+        return fairGame(target) && !PaMemoryAct.sparesEntity(this, target) && !PaTrade.curing(this, target) && super.canAttack(target);   // [pa35] [pa38]
     }
 
     /**
@@ -386,6 +392,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         }
         if (!level().isClientSide) PaPace.tick(this);                    // [pa35] the cracks, as a player's digging shows
         if (!level().isClientSide) PaIdleTake.flush(this);               // [pa36b] what it borrowed from a chest, said once
+        if (!level().isClientSide) PaFieldTick.tick(this);               // [pa38] its throws, its pillar, its slips
     }
 
     /** [pa36b] On its own account it takes only from chests its player allows, never below a stock rule, never valuables. */
@@ -397,6 +404,31 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public boolean mayTakeAny(BlockPos chest) {
         return level().isClientSide || PaIdleTake.any(this, chest);
+    }
+
+    /** [pa38] A learner's slip now and then as it builds (PaSlips). */
+    @Override
+    public void placedPart(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+        if (!level().isClientSide) PaSlips.afterPlace(this, pos, state);
+    }
+
+    /** [pa38] Now and then (at a low level) the wrong tool first for a new job, for a swing (PaSlips). */
+    @Override
+    public void equipBestTool(net.minecraft.world.level.block.state.BlockState state) {
+        if (!level().isClientSide && PaSlips.wrongTool(this, state)) return;
+        super.equipBestTool(state);
+    }
+
+    /** [pa38] Its own rod (PaFishGoal) and its own work at the enchanting table (PaEnchantGoal). */
+    @Override
+    public boolean ownsJob(com.jrpetty.mcassistant.entity.Job.Type type) {
+        return type == com.jrpetty.mcassistant.entity.Job.Type.FISH || type == com.jrpetty.mcassistant.entity.Job.Type.ENCHANT;
+    }
+
+    /** [pa38] A chest it went to (or found) for something it may not take on its own account: why, and how to allow it. */
+    @Override
+    public String refusedTakeLine(BlockPos chest, String word) {
+        return level().isClientSide ? null : PaIdleTake.refused(this, chest, word);
     }
 
     @Override
@@ -716,14 +748,30 @@ public class PlayerAssistantEntity extends AssistantEntity {
         net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "pa_crit");
         if (crit && dmg != null) dmg.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, 0.5,
             net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        // [pa38] a mace smash: the game's own extra for the fall it is in (PaMace), added to this blow
+        float smash = level().isClientSide ? 0 : PaMace.bonus(this, target);
+        net.minecraft.resources.ResourceLocation smashId = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "pa_smash");
+        if (smash > 0 && dmg != null) dmg.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(smashId, smash,
+            net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+        float before = target instanceof net.minecraft.world.entity.LivingEntity le0 ? le0.getHealth() : 0;
         try {
             boolean hit = super.doHurtTarget(target);
             if (hit && crit && level() instanceof ServerLevel sl)
                 sl.sendParticles(net.minecraft.core.particles.ParticleTypes.CRIT, target.getX(), target.getY(0.6), target.getZ(), 8, 0.3, 0.3, 0.3, 0.2);
+            if (hit && smash > 0 && target instanceof net.minecraft.world.entity.LivingEntity le)
+                PaMace.landed(this, le, smash, Math.max(0, before - le.getHealth()));   // [pa38]
             return hit;
         } finally {
             if (dmg != null) dmg.removeModifier(id);
+            if (dmg != null) dmg.removeModifier(smashId);                  // [pa38]
         }
+    }
+
+    /** [pa38] A fall after its own wind charge's lift counts only below where it was launched, as a player's does (PaMace). */
+    @Override
+    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
+        if (!level().isClientSide) fallDistance = PaMace.fallToCount(this, fallDistance);
+        return super.causeFallDamage(fallDistance, multiplier, source);
     }
 
     @Override

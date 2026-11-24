@@ -172,6 +172,9 @@ public final class PaStt {
         PaUnderstand.Reading f = free.isEmpty() ? null : PaUnderstand.read(PaWords.voiceFix(free), "");   // [pa33b] read as the server will
         if (f != null && f.understood() && f.steps().get(0).kind() == com.jrpetty.mcassistant.pa.PaIntent.Kind.QUESTION) return free;
         PaUnderstand.Reading h = held.isEmpty() ? null : PaUnderstand.read(PaWords.voiceFix(held), "");
+        // [pa38] the held reading cut short ("stop" of "stop making jokes"), or the free one a hush: the free one, whole
+        if (f != null && !free.equals(held) && (com.jrpetty.mcassistant.pa.PaQuips.mute(free, false) != null
+                || (f.understood() && (" " + free + " ").startsWith(" " + held + " ") && free.length() > held.length()))) return free;
         if (h != null && h.understood()) return held;
         if (f != null && f.understood()) return free;
         return !free.isEmpty() ? free : held;

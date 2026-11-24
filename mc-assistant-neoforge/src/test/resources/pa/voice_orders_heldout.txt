@@ -1,0 +1,17 @@
+# [pa38] Held out: written after the tuning of voice_orders.txt and run once, untuned, for an honest first-pass figure.
+fetch me some coal || GATHER
+come back here || COME
+stay put || STAY
+chop me some wood || GATHER
+mine some stone || GATHER
+fish for a bit || FISH
+snowball that creeper || THROW
+pelt it with eggs || THROW
+hook him in || HOOK
+cure him || CURE
+enchant my pickaxe || ENCHANT
+be quiet || ?quiet
+stop making jokes || ?jokes
+what's in your pack || INVENTORY
+where's your bed || BED_WHERE
+put it all in the chest || LOGI

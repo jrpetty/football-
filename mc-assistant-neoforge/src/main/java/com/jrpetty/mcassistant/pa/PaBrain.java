@@ -91,6 +91,8 @@ public final class PaBrain {
         /** When to open its player's panel after it first arrives (0: not pending). */
         public int openPanelAt;
         int askedFoodTick = -100000;
+        /** [pa38] Fishing, throws, the rod's pull, the mace, enchanting, trading and its learner's slips (PaField). */
+        public final PaField field = new PaField();
         /** [pa33b] Lines said lately (a long memory: no repeats within a long session). */
         public final PaPersona.Recent recent = new PaPersona.Recent(400);
         /** [pa33b] Its player's last death: where, which world, how, when (game time). */

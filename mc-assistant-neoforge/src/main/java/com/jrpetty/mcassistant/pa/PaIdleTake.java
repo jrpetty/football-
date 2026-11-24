@@ -97,6 +97,45 @@ public final class PaIdleTake {
         return spare;
     }
 
+    // ---- [pa38] refused, said once in a while
+
+    private static final Map<PlayerAssistantEntity, Map<BlockPos, Long>> REFUSED = new WeakHashMap<>();
+    /** The same chest's refusal is said at most once in ten minutes (the engine's top-ups come round often). */
+    static final long REFUSED_QUIET = 12_000L;
+
+    /**
+     * [pa38] Why it couldn't take {@code word} from this chest on its own account, and how to allow it: the chest isn't
+     * allowed at all (the Storage view's Take: no), it allows only basics and this is a valuable, or the rest is held back
+     * by a keep-stocked rule. Null for an ordered take (never refused here), "" when it said so a moment ago.
+     */
+    public static String refused(PlayerAssistantEntity a, BlockPos chest, String word) {
+        if (!idle(a) || a.getOwnerId() == null) return null;
+        long now = a.level().getGameTime();
+        Map<BlockPos, Long> said = REFUSED.computeIfAbsent(a, k -> new java.util.HashMap<>());
+        Long last = said.get(chest);
+        if (last != null && now - last < REFUSED_QUIET) return "";
+        String name = PaLogistics.called(a, chest, null);
+        int lvl = level(a, chest);
+        String key = lvl <= 0 ? "logi.not_allowed" : lvl < 2 && valuableWord(word) ? "logi.not_allowed_valuable" : "logi.not_allowed_stock";
+        String line = PaLogiTalk.line(a, key, "chest", name, "item", word == null || word.isBlank() ? "that" : word);
+        // its own business, so a remark rather than a reply (quiet means quiet); said, it waits ten minutes for that chest
+        if (PaTalk.comment(a, 1, line, true)) said.put(chest.immutable(), now);
+        return "";
+    }
+
+    /** [pa38] The line it would give for this chest now (the tests read it without the ten-minute wait). */
+    static String lastRefusedKey(PlayerAssistantEntity a, BlockPos chest, String word) {
+        int lvl = level(a, chest);
+        return lvl <= 0 ? "logi.not_allowed" : lvl < 2 && valuableWord(word) ? "logi.not_allowed_valuable" : "logi.not_allowed_stock";
+    }
+
+    /** Is the thing asked for (a spoken word) one of the valuables a basics chest keeps back? */
+    static boolean valuableWord(String word) {
+        if (word == null) return false;
+        String w = word.toLowerCase(java.util.Locale.ROOT);
+        return w.matches(".*\\b(iron|gold|golden|diamond|diamonds|emerald|emeralds|netherite|lapis|amethyst|elytra|totem|chainmail)\\b.*");
+    }
+
     // ---- borrowing, said once per trip
 
     private record Key(BlockPos chest, String item) {}

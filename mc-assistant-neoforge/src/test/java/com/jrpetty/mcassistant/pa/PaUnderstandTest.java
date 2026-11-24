@@ -55,6 +55,13 @@ class PaUnderstandTest {
         return acc;
     }
 
+    /** [pa38] Its rod, throws, mace, cure and bookshelves, as players say them (every one read). */
+    @Test
+    void fieldOrdersAreRead() throws IOException {
+        List<String> misses = new ArrayList<>();
+        assertTrue(score("field.txt", misses) >= 100.0, "field orders: " + misses);
+    }
+
     @Test
     void phrasingsAreRead() throws IOException {
         List<String> misses = new ArrayList<>();

@@ -1,0 +1,1082 @@
+# [pa38] Its rod, its throws, its mace, the enchanting table, villagers' trades, and the slips of a learner.
+# Blanks: {n} a number, {item} a thing or a mob ("zombie", "cod"), {what} enchantments or what's missing, {need} a level
+# or a count, {why} which offer (top, middle, bottom). Dry, short, never shouting. "[daft]" lines only for Daft humour.
+
+== field.fish_start
+Right. Rod out. Back with {n} fish, or a story.
+Off to the water. {n} fish, if they cooperate.
+Fishing it is. {n} of them. I'll be the quiet one by the water.
+{n} fish. I'll find a spot with some open water and a bit of patience.
+Gone fishing. Try not to need me in a hurry.
+I'll cast from the bank. {n} fish, and whatever else bites.
+[daft] Fishing. Time to show those cod who's boss. They'll never see it coming. Or the rod.
+== field.fish_start@gloomy
+Fishing. Standing by water, waiting. I'm good at waiting.
+{n} fish. They didn't ask to be caught either.
+To the water, then. It's quiet there, at least.
+Off to fish. If nothing bites, I'll know how it feels.
+{n} fish. I'll stand very still and hope.
+I'll go and sit by the water. Someone has to.
+== field.fish_start@serious
+Going fishing: {n} fish.
+Fishing for {n}. I'll find open water.
+Rod ready. Catching {n} fish.
+On it: {n} fish from the nearest open water.
+Heading to the water for {n} fish.
+Fishing. Target: {n}.
+
+== field.fish_no_rod
+I've no fishing rod. Three sticks and two string make one, or hand me yours.
+No rod. Hard to fish without one. Sticks and string, if you have them.
+I'd fish, but I've nothing to fish with. A rod would help. Sticks and string make one.
+Not without a rod. I'm good, but I'm not that good.
+I need a fishing rod for that. Give me one, or the string and sticks to make it.
+No rod in my pack. Bare hands and cod don't mix.
+== field.fish_no_rod@gloomy
+No rod. So no fish. Simple, really.
+I've nothing to fish with. As usual.
+A rod would be nice. Sticks and string. If it's not too much trouble.
+Without a rod I'd just be staring at water. Which I can do anyway.
+No fishing rod. The fish are safe from me.
+I'd need a rod. I don't have one. Story of my afternoon.
+== field.fish_no_rod@serious
+I need a fishing rod (three sticks, two string).
+No fishing rod in my pack.
+Can't fish: no rod. Give me one or the materials.
+A fishing rod is needed first.
+No rod available. Sticks and string make one.
+Missing: a fishing rod.
+
+== field.fish_no_water
+There's no open water near enough to fish in. Point me at some, or ping it.
+I can't see any water worth fishing round here. A lake would do.
+No decent water close by. A puddle won't feed anyone.
+Nowhere to fish from here. Take me to a river and I'll get on with it.
+I've looked. No water I can cast into from a bank. Show me some.
+Plenty of land, no fishing water. Ping a lake and I'll go.
+== field.fish_no_water@gloomy
+No water. Just land, as far as I can see.
+Nowhere to fish. The fish have hidden well.
+I looked for water. Found none. Typical.
+No lake, no river. Just me and my rod.
+Nothing to cast into. It's that kind of day.
+Dry as a bone round here. I'll wait to be shown water.
+== field.fish_no_water@serious
+No open water within reach. Ping some and I'll go.
+I can't find water to fish in nearby.
+No fishing spot found. Show me a lake or river.
+Nothing suitable to fish in here.
+No water with a bank to stand on nearby.
+Fishing needs water. None found close by.
+
+== field.fish_missed
+Missed the water. The bank enjoyed that.
+That landed on the grass. Again, with feeling.
+The cast went wide. I'll aim at the wet bit this time.
+Not my best cast. The fish are safe a moment longer.
+That one's in a bush. Reeling in.
+Fishing for dirt, apparently. Once more.
+== field.fish_missed@gloomy
+Missed. Even the water avoids me.
+On the bank. Of course it is.
+That went everywhere but the water.
+Another cast into nothing.
+Missed. I'll try again. I always do.
+Not even close. Reeling in.
+== field.fish_missed@serious
+Cast missed the water. Recasting.
+Off target. Again.
+Landed on the bank. Trying again.
+Missed the water. Adjusting.
+Bad cast. Once more.
+Recasting.
+
+== field.fish_early
+Too keen. That was a ripple, not a bite.
+Struck at nothing. The fish noticed.
+Pulled too soon. Patience is a skill, apparently.
+That was the fish thinking about it. I'd already decided for it.
+Early. I'll wait for the float to actually go under next time.
+Overeager. Back in it goes.
+== field.fish_early@gloomy
+Too soon. I always rush the good bits.
+Pulled before it bit. Classic me.
+It was only looking. I scared it off.
+Early again. I'll learn. Eventually.
+Nothing on it. I was too hasty.
+That was the fish deciding. I decided first. Badly.
+== field.fish_early@serious
+Struck early: no fish.
+Too soon. Recasting.
+Pulled before the bite.
+Early strike, nothing caught.
+Missed: struck at the ripple.
+No bite yet when I pulled. Again.
+== field.fish_lost
+It got away. I was looking at a cloud.
+Lost that one. It was this big, obviously.
+Too slow on the float. The fish wins this round.
+Gone. It took the bait and its chances.
+Missed the bite. I blinked.
+That one escaped. I'll pay attention this time.
+[daft] It got away. Probably to tell its friends about me. Great, now the whole lake knows.
+== field.fish_lost@gloomy
+It got away. They always do.
+Lost it. I'll just stand here.
+Missed. The fish had better things to do.
+Gone. Like everything else.
+Too slow. Story of the afternoon.
+That one's free now. Good for it.
+== field.fish_lost@serious
+Missed the bite. Recasting.
+Fish lost: struck too late.
+Lost that one.
+Late on the strike. No fish.
+Bite missed.
+It escaped. Trying again.
+
+== field.fish_treasure
+Ooh. {item}. That's not a fish, and I'm not complaining.
+Treasure. {item}, straight out of the water. Lucky cast.
+{item}. Someone dropped this in a lake. Their loss.
+A {item}. The water's been generous.
+Well, look at that. {item}. I'll pretend I meant it.
+{item} on the line. Better than a boot.
+== field.fish_treasure@gloomy
+{item}. Something good. Suspicious.
+Treasure. {item}. It won't last.
+{item}. Someone threw this away. Like they'll throw me away.
+A {item}. Don't get used to it.
+{item}. Even the water feels sorry for me.
+Lucky. {item}. I'll brace for the catch.
+== field.fish_treasure@serious
+Treasure: {item}.
+Caught {item}.
+{item} from the water.
+A {item}. Keeping it for you.
+Found {item}.
+Good catch: {item}.
+
+== field.fish_junk
+{item}. Lovely. Exactly what I came for.
+A {item}. The lake's tidying up.
+{item}. I'll keep it. Somebody might want it.
+Another {item}. The fish are winning.
+{item}. Not a fish. Not even close.
+That's a {item}. Back to it.
+== field.fish_junk@gloomy
+{item}. Of course.
+A {item}. The water's leftovers. Like me.
+{item}. Nobody wanted this.
+Rubbish. Literally. {item}.
+{item}. Nothing good stays in a lake.
+Just a {item}. I'll keep it company.
+== field.fish_junk@serious
+Junk: {item}.
+Caught {item}. Not useful.
+A {item}. Keeping it anyway.
+{item} from the water.
+Not a fish: {item}.
+{item}. Carrying on.
+
+== field.fish_done
+That's {n} fish. They're in my pack, smelling of fish.
+{n} fish. Done. I'll wash my hands. Somehow.
+Finished: {n} fish caught. The lake will cope.
+{n} fish, as ordered. A quiet hour well spent.
+Done fishing. {n} in the pack.
+There we are. {n} fish. I think they're all still a bit surprised.
+== field.fish_done@gloomy
+{n} fish. Caught. Their day's ruined.
+Done. {n} fish. I'm starting to understand them.
+{n} of them. I'll try not to think about it.
+That's {n}. It felt longer.
+Finished. {n} fish. And a smell that won't leave.
+{n} fish. The water's a bit lonelier now.
+== field.fish_done@serious
+Done: {n} fish caught.
+{n} fish, in my pack.
+Fishing finished. {n} caught.
+Caught {n}. Ready for the next job.
+{n} fish. Complete.
+Finished fishing: {n}.
+== field.fish_full
+My pack's full. {n} fish caught. I'll need to unload before any more.
+No room for another. {n} fish so far.
+Pack's stuffed. {n} fish. Empty me out and I'll go on.
+That's all I can carry. {n} fish, plus the odd boot.
+Full up. {n} fish. A chest would help.
+No more space. I've got {n}.
+== field.fish_full@gloomy
+Full. {n} fish. Everything weighs on me.
+No room left. {n}. Story of my pack.
+{n} fish and nowhere to put another.
+I'm full. Of fish. Not ideal.
+That's it, I'm full. {n}.
+Pack full. {n} fish. Heavy.
+== field.fish_full@serious
+Pack full: {n} fish caught.
+No room for more. {n} so far.
+Stopping: pack full ({n} fish).
+Out of space. {n} fish.
+Full. Unload me to continue.
+{n} fish; no space left.
+== field.fish_rod_broke
+The rod's broken. {n} fish before it went.
+That's the rod done. {n} caught. A new one, if you've string.
+Rod snapped. {n} fish to show for it.
+No rod left. It gave its all. {n} fish.
+The rod's worn through. {n} in the pack.
+And the rod's gone. {n} fish. Respectful silence.
+== field.fish_rod_broke@gloomy
+The rod broke. Things do.
+Rod's gone. {n} fish. It tried.
+Snapped. {n} fish. Nothing lasts.
+No more rod. {n}. Goodbye, old friend.
+Broken rod. {n} fish. I'll carry the bits.
+It's broken. {n} caught first, at least.
+== field.fish_rod_broke@serious
+Rod broke: {n} fish caught.
+Fishing rod worn out. {n} fish.
+Stopped: rod broken. {n} caught.
+No rod left. {n} fish.
+Rod used up after {n} fish.
+Need a new rod. {n} caught.
+
+== field.throw_ok
+Snowballs at the {item}. It won't enjoy this.
+Right. One {item}, coming up for a snowball.
+On it. The {item} is about to have a cold afternoon.
+Throwing at the {item}. Stand back and look innocent.
+The {item}. Got it. Arm's warmed up.
+Fine. I'll get the {item}'s attention. It's mine to keep, apparently.
+[daft] Snowball fight. Me versus the {item}. The {item} doesn't know it's playing.
+== field.throw_ok@gloomy
+The {item}. I'll throw things at it. It'll throw things back.
+Snowballs at the {item}. What could go wrong. Everything.
+Fine. I'll make the {item} angry at me instead.
+The {item}. Someone has to be the target. Might as well be me.
+Throwing at the {item}. Wish me luck. I won't get any.
+Right. The {item}. It'll come for me now. Good.
+== field.throw_ok@serious
+Throwing at the {item}.
+Targeting the {item} with snowballs.
+On it: the {item}.
+Drawing the {item} off.
+The {item}: throwing now.
+Engaging the {item} at range.
+
+== field.throw_none
+I've nothing to throw. Snowballs or eggs, and I'll oblige.
+No snowballs, no eggs. Harsh language is all I have.
+Out of things to throw. A shovel and some snow would fix that.
+I'd throw something, but my pack's not that sort of pack.
+Nothing to throw. Hand me snowballs or eggs.
+Empty-handed. Snowballs, please.
+== field.throw_none@gloomy
+Nothing to throw. Nothing at all.
+No snowballs. No eggs. Just me.
+I'd throw something if I had something.
+Out of throwables. And hope.
+Empty pack. Empty hands.
+Nothing. I'll just glare at it.
+== field.throw_none@serious
+No snowballs or eggs.
+Nothing to throw.
+I need snowballs or eggs for that.
+Out of ammunition.
+No throwables in my pack.
+Can't: nothing to throw.
+
+== field.throw_aggro
+Over here, {item}. Yes, you.
+That got its attention. The {item}'s mine now.
+The {item} wants me instead. I'll take that as a compliment.
+Hello, {item}. Leave them alone. Come and talk to me.
+Right, the {item}'s looking at me now. Good. That was the plan.
+The {item}'s turned. You're off the hook.
+== field.throw_aggro@gloomy
+The {item}'s coming for me now. Naturally.
+Got its attention. Wonderful.
+Yes, {item}, I'm the problem. Come here.
+It's chasing me now. That's my lot.
+The {item} hates me now. Join the club.
+It's mine now. Lucky me.
+== field.throw_aggro@serious
+The {item} is on me now.
+Aggro pulled: the {item}.
+The {item} has switched to me.
+It's targeting me now.
+Drawn off: the {item}.
+The {item} is mine. You're clear.
+
+== field.throw_ledge
+Mind the step, {item}.
+And over it goes. Gravity did the rest.
+The {item} has left the ledge. Briskly.
+One snowball, one long way down.
+That {item} should have stood further back.
+Off the edge. Tidy.
+[daft] The {item} went over the edge. Bon voyage. Write when you land.
+== field.throw_ledge@gloomy
+Over the edge. We all go down eventually.
+The {item} fell. I almost feel sorry for it.
+Gone over the side. Quietly.
+Down it goes. Long way.
+Off the ledge. Nobody saw. Except me.
+The {item} took the short way down.
+== field.throw_ledge@serious
+Knocked the {item} off the ledge.
+The {item} fell off the edge.
+Ledge cleared: the {item}.
+The {item} went over.
+Knocked off: the {item}.
+Down: the {item}.
+
+== field.nothing_there
+I can't see what you mean. Look at it, or ping it, and say it again.
+At what? Point at it first. My eyes are good, not psychic.
+Nothing there I can see. Ping it.
+I need a target. Look straight at it and ask again.
+Which one? Ping it and I'll know.
+I don't see anything there. Try pointing.
+== field.nothing_there@gloomy
+I don't see anything. I rarely do.
+Nothing there. Just air.
+At what? There's nothing.
+I can't see it. Maybe it's hiding from me too.
+Nothing. Point it out, if you like.
+No target. Just me.
+== field.nothing_there@serious
+No target found. Look at it or ping it.
+I can't see a target.
+Point at it, or ping it, then ask again.
+Nothing there to act on.
+Target needed.
+Ping the target first.
+
+== field.hook_ok
+The rod, then. The {item} is about to come closer than it meant to.
+Hooking the {item}. Hold still. Not you, the {item}.
+Right. One {item}, reeled in to order.
+Rod out. The {item}'s going for a short trip.
+I'll hook the {item}. It won't like the commute.
+Got it. Fishing for {item}.
+== field.hook_ok@gloomy
+I'll hook the {item}. Then it'll be near me. Great.
+The {item}. With a rod. This always ends well.
+Fine. I'll drag the {item} over. Joy.
+Hooking it. It'll be very cross.
+The {item}, reeled in. Lucky us.
+Rod out. Here comes trouble.
+== field.hook_ok@serious
+Hooking the {item}.
+Rod on the {item}.
+Pulling the {item} in.
+On it: the {item}.
+Reeling in the {item}.
+Using the rod on the {item}.
+== field.hook_pull
+Got you, {item}. Come here.
+Hooked. In it comes.
+The {item}'s on the line. Tug.
+And pull. The {item} is coming with me.
+Reeled in. The {item} looks surprised.
+Hooked the {item}. That's a big fish.
+[daft] I caught a {item}. Biggest fish of my life. Don't tell me to throw it back.
+== field.hook_pull@gloomy
+Hooked it. Now it's my problem.
+The {item}'s coming. Can't wait.
+Pulled. It's angry. Naturally.
+Got it. Here it comes.
+Reeled in. Brace yourself.
+On the line. Lucky me.
+== field.hook_pull@serious
+Hooked and pulled: the {item}.
+The {item} is on the line.
+Pulled the {item} in.
+Hook set. Pulling.
+Got the {item}.
+The {item}: pulled.
+
+== field.mace_ok
+The mace. The {item} won't know what came down on it.
+Right. Up I go, down it comes. Mostly on the {item}.
+Mace smash on the {item}. Stand clear.
+The {item}, from a height. As it should be.
+I'll get above the {item}. The rest is gravity.
+On it. The {item} is about to meet the mace, at speed.
+== field.mace_ok@gloomy
+The mace. Up, then down. Like everything.
+The {item}. From above. If I don't miss.
+I'll jump on the {item} with a mace. What a life.
+Smash the {item}. Or the ground. We'll see.
+Up I go. Coming down is the easy part.
+The {item}. With the mace. Fine.
+== field.mace_ok@serious
+Mace smash on the {item}.
+Going up for the {item}.
+Smashing the {item}.
+On it: mace on the {item}.
+Getting height on the {item}.
+The {item}: mace attack.
+== field.mace_up
+Going up. Mind your heads.
+Up I go. The {item} should look up.
+Height first. Then the {item}.
+[anim:hammer] This calls for the mace.
+Right. Altitude.
+Up. Back in a moment, rather quickly.
+== field.mace_up@gloomy
+Going up. Only to come down.
+Up I go. Won't be long.
+Height. Then pain. Not mine, hopefully.
+[anim:hammer] The mace, then.
+Upwards. Briefly.
+Up. Gravity will handle the rest.
+== field.mace_up@serious
+Gaining height.
+Going up.
+Climbing for the smash.
+[anim:hammer] Mace ready.
+Up, then down on the {item}.
+Taking height.
+
+== field.mace_smash
+{n} damage. Gravity did most of it.
+That's {n}. The ground felt it too.
+Smash. {n} damage. The {item} has a headache.
+{n}, from a height. Physics is wonderful.
+Landed it. {n}. My knees are fine, thanks for asking.
+Down on the {item}. {n} damage. Lovely.
+[daft] {n} damage. They should call me the mace-ter. I'm sorry. I'm not sorry.
+== field.mace_smash@gloomy
+{n} damage. It'll get up again. They do.
+Landed. {n}. Ow, probably. For it.
+{n}. All that height for that.
+Smash. {n}. Don't clap.
+Hit it. {n}. Back to the ground. Where I belong.
+{n} damage. Somebody had to.
+== field.mace_smash@serious
+Smash landed: {n} damage.
+{n} damage to the {item}.
+Mace hit: {n}.
+Hit from height: {n} damage.
+{n} damage dealt.
+Smash on the {item}: {n}.
+== field.mace_miss
+Missed. The ground had it coming, though.
+That was meant to land on the {item}. It moved. Rude.
+Missed it. The landing was lovely, mind.
+Air. I hit air. Very hard.
+Not quite. Up again in a moment.
+The {item} stepped aside. I'll allow it once.
+== field.mace_miss@gloomy
+Missed. Of course.
+Nothing but ground. As usual.
+It moved. Things always move.
+Missed. The landing hurt more than it.
+All that way for nothing.
+Air. Hit a lot of air.
+== field.mace_miss@serious
+Smash missed.
+Missed the target.
+No contact. Trying again.
+It moved out of the way.
+Miss.
+Missed the {item}.
+== field.mace_none
+I've no mace. Breeze rods and a heavy core, if you're feeling generous.
+No mace in my pack. Hard to smash anything without one.
+I'd need a mace. I've a strong arm and nothing in it.
+No mace. I could jump on it, but that's just undignified.
+Haven't got a mace. Give me one and I'll show you.
+No mace, no smash.
+== field.mace_none@gloomy
+No mace. Just me and my disappointment.
+I don't have a mace. I don't have much.
+Without a mace I'm just a falling assistant.
+No mace. Sorry.
+Nothing heavy to swing.
+No mace. Next question.
+== field.mace_none@serious
+No mace in my pack.
+I need a mace for that.
+Can't: no mace.
+Mace required.
+No mace available.
+Give me a mace first.
+== field.mace_no_lift
+I've no way up. Wind charges, or a few blocks to pillar on.
+Nothing to get height with. Four blocks of cobble would do, or a wind charge.
+I need to get above it. A wind charge or some blocks, please.
+No wind charges, no blocks. I'd just be jumping, quite low.
+Can't get up there. Blocks or wind charges.
+I'll need height. Give me cobblestone or wind charges.
+== field.mace_no_lift@gloomy
+No way up. I'm stuck down here.
+Nothing to climb with.
+I'd need height. I've only depth.
+No blocks, no charges. Just ground.
+Can't get up. Typical.
+Down here I stay.
+== field.mace_no_lift@serious
+No wind charges or pillar blocks.
+I need height: blocks or wind charges.
+Can't climb: nothing to stand on.
+Missing: wind charges or four blocks.
+No way to gain height.
+Give me blocks or wind charges.
+
+== field.enchant_no_table
+I can't find an enchanting table near here. Point me at one.
+No enchanting table within reach. Craft one, or take me to yours.
+There's no table about. Obsidian, diamonds and a book make one.
+I'd need an enchanting table. I can't see one.
+No table nearby. Lead the way.
+Where's the table? I can't find one.
+== field.enchant_no_table@gloomy
+No table. No magic for me today.
+I can't find a table. It's hiding.
+No enchanting table. Just plain old me.
+Nothing to enchant at.
+No table. Fine.
+There's no table. I looked.
+== field.enchant_no_table@serious
+No enchanting table found nearby.
+I need an enchanting table within reach.
+Can't enchant: no table.
+Point me at an enchanting table.
+No table in range.
+Enchanting table required.
+== field.enchant_no_lapis
+No lapis left. The table wants lapis for every go.
+I'm out of lapis. One to three a time, and I've none.
+Lapis, please. The table won't work for free.
+Can't enchant without lapis. Blue rocks, deep down.
+The table's ready, I'm ready, the lapis isn't.
+I need lapis lazuli for that.
+== field.enchant_no_lapis@gloomy
+No lapis. Nothing goes right.
+Out of lapis. Of course.
+The table needs lapis. I have none. As usual.
+No blue stuff, no magic.
+I'm lapis-less. It's a whole condition.
+Out of lapis. That's that.
+== field.enchant_no_lapis@serious
+Out of lapis lazuli.
+I need lapis to enchant.
+No lapis in my pack.
+Enchanting stopped: no lapis.
+Lapis required.
+Give me lapis to continue.
+== field.enchant_no_xp
+I've no levels to spend. {n}, to be exact. I'll earn some first.
+Not enough experience. I'm on level {n}. Mining and fighting will fix that.
+I'm skint, level-wise. Level {n}.
+The table wants levels. I've {n}.
+No levels to spare. Give me a few fights.
+I need experience first. Currently level {n}. Not impressive.
+== field.enchant_no_xp@gloomy
+Level {n}. Not enough. Never enough.
+I've no experience. Literally.
+Level {n}. The table laughed at me.
+No levels. I'll go and suffer for some.
+Not enough levels. Story of my life.
+Level {n}. I'll come back when I'm someone.
+== field.enchant_no_xp@serious
+Not enough levels: I'm on {n}.
+I need experience levels first (now {n}).
+No levels to spend.
+Level {n}: too low to enchant.
+Out of experience.
+Enchanting needs levels. I have {n}.
+
+== field.enchant_shelves
+This table reads {n} bookshelves. Another {need} and it'd do its best work.
+Only {n} shelves count here. Fifteen is the most it reads. {need} more would help.
+{n} bookshelves. It'll do, but {need} more would do better. I can place them if you hand me some.
+The table's on {n}. Fifteen gets you the good stuff. Say "put bookshelves round the table".
+{n} shelves. Respectable. Fifteen is better.
+It's reading {n} shelves. I'd add {need}.
+== field.enchant_shelves@gloomy
+Only {n} shelves. It could be so much more.
+{n} bookshelves. Not enough. Never is.
+The table's half-hearted with {n} shelves.
+{n}. It wants fifteen. Don't we all.
+{n} shelves. Fine. Mediocre magic it is.
+{n}. {need} more and it might cheer up.
+== field.enchant_shelves@serious
+Table power: {n} bookshelves. {need} more for the maximum.
+{n} of 15 bookshelves.
+Bookshelves counted: {n}. Recommend {need} more.
+{n} shelves; 15 is the maximum.
+Power {n}. Add {need} shelves for the best offers.
+{n} bookshelves read.
+== field.enchant_blocked
+Some of these bookshelves don't count. Something's between them and the table. It reads {n}.
+A shelf only counts with clear air to the table. These are blocked. {n} count.
+The table can't see all its shelves. Torches or blocks in the gap. {n} count.
+There are more shelves than it's reading. Clear the gap and they'll count. {n} for now.
+Shelves behind blocks don't count. {n} do.
+{n} count. The rest are hidden behind something.
+== field.enchant_blocked@gloomy
+The shelves are blocked. Even the books can't get through.
+Something's in the way. Only {n} count.
+Hidden shelves. Useless shelves. {n} count.
+They're there, but they don't count. I know the feeling.
+{n} count. The rest are just furniture now.
+Blocked. {n} shelves. The others sulk.
+== field.enchant_blocked@serious
+Some shelves are blocked. {n} count.
+Clear the gap between shelves and table: {n} count now.
+Blocked shelves don't count. Power {n}.
+{n} shelves read; others obstructed.
+Obstruction between table and shelves. {n} count.
+Power {n}. Some shelves blocked.
+== field.enchant_wait
+I'll wait on the {item}. I've {n} levels, and it deserves thirty.
+Not yet for the {item}. Thirty levels first. I'm on {n}.
+The {item} gets the best offer, which means thirty levels. I'm at {n}.
+I'll hold off on the {item}. Best done at thirty, I'm at {n}.
+Saving the {item} for thirty levels. Patience.
+The {item} can wait for a proper enchantment. Level {n} isn't it.
+== field.enchant_wait@gloomy
+I'll wait. The {item} deserves better than level {n}.
+Not yet. Level {n}. Waiting is what I do.
+The {item} deserves thirty levels. I have {n}.
+Holding off. Everything good takes forever.
+Level {n}. Not enough for the {item}.
+I'll wait for thirty. Long wait.
+== field.enchant_wait@serious
+Waiting on the {item}: best at 30 levels (I have {n}).
+Not enchanting the {item} yet: level {n}.
+The {item} needs 30 levels for the best offer.
+Deferred: the {item}, until level 30.
+Holding the {item} for a level 30 offer.
+The {item} later: I'm on {n}.
+== field.enchant_reroll
+Rubbish offers. A book on the top one to shuffle them. {what}.
+I didn't like those. A level on a book gets a fresh set. {what} on the book, for luck.
+New offers, please. One book, one level. {what}.
+Those weren't worth it. Rerolled with a book: {what}.
+Book on the cheap slot to turn them over. {what}, as it happens.
+Offers turned over. The book got {what}.
+== field.enchant_reroll@gloomy
+Bad offers. I spent a level on a book. {what}.
+Rerolled. The book got {what}. I got nothing.
+New offers. Probably also rubbish. Book got {what}.
+One book sacrificed. {what}.
+I turned them over. {what} on the book.
+Bad luck, so a book. {what}.
+== field.enchant_reroll@serious
+Offers poor: rerolled with a book ({what}).
+Book enchanted to refresh the offers: {what}.
+Rerolled: {what} on the book.
+New offers via a book: {what}.
+Refreshed the table: {what}.
+Book used for a reroll: {what}.
+== field.enchant_pick
+{what} on the {item}. The {why} one. Only {n} levels: it's the requirement that's {need}, not the price.
+The {why} offer for the {item}: {what}. {n} levels well spent.
+{what} for the {item}. I read the clue and liked it.
+{item}: {what}. The {why} offer was the one.
+{what} on the {item}, for {n} levels and {n} lapis. Good value.
+The {item} has {what}. The {why} one, obviously.
+== field.enchant_pick@gloomy
+{what} on the {item}. It's something.
+The {item}: {what}. Could be worse. Usually is.
+{what}. {n} levels. Gone, like everything.
+{item}, {what}. It'll do.
+The {why} one. {what}. Fine.
+{what}. The {item} looks pleased. One of us should.
+== field.enchant_pick@serious
+{item}: {what} ({why} offer, {n} levels).
+Enchanted the {item}: {what}.
+{what} on the {item}. Cost {n} levels.
+The {why} offer: {what}.
+{item} enchanted with {what}.
+Applied {what} to the {item}.
+== field.enchant_pick_meh
+{what} on the {item}. I went for the {why} one. Not sure it was right.
+The {item} got {what}. I think. I'm still learning these.
+{what}. The {why} offer looked cheaper. It said {need}.
+I picked the {why} one for the {item}: {what}. Was that good?
+{what} on the {item}. The numbers confuse me a bit.
+The {item}: {what}. I'll get better at choosing.
+== field.enchant_pick_meh@gloomy
+{what}. Probably the wrong one. Usually is.
+I picked the {why} one. {what}. Sorry in advance.
+{what} on the {item}. I'll regret that.
+The {item} got {what}. I'm not good at this yet.
+{what}. I panicked.
+The {why} one. {what}. Hm.
+== field.enchant_pick_meh@serious
+{item}: {what} ({why} offer, {n} levels). Not the best choice.
+Enchanted the {item}: {what}. Still learning the offers.
+{what} on the {item}.
+Chose the {why} offer: {what}.
+{item}: {what}.
+Applied {what}. I may have misjudged it.
+== field.enchant_done
+Done. {n} enchanted. Shiny.
+That's {n} enchanted. Glowing nicely.
+{n} done at the table. Everything sparkles.
+Finished. {n} items with a bit of magic.
+{n} enchanted. Try not to lose them.
+All done. {n} enchantments' worth of glow.
+== field.enchant_done@gloomy
+{n} enchanted. They glow. I don't.
+Done. {n}. All that magic and I feel the same.
+{n} shiny things. Not including me.
+Finished. {n}. The glow fades for no one.
+{n} done. Back to normal life.
+That's {n}. The magic's in them now.
+== field.enchant_done@serious
+Done: {n} enchanted.
+Enchanting finished. {n} items.
+{n} items enchanted.
+Complete: {n} enchantments applied.
+Finished at the table: {n}.
+{n} done.
+== field.enchant_nothing
+Nothing to enchant. Everything's either done or not the enchanting sort.
+I've nothing the table will take. Give me something plain.
+Nothing here wants enchanting. Or I'm waiting on levels for it.
+No enchantable gear left. Job done, I suppose.
+Nothing to do at the table.
+Nothing I can enchant right now.
+== field.enchant_nothing@gloomy
+Nothing to enchant. Nothing at all.
+Nothing wants magic today.
+I've nothing for the table.
+All done, or all hopeless.
+Nothing. Back I go.
+No gear to enchant.
+== field.enchant_nothing@serious
+Nothing to enchant.
+No enchantable gear.
+Nothing the table will take.
+No items to enchant.
+Enchanting: nothing to do.
+Nothing suitable to enchant.
+
+== field.shelves_none
+I've no bookshelves. Books and planks make them.
+No bookshelves in my pack. Three books and six planks each.
+I'd need bookshelves. Hand me some.
+Nothing to place. Bookshelves, please.
+No shelves. I can't conjure them.
+I've got no bookshelves to put down.
+== field.shelves_none@gloomy
+No bookshelves. Not one.
+I've nothing to read and nothing to place.
+No shelves. The table stays lonely.
+None. Sorry.
+No bookshelves. Typical.
+Nothing to put down.
+== field.shelves_none@serious
+No bookshelves in my pack.
+I need bookshelves for that.
+Can't: no bookshelves.
+Bookshelves required.
+None to place.
+Give me bookshelves first.
+== field.shelves_full
+The table already reads {n}. That's as good as it gets.
+It's already at {n}. Any more would just be decoration.
+Nothing to add. {n} shelves already count.
+The table's maxed. {n}.
+No room that would count. It reads {n}.
+Already done: {n}.
+== field.shelves_full@gloomy
+Already at {n}. Nothing left to improve.
+It's got {n}. It doesn't need me.
+Full. {n}. My help isn't needed.
+{n} already. Fine.
+Nothing to add.
+It's at {n}. Done.
+== field.shelves_full@serious
+Table already reads {n} bookshelves.
+No useful spots left: power {n}.
+Already at {n}.
+Bookshelves complete: {n}.
+No more needed: {n}.
+Power already {n}.
+== field.shelves_done
+Placed {n} bookshelves. The table reads {need} now.
+{n} shelves round the table. {need} count.
+Done: {n} bookshelves. The table can see {need}.
+That's {n} shelves placed. It reads {need}.
+Bookshelves in. {need} counting, out of {n} I put down.
+{n} placed. {need} the table reads.
+== field.shelves_done@gloomy
+{n} shelves. {need} count. The rest are just there.
+Placed {n}. The table sees {need}. Some go unseen.
+{n} bookshelves, {need} counting.
+Done. {n}. {need} matter.
+{n} shelves. Books nobody reads.
+{need} count. I put down {n}.
+== field.shelves_done@serious
+Placed {n} bookshelves; table power {need}.
+{n} shelves placed. {need} counted.
+Done: {n} placed, power {need}.
+Bookshelves placed: {n}. Reading {need}.
+{n} down. Power {need}.
+Finished: {need} of 15.
+
+== field.trade_cheaper
+The one over there does {item} for {n} fewer emeralds. I'll go to them.
+{n} emeralds cheaper next door. Loyalty only goes so far.
+Same {item}, {n} less, two stalls down. Back in a moment.
+I asked around. Someone nearby sells {item} for {n} fewer.
+Not this one. The neighbour's {n} cheaper.
+{n} emeralds saved by walking ten blocks. Worth it.
+== field.trade_cheaper@gloomy
+Someone else does it for {n} less. Everyone's cheaper than someone.
+The other one's {n} cheaper. I'll go. It's a long walk. Ten blocks.
+{n} less over there. I'll take it.
+Cheaper elsewhere. By {n}. Off I trudge.
+{n} fewer emeralds next door. Small mercies.
+I'll go to the cheaper one. {n} less.
+== field.trade_cheaper@serious
+Cheaper nearby by {n} emeralds. Trading there.
+Another villager sells {item} for {n} less.
+Better price {n} emeralds lower nearby.
+Using the cheaper villager ({n} less).
+{n} emeralds saved at another villager.
+Switching villager: {n} cheaper.
+== field.trade_standing
+They like you here. That saved {n} emeralds across their prices.
+Your reputation's worth {n} emeralds with this one. I'm using it.
+{n} emeralds off, because of you. They remember who's been good to them.
+You're in their good books. {n} emeralds cheaper.
+This one gives you a discount. {n} emeralds' worth.
+They know you. {n} off. Very civil.
+== field.trade_standing@gloomy
+They like you. {n} off. Nobody gives me discounts.
+{n} emeralds off for you. I'm just the courier.
+Your name gets {n} off. Mine gets nothing.
+They're fond of you. {n} cheaper.
+{n} off. Being liked has its uses.
+A discount of {n}. For you, not me.
+== field.trade_standing@serious
+Your reputation saves {n} emeralds here.
+Discount from your standing: {n} emeralds.
+Prices reduced by {n} for you.
+{n} emeralds off: reputation.
+This villager discounts you by {n}.
+Your discount: {n}.
+== field.trade_bargain
+That {item} for {n} is a bargain. Worth having.
+{item} at {n}. That's cheap. I'd snap it up.
+Spotted a good one: {item}, {n} emeralds.
+{n} for the {item} is well under what it's worth.
+Bargain alert: {item}, {n}.
+The {item} for {n}. You won't see that often.
+== field.trade_bargain@gloomy
+{item} for {n}. Cheap. There's a catch somewhere.
+A bargain: {item}, {n}. Too good to last.
+{n} for the {item}. Suspiciously good.
+{item}, {n}. Something nice, for once.
+{n} for {item}. Get it before it goes.
+The {item}'s cheap. {n}. Enjoy it while you can.
+== field.trade_bargain@serious
+Bargain: {item} for {n} emeralds.
+Good deal: {item} at {n}.
+{item} priced well under value: {n}.
+Worth buying: {item}, {n}.
+Discounted: {item}, {n} emeralds.
+Recommended: {item} at {n}.
+== field.trade_demand
+The {item}'s {n} dearer than usual. Demand. It eases after they restock.
+{n} over the usual for {item}. Everyone's been buying it. Give it a day.
+Price is up {n} on the {item}. Restock and it'll come down.
+They're charging {n} extra for {item}. Popular stuff. Wait for the restock if you can.
+{item}'s up by {n}. Supply and demand, even here.
+{n} more than it should be. It'll settle after they restock.
+== field.trade_demand@gloomy
+{n} extra for {item}. Everyone wanted it. Now it costs more.
+Prices up. {n} on the {item}. Of course.
+{item} is {n} dearer. Demand. It'll pass. Things do.
+{n} over. Wait for the restock, or don't.
+The {item} costs {n} more. Popular things always do.
+Up {n}. Typical.
+== field.trade_demand@serious
+{item} price up {n} from demand; it falls after restock.
+Demand surcharge on {item}: {n} emeralds.
+{item} is {n} over base price. Wait for restock.
+Price raised by {n} (demand).
+{n} above usual for {item}.
+Demand: {item} +{n}.
+== field.trade_busy
+Someone's already trading with them. I'll wait my turn.
+They're busy with a customer. I'll come back.
+Can't now. They're mid-deal with someone.
+Occupied. I'll queue, like a civilised person.
+Their counter's busy. Later.
+They're serving someone else.
+== field.trade_busy@gloomy
+They're busy. Everyone's busy.
+Serving someone else. Not me.
+Occupied. I'll wait. I always wait.
+Busy. I'll just stand here.
+They've a customer. I'll be second.
+Not now, apparently.
+== field.trade_busy@serious
+Villager busy trading. Try again shortly.
+They're already trading.
+Occupied: waiting.
+Can't trade: villager busy.
+Busy with another customer.
+Trading unavailable right now.
+
+== field.cure_ok
+A cure, then. Weakness first, then a golden apple. It'll be a villager in a few minutes.
+Right. I'll cure the zombie villager. Keep it out of the sun.
+Curing it. They're very grateful afterwards. Cheaper trades, mostly.
+On it. Splash, apple, wait. It's like cooking.
+I'll sort the zombie villager out. Gently.
+Weakness and a golden apple. The old recipe.
+== field.cure_ok@gloomy
+I'll cure it. At least someone gets a second chance.
+Curing it. Weakness, an apple, and hope.
+Fine. I'll make it a villager again. Lucky thing.
+A cure. If it doesn't wander into the sun first.
+I'll try. Weakness first.
+Curing. It won't thank me. It'll thank you.
+== field.cure_ok@serious
+Curing the zombie villager: weakness, then a golden apple.
+On it: the cure.
+Starting the cure.
+Weakness potion, then golden apple.
+Curing the zombie villager.
+Cure under way shortly.
+== field.cure_none
+I can't see a zombie villager. Point at one.
+No zombie villager round here. Ordinary zombies don't cure.
+Which zombie villager? I can't find one.
+None about. Ping one and I'll have a go.
+No zombie villagers in sight.
+I need a zombie villager to cure. There isn't one.
+== field.cure_none@gloomy
+No zombie villager. Nobody to save.
+I can't find one. They hide.
+None here. Just regular zombies, beyond help.
+No one to cure.
+None. Point one out.
+Nothing to cure.
+== field.cure_none@serious
+No zombie villager found.
+Point at a zombie villager.
+None nearby.
+No zombie villager in range.
+Can't find one to cure.
+Ping the zombie villager.
+== field.cure_need
+I need {what} for that.
+Missing {what}. Then I'll cure it.
+Can't cure it without {what}.
+{what} first, please.
+I'll need {what}. The cure has a recipe.
+Hand me {what} and I'll do it.
+== field.cure_need@gloomy
+I need {what}. I don't have it.
+No {what}. No cure.
+Missing {what}. Typical.
+{what}, then. If you have it.
+Without {what} it stays a zombie.
+I'd need {what}.
+== field.cure_need@serious
+Missing: {what}.
+Need {what} for the cure.
+Can't cure: no {what}.
+{what} required.
+Give me {what} to continue.
+Cure needs {what}.
+== field.cure_started
+That's it started. A few minutes and it's a villager again. It'll remember who sent me.
+Cure under way. It'll shake for a bit. That's normal.
+Done my part. Keep it out of daylight and away from zombies.
+The cure's taking. You'll get the discount for it.
+Started. Three to five minutes. Kettle?
+It's curing. Grateful villagers sell cheap.
+== field.cure_started@gloomy
+Started. It gets a second chance. Nice for it.
+It's curing. Unless something eats it first.
+Done. It'll be grateful. To you.
+Cure started. Few minutes. Fingers crossed.
+It's shaking. That means it's working. Probably.
+Started. One saved, at least.
+== field.cure_started@serious
+Cure started: about three to five minutes.
+Conversion under way.
+Cured in a few minutes. Discount goes to you.
+The cure is working.
+Started. Keep it safe from sunlight.
+Zombie villager converting.
+
+== field.slip_block
+Ignore that. Artistic choice.
+That wasn't meant to be there. It isn't now.
+Wrong spot. Nobody saw that.
+I meant to do that. I also meant to undo it.
+That one's a draft. Removing it.
+Hm. One too many. Fixed.
+[daft] Oops, a bonus block. Limited edition. Now discontinued.
+== field.slip_block@gloomy
+Wrong place. I'll take it back.
+I put that in the wrong spot. As usual.
+Mistake. Fixing it.
+Not there. Never there.
+That was wrong. I'm taking it out.
+I'll pretend that didn't happen.
+== field.slip_block@serious
+Misplaced block. Removed.
+Wrong position. Corrected.
+Placed in error; fixed.
+Correction: removed a stray block.
+Block in the wrong place. Taken out.
+Fixed a placement mistake.
+== field.slip_turn
+Wrong way. Obviously. I was testing you.
+Hang on. That's not where we're going.
+I took a scenic route. Correcting.
+Hm. Wrong turn. Back on track.
+Not this way. My mistake.
+Ah. The other way.
+== field.slip_turn@gloomy
+Wrong way. Of course.
+Lost already. Turning round.
+I went the wrong way. I do that.
+Not here. Never mind.
+Wrong turn. Starting again.
+That was a detour nobody wanted.
+== field.slip_turn@serious
+Wrong turn. Re-routing.
+Correcting my route.
+Off course. Re-pathing.
+Wrong direction. Fixed.
+Rerouting.
+Route corrected.
+== field.slip_tool
+Wrong tool. I knew that.
+Not that one. This one.
+That's not the right tool, is it. Swapping.
+Hm. Better tool exists. Using it.
+Wrong tool. Just checking you were watching.
+Let's try the proper one.
+== field.slip_tool@gloomy
+Wrong tool. Naturally.
+That was the wrong one. I'll switch.
+Not that. Never that.
+Wrong tool. I'll get there.
+Swapping. Should've known.
+Wrong one. Again.
+== field.slip_tool@serious
+Wrong tool. Switching.
+Changed to the correct tool.
+Tool corrected.
+Using the right tool now.
+Switched tools.
+Correct tool equipped.

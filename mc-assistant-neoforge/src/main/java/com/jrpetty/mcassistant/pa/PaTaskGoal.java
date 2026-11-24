@@ -551,44 +551,51 @@ public class PaTaskGoal extends Goal {
                 if (d < bd) { bd = d; best = v; }
             }
             if (best == null) { finish("I can't see a villager there to trade with.", true); return; }
-            aimed = best;
+            // [pa38] with practice it checks the villagers nearby for the same thing at a better price (PaTrade)
+            Item want0 = word.equals("anything") ? Items.AIR : itemFor(word);
+            aimed = word.equals("anything") ? best : PaTrade.settle(a, best, sell, want0, new java.util.Random(a.getRandom().nextLong()));
             t.stage = 1;
         }
         if (!(aimed instanceof net.minecraft.world.entity.npc.Villager v) || !v.isAlive()) { finish("The villager wandered off.", true); return; }
         if (!reach(v.blockPosition(), 2.5)) { if (gaveUpWalking()) finish("I couldn't get to the villager.", true); return; }
+        if (v.getTradingPlayer() != null) { finish(PaLogiTalk.line(a, "field.trade_busy"), true); return; }   // [pa38] someone's at the counter
         Item want = word.equals("anything") ? Items.AIR : itemFor(word);
-        net.minecraft.world.item.trading.MerchantOffer offer = null;
-        for (net.minecraft.world.item.trading.MerchantOffer o : v.getOffers()) {
-            if (o.isOutOfStock()) continue;
-            boolean match = sell ? o.getResult().is(Items.EMERALD) && (want == Items.AIR || o.getCostA().is(want))
-                : !o.getResult().is(Items.EMERALD) && (want == Items.AIR || o.getResult().is(want));
-            if (match) { offer = o; break; }
+        // [pa38] the prices its player would be offered (their standing there, the Hero of the Village): the game's own
+        int saved = PaTrade.ownerPrices(a, v);
+        try {
+            net.minecraft.world.item.trading.MerchantOffer offer = sell || want != Items.AIR ? PaTrade.offerFor(v, sell, want)
+                : PaTrade.bestBuy(a, v, new java.util.Random(a.getRandom().nextLong()));
+            if (offer == null) { finish("That villager doesn't " + (sell ? "buy " : "sell ") + (want == Items.AIR ? "anything I can do" : word) + ".", true); return; }
+            PaTrade.remark(a, v, offer, saved);
+            int deals = 0, spent = 0, got = 0;
+            int wantCount = t.amount > 0 ? t.amount : sell ? 64 : offer.getResult().getCount();
+            while (!offer.isOutOfStock() && deals < 12 && got < wantCount) {
+                ItemStack ca = offer.getCostA(), cb = offer.getCostB();
+                if (a.countMatching(st -> st.is(ca.getItem())) < ca.getCount() || !cb.isEmpty() && a.countMatching(st -> st.is(cb.getItem())) < cb.getCount()) break;
+                a.removeMatching(st -> st.is(ca.getItem()), ca.getCount());
+                if (!cb.isEmpty()) a.removeMatching(st -> st.is(cb.getItem()), cb.getCount());
+                ItemStack res = offer.getResult().copy();
+                ItemStack left = a.insertGiven(res);
+                if (!left.isEmpty()) a.spawnAtLocation(left);
+                v.notifyTrade(offer);
+                deals++;
+                spent += ca.is(Items.EMERALD) ? ca.getCount() : 0;
+                got += sell ? ca.getCount() : res.getCount();
+            }
+            if (deals == 0) {
+                ItemStack ca = offer.getCostA();
+                finish("I haven't enough to trade: it wants " + ca.getCount() + " " + PaTrade.name(ca) + ". Give me some and ask again.", true);
+                return;
+            }
+            a.mind.field.deals += deals;
+            a.mind.field.lastDeal = (sell ? "sell " : "buy ") + PaTrade.name(offer.getResult()) + " x" + got + " for " + (sell ? deals * offer.getResult().getCount() : spent);
+            a.level().playSound(null, v.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            a.earn("trade");
+            finish(sell ? "Sold " + got + " " + word + " for " + deals * offer.getResult().getCount() + " emeralds."
+                : "Bought " + got + " " + PaTrade.name(offer.getResult()) + " for " + spent + " emerald" + (spent == 1 ? "" : "s") + ".", false);
+        } finally {
+            PaTrade.restore(v);                                                // [pa38] its player's prices were for this trade only
         }
-        if (offer == null) { finish("That villager doesn't " + (sell ? "buy " : "sell ") + (want == Items.AIR ? "anything I can do" : word) + ".", true); return; }
-        int deals = 0, spent = 0, got = 0;
-        int wantCount = t.amount > 0 ? t.amount : sell ? 64 : offer.getResult().getCount();
-        while (!offer.isOutOfStock() && deals < 12 && got < wantCount) {
-            ItemStack ca = offer.getCostA(), cb = offer.getCostB();
-            if (a.countMatching(st -> st.is(ca.getItem())) < ca.getCount() || !cb.isEmpty() && a.countMatching(st -> st.is(cb.getItem())) < cb.getCount()) break;
-            a.removeMatching(st -> st.is(ca.getItem()), ca.getCount());
-            if (!cb.isEmpty()) a.removeMatching(st -> st.is(cb.getItem()), cb.getCount());
-            ItemStack res = offer.getResult().copy();
-            ItemStack left = a.insertGiven(res);
-            if (!left.isEmpty()) a.spawnAtLocation(left);
-            v.notifyTrade(offer);
-            deals++;
-            spent += ca.is(Items.EMERALD) ? ca.getCount() : 0;
-            got += sell ? ca.getCount() : res.getCount();
-        }
-        if (deals == 0) {
-            ItemStack ca = offer.getCostA();
-            finish("I haven't enough to trade: it wants " + ca.getCount() + " " + ca.getHoverName().getString().toLowerCase() + ". Give me some and ask again.", true);
-            return;
-        }
-        a.level().playSound(null, v.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
-        a.earn("trade");
-        finish(sell ? "Sold " + got + " " + word + " for " + deals * offer.getResult().getCount() + " emeralds."
-            : "Bought " + got + " " + offer.getResult().getHoverName().getString().toLowerCase() + " for " + spent + " emerald" + (spent == 1 ? "" : "s") + ".", false);
     }
 
     // ------------------------------------------------------------------ [pa33d] mapping the area for its player
