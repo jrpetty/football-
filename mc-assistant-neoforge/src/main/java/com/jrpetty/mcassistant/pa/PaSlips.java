@@ -38,7 +38,8 @@ public final class PaSlips {
 
     /** Are the slips on? (Off in the game-test server unless a test asks.) */
     static boolean on() {
-        return testing || System.getProperty("neoforge.enabledGameTestNamespaces") == null;
+        String gt = System.getProperty("neoforge.enabledGameTestNamespaces");      // the game-test server names its namespaces; a plain dev server leaves it empty
+        return testing || FILM || gt == null || gt.isBlank();
     }
 
     /** Filming hook (-Dmca.pa.filmSlips=true): every chance a learner has comes up, so the slip is on camera. Nothing changes without it. */

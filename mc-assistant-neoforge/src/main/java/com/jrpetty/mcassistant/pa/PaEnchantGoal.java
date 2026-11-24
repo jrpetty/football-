@@ -198,12 +198,19 @@ final class PaEnchantGoal extends Goal {
 
     static String says(List<EnchantmentInstance> l) {
         List<String> parts = new ArrayList<>();
-        for (EnchantmentInstance e : l) parts.add(cap(id(e.enchantment).replace('_', ' ')) + " " + roman(e.level));
+        for (EnchantmentInstance e : l) parts.add(words(id(e.enchantment)) + " " + roman(e.level));
         return parts.size() <= 1 ? (parts.isEmpty() ? "nothing" : parts.get(0)) : String.join(", ", parts.subList(0, parts.size() - 1)) + " and " + parts.get(parts.size() - 1);
     }
 
     static String roman(int n) {
         return switch (n) { case 1 -> "I"; case 2 -> "II"; case 3 -> "III"; case 4 -> "IV"; case 5 -> "V"; default -> String.valueOf(n); };
+    }
+
+    /** "fire_aspect" as the game names it: "Fire Aspect". */
+    static String words(String id) {
+        StringBuilder b = new StringBuilder();
+        for (String w : id.split("_")) b.append(b.length() > 0 ? " " : "").append(cap(w));
+        return b.toString();
     }
 
     static String cap(String s) {

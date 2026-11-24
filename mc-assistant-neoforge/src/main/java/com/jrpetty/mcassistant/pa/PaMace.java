@@ -41,7 +41,7 @@ import java.util.List;
  */
 final class PaMace extends Goal {
 
-    enum Phase { READY, WIND, PILLAR, LEAP, FALL }
+    enum Phase { READY, APPROACH, WIND, PILLAR, LEAP, FALL }
 
     static final int PILLAR = 4;
 
@@ -141,6 +141,14 @@ final class PaMace extends Goal {
         PaTalk.comment(a, 1, PaLogiTalk.line(a, "field.mace_up", "item", target == null ? "it" : PaThrows.mob(target)), true);
         baseY = a.getY();
         column = a.blockPosition();
+        // close in first: from the top it can steer only a couple of blocks, so it goes up beside its target
+        to(target != null && a.distanceTo(target) > 3.0 ? Phase.APPROACH : hasWind(a) ? Phase.WIND : Phase.PILLAR);
+    }
+
+    private void lift() {
+        a.getNavigation().stop();
+        baseY = a.getY();
+        column = a.blockPosition();
         to(hasWind(a) ? Phase.WIND : Phase.PILLAR);
     }
 
@@ -169,6 +177,10 @@ final class PaMace extends Goal {
         a.getLookControl().setLookAt(t, 30.0F, 30.0F);
         int in = a.tickCount - phaseAt;
         switch (phase) {
+            case APPROACH -> {
+                if (a.distanceTo(t) <= 2.8 && a.onGround() || in > 100) { lift(); return; }
+                if (a.getNavigation().isDone() || in % 10 == 0) a.getNavigation().moveTo(t, 1.2);
+            }
             case WIND -> {
                 if (in == 6) a.setDeltaMovement(a.getDeltaMovement().x, 0.42, a.getDeltaMovement().z);           // the jump
                 if (in == 8) {                                                                                  // and the charge at its feet
