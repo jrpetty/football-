@@ -124,9 +124,13 @@ public final class PaClient {
                     net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
                     net.minecraft.network.chat.Component.literal(data.getString("name") + " reached level " + data.getInt("level")),
                     net.minecraft.network.chat.Component.literal(sk.isEmpty() ? "Better at everything it does." : "New: " + sk));
-                if (!un.isEmpty()) net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),   // [pa35] the unlock moment
-                    net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.NARRATOR_TOGGLE,
-                    net.minecraft.network.chat.Component.literal("Unlocked at level " + data.getInt("level")), net.minecraft.network.chat.Component.literal(un));
+                if (!un.isEmpty()) {                                    // [pa35] the unlock moment: "Basil can now mine iron ore"
+                    int dot = un.indexOf(". ");
+                    String first = dot > 0 ? un.substring(0, dot) : un.replaceAll("\\.$", ""), rest = dot > 0 ? un.substring(dot + 2) : "Unlocked at level " + data.getInt("level") + ".";
+                    net.minecraft.client.gui.components.toasts.SystemToast.add(mc.getToasts(),
+                        net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.NARRATOR_TOGGLE,
+                        net.minecraft.network.chat.Component.literal(data.getString("name") + " c" + first.substring(1)), net.minecraft.network.chat.Component.literal(rest));
+                }
             }
             default -> { }
         }
