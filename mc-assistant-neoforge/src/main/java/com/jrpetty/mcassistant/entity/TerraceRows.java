@@ -1313,6 +1313,28 @@ public final class TerraceRows {
         return new BlockPos(p.getX(), b.anchor().getY() + 1, p.getZ());
     }
 
+    /**
+     * [house34c] As footOf, where a hand can stand: the first open place with a floor under it, below the block in the
+     * column beside it (in front first, then the others). The ground floor at the row's anchor's height was in the made
+     * ground under a row stepping up its hill, and every hand sent to the grand row's upper houses stopped at the end of a
+     * path that could not get there, sixty blocks off, its turn spent walking.
+     */
+    static BlockPos footOf(ServerLevel level, Ledger.Building b, BlockPos p) {
+        Direction out = b.facing().getOpposite();
+        Direction[] round = { out, out.getClockWise(), out.getCounterClockWise(), b.facing() };
+        for (Direction d : round) {
+            BlockPos q = p.relative(d);
+            for (int y = p.getY(); y >= b.anchor().getY() - 3; y--) {
+                BlockPos at = new BlockPos(q.getX(), y, q.getZ());
+                if (!level.isLoaded(at)) break;
+                if (level.getBlockState(at).getCollisionShape(level, at).isEmpty()
+                        && level.getBlockState(at.above()).getCollisionShape(level, at.above()).isEmpty()
+                        && level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) return at;
+            }
+        }
+        return footOf(b, p);
+    }
+
     /** [house34b] The wash on the yards' lines: sheets and shirts, white, blue, pink, yellow, grey. */
     private static final Block[] WASH = { Blocks.WHITE_WALL_BANNER, Blocks.LIGHT_BLUE_WALL_BANNER, Blocks.WHITE_WALL_BANNER,
         Blocks.PINK_WALL_BANNER, Blocks.YELLOW_WALL_BANNER, Blocks.LIGHT_GRAY_WALL_BANNER, Blocks.WHITE_WALL_BANNER };
@@ -1376,7 +1398,7 @@ public final class TerraceRows {
             if (there.is(face) || !there.isCollisionShapeFullBlock(level, pl.pos()) || there.hasBlockEntity()) continue;
             if (!have[brick ? 0 : 1]) continue;
             if (!free) {
-                if (laid == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "facing " + name(id, b) + (brick ? " in brick" : " in dressed stone"))) break;
+                if (laid == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, pl.pos()), "facing " + name(id, b) + (brick ? " in brick" : " in dressed stone"))) break;
                 if (Crafts.takeOne(level, v, st -> st.is(faceItem)).isEmpty() && !Masonry.take(level, v, faceItem, 1)) { have[brick ? 0 : 1] = false; continue; }
                 Crafts.giveBack(level, v, there.getBlock().asItem(), 1);                  // what came off goes back into the stores
             }
@@ -1402,7 +1424,7 @@ public final class TerraceRows {
                 if (!free) {
                     java.util.function.Predicate<ItemStack> tile = it -> it.is(Items.DEEPSLATE_TILES) || it.is(Items.COBBLED_DEEPSLATE);
                     if (slated == 0 && (Crafts.stock(level, v, tile) < 1
-                            || !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "slating the roof of " + name(id, b)))) break;
+                            || !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, pl.pos()), "slating the roof of " + name(id, b)))) break;
                     if (Crafts.takeOne(level, v, tile).isEmpty()) break;
                     Crafts.giveBack(level, v, there.getBlock().asItem(), 1);
                 }
@@ -1422,7 +1444,7 @@ public final class TerraceRows {
             BlockState there = level.getBlockState(pl.pos());
             Block slab = SLAB_OF.get(there.getBlock());
             if (slab == null) continue;
-            if (!free && cut == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(b, pl.pos()), "cutting the copings of " + name(id, b))) break;
+            if (!free && cut == 0 && !TownJobs.atWork(level, v, ROWS_WORK, footOf(level, b, pl.pos()), "cutting the copings of " + name(id, b))) break;
             level.setBlock(pl.pos(), slab.defaultBlockState(), 3);
             cut++;
             if (!free && cut >= REFACE) break;
