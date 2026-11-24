@@ -54,11 +54,16 @@ public final class PaStt {
     }
 
     public PaStt(Path dir, String preference, String osName, Predicate<String> onPath, java.util.function.Supplier<PaAccent> accent) {
+        this(dir, preference, osName, onPath, accent, new PaVosk(dir.resolve("vosk")));
+    }
+
+    /** [voice37] With the speech model as the mod jar carries it (unpacked into the game folder). */
+    public PaStt(Path dir, String preference, String osName, Predicate<String> onPath, java.util.function.Supplier<PaAccent> accent, PaVosk vosk) {
         this.accent = accent == null ? () -> PaAccent.US : accent;
         this.dir = dir;
         this.preference = preference == null ? "auto" : preference.toLowerCase(Locale.ROOT);
         this.windowsHere = (osName == null ? "" : osName.toLowerCase(Locale.ROOT)).contains("win") && onPath.test("powershell");
-        this.vosk = new PaVosk(dir.resolve("vosk"));
+        this.vosk = vosk;
     }
 
     public PaVosk vosk() { return vosk; }
@@ -84,7 +89,7 @@ public final class PaStt {
                     : PaAccent.windowsAdvice(accent.get(), winCulture, winInstalled);
             }
             case VOSK -> "Listening with the offline speech model.";
-            case NONE -> windowsHere ? "Windows' speech recognition isn't available here." : "No speech model yet: in your assistant's Settings, Voice, turn Listen on and click \"I agree: download it\" (about 40 MB, once).";
+            case NONE -> windowsHere ? "Windows' speech recognition isn't available here." : "The speech model isn't unpacked yet: turn Listen on in your assistant's Settings, Voice (it's inside the mod; nothing is downloaded).";   // [voice37]
         };
     }
 

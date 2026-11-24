@@ -41,15 +41,42 @@ and respawn point; a sneak-click still hires a crew hand).
 
 - **Talk**: press **Y** (or right-click it) and type plain words in its panel: "follow me", "get me 16
   logs", "build me a small house here", "chop 64 logs, then make planks and sticks". It answers in words,
-  aloud (your computer's own voice) and in a bubble; unclear orders get a question with choices.
+  aloud and in a bubble; unclear orders get a question with choices.
+- **Its voice** (inside the mod, offline, nothing to install): on a fast computer an **expressive** British
+  voice (Chatterbox-Turbo: Arthur, Callum, Harriet, Elsie) that chuckles after a punchline, sighs when gloomy
+  and laughs out loud with a Daft sense of humour; on any computer the **natural** Kokoro voices. Settings >
+  Voice > Engine: Auto (times your computer), Expressive, Natural or Basic (the computer's own). It speaks
+  from where it stands (Radio: full volume anywhere), one line at a time.
 - **Voice**: switch Listen on in its About tab, then hold **Z** and speak (Windows' own offline
-  recogniser, or a small offline model downloaded once with your agreement).
+  recogniser, or the small offline Vosk model that comes inside the mod, unpacked when you turn listening on).
 - **Orders, Jobs, Pack, About** tabs: one-click orders with pickers, the live job list with progress
   (reorder, cancel, pause, undo), its pack and gear, its record and every setting.
 - **Action wheel**: look at something and press **X** (mine this vein, use that chest, attack that...).
 - One per player by default (`serverconfig/mc_assistant-assistant-server.toml`), saved with its owner,
   follows through logouts and dimensions, comes back after a fall, and never works a town's ground or
   someone else's land unless the server allows it.
+
+### The voices in a modpack, and their credits
+
+The release jar carries every voice file and the speech-recognition model (about 735 MB: why the jar is large) and unpacks the ones a computer
+needs into the game folder (`mc_assistant-cache/voice/<version>/`) the first time an assistant appears, each
+checked by its SHA-256; older versions' folders are removed. It never downloads a voice. Pack makers can:
+
+- **ship it as is**: nothing else to include or configure;
+- **pre-unpack**: start the pack once and ship `mc_assistant-cache/voice/` with it (checked at every start);
+- **build a jar without the voices** (`./gradlew build`, the default for development) and drop the offline
+  packs from `tools/voice/build_voice_pack.py --expressive` into `config/`.
+
+Building the release jar: `./gradlew build -PbundleVoice=true` downloads the pinned files listed in
+`src/main/resources/assets/mc_assistant/voice/parts.tsv` (Hugging Face at a fixed revision, GitHub, Maven
+Central), checks them and packs them in; `checkVoiceBundle` then confirms the jar.
+
+Credits (please keep them in a pack's credits): Chatterbox-Turbo by Resemble AI, MIT; Kokoro (hexgrad),
+Apache-2.0, through kokoro-onnx, MIT; misaki pronouncing dictionaries, Apache-2.0; ONNX Runtime, MIT; Vosk
+(Alpha Cephei) library and small English model, Apache-2.0. The
+expressive voices are made from the **CSTR VCTK Corpus 0.92** (Centre for Speech Technology Research,
+University of Edinburgh), **CC BY 4.0**, speakers p225, p226, p227 and p228: recordings joined, trimmed and
+encoded into the voice files in `assets/mc_assistant/voice/expressive/`, nothing else changed.
 
 ## Use in game
 

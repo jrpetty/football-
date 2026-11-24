@@ -33,15 +33,27 @@ jobs:
           java-version: "21"
           cache: gradle
 
+      # [voice37] The release jar carries the assistant's voices (Kokoro, ONNX Runtime and the expressive Chatterbox-Turbo,
+      # about 700 MB): -PbundleVoice=true downloads each pinned file, checks its SHA-256 and packs it in (build.gradle's
+      # voiceAssets; checkVoiceBundle then confirms the jar). The downloads are cached between runs by parts.tsv's hash.
+      - name: Cache the bundled voice files
+        uses: actions/cache@v4
+        with:
+          path: mc-assistant-neoforge/build/voice-cache
+          key: voice-cache-${{ hashFiles('mc-assistant-neoforge/src/main/resources/assets/mc_assistant/voice/parts.tsv') }}
+
       - name: Build mod
         working-directory: mc-assistant-neoforge
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon build
+          ./gradlew --no-daemon build -PbundleVoice=true
 
       - name: List outputs
         working-directory: mc-assistant-neoforge
-        run: ls -la build/libs/
+        run: |
+          ls -la build/libs/
+          # [voice37] GitHub refuses a release asset of 2 GB or more: stop here rather than fail half-uploaded.
+          for f in build/libs/*.jar; do s=$(stat -c %s "$f"); echo "$f: $s bytes"; [ "$s" -lt 2000000000 ] || { echo "too big for a release asset"; exit 1; }; done
 
       - name: Upload jar artifact
         uses: actions/upload-artifact@v4
@@ -49,6 +61,7 @@ jobs:
           name: mc-assistant-neoforge-jar
           path: mc-assistant-neoforge/build/libs/*.jar
           if-no-files-found: error
+          compression-level: 0   # [voice37] the jar is already compressed (and some 700 MB with the voices): don't zip it again
 
       - name: Attach jar to rolling release
         uses: softprops/action-gh-release@v2

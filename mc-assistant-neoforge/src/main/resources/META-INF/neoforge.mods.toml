@@ -18,6 +18,7 @@ Stop / Follow / Stay / Guard / Deposit / Come buttons. Craft an Assistant
 Spawner block to summon it anywhere.
 '''
 authors = "jrpetty"
+credits = "Assistant voices: Chatterbox-Turbo by Resemble AI (MIT); Kokoro (Apache-2.0) via kokoro-onnx (MIT); misaki dictionaries (Apache-2.0); ONNX Runtime (MIT); Vosk speech recognition and its small English model (Apache-2.0). Expressive voices made from the CSTR VCTK Corpus 0.92, University of Edinburgh, CC BY 4.0 (speakers p225, p226, p227, p228)."
 
 [[dependencies."${mod_id}"]]
 modId = "neoforge"

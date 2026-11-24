@@ -2,8 +2,6 @@ package com.jrpetty.mcassistant.pa.voice;
 
 import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -33,12 +31,13 @@ import java.util.zip.ZipInputStream;
  * frozen 200 MB+ interpreter. ONNX Runtime's jar carries its own Windows, macOS and Linux libraries, loads like the
  * speech library already does (its own class loader, so nothing joins the mod's classpath), and fails into a message.
  *
- * <p>Nothing ships in the mod jar. [pa35] The first time an assistant is summoned on a computer (unless the player says
+ * <p>[voice37] Now everything below ships inside the release jar instead and is unpacked, not downloaded (PaVoiceAssets);
+ * the list and checks are the same. [pa35] The first time an assistant is summoned on a computer (unless the player says
  * not to), these are downloaded once into the config folder, in the background, from GitHub and Maven Central (reachable
  * where Hugging Face often isn't), each resumed where it stopped and checked by its SHA-256 before use: the int8 model
  * (about 92 MB) and the voice pack (about 28 MB) from kokoro-onnx's model-files-v1.0 release, its vocabulary, misaki's
  * British and American pronouncing dictionaries (about 13 MB; PaG2p reads them, so no other program is needed), and ONNX
- * Runtime (about 93 MB). An offline pack (a zip in the config folder, tools/voice/build_voice_pack.py) does the same
+ * Runtime (about 75 MB; [voice37] 1.23.2, shared with the expressive voice). An offline pack (a zip in the config folder, tools/voice/build_voice_pack.py) does the same
  * with no network. espeak-ng, if the player happens to have it, only helps with words the dictionaries lack.
  *
  * <p>Not run here: downloading and running native code needs the player's go-ahead on their own computer. The paths,
@@ -53,10 +52,11 @@ public final class PaKokoro {
     public static final String CONFIG_URL = "https://raw.githubusercontent.com/thewh1teagle/kokoro-onnx/3596b26764286a7de9d90c363e988d50578918e5/src/kokoro_onnx/config.json";
     /** [pa35] misaki's pronouncing dictionaries (Apache-2.0), the ones Kokoro was trained with, pinned to a commit. */
     public static final String LEXICON_URL = "https://raw.githubusercontent.com/hexgrad/misaki/fba1236595f2d2bf21d414ba6e57d25256afada3/misaki/data/";
-    public static final String ORT_VERSION = "1.20.0";
+    /** [voice37] 1.23.2: the newest with Intel Mac libraries, and new enough for the expressive voice's 4-bit models. */
+    public static final String ORT_VERSION = "1.23.2";
     public static final String ORT_URL = "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime/" + ORT_VERSION + "/onnxruntime-" + ORT_VERSION + ".jar";
     /** Sizes as published (bytes), to check a download and to tell the player before they agree. */
-    public static final long MODEL_BYTES = 92_361_271L, VOICES_BYTES = 28_214_398L, ORT_BYTES = 92_987_839L;
+    public static final long MODEL_BYTES = 92_361_271L, VOICES_BYTES = 28_214_398L, ORT_BYTES = 75_255_976L;
     public static final int SAMPLE_RATE = 24_000, MAX_TOKENS = 510, STYLE = 256;
 
     /** [pa35] One download: what, from where, the file, its size and SHA-256 (checked before it's used), its licence. */
@@ -70,7 +70,7 @@ public final class PaKokoro {
         new Part("British pronouncing dictionary (more words)", LEXICON_URL + "gb_silver.json", "gb_silver.json", 3_663_898L, "48131e2d92ccc41655f4543e87e0f938e71463eb5a54be7f0693bb712ebb6bce", "Apache-2.0 (misaki)"),
         new Part("American pronouncing dictionary", LEXICON_URL + "us_gold.json", "us_gold.json", 3_000_469L, "dc414872a49a28ae6c141463d502fd945f3b2fde040484fdc47d00cc4612686f", "Apache-2.0 (misaki)"),
         new Part("American pronouncing dictionary (more words)", LEXICON_URL + "us_silver.json", "us_silver.json", 3_099_517L, "de8f67be911bb6c659187b4a65fd966b6a30e56350e0f790d763210b053ac475", "Apache-2.0 (misaki)"),
-        new Part("ONNX Runtime for Java", ORT_URL, "onnxruntime.jar", ORT_BYTES, "c46608681692b3693914defb42fa3119ad7cb6146870581ece247e0ed5793fe8", "MIT"));
+        new Part("ONNX Runtime for Java", ORT_URL, "onnxruntime.jar", ORT_BYTES, "e0ab4a1af57d2da09097202f2dfd691e390c82e81183314788ccde4cf7c3cc38", "MIT"));
 
     /** The download, in megabytes, said before the player agrees. */
     public static int totalMb() {
@@ -180,15 +180,7 @@ public final class PaKokoro {
         Reply get(java.net.URI uri, long from) throws Exception;
     }
 
-    /** The real network: a plain GET with a generic user agent; nothing about the player or their world is sent. */
-    public static final Fetcher HTTP = (uri, from) -> {
-        java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
-            .connectTimeout(java.time.Duration.ofSeconds(20)).build();
-        java.net.http.HttpRequest.Builder rb = java.net.http.HttpRequest.newBuilder(uri).timeout(java.time.Duration.ofMinutes(30)).header("User-Agent", "minecraft-mod");
-        if (from > 0) rb.header("Range", "bytes=" + from + "-");
-        java.net.http.HttpResponse<InputStream> res = http.send(rb.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());
-        return new Fetcher.Reply(res.statusCode(), res.headers().firstValueAsLong("Content-Length").orElse(-1L), res.body());
-    };
+    // [voice37] No network fetcher any more: the files come from inside the mod jar (PaVoiceAssets.fromJar) or an offline pack.
 
     /** [pa35] Progress as it goes: a fraction of the whole (by bytes) and a line to show. */
     public interface Progress {
@@ -196,14 +188,13 @@ public final class PaKokoro {
     }
 
     private volatile boolean cancel;
+    /** [voice37] What these files are, in messages ("natural voice"; the expressive voice reuses this downloader). */
+    private String what = "natural voice";
+
+    public PaKokoro named(String what) { this.what = what; return this; }
 
     /** Stop a download under way (it carries on from where it was next time). */
     public void cancel() { cancel = true; }
-
-    /** Download what is missing, off the game thread: resumed where it stopped, each file checked by its SHA-256. */
-    public boolean install(java.util.function.Consumer<String> progress) {
-        return install(HTTP, (f, l) -> progress.accept(l));
-    }
 
     public boolean install(Fetcher net, Progress progress) {
         cancel = false;
@@ -235,7 +226,7 @@ public final class PaKokoro {
                             have += n;
                             if (have - lastShown > (1 << 20) || have >= p.bytes()) {
                                 lastShown = have;
-                                progress.at(Math.min(1.0, (done + have) / (double) total), "Downloading " + p.what() + ": " + Math.round(have / 1_000_000.0) + " of " + Math.max(1, Math.round(p.bytes() / 1_000_000.0)) + " MB");
+                                progress.at(Math.min(1.0, (done + have) / (double) total), (p.url().startsWith("jar:") ? "Unpacking " : "Downloading ") + p.what() + ": " + Math.round(have / 1_000_000.0) + " of " + Math.max(1, Math.round(p.bytes() / 1_000_000.0)) + " MB");
                             }
                         }
                     } catch (java.io.IOException e) {
@@ -253,7 +244,7 @@ public final class PaKokoro {
             why = downloaded() ? "" : "The download didn't give what was expected.";
             return downloaded();
         } catch (Throwable e) {
-            why = "Couldn't download the natural voice: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            why = "Couldn't get the " + what + " ready: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
             return false;
         }
     }
@@ -498,9 +489,9 @@ public final class PaKokoro {
             try (InputStream in = Files.newInputStream(dir.resolve(VOICES_FILE))) {
                 voices = readVoices(in);
             }
-            ort = new URLClassLoader(new URL[]{dir.resolve("onnxruntime.jar").toUri().toURL()}, PaKokoro.class.getClassLoader());
+            ort = PaOrt.loader(dir.resolve("onnxruntime.jar"));       // [voice37] one runtime for both neural voices
             Class<?> envC = ort.loadClass("ai.onnxruntime.OrtEnvironment");
-            env = envC.getMethod("getEnvironment").invoke(null);
+            env = PaOrt.env(ort);
             Class<?> optsC = ort.loadClass("ai.onnxruntime.OrtSession$SessionOptions");
             Object opts = optsC.getConstructor().newInstance();
             session = envC.getMethod("createSession", String.class, optsC).invoke(env, dir.resolve(MODEL_FILE).toString(), opts);

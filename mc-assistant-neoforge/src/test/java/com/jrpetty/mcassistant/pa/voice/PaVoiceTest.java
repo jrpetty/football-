@@ -156,7 +156,7 @@ class PaVoiceTest {
         PaVosk v = new PaVosk(dir.resolve("vosk"));
         assertFalse(v.installed());
         assertFalse(v.load());
-        assertTrue(v.status().contains("downloaded"), v.status());
+        assertTrue(v.status().contains("unpacked"), v.status());   // [voice37] inside the jar now: unpacked, never downloaded
         assertTrue(v.session(List.of("follow")) == null);
     }
 

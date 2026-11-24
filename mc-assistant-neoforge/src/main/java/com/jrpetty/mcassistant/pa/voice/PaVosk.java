@@ -2,15 +2,11 @@ package com.jrpetty.mcassistant.pa.voice;
 
 import java.io.File;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.Duration;
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -19,11 +15,12 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
- * [pa33] Offline speech recognition with Vosk (Apache 2.0), on every OS. Nothing of it ships in the mod jar: when the
- * player turns listening on and agrees, the small English model (about 40 MB, from the Vosk project) and the Vosk
- * library for their OS (from the project's own release on Maven Central) are downloaded once into the config folder.
- * Called through JNA, which the game already carries. Each piece fails gracefully: no model, no library, no JNA,
- * a failed download, all end in a plain message, and typing goes on working.
+ * [pa33] Offline speech recognition with Vosk (Apache 2.0), on every OS. [voice37] It ships inside the release jar (the
+ * small English model, about 40 MB, and the Vosk release jar from Maven Central with its libraries for Windows, Linux
+ * and macOS, both pinned and checked by SHA-256 when the jar is built): when the player turns listening on, the two
+ * are unpacked from the mod into the game folder (PaVoiceAssets), checked again, and the model and this computer's
+ * library taken out of them. Nothing is downloaded. Called through JNA, which the game already carries. Each piece fails
+ * gracefully: no model, no library, no JNA, all end in a plain message, and typing goes on working.
  *
  * <p>Two recognisers run on what was heard: one held to the assistant's own words (far more accurate for orders),
  * and one free (for names and questions); PaStt keeps the better reading.
@@ -42,16 +39,29 @@ public final class PaVosk {
      */
 
     public static final String MODEL = "vosk-model-small-en-us-0.15";
-    public static final String MODEL_URL = "https://alphacephei.com/vosk/models/" + MODEL + ".zip";
-    public static final String LIB_URL = "https://repo1.maven.org/maven2/com/alphacephei/vosk/0.3.45/vosk-0.3.45.jar";
+    public static final String LIB_JAR = "vosk-0.3.45.jar", MODEL_ZIP = MODEL + ".zip";
+
+    /** [voice37] What the release jar carries for listening (the build fetches them from these pinned sources). */
+    public static final List<PaKokoro.Part> PARTS = List.of(
+        new PaKokoro.Part("Speech recognition library (Vosk)", "https://repo1.maven.org/maven2/com/alphacephei/vosk/0.3.45/vosk-0.3.45.jar", LIB_JAR, 25_861_916L,
+            "9e38e96e4448a41d889bb254b2f8424945554945c6e77e1cd97a3d8633fac2ba", "Apache-2.0"),
+        new PaKokoro.Part("Speech recognition model (small English)", "https://alphacephei.com/vosk/models/" + MODEL_ZIP, MODEL_ZIP, 41_205_931L,
+            "30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498", "Apache-2.0"));
 
     private final Path dir;
+    private final PaKokoro files;
     private volatile String status = "Not set up.";
     private Object lib;           // the JNA binding, once loaded (Object, so this class loads without JNA)
     private Object model;
 
     public PaVosk(Path dir) {
+        this(dir, PARTS);
+    }
+
+    /** [voice37] With the files as the jar carries them (PaVoiceAssets.parts(pack, "stt")). */
+    public PaVosk(Path dir, List<PaKokoro.Part> parts) {
         this.dir = dir;
+        this.files = new PaKokoro(dir, parts).named("speech model");
     }
 
     public String status() { return status; }
@@ -77,38 +87,26 @@ public final class PaVosk {
         return Files.isDirectory(modelDir().resolve("am")) && Files.isRegularFile(dir.resolve(libName()));
     }
 
-    /** Download what is missing (the player agreed first). Runs on the caller's thread; reports progress. */
-    public boolean install(Consumer<String> progress) {
+    /**
+     * [voice37] Unpack what is missing from the mod jar (never the network: the fetcher is PaVoiceAssets.fromJar), each
+     * archive checked by its SHA-256, then the model and this computer's library taken out. Runs on the caller's thread.
+     */
+    public boolean unpack(PaKokoro.Fetcher fromJar, Consumer<String> progress) {
         try {
+            if (installed()) { status = "Installed."; return true; }
             Files.createDirectories(dir);
-            HttpClient http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).connectTimeout(Duration.ofSeconds(20)).build();
-            if (!Files.isRegularFile(dir.resolve(libName()))) {
-                progress.accept("Downloading the speech library...");
-                Path jar = download(http, LIB_URL, dir.resolve("vosk.jar.part"));
-                unzip(jar, dir, platform() + "/", true);
-                Files.deleteIfExists(jar);
-            }
-            if (!Files.isDirectory(modelDir().resolve("am"))) {
-                progress.accept("Downloading the speech model (about 40 MB)...");
-                Path zip = download(http, MODEL_URL, dir.resolve("model.zip.part"));
-                progress.accept("Unpacking the speech model...");
-                unzip(zip, dir, "", false);
-                Files.deleteIfExists(zip);
-            }
-            status = installed() ? "Installed." : "The download didn't give what was expected.";
+            if (!files.downloaded() && !files.install(fromJar, (f, l) -> progress.accept(l))) { status = files.why(); return false; }
+            if (!Files.isRegularFile(dir.resolve(libName()))) unzip(dir.resolve(LIB_JAR), dir, platform() + "/", true);
+            if (!Files.isDirectory(modelDir().resolve("am"))) { progress.accept("Unpacking the speech model..."); unzip(dir.resolve(MODEL_ZIP), dir, "", false); }
+            status = installed() ? "Installed." : "This computer has no Vosk library (" + platform() + "): Windows' own recogniser or typing instead.";
             return installed();
         } catch (Throwable e) {
-            status = "Couldn't download the speech model: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            status = "Couldn't unpack the speech model: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
             return false;
         }
     }
 
-    private static Path download(HttpClient http, String url, Path to) throws Exception {
-        HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(10)).header("User-Agent", "minecraft-mod").build();
-        HttpResponse<Path> res = http.send(req, HttpResponse.BodyHandlers.ofFile(to));
-        if (res.statusCode() != 200) throw new IllegalStateException("HTTP " + res.statusCode() + " from " + URI.create(url).getHost());
-        return to;
-    }
+    public PaKokoro files() { return files; }
 
     /** Unzip entries under {@code under} (flattened when asked), never outside the target folder. */
     private static void unzip(Path zip, Path to, String under, boolean flatten) throws Exception {
@@ -133,7 +131,7 @@ public final class PaVosk {
     public synchronized boolean load() {
         if (model != null) return true;
         if (!installed()) {
-            status = "The speech model isn't downloaded yet.";
+            status = "The speech model isn't unpacked yet.";
             return false;
         }
         try {
@@ -230,6 +228,12 @@ public final class PaVosk {
 
         static Binding load(String path) {
             if (!new File(path).isFile()) throw new IllegalStateException("no " + path);
+            File here = new File(path).getParentFile();
+            // [voice37] on Windows its own runtime libraries first, from beside it (Windows wouldn't look there by itself)
+            for (String dep : new String[]{"libwinpthread-1.dll", "libgcc_s_seh-1.dll", "libstdc++-6.dll"}) {
+                File f = new File(here, dep);
+                if (f.isFile()) { try { System.load(f.getAbsolutePath()); } catch (Throwable ignored) { /* JNA may still find it */ } }
+            }
             return new Binding(com.sun.jna.Native.load(path, Lib.class));
         }
 
