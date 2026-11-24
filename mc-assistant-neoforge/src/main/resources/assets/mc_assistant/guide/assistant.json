@@ -409,7 +409,7 @@
       "steps": [],
       "controls": [],
       "items": [],
-      "tips": ["Listening (speech recognition) is separate, off by default, and asks before fetching its model."],
+      "tips": ["Listening (speech recognition, Vosk, Apache-2.0) is inside the mod too: off by default, unpacked when you turn it on, never downloaded."],
       "related": ["pa_voices_natural"],
       "covers": []
     },
