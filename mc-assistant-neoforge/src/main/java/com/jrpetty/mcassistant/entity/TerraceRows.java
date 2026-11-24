@@ -942,6 +942,7 @@ public final class TerraceRows {
             if (!Land.areaLoaded(level, b.anchor(), 12) || Ledger.raising(id, b.anchor())) continue;
             if (!standing(level, id, b)) continue;
             int n = dress(level, v, b, false);
+            if (DEBUG_FINISH) LOG.info("[MCA-TERRACE-DBG] {} {} -> {} (crew {})", Villages.name(id), name(id, b), n, TownJobs.handAt(level, id, ROWS_WORK) == null ? "none" : TownJobs.handAt(level, id, ROWS_WORK).displayNameCap());
             if (n > 0) {
                 int all = PIECES.merge(b.anchor().asLong() + "", n, Integer::sum);
                 if (all == n || all % 200 < n) LOG.info("[MCA-TERRACE] {}: the hands finishing {} ({} pieces so far)", Villages.name(id), name(id, b), all);
@@ -994,6 +995,7 @@ public final class TerraceRows {
     /** The rows' own crew (TownJobs): not the walls crew, which the age's make-over of every building keeps at one spot
      *  after another for days, while the rows stood half in cobble and timber waiting on it. */
     static final String ROWS_WORK = "terraces";
+    private static final boolean DEBUG_FINISH = Boolean.getBoolean("mcassistant.terracedebug");
     /**
      * [house34b] Where a hand stands to work on this block of a row: at the foot of its wall, on the row's own ground floor
      * (it works off its ladder and scaffold, as the builders do). Sent to the block itself, a hand could never come within
