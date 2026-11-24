@@ -1,0 +1,91 @@
+# [pa35] Progress: the mining and gear ladders, unlocks, the bond, wants and "our story". Same rules as the other banks:
+# dry by default, affection sideways, no exclamation marks, no swearing, never anything near self-harm. Blanks: {owner}
+# {name} {what} {level} {mine} {time} {instead} {item}.
+
+== say.lock.met
+{what}, there. I'm not allowed to touch it till level {level}. You do the honours.
+There's {what} here. Level {level} job, apparently. I've marked it for you.
+{what}. Not mine to dig yet. Level {level}. I'll just look at it longingly.
+I've found {what} and I'm under orders to leave it. Level {level}. Pinged it for you.
+{what} in the wall. Above my pay grade until level {level}.
+Look, {what}. I'd mine it, but I'm level-locked. {level}, if you're counting.
+== say.lock.met@gloomy
+{what}. Right there. And I can't touch it until level {level}. Of course.
+There's {what} here. Not for me. Not yet. Level {level}.
+{what}. I've marked it. I'm not allowed. Level {level}.
+Found {what}. I'll leave it for you. I always leave the good bits.
+{what}, there. Level {level} before I'm trusted with it.
+{what}. I'll just stand near it. Level {level}.
+== say.lock.met@serious
+{what} here. I can't mine it until level {level}; I've marked it for you.
+Found {what}. Level {level} needed. Marked.
+{what} there. Locked until level {level}.
+There's {what}. I'll leave it: level {level} needed. Pinged.
+{what} found. Marked for you; I need level {level}.
+{what}. Locked: level {level}.
+
+== say.lock.refuse
+{what}'s a level {level} job. I'm level {mine}, {time} of graft away. I can get you {instead}, or you mine it and I'll carry.
+Level {level} for {what}, I'm afraid. I'm {mine}. Give it {time}. Meanwhile, {instead}?
+Can't touch {what} till level {level}. That's {time} off. I'll do {instead} if you like, or carry yours.
+{what}? Not at level {mine}. Level {level}, {time} from now. {instead} I can do.
+I'd love to, but {what} needs level {level}. {time} or so. I can fetch {instead} meanwhile.
+{what} is above my station until level {level}. {time} away. {instead}, or I carry what you dig.
+== say.lock.refuse@gloomy
+{what} needs level {level}. I'm {mine}. {time} to go. I can do {instead}. It's something.
+Not {what}. Not yet. Level {level}, {time} off. {instead}, perhaps.
+Level {level} for {what}. I'm only {mine}. {time}. I can carry yours.
+{what}. Out of reach until level {level}. {time} of work. There's always {instead}.
+I can't. {what} is level {level}. {time} away. I'll get {instead} instead.
+{what}, level {level}. I'm {mine}. I'll manage {instead}.
+== say.lock.refuse@serious
+I can mine {what} from level {level}; I'm level {mine}, about {time} away. I can get {instead}, or carry what you mine.
+{what} needs level {level} ({time} away). I can do {instead} now.
+Locked: {what} at level {level}. I'm {mine}. {instead} is available, or I'll carry yours.
+Level {level} for {what}. About {time} to go. I can fetch {instead}.
+Not yet: {what} is level {level}. I'll carry yours, or get {instead}.
+{what} needs level {level}. I'm level {mine}.
+
+== say.lock.unlock
+Level {level}. I'm allowed {what} now. Try to contain yourself.
+I can mine {what} now. Don't tell the {what}.
+{what}, unlocked. I've been waiting for this. Quietly.
+Level {level}. {what} is fair game. Point me at some.
+New at level {level}: {what}. I'll try not to show off.
+{what}. Finally. Let's go and find some.
+== say.lock.unlock@gloomy
+Level {level}. {what}, now. It took long enough.
+{what}. I'm allowed now. It only took forever.
+I can mine {what}. It'll still be hard, but I'm allowed.
+Level {level}. {what}. Well. That's something.
+{what}, unlocked. I'll try to be worthy of it.
+{what}. Now we'll see.
+== say.lock.unlock@serious
+Level {level}: I can mine {what} now.
+{what} unlocked.
+I can mine {what} from now on.
+Level {level}. {what} available.
+New: {what}.
+{what}, unlocked.
+
+== say.gear.locked
+{item}? Level {level}, mate. I'd hurt myself. I'll hold it for you.
+That's a level {level} thing, the {item}. I'll carry it, not use it.
+{item}. Lovely. Not till level {level}, though. It's in my pack, untouched.
+I'm not allowed the {item} till level {level}. I'll mind it.
+{item}? I'd only embarrass us both. Level {level}. Holding it.
+The {item} needs level {level}. I'll keep it warm for you.
+== say.gear.locked@gloomy
+The {item}. Level {level}. I'd only get it wrong. I'll hold it.
+Not the {item}. Not yet. Level {level}. It's in my pack.
+{item}. I'll carry it. Using it is level {level}.
+I can't use the {item} yet. Level {level}. I'll keep it safe.
+Level {level} for the {item}. I'll hold on to it.
+The {item}. One day. Level {level}.
+== say.gear.locked@serious
+I can't use the {item} until level {level}. I'll carry it.
+The {item} needs level {level}. Holding it for you.
+{item}: level {level}. It's in my pack.
+Not until level {level}. I'll keep the {item}.
+Level {level} for the {item}. Kept, not used.
+Held, not used: level {level}.
