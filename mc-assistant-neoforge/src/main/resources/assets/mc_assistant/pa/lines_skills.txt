@@ -385,30 +385,30 @@ Fine. Starting in three.
 == say.challenge_mine@serious
 One minute. Most blocks mined wins.
 Mining contest. On three.
-Ready. One minute.
+Ready. Ten shots each.
 Most blocks in a minute.
 Starting in three.
 Mining contest. Go on three.
 
 == say.challenge_shoot
-Shooting contest. A minute each way. Most hits on the target wins.
+Shooting contest. Ten shots each. Most hits on the target wins.
 Target practice. Try to keep up.
 Archery contest. I'll go easy on you. I won't.
-Most hits in a minute. Bows ready.
+Ten arrows each. Bows ready.
 You and me and the target. Starting in three.
 Let's see your aim. On three.
 == say.challenge_shoot@gloomy
 A shooting contest. I'll miss. Fine.
 Most hits wins. I'll be the one losing.
 Archery. Let's get it over with.
-A minute of shooting. My aim is cursed.
+Ten shots each. My aim is cursed.
 Fine. On three.
 Target practice. Mostly practice.
 == say.challenge_shoot@serious
-Shooting contest. Most hits in a minute.
+Shooting contest. Ten shots each.
 Target practice. On three.
 Most hits on the target wins.
-Ready. One minute.
+Ready. Ten shots each.
 Starting in three.
 Archery contest. Go on three.
 
@@ -437,7 +437,7 @@ Off.
 
 == say.challenge_won
 [bad] I win. I'm a winner. A win-ner. A win-dow. That made no sense. Keeping it.
-[anim:cheer] I win. Better luck next time. Bring a faster you.
+[anim:cheer] I win. Better luck next time. Bring a better you.
 [anim:cheer] Victory. I'd say it was close, but I'd be lying.
 [anim:dance] Winner. I'll accept my prize in cake.
 [anim:cheer] And that's how it's done. Lessons on Tuesdays.

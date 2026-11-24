@@ -1959,4 +1959,35 @@ public class PlayerAssistantGameTests {
             });
         });
     }
+
+    /** pai55: a shooting contest: its player says it with a target block in sight, a countdown, it takes its ten shots
+     *  (one every two seconds, whatever tick the game began on), its player's hits count, and the verdict gives the
+     *  score. [pa33e] */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "pai55_contest")
+    public static void pai55_contest(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_162_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        atLevel(a, 6);
+        a.insertGiven(new ItemStack(Items.BOW));
+        a.insertGiven(new ItemStack(Items.ARROW, 20));
+        BlockPos target = new BlockPos(x + 12, y + 1, Z);
+        level.setBlock(target.below(), Blocks.STONE.defaultBlockState(), 3);
+        level.setBlock(target, Blocks.TARGET.defaultBlockState(), 3);
+        a.teleportTo(x + 0.5, y, Z + 2.5);
+        say(p, a, "stay here");
+        helper.runAfterDelay(10, () -> {
+            say(p, a, "shooting contest", target, -1);
+            helper.assertTrue(fromLists(lastWords(a), "say.challenge_shoot"), "on your marks: " + lastWords(a));
+            int arrows = a.countMatching(st -> st.is(Items.ARROW));
+            for (int k = 0; k < 3; k++) helper.runAfterDelay(120 + k * 60, () -> com.jrpetty.mcassistant.pa.PaChallenge.ownerHit(p, target));
+            helper.runAfterDelay(560, () -> {
+                helper.assertTrue(arrows - a.countMatching(st -> st.is(Items.ARROW)) == 10, "its ten shots: " + (arrows - a.countMatching(st -> st.is(Items.ARROW))));
+                helper.assertTrue(lastWords(a).matches(".*\\(3 to [1-9][0-9]?\\)\\s*$"), "the verdict with the score (three to its hits): " + lastWords(a));
+                Kit.log("pai55 contest: " + lastWords(a));
+                helper.succeed();
+            });
+        });
+    }
 }

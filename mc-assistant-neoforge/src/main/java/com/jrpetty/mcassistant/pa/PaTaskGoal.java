@@ -57,9 +57,9 @@ public class PaTaskGoal extends Goal {
         idx = 0;
         walkTicks = 0;
         cool = 0;
-        shotLine = null;
-        shotAt = null;
-        if (t != null) t.stage = 0;
+        if (t != shotFor) { shotLine = null; shotAt = null; moverDrawn = false; }                      // a shot in the air carries on if its task does
+        shotFor = t;
+        if (t != null && shotLine == null && shotAt == null) t.stage = 0;
     }
 
     @Override
@@ -678,6 +678,8 @@ public class PaTaskGoal extends Goal {
     @javax.annotation.Nullable private String shotLine;
     @javax.annotation.Nullable private net.minecraft.world.entity.Entity shotAt;
     private int shotDist;
+    @javax.annotation.Nullable private PaTask shotFor;
+    private boolean moverDrawn;
 
     private void shoot() {
         if (shotLine != null || shotAt != null) {                                  // waiting for the arrow to get there
@@ -730,6 +732,12 @@ public class PaTaskGoal extends Goal {
     /** [pa33e] At something moving: led by where it will be when the arrow gets there. */
     private void shootMover() {
         net.minecraft.world.entity.Entity e = a.level().getEntity(Integer.parseInt(t.item.substring(2)));
+        if ((e == null || !e.isAlive()) && t.stage > 0) {                          // gone since it fired: that was the arrow
+            a.earn("trick");
+            a.playAnim("cheer");
+            finish(PaTalk.line(a, "trick_moving", "dist", String.valueOf(shotDist), "thing", "target"), false);
+            return;
+        }
         if (e == null || !e.isAlive()) { finish("It's gone.", true); return; }
         double d = Math.sqrt(a.distanceToSqr(e));
         if (d > PaLevels.range(a.veteranLevel()) + (PaLevels.has(a.veteranLevel(), "trick") ? 12 : 0) || !a.hasLineOfSight(e)) {
@@ -740,6 +748,7 @@ public class PaTaskGoal extends Goal {
         a.getNavigation().stop();
         a.getLookControl().setLookAt(e, 30.0F, 30.0F);
         if (cool > 0) return;
+        if (!moverDrawn) { moverDrawn = true; PaShots.drawBow(a); cool = 16; return; }   // a draw first, as a player's (about a second)
         cool = 25;
         t.stage++;
         int ticks = PaShots.shootAtMover(a, e);
