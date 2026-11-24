@@ -1284,6 +1284,10 @@ public final class TerraceRows {
                 Homes.Home h = Homes.homes(v.id()).get(s.anchor().asLong());
                 sb.append(" door").append(s.index() + 1).append('@').append(s.door().toShortString())
                     .append(h == null ? "(off the books)" : h.members.isEmpty() ? "(to let)" : "(" + h.members.size() + ")");
+                if (h != null) for (VillageFolkEntity f : Homes.loadedMembers(v.id(), h)) {
+                    sb.append("{").append(f.displayNameCap()).append(" ").append(f.blockPosition().toShortString()).append(" ")
+                        .append(f.hobbyNow == null ? "-" : f.hobbyNow).append("}");
+                }
             }
         }
         sb.append(" | wants ").append(WANTS.get(v.id())).append(" | on site: bricks ").append(siteStock(v.id(), Items.BRICKS))
