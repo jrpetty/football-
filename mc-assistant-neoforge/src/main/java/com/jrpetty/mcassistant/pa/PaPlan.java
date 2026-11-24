@@ -94,6 +94,7 @@ public final class PaPlan {
 
         /** How far along, 0..100, or -1 when it cannot be told. */
         public int percent(AssistantEntity a) {
+            if (task != null && task.kind == PaTask.Kind.LOGI && a instanceof PlayerAssistantEntity pa) return PaLogistics.percent(pa, this);   // [pa36]
             if (target > 0 && !count.isEmpty() && base >= 0) {
                 int have = Math.max(0, PaItems.count(a, count) - base);
                 return Math.min(100, have * 100 / target);
@@ -104,6 +105,7 @@ public final class PaPlan {
 
         /** "12/16" when counted, else "". */
         public String tally(AssistantEntity a) {
+            if (task != null && task.kind == PaTask.Kind.LOGI && a instanceof PlayerAssistantEntity pa) return PaLogistics.tally(pa, this);   // [pa36]
             if (target > 0 && !count.isEmpty() && base >= 0) {
                 return Math.min(target, Math.max(0, PaItems.count(a, count) - base)) + "/" + target;
             }

@@ -361,6 +361,15 @@ public final class PaLogiParse {
         PaLogiOrder w = whole(c);
         if (w != null) return w;
 
+        // ---- recipes: "how do I make a piston", "what do you need for a beacon", "what can you make with this"
+        if ((m = Pattern.compile("^(?:how (?:do|can|would|should) (?:i|you|we|one) (?:make|craft|build) |how (?:is|are) (?:a |an )?|what(?: is|s)? the recipe for |recipe for |what (?:do|does|would) (?:you|i|it|we) need (?:for|to make|to craft|to build) |what goes into |what (?:is|s) needed for |what makes )(?:a |an |some |the )?(.+?)(?: made| crafted)?$").matcher(c)).matches()) {
+            String it = m.group(1).trim();
+            if (!it.isEmpty() && !it.matches("(?:it|that|this|you|money|friends|a living|sure)")) return PaLogiOrder.of(Op.RECIPE).withItem(it);
+        }
+        if (c.matches("^what (?:can|could) (?:you|i|we) (?:make|craft|build)(?: (?:with|from|out of) (?:this|that|these|it|what you have|what you ve got|your stuff|your pack|my stuff))?$")
+            || c.matches("^what (?:can|could) (?:this|these|that) (?:make|be made into|be used for)$"))
+            return PaLogiOrder.of(Op.CANMAKE);
+
         // ---- questions: counts and finds
         if ((m = Pattern.compile("^(?:how (?:much|many)) (.+?)(?: (?:do|have|did|does|are|is)(?: we| i| you| there)?(?: have| got| own| store| stored| left| kept| in (.+?))?(?: in (.+?))?(?: altogether| in total| total| between us| all together| overall)?)?$").matcher(c)).matches()) {
             String thing = m.group(1).replaceAll("\\b(?:do|have|did|are|is|we|i|you|there|got|left|in total|altogether)\\b.*$", "").trim();

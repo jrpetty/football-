@@ -57,7 +57,11 @@ public record PaLogiOrder(Op op, String item, PaQty.Qty qty, Ref from, Ref to, S
         /** Show the storage map. */
         LIST,
         /** Fetch its player's things from where they died. */
-        DEATH
+        DEATH,
+        /** "How do I make a piston?": the recipe, with what it has. */
+        RECIPE,
+        /** "What can you make with this?" */
+        CANMAKE
     }
 
     /** Where a fill's items come from. */

@@ -42,7 +42,7 @@ public class PaTaskGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return a.task != null && a.getTarget() == null && !a.plan.paused;
+        return a.task != null && a.task.kind != PaTask.Kind.LOGI && a.getTarget() == null && !a.plan.paused;   // [pa36] logistics: PaLogiGoal
     }
 
     @Override
@@ -113,6 +113,7 @@ public class PaTaskGoal extends Goal {
             case PILLAR -> pillar();
             case SHOOT -> shoot();
             case BREW -> brew();
+            case LOGI -> { }                                     // [pa36] PaLogiGoal's
         }
     }
 

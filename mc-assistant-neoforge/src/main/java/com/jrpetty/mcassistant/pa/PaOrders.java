@@ -468,6 +468,7 @@ public final class PaOrders {
             }
             case STOP -> {
                 PaCome.end(a);                                            // [pa33g] another order ends a come-here
+                PaLogistics.stopping(a);                                  // [pa36] what a logistics job had moved, said
                 stopAll(a);
                 return PaTalk.line(a, "stop");
             }
@@ -765,6 +766,8 @@ public final class PaOrders {
                 return planBuild(p, a, i, look, out);
             }
             case CRAFT -> {
+                String held = PaCraft.check(p, a, i, out);                 // [pa36] exactly what's missing, with choices
+                if (held != null) return held.isEmpty() ? null : held;
                 String what = i.item();
                 if (what.equals("charcoal")) {
                     PaPlan.Step s = step("make " + Math.max(1, n) + " charcoal", Kind.SMELT, 10 * Math.max(4, n));
@@ -797,6 +800,7 @@ public final class PaOrders {
                     put.task = new PaTask(PaTask.Kind.PLACE, at, what, 1);
                     out.add(put);
                 }
+                PaCraft.deliver(a, i, out, CraftPlanner.pretty(target), amount);   // [pa36] "make me ..." handed over, "make yourself ..." put on
                 return null;
             }
             case SMELT -> {
@@ -833,6 +837,9 @@ public final class PaOrders {
                 s.jobs.add(Job.give(i.item(), amount));
                 out.add(s);
                 return null;
+            }
+            case LOGI -> {                                         // [pa36] chests, gathering into them, stock jobs, hauls
+                return PaLogistics.plan(p, a, i, look, out, said);
             }
             case GOTO -> {                                         // [pa33c-2b] a ping, a waypoint, where it died, its bed
                 BlockPos to = placeFor(p, a, i, look);

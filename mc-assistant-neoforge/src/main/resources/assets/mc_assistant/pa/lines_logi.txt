@@ -1,0 +1,963 @@
+# [pa36] Chests, gathering and logistics. Blanks: {n} a number, {have} how many so far, {item} the thing, {chest} a
+# container's name ("the iron chest", "that chest"), {who} another player, {trip} a trip count, {from}/{to} places,
+# {need} a level, {level} its level, {dist} blocks, {dir} a direction, {answer} a count spelt out, {owner} its player.
+# Dry, short, useful; now and then funny. No exclamation marks. "[daft]" marks the cheesy ones: said only when its
+# player has asked for daft humour.
+
+== logi.fill_start
+Right. {n} {item}, into {chest}. Back shortly.
+{n} {item} for {chest}. I'll keep count so you don't have to.
+On it. {chest} will have {n} {item} by the time I'm done.
+{n} {item}. Off I go. Try not to move the chest.
+Fine. {n} {item}, delivered. The walking's included.
+{n} {item} into {chest}. I'll make as many trips as it takes. Which is the bit I like least.
+[daft] {n} {item}? That's my favourite number of {item}. Coincidence.
+== logi.fill_start@gloomy
+{n} {item} into {chest}. It'll be filled. Then emptied. Then filled again.
+{n} {item}. Every one of them carried by hand. By my hand.
+Off to fetch {n} {item} for {chest}. It never asked for this either.
+{n} {item}. Somewhere out there they're waiting to be dug up. Poor things.
+{chest} wants {n} {item}. Everyone wants something.
+Going. {n} {item}. Don't wait up.
+== logi.fill_start@serious
+Filling {chest} with {n} {item}.
+{n} {item} into {chest}. Starting now.
+Gathering {n} {item} for {chest}.
+On it: {n} {item} to {chest}.
+{n} {item}, into {chest}. I'll report when it's done.
+Understood. {n} {item} for {chest}.
+
+== logi.trip
+Pack's full. Taking this lot to {chest}, then back for more.
+{have} of {n} so far. Dropping these off.
+Back to the chest. {have} down, the rest to go.
+That's a load. Off to {chest} with it.
+Trip {trip}. {have} of {n}. The chest is coming along nicely.
+Unloading. {have} of {n}. Then more of the same.
+[daft] Another trip to the chest. We're practically on first-name terms now.
+== logi.trip@gloomy
+Trip {trip}. The chest doesn't even say thank you.
+{have} of {n}. Back and forth, back and forth.
+Full again. Off to {chest}. Again.
+Another load for {chest}. It's a bottomless box of my efforts.
+{have} done. Walking it over. Walking is most of my life now.
+Trip {trip}. If you see me walking, that's why.
+== logi.trip@serious
+Pack full: unloading at {chest}.
+{have} of {n}. Delivering.
+Trip {trip}: {have} of {n} so far.
+Dropping off at {chest}, then continuing.
+Unloading. {have}/{n}.
+Back to {chest} with this load.
+
+== logi.done
+Done. {n} {item} in {chest}.
+That's {n} {item} in {chest}. Took {trip} trip(s), if anyone's counting. I was.
+{chest} has its {n} {item}. You're welcome to check.
+All {n} {item} are in {chest}. Neatly, even.
+Finished. {n} {item}, all in {chest}.
+{n} {item}, delivered. I'll be over here, being useful.
+[daft] {n} {item} in {chest}. Stone cold delivery.
+== logi.done@gloomy
+{n} {item} in {chest}. It's full of my labour now.
+Done. {n} {item}. The chest is happier than I am.
+There. {n} {item} in {chest}. They'll be gone in a week.
+{chest} has its {n} {item}. Nobody's ever filled me with anything.
+That's the lot. {n} {item}. I'll just stand here.
+Done. {n} {item}. Another task survived.
+== logi.done@serious
+Done: {n} {item} in {chest}.
+{chest} now holds {n} {item}.
+Complete. {n} {item} delivered to {chest}.
+All {n} {item} are in {chest}.
+Finished: {n} {item}, {trip} trip(s).
+{n} {item} stored in {chest}.
+
+== logi.deposit_done
+Put {n} {item} in {chest}.
+{n} {item} into {chest}. Pack's a lot lighter.
+That's {n} {item} in {chest}.
+In they go. {n} {item}, {chest}.
+{chest} has {n} more {item}.
+Done. {n} {item}, stowed in {chest}.
+[daft] {n} {item} tucked into {chest}. Sleep well, little {item}.
+== logi.deposit_done@gloomy
+{n} {item} in {chest}. Out of sight, out of mind.
+Put them in. {n} {item}. Gone into the dark.
+{n} {item}, shut away in {chest}. Like everything.
+In {chest}. {n} {item}. It's better than being carried by me.
+Done. {n} {item}. The lid's closed on them.
+That's {n} {item} in {chest}. Rest easy.
+== logi.deposit_done@serious
+Deposited {n} {item} in {chest}.
+{n} {item} put in {chest}.
+Stored {n} {item} in {chest}.
+{n} {item} are in {chest}.
+Done: {n} {item}, {chest}.
+{chest}: {n} {item} added.
+
+== logi.short
+Only found {have} of {n} {item} round here. Want me to look further afield?
+That's {have} {item}, not {n}. There's no more within reach. Shall I go further?
+{have} out of {n}. The area's picked clean. Further, or call it there?
+I got {have} {item}. The rest isn't nearby. Your call.
+Ran out at {have} {item}. I can go further out if you like.
+{have} of {n}. That's what this patch had. Want me to travel for the rest?
+== logi.short@gloomy
+Only {have} {item}. The world's run dry. Shall I go further and be disappointed there?
+{have} of {n}. There isn't any more. There never is.
+Ran out at {have}. Further? The walk's long and the chest is patient.
+{have} {item}. That's all this place had to give. Like me.
+I found {have}. Not {n}. Close, in a way that doesn't count.
+{have} of {n}. Further afield, or shall we accept defeat?
+== logi.short@serious
+Only {have} of {n} {item} nearby. Look further?
+Found {have} {item}; none left within reach. Go further?
+{have}/{n} {item}. Nothing more nearby. Shall I search further?
+Short by {left}: {have} of {n}. Go further or stop here?
+That's {have} of {n} {item}. More would need a longer trip.
+Nearby supply exhausted at {have}/{n}. Continue further out?
+
+== logi.full
+{chest} is full. Using the next one along.
+No room left in {chest}. Moving on to the one beside it.
+That one's full. I'll put the rest next door.
+{chest}'s full to the lid. Overflow's going in the next chest.
+Full. Trying the next chest over.
+Out of room there. Next chest.
+[daft] {chest} is fuller than I am after a mushroom stew. Next one.
+== logi.full@gloomy
+{chest} is full. Even chests have limits. Next one.
+No room. The story of my life, but for chests.
+Full. On to the next box of disappointment.
+That chest has had enough. I understand completely.
+Full up. Moving along.
+It's full. They always fill up eventually.
+== logi.full@serious
+{chest} is full; using the next chest.
+No room in {chest}. Continuing in the nearest chest.
+{chest} full. Overflow to the next container.
+Container full. Switching to the next one.
+{chest} has no space left. Moving to the next.
+Full. Using the adjacent chest.
+
+== logi.full_none
+Every chest near there is full. Where would you like the rest?
+I've run out of room. Ping a chest, or I'll keep the rest on me.
+No space left anywhere near {chest}. Another chest, or more chests?
+Full, and so is the next one. I'll hang on to the rest. Point me somewhere.
+Out of room. Place a chest and ping it and I'll carry on.
+Nowhere left to put them. I'm holding the rest for now.
+== logi.full_none@gloomy
+All full. There's no room anywhere. I'll just carry it. Forever.
+Everything's full. I'm the storage now.
+No room left. Not here, not anywhere near. Point me somewhere else.
+Full, all of it. The rest stays with me, like a burden.
+Nowhere to put it. Make me a chest and I'll fill that too.
+No space. I'm keeping the rest, against my will.
+== logi.full_none@serious
+All nearby containers are full. Where should the rest go?
+No space left near {chest}. Ping another container.
+Out of room. I'm holding the remainder.
+Every known chest nearby is full. Please add or ping another.
+No space found. Remainder kept in my pack.
+Storage full. Awaiting a new container.
+
+== logi.none
+None of your chests has any {item}, as far as I know.
+No {item} anywhere I know of. Not in your chests, not on me.
+I've looked. No {item}. Want me to make or find some?
+There's no {item} in storage. I could go and get some.
+Not a single {item} in your chests. Shall I sort that out?
+We're out of {item}. Shall I get more?
+== logi.none@gloomy
+No {item}. Anywhere. I checked every chest.
+There isn't any {item}. There was once, probably.
+Not one {item}. The chests are as empty as my weekends.
+We have no {item}. We have nothing, really.
+None. I'd have found it. I always find nothing.
+No {item}. Shall I go out into the cold and get some?
+== logi.none@serious
+No {item} in any known chest.
+None found: {item} is not in storage.
+Storage has no {item}. Shall I gather or make some?
+{item}: none in your chests or my pack.
+Out of {item}.
+Zero {item} in storage.
+
+== logi.player_none
+You haven't any {item} on you.
+No {item} in your inventory. Did you mean mine?
+You've got no {item} to put away.
+Nothing of that sort on you. Check your pockets.
+I can't take {item} you don't have.
+Your inventory has no {item}. Want me to put mine in instead?
+== logi.player_none@gloomy
+You've no {item}. Neither of us has anything, really.
+No {item} on you. A pair of empty pockets, the two of us.
+Nothing. You have no {item}. I'd hoped otherwise.
+There's no {item} on you to hand over.
+You don't have any. I looked. Politely.
+No {item} on you. Such is life.
+== logi.player_none@serious
+You have no {item}.
+No {item} in your inventory.
+Nothing to hand over: no {item} on you.
+Your inventory contains no {item}.
+You're carrying no {item}.
+None on you.
+
+== logi.refuse
+That chest is {who}'s. I don't help myself to other people's things.
+That's {who}'s chest. I'm not opening it.
+Not that one. It belongs to {who}.
+{who} put that chest there. It stays shut, as far as I'm concerned.
+That's {who}'s. Ask them, not me.
+No. That one is {who}'s, and I'm not a thief.
+== logi.refuse@gloomy
+That's {who}'s. I may be miserable but I'm not a thief.
+{who}'s chest. It isn't ours. Nothing is ours.
+I won't open {who}'s chest. Some things are sacred.
+That belongs to {who}. Leave it be.
+Not ours. {who}'s. Let's not.
+That's {who}'s chest. I'd only feel worse.
+== logi.refuse@serious
+That chest belongs to {who}. I won't use it.
+{who} placed that chest. Not ours to open.
+I don't use other players' chests: that one is {who}'s.
+Refused: that container is {who}'s.
+That's {who}'s property.
+I can't use {who}'s chest.
+
+== logi.fetch_done
+Here you are. {n} {item}.
+{n} {item}, as ordered.
+{n} {item}. Straight from your chests.
+There. {n} {item}. Don't spend them all at once.
+Brought you {n} {item}.
+{n} {item}, delivered to your hands.
+[daft] {n} {item}, special delivery. Sign here. Just kidding, there's nothing to sign.
+== logi.fetch_done@gloomy
+{n} {item}. Fetched. Like a dog, but sadder.
+Here. {n} {item}. I hope they make you happy.
+{n} {item}. I carried them all the way.
+There you go. {n} {item}. Enjoy them while they last.
+{n} {item}. From the chest to you. That's my whole day.
+Here they are. {n} {item}.
+== logi.fetch_done@serious
+{n} {item}, delivered.
+Here are {n} {item}.
+Brought {n} {item} from storage.
+{n} {item} handed over.
+Delivered: {n} {item}.
+{n} {item}, as requested.
+
+== logi.handover_ask
+Hand over {n} {item}? I'll put them in {chest}.
+Shall I take {n} {item} off you for {chest}? Press Hand over.
+{n} {item} from you into {chest}. Say the word, or press Hand over.
+I'll take {n} {item} off your hands for {chest}. All right?
+Give me {n} {item} and they'll go in {chest}.
+{n} {item} of yours into {chest}? Hand them over.
+== logi.handover_ask@gloomy
+Hand over {n} {item}, if you trust me with them. I'll put them in {chest}.
+{n} {item} for {chest}. I'll take them. Someone has to.
+Give me {n} {item}. I'll carry them to {chest}. Of course I will.
+{n} {item} from you to {chest}? Press Hand over.
+Shall I take {n} {item} off you? They'll be safe in {chest}. Safer than with me.
+{n} {item}. Hand them over and I'll do the rest.
+== logi.handover_ask@serious
+Hand over {n} {item} for {chest}?
+Confirm: {n} {item} from you into {chest}.
+Press Hand over to give me {n} {item} for {chest}.
+{n} {item} from your inventory into {chest}. Confirm?
+Taking {n} {item} from you for {chest}: OK?
+Ready to take {n} {item} for {chest}.
+
+== logi.handover_far
+Come a bit closer and I'll take them off you.
+You're too far away to hand anything over. Come here.
+I can't reach your pockets from here. Closer.
+Bring them over and I'll take them.
+Walk over and I'll take them off you.
+You'll have to come nearer for that.
+== logi.handover_far@gloomy
+You're too far. Everyone's always too far.
+Come closer. I can't take things from across the map.
+I can't reach. Come here, if you can be bothered.
+Too far away. My arms aren't that long. Nothing about me is.
+You'll need to be nearer. I'll wait.
+Come over here. I'll be the one standing alone.
+== logi.handover_far@serious
+Too far to hand over. Come closer.
+Please come within a few blocks.
+I need you nearby to take the items.
+Out of reach. Move closer.
+Come nearer to hand them over.
+You're too far away.
+
+== logi.stock_set
+Right. I'll keep {chest} stocked with {n} {item}. Checking every few minutes.
+{chest}, {n} {item}, always. I'll top it up when it dips.
+Standing job noted. {chest} won't drop below {n} {item} on my watch.
+I'll keep an eye on {chest}. {n} {item} at all times.
+Done. {chest} gets topped up to {n} {item} whenever it runs low.
+Fine. If {chest} goes under {n} {item}, I'll sort it.
+[daft] {chest} will never want for {item} again. I'm like a very tidy fairy godmother.
+== logi.stock_set@gloomy
+I'll keep {chest} at {n} {item}. Forever. Or until you change your mind.
+{n} {item} in {chest}, always. A job with no end. My favourite kind.
+Fine. I'll keep topping up {chest}. It'll keep emptying. That's how it goes.
+{chest} at {n} {item}. I'll check it every few minutes. I've nothing else.
+A standing job. Standing is something I do a lot of.
+I'll keep {chest} full. Someone should be.
+== logi.stock_set@serious
+Standing job: keep {chest} at {n} {item}.
+I'll keep {chest} stocked with {n} {item}, checked every few minutes.
+{chest} will be kept at {n} {item}.
+Noted. {chest}: minimum {n} {item}.
+Keeping {chest} topped up to {n} {item}.
+Stock job set: {n} {item} in {chest}.
+
+== logi.stock_topup
+{chest} is low on {item}. Topping it up.
+{chest} was running short of {item}. Sorting it.
+Down to {have} {item} in {chest}. Off to fix that.
+Someone's been at {chest}. Topping up the {item}.
+{chest} needs {item}. On it.
+Time to top up {chest}. {item}, coming up.
+[daft] Who ate all the {item}? Never mind. Topping up.
+== logi.stock_topup@gloomy
+{chest} is low on {item} again. Of course it is.
+Someone's emptied {chest}. Off I go to fill it again.
+{item} running low in {chest}. The cycle continues.
+Topping up {chest}. It'll only empty again.
+{chest} needs more {item}. Everyone needs more of something.
+Back to {chest}. The {item} won't fetch themselves.
+== logi.stock_topup@serious
+{chest} is below {n} {item}; topping up.
+Restocking {chest} with {item}.
+{chest}: {have} of {n} {item}. Refilling.
+Low stock in {chest}. Getting {item}.
+Topping up {chest} to {n} {item}.
+Restocking {item}.
+
+== logi.unstock
+Right, I'll stop keeping that stocked.
+Standing job cancelled. It's on its own now.
+No more topping up. Noted.
+Fine. That chest can fend for itself.
+I'll leave it be from now on.
+Stopped. It won't get restocked unless you ask.
+== logi.unstock@gloomy
+I'll stop. It'll empty and nobody will notice.
+Standing job over. Like all good things.
+No more refills. It's on its own now. Like me.
+Fine. Let it go hungry.
+Cancelled. I'll find something else to worry about.
+Stopped. One less thing to be let down by.
+== logi.unstock@serious
+Stock job cancelled.
+I'll no longer restock it.
+Standing job removed.
+Stopped restocking.
+Cancelled: no more top-ups.
+Understood; restocking stopped.
+
+== logi.count
+{answer}
+By my count: {answer}
+Counted it up. {answer}
+{answer} That's everything I know of.
+Here's the tally. {answer}
+{answer} I checked the lot.
+== logi.count@gloomy
+{answer} It never feels like enough.
+I counted. {answer}
+{answer} For what it's worth.
+{answer} That's all there is.
+{answer} Numbers don't lie. Unlike hope.
+Counted. {answer}
+== logi.count@serious
+{answer}
+Total: {answer}
+Count: {answer}
+{answer}
+Inventory check: {answer}
+Here's the count. {answer}
+
+== logi.count_none
+We haven't any {item}. Not in your chests, not on me, not on you.
+None. No {item} anywhere I can count.
+Zero {item}. I looked in every chest I know.
+No {item} at all, I'm afraid.
+Nothing. Not one {item} between us.
+We're clean out of {item}.
+== logi.count_none@gloomy
+None. Zero. An empty number for an empty feeling.
+We have no {item}. We have very little, generally.
+Not one {item}. I counted twice. Just to be sure of the bad news.
+No {item}. It was always going to be none.
+Nothing. No {item}, anywhere.
+Zero {item}. I'm not surprised.
+== logi.count_none@serious
+Count: zero {item}.
+No {item} in storage, my pack or yours.
+None found.
+Zero {item}.
+We have no {item}.
+{item}: none.
+
+== logi.find
+{item}: in {chest}, {dist} blocks {dir}. I've pinged it.
+{chest} has the {item}. {dist} blocks {dir}. Marked.
+Found it. {chest}, {dist} blocks {dir}. Look for the marker.
+The {item} are in {chest}. That's {dist} blocks {dir}; I've pinged it for you.
+There. {chest}, {dist} blocks {dir}.
+{chest}, {dist} blocks {dir}. The marker's on it.
+== logi.find@gloomy
+{chest}. {dist} blocks {dir}. The {item} have been waiting.
+It's in {chest}, {dist} blocks {dir}. Pinged. Go on.
+Found the {item}. {chest}, {dist} blocks {dir}. At least something's where it should be.
+{chest} has it. {dist} blocks {dir}. Marked.
+{dist} blocks {dir}, in {chest}. I've marked it.
+In {chest}. {dist} blocks {dir}.
+== logi.find@serious
+{item} in {chest}, {dist} blocks {dir}. Pinged.
+Found: {chest}, {dist} blocks {dir}.
+{chest} contains {item}. {dist} blocks {dir}.
+{item}: {chest} ({dist} blocks {dir}). Marked.
+Location: {chest}, {dist} blocks {dir}.
+Pinged {chest}, {dist} blocks {dir}.
+
+== logi.find_none
+No chest I know has any {item}.
+I can't find {item} in any of your chests.
+No {item} anywhere in storage, as far as I know.
+None of your chests has {item}. Unless you've a chest I don't know about.
+Nothing. No chest with {item} in it.
+Not in any chest I've seen.
+== logi.find_none@gloomy
+No {item}. Not in any chest. Not anywhere.
+I looked through everything. No {item}.
+There's no {item} in your chests. Things go missing.
+None. Gone, if it was ever there.
+No chest has it. I'm sorry. Sort of.
+Not one chest with {item}.
+== logi.find_none@serious
+No known chest contains {item}.
+{item} not found in storage.
+None of your chests holds {item}.
+Not found.
+No container with {item}.
+Search finished: no {item}.
+
+== logi.named
+That's {chest} from now on.
+{chest} it is.
+Noted. {chest}.
+Right. I'll call it {chest}.
+{chest}. Got it.
+Named: {chest}.
+[daft] I name thee {chest}. Rise, chest.
+== logi.named@gloomy
+{chest}. A name. Better than none.
+Fine. It's {chest} now. Nobody names me.
+{chest}. It'll outlive us both.
+{chest} it is. At least one of us has an identity.
+Named it {chest}.
+{chest}. Noted.
+== logi.named@serious
+Named it {chest}.
+That container is now {chest}.
+{chest}: saved.
+Saved as {chest}.
+Label set: {chest}.
+It's {chest}.
+
+== logi.dropoff
+That's the drop-off now. When I'm full, that's where it goes.
+{chest} is the drop-off. Noted.
+Drop-off set. I'll unload there.
+Right. Full pack, that chest. Simple.
+{chest} it is, for dropping off.
+Got it. That's where I'll empty out.
+== logi.dropoff@gloomy
+The drop-off. Where I'll dump the fruits of my toil.
+Drop-off set. I'll get to know it well.
+{chest} is where it all ends up now.
+Fine. That's where I'll unload. Again and again.
+Drop-off noted. My second home.
+That's the drop-off. I'll see a lot of it.
+== logi.dropoff@serious
+Drop-off set: {chest}.
+{chest} is now the drop-off.
+Noted. I'll unload at {chest} when full.
+Drop-off saved.
+Drop-off: {chest}.
+Unloading point set.
+
+== logi.autodrop_on
+When I'm full I'll go to the drop-off and come back.
+Automatic drop-off on. Full pack, quick trip, back to work.
+Noted. I'll unload at the drop-off whenever I fill up.
+Right. No more standing about with a full pack.
+I'll empty out at the drop-off when I need to.
+Got it. Full means a trip to the drop-off.
+== logi.autodrop_on@gloomy
+When I'm full I'll trudge to the drop-off. And trudge back.
+Auto drop-off on. More walking. Splendid.
+Fine. Full pack, long walk, back again.
+I'll unload when full. It's the closest I get to a holiday.
+Drop-off trips it is.
+Noted. I'll go when I'm full.
+== logi.autodrop_on@serious
+Auto drop-off on.
+I'll unload at the drop-off when my pack is full.
+Automatic drop-off enabled.
+When full, I'll unload and return.
+Noted: drop-off when full.
+Enabled.
+
+== logi.autodrop_off
+Auto drop-off off. I'll hang on to things.
+No more drop-off trips unless you ask.
+Right. Full pack stays full until you say.
+Noted. I'll stop the automatic trips.
+Off. I'll keep what I gather.
+Fine. No unloading on my own.
+== logi.autodrop_off@gloomy
+No more trips. I'll just carry it all. Like always.
+Auto drop-off off. More weight for me.
+Fine. I'll keep it. All of it.
+No more drop-off. I'll be a pack mule instead.
+Off. I'll suffer the weight.
+Stopped. I'll carry the load.
+== logi.autodrop_off@serious
+Auto drop-off off.
+Automatic drop-off disabled.
+I'll no longer unload on my own.
+Disabled.
+Noted: no automatic drop-offs.
+Off.
+
+== logi.dropoff_trip
+Pack's nearly full. Popping to the drop-off, then back to it.
+Quick trip to the drop-off. I'll be right back.
+Full up. Unloading, then carrying on.
+Off to the drop-off. Don't start without me.
+Emptying out at the drop-off. Back in a minute.
+Drop-off run. Then more of the same.
+== logi.dropoff_trip@gloomy
+Full again. Off to the drop-off. I'll be back. Eventually.
+The pack's heavy. Like my heart. Unloading.
+Drop-off trip. The one bit of exercise I can't avoid.
+To the drop-off. And back. And on we go.
+Pack full. Off I trudge.
+Unloading. Then back to the grind.
+== logi.dropoff_trip@serious
+Pack full: unloading at the drop-off.
+Going to the drop-off; returning after.
+Drop-off trip.
+Unloading, then resuming.
+Pack near capacity. Drop-off run.
+Heading to the drop-off.
+
+== logi.haul_start
+Hauling from {from} to {to}. Say stop when you've had enough.
+Right. {from} to {to}, on repeat, until you say stop.
+Back and forth between {from} and {to}. I'll count the trips.
+Haul started. {from}, {to}, repeat.
+On it. Everything from {from} to {to}.
+{from} to {to}. I'll keep at it until you stop me.
+[daft] From {from} to {to}. I'm basically a minecart with opinions.
+== logi.haul_start@gloomy
+{from} to {to}. Back and forth until the end of time. Or until you say stop.
+Hauling. The walk is long and the loads are heavy.
+{from} to {to}, over and over. This is my life now.
+Hauling begins. Stop me before I wear a groove in the ground.
+Fine. I'll carry it all from {from} to {to}.
+Started. Tell me when to stop. Please.
+== logi.haul_start@serious
+Hauling from {from} to {to} until told to stop.
+Haul started: {from} to {to}.
+Running loads from {from} to {to}.
+Repeating haul: {from} to {to}.
+Transport loop started.
+Hauling everything from {from} to {to}.
+
+== logi.haul_trip
+Trip {trip} done. {n} moved so far.
+That's trip {trip}. {n} in total.
+Another load in. {n} so far, {trip} trips.
+Trip {trip}. Going back for more.
+{n} moved over {trip} trips. Back I go.
+Trip {trip} unloaded.
+== logi.haul_trip@gloomy
+Trip {trip}. {n} moved. My feet have opinions.
+{trip} trips. {n} things. Back again.
+Trip {trip}. The road knows me by name now.
+Another one done. {n} in all. More to come.
+{trip} trips. Still going. Still hauling.
+Trip {trip}. Don't count the steps, they're depressing.
+== logi.haul_trip@serious
+Trip {trip} complete: {n} moved.
+{n} moved in {trip} trips.
+Trip {trip} done.
+Load delivered. Total {n}.
+Trip {trip}: unloaded.
+Running total: {n}.
+
+== logi.haul_wait
+Nothing left at {from}. I'll check again shortly.
+{from}'s empty for now. Waiting for more.
+Run out at {from}. I'll look again in a bit.
+Nothing to haul right now. I'll keep checking.
+{from} is bare. I'll wait.
+All moved. I'll check {from} again soon.
+== logi.haul_wait@gloomy
+Nothing left at {from}. I'll stand here and wait. I'm good at that.
+Empty. I'll wait for more, like always.
+{from}'s empty. A rare moment of peace.
+Nothing to carry. Strangely, that's worse.
+I'll wait. Something will turn up. Probably.
+Empty for now. I'll check again.
+== logi.haul_wait@serious
+Source empty. Checking again shortly.
+{from} empty; waiting.
+Nothing to haul at present.
+Paused: {from} empty.
+Waiting for items at {from}.
+Will recheck {from} soon.
+
+== logi.stopped
+Stopped. Moved {n} in all.
+Right, stopping. That's {n} moved.
+Stopped. {n} shifted before you called it.
+Fine. {n} moved, and I'm done.
+That's me stopped. {n} moved.
+Stopping. Final count: {n}.
+== logi.stopped@gloomy
+Stopped. {n} moved. I'll try to forget the walking.
+Done, I suppose. {n} in all.
+Stopped. {n}. It was something.
+That's it, then. {n} moved.
+Stopped. {n}. Not that anyone was counting. I was.
+Fine. {n}, and stop.
+== logi.stopped@serious
+Stopped. {n} moved.
+Halted. Total moved: {n}.
+Stopped after moving {n}.
+Job stopped. {n} moved.
+Stopped. Count: {n}.
+Ended. {n} moved.
+
+== logi.sorted
+Sorted. {n} chest(s), everything in its place.
+Done. Like goes with like now.
+All sorted. You'll find things faster.
+Tidied. {n} chest(s). Try not to undo it in one evening.
+Sorted by kind. It's almost relaxing.
+Done. {n} chest(s), all in order.
+[daft] Sorted. Marie Kondo would weep. Tidily.
+== logi.sorted@gloomy
+Sorted. It'll be chaos again by tomorrow.
+Done. Order, for now.
+{n} chest(s) sorted. Enjoy it while it lasts.
+Tidied. Entropy wins eventually.
+Sorted. It's the only order in my life.
+Done. Everything in its place. Except me.
+== logi.sorted@serious
+Sorted {n} chest(s).
+Chests sorted by kind.
+Done: items grouped and compacted.
+Sorting complete.
+{n} chest(s) organised.
+Sorted.
+
+== logi.fuelled
+Fuelled {n} furnace(s).
+Furnaces fuelled. {n} of them.
+Fuel in. They'll keep burning for a while.
+Done. {n} furnace(s) topped up with fuel.
+That's the fuel in.
+Furnaces are fed.
+== logi.fuelled@gloomy
+Fuelled. They'll burn through it. Everything burns out.
+{n} furnace(s) fed. They're never full for long.
+Fuel in. Warmth, at last. Not for me.
+Done. Burn bright, little furnaces.
+Furnaces fuelled. I'll do it again soon.
+That's the fuel in. For now.
+== logi.fuelled@serious
+Fuelled {n} furnace(s).
+Fuel added to {n} furnace(s).
+Furnaces fuelled.
+Done: fuel in.
+{n} furnace(s) fuelled.
+Fuel loaded.
+
+== logi.no_fuel
+I've no fuel. Coal, charcoal, planks or logs would do.
+Nothing to burn. Shall I chop some logs?
+No fuel on me or in your chests. Want me to get some wood?
+I need fuel for that. Logs will do in a pinch.
+Out of fuel. Coal would be lovely. Logs, if not.
+No fuel anywhere I know. Shall I go and get some?
+== logi.no_fuel@gloomy
+No fuel. Nothing to burn. Cold furnaces, cold me.
+I've nothing to put in it. Nothing at all.
+No fuel. Shall I go and cut down a tree? Poor tree.
+Out of fuel. Of course.
+Nothing to burn. I'll go and find something.
+No coal, no charcoal, no logs. Just me.
+== logi.no_fuel@serious
+No fuel available.
+I need coal, charcoal, planks or logs.
+Out of fuel. Shall I gather logs?
+No fuel in my pack or storage.
+Fuel required.
+No fuel found.
+
+== logi.smelt_start
+Smelting {n} {item}. Furnaces take their time, so do I.
+{n} {item} in the furnace. About {secs} seconds.
+Smelting. {n} {item}, {secs} seconds or so.
+In they go. {n} {item}. I'll wait for them.
+{n} {item} cooking. I'll collect them when they're done.
+Furnace on. {n} {item}, ready in about {secs} seconds.
+== logi.smelt_start@gloomy
+{n} {item}, smelting. I'll stand here and watch it burn.
+{secs} seconds of waiting. I'm good at waiting.
+Into the fire with them. {n} {item}.
+Smelting {n} {item}. It's warm, at least.
+{n} {item} in the furnace. Time passes slowly.
+Smelting. {secs} seconds. I'll count them.
+== logi.smelt_start@serious
+Smelting {n} {item}: about {secs} seconds.
+{n} {item} loaded into the furnace.
+Smelting started: {n} {item}.
+{n} {item} smelting. Collecting when done.
+Furnace loaded: {n} {item}.
+Smelting {n} {item}.
+
+== logi.collected
+Collected {n} from the furnace.
+{n} out of the furnace and into my pack.
+Furnace emptied. {n} of them.
+Took out {n}.
+Got {n} out of there.
+{n} collected.
+== logi.collected@gloomy
+{n} collected. Still warm.
+Took {n} out. The furnace looks lonely now.
+{n} out. Another furnace emptied.
+Collected {n}. Onward.
+{n} from the furnace. Done.
+Emptied it. {n}.
+== logi.collected@serious
+Collected {n} from the furnace.
+Output collected: {n}.
+{n} taken from the furnace.
+Furnace output: {n}, collected.
+Collected.
+{n} retrieved.
+
+== logi.composted
+Composted {n}. Bone meal soon, with luck.
+{n} in the composter. It's filling up.
+That's {n} composted.
+In they go. {n} for the compost.
+Composted {n}. Nature's recycling.
+{n} composted.
+[daft] {n} composted. Rotten business, this.
+== logi.composted@gloomy
+{n} composted. To dust we all return.
+Composted {n}. That's what happens to everything.
+{n} into the composter. Decay, but useful.
+Composted. {n}. The circle of life, slowly.
+{n} gone to compost.
+Done. {n} composted.
+== logi.composted@serious
+Composted {n}.
+{n} items composted.
+Composter: {n} added.
+Done: {n} composted.
+{n} into the composter.
+Composting complete: {n}.
+
+== logi.forgot
+Forgotten. I won't touch it again.
+Right, that chest is off my list.
+Noted. I'll leave that one alone.
+Forgotten. Not my chest.
+Off the map. I won't use it.
+Fine. It's dead to me. Figuratively.
+== logi.forgot@gloomy
+Forgotten. Everything is, eventually.
+I'll forget it. I'm good at being forgotten.
+Off the list. Gone.
+I won't use it again. Goodbye, chest.
+Forgotten. As if it never was.
+Done. It's not ours.
+== logi.forgot@serious
+Forgotten: I won't use that chest.
+Removed from the storage map.
+That chest is off my list.
+I'll leave that container alone.
+Removed.
+Noted. Not using it.
+
+== logi.locked_mine
+{item} is a level {need} job. I'm level {level}. I can gather something else, or carry whatever you mine.
+Mining {item} opens at level {need}; I'm {level}. Want something else gathered instead?
+Not yet. {item} needs level {need}, and I'm level {level}. I'll carry yours if you mine it.
+I can't break {item} till level {need}. I'm {level}. Shall I fetch stone instead, or haul what you dig?
+Level {need} for {item}. I'm {level}. Mine it yourself and I'll do the carrying.
+{item} is above my level: {need}, and I'm {level}. Something else?
+== logi.locked_mine@gloomy
+{item} is level {need}. I'm {level}. Always one rung too low.
+I can't mine {item} until level {need}. I'm only {level}. I can carry, at least.
+Level {need} for {item}. I'm {level}. The ladder goes on.
+Not at level {level}. {item} wants {need}. I'll haul what you dig.
+{item}: level {need}. I'm {level}. Story of my life.
+I'm level {level}. {item} needs {need}. I could carry yours instead.
+== logi.locked_mine@serious
+{item} needs level {need}; I'm level {level}. I can gather something else or carry what you mine.
+Mining {item} unlocks at level {need}. Currently level {level}.
+Can't mine {item} until level {need}.
+Level {need} required for {item}. I'm {level}.
+{item} is locked until level {need}.
+Not at level {level}: {item} needs {need}.
+
+== logi.empty_done
+Pack emptied. {n} item(s) into {chests} chest(s).
+Unloaded. {n} item(s), sorted into {chests} chest(s).
+That's my pack empty. {n} item(s) put away.
+Done. {n} item(s), each where its kind already lives.
+Emptied out. {n} item(s) stored.
+All put away. {n} item(s), {chests} chest(s).
+== logi.empty_done@gloomy
+Empty. My pack, I mean. {n} item(s) put away.
+Unloaded {n}. I feel lighter. Physically.
+Pack empty. {n} item(s) gone into the dark.
+{n} item(s) stored. Now I've got nothing. Again.
+Emptied. {n} item(s), {chests} chest(s).
+Done. {n} put away.
+== logi.empty_done@serious
+Pack emptied: {n} item(s) into {chests} chest(s).
+Unloaded {n} item(s).
+{n} item(s) stored in {chests} chest(s).
+Pack empty.
+Done: {n} item(s) put away.
+Stored {n} item(s).
+
+== logi.moved
+Moved {n} from {from} to {to}.
+{n} shifted from {from} to {to}.
+Done. {n} moved over to {to}.
+{to} has the lot now. {n} moved.
+That's {n} from {from} to {to}.
+All moved. {n} in {to}.
+== logi.moved@gloomy
+Moved {n}. From one box to another. Such is progress.
+{n} moved to {to}. They looked fine where they were.
+Done. {n} in {to}. {from} looks empty now.
+{n} moved. {from} to {to}. Back and forth.
+Moved them. {n}. They didn't thank me.
+{n} moved over.
+== logi.moved@serious
+Moved {n} from {from} to {to}.
+{n} transferred to {to}.
+Transfer complete: {n}.
+{n} moved.
+Done: {from} to {to}, {n} items.
+Moved {n} to {to}.
+
+== logi.no_chest
+I don't know a chest for that. Ping one and say it again.
+Which chest? Ping it or look at it and ask again.
+I don't know which chest you mean. Point me at it.
+No chest I know fits that. Ping one.
+I can't find a chest for that. Show me which.
+Which one? Look at it or ping it, and ask again.
+== logi.no_chest@gloomy
+Which chest? I don't know it. Ping it, please.
+I can't find that chest. Things hide from me.
+No idea which chest. Point at it and try again.
+I don't know that one. Ping it for me.
+Which chest? Show me.
+I can't see a chest like that. Ping it.
+== logi.no_chest@serious
+No matching chest. Ping one and repeat the order.
+Which chest? Please ping it.
+Chest not found. Point me at it.
+I don't know that container. Ping it.
+Please ping the chest.
+Unknown chest. Look at it or ping it.
+
+== logi.listed
+Here's your storage. {n} container(s) I know of.
+Your storage map. {n} container(s).
+{n} container(s) on the map. Have a look.
+That's the storage. {n} container(s) so far.
+Opened the storage view. {n} container(s).
+Storage, at a glance. {n} container(s).
+== logi.listed@gloomy
+The storage map. {n} container(s). Full of things we'll never use.
+{n} container(s). It's quite a collection of boxes.
+Your storage. Have a look. Try not to despair.
+{n} container(s) on the map.
+Here's everything we own. In boxes.
+The storage view. {n} container(s).
+== logi.listed@serious
+Storage view: {n} container(s).
+{n} known container(s).
+Showing your storage.
+Storage map opened.
+{n} container(s) listed.
+Here's the storage view.
+
+== craft.short
+Need {need}. Hand them over, or shall I go and find them?
+I'm short {need}. Give them to me, or I'll go and get them.
+To make that I need {need}. Yours, storage, or shall I fetch?
+Missing {need}. Hand them over, or I'll go looking.
+That needs {need} more than I've got. Your choice how.
+Short of {need}. Give me them, or I'll gather.
+== craft.short@gloomy
+I need {need}. I never have what I need.
+Short {need}. Hand them over, or I'll trudge off and find them.
+Missing {need}. As usual.
+I'd make it, but I need {need}. Give, or I go.
+{need}, missing. Shall I go out and suffer for them?
+Need {need}. I'll wait. Or go. Your call.
+== craft.short@serious
+Missing {need}. Hand over, or shall I gather?
+Need {need} to craft that.
+Shortfall: {need}.
+Required: {need}. Hand over or gather?
+I'm missing {need}.
+To craft it I need {need}.
+
+== craft.recipe
+{answer}
+Here's how. {answer}
+{answer} I've put it in the Craft view.
+The recipe: {answer}
+{answer} That's all it takes.
+{answer}
+== craft.recipe@gloomy
+{answer} Simple, unlike life.
+{answer}
+The recipe. {answer}
+{answer} If only everything had a recipe.
+{answer} There.
+Here. {answer}
+== craft.recipe@serious
+{answer}
+Recipe: {answer}
+{answer}
+{answer}
+Ingredients: {answer}
+Here's the recipe. {answer}

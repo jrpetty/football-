@@ -44,6 +44,7 @@ public final class PaServer {
             }
             case "talk" -> talk(p, r, a, args);
             case "ping" -> ping(p, r, a, args);                     // [pa33c-2b] a ping wheel choice (a bare ping never reaches here)
+            case "logi" -> PaLogiNet.act(p, r, a, args);            // [pa36] the Storage view, the chest wheel's pickers, the Craft view
             case "mark" -> {                                        // [pa33c-2b] a bare ping shared with players near by (never an order)
                 if (!MARKS.computeIfAbsent(p.getUUID(), k -> new PaPings.Rate()).allow(System.currentTimeMillis())) return;
                 BlockPos at = new BlockPos(args.getInt("x"), args.getInt("y"), args.getInt("z"));
@@ -123,6 +124,7 @@ public final class PaServer {
                 PaNet.refresh(p, a);
             }
             case "glance" -> {                                      // [pa33d] a bare ping: it looks over, nothing more (no order, no log)
+                PaLogistics.seen(p, new BlockPos(args.getInt("x"), args.getInt("y"), args.getInt("z")));   // [pa36] a pinged chest is "this chest" for a while
                 if (a == null || !a.obeys(p) || a.getTarget() != null || a.isSleeping() || a.distanceToSqr(p) > 48 * 48) return;
                 if (!MARKS.computeIfAbsent(p.getUUID(), k -> new PaPings.Rate()).allow(System.currentTimeMillis())) return;
                 a.mind.glanceAt = new BlockPos(args.getInt("x"), args.getInt("y"), args.getInt("z"));
@@ -171,6 +173,7 @@ public final class PaServer {
         BlockPos at = args.contains("x") ? new BlockPos(args.getInt("x"), args.getInt("y"), args.getInt("z")) : null;
         int ent = args.contains("ent") ? args.getInt("ent") : -1;
         String label = args.getString("label");
+        if (at != null) PaLogistics.seen(p, at);                    // [pa36]
         switch (o.id()) {
             case "look" -> {
                 String key = "ping.look." + target.name().toLowerCase(java.util.Locale.ROOT);
@@ -241,6 +244,10 @@ public final class PaServer {
         String[] w = text.substring(1).split(" ");
         switch (w[0]) {
             case "fetchdeath" -> PaBanter.fetchDeath(a);           // [pa33b]
+            case "logi" -> {                                        // [pa36] "Hand over", "Look further", a craft's choices
+                if (w.length > 1 && w[1].startsWith("craft")) PaCraft.choice(p, a, w[1]);
+                else PaLogiNet.hash(p, a, w);
+            }
             case "memforgetall" -> { PaMemoryAct.forgetAll(a); return; }     // [pa35] "forget everything", confirmed
             case "memkeep" -> PaTalk.reply(a, "Right. I'll hang on to all of it.", null, true);
             case "memlike", "memdislike" -> {                        // [pa35] "I like Sam": a thing after all, not a person

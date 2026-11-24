@@ -77,6 +77,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.goalSelector.addGoal(2, new PaTaskGoal(this));
         this.goalSelector.addGoal(1, new PaCome.ComeGoal(this));          // [pa33g] told to come: before its work
         this.goalSelector.addGoal(3, new PaBowGoal(this));                 // [pa33g] its own archery (PaBow) in a fight
+        this.goalSelector.addGoal(2, new PaLogiGoal(this));                // [pa36] chests and logistics
     }
 
     /** Tests: the goals running just now, by name. */
