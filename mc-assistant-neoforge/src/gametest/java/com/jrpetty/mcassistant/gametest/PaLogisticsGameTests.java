@@ -165,12 +165,10 @@ public class PaLogisticsGameTests {
         long t0 = level.getGameTime();
         say(p, a, "gather 100 stone and put it in this chest", chest);
         helper.assertTrue(a.plan.total() == 1, "one step planned: " + a.plan.total() + " (" + lastWords(a) + ")");
-        // what a player would take: 100 x the stone pickaxe's vanilla break time on stone
-        net.minecraft.world.entity.LivingEntity probe = a;
-        ItemStack held = a.getMainHandItem().copy();
-        a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_PICKAXE));
-        int each = PaPace.breakTicks(probe, Blocks.STONE.defaultBlockState(), level, new BlockPos(x + 8, y, Z));
-        a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, held);
+        // what a player would take: 100 x the stone pickaxe's vanilla break time on stone, standing on the ground (12 ticks)
+        float speed = new ItemStack(Items.STONE_PICKAXE).getDestroySpeed(Blocks.STONE.defaultBlockState());
+        int each = PaPace.ticksToBreak(Blocks.STONE.defaultBlockState().getDestroySpeed(level, new BlockPos(x + 8, y, Z)),
+            PaPace.digSpeed(speed, 0, 0, 0, 1.0F, false, 0.2F, true), true);
         String[] hud = {""};
         helper.onEachTick(() -> {
             if (a.state() != null && a.state().contains("/100")) hud[0] = a.state();

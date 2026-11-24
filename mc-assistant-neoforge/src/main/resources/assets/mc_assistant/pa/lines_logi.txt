@@ -9,7 +9,7 @@ Right. {n} {item}, into {chest}. Back shortly.
 {n} {item} for {chest}. I'll keep count so you don't have to.
 On it. {chest} will have {n} {item} by the time I'm done.
 {n} {item}. Off I go. Try not to move the chest.
-Fine. {n} {item}, delivered. The walking's included.
+Fine. {n} {item}, coming up. The walking's on me.
 {n} {item} into {chest}. I'll make as many trips as it takes. Which is the bit I like least.
 [daft] {n} {item}? That's my favourite number of {item}. Coincidence.
 == logi.fill_start@gloomy
