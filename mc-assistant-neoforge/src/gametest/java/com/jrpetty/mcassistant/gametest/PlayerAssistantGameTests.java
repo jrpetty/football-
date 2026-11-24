@@ -1590,7 +1590,10 @@ public class PlayerAssistantGameTests {
             .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
         // the night's own monsters kept away (they'd rightly keep it up): only the test's zombie comes near
         net.minecraft.world.entity.Entity[] ours = {null};
+        boolean[] trace = {false};
         helper.onEachTick(() -> {
+            if (trace[0] && helper.getTick() % 20 == 0) Kit.log("pai46 at " + a.blockPosition().toShortString() + " sleeping " + a.isSleeping() + " wanted " + a.sleepWanted
+                + " nav done " + a.getNavigation().isDone() + " goals " + a.goalSelectorForTests() + " mode " + a.getMode() + " plan idle " + a.plan.idle() + " task " + a.task);
             for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,      // slimes too (a flat world's night)
                     new net.minecraft.world.phys.AABB(head).inflate(24), e -> e instanceof net.minecraft.world.entity.monster.Enemy && e != ours[0])) m.discard();
         });
@@ -1615,7 +1618,9 @@ public class PlayerAssistantGameTests {
                     helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_danger"), "a monster wakes it: " + lastWords(a));
                     z.discard();
                     say(p, a, "go to bed");
+                    trace[0] = true;
                     w.await(helper, 400, a::isSleeping, () -> {
+                        trace[0] = false;
                         helper.assertTrue(a.isSleeping(), "back to bed (wanted " + a.sleepWanted + ", target " + a.getTarget() + ", at " + a.blockPosition().toShortString() + ", " + lastWords(a) + ")");
                         say(p, a, "wake up");
                         helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_told"), "\"wake up\": " + lastWords(a));

@@ -79,6 +79,14 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.goalSelector.addGoal(3, new PaBowGoal(this));                 // [pa33g] its own archery (PaBow) in a fight
     }
 
+    /** Tests: the goals running just now, by name. */
+    public String goalSelectorForTests() {
+        StringBuilder b = new StringBuilder();
+        this.goalSelector.getAvailableGoals().stream().filter(net.minecraft.world.entity.ai.goal.WrappedGoal::isRunning)
+            .forEach(g -> b.append(g.getGoal().getClass().getSimpleName()).append(' '));
+        return b.toString().trim();
+    }
+
     /** [pa33g] Its bow is drawn its own way (PaBowGoal, PaBow), never the town archers'. */
     @Override
     public boolean ownBow() {
@@ -89,7 +97,8 @@ public class PlayerAssistantEntity extends AssistantEntity {
      *  player (nor the catch-up hop) while it has a job here; it keeps its chunks awake instead (PaChunks). */
     @Override
     public boolean walkingToOwner() {
-        return mind.come != null || task != null || !plan.idle() && !plan.paused;
+        return mind.come != null || task != null || !plan.idle() && !plan.paused
+            || sleepWanted;                                             // on its way to bed: the follow pulled it back each time (pai46)
     }
 
     // ------------------------------------------------------------------ who it is
