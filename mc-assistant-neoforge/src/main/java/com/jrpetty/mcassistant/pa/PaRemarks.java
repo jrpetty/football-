@@ -156,6 +156,15 @@ public final class PaRemarks {
 
     // ------------------------------------------------------------------ chat or an order
 
+    /** Everyday words of small talk (with the common words the order reader knows, enough to tell chat from gibberish). */
+    static final Set<String> CHATTY = Set.of("i", "i'm", "im", "me", "my", "mine", "you", "your", "we", "our", "us", "it", "it's", "its", "is", "was",
+        "are", "were", "be", "been", "am", "a", "an", "the", "and", "or", "but", "so", "to", "of", "in", "on", "at", "for", "with", "just", "really",
+        "very", "bit", "quite", "today", "tonight", "yesterday", "tomorrow", "day", "night", "morning", "weather", "sun", "sunset", "sunrise", "rain",
+        "cold", "hot", "warm", "nice", "lovely", "had", "have", "has", "long", "short", "bored", "tired", "happy", "sad", "hungry", "like", "love",
+        "hate", "think", "feel", "feeling", "looks", "look", "says", "said", "hi", "hello", "hey", "dog", "cat", "hat", "minecraft", "game", "what",
+        "how", "who", "why", "this", "that", "here", "there", "all", "too", "well", "oh", "ah", "hmm", "yeah", "yes", "no", "not", "never", "always",
+        "again", "now", "then", "still", "about", "life", "world", "home", "friend", "mate", "great", "good", "bad", "okay", "ok", "fine", "busy");
+
     /** Words an order starts with. */
     static final Set<String> ORDER_VERBS = Set.of("get", "bring", "make", "craft", "build", "go", "come", "follow", "mine", "dig", "chop", "cut",
         "gather", "collect", "fetch", "put", "place", "kill", "attack", "guard", "find", "give", "take", "smelt", "cook", "plant", "farm",
@@ -177,6 +186,10 @@ public final class PaRemarks {
         String[] w = s.split(" ");
         if (w.length > 10) return false;
         if (ORDER_VERBS.contains(w[0])) return false;
+        // real words, mostly ("blargh flob" is nonsense to ask back about, not chat)
+        int known = 0;
+        for (String x : w) if (CHATTY.contains(x) || GOOD.contains(x) || BAD.contains(x) || PaWords.COMMON.contains(x) || PaWords.VOCAB.contains(x)) known++;
+        if (known * 2 < w.length) return false;
         if (s.matches("^(?:where|how many|how much|what's in|whats in|what is in)\\b.*")) return false;   // questions the parser asks back about
         return true;
     }

@@ -68,7 +68,7 @@ class PaRemarksTest {
                 "the sunset looks lovely", "i like your hat", "bit cold today"))
             assertTrue(PaRemarks.chat(s), "chat: " + s);
         for (String s : List.of("get me some flibber", "build a zorbon", "make me a snarg", "please fetch the wotsit", "can you mine the glorp",
-                "where is the thing", "how many logs do you have"))
+                "where is the thing", "how many logs do you have", "blargh flob", "zxq wibble"))
             assertFalse(PaRemarks.chat(s), "an order (misheard) is asked back about: " + s);
     }
 
