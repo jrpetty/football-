@@ -131,7 +131,7 @@ public final class PaMemory {
                 case FOE -> subject + ": not to be trusted";
                 case ONLY_ME -> "Orders from you only";
                 case CLEAN -> "No swearing around " + subject;
-                case SPARE -> (value.equals("#animals") ? "Never hurt " : "Never break ") + subject;   // [pa35] cows are hurt, not broken
+                case SPARE -> (extra.equals("#animals") ? "Never hurt " : "Never break ") + subject;   // [pa35] cows are hurt, not broken
                 case STOCK -> "Always keep " + n + " " + subject;
                 case RULE -> cap(when == When.NEAR ? "when " + extra + " is about" : when.says) + ": " + value;
                 case REMINDER -> "Remind you" + (value.isEmpty() ? "" : " to " + value);

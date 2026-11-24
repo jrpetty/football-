@@ -227,6 +227,7 @@ public class PaScreen extends Screen {
             g.drawString(font, label, tx + com.jrpetty.mcassistant.pa.PaLayout.TAB_PAD / 2, top + 32, on ? UiStyle.TEXT : muted(), false);
             final String t = TABS[i];
             zone(tx, top + 29, tw, 14, () -> { tab = t; scroll = 0; picker = ""; pick.clear(); confirmDismiss = false; PaClientConfig.set(PaClientConfig.LASTTAB, t);
+                if (!t.equals("talk") && getFocused() == input) { input.setFocused(false); setFocused(null); }   // [pa35] the keys work the tab, not a hidden box
                 if (t.equals("stats") && !PaClientConfig.get(PaClientConfig.PROGRESSTOUR, false) && progressTip < 0) progressTip = 0; }, "");   // [pa35] three tips, once
             tx += tw + 2;
         }
@@ -1069,7 +1070,7 @@ public class PaScreen extends Screen {
         g.drawString(font, count, x + iw - 112 - font.width(count), y + 3, n >= cap ? UiStyle.DANGER : faint(), false);
         if (in(mx, my, x + iw - 112 - font.width(count), y, font.width(count), 12))
             tipNow = "Things kept (places are kept apart, up to 32). The server's operators set the limit.";
-        toggleAt(g, "Remembering", !paused, x + iw - 104, y, 104, mx, my,
+        toggleAt(g, "Memory", !paused, x + iw - 104, y, 104, mx, my,
             paused ? "Paused: it keeps nothing new until you turn this on. What it knows still counts." : "On: it keeps what you tell it. Off pauses that; what it knows still counts.",
             () -> { CompoundTag t = new CompoundTag(); t.putString("op", "pause"); t.putBoolean("on", !paused); PaClient.send("memop", t); });
         int cy = y + 16;
@@ -1885,7 +1886,7 @@ public class PaScreen extends Screen {
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
         if (tour >= 0 && key == GLFW.GLFW_KEY_ESCAPE) { tour = TOUR.length; return true; }
-        if (input.isFocused() && !(key == GLFW.GLFW_KEY_TAB && (mods & GLFW.GLFW_MOD_CONTROL) != 0)) {
+        if (input.isFocused() && tab.equals("talk") && !(key == GLFW.GLFW_KEY_TAB && (mods & GLFW.GLFW_MOD_CONTROL) != 0)) {   // [pa35] only on Talk, where it's seen
             if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { sendTyped(); return true; }
             if (key == GLFW.GLFW_KEY_TAB) {
                 List<String> sug = PaUnderstand.complete(input.getValue(), 1);
