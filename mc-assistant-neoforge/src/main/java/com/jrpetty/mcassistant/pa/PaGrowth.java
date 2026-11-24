@@ -70,12 +70,12 @@ public final class PaGrowth {
         new Metric("fishwait", "Waits for a bite", "s", false, PaKnack::meanWaitSeconds, "The hook's real bite times, open water, no Lure on the rod: a quiet line and a good spot take a little off (half a level of Lure at most)"),
         new Metric("treasure", "Treasure on a catch", "%.", true, l -> 100 * PaKnack.treasureChance(PaKnack.luck(l)), "The game's fishing loot: practice is worth a little Luck of the Sea (one level at most)"),
         new Metric("lostbites", "Bites it loses", "%.", false, l -> 100 * PaKnack.lostBites(l), "Striking too soon, or looking away when the float dips"),
-        new Metric("enchant", "Misjudges enchant offers by", "%", false, l -> 100 * PaKnack.enchantSigma(l), "How far off its sense of the table's three offers is: it reads the clue better and wastes fewer levels"),
-        new Metric("trade", "Misjudges a trade by", "%", false, l -> 100 * PaKnack.tradeSigma(l), "How far off its sense of a villager's price is"),
-        new Metric("villagers", "Compares prices with", "n", true, l -> PaKnack.villagersCompared(l), "How many villagers near the one you sent it to it checks for a better price"),
-        new Metric("misplace", "Misplaces a block", "%.", false, l -> 100 * PaKnack.misplace(l), "A block set one cell off now and then, put right straight away (never your builds, never anything rare)"),
-        new Metric("wrongturn", "Takes a wrong turn", "%", false, l -> 100 * PaKnack.wrongTurn(l), "On a long walk: a few steps the wrong way, then it re-paths"),
-        new Metric("wrongtool", "Picks up the wrong tool", "%", false, l -> 100 * PaKnack.wrongTool(l), "For a new job: one swing with the wrong tool before it switches"));
+        new Metric("enchant", "Enchant offer error", "%", false, l -> 100 * PaKnack.enchantSigma(l), "How far off its sense of the table's three offers is: it reads the clue better and wastes fewer levels"),
+        new Metric("trade", "Trade price error", "%", false, l -> 100 * PaKnack.tradeSigma(l), "How far off its sense of a villager's price is"),
+        new Metric("villagers", "Villagers compared", "n", true, l -> PaKnack.villagersCompared(l), "How many villagers near the one you sent it to it checks for a better price"),
+        new Metric("misplace", "Misplaced blocks", "%.", false, l -> 100 * PaKnack.misplace(l), "A block set one cell off now and then, put right straight away (never your builds, never anything rare)"),
+        new Metric("wrongturn", "Wrong turns", "%", false, l -> 100 * PaKnack.wrongTurn(l), "On a long walk: a few steps the wrong way, then it re-paths"),
+        new Metric("wrongtool", "Wrong tool first", "%", false, l -> 100 * PaKnack.wrongTool(l), "For a new job: one swing with the wrong tool before it switches"));
 
     /** Break speed reads as a player's at every level, and says so. */
     public static final String BREAKING = "As a player, by your tool";

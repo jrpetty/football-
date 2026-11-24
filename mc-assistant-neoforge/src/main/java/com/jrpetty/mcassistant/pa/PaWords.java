@@ -189,6 +189,9 @@ public final class PaWords {
         {"\\bgo two\\b", "go to"},
         {"\\b(go to|to|at) the minds?$", "$1 the mine"},
         {"\\b(chop|cut|fell)( down)? (that|this|the) three\\b", "$1$2 $3 tree"},
+        {"\\bpelted with\\b", "pelt it with"},
+        {"\\bcure (?:home|tame|hum|them|team|him)$", "cure him"},
+        {"\\bhook (?:home|came|hum|cam) in$", "hook him in"},
     };
 
     /** [pa33b] A spoken order with the recogniser's usual British-vowel slips put right (see MISHEARD). */
