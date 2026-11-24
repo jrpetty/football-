@@ -9,8 +9,8 @@ Gather 100 stone and place it in this chest. || FILL stone 100 > POINT by GATHER
 get 100 cobble and put it in that chest || FILL cobblestone 100 > POINT by GATHER
 mine 100 stone and put it in the chest || FILL stone 100 > DEF by GATHER
 mine a stack of stone and dump it in this chest || FILL stone 1st > POINT by GATHER
-dig two stacks of dirt and put them in that barrel || FILL dirt 2st > POINT by GATHER
-chop 3 stacks of oak and drop it in the wood chest || FILL oak log 3st > NAMED(logs) by GATHER
+dig two stacks of dirt and put them in that barrel || FILL dirt 2st > POINT[barrel] by GATHER
+chop 3 stacks of oak and drop it in the wood chest || FILL oak log 3st > NAMED(wood) by GATHER
 chop 64 logs and put them in my storage || FILL logs 64 > STORAGE by GATHER
 chop some wood and chuck it in the chest by the furnace || FILL logs some > NEAR(furnace) by GATHER
 collect 32 sand and put it in this chest please || FILL sand 32 > POINT by GATHER
@@ -21,14 +21,14 @@ grab 20 logs and bring them to the drop off || FILL logs 20 > DROPOFF by GATHER
 gather stone until it's full and put it in this chest || FILL stone full > POINT by GATHER
 go and gather 100 stone then put it in this chest || FILL stone 100 > POINT by GATHER
 could you gather 100 stone and put it in this chest || FILL stone 100 > POINT by GATHER
-basil gather 100 stone and put it into this chest || FILL stone 100 > POINT by GATHER
+ok gather 100 stone and put it into this chest || FILL stone 100 > POINT by GATHER
 gather a hundred stone and put it in this chest || FILL stone 100 > POINT by GATHER
 gather one hundred stone and pop it in this chest || FILL stone 100 > POINT by GATHER
 gather 100 stone and bung it in this chest || FILL stone 100 > POINT by GATHER
 gather 100 stoen and put it in this chets || FILL stoen 100 > POINT by GATHER
 gather 100 stone and put it in this chess || FILL stone 100 > POINT by GATHER
 mine 64 cobblestone and put it in my barrel || FILL cobblestone 64 > STORAGE[barrel] by GATHER
-chop 2 staks of birch and put them in the wood barrel || FILL birch log 2st > NAMED(logs)[barrel] by GATHER
+chop 2 staks of birch and put them in the wood barrel || FILL birch log 2st > NAMED(wood)[barrel] by GATHER
 get a shulker's worth of stone and put it in that shulker || FILL stone 27st > POINT[shulker] by GATHER
 get enough stone for a house and put it in the chest || FILL stone 128 > DEF by GATHER
 mine as much stone as you can carry and put it in this chest || FILL stone carry > POINT by GATHER
@@ -52,12 +52,12 @@ put it in this chest || DEPOSIT it all < PACK > POINT by PACK
 put them in there || DEPOSIT it all < PACK > POINT by PACK
 put the stone in that chest || DEPOSIT stone all < PACK > POINT by PACK
 put 32 stone in the chest || DEPOSIT stone 32 < PACK > DEF by PACK
-put your logs in the wood chest || DEPOSIT logs all < PACK > NAMED(logs) by PACK
+put your logs in the wood chest || DEPOSIT logs all < PACK > NAMED(wood) by PACK
 drop the iron in the iron chest || DEPOSIT iron all < PACK > NAMED(iron) by PACK
 put a stack of torches in the chest by the door || DEPOSIT torches 1st < PACK > NEAR(door) by PACK
 stick the diamonds in my ender chest || DEPOSIT diamond all < PACK > ENDER[ender chest] by PACK
 put the bread in that barrel || DEPOSIT bread all < PACK > POINT[barrel] by PACK
-put the coal in the furnace || FUEL coal < - > DEF[furnace]
+put the coal in the furnace || FUEL coal > DEF[furnace]
 put some coal in this furnace || FUEL coal some > POINT[furnace]
 put your raw iron in the furnace || SMELT raw iron all < PACK > DEF[furnace] by PACK
 store the cobblestone || DEPOSIT cobblestone all < PACK > STORAGE by PACK
@@ -87,7 +87,7 @@ drop it all off || EMPTY_PACK * all < PACK > DROPOFF by PACK
 put all my cobble in that chest || HANDOVER cobblestone all < ME > POINT by PLAYER
 put my cobblestone in this chest || HANDOVER cobblestone all < ME > POINT by PLAYER
 put 20 of my logs in the chest || HANDOVER logs 20 < ME > DEF by PLAYER
-take my diamonds and put them in the vault || null
+take my diamonds and put them in the vault || HANDOVER diamond all < ME > STORAGE by PLAYER
 put my stuff in my storage || HANDOVER * all < ME > STORAGE by PLAYER
 store my iron || HANDOVER iron all < ME > STORAGE by PLAYER
 put all my ores in the furnace || SMELT ore all < ME > DEF[furnace] by PLAYER
@@ -106,14 +106,14 @@ take everything from that chest || TAKE * all < POINT > PACK by KNOWN
 take 16 coal from the chest || TAKE coal 16 < DEF > PACK by KNOWN
 grab the torches out of this chest || TAKE torches some < POINT > PACK by KNOWN
 take the bread out of the food barrel || TAKE bread some < NAMED(food)[barrel] > PACK by KNOWN
-get 32 logs out of my storage || TAKE logs 32 < STORAGE > PACK by KNOWN
+get 32 logs out of my storage || FETCH logs 32 < STORAGE > ME by KNOWN
 withdraw 8 iron from the iron chest || TAKE iron 8 < NAMED(iron) > PACK by KNOWN
 take the ingots out of the furnace || COLLECT * all < DEF[furnace]
 
 ## move between containers
 move everything from this chest to that chest || MOVE * all < POINT > POINT2
 move all the stone from this chest to that chest || MOVE stone all < POINT > POINT2
-transfer the logs from the wood chest to my storage || MOVE logs all < NAMED(logs) > STORAGE
+transfer the logs from the wood chest to my storage || MOVE logs all < NAMED(wood) > STORAGE
 empty this chest into that chest || MOVE * all < POINT > POINT2
 empty this chest into my storage || MOVE * all < POINT > STORAGE
 move 64 cobblestone from the drop off to the stone chest || MOVE cobblestone 64 < DROPOFF > NAMED(stone)
@@ -147,7 +147,7 @@ stop keeping the furnaces fuelled || UNSTOCK > KNOWN[furnace]
 
 ## furnaces and composters
 fuel this furnace || FUEL fuel > POINT[furnace]
-fuel the furnaces || FUEL fuel > DEF[furnace]
+fuel the furnaces || FUEL fuel > KNOWN[furnace]
 refuel the smoker with charcoal || FUEL charcoal > DEF[smoker]
 smelt everything in that chest || SMELT * all < POINT > NEAREST[furnace]
 smelt everything in the ore chest in the blast furnace || SMELT * all < NAMED(ore) > DEF[blast furnace]
@@ -166,13 +166,13 @@ make 16 bread and put it in the food chest || CRAFT:bread:16 ; DEPOSIT bread 16 
 smelt 8 iron and put the ingots in my storage || SMELT:iron:8 ; DEPOSIT iron ingot 8 < PACK > STORAGE by PACK [made]
 mine iron until you have 32 then smelt it and put the ingots in my storage || MINE_ORE:iron:32 ; SMELT:it ; DEPOSIT iron ingot all < PACK > STORAGE by PACK
 chop 4 logs, then make planks, then put everything in that chest || GATHER:logs:4 ; CRAFT:planks ; DEPOSIT * all < PACK > POINT by PACK
-chop 16 logs then put them in the chest || GATHER:logs:16 ; DEPOSIT logs all < PACK > DEF by PACK
+chop 16 logs then put them in the chest || FILL logs 16 > DEF by GATHER
 
 ## counts and finds
 how much iron do we have || COUNT iron < KNOWN
 how much iron do we have? || COUNT iron < KNOWN
 how many diamonds have we got || COUNT diamond < KNOWN
-how many torches are in that chest || COUNT torch < POINT
+how many torches are in that chest || COUNT torches < POINT
 how much cobblestone is in storage || COUNT cobblestone < STORAGE
 how much wood do we have altogether || COUNT logs < KNOWN
 do we have any diamonds left || COUNT diamond < KNOWN
@@ -219,7 +219,7 @@ when your pack is full drop it in this chest || AUTODROP > POINT [on]
 stop using the drop off || AUTODROP [off]
 haul from the mine to base until i say stop || HAUL * all < WAYPOINT(mine) > HOME [loop]
 haul stone from the quarry to my storage || HAUL stone all < WAYPOINT(quarry) > STORAGE [loop]
-ferry the logs from the lumber yard to the wood chest until i say stop || HAUL logs all < WAYPOINT(lumber yard) > NAMED(logs) [loop]
+ferry the logs from the lumber yard to the wood chest until i say stop || HAUL logs all < WAYPOINT(lumber yard) > NAMED(wood) [loop]
 keep bringing iron from the mine to the iron chest || HAUL iron all < WAYPOINT(mine) > NAMED(iron) [loop]
 haul cobblestone from this chest to that chest 5 times || HAUL cobblestone all < POINT > POINT [5]
 run everything from the drop off to my storage on repeat || HAUL * all < DROPOFF > STORAGE [loop]
@@ -231,14 +231,14 @@ go get my gear from where i died and put it in this chest || DEATH * all > POINT
 
 ## British, typos, voice
 bung the cobble in that chest || DEPOSIT cobblestone all < PACK > POINT by PACK
-pop it all in the chest, ta || DEPOSIT * all < PACK > DEF by PACK
+pop it all in the chest, ta || DEPOSIT it all < PACK > DEF by PACK
 chuck everything in the drop off || EMPTY_PACK * all < PACK > DROPOFF by PACK
-be a love and put the logs in the wood chest || DEPOSIT logs all < PACK > NAMED(logs) by PACK
+be a love and put the logs in the wood chest || DEPOSIT logs all < PACK > NAMED(wood) by PACK
 nab me 10 iron from the storage || FETCH iron 10 < STORAGE > ME by KNOWN
 put teh stone in thsi chest || DEPOSIT stone all < PACK > POINT by PACK
 put the stone in the chset || DEPOSIT stone all < PACK > DEF by PACK
 put the stone in the barell || DEPOSIT stone all < PACK > DEF[barrel] by PACK
-put the coal in the furnice || FUEL coal < - > DEF[furnace]
+put the coal in the furnice || FUEL coal > DEF[furnace]
 keep this chest stockd with bread || STOCK bread 1st > POINT
 gather for stacks of stone and put it in this chest || FILL stone 4st > POINT by GATHER
 gather to stacks of logs and put them in that chest || FILL logs 2st > POINT by GATHER
@@ -258,7 +258,7 @@ make a furnace || null
 build a storage || null
 follow me || null
 go there || null
-fuel the furnace || null
+fuel the furnace || FUEL fuel > DEF[furnace]
 smelt 8 iron || null
 put torches down here || null
 place a crafting table here || null

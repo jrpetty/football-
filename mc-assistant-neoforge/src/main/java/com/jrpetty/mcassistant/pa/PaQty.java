@@ -179,7 +179,9 @@ public final class PaQty {
 
     /** Lower case, with a recogniser's "for stacks", "to stacks" (numbers written as words that sound like them) put right. */
     static String prep(String c) {
-        return c.toLowerCase(Locale.ROOT).replaceAll("\\b(?:for|four) (" + ST + ")\\b", "4 $1").replaceAll("\\b(?:to|too|two) (" + ST + ")\\b", "2 $1")
+        return c.toLowerCase(Locale.ROOT)
+            .replaceAll("\\benough ((?:[a-z]+ ){1,2})(for|to build|to make) ((?:a |an |the |my |our )?(?:small |little |big |large )?(?:house|home|cottage|cabin|hut|shelter|base|wall|tower|farm|bridge|path|floor|roof|room|platform))\\b", "enough $2 $3 $1")
+            .replaceAll("\\bas (much|many) ((?:[a-z]+ ){1,2})as (you|u|ya) (can|could) (carry|hold|fit|manage|take|get)\\b", "as $1 as $3 $4 $5 $2").replaceAll("\\b(?:for|four) (" + ST + ")\\b", "4 $1").replaceAll("\\b(?:to|too|two) (" + ST + ")\\b", "2 $1")
             .replaceAll("\\b(?:won|one) (" + ST + ")\\b", "1 $1").replaceAll("\\bate (" + ST + ")\\b", "8 $1");
     }
 

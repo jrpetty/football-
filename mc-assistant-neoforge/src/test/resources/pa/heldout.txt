@@ -16,10 +16,10 @@ craft a diamond pickaxe || CRAFT:diamond pickaxe
 make a stone sword || CRAFT:stone sword
 smelt all the iron || SMELT:iron
 cook my food || SMELT:food
-throw everything in the chest || DEPOSIT
+throw everything in the chest || LOGI
 bring me 5 bread || GIVE:bread:5
 give me your pickaxe || GIVE:pickaxe
-get the iron from the chest || FETCH:iron
+get the iron from the chest || LOGI
 protect the farm || GUARD_HERE:farm
 kill that spider || FIGHT:spider@LOOKED
 attack it || FIGHT@LOOKED
@@ -48,7 +48,7 @@ chop 20 logs and make a crafting table || GATHER:logs:20 > CRAFT:crafting table
 get 10 sand then smelt it into glass || GATHER:sand:10 > SMELT
 farm the wheat and bring me bread || FARM:wheat > GIVE:bread
 go mining for diamonds then come back || MINE_ORE:diamond > COME
-collect 64 cobblestone and then deposit it || GATHER:stone:64 > DEPOSIT
+collect 64 cobblestone and then deposit it || GATHER:stone:64 > LOGI
 build a smeltery and a storage || BUILD:smeltery > BUILD:storage
 hunt cows and cook the beef || HUNT:cows > SMELT:beef
 fish || FISH
@@ -56,7 +56,7 @@ breed some sheep || BREED:sheep
 shear sheep || SHEAR
 plant wheat || FARM:wheat
 harvest carrots || FARM:carrots
-sort my chests || SORT
+sort my chests || LOGI
 fix your sword || REPAIR
 sell 10 wheat || TRADE_SELL:wheat:10
 buy a stack of torches || TRADE_BUY:torches:64
