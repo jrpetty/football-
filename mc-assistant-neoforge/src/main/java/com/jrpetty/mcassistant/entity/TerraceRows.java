@@ -2095,6 +2095,15 @@ public final class TerraceRows {
         return spots(b).get(i).frame().facing();
     }
 
+    /** [house34c] Tests: is this spot on a row's own ground (the corner terrace leaves its block's fourth lot alone)? True for
+     *  anything not a row. */
+    public static boolean onGroundForTests(String structure, BlockPos anchor, Direction facing, BlockPos p) {
+        Shape sh = shape(structure);
+        if (sh == null) return true;
+        int[] d = local(new Ledger.Building(structure, anchor, facing), p);
+        return sh.covers(d[0], d[2]);
+    }
+
     /** [house34c] Tests: where this folk sits out on its step of an evening (Habits.doorstep), or null. */
     @Nullable
     public static BlockPos doorstepForTests(VillageFolkEntity f) {
