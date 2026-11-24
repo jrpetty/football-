@@ -219,6 +219,7 @@ public final class Routes {
 
     public static void resetForTests() {
         BRIDGES.clear();
+        UNDER_WAY.clear();                                               // [soak40]
     }
 
     // ------------------------------------------------------------------ the survey
@@ -244,6 +245,82 @@ public final class Routes {
         List<int[]> out = trace(pts);
         if (flip) java.util.Collections.reverse(out);
         return out;
+    }
+
+    /**
+     * [soak40] As line, for the roads between towns (RoadWorks.road): a survey not yet made is made a little at a time
+     * (SLICE_MS of the world's own lie of the land worked out a tick, across all the surveys under way), and null comes
+     * back till it is done, so the road is "not yet a road" a few minutes rather than the whole server stopping: the
+     * survey works out the ground nobody is near from the world's generator, a column at a time, and a road over three
+     * hundred blocks of it held the server still for twelve seconds on day thirty-three of the soak (sixteen in the last
+     * four-hundred-day run). The colonies' roads (Roads.line) are laid by the step and still survey at once.
+     */
+    @Nullable
+    static List<int[]> lineIfReady(UUID a, UUID b, BlockPos s, BlockPos e) {
+        UUID first = a.compareTo(b) < 0 ? a : b, second = first == a ? b : a;
+        if (decode(Ledger.note(first, NOTE + second)) != null) return line(a, b, s, e);
+        boolean flip = first != a;
+        BlockPos fs = flip ? e : s, fe = flip ? s : e;
+        String key = first + "|" + second;
+        Survey sv = UNDER_WAY.get(key);
+        if (sv == null || !sv.s.equals(fs) || !sv.e.equals(fe)) {
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            Villages.Village va = Villages.get(first);
+            ServerLevel level = server == null || va == null ? null : server.getLevel(va.dim());
+            if (level == null) return line(a, b, s, e);
+            sv = new Survey(level, first, second, fs, fe);
+            UNDER_WAY.put(key, sv);
+        }
+        long tick = sv.level.getGameTime();
+        if (tick != sliceTick) {
+            sliceTick = tick;
+            sliceLeft = SLICE_MS * 1_000_000L;
+            sliceRan = false;
+        }
+        if (sliceLeft <= 0 && sliceRan) return null;                     // this tick's slice spent (the first survey asked always gets on)
+        sliceRan = true;
+        long t0 = System.nanoTime();
+        sv.deadline = t0 + sliceLeft;
+        List<int[]> pts;
+        try {
+            pts = sv.run();
+        } catch (NotYet n) {
+            sv.worked += System.nanoTime() - t0;
+            sv.turns++;
+            sliceLeft = 0;
+            return null;
+        } finally {
+            sv.deadline = Long.MAX_VALUE;
+        }
+        sv.worked += System.nanoTime() - t0;
+        sliceLeft -= System.nanoTime() - t0;
+        UNDER_WAY.remove(key);
+        if (pts == null) {
+            pts = new ArrayList<>();
+            pts.add(new int[]{ fs.getX(), fs.getZ() });
+            pts.add(new int[]{ fe.getX(), fe.getZ() });
+        } else {
+            finish(sv, pts, sv.worked / 1_000_000L, sv.turns + 1);
+        }
+        Ledger.note(first, NOTE + second, encode(pts));
+        List<int[]> out = trace(pts);
+        if (flip) java.util.Collections.reverse(out);
+        return out;
+    }
+
+    /** [soak40] The surveys being made a slice at a time, by pair; the work this tick may still do, and which tick. */
+    private static final Map<String, Survey> UNDER_WAY = new java.util.concurrent.ConcurrentHashMap<>();
+    static long SLICE_MS = 30;
+    private static long sliceTick = Long.MIN_VALUE, sliceLeft;
+    private static boolean sliceRan;
+
+    /** [soak40] A survey's slice of work spent: it goes on from here next time. */
+    static final class NotYet extends RuntimeException {
+        static final NotYet ONCE = new NotYet();
+
+        private NotYet() {
+            super(null, null, false, false);
+        }
     }
 
     /** The turning points of a kept survey, or null. */
@@ -291,12 +368,20 @@ public final class Routes {
         Survey sv = new Survey(level, a, b, s, e);
         List<int[]> pts = sv.run();
         if (pts == null) return null;
+        return finish(sv, pts, (System.nanoTime() - t0) / 1_000_000L, 1);
+    }
+
+    /** A survey made: its water kept, the line in the log and the region's news. */
+    static List<int[]> finish(Survey sv, List<int[]> pts, long ms, int turns) {
+        UUID a = sv.a, b = sv.b;
+        BlockPos s = sv.s, e = sv.e;
+        ServerLevel level = sv.level;
         Ledger.note(a, NOTE + "w/" + b, Integer.toString(sv.water));
         BRIDGES.remove(RoadWorks.key(a, b));
         int len = trace(pts).size();
-        LOG.info("[MCA-ROUTES] {} - {}: surveyed {} blocks ({} straight), {} turns, {} over water, {} squares looked at in {} ms",
+        LOG.info("[MCA-ROUTES] {} - {}: surveyed {} blocks ({} straight), {} turns, {} over water, {} squares looked at in {} ms{}",
             Villages.name(a), Villages.name(b), len, (int) Math.sqrt(s.distSqr(e)), pts.size() - 2, sv.water, sv.looked,
-            (System.nanoTime() - t0) / 1_000_000L);
+            ms, turns > 1 ? " of work over " + turns + " ticks" : "");
         long day = level.getDayTime() / 24000L;
         String words = "the road between " + Villages.name(a) + " and " + Villages.name(b) + " was surveyed: " + len
             + " blocks by the lie of the land" + (sv.water > 0 ? ", with a bridge to build over the water" : "")
@@ -313,6 +398,9 @@ public final class Routes {
         final int cell, ox, oz, w, h;
         final Map<Long, int[]> memo = new HashMap<>();
         int water, looked;
+        // [soak40] Made a slice at a time (lineIfReady): when this slice's work runs out, and what it has cost so far.
+        long deadline = Long.MAX_VALUE, worked;
+        int turns, fresh;
 
         Survey(ServerLevel level, UUID a, UUID b, BlockPos s, BlockPos e) {
             this.level = level;
@@ -375,6 +463,10 @@ public final class Routes {
                 int[] near = fx < 0.5 ? (fz < 0.5 ? g00 : g01) : (fz < 0.5 ? g10 : g11);
                 return new int[]{ (int) Math.round(y), near[1] | flags };
             }
+            // [soak40] This slice's work spent: on from here next time (a few new columns a slice whatever it costs to come
+            // back to them, so a long search always gets on).
+            if (deadline != Long.MAX_VALUE && fresh >= 16 && System.nanoTime() > deadline) throw NotYet.ONCE;
+            fresh++;
             var gen = level.getChunkSource().getGenerator();
             var rs = level.getChunkSource().randomState();
             int surface = gen.getBaseHeight(x, z, Heightmap.Types.WORLD_SURFACE_WG, level, rs) - 1;
@@ -453,6 +545,9 @@ public final class Routes {
 
         @Nullable
         List<int[]> run() {
+            looked = 0;                                                   // [soak40] run again from the start, its ground kept
+            water = 0;
+            fresh = 0;
             int si = clamp((s.getX() - ox + cell / 2) / cell, w), sj = clamp((s.getZ() - oz + cell / 2) / cell, h);
             int ei = clamp((e.getX() - ox + cell / 2) / cell, w), ej = clamp((e.getZ() - oz + cell / 2) / cell, h);
             int n = w * h;
@@ -554,6 +649,27 @@ public final class Routes {
     }
 
     // ------------------------------------------------------------------ for the tests
+
+    /** [soak40] Tests: each survey's slice this many milliseconds (0: a few columns a call; 30 as the game has it). */
+    public static void sliceForTests(long ms) {
+        SLICE_MS = ms;
+        sliceTick = Long.MIN_VALUE;
+    }
+
+    /** [soak40] Tests: the road between two towns surveyed now, at once, nothing kept: every step of it, from a's end. */
+    @Nullable
+    public static List<int[]> surveyNowForTests(UUID a, UUID b) {
+        Villages.Village va = Villages.get(a), vb = Villages.get(b);
+        if (va == null || vb == null) return null;
+        UUID first = a.compareTo(b) < 0 ? a : b, second = first == a ? b : a;
+        Villages.Village f = first == a ? va : vb, o = first == a ? vb : va;
+        BlockPos s = Roads.exit(f.centre(), o.centre()), e = Roads.exit(o.centre(), f.centre());
+        ServerLevel level = ServerLifecycleHooks.getCurrentServer().getLevel(f.dim());
+        if (level == null) return null;
+        Survey sv = new Survey(level, first, second, s, e);
+        List<int[]> pts = sv.run();
+        return pts == null ? null : trace(pts);
+    }
 
     /** The turning points kept for the road between two towns, or null. */
     @Nullable

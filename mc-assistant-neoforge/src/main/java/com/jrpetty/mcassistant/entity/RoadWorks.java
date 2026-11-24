@@ -130,10 +130,14 @@ public final class RoadWorks {
         Villages.Village a = x.id().compareTo(y.id()) < 0 ? x : y, b = a == x ? y : x;
         double far = Math.sqrt(a.centre().distSqr(b.centre()));
         if (far > LONGEST) return null;
-        List<int[]> line = LINES.computeIfAbsent(key(a.id(), b.id()), k -> {
+        String k = key(a.id(), b.id());
+        List<int[]> line = LINES.get(k);
+        if (line == null) {
             BlockPos s = Roads.exit(a.centre(), b.centre()), e = Roads.exit(b.centre(), a.centre());
-            return Routes.line(a.id(), b.id(), s, e);                    // [links12] surveyed over the land (Routes)
-        });
+            line = Routes.lineIfReady(a.id(), b.id(), s, e);             // [links12] surveyed over the land (Routes)
+            if (line == null) return null;                               // [soak40] being surveyed, a slice a tick: not a road yet
+            LINES.put(k, line);
+        }
         if (line.size() < SHORTEST) return null;
         return new Road(a.id(), b.id(), line);
     }
