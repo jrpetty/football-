@@ -131,7 +131,7 @@ public final class PaPersona {
     /** [pa35] A pun or a cheesy line: only ever said with a Daft sense of humour. */
     public static boolean corny(String line) {
         java.util.Set<String> t = PaLines.tags(line);
-        return t.contains("bad") || t.contains("corny");
+        return t.contains("bad") || t.contains("corny") || t.contains("daft");   // [pa35] pa-36 tags its cheesy logistics lines [daft]
     }
 
     /** [pa35] The lines this sense of humour may say (Dry and Sincere: no corny ones). */
