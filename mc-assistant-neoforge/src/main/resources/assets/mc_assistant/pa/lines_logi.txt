@@ -741,6 +741,29 @@ Smelting started: {n} {item}.
 Furnace loaded: {n} {item}.
 Smelting {n} {item}.
 
+== logi.smelt_done
+Smelted {n}. They're in my pack.
+That's {n} out of the furnace, done.
+{n} smelted and collected.
+Done. {n}, still warm.
+All {n} smelted.
+Furnace work finished. {n} of them.
+[daft] {n} smelted. Hot stuff, if I say so myself.
+== logi.smelt_done@gloomy
+{n} smelted. The fire's gone quiet.
+Done. {n}. Forged in flame, like my resentment.
+That's {n} smelted. The furnace and I had a moment.
+{n} out of the fire.
+Finished. {n}. Nothing lasts, but ingots come close.
+Smelted {n}. I watched every second.
+== logi.smelt_done@serious
+Smelted {n}.
+{n} smelted and collected.
+Smelting complete: {n}.
+Done: {n} smelted.
+{n} collected from the furnace.
+Finished smelting {n}.
+
 == logi.collected
 Collected {n} from the furnace.
 {n} out of the furnace and into my pack.

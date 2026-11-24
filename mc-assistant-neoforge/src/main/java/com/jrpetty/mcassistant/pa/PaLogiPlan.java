@@ -82,7 +82,7 @@ final class PaLogiPlan {
                 int have = 0;
                 for (ItemStack s : a.getInventoryItems()) if (!s.isEmpty() && what.test(s)) have += s.getCount();
                 // with "made" (craft 64 torches and put them in the chest) the items come from the step before: count them then
-                if (have == 0 && !"made".equals(o.arg()) && !inPlanBefore(a, out, item)) {
+                if (have == 0 && !"made".equals(o.arg()) && alone(said) && a.plan.idle()) {
                     if (!item.equals("*") && p != null) {
                         int hers = 0;
                         for (ItemStack s : p.getInventory().items) if (!s.isEmpty() && what.test(s)) hers += s.getCount();
@@ -267,8 +267,14 @@ final class PaLogiPlan {
         }
     }
 
-    static boolean inPlanBefore(PlayerAssistantEntity a, List<PaPlan.Step> out, String item) {
-        return !out.isEmpty() || !a.plan.idle();
+    /** Was this the only step said? (In "chop 4 logs, then make planks, then put them in the chest" the planks come later.) */
+    static boolean alone(String said) {
+        if (said == null || said.isEmpty()) return true;
+        try {
+            return PaUnderstand.read(said, "").steps().size() <= 1;
+        } catch (RuntimeException e) {
+            return true;
+        }
     }
 
     static int eta(@Nullable GatherGoal.Kind k, int n) {

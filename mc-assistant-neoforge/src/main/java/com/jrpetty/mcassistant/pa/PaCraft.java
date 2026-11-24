@@ -129,14 +129,17 @@ public final class PaCraft {
         path.add(item);
         try {
             if (craft != null) {
+                // tried on a copy: an iron ingot has a recipe (nine nuggets) that fails where the furnace succeeds
+                Map<Item, Integer> trial = new LinkedHashMap<>(pool);
                 int crafts = (n + craft.yield() - 1) / craft.yield();
+                boolean ok = true;
                 for (RecipeBook.Part part : craft.parts()) {
                     int need = part.count() * crafts;
-                    Item rep = choose(pool, part);
+                    Item rep = choose(trial, part);
                     if (rep == null) rep = first(part);
-                    if (rep == null || !makeable(level, rep, need, pool, path, depth + 1)) return false;
+                    if (rep == null || !makeable(level, rep, need, trial, path, depth + 1)) { ok = false; break; }
                 }
-                return true;
+                if (ok) { pool.clear(); pool.putAll(trial); return true; }
             }
             Item raw = smeltFrom(level, item);
             return raw != null && makeable(level, raw, n, pool, path, depth + 1);
@@ -195,6 +198,7 @@ public final class PaCraft {
     @Nullable
     public static String check(@Nullable ServerPlayer p, PlayerAssistantEntity a, PaIntent i, List<PaPlan.Step> out) {
         if (i.raw() != null && i.raw().startsWith("#go ")) return null;                           // "go and get them": the engine's full chain
+        if (!a.plan.idle() || !PaLogiPlan.alone(i.raw())) return null;                           // a later step: what it needs may come from the steps before
         Item item = itemFor(a.level(), i.item());
         if (item == null || item == Items.AIR) return null;
         int n = Math.max(1, i.amount());
