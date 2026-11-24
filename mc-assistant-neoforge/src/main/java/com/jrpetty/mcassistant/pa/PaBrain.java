@@ -62,6 +62,8 @@ public final class PaBrain {
         @Nullable public PaPace.Dig dig;
         /** [pa33g] A bow drawn (PaBow), or null. */
         @Nullable public PaBow.Draw bow;
+        /** [pa35] When it last spoke up about its player's worn tool (auto-help). */
+        public int toolWarned = -100000;
         /** [pa35] A crossbow shot under way (spanning or aiming, PaCrossbow), or null; loads and shots so far (the tests read them). */
         @Nullable public PaCrossbow.Job xbow;
         public int xbowLoads, xbowShots;
@@ -654,20 +656,41 @@ public final class PaBrain {
         if (!(a.getOwnerPlayer() instanceof ServerPlayer owner) || owner.level() != a.level() || a.distanceToSqr(owner) > 64 * 64) return;
         if (a.getMode() == AssistantEntity.Mode.STAY || a.mind.post != null) return;
         if (a.tickCount - a.mind.lastAuto < PaGrowth.autoHelpSeconds(a.veteranLevel()) * 20) return;   // [pa35] more often with its level
-        // 1. danger near its player: it steps in (noticed further off with its level)
+        // 1. danger near its player: it steps in (noticed further off with its level), [pa35] what's creeping up behind them first
+        Monster pick = null;
+        double pickScore = 1e9;
+        net.minecraft.world.phys.Vec3 facing = owner.getLookAngle();
         for (Monster m : a.level().getEntitiesOfClass(Monster.class, owner.getBoundingBox().inflate(PaGrowth.perception(a.veteranLevel())))) {
             if (!m.isAlive() || m instanceof net.minecraft.world.entity.monster.Creeper && !a.canSnipeCreepers()) continue;
-            if (veto(a, "fight")) break;
+            net.minecraft.world.phys.Vec3 to = m.position().subtract(owner.position());
+            boolean behind = to.horizontalDistanceSqr() > 0.01 && to.normalize().dot(facing) < -0.2;
+            double score = m.distanceToSqr(owner) * (behind ? 0.4 : 1.0);
+            if (score < pickScore) { pickScore = score; pick = m; }
+        }
+        if (pick != null && !veto(a, "fight")) {
+            net.minecraft.world.phys.Vec3 to = pick.position().subtract(owner.position());
+            boolean behind = to.horizontalDistanceSqr() > 0.01 && to.normalize().dot(facing) < -0.2;
             a.mind.lastAuto = a.tickCount;
             a.equipBestWeapon();
-            a.setTarget(m);
+            a.setTarget(pick);
             if (a.tickCount - a.mind.threatTick > 600) {
                 a.mind.threatTick = a.tickCount;
-                offer(a, "fight", "deal with that " + m.getName().getString().toLowerCase());
+                offer(a, "fight", "deal with that " + pick.getName().getString().toLowerCase() + (behind ? " behind you" : ""));
             }
             return;
         }
+        // [pa35] your tool nearly worn through: the same kind in better nick from its pack, handed over (or a warning)
+        if (!veto(a, "tool") && tool(a, owner)) return;
         BlockPos base = PaOrders.homeOf(a) != null ? PaOrders.homeOf(a) : owner.blockPosition();
+        // [pa35] your pack full and things on the floor round you: it carries them; loot lying about: picked up before it vanishes
+        if (!veto(a, "carry") && owner.getInventory().getFreeSlot() < 0 && looseNear(a, owner.position(), 6, true) > 0 && a.packRoom() > 0) {
+            autoStep(a, "carry", "carry what you can't", PaIntent.Kind.GATHER, Job.cleanup(), null);
+            return;
+        }
+        if (!veto(a, "pickup") && looseNear(a, a.position(), 10, false) >= 2 && a.packRoom() > 2) {
+            autoStep(a, "pickup", "pick up what's lying about", PaIntent.Kind.GATHER, Job.cleanup(), null);
+            return;
+        }
         // 2. a full pack: put it away
         long used = a.getInventoryItems().stream().filter(s -> !s.isEmpty()).count();
         if (used >= 22 && !veto(a, "stash") && a.findChestWith(s -> true, 16) != null) {
@@ -683,6 +706,16 @@ public final class PaBrain {
                     autoStep(a, "fuel", "keep the furnace fuelled", PaIntent.Kind.FUEL, null, new PaTask(PaTask.Kind.FUEL, p.immutable(), "", 0));
                     return;
                 }
+            }
+        }
+        // [pa35] raw food in its pack and a furnace at home: cooked
+        if (!veto(a, "cook")) {
+            String raw = rawFood(a);
+            if (raw != null && a.countMatching(s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL)
+                    || s.is(net.minecraft.tags.ItemTags.PLANKS) || s.is(net.minecraft.tags.ItemTags.LOGS)) > 0 && furnaceNear(a, base)) {
+                int n = Math.min(16, a.countMatching(com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(raw)));
+                autoStep(a, "cook", "cook my raw " + raw, PaIntent.Kind.SMELT, Job.smelt(raw, n), null);
+                return;
             }
         }
         // 4. ripe crops near the base
@@ -726,8 +759,67 @@ public final class PaBrain {
         }
     }
 
+    /** [pa35] Loose items near a spot, old enough to be forgotten (and not what its player threw down; "full": any age, by its player). */
+    static int looseNear(PlayerAssistantEntity a, net.minecraft.world.phys.Vec3 at, double r, boolean full) {
+        int n = 0;
+        net.minecraft.world.entity.Entity owner = a.getOwnerPlayer();
+        for (net.minecraft.world.entity.item.ItemEntity ie : a.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                new net.minecraft.world.phys.AABB(at, at).inflate(r))) {
+            if (!ie.isAlive() || ie.hasPickUpDelay() && !full) continue;
+            if (owner != null && ie.getOwner() == owner) continue;          // thrown down on purpose
+            if (!full && ie.getAge() < 200) continue;                       // its player's own drops, fresh: theirs to pick up
+            if (PaSafety.offLimits(a, ie.blockPosition())) continue;
+            n++;
+        }
+        return n;
+    }
+
+    static final String[] RAW = {"beef", "porkchop", "mutton", "chicken", "rabbit", "cod", "salmon", "potato"};
+
+    /** [pa35] Raw food it carries enough of to be worth a furnace (four or more), or null. */
+    @Nullable
+    static String rawFood(PlayerAssistantEntity a) {
+        for (String m : RAW) if (a.countMatching(com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(m)) >= 4) return m;
+        return null;
+    }
+
+    static boolean furnaceNear(PlayerAssistantEntity a, BlockPos base) {
+        for (BlockPos p : BlockPos.betweenClosed(base.offset(-10, -3, -10), base.offset(10, 3, 10)))
+            if (a.level().getBlockEntity(p) instanceof AbstractFurnaceBlockEntity && !(a.level().getBlockEntity(p) instanceof net.minecraft.world.level.block.entity.BlastFurnaceBlockEntity)
+                && PaChests.allowed(a, a.level(), p)) return true;
+        return false;
+    }
+
+    /** [pa35] Its player's tool nearly worn through (a twentieth left): the same kind in better nick handed over, or a word. */
+    static boolean tool(PlayerAssistantEntity a, ServerPlayer owner) {
+        net.minecraft.world.item.ItemStack held = owner.getMainHandItem();
+        if (!held.isDamageableItem() || held.getMaxDamage() - held.getDamageValue() > Math.max(3, held.getMaxDamage() / 20)) return false;
+        if (a.tickCount - a.mind.toolWarned < 20 * 120) return false;
+        a.mind.toolWarned = a.tickCount;
+        a.mind.lastAuto = a.tickCount;
+        var inv = a.getInventoryItems();
+        int best = -1;
+        for (int i = 0; i < inv.size(); i++) {
+            net.minecraft.world.item.ItemStack s = inv.get(i);
+            if (!s.isEmpty() && s.getItem() == held.getItem() && s.getMaxDamage() - s.getDamageValue() > held.getMaxDamage() / 4
+                && (best < 0 || s.getDamageValue() < inv.get(best).getDamageValue())) best = i;
+        }
+        String what = held.getHoverName().getString().toLowerCase(java.util.Locale.ROOT);
+        if (best < 0 || a.distanceToSqr(owner) > 6 * 6) {
+            PaTalk.reply(a, PaTalk.line(a, "autohelp_tool_warn", "item", what), null, true);
+            return true;
+        }
+        net.minecraft.world.item.ItemStack fresh = inv.get(best).copy();
+        if (!owner.getInventory().add(fresh)) return false;
+        inv.set(best, net.minecraft.world.item.ItemStack.EMPTY);
+        a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        PaTalk.reply(a, PaTalk.line(a, "autohelp_tool", "item", what), List.of(new Choice("Thanks", "thanks"), new Choice("Don't do that", "#veto tool")), true);
+        return true;
+    }
+
     private static boolean veto(PlayerAssistantEntity a, String key) {
-        return a.mind.vetoed.contains(key);
+        PaData.Rec r = a.rec();
+        return a.mind.vetoed.contains(key) || r != null && r.autoOff.contains(key);   // [pa35] or switched off in Settings
     }
 
     private static void autoStep(PlayerAssistantEntity a, String key, String what, PaIntent.Kind kind, @Nullable Job job, @Nullable PaTask task) {

@@ -54,6 +54,8 @@ public final class PaData extends SavedData {
         public int language, roastBack;
         /** [pa35] Its sense of humour: 0 Dry (default), 1 Daft, 2 Sincere. */
         public int humour;
+        /** [pa35] Kinds of auto-help switched off (PaLayout.AUTO_HELP keys), by Settings or by "don't do that". */
+        public final java.util.Set<String> autoOff = new java.util.LinkedHashSet<>();
         public boolean defend = true;
         /** [pa35] Ping an ore it may not mine yet when it meets one (Settings, Behaviour). */
         public boolean pingLocked = true;
@@ -158,6 +160,9 @@ public final class PaData extends SavedData {
             net.minecraft.nbt.ListTag kl = new net.minecraft.nbt.ListTag();
             for (String k : keep) kl.add(net.minecraft.nbt.StringTag.valueOf(k));
             t.put("Keep", kl);
+            ListTag ao = new ListTag();                                                             // [pa35]
+            for (String k : autoOff) ao.add(net.minecraft.nbt.StringTag.valueOf(k));
+            t.put("AutoOff", ao);
             t.putLong("LeftAt", leftAt);
             t.putLong("Xp", xp);
             t.putInt("Spend", spend);
@@ -220,6 +225,7 @@ public final class PaData extends SavedData {
             CompoundTag wp = t.getCompound("Waypoints");
             for (String k : wp.getAllKeys()) { r.waypoints.put(k, BlockPos.of(wp.getCompound(k).getLong("P"))); r.waypointDims.put(k, wp.getCompound(k).getString("D")); }
             for (net.minecraft.nbt.Tag k : t.getList("Keep", net.minecraft.nbt.Tag.TAG_STRING)) r.keep.add(k.getAsString());
+            for (net.minecraft.nbt.Tag k : t.getList("AutoOff", net.minecraft.nbt.Tag.TAG_STRING)) r.autoOff.add(k.getAsString());   // [pa35]
             r.leftAt = t.getLong("LeftAt");
             r.xp = t.getLong("Xp");
             r.spend = t.contains("Spend") ? t.getInt("Spend") : 64;

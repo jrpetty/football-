@@ -170,6 +170,9 @@ public final class PaNet {
         t.putBoolean("introduced", r.introduced);
         CompoundTag set = new CompoundTag();
         set.putBoolean("auto", r.autoHelp);
+        ListTag ao = new ListTag();                                                                 // [pa35] the kinds switched off
+        for (String k : r.autoOff) ao.add(net.minecraft.nbt.StringTag.valueOf(k));
+        set.put("autoOff", ao);
         set.putBoolean("chests", r.useChests);
         set.putBoolean("break", r.breakNearBuilds);
         set.putBoolean("confirm", r.confirm);

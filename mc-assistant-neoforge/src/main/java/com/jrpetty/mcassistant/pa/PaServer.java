@@ -58,6 +58,10 @@ public final class PaServer {
             case "settings" -> {
                 if (r == null) return;
                 if (args.contains("auto")) r.autoHelp = args.getBoolean("auto");
+                if (args.contains("autoKind")) {                         // [pa35] one kind of auto-help on or off
+                    String k = args.getString("autoKind");
+                    if (args.getBoolean("on")) { r.autoOff.remove(k); if (a != null) a.mind.vetoed.remove(k); } else r.autoOff.add(k);
+                }
                 if (args.contains("chests")) r.useChests = args.getBoolean("chests");
                 if (args.contains("break")) r.breakNearBuilds = args.getBoolean("break");
                 if (args.contains("confirm")) r.confirm = args.getBoolean("confirm");
@@ -255,6 +259,8 @@ public final class PaServer {
             case "veto" -> {
                 if (w.length > 1) {
                     a.mind.vetoed.add(w[1]);
+                    r.autoOff.add(w[1]);                                 // [pa35] kept, and shown in Settings > Behaviour
+                    PaData.touch();
                     a.plan.dropAuto();
                     if (a.plan.current != null && a.plan.current.auto) { a.clearQueue(); a.task = null; a.plan.current = null; }
                     if (w[1].equals("fight")) a.setTarget(null);

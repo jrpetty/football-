@@ -551,3 +551,47 @@ Packed until I reach the level: {item}.
 Left {item} in my pack.
 Can't use {item} yet.
 Packed for later: {item}.
+
+== say.autohelp_tool
+Your {item}'s on its last legs. Have this one. Same again, less tired.
+Here. A fresh {item}. Yours was about to give up on you.
+Swap. Your {item} was held together by hope.
+Have my spare {item}. I heard yours creaking.
+Fresh {item} in your pack. The old one deserves a rest.
+Your {item} was nearly done. There's a better one in your pack now.
+== say.autohelp_tool@gloomy
+Your {item} was nearly gone. I've given you mine. It'll go too, eventually.
+Here's another {item}. Yours was dying. Everything does.
+A spare {item}, in your pack. Before yours breaks at the worst moment.
+Your {item}'s finished. Take this one.
+I gave you my {item}. Yours wouldn't have lasted.
+Another {item}. For when the first one fails.
+== say.autohelp_tool@serious
+Your {item} is nearly broken; I've put a better one in your pack.
+A fresh {item} is in your pack.
+Swapped you a spare {item}.
+Your {item} was almost worn out. Here's another.
+Spare {item} handed over.
+New {item} in your pack.
+
+== say.autohelp_tool_warn
+Your {item}'s nearly done. I've no spare, before you ask.
+That {item} has about three swings left in it. Just so you know.
+Your {item} is held together by optimism. I haven't got another.
+Heads up: your {item}'s about to go.
+Your {item}'s nearly worn through. Might want to sort that.
+That {item}'s on borrowed time. I'm only saying.
+== say.autohelp_tool_warn@gloomy
+Your {item}'s about to break. I've nothing to give you.
+That {item} won't last. Nothing does.
+Your {item} is nearly gone. Sorry, no spare.
+Your {item}'s dying. I can only watch.
+I'd give you another {item}. I haven't got one.
+That {item} has a few swings left. Then nothing.
+== say.autohelp_tool_warn@serious
+Your {item} is nearly broken, and I have no spare.
+Your {item} is about to break.
+Warning: your {item} is almost worn out.
+Your {item} needs replacing soon.
+That {item} is nearly done.
+Your {item} is low on durability.

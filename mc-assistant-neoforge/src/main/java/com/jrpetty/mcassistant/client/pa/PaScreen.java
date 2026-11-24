@@ -1381,6 +1381,20 @@ public class PaScreen extends Screen {
         cy = toggle(g, "Show what it's doing (HUD)", hud, sx, cy, half, mx, my, "", () -> PaClientConfig.set(PaClientConfig.HUD, !hud));
         cy = toggle(g, "Auto-help", set.getBoolean("auto"), sx, cy, half, mx, my,
             "Keeps the furnace going, the farm picked, the chests sorted, you fed and safe; it says what it's doing and you can veto it", () -> setting("auto", !set.getBoolean("auto")));
+        if (set.getBoolean("auto")) {                                   // [pa35] each kind its own switch, indented under it
+            java.util.Set<String> off = new java.util.HashSet<>();
+            for (Tag t : set.getList("autoOff", Tag.TAG_STRING)) off.add(t.getAsString());
+            for (String[] k : com.jrpetty.mcassistant.pa.PaLayout.AUTO_HELP) {
+                final String key = k[0];
+                final boolean on = !off.contains(key);
+                cy = toggle(g, k[1], on, sx + 8, cy, half - 8, mx, my, k[2], () -> {
+                    CompoundTag t = new CompoundTag();
+                    t.putString("autoKind", key);
+                    t.putBoolean("on", !on);
+                    PaClient.send("settings", t);
+                });
+            }
+        }
         cy = toggle(g, "Ask before big jobs", set.getBoolean("confirm"), sx, cy, half, mx, my, "", () -> setting("confirm", !set.getBoolean("confirm")));
         cy = toggle(g, "Use your chests", set.getBoolean("chests"), sx, cy, half, mx, my,
             "Off: only chests you point it at. Never a town's stores or anyone else's.", () -> setting("chests", !set.getBoolean("chests")));

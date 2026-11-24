@@ -572,4 +572,66 @@ public class PaMemoryGameTests {
             }
         });
     }
+
+    /** pam12: auto-help that's actually help, each kind its own switch: its player's pickaxe nearly worn through, it
+     *  hands over its spare; loot lying about, it picks up; with "tool" switched off, it leaves the tool be. */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "pam12_auto_help")
+    public static void pam12_auto_help(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_533_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.setPaXpForTests(PaLevels.xpFor(10));                          // checks every six seconds at the top
+        PaData.Rec r = a.rec();
+        r.autoHelp = true;
+        r.autoOff.clear();
+        ItemStack worn = new ItemStack(Items.IRON_PICKAXE);
+        worn.setDamageValue(worn.getMaxDamage() - 3);
+        p.setItemSlot(EquipmentSlot.MAINHAND, worn);
+        a.insertGiven(new ItemStack(Items.IRON_PICKAXE));
+        for (int i = 0; i < 3; i++) {
+            var ie = new net.minecraft.world.entity.item.ItemEntity(level, x + 4 + i, y + 0.2, Z + 3, new ItemStack(Items.COBBLESTONE, 5));
+            level.addFreshEntity(ie);
+        }
+        int[] phase = {0}, at = {0};
+        helper.onEachTick(() -> {
+            at[0]++;
+            switch (phase[0]) {
+                case 0 -> {
+                    int fresh = 0;
+                    for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+                        ItemStack st = p.getInventory().getItem(i);
+                        if (st.is(Items.IRON_PICKAXE) && st.getDamageValue() == 0) fresh++;
+                    }
+                    if (fresh == 0) { if (at[0] > 900) helper.fail("no spare pickaxe handed over: " + allWords(a)); return; }
+                    helper.assertTrue(a.countMatching(st -> st.is(Items.IRON_PICKAXE)) == 0, "its spare, not a copy");
+                    Kit.log("[VT] pam12 tool handed over after " + at[0] + " ticks: " + lastWords(a));
+                    phase[0] = 1; at[0] = 0;
+                }
+                case 1 -> {
+                    int loose = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(x, y - 2, Z - 2, x + 9, y + 3, Z + 6), e -> e.getItem().is(Items.COBBLESTONE)).size();
+                    if (loose > 0) { if (at[0] > 1200) helper.fail("loot left lying: " + loose + "; " + allWords(a)); return; }
+                    helper.assertTrue(a.countMatching(st -> st.is(Items.COBBLESTONE)) >= 15, "in its pack: " + a.countMatching(st -> st.is(Items.COBBLESTONE)));
+                    Kit.log("[VT] pam12 loot picked up after " + at[0] + " ticks");
+                    r.autoOff.add("tool");                                // switched off: it leaves the tool be
+                    ItemStack again = new ItemStack(Items.IRON_PICKAXE);
+                    again.setDamageValue(again.getMaxDamage() - 3);
+                    p.getInventory().clearContent();
+                    p.setItemSlot(EquipmentSlot.MAINHAND, again);
+                    a.insertGiven(new ItemStack(Items.IRON_PICKAXE));
+                    a.mind.toolWarned = -100000;
+                    phase[0] = 2; at[0] = 0;
+                }
+                case 2 -> {
+                    if (at[0] < 400) {
+                        helper.assertTrue(a.countMatching(st -> st.is(Items.IRON_PICKAXE)) == 1, "switched off: kept its spare");
+                        return;
+                    }
+                    phase[0] = 3;
+                    helper.succeed();
+                }
+                default -> { }
+            }
+        });
+    }
 }

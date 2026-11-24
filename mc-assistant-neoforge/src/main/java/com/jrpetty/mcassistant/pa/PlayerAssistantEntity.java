@@ -260,6 +260,14 @@ public class PlayerAssistantEntity extends AssistantEntity {
         return PaLevels.canUse(this, s);
     }
 
+    /** [pa35] Empty slots in the part of its pack open at its level. */
+    public int packRoom() {
+        net.minecraft.core.NonNullList<ItemStack> inv = getInventoryItems();
+        int open = Math.min(inv.size(), PaPack.open(veteranLevel())), n = 0;
+        for (int i = 0; i < open; i++) if (inv.get(i).isEmpty()) n++;
+        return n;
+    }
+
     /** May it fight this? Monsters and the like yes; people, assistants, crews and folk no. */
     public static boolean fairGame(@Nullable net.minecraft.world.entity.LivingEntity target) {
         return target == null || !(target instanceof Player || target instanceof AssistantEntity
