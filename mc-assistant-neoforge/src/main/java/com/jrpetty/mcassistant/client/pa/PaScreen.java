@@ -1022,7 +1022,7 @@ public class PaScreen extends Screen {
                 cy += 15;
             }
         }
-        if (progressTip >= 0 && progressTip > 2) progressTip = -1;
+        if (progressTip > 2) { progressTip = -1; PaClientConfig.set(PaClientConfig.PROGRESSTOUR, true); }   // done: never again
         return cy - y + 4;
     }
 
@@ -1904,6 +1904,18 @@ public class PaScreen extends Screen {
             return memEdit.keyPressed(key, scan, mods) || true;
         }
         if (key == GLFW.GLFW_KEY_ESCAPE && memEditing != null) { memEditing = null; return true; }
+        // [pa35] the Progress tab's tour by keyboard: Enter for the next tip, Escape to skip them for good
+        if (tab.equals("stats") && progressTip >= 0) {
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER || key == GLFW.GLFW_KEY_SPACE) { progressTip++; UiStyle.click(); return true; }
+            if (key == GLFW.GLFW_KEY_ESCAPE) { progressTip = -1; PaClientConfig.set(PaClientConfig.PROGRESSTOUR, true); return true; }
+        }
+        // [pa35] up and down, page up and down, home and end scroll every long tab (Memory, Progress, Pack, Jobs) without a mouse
+        if (!tab.equals("settings") && !tab.equals("talk")) {
+            int step = switch (key) { case GLFW.GLFW_KEY_UP -> -20; case GLFW.GLFW_KEY_DOWN -> 20; case GLFW.GLFW_KEY_PAGE_UP -> -120; case GLFW.GLFW_KEY_PAGE_DOWN -> 120;
+                case GLFW.GLFW_KEY_HOME -> -100000; case GLFW.GLFW_KEY_END -> 100000; default -> 0; };
+            if (step != 0) { scroll = Math.max(0, scroll + step); return true; }
+            if (tab.equals("stats") && key == GLFW.GLFW_KEY_M) { tab = "memory"; scroll = 0; PaClientConfig.set(PaClientConfig.LASTTAB, tab); UiStyle.click(); return true; }   // to Our story
+        }
         if (tab.equals("settings") && (mods & GLFW.GLFW_MOD_CONTROL) != 0 && (key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_DOWN)) {
             section = Math.floorMod(section + (key == GLFW.GLFW_KEY_UP ? -1 : 1), SECTIONS.length);   // [pa33c-2b] always, even with the triangle in hand
             scroll = 0;
@@ -1922,6 +1934,7 @@ public class PaScreen extends Screen {
             scroll = 0;
             triangle.blur();
             PaClientConfig.set(PaClientConfig.LASTTAB, tab);
+            if (tab.equals("stats") && !PaClientConfig.get(PaClientConfig.PROGRESSTOUR, false) && progressTip < 0) progressTip = 0;   // [pa35] the tour by keyboard too
             if (tab.equals("talk")) setFocused(input);
             UiStyle.click();
             return true;

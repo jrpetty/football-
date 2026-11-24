@@ -43,6 +43,14 @@ class PaLayoutTest {
             for (String b : PaLayout.PACK_BUTTONS) if (PaLayout.textW(b) > pb - 4) bad.add(at + ": " + b + " in " + pb);
             // the Pack tab's grids and gear: 84 + 9 slots + gap inside the page
             if (84 + 9 * 18 > w - 22) bad.add(at + ": pack grids wider than the page");
+            // [pa35] the Progress tab: ten level columns, each wide enough for an icon (16) and its padlock, inside the page
+            int page = w - 22, col = PaLayout.trackColumn(page);
+            if (col * 10 > page) bad.add(at + ": the ladder track " + col * 10 + " > " + page);
+            if (col < 18) bad.add(at + ": a level column too narrow for an icon: " + col);
+            // [pa35] the Memory tab's buttons, and each auto-help switch under Settings > Behaviour (indented, beside its On/Off)
+            int sw = PaLayout.settingsW(w);
+            for (String[] k : PaLayout.AUTO_HELP) if (PaLayout.textW(k[1]) > sw - 8 - 44) bad.add(at + ": auto-help " + k[1] + " in " + (sw - 52));
+            for (String b : PaLayout.MEMORY_BUTTONS) if (PaLayout.textW(b) + 10 > page / 3) bad.add(at + ": memory " + b);
         }
         assertTrue(cases >= 30, "cases " + cases);
         assertTrue(bad.isEmpty(), String.join("\n", bad));
