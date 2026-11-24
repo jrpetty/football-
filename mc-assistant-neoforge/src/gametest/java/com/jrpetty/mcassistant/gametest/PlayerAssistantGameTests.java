@@ -1818,6 +1818,14 @@ public class PlayerAssistantGameTests {
         }
     }
 
+    /** The chunks round a spot loaded with their creatures, and ticking. */
+    private static boolean entitiesReady(ServerLevel l, int bx, int bz) {
+        for (int cx = (bx >> 4) - 1; cx <= (bx >> 4) + 1; cx++)
+            for (int cz = (bz >> 4) - 1; cz <= (bz >> 4) + 1; cz++)
+                if (!l.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(cx, cz)) || !l.isPositionEntityTicking(new BlockPos(cx * 16 + 8, 64, cz * 16 + 8))) return false;
+        return true;
+    }
+
     /** The chunks round a spot in another dimension held loaded (a real player's arrival loads them; a mock player's tickets lag). */
     private static void forceAround(ServerLevel l, int bx, int bz, boolean on) {
         for (int cx = (bx >> 4) - 1; cx <= (bx >> 4) + 1; cx++) for (int cz = (bz >> 4) - 1; cz <= (bz >> 4) + 1; cz++) l.setChunkForced(cx, cz, on);
@@ -1826,7 +1834,7 @@ public class PlayerAssistantGameTests {
     /** pai51: through a portal with its player, at once: carried across beside them the moment they arrive, never stood
      *  in the arrival portal (where, as a mob, it would bounce straight back out), the same body a while later, and home
      *  again with them. [pa33e] */
-    @GameTest(template = EMPTY, timeoutTicks = 700, batch = "pai51_portal")
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "pai51_portal")
     public static void pai51_portal(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_150_000, y = ground(level, x);
@@ -1850,7 +1858,8 @@ public class PlayerAssistantGameTests {
             for (int dy = 0; dy <= 4; dy++)
                 nether.setBlock(new BlockPos(nx + dx, ny - 1 + dy, nz), dx == -1 || dx == 2 || dy == 0 || dy == 4 ? Blocks.OBSIDIAN.defaultBlockState()
                     : Blocks.NETHER_PORTAL.defaultBlockState().setValue(net.minecraft.world.level.block.NetherPortalBlock.AXIS, Direction.Axis.X), 18);
-        helper.runAfterDelay(20, () -> {
+        // as a real arrival: the player only gets there once the place is loaded and ticking (a busy server takes a while)
+        w.await(helper, 1000, () -> entitiesReady(nether, nx, nz), () -> {
             helper.assertTrue(a.level() == level, "it starts beside its player");
             p.teleportTo(nether, nx + 0.5, ny, nz + 0.5, Set.of(), 0.0F, 0.0F);      // arrived in the portal, as through it
             crossedAt[0] = helper.getTick();                                          // watched each tick (the new chunk's tickets take a moment)
@@ -1961,7 +1970,7 @@ public class PlayerAssistantGameTests {
 
     /** pai54: the End at level 10, in a real fight: on a platform in the End with its player, it shoots the crystal off
      *  its pillar first, then puts arrows into the dragon (which feels them: they count as its player's). [pa33e] */
-    @GameTest(template = EMPTY, timeoutTicks = 1000, batch = "pai54_end")
+    @GameTest(template = EMPTY, timeoutTicks = 2000, batch = "pai54_end")
     public static void pai54_end(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 7_159_000, y = ground(level, x);
@@ -1977,7 +1986,7 @@ public class PlayerAssistantGameTests {
         for (BlockPos q : BlockPos.betweenClosed(ex - 8, ey - 1, ez - 8, ex + 16, ey + 12, ez + 8))
             end.setBlock(q, q.getY() == ey - 1 ? Blocks.OBSIDIAN.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
         for (int dy = 0; dy < 5; dy++) end.setBlock(new BlockPos(ex + 12, ey + dy, ez), Blocks.OBSIDIAN.defaultBlockState(), 2);
-        helper.runAfterDelay(10, () -> {
+        w.await(helper, 1000, () -> entitiesReady(end, ex, ez), () -> {
           p.teleportTo(end, ex + 0.5, ey, ez + 0.5, Set.of(), -90.0F, 0.0F);
           w.await(helper, 300, () -> { PlayerAssistantEntity q = PaLife.find(p); return q != null && q.level() == end; }, () -> {
             PlayerAssistantEntity b = PaLife.find(p);

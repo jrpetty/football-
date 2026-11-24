@@ -50,6 +50,8 @@ public final class PaBrain {
         public int glanceUntil, endSaidAt = -100000;
         /** [pa33e] Elytra following: wings on (by it), when it took off, its last rocket and word. */
         public boolean wingsOn;
+        /** [pa33e] Ticks running it was held back by the shared budget. */
+        public int starved;
         public int takeoffAt, rocketAt = -1000, flightSaidAt = -100000;
         /** [pa33e] Parkour: a jump in the air (from, to, the gap), a gap it fell short at, a bridge or pillar under way. */
         public int leapAt, pkStuck, pkMode, pkLaid, pkRestUntil, pkSaidAt = -100000;
@@ -126,7 +128,12 @@ public final class PaBrain {
             else feed(a);                                         // never skipped: stop and orders must be prompt
         }
         PaMoves.tick(a);                                          // [pa33d] shield, clutch, sprint, pearl: never held back by the budget
-        if (!spare) return;
+        if (t % 10 == 3) PaSleep.tick(a);                         // [pa33d] bedtime; [pa33e] cheap, so never held back either
+        if (t % 2 == 0) PaChallenge.tick(a);                      // [pa33d] a race, a mining minute, a shooting match (timed: never held back)
+        // [pa33e] the budget is shared by every assistant on the server, so the last in the tick order could go without for
+        // ever: one held back four ticks running thinks on the fifth regardless
+        if (!spare && ++a.mind.starved < 5) return;
+        a.mind.starved = 0;
         if (t % 10 == 0) state(a);
         if (a.mind.openPanelAt > 0 && a.tickCount >= a.mind.openPanelAt) {
             a.mind.openPanelAt = 0;
@@ -135,12 +142,10 @@ public final class PaBrain {
         if (t % 20 == 0) personalSpace(a);
         if (t % 20 == 0) banter(a);                               // [pa33b] remarks, always after anything useful
         if (t % 20 == 5) sleptIn(a);                              // [pa33c-2b] the bed it sleeps in is its spawn
-        if (t % 10 == 3) PaSleep.tick(a);                         // [pa33d] bedtime
         if (a.mind.glanceAt != null) {                            // [pa33d] a look at a bare ping
             if (a.tickCount < a.mind.glanceUntil) a.getLookControl().setLookAt(a.mind.glanceAt.getX() + 0.5, a.mind.glanceAt.getY() + 0.5, a.mind.glanceAt.getZ() + 0.5);
             else a.mind.glanceAt = null;
         }
-        if (t % 2 == 0) PaChallenge.tick(a);                      // [pa33d] a race, a mining minute, a shooting match
         if (t % 10 == 0) boat(a);                                 // [pa33b] along with its player on the water
         if (t % 40 == 0) {
             safety(a);
