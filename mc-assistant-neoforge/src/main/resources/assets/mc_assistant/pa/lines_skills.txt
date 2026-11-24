@@ -2,7 +2,7 @@
 # {dist} blocks, {score} a score, {owner} its player. No exclamation marks: it says things, it doesn't shout them.
 
 == say.skill_locked
-[bad] That's above my level. Literally. It's a level joke. I'll wait over here.
+[bad] That's above my level. Literally: level {need}, and I'm {level}. It's a level joke. I'll wait over here.
 That's a level {need} job and I'm level {level}. Keep me busy and I'll get there.
 Level {need} for that, I'm afraid. I'm {level}. Practice makes perfect, or at least level {need}.
 Not yet. I'll know how at level {need}. I'm level {level}, so, soon. Ish.

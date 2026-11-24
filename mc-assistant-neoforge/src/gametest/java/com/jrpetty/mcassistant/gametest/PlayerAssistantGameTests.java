@@ -1586,6 +1586,12 @@ public class PlayerAssistantGameTests {
             .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
         level.setBlock(head, Blocks.WHITE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, net.minecraft.core.Direction.NORTH)
             .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        // the night's own monsters kept away (they'd rightly keep it up): only the test's zombie comes near
+        net.minecraft.world.entity.Entity[] ours = {null};
+        helper.onEachTick(() -> {
+            for (net.minecraft.world.entity.monster.Monster m : level.getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class,
+                    new net.minecraft.world.phys.AABB(head).inflate(24), e -> e != ours[0])) m.discard();
+        });
         say(p, a, "use this bed", foot, -1);
         say(p, a, "go to bed");
         helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.bed_day"), "in the day it waits for dark: " + lastWords(a));
@@ -1601,6 +1607,7 @@ public class PlayerAssistantGameTests {
                 net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
                 z.moveTo(head.getX() + 3.5, y, head.getZ() + 0.5, 0, 0);
                 z.setNoAi(true);
+                ours[0] = z;
                 level.addFreshEntity(z);
                 helper.runAfterDelay(30, () -> {
                     helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_danger"), "a monster wakes it: " + lastWords(a));

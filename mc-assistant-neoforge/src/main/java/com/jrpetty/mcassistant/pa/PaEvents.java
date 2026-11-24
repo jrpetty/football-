@@ -56,7 +56,11 @@ public final class PaEvents {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
         for (PaData.Rec r : PaData.of(p.getUUID())) {
             PlayerAssistantEntity a = PaLife.entity(p.server, r);
-            if (a == null || a.level() == p.level()) continue;
+            if (a == null) {                                             // [pa33e] its chunk not loaded just now: stood up beside them from its kept copy
+                if (!r.away && !r.dead(p.serverLevel().getGameTime()) && r.snapshot != null && PaLife.followsAlong(r)) PaLife.standUp(p, r);
+                continue;
+            }
+            if (a.level() == p.level()) continue;
             boolean busy = !a.plan.idle() || a.mind.post != null || a.getMode() == com.jrpetty.mcassistant.entity.AssistantEntity.Mode.STAY;
             if (busy) continue;
             PaLife.bringTo(a, p);
