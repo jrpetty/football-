@@ -312,3 +312,61 @@ I've heard better from a sheep, {player}. And I'm done listening.
 == stranger.plain
 I'm busy, {player}. Sorry.
 Hello, {player}. I'm working.
+
+# [pa33f] comebacks in kind at the Language setting
+== tone.comeback.insult.cheeky
+[anim:shrug] Bloody charming. I'll carry on regardless.
+[anim:point] Says the one who punched a tree for breakfast, you muppet.
+[anim:shrug] Damn, harsh. Still here though.
+[anim:point] Oi. Watch it, you plonker.
+[anim:shrug] Cheers, you git. Love you too.
+[anim:point] Bloody cheek. I'm doing my best over here.
+== tone.comeback.insult.unfiltered
+[anim:point] Piss off. I'm brilliant and you know it.
+[anim:shrug] Bollocks to that. I'm the best thing in your world.
+[anim:point] Says you, you absolute weapon.
+[anim:shrug] Charming. Go and kick a creeper, see how that works out.
+[anim:point] Shit-talk all you like. I'm still carrying your stuff.
+[anim:shrug] Well, fuck me. I'll cry about it later.
+== tone.comeback.praise.cheeky
+[anim:bow] Damn right I am.
+[anim:cheer] Bloody brilliant, aren't I.
+[anim:bow] I know. Don't make a fuss, you soft git.
+[anim:cheer] Get in. Say it louder.
+[anim:bow] Cheers, you big softie. Bloody lovely of you.
+[anim:cheer] Damn, I'm good. Glad you noticed.
+== tone.comeback.praise.unfiltered
+[anim:cheer] Too fucking right.
+[anim:bow] Damn straight. I'm the shit.
+[anim:cheer] Bloody right I am. Write it down.
+[anim:bow] Cheers. You're not half bad either, you big soft bastard.
+[anim:cheer] Hell yes. Best assistant going.
+[anim:bow] I know, I know. Bloody marvellous.
+== tone.comeback.laugh.cheeky
+[anim:bow] Bloody hilarious, aren't I.
+[anim:cheer] Get in. Damn, I'm funny.
+[anim:bow] Told you I was good, you muppet.
+[anim:cheer] Ha. Bloody landed it.
+[anim:bow] I'm wasted on you, honestly. Damn good joke.
+[anim:cheer] That one's a keeper. Bloody gold.
+== tone.comeback.laugh.unfiltered
+[anim:cheer] Fucking nailed it.
+[anim:bow] Damn right that was funny.
+[anim:cheer] Ha. I'm the shit at this.
+[anim:bow] Bloody comedy genius, me.
+[anim:cheer] Hell yes. Two shows a night.
+[anim:bow] Pissing yourself, are you. Good.
+== tone.comeback.laugh_other.cheeky
+[anim:think] What's so bloody funny.
+[anim:shrug] Laughing at me, you git.
+[anim:think] Damn, someone's in a good mood.
+[anim:shrug] Share the joke, you muppet.
+[anim:think] Bloody cheerful today, aren't you.
+[anim:shrug] Go on, what's funny. Damn it, tell me.
+== tone.comeback.laugh_other.unfiltered
+[anim:think] What the hell's so funny.
+[anim:shrug] Pissing yourself over nothing. Fair enough.
+[anim:think] Laughing at me. Bollocks to you too.
+[anim:shrug] Damn, what did I miss.
+[anim:think] Bloody hell, someone's happy.
+[anim:shrug] Share the joke or shut it. Lovingly.

@@ -10,7 +10,7 @@ public final class PaQuips {
 
     private PaQuips() {}
 
-    public enum Comeback { INSULT, SHUTUP, PRAISE, LOVE, JOKE }
+    public enum Comeback { INSULT, SHUTUP, PRAISE, LOVE, JOKE, LAUGH }   // [pa33f] LAUGH: lol, haha, an emoji
     
 
     private static final Object[][] COMEBACKS = {
@@ -26,6 +26,17 @@ public final class PaQuips {
         if (text == null) return null;
         String c = " " + PaWords.clean(text).toLowerCase(Locale.ROOT).replace(" , ", " ").replaceAll("\\s+", " ").trim() + " ";
         String[] words = c.trim().split(" ");
+        if (c.matches(".* (?:you're|youre|you are|ur|what|such) (?:an? )?(?:absolute |total |complete |right |proper )?joke .*")) return PaQuips.Comeback.INSULT;   // [pa33f] being one isn't asking for one
+        // a joke asked for, or love, said outright: first
+        for (Object[] row : COMEBACKS) {
+            if (row[0] != PaQuips.Comeback.JOKE && row[0] != PaQuips.Comeback.LOVE) continue;
+            for (String phrase : ((String) row[1]).split("\\|")) {
+                if (c.contains(" " + phrase + " ")) return (PaQuips.Comeback) row[0];
+            }
+        }
+        // [pa33f] then a remark read by its shape: "you're / that was / what a" and any good or bad word, laughter, "not bad"
+        PaQuips.Comeback shaped = PaRemarks.read(text);
+        if (shaped != null) return shaped;
         for (Object[] row : COMEBACKS) {
             for (String phrase : ((String) row[1]).split("\\|")) {
                 if (c.contains(" " + phrase + " ")) return (PaQuips.Comeback) row[0];

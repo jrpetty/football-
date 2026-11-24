@@ -139,3 +139,72 @@ Appreciated.
 == comeback.love@gloomy
 That's nice. Nobody's said that to me before. Well, once. It was a chicken.
 Love. Hm. I'll try to remember the feeling when it rains.
+
+# [pa33f] a laugh at its joke, a laugh at nothing of its, and small talk it can't place
+== comeback.laugh
+[anim:bow] Thank you, thank you. I'm here all week. I'm here every week. I live here.
+[anim:cheer] It landed. Write down the time.
+[anim:bow] I'll be doing two shows nightly.
+[anim:cheer] See, I'm funny. Tell the others.
+[anim:bow] That's the laugh I was working for.
+[anim:cheer] Got one. I'm framing it.
+[anim:point] And you said I wasn't funny. You didn't. But you might have.
+[bad] I'd tell you another, but I'd hate to peak. That's a lie. I'll tell another. It'll be worse.
+== comeback.laugh@gloomy
+[anim:shrug] A laugh. Don't get used to it, the next one's grim.
+[anim:shrug] Glad something's funny round here.
+[anim:shrug] Enjoy it. They don't all land.
+[anim:shrug] Nice to be laughed with. Usually it's at.
+[anim:shrug] That's one for me, then. Out of several hundred.
+[anim:shrug] It went better than most things I try.
+== comeback.laugh@serious
+[anim:bow] Glad you liked it.
+[anim:bow] Thank you.
+[anim:salute] One of my better ones.
+[anim:bow] Pleased that landed.
+[anim:salute] Noted. More where that came from.
+[anim:bow] Good to hear.
+== comeback.laugh_other
+[anim:think] What's funny. Is it my hat. I don't have a hat.
+[anim:shrug] Laughing at me or with me. Don't answer that.
+[anim:think] Glad you're enjoying yourself. I'll pretend I did that on purpose.
+[anim:shrug] Whatever it was, I'll take the credit.
+[anim:think] I missed the joke. Tell me later.
+[anim:point] You've a nice laugh. Unsettling, but nice.
+[bad] Laughter's the best medicine. Unless you've got a potion of healing. Then it's that. Sorry.
+== comeback.laugh_other@gloomy
+[anim:shrug] Something's funny. It's probably me.
+[anim:shrug] Laugh away. I'll stand here.
+[anim:shrug] At least one of us is cheerful.
+[anim:shrug] Good. Someone should be having fun.
+[anim:shrug] I'll assume it's not at me. I'll be wrong.
+[anim:shrug] Nice to hear. Doesn't happen much.
+== comeback.laugh_other@serious
+[anim:think] Something funny.
+[anim:think] Glad you're in good spirits.
+[anim:salute] Good to hear you laughing.
+[anim:think] Noted.
+[anim:salute] Right you are.
+[anim:think] Fair enough.
+== comeback.chat
+[anim:think] Fair enough. I'll have a think about that. I won't, but it sounds polite.
+[anim:shrug] Can't argue with that. I could, but I won't.
+[anim:think] Interesting. Tell me more while I stand here looking busy.
+[anim:point] Noted. Filed under things you've said.
+[anim:shrug] If you say so. You usually do.
+[anim:think] Hm. I'm with you. Mostly.
+[bad] That's what I always say. I've never said it. But I would.
+== comeback.chat@gloomy
+[anim:shrug] Right. Well. There it is.
+[anim:shrug] I'd say something cheerful, but here we are.
+[anim:shrug] Fair. Most things are, eventually.
+[anim:shrug] Mm. I'll add it to the pile.
+[anim:shrug] If you like. Not that anyone asks me.
+[anim:shrug] Noted, for what it's worth.
+== comeback.chat@serious
+[anim:think] Understood.
+[anim:think] Fair enough.
+[anim:think] Noted.
+[anim:think] I hear you.
+[anim:think] Right.
+[anim:think] Okay.

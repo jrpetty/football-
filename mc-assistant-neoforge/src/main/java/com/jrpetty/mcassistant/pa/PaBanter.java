@@ -230,6 +230,7 @@ public final class PaBanter {
         PaPersona.Tri t = a.tri();                                    // hushed, the Serious corner
         if (cb == PaQuips.Comeback.JOKE && r != null && r.mute > 0) return PaTalk.line(a, "joke_muted");
         if (cb == PaQuips.Comeback.JOKE) {
+            a.mind.jokeAt = a.tickCount;                                        // [pa33f] a laugh soon after is at this
             String intro = PaPersona.from(PaLines.get("comeback.joke"), a.getRandom()::nextInt, a.mind.recent);
             String joke = PaPersona.from(PaLines.get("joke"), a.getRandom()::nextInt, a.mind.recent);
             String film = filmNext("mca.pa.filmJokes");                     // [pa33e] filming only: the jokes in a chosen order
@@ -237,6 +238,16 @@ public final class PaBanter {
             return (intro == null ? "" : intro + " ") + (joke == null ? "I've forgotten all my jokes. That's the joke." : joke);
         }
         String key = "comeback." + cb.name().toLowerCase(Locale.ROOT);
+        if (cb == PaQuips.Comeback.LAUGH && a.tickCount - a.mind.jokeAt > 1200) key = "comeback.laugh_other";   // nothing of its to laugh at lately
+        // [pa33f] in kind at its Language: now and then a cheekier (or unfiltered) line back
+        int lang = r == null || r.mute > 0 ? 0 : PaTone.level(r.language, PaConfig.maxLanguage());
+        if (lang > 0 && cb != PaQuips.Comeback.LOVE && a.getRandom().nextInt(100) < 50) {
+            String tk = "tone." + key + "." + (lang >= 2 ? "unfiltered" : "cheeky");
+            if (PaLines.has(tk)) {
+                String line = toneLine(a, tk, "");
+                if (line != null) return line;
+            }
+        }
         String raw = PaPersona.remark(key, t, r == null ? 0 : r.look, null, a.getRandom()::nextInt, a.mind.recent);
         if (raw == null) raw = PaPersona.from(PaLines.get(key + "@serious"), a.getRandom()::nextInt, a.mind.recent);
         return raw == null ? "Noted." : fill(a, raw);

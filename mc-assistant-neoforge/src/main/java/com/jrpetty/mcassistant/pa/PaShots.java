@@ -23,6 +23,35 @@ public final class PaShots {
     }
 
     /** The bow into its hand (what was there goes in the pack). */
+    /** [pa33f] Its eyes (and body) held on what it's shooting at for a second, as a player's are while drawing and loosing:
+     *  other habits (a look at its player, a glance about) wait. */
+    static void holdAim(PlayerAssistantEntity a, @javax.annotation.Nullable net.minecraft.world.entity.Entity at, Vec3 spot) {
+        a.mind.aimEntity = at;
+        a.mind.aimSpot = spot;
+        a.mind.aimUntil = a.tickCount + 24;
+        face(a, at != null ? at.getBoundingBox().getCenter() : spot);
+    }
+
+    /** Turned to face a spot, head and body. */
+    static void face(PlayerAssistantEntity a, Vec3 p) {
+        double dx = p.x - a.getX(), dz = p.z - a.getZ(), dy = p.y - a.getEyeY();
+        float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F;
+        float pitch = (float) (-Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)) * 180.0 / Math.PI);
+        a.setYRot(yaw);
+        a.yBodyRot = yaw;
+        a.setYHeadRot(yaw);
+        a.setXRot(pitch);
+        a.getLookControl().setLookAt(p.x, p.y, p.z, 360.0F, 90.0F);
+    }
+
+    /** Each tick, from its moves: the aim held. */
+    static void aimTick(PlayerAssistantEntity a) {
+        PaBrain.Mind m = a.mind;
+        if (m.aimUntil <= a.tickCount || m.aimSpot == null) return;
+        if (m.aimEntity != null && !m.aimEntity.isAlive()) { m.aimUntil = 0; return; }
+        face(a, m.aimEntity != null ? m.aimEntity.getBoundingBox().getCenter() : m.aimSpot);
+    }
+
     static void drawBow(PlayerAssistantEntity a) {
         if (a.getMainHandItem().is(Items.BOW)) return;
         var inv = a.getInventoryItems();
@@ -50,6 +79,7 @@ public final class PaShots {
     public static boolean shootAt(PlayerAssistantEntity a, BlockPos at) {
         if (!hasBow(a) || a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return false;
         drawBow(a);
+        holdAim(a, null, Vec3.atCenterOf(at));
         int lv = a.veteranLevel();
         float velocity = 2.6F + 0.04F * lv;
         Arrow arrow = new Arrow(a.level(), a, new ItemStack(Items.ARROW), a.getMainHandItem().copy());
@@ -82,6 +112,7 @@ public final class PaShots {
     public static int shootAtMover(PlayerAssistantEntity a, net.minecraft.world.entity.Entity e) {
         if (!hasBow(a) || a.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return -1;
         drawBow(a);
+        holdAim(a, e, e.position());
         int lv = a.veteranLevel();
         float velocity = 2.6F + 0.04F * lv;
         Arrow arrow = new Arrow(a.level(), a, new ItemStack(Items.ARROW), a.getMainHandItem().copy());

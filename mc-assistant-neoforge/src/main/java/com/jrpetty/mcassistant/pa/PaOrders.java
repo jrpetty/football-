@@ -148,6 +148,12 @@ public final class PaOrders {
                 PaTalk.reply(a, PaTalk.line(a, "ok"));
                 return;
             }
+            // [pa33f] a remark it can't place but that reads as chat: a word back in kind, never a menu
+            if (reading.steps().isEmpty() && reading.clarify().question().startsWith("I'm not sure") && PaRemarks.chat(text)) {
+                String back = PaPersona.remark("comeback.chat", a.tri(), mr == null ? 0 : mr.look, null, a.getRandom()::nextInt, a.mind.recent);
+                if (back == null) back = PaPersona.from(PaLines.get("comeback.chat@serious"), a.getRandom()::nextInt, a.mind.recent);
+                if (back != null) { PaTalk.reply(a, PaBanter.fill(a, back)); return; }
+            }
             // Steps read before the unclear part still run; then the question.
             if (!reading.steps().isEmpty()) run(p, a, reading.steps(), look, text);
             PaTalk.reply(a, reading.clarify().question(), reading.clarify().choices());

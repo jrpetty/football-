@@ -748,7 +748,7 @@ public class PaTaskGoal extends Goal {
         a.getNavigation().stop();
         a.getLookControl().setLookAt(e, 30.0F, 30.0F);
         if (cool > 0) return;
-        if (!moverDrawn) { moverDrawn = true; PaShots.drawBow(a); cool = 16; return; }   // a draw first, as a player's (about a second)
+        if (!moverDrawn) { moverDrawn = true; PaShots.drawBow(a); PaShots.holdAim(a, e, e.position()); cool = 16; return; }   // a draw first, as a player's (about a second)
         cool = 25;
         t.stage++;
         int ticks = PaShots.shootAtMover(a, e);

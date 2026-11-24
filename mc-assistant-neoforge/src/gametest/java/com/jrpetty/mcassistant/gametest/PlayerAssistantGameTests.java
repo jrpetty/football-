@@ -1591,8 +1591,8 @@ public class PlayerAssistantGameTests {
         // the night's own monsters kept away (they'd rightly keep it up): only the test's zombie comes near
         net.minecraft.world.entity.Entity[] ours = {null};
         helper.onEachTick(() -> {
-            for (net.minecraft.world.entity.monster.Monster m : level.getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class,
-                    new net.minecraft.world.phys.AABB(head).inflate(24), e -> e != ours[0])) m.discard();
+            for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,      // slimes too (a flat world's night)
+                    new net.minecraft.world.phys.AABB(head).inflate(24), e -> e instanceof net.minecraft.world.entity.monster.Enemy && e != ours[0])) m.discard();
         });
         say(p, a, "use this bed", foot, -1);
         say(p, a, "go to bed");
@@ -1616,7 +1616,7 @@ public class PlayerAssistantGameTests {
                     z.discard();
                     say(p, a, "go to bed");
                     w.await(helper, 400, a::isSleeping, () -> {
-                        helper.assertTrue(a.isSleeping(), "back to bed");
+                        helper.assertTrue(a.isSleeping(), "back to bed (wanted " + a.sleepWanted + ", target " + a.getTarget() + ", at " + a.blockPosition().toShortString() + ", " + lastWords(a) + ")");
                         say(p, a, "wake up");
                         helper.assertTrue(!a.isSleeping() && fromLists(lastWords(a), "say.woke_told"), "\"wake up\": " + lastWords(a));
                         say(p, a, "go to bed");
@@ -1977,6 +1977,20 @@ public class PlayerAssistantGameTests {
         ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
         PlayerAssistantEntity a = assistant(helper, p);
         Waiter w = Waiter.on(helper);
+        // [pa33f] while it shoots at the dragon it faces the dragon (not its player): the most it is ever turned away, aiming
+        net.minecraft.world.entity.Entity[] foe = {null};
+        double[] worst = {-1};
+        int[] aimed = {0}, facing = {0};                                  // ticks aiming at it, and of those turned within 30 degrees (it flies about)
+        helper.onEachTick(() -> {
+            PlayerAssistantEntity q = PaLife.find(p);
+            if (foe[0] == null || q == null || q.mind.aimUntil <= q.tickCount || q.mind.aimEntity != foe[0]) return;
+            Vec3 to = foe[0].getBoundingBox().getCenter().subtract(q.position());
+            double want = Math.toDegrees(Math.atan2(to.z, to.x)) - 90.0;
+            double off = Math.abs(net.minecraft.util.Mth.wrapDegrees(want - q.getYHeadRot()));
+            worst[0] = Math.max(worst[0], off);
+            aimed[0]++;
+            if (off < 30.0) facing[0]++;
+        });
         atLevel(a, 10);
         a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
         a.insertGiven(new ItemStack(Items.ARROW, 64));
@@ -1999,9 +2013,12 @@ public class PlayerAssistantGameTests {
                 dragon.moveTo(ex + 14.5, ey + 3, ez + 0.5, 0, 0);
                 end.addFreshEntity(dragon);
                 dragon.getPhaseManager().setPhase(net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase.HOVERING);   // hovering where it is
+                foe[0] = dragon;
                 float full = dragon.getHealth();
                 helper.runAfterDelay(300, () -> {
                     helper.assertTrue(dragon.getHealth() < full, "arrows in the dragon: " + dragon.getHealth() + " of " + full + " (" + lastWords(b) + ")");
+                    helper.assertTrue(aimed[0] > 0 && facing[0] * 10 >= aimed[0] * 9, "it faced the dragon while it shot: " + facing[0] + " of " + aimed[0]
+                        + " aiming ticks within 30 degrees (at worst " + (int) worst[0] + ", as it wheels about)");
                     Kit.log("pai54 end: crystal down, dragon at " + dragon.getHealth() + " of " + full + "; " + lastWords(b));
                     dragon.discard();
                     forceAround(end, ex, ez, false);
