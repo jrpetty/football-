@@ -25,6 +25,25 @@ public final class PaOrt {
     private static Path from;
     private static Object env;
 
+    /**
+     * [voice42] The runtime jars, both in the Kokoro folder. 1.25.1 everywhere it is built for (Windows x64, Linux x64 and
+     * arm64, Apple-silicon Macs). ONNX Runtime 1.21 to 1.24 work out Kokoro's int8 convolutions wrongly on CPUs with Intel
+     * AMX (the U8U8 tile kernel's column tail), which came out as NaN, huge samples, silence and clicks; 1.25 fixed it. 1.24
+     * dropped Intel Macs, which have no AMX, so they keep 1.23.2, cut down to their own library.
+     */
+    public static final String JAR = "onnxruntime.jar", JAR_INTEL_MAC = "onnxruntime-macx64.jar";
+
+    /** Which runtime jar this computer loads: the Intel Mac one on an Intel Mac, else the main one. */
+    public static String jarName(String osName, String osArch) {
+        String arch = osArch == null ? "" : osArch.toLowerCase(Locale.ROOT);
+        return mac(osName) && (arch.equals("x86_64") || arch.equals("amd64") || arch.equals("x64")) ? JAR_INTEL_MAC : JAR;
+    }
+
+    /** The runtime jar for this computer, in the folder that holds Kokoro's files. */
+    public static Path jar(Path kokoroDir) {
+        return kokoroDir.resolve(jarName(System.getProperty("os.name"), System.getProperty("os.arch")));
+    }
+
     /** The runtime's class loader over this jar (the same one for every caller once made). */
     public static synchronized ClassLoader loader(Path jar) throws Exception {
         if (loader != null) {

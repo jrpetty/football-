@@ -490,9 +490,15 @@ public final class PaTts {
                     && (v == null || c.lang().toLowerCase(Locale.ROOT).startsWith(o.accent().culture.toLowerCase(Locale.ROOT)))) v = c;
             if (v == null && engine.equals("piper")) v = auto(o.accent());
             if (v == null && (engine.equals("sapi") || engine.equals("mac") || engine.equals("espeak"))) v = autoBasic(o.accent(), engine);
+            if (engine.equals("kokoro")) {
+                String rest = kokoro(line, o, mine);
+                if (rest == null || gen.get() != mine) return;
+                engine = engineFor(null, true, false, false, catalogue, kind);   // [voice42] what Kokoro couldn't say cleanly: the basic voice says it
+                line = rest;
+                v = engine.equals("sapi") || engine.equals("mac") || engine.equals("espeak") ? autoBasic(o.accent(), engine) : null;
+            }
             int[] p = PaSpeech.prosody(o.gloom(), o.fun());
             switch (engine) {
-                case "kokoro" -> kokoro(line, o, mine);
                 case "piper" -> piper(line, v, o);
                 case "winrt" -> winrt(line, v, o);
                 case "sapi" -> sapi(line, v, o);
@@ -658,11 +664,16 @@ public final class PaTts {
      * [pa35] Spoken a sentence at a time, so the first words start as soon as the first sentence is made: the words read by
      * its own dictionaries (PaG2p), the sound finished (PaAudio: trimmed, the mood's pitch, -16 LUFS, never clipping,
      * faded), and streamed to the speakers while the next sentence is made. A new line stops this one at once.
+     *
+     * <p>[voice42] Every piece is checked before it is played (PaKokoro.speak: NaN, absurd samples, near-silence, a spike,
+     * one retry made another way). A piece that still isn't speech is never played: what has been said stays said and the
+     * rest of the line (from that sentence) is returned for the basic voice. Null when it said it all, was cut off, or
+     * couldn't start (the status says why).
      */
-    private void kokoro(String line, Opts o, int mine) throws Exception {
+    private String kokoro(String line, Opts o, int mine) throws Exception {
         PaKokoro.Voice kv = kokoroVoice(o.voiceKey(), o.accent(), o.female());
-        if (kokoro == null || kv == null || !kokoro.downloaded()) { status = "The natural voice isn't downloaded yet."; return; }
-        if (!kokoro.load()) { status = kokoro.why(); return; }
+        if (kokoro == null || kv == null || !kokoro.downloaded()) { status = "The natural voice isn't downloaded yet."; return null; }
+        if (!kokoro.load()) { status = kokoro.why(); return null; }
         String os = System.getProperty("os.name");
         String espeak = PaKokoro.espeak(os, PaTts::onPath, Files::isRegularFile);
         boolean british = kv.lang().equals("en-GB");
@@ -675,13 +686,21 @@ public final class PaTts {
         Sink out = null;
         try {
             boolean first = true;
-            for (String sentence : PaSpeech.sentences(line)) {
-                if (gen.get() != mine) return;
+            List<String> sentences = PaSpeech.sentences(line);
+            for (int si = 0; si < sentences.size(); si++) {
+                String sentence = sentences.get(si);
+                if (gen.get() != mine) return null;
                 for (String chunk : chunks(g2p.phonemize(sentence))) {
-                    if (gen.get() != mine) return;
+                    if (gen.get() != mine) return null;
                     long made = System.nanoTime();
-                    float[] raw = kokoro.synth(chunk, kv, speed);
-                    timedKokoro(System.nanoTime() - made, raw.length);           // [voice37] the tier's guess
+                    PaKokoro.Said said = kokoro.speak(chunk, kv, speed);
+                    if (said.fault() != null) kokoroFault(said, kv);
+                    if (!said.ok()) {
+                        if (out != null && gen.get() == mine) out.drain();
+                        return String.join(" ", sentences.subList(si, sentences.size()));
+                    }
+                    float[] raw = said.samples();
+                    if (!said.retried()) timedKokoro(System.nanoTime() - made, raw.length);   // [voice37] the tier's guess
                     if (raw.length == 0) continue;
                     float[] done = PaAudio.finish(raw, PaKokoro.SAMPLE_RATE, pitch);
                     char end = sentence.charAt(sentence.length() - 1);
@@ -697,8 +716,25 @@ public final class PaTts {
                 }
             }
             if (out != null && gen.get() == mine) out.drain();
+            return null;
         } finally {
             if (out != null) { out.close(); if (this.sink == out) this.sink = null; }
+        }
+    }
+
+    /** [voice42] Kokoro's bad pieces this session: told to the log once (the first), counted after. */
+    private final java.util.concurrent.atomic.AtomicInteger kokoroFaults = new java.util.concurrent.atomic.AtomicInteger();
+
+    public int kokoroFaults() { return kokoroFaults.get(); }
+
+    private void kokoroFault(PaKokoro.Said said, PaKokoro.Voice kv) {
+        if (kokoroFaults.getAndIncrement() > 0) return;
+        String msg = "[voice42] The natural voice (" + kv.label() + ") gave " + said.fault() + " instead of speech; "
+            + (said.ok() ? "made again another way, which was clean" : "the basic voice says that part instead") + ". Logged once; later pieces are checked the same way.";
+        try {
+            org.slf4j.LoggerFactory.getLogger("mc_assistant/voice").warn(msg);       // the game's log (resolved only here: plain Java elsewhere)
+        } catch (Throwable e) {
+            System.err.println(msg);
         }
     }
 
@@ -744,7 +780,7 @@ public final class PaTts {
         Sink out = null;
         boolean played = false;
         try {
-            if (!expressive.load(kokoro.dir().resolve("onnxruntime.jar"))) { expressiveFailed = true; status = expressive.why(); return false; }
+            if (!expressive.load(PaOrt.jar(kokoro.dir()))) { expressiveFailed = true; status = expressive.why(); return false; }
             PaExpressive.Voice v = PaExpressive.pick(o.voiceKey(), o.female(), prefs.get().look());
             String key = PaVoiceStyle.keyOf(written);
             PaVoiceStyle.Kind kind = key != null ? PaVoiceStyle.kindOf(key) : PaVoiceStyle.guess(line);
@@ -793,7 +829,7 @@ public final class PaTts {
         int startGen = gen.get();
         Thread t = new Thread(() -> {
             try {
-                if (!expressiveFirst(o.voiceKey(), o.basic()) || !expressive.load(kokoro.dir().resolve("onnxruntime.jar"))) return;
+                if (!expressiveFirst(o.voiceKey(), o.basic()) || !expressive.load(PaOrt.jar(kokoro.dir()))) return;
                 Prefs p = prefs.get();
                 PaExpressive.Voice v = PaExpressive.pick(o.voiceKey(), o.female(), prefs.get().look());
                 for (String l : lines) {

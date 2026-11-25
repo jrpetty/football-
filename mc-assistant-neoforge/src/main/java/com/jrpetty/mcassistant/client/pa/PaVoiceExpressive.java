@@ -3,6 +3,7 @@ package com.jrpetty.mcassistant.client.pa;
 import com.jrpetty.mcassistant.pa.PaClientConfig;
 import com.jrpetty.mcassistant.pa.PaLines;
 import com.jrpetty.mcassistant.pa.voice.PaExpressive;
+import com.jrpetty.mcassistant.pa.voice.PaOrt;
 import com.jrpetty.mcassistant.pa.voice.PaTts;
 import com.jrpetty.mcassistant.pa.voice.PaVoiceAssets;
 import com.jrpetty.mcassistant.pa.voice.PaVoiceTier;
@@ -150,7 +151,7 @@ public final class PaVoiceExpressive {
         benchmarking = true;
         Thread t = new Thread(() -> {
             try {
-                if (!tts.expressive().load(tts.kokoro().dir().resolve("onnxruntime.jar"))) { line = tts.expressive().why(); failed = true; return; }
+                if (!tts.expressive().load(PaOrt.jar(tts.kokoro().dir()))) { line = tts.expressive().why(); failed = true; return; }
                 double r = tts.expressive().benchmark(() -> false);
                 Minecraft.getInstance().execute(() -> PaClientConfig.set(PaClientConfig.EXPRESSIVERTF, Math.round(r * 1000) / 1000.0));
                 line = PaVoiceTier.verdict(r, tts.kokoroRtf());
@@ -180,7 +181,7 @@ public final class PaVoiceExpressive {
         warmed = true;
         Thread t = new Thread(() -> {
             try {
-                if (!tts.expressive().load(tts.kokoro().dir().resolve("onnxruntime.jar"))) return;
+                if (!tts.expressive().load(PaOrt.jar(tts.kokoro().dir()))) return;
                 tts.expressive().synth("Right.", PaExpressive.VOICES.get(0), new PaExpressive.Read(0.7f, 1), () -> false);
                 Minecraft.getInstance().execute(PaVoiceExpressive::prewarm);
             } catch (Throwable ignored) {
