@@ -1731,6 +1731,10 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Being hit is not forgotten — by it, or by anybody who saw. */
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+        // [tp46] A cage rider walked into the cage or out of it (LiftGlide) cuts a rock corner at a stop for a tick or two: no
+        // hurt from the wall, and no step out of it (stepped out, it was walked back into the rock, two hundred times in a soak).
+        if (!level().isClientSide && source.is(net.minecraft.world.damagesource.DamageTypes.IN_WALL)
+                && MineLift.state(getUUID()) == MineLift.State.RIDING) return false;
         if (!level().isClientSide && StepOut.fromTheWall(this, source)) return false;   // [soak40] out of the wall, not buried in it
         boolean took = super.hurt(source, amount);
         if (took) Individual.wounded(this, source, amount);   // [individual] a real wound leaves a scar

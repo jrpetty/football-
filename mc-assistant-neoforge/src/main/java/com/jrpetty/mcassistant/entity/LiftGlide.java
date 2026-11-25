@@ -160,21 +160,6 @@ final class LiftGlide {
                 at = here.add(at.subtract(here).normalize().scale(PACE * 1.5));
                 all = false;
             }
-            // [tp46] Never into the rock: a step that would put it in a wall (the corner between the landing and the window cut
-            // across) is taken one way at a time, round the corner. A miner glided straight across a lower stop's corner stood in
-            // the rock, stepped out of it for its life, and was glided back into it, two hundred times in a soak.
-            Vec3 by = at.subtract(here);
-            net.minecraft.world.phys.AABB box = e.getBoundingBox().deflate(0.01);
-            if (by.lengthSqr() > 1.0E-8 && level.noCollision(e, box) && !level.noCollision(e, box.move(by))) {
-                Vec3 xFirst = new Vec3(by.x, by.y, 0), zFirst = new Vec3(0, by.y, by.z);
-                double ax = Math.abs(by.x), az = Math.abs(by.z);
-                Vec3[] tries = az >= ax ? new Vec3[]{ zFirst, xFirst } : new Vec3[]{ xFirst, zFirst };
-                Vec3 ok = null;
-                for (Vec3 t : tries) if (t.horizontalDistanceSqr() > 1.0E-8 && level.noCollision(e, box.move(t))) { ok = t; break; }
-                if (ok == null) { all = false; continue; }
-                at = here.add(ok);
-                all = false;
-            }
             e.setDeltaMovement(Vec3.ZERO);
             e.fallDistance = 0;
             e.setPos(at.x, at.y, at.z);
