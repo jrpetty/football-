@@ -64,12 +64,47 @@ public final class MineWay {
     }
 
     private static final Map<UUID, Way> WAYS = new ConcurrentHashMap<>();
-    /** Bridges finished, all told (the tests). */
-    public static volatile int BRIDGED;
+    /** Bridges finished, by town (the tests). */
+    private static final Map<UUID, Integer> BRIDGED = new ConcurrentHashMap<>();
 
-    public static void resetForTests() {
-        WAYS.clear();
-        BRIDGED = 0;
+    /** Tests: bridges this town has finished on the way to its mine. */
+    public static int bridgedForTests(UUID village) {
+        return BRIDGED.getOrDefault(village, 0);
+    }
+
+    /**
+     * Every second, for each folk of a town whose mine is cut off: nothing takes it over the water to the mine meanwhile
+     * (a load for the chest at the pithead, a walk to its plot): that errand dropped and the walk stopped on this side.
+     */
+    public static void keepOff(VillageFolkEntity f) {
+        UUID id = f.ownerId();
+        if (!cutOff(id)) return;
+        Way w = WAYS.get(id);
+        if (w == null || near(f.blockPosition(), w.site, 48)) return;
+        Job j = f.peekJob();
+        BlockPos at = j == null ? null : posOf(j.arg());
+        if (at != null && near(at, w.site, 48)) {
+            f.clearQueue();
+            f.brain("the mine is cut off by water: that errand waits for the bridge");
+        }
+        BlockPos to = f.getNavigation().getTargetPos();
+        if (to != null && near(to, w.site, 48) && !f.getNavigation().isDone()) f.getNavigation().stop();
+    }
+
+    private static boolean near(BlockPos a, BlockPos b, int r) {
+        return Math.abs(a.getX() - b.getX()) <= r && Math.abs(a.getZ() - b.getZ()) <= r;
+    }
+
+    @Nullable
+    private static BlockPos posOf(@Nullable String arg) {
+        if (arg == null) return null;
+        String[] p = arg.trim().split("\\s+");
+        if (p.length < 3) return null;
+        try {
+            return new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /** Is this town's mine cut off (no way on foot, a bridge to build first)? Its miners do not commute meanwhile. */
@@ -191,7 +226,7 @@ public final class MineWay {
             }
             String out = BridgeKit.lay(level, v, p, PER_VISIT, false);
             if (out == null) {
-                BRIDGED++;
+                BRIDGED.merge(v.id(), 1, Integer::sum);
                 w.status = "";
                 w.looked = -1;                                                 // looked at again at once
                 Villages.tell(v.id(), level.getDayTime() / 24000L, "a " + p.family().name() + " bridge was finished on the way to the mine");

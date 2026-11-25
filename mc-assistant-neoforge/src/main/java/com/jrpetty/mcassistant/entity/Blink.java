@@ -369,13 +369,15 @@ public final class Blink {
             net.minecraft.core.BlockPos site = TownMine.siteOf(v.id());
             if (site == null || !v.dim().equals(level.dimension())) continue;
             int all = 0, atMine = 0, below = 0, wet = 0;
+            int ground = level.hasChunk(site.getX() >> 4, site.getZ() >> 4)
+                ? level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, site.getX(), site.getZ()) : 64;
             for (AssistantEntity a : Villages.folkOf(v.id())) {
                 if (a.stationTask() != AssistantEntity.StationTask.MINE) continue;
                 all++;
                 double dx = a.getX() - site.getX(), dz = a.getZ() - site.getZ();
-                boolean near = dx * dx + dz * dz <= 48 * 48;
+                boolean near = dx * dx + dz * dz <= 160 * 160 && (dx * dx + dz * dz <= 24 * 24 || a.getY() < ground - 4);   // at the pithead, or in the works
                 if (near) atMine++;
-                if (near && a.getY() < site.getY() - 4) below++;
+                if (near && a.getY() < ground - 4) below++;
                 if (a.isInWater()) wet++;
             }
             b.append(Villages.name(v.id())).append(": miners ").append(all).append(", at the mine ").append(atMine).append(" (below ").append(below)

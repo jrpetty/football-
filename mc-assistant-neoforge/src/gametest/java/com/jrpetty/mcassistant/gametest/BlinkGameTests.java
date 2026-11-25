@@ -437,8 +437,7 @@ public class BlinkGameTests {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
-        com.jrpetty.mcassistant.entity.MineWay.resetForTests();
-        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        if (!bridged) com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
         level.setDayTime(22000L);
         int cz = 40_000, n = 6;
         int reach = com.jrpetty.mcassistant.village.TownPlan.reach();
@@ -510,7 +509,7 @@ public class BlinkGameTests {
             if (ran % 250 == 0 && ran <= 3000) for (VillageFolkEntity m : miners) Kit.log("[VT] " + label + "   " + m.getAssistantName() + " at "
                 + m.blockPosition().toShortString() + (m.isInWater() ? " IN WATER" : "") + " goals " + running(m) + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg())
                 + " lent " + (m.isPassenger() ? "riding" : "") + " | " + m.brainNoteForBooks());
-            if (ran % 1000 == 0) Kit.log("[VT] " + label + " @" + ran + ": " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]) + "; bridges " + com.jrpetty.mcassistant.entity.MineWay.BRIDGED
+            if (ran % 1000 == 0) Kit.log("[VT] " + label + " @" + ran + ": " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]) + "; bridges " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0])
                 + "; reached " + java.util.Arrays.toString(reached) + "; in the water " + java.util.Arrays.toString(wet) + "; seen jumps " + Blink.seenJumps());
             boolean all = java.util.Arrays.stream(reached).limit(miners.size()).allMatch(t -> t > 0);
             if (!all && ran < 30000) return;
@@ -523,10 +522,10 @@ public class BlinkGameTests {
             ok.that(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenJumps());
             ok.that(dead == 0, "nobody drowned: " + dead + " dead");
             ok.that(java.util.Arrays.stream(wet).allMatch(t -> t < 60), "nobody swam the river: " + java.util.Arrays.toString(wet));
-            if (bridged) ok.that(com.jrpetty.mcassistant.entity.MineWay.BRIDGED == 0, "nothing more built where a crossing stood: " + com.jrpetty.mcassistant.entity.MineWay.BRIDGED);
-            else ok.that(com.jrpetty.mcassistant.entity.MineWay.BRIDGED >= 1, "the town bridged the river: " + com.jrpetty.mcassistant.entity.MineWay.BRIDGED);
+            if (bridged) ok.that(com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]) == 0, "nothing more built where a crossing stood: " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]));
+            else ok.that(com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]) >= 1, "the town bridged the river: " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]));
             ok.that(!com.jrpetty.mcassistant.entity.MineWay.cutOff(id[0]), "the mine reached on foot: " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]));
-            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            if (!bridged) com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
             level.getServer().tickRateManager().setTickRate(20.0F);
             letGo(level, you[0]);
             if (ok.clean()) helper.succeed();

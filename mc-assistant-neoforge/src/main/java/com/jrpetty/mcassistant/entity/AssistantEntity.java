@@ -3475,6 +3475,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // by its bed; one that still cannot get there gives the bed up for a nearer one.
             // (A whole village spent two nights "on the way" to beds a hundred blocks off.)
             double far = bed.distSqr(blockPosition());
+            // [tp43] A step or three from it in a player's sight (a bed in a corner it keeps sidestepping round): over to it
+            // and onto it now, not after twenty seconds of shuffling about beside it.
+            if (this instanceof VillageFolkEntity vf && far <= 12.0 && Blink.seen(this) && !Stroll.led(vf) && tickCount - bedStepTick > 100) {
+                bedStepTick = tickCount;
+                if (stepOntoBed(bed)) { brain("stepped over to its bed"); return true; }
+            }
             if (far < bedWalkBest - 2.0) {
                 bedWalkBest = far;
                 bedSeenFails = 0;
@@ -3548,6 +3554,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int bedWalkFails;
     /** [tp43] Looks in a player's sight that got it no nearer its bed (four, and the bed is given up for one it can reach). */
     private int bedSeenFails;
+    private int bedStepTick = -1000;
     /** [tp43] Beds it could not get to, and till when they are passed over when it looks for one. */
     private final java.util.Map<BlockPos, Integer> badBeds = new java.util.HashMap<>();
     private int bedClaimTick = -99999; // one bed hunt per night, not per tick

@@ -466,6 +466,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level() instanceof net.minecraft.server.level.ServerLevel runs && NetherRuns.hold(this, runs)) return;
         if (level() instanceof net.minecraft.server.level.ServerLevel field && Armies.hold(this, field)) return;   // [war] in an army: its place in the ranks
         if (tickCount % 20 == 17) Aboard.step(this);           // [mine-safety] out of a boat it never meant to board
+        if (tickCount % 20 == 11) MineWay.keepOff(this);       // [tp43] not over the water to a mine cut off by it
         if (tickCount % 20 == 3) persona.town = ownerId();      // [identity] how fast it trusts a player is its town's (Treatment)
         // [transport] Sat in a cart or the ferry: the ride (or the rowing) is its day till it is off again.
         if (level() instanceof net.minecraft.server.level.ServerLevel riding && Transport.aboard(this)) {
