@@ -3996,13 +3996,19 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      */
     @Override
     protected net.minecraft.world.phys.Vec3 maybeBackOffFromEdge(net.minecraft.world.phys.Vec3 vec, net.minecraft.world.entity.MoverType mover) {
-        if (!isSettler() || level().isClientSide || mover != net.minecraft.world.entity.MoverType.SELF || vec.y > 0.0 || !onGround()
+        if (!isSettler() || level().isClientSide || mover != net.minecraft.world.entity.MoverType.SELF
                 || onClimbable() || isInWater() || isInLava() || isPassenger() || isSleeping()) {
             return vec;
         }
+        // [tp47] In the air off a hop of its own (a jump at a step, at a block in its way) as well as on its feet: a miner at the
+        // edge of the bank under an old bridge's end hopped, and the hop carried it over the edge and down into the lake. Not
+        // one already over a drop (a step down it planned, a fall under way).
+        boolean hop = !onGround() && fallDistance < 1.0F;
+        if (!hop && (vec.y > 0.0 || !onGround())) return vec;
         double dx = vec.x, dz = vec.z;
         if (dx * dx + dz * dz < 1.0E-7) return vec;
         int limit = edgeLimit();
+        if (hop && overDrop(0.0, 0.0, limit + 2)) return vec;
         if (!overDrop(dx, dz, limit)) return vec;
         final double step = 0.05;
         while (dx != 0.0 && overDrop(dx, 0.0, limit)) dx = Math.abs(dx) < step ? 0.0 : dx - Math.signum(dx) * step;
