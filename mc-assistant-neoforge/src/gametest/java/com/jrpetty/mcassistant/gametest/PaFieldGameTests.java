@@ -640,4 +640,107 @@ public class PaFieldGameTests {
             Kit.log("[VT] pf13 " + allWords(a));
         });
     }
+
+    // ================================================================== a step aside for a clear shot
+
+    /** Its player stands between it and a zombie (still, after that player, helmeted against the sun): the assistant here. */
+    private static Zombie sideScene(ServerLevel level, int x, int y, ServerPlayer p, PlayerAssistantEntity a) {
+        for (Zombie old : level.getEntitiesOfClass(Zombie.class, new net.minecraft.world.phys.AABB(x - 40, y - 8, Z - 40, x + 40, y + 16, Z + 40))) old.discard();
+        a.teleportTo(x + 0.5, y, Z + 0.5);
+        a.setYRot(-90);
+        Zombie zz = EntityType.ZOMBIE.create(level);
+        zz.moveTo(x + 11.5, y, Z + 0.5, 90, 0);
+        zz.setNoAi(true);                                                          // it stays put: the line stays through its player
+        zz.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+        zz.setPersistenceRequired();
+        level.addFreshEntity(zz);
+        zz.setTarget(p);
+        return zz;
+    }
+
+    /** pf14: level 4, snowballs, its hurt player right in the line to a zombie after them: it steps aside, then hits it. */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "pf14_sidestep")
+    public static void pf14_sidestep(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 10_039_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x + 3, y, Z));
+        p.setHealth(8.0F);
+        PlayerAssistantEntity a = assistant(helper, p, 4);
+        a.removeMatching(s -> s.is(Items.BOW) || s.is(Items.ARROW) || s.is(Items.CROSSBOW), 999);
+        a.insertGiven(new ItemStack(Items.SNOWBALL, 16));
+        a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.FOLLOW);
+        Zombie[] z = {null};
+        double[] offLine = {0};
+        helper.runAfterDelay(10, () -> z[0] = sideScene(level, x, y, p, a));
+        boolean[] hit = {false};
+        helper.onEachTick(() -> {
+            if (z[0] == null) return;
+            offLine[0] = Math.max(offLine[0], Math.abs(a.getZ() - (Z + 0.5)));
+            if (z[0].getLastHurtByMob() == a) hit[0] = true;                       // (the game forgets who hurt it after five seconds)
+        });
+        helper.succeedWhen(() -> {
+            PaField f = a.mind.field;
+            helper.assertTrue(hit[0], "the zombie hit by its snowball (thrown " + f.throwsDone + ", steps " + f.sideSteps + ", gave up " + f.sideGiveUps + ")");
+            helper.assertTrue(f.sideSteps >= 1 && offLine[0] >= 0.8, "it stepped aside first: " + f.sideSteps + " step(s), " + String.format("%.1f", offLine[0]) + " off the line (gave up " + f.sideGiveUps + ", last " + f.sideEnd + ")");
+            helper.assertTrue(p.getLastHurtByMob() != a, "never its player");
+            Kit.log("[VT] pf14 stepped " + String.format("%.1f", offLine[0]) + " off the line, " + f.throwsDone + " thrown; " + allWords(a));
+        });
+    }
+
+    /** pf15: the same, told to stay: it holds the throw and its ground, and waits. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pf15_sidestep_stay")
+    public static void pf15_sidestep_stay(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 10_042_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x + 3, y, Z));
+        p.setHealth(8.0F);
+        PlayerAssistantEntity a = assistant(helper, p, 4);
+        a.removeMatching(s -> s.is(Items.BOW) || s.is(Items.ARROW) || s.is(Items.CROSSBOW), 999);
+        a.insertGiven(new ItemStack(Items.SNOWBALL, 16));
+        a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.STAY);
+        Zombie[] z = {null};
+        double[] moved = {0};
+        helper.runAfterDelay(10, () -> z[0] = sideScene(level, x, y, p, a));
+        helper.onEachTick(() -> { if (z[0] != null && a.tickCount > 15) moved[0] = Math.max(moved[0], Math.hypot(a.getX() - (x + 0.5), a.getZ() - (Z + 0.5))); });
+        helper.runAfterDelay(260, () -> {
+            PaField f = a.mind.field;
+            helper.assertTrue(f.sideAsked > 0, "it was held by its player in the line (else the test proves nothing)");
+            helper.assertTrue(moved[0] < 0.3, "told to stay, it stayed: moved " + String.format("%.2f", moved[0]));
+            helper.assertTrue(f.sideSteps == 0 && f.throwsDone == 0, "no step, no throw through its player: " + f.sideSteps + ", " + f.throwsDone);
+            helper.assertTrue(p.getLastHurtByMob() != a, "never its player");
+            Kit.log("[VT] pf15 stayed put (moved " + String.format("%.2f", moved[0]) + "), held its throw");
+            helper.succeed();
+        });
+    }
+
+    /** pf16: level 6 with a bow, its player in the line to the zombie it is fighting: a step aside, then the arrow. */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "pf16_sidestep_bow")
+    public static void pf16_sidestep_bow(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 10_045_000, y = ground(level, x);
+        ServerPlayer p = player(helper, level, new BlockPos(x + 3, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p, 6);
+        a.removeMatching(s -> s.is(Items.SNOWBALL) || s.is(Items.EGG) || s.is(Items.CROSSBOW), 999);
+        a.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        a.insertGiven(new ItemStack(Items.ARROW, 32));
+        a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.FOLLOW);
+        Zombie[] z = {null};
+        double[] offLine = {0};
+        helper.runAfterDelay(10, () -> { z[0] = sideScene(level, x, y, p, a); a.setTarget(z[0]); });
+        boolean[] hit = {false};
+        helper.onEachTick(() -> {
+            if (z[0] == null) return;
+            offLine[0] = Math.max(offLine[0], Math.abs(a.getZ() - (Z + 0.5)));
+            if (z[0].getLastHurtByMob() == a) hit[0] = true;
+            if (z[0].isAlive() && a.getTarget() == null) a.setTarget(z[0]);
+        });
+        helper.succeedWhen(() -> {
+            PaField f = a.mind.field;
+            helper.assertTrue(hit[0], "the zombie hit by its arrow (steps " + f.sideSteps + ", gave up " + f.sideGiveUps + ")");
+            helper.assertTrue(f.sideSteps >= 1 && offLine[0] >= 0.8, "it stepped aside first: " + f.sideSteps + ", " + String.format("%.1f", offLine[0]) + " off the line (gave up " + f.sideGiveUps + ", last " + f.sideEnd + ")");
+            helper.assertTrue(p.getLastHurtByMob() != a && p.getHealth() >= p.getMaxHealth() - 0.01F, "never its player: health " + p.getHealth()
+                + " of " + p.getMaxHealth() + ", last hurt by " + p.getLastHurtByMob() + ", " + p.getLastDamageSource());
+            Kit.log("[VT] pf16 bow: stepped " + String.format("%.1f", offLine[0]) + " off the line, then hit");
+        });
+    }
 }

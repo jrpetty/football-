@@ -144,4 +144,17 @@ class PaKnackTest {
         }
         assertTrue(PaKnack.SLIP_GAP >= 1200, "no two slips close together");
     }
+
+    // ------------------------------------------------------------------ a step aside for a clear shot
+
+    @Test
+    void itStepsOutOfItsPlayersLineSoonerAndCleanerWithLevel() {
+        for (int l = 2; l <= 10; l++) {
+            assertTrue(PaKnack.sideNotice(l) <= PaKnack.sideNotice(l - 1), "never slower to notice with a level: " + l);
+            assertTrue(PaKnack.sideJudge(l) < PaKnack.sideJudge(l - 1), "a better sense of the spot with each level: " + l);
+            assertTrue(PaKnack.sideMargin(l) > PaKnack.sideMargin(l - 1), "more room left for its player with each level: " + l);
+        }
+        assertTrue(PaKnack.sideNotice(1) >= 25 && PaKnack.sideNotice(10) <= 5, "a second and more for a learner, a blink for a master");
+        assertTrue(PaKnack.sideMargin(1) > 1.0, "never closer than the game's own rule allows");
+    }
 }

@@ -204,4 +204,24 @@ public final class PaKnack {
     public static boolean roll(double p, Random r) {
         return p > 0 && r.nextDouble() < p;
     }
+
+    // ------------------------------------------------------------------ a step aside for a clear shot
+
+    private static final int[] SIDE_NOTICE = {30, 26, 22, 18, 15, 12, 9, 7, 5, 4};
+    private static final double[] SIDE_JUDGE = {1.6, 1.3, 1.05, 0.85, 0.65, 0.5, 0.35, 0.22, 0.12, 0.06};
+
+    /** [pa38] How long (ticks) its player stands in its line of fire before it notices and steps aside: a learner stands there a while. */
+    public static int sideNotice(int l) {
+        return SIDE_NOTICE[Math.max(1, Math.min(10, l)) - 1];
+    }
+
+    /** [pa38] How far off its sense of a good spot to step to is (noise on the score, in blocks of walking): a learner picks worse angles. */
+    public static double sideJudge(int l) {
+        return SIDE_JUDGE[Math.max(1, Math.min(10, l)) - 1];
+    }
+
+    /** [pa38] The room it wants between the line and its player (blocks; the game's rule refuses under 1): more with practice. */
+    public static double sideMargin(int l) {
+        return 1.05 + 0.07 * (Math.max(1, Math.min(10, l)) - 1);
+    }
 }

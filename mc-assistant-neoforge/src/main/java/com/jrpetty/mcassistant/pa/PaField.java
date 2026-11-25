@@ -67,4 +67,17 @@ public final class PaField {
     @Nullable public net.minecraft.world.level.block.state.BlockState toolFor;
     public int lastToolJob = -100000;
     @Nullable public net.minecraft.world.level.block.Block lastToolBlock;
+
+    // ---- a step aside for a clear shot (PaSidestep): its player in the line of fire
+    /** Held for a friend in the way: last asked at, since when (this streak), at what (entity id), and the band to keep. */
+    public int sideAsked = -100000, sideSince = -100000, sideTarget = -1;
+    public double sideMin, sideMax;
+    /** Given up till then (it waits, or fights up close, as before); the last step's end; the last word about it. */
+    public int sideRestUntil = -100000, sideEnded = -100000, sideQuipAt = -100000;
+    /** Steps taken and steps given up, since it was made. */
+    public int sideSteps, sideGiveUps;
+    /** How the last step ended ("clear", "clear on the way", "too long", "still blocked", "called off", "nowhere"): the tests read it. */
+    public String sideEnd = "";
+    /** The spot of the last step (never straight back to it). */
+    @Nullable public BlockPos sideLast;
 }
