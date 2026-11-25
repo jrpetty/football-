@@ -343,7 +343,7 @@ public class FolkNavigation extends GroundPathNavigation {
                 // errand's way cut short either way: the dry one if it ends as near, near enough.)
                 if (dry != null && !swims(dry) && (dry.canReach() || !p.canReach() && endOff(dry, target) <= endOff(p, target) + 4.0)) {
                     DRY_WAYS++;
-                    return dry;
+                    return dry.canReach() ? dry : shoreTrim(dry);              // [tp47] (cut short at a drop to a shore, as below)
                 }
                 // [tp47] Else a leg of it along the way its town opened to its mine (over the bridge), the furthest stop on it that a
                 // dry walk reaches (a walk the length of the way is beyond one search; a walk to the next stop is not).
@@ -414,7 +414,9 @@ public class FolkNavigation extends GroundPathNavigation {
         if (f.isInWater() || f.isPassenger()) return false;
         AssistantEntity.StationTask t = f.stationTask();
         if (t == AssistantEntity.StationTask.DIVER || t == AssistantEntity.StationTask.FERRY) return false;
-        for (BlockPos q : targets) if (!this.level.getFluidState(q).isEmpty()) return false;
+        // [tp47] Bound for the water itself: its top (a fisher's spot, a jetty's next plank off the bank), not deep under it (a
+        // town job's stand worked out on a lake's bed, thirty blocks down: the hand called to it swam out over the lake).
+        for (BlockPos q : targets) if (!this.level.getFluidState(q).isEmpty() && (t == AssistantEntity.StationTask.FISH || this.level.getFluidState(q.above()).isEmpty())) return false;
         return true;
     }
 
