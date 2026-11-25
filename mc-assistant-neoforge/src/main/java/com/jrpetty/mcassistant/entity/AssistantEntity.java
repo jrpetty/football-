@@ -7070,7 +7070,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     protected boolean stepOntoBed(BlockPos bed) {
         if (!(this instanceof VillageFolkEntity vf) || isPassenger() || getPose() == net.minecraft.world.entity.Pose.SITTING) return false;
         net.minecraft.world.phys.Vec3 top = new net.minecraft.world.phys.Vec3(bed.getX() + 0.5, bed.getY() + 0.5625, bed.getZ() + 0.5);
-        return Stroll.alongPoints(vf, java.util.List.of(position(), top));
+        // By the way the pathfinder finds round whatever stands between (a chest at the bed's foot, the corner of a wall),
+        // or straight over if it finds none.
+        java.util.List<net.minecraft.world.phys.Vec3> pts = new java.util.ArrayList<>();
+        pts.add(position());
+        net.minecraft.world.level.pathfinder.Path p = getNavigation().createPath(bed, 1);
+        if (p != null) {
+            for (int i = Math.max(1, p.getNextNodeIndex()); i < p.getNodeCount(); i++) {
+                BlockPos n = p.getNodePos(i);
+                if (n.equals(bed) || n.equals(bed.above())) break;
+                pts.add(net.minecraft.world.phys.Vec3.atBottomCenterOf(n));
+            }
+        }
+        pts.add(top);
+        return Stroll.alongPoints(vf, pts) || Stroll.alongPoints(vf, java.util.List.of(position(), top));
     }
     /** [tp43] The last tick it was asleep or away from its bed: a few seconds to come up to the bed's side, then it lies down. */
     private int bedSideSince;

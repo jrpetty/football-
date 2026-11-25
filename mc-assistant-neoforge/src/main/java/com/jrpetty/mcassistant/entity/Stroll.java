@@ -86,6 +86,7 @@ public final class Stroll {
             if (len <= go) { at = b; go -= len; w.leg++; }
             else { at = at.add(b.subtract(at).scale(go / len)); go = 0; }
         }
+        if (!f.level().noCollision(f, f.getBoundingBox().move(at.subtract(from)).deflate(0.01))) openDoors(f, at);   // a door on the way: opened
         if (!f.level().noCollision(f, f.getBoundingBox().move(at.subtract(from)).deflate(0.01))) {
             Vec3 up = at.add(0, 0.6, 0), step = at.add(0, 1.0, 0);         // onto a bed or a slab; up a step
             if (f.level().noCollision(f, f.getBoundingBox().move(up.subtract(from)).deflate(0.01))) at = up;
@@ -107,6 +108,18 @@ public final class Stroll {
         }
         if (w.leg >= w.points.size() - 1) WALKS.remove(f.getUUID());
         return true;
+    }
+
+    /** Any shut wooden door its body would stand in at this spot opened, as it would open it walking. */
+    private static void openDoors(VillageFolkEntity f, Vec3 at) {
+        BlockPos feet = BlockPos.containing(at);
+        for (BlockPos p : new BlockPos[]{ feet, feet.above() }) {
+            net.minecraft.world.level.block.state.BlockState st = f.level().getBlockState(p);
+            if (st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock door && st.is(net.minecraft.tags.BlockTags.WOODEN_DOORS)
+                    && !st.getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) {
+                door.setOpen(f, f.level(), st, p, true);
+            }
+        }
     }
 
     public static void resetForTests() {
