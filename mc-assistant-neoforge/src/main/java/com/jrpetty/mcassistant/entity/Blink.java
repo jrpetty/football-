@@ -351,6 +351,7 @@ public final class Blink {
             .then(Commands.literal("seen").executes(ctx -> say(ctx.getSource(), String.join("\n", seenLines()))))
             .then(Commands.literal("held").executes(ctx -> say(ctx.getSource(), String.join("\n", HELD_LINES))))
             .then(Commands.literal("miners").executes(ctx -> say(ctx.getSource(), miners(ctx.getSource().getLevel()))))
+            .then(Commands.literal("beds").executes(ctx -> say(ctx.getSource(), beds(ctx.getSource().getLevel()))))
             .then(Commands.literal("unwatch").executes(ctx -> { WATCH.clear(); return say(ctx.getSource(), "watchers cleared"); }))
             .then(Commands.literal("watch")
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg()).then(Commands.argument("z", DoubleArgumentType.doubleArg())
@@ -382,6 +383,26 @@ public final class Blink {
             }
             b.append(Villages.name(v.id())).append(": miners ").append(all).append(", at the mine ").append(atMine).append(" (below ").append(below)
                 .append("), in the water ").append(wet).append("; ").append(MineWay.status(v.id())).append('\n');
+        }
+        return b.toString();
+    }
+
+    /** [tp46] Each town's night: how many asleep (on a floor), with a bed, and why the rest are not (Bedside.whyAwake). */
+    static String beds(ServerLevel level) {
+        StringBuilder b = new StringBuilder();
+        for (Villages.Village v : Villages.every()) {
+            if (!v.dim().equals(level.dimension())) continue;
+            int all = 0, asleep = 0, floor = 0, bed = 0;
+            java.util.Map<String, Integer> why = new java.util.TreeMap<>();
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                all++;
+                if (a.bedPos() != null) bed++;
+                if (a.isSleeping()) { asleep++; if (Bedside.onAFloor(a)) floor++; continue; }
+                why.merge(Bedside.kind(Bedside.whyAwake(a)), 1, Integer::sum);
+            }
+            if (all == 0) continue;
+            b.append(Villages.name(v.id())).append(": ").append(asleep).append(" of ").append(all).append(" asleep (").append(floor)
+                .append(" on a floor), ").append(bed).append(" with a bed; awake: ").append(why).append('\n');
         }
         return b.toString();
     }

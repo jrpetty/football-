@@ -369,6 +369,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void stopSleeping() {
         if (level().isClientSide) { super.stopSleeping(); return; }
+        Bedside.up(this);                                                 // [tp46] off its floor, if it lay on one
         java.util.Optional<BlockPos> lay = getSleepingPos();
         double fx = getX(), fy = getY(), fz = getZ();
         blinkDepth++;
@@ -439,6 +440,7 @@ public class VillageFolkEntity extends AssistantEntity {
      *  tick (FolkLod). */
     @Override
     public void travel(net.minecraft.world.phys.Vec3 input) {
+        if (!level().isClientSide && lyingInStep()) return;              // [tp46] drawing itself up into its bed from the foot
         if (!level().isClientSide && Stroll.step(this)) return;          // [tp43] led along a way, a step a tick
         if (!level().isClientSide && FolkLod.rests(this, input)) return;
         super.travel(input);
@@ -2084,7 +2086,7 @@ public class VillageFolkEntity extends AssistantEntity {
         net.minecraft.world.entity.EntityDimensions base = super.getDefaultDimensions(pose);
         if (this.entityData == null || pose == net.minecraft.world.entity.Pose.SLEEPING) return base;
         long look = this.entityData.get(DATA_LOOK);
-        if (!Looks.known(look)) return base;
+        if (!Looks.known(look)) return base.scale(1.0F, Individual.TALLEST);   // [tp46] under a carpet in a room two high
         return base.scale(1.0F, Individual.hitboxScale(Looks.heightOfStep(Looks.heightStepOf(look))));
     }
 
@@ -3012,6 +3014,11 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** What the last look for a bed found (the report line). */
     private String bedLook = "";
+
+    @Override
+    protected String bedLookNote() {
+        return bedLook.isEmpty() ? "not looked yet" : bedLook;
+    }
 
     /**
      * A bed down in the ground (a buried ruin's, a vault's) is nobody's home: three folk of one
@@ -8504,6 +8511,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     @Nullable
     protected BlockPos wayToward(BlockPos dest) {
+        BlockPos mine = MineWay.waypoint(this, dest);                  // [tp46] a miner on its town's way to the mine
+        if (mine != null) return mine;
         UUID village = ownerId();
         BlockPos heart = villageCentre;
         if (village == null || heart == null || !(level() instanceof net.minecraft.server.level.ServerLevel sl)) return null;

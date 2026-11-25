@@ -318,10 +318,18 @@ public final class Individual {
         if (f.isLeftHanded() != s.genes.leftHanded) f.setLeftHanded(s.genes.leftHanded);
     }
 
-    /** Its height's share of its hitbox: half as much lower as it is shorter, never taller than a villager's. */
+    /** Its height's share of its hitbox: half as much lower as it is shorter, never taller than {@link #TALLEST}. */
     public static float hitboxScale(float height) {
-        return Math.min(1.0F, 1.0F - (1.0F - height) * 0.5F);
+        return Math.min(TALLEST, 1.0F - (1.0F - height) * 0.5F);
     }
+
+    /**
+     * [tp46] The tallest hitbox a folk has, of a villager's 1.95: 1.85, a carpet's height under two blocks. The upper floors
+     * are two blocks high and carpeted between the beds; a box of 1.95 could not step onto a carpet there (1.95 and a
+     * sixteenth is over two), and a third of a town of thirty stood all night two blocks from its beds, "stepped aside out
+     * of a wedge". Its picture is drawn at its own height whatever its box (client/FolkRenderer).
+     */
+    public static final float TALLEST = 1.85F / 1.95F;
 
     // The marks, packed: scar 2 bits, patch 2, spectacles, soot, sun, stick, stoop 2, a child's growth 3, its clothes.
     static final int M_SCAR = 0, M_PATCH = 2, M_SPECS = 4, M_SOOT = 5, M_SUN = 6, M_STICK = 7, M_STOOP = 8, M_GROWTH = 10,

@@ -68,6 +68,8 @@ public final class MineWay {
         long boughtAt = -100000L;
         /** [tp46] When the way was found cut off, and when it opened (the tests, the log). */
         long cutAt = -1, openedAt = -1;
+        /** [tp46] The walk the way was planned along, heart first ({x, z}), and its cells' ground; null for one never cut off. */
+        @Nullable List<int[]> line;
         String status = "";
         Way(BlockPos site) { this.site = site; }
     }
@@ -133,6 +135,39 @@ public final class MineWay {
             }
         }
     }
+
+    /**
+     * [tp46] A miner's next stop on the way its town opened to the mine (over the new bridge, up the cut stair), sixteen steps
+     * along it toward where it is going, for a walk too long for the pathfinder in one go (VillageFolkEntity.wayToward): left
+     * to the pathfinder a long walk from the pithead went down the bank beside the bridge's end and into the lake. Null when
+     * its town has no such way, or it is nowhere near it (it goes as it always did).
+     */
+    @Nullable
+    public static BlockPos waypoint(AssistantEntity f, BlockPos dest) {
+        if (f.stationTask() != AssistantEntity.StationTask.MINE) return null;
+        UUID id = f.ownerId();
+        Way w = id == null ? null : WAYS.get(id);
+        if (w == null || w.line == null || !w.open || !w.walkable || w.line.size() < 2) return null;
+        List<int[]> line = w.line;
+        int[] heart = line.get(0), pit = line.get(line.size() - 1);
+        long toPit = sq(dest.getX() - pit[0], dest.getZ() - pit[1]), toHeart = sq(dest.getX() - heart[0], dest.getZ() - heart[1]);
+        boolean out = toPit <= toHeart;                                      // going out to the mine, or home
+        int near = -1;
+        long best = Long.MAX_VALUE;
+        for (int i = 0; i < line.size(); i++) {
+            long d = sq(f.getBlockX() - line.get(i)[0], f.getBlockZ() - line.get(i)[1]);
+            if (d < best) { best = d; near = i; }
+        }
+        if (near < 0 || best > 40L * 40L) return null;
+        int to = best > 6L * 6L ? near : out ? Math.min(line.size() - 1, near + 16) : Math.max(0, near - 16);
+        // Nearly there: the last stretch is the pathfinder's own.
+        if (out ? near >= line.size() - 4 : near <= 3) return null;
+        int[] c = line.get(to);
+        if (!(f.level() instanceof ServerLevel level)) return null;
+        return Visitors.surface(level, new BlockPos(c[0], 0, c[1]));
+    }
+
+    private static long sq(long dx, long dz) { return dx * dx + dz * dz; }
 
     /** Is this folk over the water at its town's mine while the mine is cut off (it works there; it cannot come over to help)? */
     public static boolean farSide(AssistantEntity f) {
@@ -247,6 +282,7 @@ public final class MineWay {
             List<int[]> line = route(level, v.centre(), w.site);
             boolean routed = line != null;
             if (line == null) line = Roads.bresenham(v.centre().getX(), v.centre().getZ(), w.site.getX(), w.site.getZ());
+            w.line = routed ? line : null;
             List<BridgeKit.Plan> drawn = new ArrayList<>();
             // [tp46] Along the cheapest walk (an old bridge's deck on it is ground, not water to bridge again), each stretch of
             // open water, a lake's islands and all, is one crossing, its deck low over the water.

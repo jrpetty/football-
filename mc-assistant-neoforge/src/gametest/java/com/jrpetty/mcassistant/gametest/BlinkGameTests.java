@@ -236,17 +236,33 @@ public class BlinkGameTests {
      */
     @GameTest(template = EMPTY, timeoutTicks = 60000, batch = "bk03_town_day_and_night")
     public static void bk03_town_day_and_night(GameTestHelper helper) {
+        dayAndNight(helper, "bk03", 6748000, 30, -1);
+    }
+
+    /**
+     * [tp46] bk08: a town of twelve four beds short (four of its beds taken up before the first night): the four with no bed
+     * to be had lie down on a floor indoors, walked to; nine in ten of the town asleep at one in the morning all the same,
+     * and nobody seen to jump.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 60000, batch = "bk08_beds_short")
+    public static void bk08_beds_short(GameTestHelper helper) {
+        dayAndNight(helper, "bk08", 6776000, 12, 4);
+    }
+
+    /** A town of {@code folk} through a day and a night with a player at its heart; {@code short_} of its beds taken up first (-1: none). */
+    static void dayAndNight(GameTestHelper helper, String tag, int cx, int folk, int short_) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
         level.setDayTime(22000L);
-        int cx = 6748000, cz = 40_000;
+        int cz = 40_000;
         BuildAuditGameTests.shape(level, BuildAuditGameTests.Ground.MEADOW, cx, cz, com.jrpetty.mcassistant.village.TownPlan.reach() + 16, 2803);
         BlockPos heart = Kit.surface(level, cx, cz);
-        Kit.log("[VT] bk03 found 30: " + Kit.command(level, "village found 30 " + cx + " " + cz));
+        Kit.log("[VT] " + tag + " found " + folk + ": " + Kit.command(level, "village found " + folk + " " + cx + " " + cz));
         UUID[] id = { null };
         long[] began = { -1 };
+        int[] asleepAt1 = { -1, 0 };
         ServerPlayer[] you = { null };
         helper.onEachTick(() -> {
             if (began[0] == -2) return;
@@ -270,44 +286,98 @@ public class BlinkGameTests {
                 Blink.reset();
                 Blink.setOn(true);
                 began[0] = level.getGameTime();
-                Kit.log("[VT] bk03 " + com.jrpetty.mcassistant.entity.Villages.name(v.id()) + ": " + com.jrpetty.mcassistant.entity.Villages.headcount(v.id())
+                Kit.log("[VT] " + tag + " " + com.jrpetty.mcassistant.entity.Villages.name(v.id()) + ": " + com.jrpetty.mcassistant.entity.Villages.headcount(v.id())
                     + " folk, a player at the heart from six in the morning");
                 return;
             }
             long ran = level.getGameTime() - began[0];
-            if (ran == 14000 || ran == 19000) {                                   // the evening, and the middle of the night: who is in bed
-                int asleep = 0, all = 0;
+            // The beds taken up at dusk, the day's works done (they would make them up again by day).
+            if (ran == 12600 && short_ > 0) Kit.log("[VT] " + tag + " beds taken up: " + takeUpBeds(level, heart, folk - short_) + ", " + (folk - short_) + " kept");
+            if (ran == 14000 || ran == 16000 || ran == 19000) {                   // the evening, bedtime, and one in the morning: who is in bed
+                int asleep = 0, all = 0, floor = 0, beds = 0;
+                java.util.Map<String, Integer> why = new java.util.TreeMap<>();
                 for (com.jrpetty.mcassistant.entity.AssistantEntity a : com.jrpetty.mcassistant.entity.Villages.folkOf(id[0])) {
                     all++;
-                    if (a.isSleeping()) { asleep++; continue; }
+                    String w = com.jrpetty.mcassistant.entity.Bedside.whyAwake(a);
+                    why.merge(com.jrpetty.mcassistant.entity.Bedside.kind(w), 1, Integer::sum);
+                    if (a.bedPos() != null) beds++;
+                    if (a.isSleeping()) { asleep++; if (com.jrpetty.mcassistant.entity.Bedside.onAFloor(a)) floor++; continue; }
                     BlockPos bed = a.bedPos();
-                    Kit.log("[VT] bk03   awake at night: " + a.getAssistantName() + " at " + a.blockPosition().toShortString() + " bed " + (bed == null ? "-" : bed.toShortString()
-                        + " " + (int) Math.sqrt(bed.distSqr(a.blockPosition())) + " off") + " path " + pathLine(a) + " shift " + a.onShift()
+                    Kit.log("[VT] " + tag + "   awake at night: " + a.getAssistantName() + " (" + w + ") at " + a.blockPosition().toShortString() + " bed " + (bed == null ? "-" : bed.toShortString()
+                        + " " + (int) Math.sqrt(bed.distSqr(a.blockPosition())) + " off") + " path " + pathLine(a) + " shift " + a.onShift() + " gave up " + a.bedsGivenUp()
                         + " goals " + running(a) + " job " + (a.peekJob() == null ? "-" : a.peekJob().type()) + " | " + a.brainNoteForBooks());
                 }
-                Kit.log("[VT] bk03 at night: " + asleep + " of " + all + " asleep");
+                if (ran == 19000) {                                            // [tp46] the room round the first two awake at their bedside
+                    int shown = 0;
+                    for (com.jrpetty.mcassistant.entity.AssistantEntity a : com.jrpetty.mcassistant.entity.Villages.folkOf(id[0])) {
+                        if (a.isSleeping() || a.bedPos() == null || a.bedPos().distSqr(a.blockPosition()) > 18 || shown++ >= 2) continue;
+                        BlockPos bed = a.bedPos();
+                        Kit.log("[VT] " + tag + " room round " + a.getAssistantName() + " at " + a.position() + " bed " + bed.toShortString() + " " + level.getBlockState(bed));
+                        for (int dy = -1; dy <= 1; dy++) for (int dz = -3; dz <= 3; dz++) {
+                            StringBuilder row = new StringBuilder("[VT] bk03 room y" + dy + " z" + (bed.getZ() + dz) + ":");
+                            for (int dx = -3; dx <= 3; dx++) {
+                                BlockPos q = bed.offset(dx, dy, dz);
+                                String n = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(q).getBlock()).getPath();
+                                if (q.equals(a.blockPosition())) n = "@" + n;
+                                row.append(' ').append(String.format("%-14.14s", n));
+                            }
+                            Kit.log(row.toString());
+                        }
+                    }
+                }
+                Kit.log("[VT] " + tag + " at night (" + (level.getDayTime() % 24000L) + "): " + asleep + " of " + all + " asleep (" + floor + " on a floor), " + beds + " with a bed; why: " + why);
+                if (ran == 19000) { asleepAt1[0] = asleep; asleepAt1[1] = all; }
             }
-            if (ran % 4000 == 0) Kit.log("[VT] bk03 @" + ran + " (" + (level.getDayTime() % 24000L) + "): seen jumps " + Blink.seenJumps() + ", safety " + Blink.excusedSeenJumps());
+            if (ran % 4000 == 0) Kit.log("[VT] " + tag + " @" + ran + " (" + (level.getDayTime() % 24000L) + "): seen jumps " + Blink.seenJumps() + ", safety " + Blink.excusedSeenJumps());
             if (ran < 24200) return;
             began[0] = -2;
-            Kit.log("[VT] bk03 a day and a night with a player at the heart:\n" + Blink.report());
-            for (String l : Blink.seenLines()) Kit.log("[VT] bk03 seen: " + l);
+            Kit.log("[VT] " + tag + " a day and a night with a player at the heart:\n" + Blink.report());
+            for (String l : Blink.seenLines()) Kit.log("[VT] " + tag + " seen: " + l);
             List<String> held = Blink.heldLines();
-            for (int i = 0; i < Math.min(40, held.size()); i++) Kit.log("[VT] bk03 held: " + held.get(i));
+            for (int i = 0; i < Math.min(40, held.size()); i++) Kit.log("[VT] " + tag + " held: " + held.get(i));
             // Every move through a teleport, set or put is counted with its cause: none may be seen. The once-a-tick look
             // also counts a change of place of over a block and a half that came by none of them (the game's own push out of
             // a block set where a folk stood, a step up a slab at a run): a residual of at most two a day is let be.
             long untraced = Blink.seenLines().stream().filter(l -> l.contains("untraced")).count();
             long seen = Blink.seenJumps() - untraced;
-            Kit.log("[VT] bk03 seen " + seen + " traced, " + untraced + " untraced");
+            Kit.log("[VT] " + tag + " seen " + seen + " traced, " + untraced + " untraced");
             if (untraced > 2) seen += untraced;
             com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
             com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
             level.getServer().tickRateManager().setTickRate(20.0F);
             letGo(level, you[0]);
-            if (seen == 0) helper.succeed();
-            else helper.fail("jumps in the player's sight over a day and a night: " + seen);
+            // [tp46] And nine in ten of the town asleep at one in the morning, in a bed or (with none to be had) on a floor.
+            int need = (asleepAt1[1] * 9 + 9) / 10;
+            if (seen != 0) helper.fail("jumps in the player's sight over a day and a night: " + seen);
+            else if (asleepAt1[0] < need) helper.fail("asleep at one in the morning: " + asleepAt1[0] + " of " + asleepAt1[1] + " (" + need + " wanted)");
+            else helper.succeed();
         });
+    }
+
+    /** [tp46] The town's beds taken up (both halves, nothing dropped) but the {@code keep} nearest the heart; how many went. */
+    static int takeUpBeds(ServerLevel level, BlockPos heart, int keep) {
+        List<BlockPos> heads = new java.util.ArrayList<>();
+        for (int x = (heart.getX() >> 4) - 6; x <= (heart.getX() >> 4) + 6; x++) for (int z = (heart.getZ() >> 4) - 6; z <= (heart.getZ() >> 4) + 6; z++) {
+            net.minecraft.world.level.chunk.LevelChunk c = level.getChunkSource().getChunkNow(x, z);
+            if (c == null) continue;
+            for (net.minecraft.world.level.block.entity.BlockEntity be : c.getBlockEntities().values()) {
+                net.minecraft.world.level.block.state.BlockState st = level.getBlockState(be.getBlockPos());
+                if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock
+                        && st.getValue(net.minecraft.world.level.block.BedBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.HEAD) heads.add(be.getBlockPos());
+            }
+        }
+        heads.sort(java.util.Comparator.comparingDouble(p -> -p.distSqr(heart)));
+        int n = Math.max(0, heads.size() - keep);
+        int gone = 0;
+        for (BlockPos h : heads) {
+            if (gone >= n) break;
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(h);
+            BlockPos foot = h.relative(st.getValue(net.minecraft.world.level.block.BedBlock.FACING).getOpposite());
+            level.setBlock(foot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2 | 16);
+            level.setBlock(h, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2 | 16);
+            gone++;
+        }
+        return gone;
     }
 
     // ============================================================ bk04 / bk05: before the cage
