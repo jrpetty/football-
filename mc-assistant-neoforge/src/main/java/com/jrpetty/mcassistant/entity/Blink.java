@@ -177,7 +177,16 @@ public final class Blink {
         if (!on || f.level().isClientSide) return;
         boolean miner = miner(f);
         boolean seen = seen(f);
-        if (miner && f.isInWater() && f.ownerId() != null) MINER_WET.merge(f.ownerId(), 1L, Long::sum);   // [tp46]
+        if (miner) trail(f);                                                // [tp47]
+        if (miner && f.isInWater() && f.ownerId() != null) {
+            MINER_WET.merge(f.ownerId(), 1L, Long::sum);   // [tp46]
+            // [tp47] Where, and at what: by the eight-block square and four-block band, and the folk's last word.
+            if (MINER_WET_AT.size() < 2000) {
+                String note = f.brainNoteForBooks();
+                MINER_WET_AT.merge((f.getBlockX() & ~7) + "," + (f.getBlockY() & ~3) + "," + (f.getBlockZ() & ~7) + " "
+                    + (note.length() > 48 ? note.substring(0, 48) : note), 1L, Long::sum);
+            }
+        }
         synchronized (TICKS) {
             TICKS[miner ? 0 : 2]++;
             if (seen) TICKS[miner ? 1 : 3]++;
@@ -244,9 +253,52 @@ public final class Blink {
 
     /** [tp46] Ticks the town's miners have spent in the water since the counts were reset (the soak). */
     private static final Map<java.util.UUID, Long> MINER_WET = new java.util.concurrent.ConcurrentHashMap<>();
+    /** [tp47] Each miner's last couple of seconds (where, on what walk, at what), told in the log when it goes into the water. */
+    private static final Map<java.util.UUID, java.util.ArrayDeque<String>> TRAILS = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<java.util.UUID, Boolean> WAS_WET = new java.util.concurrent.ConcurrentHashMap<>();
+    private static int trailsTold;
+
+    private static void trail(VillageFolkEntity f) {
+        java.util.ArrayDeque<String> t = TRAILS.computeIfAbsent(f.getUUID(), k -> new java.util.ArrayDeque<>());
+        boolean wet = f.isInWater();
+        Boolean was = WAS_WET.put(f.getUUID(), wet);
+        if (wet && Boolean.FALSE.equals(was) && trailsTold < 80) {
+            trailsTold++;
+            net.minecraft.world.level.pathfinder.Path p = f.getNavigation().getPath();
+            StringBuilder nodes = new StringBuilder();
+            if (p != null) for (int i = Math.max(0, p.getNextNodeIndex() - 2); i < p.getNodeCount() && i < p.getNextNodeIndex() + 12; i++) {
+                net.minecraft.core.BlockPos q = p.getNodePos(i);
+                nodes.append(i == p.getNextNodeIndex() ? "*" : "").append(q.toShortString()).append(f.level().getFluidState(q).isEmpty() ? "" : "~").append(' ');
+            }
+            java.util.ArrayDeque<String> slow = SLOW.get(f.getUUID());
+            com.mojang.logging.LogUtils.getLogger().info("[MCA-WET] {} into the water at {}; before, every ten ticks:\n  {}\n  and the last ticks:\n  {}\n  path {}\n  {}", f.getAssistantName(),
+                String.format("%.2f %.2f %.2f", f.getX(), f.getY(), f.getZ()), slow == null ? "-" : String.join("\n  ", slow), String.join("\n  ", t), nodes,
+                f.getNavigation() instanceof FolkNavigation fn && fn.mustSwim() ? "let swim: " + fn.wetWhy() : "not a planned swim");
+        }
+        net.minecraft.world.level.pathfinder.Path p = f.getNavigation().getPath();
+        t.addLast(f.level().getGameTime() + " " + String.format("%.2f %.2f %.2f", f.getX(), f.getY(), f.getZ()) + (f.onGround() ? " g" : " -")
+            + (wet ? " WET" : "") + (p == null ? " path -" : " path " + p.getNextNodeIndex() + "/" + p.getNodeCount() + " to " + p.getTarget().toShortString()
+            + (p.canReach() ? "" : "(x)") + (p.isDone() ? " done" : "")) + (f.getNavigation() instanceof FolkNavigation fn && fn.mustSwim() ? " MUSTSWIM" : "")
+            + " | " + f.brainNoteForBooks());
+        if (t.size() > 30) t.removeFirst();
+        if (f.level().getGameTime() % 10 == 0) {
+            java.util.ArrayDeque<String> slow = SLOW.computeIfAbsent(f.getUUID(), k -> new java.util.ArrayDeque<>());
+            slow.addLast(t.peekLast());
+            if (slow.size() > 36) slow.removeFirst();
+        }
+    }
+    private static final Map<java.util.UUID, java.util.ArrayDeque<String>> SLOW = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** [tp47] The miners' ticks in the water by where (an eight-block square, a four-block band) and what they were at. */
+    private static final Map<String, Long> MINER_WET_AT = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static void reset() {
         MINER_WET.clear();
+        MINER_WET_AT.clear();
+        TRAILS.clear();
+        SLOW.clear();
+        WAS_WET.clear();
+        trailsTold = 0;
         BY.clear();
         HELD.clear();
         SEEN.clear();
@@ -395,6 +447,9 @@ public final class Blink {
                 .append("), in the water ").append(wet).append(" (miner-ticks in the water so far ").append(MINER_WET.getOrDefault(v.id(), 0L))
                 .append("); ").append(MineWay.status(v.id())).append(wetAt.length() > 0 ? "; wet:" + wetAt : "").append('\n');
         }
+        // [tp47] Where the miners' wet ticks were spent, the most first.
+        MINER_WET_AT.entrySet().stream().sorted((x, y) -> Long.compare(y.getValue(), x.getValue())).limit(16)
+            .forEach(e -> b.append("  wet ").append(e.getValue()).append(" at ").append(e.getKey()).append('\n'));
         return b.toString();
     }
 

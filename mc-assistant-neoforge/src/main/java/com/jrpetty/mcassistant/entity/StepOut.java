@@ -23,6 +23,9 @@ public final class StepOut {
 
     private StepOut() {}
 
+    /** [tp47] Step-outs told in the log so far (the first forty). */
+    private static int told;
+
     /** How far it looks: up to three blocks up, two to the side. */
     static final int UP = 3, SIDE = 2;
 
@@ -32,6 +35,17 @@ public final class StepOut {
         BlockPos to = open(level, f);
         if (to == null) return false;
         if (f.isSleeping()) f.stopSleeping();
+        if (told < 40) {                                                    // [tp47] the log: what put it in the wall
+            told++;
+            net.minecraft.world.level.pathfinder.Path p = f.getNavigation().getPath();
+            StringBuilder goals = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal g : f.goalsForTests().getAvailableGoals())
+                if (g.isRunning()) goals.append(g.getGoal().getClass().getSimpleName()).append(',');
+            com.mojang.logging.LogUtils.getLogger().info("[MCA-STEPOUT] {} ({}) at {} in {}: {} | path {} | goals {} | moving {} | led {}", f.getAssistantName(),
+                f.stationTask(), String.format("%.2f %.2f %.2f", f.getX(), f.getY(), f.getZ()), level.getBlockState(f.blockPosition()).getBlock().getName().getString(),
+                f.brainNoteForBooks(), p == null ? "-" : p.getNextNodeIndex() + "/" + p.getNodeCount() + " to " + p.getTarget().toShortString(), goals,
+                f.getDeltaMovement(), Stroll.led(f));
+        }
         f.getNavigation().stop();
         Blink.safety(f, "step out of the wall (suffocating)");          // [tp43] a step or two, for its life
         f.teleportTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
