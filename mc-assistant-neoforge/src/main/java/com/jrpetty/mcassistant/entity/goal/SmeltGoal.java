@@ -507,6 +507,11 @@ public class SmeltGoal extends Goal {
             BlockPos pos = feet.relative(dir);
             if (assistant.level().getBlockState(pos).canBeReplaced()
                 && assistant.level().getBlockState(pos.below()).isSolid()) {
+                // [film39] A settler's only on its own ground and where the town allows it: findFurnaces counts only the
+                // furnaces in its zone, so one set down off it was never found again, and the next smelt set down another
+                // beside it (furnaceNearby saw the last one): a heap of twelve on the top corner of a mine's stair.
+                if (assistant.isSettler() && (!assistant.inZone(pos)
+                        || !com.jrpetty.mcassistant.entity.TownBlocks.mayPlace(assistant.level(), pos, com.jrpetty.mcassistant.entity.TownBlocks.Why.FURNISH))) continue;
                 assistant.level().setBlockAndUpdate(pos, Blocks.FURNACE.defaultBlockState());
                 if (assistant.isSettler()) {
                     com.jrpetty.mcassistant.entity.ZoneChests.mark(assistant.level(), pos);
