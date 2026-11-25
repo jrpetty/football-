@@ -45,6 +45,8 @@ final class PaFishGoal extends Goal {
     @Nullable private PaFishHook hook;
     private Phase phase = Phase.WALK;
     private int phaseAt, strikeAt = -1, fish, walkStuck, spots, dryCasts;
+    /** Fish actually picked up into its pack this job (a fish reeled in can drift off on the water before it gets there). */
+    private int landed;
     private boolean earlyRolled, strikingEarly, biteSeen;
     private double bestDist;
     private final List<ItemEntity> flying = new ArrayList<>();
@@ -76,6 +78,7 @@ final class PaFishGoal extends Goal {
         job = a.peekJob();
         gen = a.taskGen();
         fish = 0;
+        landed = 0;
         spots = 0;
         dryCasts = 0;
         flying.clear();
@@ -128,7 +131,7 @@ final class PaFishGoal extends Goal {
         if (job == null) return;
         ItemStack rod = a.getMainHandItem();
         if (!rod.is(Items.FISHING_ROD)) {
-            if (!rodInHand()) { finish(PaLogiTalk.line(a, "field.fish_rod_broke", "n", String.valueOf(fish)), fish > 0); return; }
+            if (!rodInHand()) { finish(PaLogiTalk.line(a, "field.fish_rod_broke", "n", String.valueOf(landed)), landed > 0); return; }
             rod = a.getMainHandItem();
         }
         switch (phase) {
@@ -277,12 +280,13 @@ final class PaFishGoal extends Goal {
         sweepUp(age > 30 ? 6.0 : 1.8);
         if (!flying.isEmpty() && age < 60) return;
         flying.clear();
-        if (job != null && fish >= job.amount()) {
-            finish(PaLogiTalk.line(a, "field.fish_done", "n", String.valueOf(fish)), true);
+        // Done when the fish are in its pack, not when they were reeled in: one that drifted off on the water is fished again.
+        if (job != null && landed >= job.amount()) {
+            finish(PaLogiTalk.line(a, "field.fish_done", "n", String.valueOf(landed)), true);
             return;
         }
         if (PaContainers.packRoom(a, new ItemStack(Items.COD)) <= 0) {
-            finish(PaLogiTalk.line(a, "field.fish_full", "n", String.valueOf(fish)), fish > 0);
+            finish(PaLogiTalk.line(a, "field.fish_full", "n", String.valueOf(landed)), landed > 0);
             return;
         }
         to(Phase.AIM);
@@ -299,6 +303,7 @@ final class PaFishGoal extends Goal {
             ItemStack left = a.insertGiven(s.copy());
             int took = n - left.getCount();
             if (took > 0) {
+                if (s.is(ItemTags.FISHES)) landed += took;
                 a.take(ie, took);
                 a.level().playSound(null, a.getX(), a.getY(), a.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.2F,
                     ((a.getRandom().nextFloat() - a.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
