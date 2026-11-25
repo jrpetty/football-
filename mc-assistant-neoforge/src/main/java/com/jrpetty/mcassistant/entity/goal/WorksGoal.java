@@ -542,8 +542,6 @@ public class WorksGoal extends Goal {
             double dd = a.position().distanceTo(Vec3.atBottomCenterOf(cells.get(i)));
             if (dd <= nearD) { nearD = dd; near = i; }
         }
-        // [tp43] A few steps off the way's next cell (round the corner of a landing from it): from where it stands, round the corner.
-        if (near < 0 && !cells.isEmpty() && a.position().distanceTo(Vec3.atBottomCenterOf(cells.get(0))) <= 4.5) near = 0;
         if (near >= 0 && a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.Stroll.along(f, squared(cells.subList(near, cells.size())))) {
             replans = 0;
             LEAD_STROLLS++;
