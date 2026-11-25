@@ -375,6 +375,7 @@ public final class Blink {
             net.minecraft.core.BlockPos site = TownMine.siteOf(v.id());
             if (site == null || !v.dim().equals(level.dimension())) continue;
             int all = 0, atMine = 0, below = 0, wet = 0;
+            StringBuilder wetAt = new StringBuilder();
             int ground = level.hasChunk(site.getX() >> 4, site.getZ() >> 4)
                 ? level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, site.getX(), site.getZ()) : 64;
             for (AssistantEntity a : Villages.folkOf(v.id())) {
@@ -384,11 +385,15 @@ public final class Blink {
                 boolean near = dx * dx + dz * dz <= 160 * 160 && (dx * dx + dz * dz <= 24 * 24 || a.getY() < ground - 4);   // at the pithead, or in the works
                 if (near) atMine++;
                 if (near && a.getY() < ground - 4) below++;
-                if (a.isInWater()) wet++;
+                if (a.isInWater()) {
+                    wet++;
+                    if (wetAt.length() < 400) wetAt.append(' ').append(a.getAssistantName()).append('@').append(a.blockPosition().toShortString())
+                        .append(a instanceof VillageFolkEntity vf ? "(" + MineLift.state(a.getUUID()) + ", " + vf.brainNoteForBooks() + ")" : "");
+                }
             }
             b.append(Villages.name(v.id())).append(": miners ").append(all).append(", at the mine ").append(atMine).append(" (below ").append(below)
                 .append("), in the water ").append(wet).append(" (miner-ticks in the water so far ").append(MINER_WET.getOrDefault(v.id(), 0L))
-                .append("); ").append(MineWay.status(v.id())).append('\n');
+                .append("); ").append(MineWay.status(v.id())).append(wetAt.length() > 0 ? "; wet:" + wetAt : "").append('\n');
         }
         return b.toString();
     }
