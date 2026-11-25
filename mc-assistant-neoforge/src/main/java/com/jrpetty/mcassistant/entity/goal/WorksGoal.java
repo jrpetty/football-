@@ -305,7 +305,7 @@ public class WorksGoal extends Goal {
     private void putAtTheTop(ServerLevel level) {
         BlockPos top = MineWorks.below(a) ? MineWorks.topFor(level, a) : null;
         // [tp43] Never in a player's sight: left below, it is sent up the stair by the works' next look (MineStairs).
-        if (top != null && open(top) && com.jrpetty.mcassistant.entity.Blink.mayJump(a, "works: a climb that got nowhere, put at the top")) {
+        if (top != null && open(top) && com.jrpetty.mcassistant.entity.Blink.mayJumpTo(a, top.getX() + 0.5, top.getZ() + 0.5, "works: a climb that got nowhere, put at the top")) {
             a.getNavigation().stop();
             a.teleportTo(top.getX() + 0.5, top.getY(), top.getZ() + 0.5);
             teleports++;

@@ -3473,6 +3473,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 net.minecraft.world.level.pathfinder.Path toBed = getNavigation().getPath();
                 if (isSettler() && putBeside(bed, "bed: could not walk to it, put beside it")) {
                     brain("could not walk to my bed — put beside it");
+                } else if (isSettler() && this instanceof VillageFolkEntity && Blink.seen(this) && bed.distSqr(blockPosition()) <= 18 && stepOntoBed(bed)) {
+                    // [tp43] A few steps from its bed and getting no nearer (the bed in a corner, a chest at its foot): it steps
+                    // over to it and onto it, led, as anybody climbs into a bed from the side they can reach.
+                    brain("stepped over to its bed");
+                    return true;
                 } else if (isSettler() && this instanceof VillageFolkEntity && Blink.seen(this)
                         && (toBed == null || toBed.canReach() || getNavigation().isDone())) {
                     // [tp43] In a player's sight it is never put beside its bed: it walks on (a fresh way each look),
@@ -3502,8 +3507,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // [tp43] Lying down is a step onto the bed, not a hop of two blocks into it: in a player's sight it comes up to the
             // bed's side first (a few seconds at most, then it lies down wherever it has got to).
             double bx = bed.getX() + 0.5 - getX(), bz = bed.getZ() + 0.5 - getZ();
-            if (this instanceof VillageFolkEntity && bx * bx + bz * bz > 1.3 * 1.3 && tickCount - bedSideSince < 200 && Blink.seen(this)) {
-                if (getNavigation().isDone()) getNavigation().moveTo(bed.getX() + 0.5, bed.getY(), bed.getZ() + 0.5, 0.7D);
+            if (this instanceof VillageFolkEntity vf && bx * bx + bz * bz > 1.3 * 1.3 && tickCount - bedSideSince < 200 && Blink.seen(this)) {
+                if (!Stroll.led(vf)) stepOntoBed(bed);
                 return true;
             }
             getNavigation().stop();
@@ -7056,6 +7061,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     private int putBesideTick = -100000;
+
+    /** [tp43] Led over to its bed and up onto it (a few steps at most), to lie down there. True if it set off. */
+    protected boolean stepOntoBed(BlockPos bed) {
+        if (!(this instanceof VillageFolkEntity vf)) return false;
+        net.minecraft.world.phys.Vec3 top = new net.minecraft.world.phys.Vec3(bed.getX() + 0.5, bed.getY() + 0.5625, bed.getZ() + 0.5);
+        return Stroll.alongPoints(vf, java.util.List.of(position(), top));
+    }
     /** [tp43] The last tick it was asleep or away from its bed: a few seconds to come up to the bed's side, then it lies down. */
     private int bedSideSince;
 

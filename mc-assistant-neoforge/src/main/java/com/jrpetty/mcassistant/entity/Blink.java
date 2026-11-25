@@ -160,7 +160,7 @@ public final class Blink {
 
     /** VillageFolkEntity: an instant move from (fx, fy, fz) to where it now is, by a call outside the game's movement. */
     static void moved(VillageFolkEntity f, double fx, double fy, double fz, @Nullable String via) {
-        if (!on || f.tickCount <= 0 || f.isRemoved() || f.level().isClientSide) return;
+        if (!on || f.tickCount <= 0 || f.isRemoved() || f.level().isClientSide || f.isPassenger()) return;   // riding: the vehicle's movement
         double dx = f.getX() - fx, dy = f.getY() - fy, dz = f.getZ() - fz;
         if (dx * dx + dy * dy + dz * dz <= HOP * HOP) return;
         String why = WHY.remove(f.getId());
@@ -264,6 +264,11 @@ public final class Blink {
     /** The seen jumps, one line each (at most 400 kept). */
     public static List<String> seenLines() {
         return new ArrayList<>(SEEN);
+    }
+
+    /** The jumps held back to a place (the first few hundred), one line each. */
+    public static List<String> heldLines() {
+        return new ArrayList<>(HELD_LINES);
     }
 
     /** Unexcused jumps by cause: {miner seen, miner unseen, other seen, other unseen}. */

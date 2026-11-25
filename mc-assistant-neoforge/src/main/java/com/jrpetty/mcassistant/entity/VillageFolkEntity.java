@@ -387,6 +387,13 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Blink.on()) Blink.moved(this, fx, fy, fz, "out of bed (the game's own stand-up)");
     }
 
+    /** [tp43] Getting down off a cart, a boat or a horse is the game's own step down (riding, not a jump). */
+    @Override
+    public void stopRiding() {
+        if (isPassenger()) Blink.note(this, "~dismount");
+        super.stopRiding();
+    }
+
     @Override
     public void teleportTo(double x, double y, double z) {
         if (blinkDepth > 0 || !Blink.on()) { super.teleportTo(x, y, z); return; }

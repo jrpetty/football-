@@ -66,7 +66,7 @@ public class BlinkGameTests {
         int coal = com.jrpetty.mcassistant.entity.MineWorks.levelY(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COAL);
         int copper = com.jrpetty.mcassistant.entity.MineWorks.levelY(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COPPER);
         Kit.hold(level, r.sx(), r.sz(), 48);
-        MineWorksGameTests.tower(r, copper - 3);
+        MineWorksGameTests.tower(r, -59);                       // down to the ground: the shaft sunk deeper stays in rock
         MineWorksGameTests.bed(r, coal, 32, net.minecraft.world.level.block.Blocks.COAL_ORE, 80, 4301L);
         MineWorksGameTests.bed(r, copper, 32, net.minecraft.world.level.block.Blocks.COPPER_ORE, 80, 4302L);
         com.jrpetty.mcassistant.entity.MineWorks.sinkForTests(level, r.v(), 4 * ((MineWorksGameTests.TOP - copper) / 3) + 1, null);
@@ -284,6 +284,8 @@ public class BlinkGameTests {
             began[0] = -2;
             Kit.log("[VT] bk03 a day and a night with a player at the heart:\n" + Blink.report());
             for (String l : Blink.seenLines()) Kit.log("[VT] bk03 seen: " + l);
+            List<String> held = Blink.heldLines();
+            for (int i = 0; i < Math.min(40, held.size()); i++) Kit.log("[VT] bk03 held: " + held.get(i));
             long seen = Blink.seenJumps();
             com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
             com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
