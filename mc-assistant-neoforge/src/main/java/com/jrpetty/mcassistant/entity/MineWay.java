@@ -26,8 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *     are ground; water, lava, a cliff and a wall are not).</li>
  * <li><b>The crossing.</b> If it cannot, and the straight way out to the pithead crosses water three wide or more, the
  *     town bridges it there before anything else at the mine: the road gang's kit (BridgeKit, timber, a block clear over
- *     the water, ramps at the ends), out of the stores, a dozen blocks a visit by a hand at the town's works (a miner for
- *     choice: its own way to work).</li>
+ *     the water, ramps at the ends), out of the stores, a dozen blocks a visit by a hand at the town's works (on top of the
+ *     town's share of hands for its works: the mine waits on it).</li>
  * <li><b>Meanwhile.</b> Till the way is open the mine is cut off: its miners do not commute (no shift, no walk back to
  *     the plot): they help build the bridge or take up the town's other work.</li>
  * <li><b>Not water.</b> No way, and no water on the straight way (a cliff, a wall), or the bridge down and still no way:
@@ -89,6 +89,17 @@ public final class MineWay {
         }
         BlockPos to = f.getNavigation().getTargetPos();
         if (to != null && near(to, w.site, 48) && !f.getNavigation().isDone()) f.getNavigation().stop();
+        // A miner's walk that would take it into the water (round to its plot by some way of its own): not while it waits.
+        net.minecraft.world.level.pathfinder.Path p = f.getNavigation().getPath();
+        if (f.stationTask() == AssistantEntity.StationTask.MINE && p != null && !p.isDone() && !f.isInWater()) {
+            for (int i = p.getNextNodeIndex(); i < p.getNodeCount(); i++) {
+                BlockPos n = p.getNodePos(i);
+                if (f.level().getFluidState(n).is(net.minecraft.tags.FluidTags.WATER)) {
+                    f.getNavigation().stop();
+                    break;
+                }
+            }
+        }
     }
 
     private static boolean near(BlockPos a, BlockPos b, int r) {
@@ -173,6 +184,10 @@ public final class MineWay {
             for (int[] run : waterRuns(level, line)) {
                 BridgeKit.Span s = BridgeKit.spanAt(level, id, ROAD, line, run[0] + run[1] / 2, 1);
                 if (s == null) continue;
+                // The cheapest that serves: planks through (no log beams to wait on), unless the town drew it in timber already.
+                String fam = "b18.fam/" + ROAD + "/" + s.a() + "/w";
+                if (com.jrpetty.mcassistant.village.Ledger.note(id, fam) == null || com.jrpetty.mcassistant.village.Ledger.note(id, fam).isEmpty())
+                    com.jrpetty.mcassistant.village.Ledger.note(id, fam, BridgeKit.PLANKS.name());
                 BridgeKit.Plan p = BridgeKit.plan(level, v, id, ROAD, line, s, false, false);
                 if (p != null && !w.plans.contains(p)) w.plans.add(p);
             }
@@ -220,7 +235,7 @@ public final class MineWay {
             // The gang stands on the bank at the town's end of it.
             BlockPos a = Visitors.surface(level, s.at(s.w0() - 2, 0, s.deckY())), b = Visitors.surface(level, s.at(s.w1() + 2, 0, s.deckY()));
             BlockPos stand = a.distSqr(v.centre()) <= b.distSqr(v.centre()) ? a : b;
-            if (!TownJobs.atWork(level, v, "mineway", stand, "building the bridge on the way to the mine", AssistantEntity.StationTask.MINE)) {
+            if (!TownJobs.atWork(level, v, "mineway", stand, "building the bridge on the way to the mine", AssistantEntity.StationTask.HAUL)) {
                 w.status = "waiting for a hand";
                 return;
             }

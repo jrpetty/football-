@@ -462,6 +462,8 @@ public final class TownJobs {
         // and a villa ordered and paid for in a town of sixty sat all day at "waiting for a hand the town can spare",
         // its one hand in eight always taken by the town's beds, signs and gardens first.
         if (paid(works) && busy < Math.max(cap + 2, adults / 2)) extra = true;
+        // [tp43] Nor the bridge on the way to the mine: the mine waits on it, its miners kept off it meanwhile.
+        if ("mineway".equals(works) && busy < cap + 2) extra = true;
         if (busy < cap || extra) return ANY;
         return busy >= Math.max(1, adults / 4) ? NONE_TO_SPARE : IDLE_ONLY;
     }
