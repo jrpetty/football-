@@ -304,7 +304,8 @@ public class WorksGoal extends Goal {
     /** [econ32b] A climb that got nowhere: put at the top of the works (the way in), if it is below and the top is open. */
     private void putAtTheTop(ServerLevel level) {
         BlockPos top = MineWorks.below(a) ? MineWorks.topFor(level, a) : null;
-        if (top != null && open(top)) {
+        // [tp43] Never in a player's sight: left below, it is sent up the stair by the works' next look (MineStairs).
+        if (top != null && open(top) && com.jrpetty.mcassistant.entity.Blink.mayJumpTo(a, top.getX() + 0.5, top.getZ() + 0.5, "works: a climb that got nowhere, put at the top")) {
             a.getNavigation().stop();
             a.teleportTo(top.getX() + 0.5, top.getY(), top.getZ() + 0.5);
             teleports++;
@@ -402,7 +403,7 @@ public class WorksGoal extends Goal {
                     com.jrpetty.mcassistant.entity.MineLift.cancel(id);
                     LIFT_GAVE_UP++;
                     toStairs(r);
-                } else a.getNavigation().stop();
+                } else queueUp(r[0]);                            // [tp43] its own place in the queue, off the stair's head
             }
             case RIDING -> { }
             case ARRIVED -> {
@@ -415,6 +416,20 @@ public class WorksGoal extends Goal {
             }
         }
         return false;
+    }
+
+    /** [tp43] Waiting for the cage: to its own cell round the stop (MineLift.queueSpot), and stood there facing the cage. */
+    private void queueUp(int stop) {
+        if (!(a instanceof VillageFolkEntity f) || f.ownerId() == null || !(a.level() instanceof ServerLevel level)) { a.getNavigation().stop(); return; }
+        if ((a.tickCount + a.getId()) % 10 != 0) return;
+        BlockPos spot = com.jrpetty.mcassistant.entity.MineLift.queueSpot(level, f.ownerId(), stop, a.getUUID());
+        if (spot == null || at(spot)) {
+            a.getNavigation().stop();
+            com.jrpetty.mcassistant.entity.MineLift.Stop s = com.jrpetty.mcassistant.entity.MineLift.stopAt(f.ownerId(), stop);
+            if (s != null) a.getLookControl().setLookAt(s.board().getX() + 0.5, s.board().getY() + 1.5, s.board().getZ() + 0.5);
+            return;
+        }
+        if (a.getNavigation().isDone() || !spot.equals(a.getNavigation().getTargetPos())) a.getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0.7D);
     }
 
     private void toStairs(int[] r) {
@@ -475,6 +490,12 @@ public class WorksGoal extends Goal {
         }
         if (stuck > 160) {                                       // [fixes14] the last resort, after eight seconds
             stuck = 0;
+            if (open(dest) && !com.jrpetty.mcassistant.entity.Blink.mayJump(a, "works: stuck on the way, put on the waypoint")) {
+                // [tp43] In a player's sight: led along the open way to it, a step a tick (past a knot of folk at the stair
+                // head, over the lip of a step), or, lost off the way, a fresh way from where it stands. Never put there.
+                hopNote(dest);
+                return leadOn(dest);
+            }
             if (open(dest)) {
                 a.getNavigation().stop();
                 hopNote(dest);                                   // [fixes14] why it was stuck, for the tests
@@ -486,6 +507,101 @@ public class WorksGoal extends Goal {
         }
         return false;
     }
+
+    /** [tp43] Fresh ways planned in a row for a walk that was stuck in sight; three, and it waits on its way instead. */
+    private int replans;
+
+    /**
+     * [tp43] Stuck on its way with a player watching: led along the cells of its route from the next to this one, if it
+     * stands by the way (the works' route is cut open, cell to cell); off the way, a fresh route from where it stands. False:
+     * not there yet (the lead, or the new walk, takes it on).
+     */
+    private boolean leadOn(BlockPos dest) {
+        LEADS++;
+        List<BlockPos> cells = new ArrayList<>();
+        int k = ri;
+        for (; k < route.size(); k++) {
+            cells.add(route.get(k));
+            if (route.get(k).equals(dest)) break;
+        }
+        // From the cell of the way nearest where it stands (it may have come off it a little ahead or behind).
+        int near = -1;
+        double nearD = 2.5;
+        for (int i = 0; i < cells.size(); i++) {
+            double dd = a.position().distanceTo(Vec3.atBottomCenterOf(cells.get(i)));
+            if (dd <= nearD) { nearD = dd; near = i; }
+        }
+        if (near >= 0 && a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.Stroll.along(f, cells.subList(near, cells.size()))) {
+            replans = 0;
+            LEAD_STROLLS++;
+            return false;
+        }
+        // Below the spot, close under it (fallen down a lip or into a pit beside the stair): it builds itself up a block at
+        // a time out of the cobblestone in its pack (Footholds, taken up again after), and walks on from the top.
+        Vec3 flat = new Vec3(dest.getX() + 0.5 - a.getX(), 0, dest.getZ() + 0.5 - a.getZ());
+        if (dest.getY() > a.getY() + 1.2 && flat.length() <= 4.5 && com.jrpetty.mcassistant.entity.Footholds.rise(a, com.jrpetty.mcassistant.entity.Footholds.Purpose.ESCAPE)) {
+            stuck = 150;                                                        // the next block in half a second
+            replans = 0;
+            LEAD_RISES++;
+            return false;
+        }
+        // The spot a few blocks off and the way to it shut (a block it sealed a spring with, a lip of rock): it digs through
+        // (its own works), a block or two a look, and steps on.
+        if (a.position().distanceTo(Vec3.atBottomCenterOf(dest)) <= 4.5 && a.level() instanceof ServerLevel dl && a instanceof VillageFolkEntity f2) {
+            int dug = digToward(dl, dest);
+            if (dug >= 0 && com.jrpetty.mcassistant.entity.Stroll.alongPoints(f2, List.of(a.position(), Vec3.atBottomCenterOf(dest)))) {
+                replans = 0;
+                LEAD_STROLLS++;
+                if (dug > 0) LEAD_DIGS++;
+                return false;
+            }
+        }
+        LEAD_REPLANS++;
+        if (++replans > 3 || !(a.level() instanceof ServerLevel level)) { replans = 0; walking = null; return false; }
+        walking = null;
+        if (phase == Phase.OUT) { beginOut(bye); return false; }                // a fresh way up from here
+        if (phase == Phase.WALK && task != null && a instanceof VillageFolkEntity f) {
+            setRoute(level, MineWorks.route(level, a, task));                  // a fresh way to the face from here
+            return false;
+        }
+        if (phase == Phase.BREAK) { breakAt = null; phase = Phase.NEXT; return false; }
+        return false;
+    }
+
+    /**
+     * [tp43] The blocks on the straight way from its feet to this spot that would stop it (at its feet's height and its
+     * head's, at each end's), broken as it would break them at the face, up to three; -1 if the way is shut by something it
+     * may not or cannot break (bedrock, a chest, a fluid, a spring). The number broken otherwise.
+     */
+    private int digToward(ServerLevel level, BlockPos dest) {
+        Vec3 from = a.position(), to = Vec3.atBottomCenterOf(dest);
+        java.util.LinkedHashSet<BlockPos> shut = new java.util.LinkedHashSet<>();
+        int lo = Math.min(a.blockPosition().getY(), dest.getY()), hi = Math.max(a.blockPosition().getY(), dest.getY()) + 1;
+        double len = from.distanceTo(to);
+        int steps = Math.max(1, (int) Math.ceil(len / 0.4));
+        for (int i = 1; i <= steps; i++) {
+            double t = i / (double) steps;
+            int x = net.minecraft.util.Mth.floor(from.x + (to.x - from.x) * t), z = net.minecraft.util.Mth.floor(from.z + (to.z - from.z) * t);
+            int y = net.minecraft.util.Mth.floor(from.y + (to.y - from.y) * t);
+            for (int yy = Math.max(lo, y); yy <= Math.min(hi, y + 1); yy++) {
+                BlockPos p = new BlockPos(x, yy, z);
+                net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+                if (st.getCollisionShape(level, p).isEmpty()) continue;
+                if (!level.getFluidState(p).isEmpty() || st.hasBlockEntity() || st.getDestroySpeed(level, p) < 0) return -1;
+                shut.add(p);
+            }
+        }
+        if (shut.size() > 3) return -1;
+        for (BlockPos p : shut) {
+            a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            level.destroyBlock(p, true, a);
+            broke++;
+        }
+        return shut.size();
+    }
+
+    /** [tp43] Stuck walks led on (or re-planned) in a player's sight instead of put there. */
+    public static volatile int LEADS, LEAD_STROLLS, LEAD_REPLANS, LEAD_DIGS, LEAD_RISES;
 
     /**
      * [fixes14] Is this spot a short straight walk from where it stands, every block of the way open two high (at its
@@ -917,6 +1033,11 @@ public class WorksGoal extends Goal {
         HOPS.clear();
         ENDS.clear();
         TELEPORTS = 0;
+        LEADS = 0;
+        LEAD_STROLLS = 0;
+        LEAD_REPLANS = 0;
+        LEAD_DIGS = 0;
+        LEAD_RISES = 0;
         BROKEN = 0;
         SEALED = 0;
         LEFT = 0;

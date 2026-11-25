@@ -1038,8 +1038,8 @@ public final class Divers {
                 if (f.getNavigation().isDone() || now % 40 == 0) f.walkTo(to, 1.0D);
                 if (now - d.stageSince > 1600) {
                     // Cannot get there: up to the bank (the folk's own way), and the next thing.
-                    if (d.land == null) f.moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, f.getYRot(), 0.0F);
-                    else return false;
+                    if (d.land == null && Blink.mayJumpTo(f, to.getX() + 0.5, to.getZ() + 0.5, "diver: put at the bank")) f.moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, f.getYRot(), 0.0F);
+                    else return false;                                       // [tp43] (in sight: the next thing instead)
                 }
                 return true;
             }
@@ -1125,8 +1125,13 @@ public final class Divers {
                 // Up onto the bank: a pull and a step, as a swimmer climbs out.
                 double dx = d.entry.getX() + 0.5 - f.getX(), dz = d.entry.getZ() + 0.5 - f.getZ();
                 if (d.worked++ % 10 == 0) f.setDeltaMovement(dx * 0.25, f.isInWater() ? 0.42 : f.getDeltaMovement().y, dz * 0.25);
-                if (now - d.stageSince > 100) {
+                // [tp43] In a player's sight it keeps climbing (and swims for where it went in) for half a minute before it is
+                // hauled out, for its breath's sake.
+                if (now - d.stageSince > 100 && now - d.stageSince <= 600 && !Blink.mayJumpTo(f, d.entry.getX() + 0.5, d.entry.getZ() + 0.5, "diver: hauled out where it went in")) {
+                    if (f.getNavigation().isDone()) f.getNavigation().moveTo(d.entry.getX() + 0.5, d.entry.getY(), d.entry.getZ() + 0.5, 1.0D);
+                } else if (now - d.stageSince > 100) {
                     // A bank too steep to climb: it hauls itself out where it went in.
+                    if (now - d.stageSince > 600) Blink.safety(f, "diver: hauled out after half a minute's climbing");
                     f.moveTo(d.entry.getX() + 0.5, d.entry.getY(), d.entry.getZ() + 0.5, f.getYRot(), 0.0F);
                     finish(level, v, w, f, d);
                     return false;
@@ -1370,7 +1375,12 @@ public final class Divers {
         back = back.normalize().scale(-1.1);
         if (d.job == Job.RESCUE && e instanceof VillageFolkEntity who) {
             double y = Math.max(f.getY(), DiverSwim.surfaceOver(level, f.blockPosition()).y - 0.6);
-            who.moveTo(f.getX() + back.x, y, f.getZ() + back.z, who.getYRot(), 0.0F);
+            // [tp43] Drawn to its rescuer's back at a swimmer's pace, not snapped there (the diver turning swung it round
+            // two blocks at a time before).
+            Vec3 want = new Vec3(f.getX() + back.x, y, f.getZ() + back.z), here = who.position();
+            if (here.distanceTo(want) > 0.45) want = here.add(want.subtract(here).normalize().scale(0.45));
+            Blink.safety(who, "diver: a drowning folk towed");               // [tp43] held by its rescuer
+            who.moveTo(want.x, want.y, want.z, who.getYRot(), 0.0F);
             who.setDeltaMovement(Vec3.ZERO);
             who.getNavigation().stop();
         } else if (d.job == Job.TOW && e instanceof Boat b) {
@@ -1387,6 +1397,7 @@ public final class Divers {
         long day = level.getDayTime() / 24000L;
         if (d.job == Job.RESCUE && e instanceof VillageFolkEntity who) {
             BlockPos dry = d.entry;
+            Blink.safety(who, "diver: a rescued folk set on the bank");     // [tp43]
             who.moveTo(dry.getX() + 0.5, dry.getY(), dry.getZ() + 0.5, who.getYRot(), 0.0F);
             who.setDeltaMovement(Vec3.ZERO);
             WET.remove(who.getUUID());

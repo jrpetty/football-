@@ -380,7 +380,7 @@ public final class DiningPlaces {
         Dining.DOING.put(f.getUUID(), what);
         if (d > 2.0) {
             long started = WALKING.computeIfAbsent(f.getUUID(), k -> level.getGameTime());
-            if (level.getGameTime() - started > Dining.STUCK) {
+            if (level.getGameTime() - started > Dining.STUCK && Blink.mayJumpTo(f, post.getX() + 0.5, post.getZ() + 0.5, "dining: a waiter put at its post")) {   // [tp43]
                 f.teleportTo(post.getX() + 0.5, post.getY(), post.getZ() + 0.5);
                 WALKING.remove(f.getUUID());
             } else if (f.getNavigation().isDone()) {

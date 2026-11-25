@@ -102,8 +102,8 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     @Override
-    public boolean putBeside(BlockPos target) {
-        return MineSafety.climbInstead(this) || super.putBeside(target);
+    public boolean putBeside(BlockPos target, String why) {
+        return MineSafety.climbInstead(this) || super.putBeside(target, why);
     }
 
     /** A villager is not a hired hand on a clock: it eats a ration every five and a
@@ -311,6 +311,102 @@ public class VillageFolkEntity extends AssistantEntity {
         return net.minecraft.sounds.SoundEvents.VILLAGER_DEATH;
     }
 
+    // ------------------------------------------------------------------ [tp43] the jump detector's hooks (Blink)
+
+    /** [tp43] The tick of the last instant move the hooks counted; where it stood at the last tick; riding then. */
+    int blinkTick = -100;
+    @javax.annotation.Nullable double[] blinkLast;
+    boolean blinkRode;
+    private int blinkDepth;
+    private boolean blinkPhysics;
+
+    /** [tp43] The game's own movement (a step, a fall, a shove) is never a jump. */
+    @Override
+    public void move(net.minecraft.world.entity.MoverType type, net.minecraft.world.phys.Vec3 by) {
+        if (blinkPhysics || !Blink.on()) { super.move(type, by); return; }
+        blinkPhysics = true;
+        try {
+            super.move(type, by);
+        } finally {
+            blinkPhysics = false;
+        }
+    }
+
+    @Override
+    public void setPos(double x, double y, double z) {
+        if (blinkPhysics || blinkDepth > 0 || !Blink.on()) { super.setPos(x, y, z); return; }
+        double fx = getX(), fy = getY(), fz = getZ();
+        blinkDepth++;
+        try {
+            super.setPos(x, y, z);
+        } finally {
+            blinkDepth--;
+        }
+        Blink.moved(this, fx, fy, fz, null);
+    }
+
+    @Override
+    public void moveTo(double x, double y, double z, float yRot, float xRot) {
+        if (blinkDepth > 0 || !Blink.on()) { super.moveTo(x, y, z, yRot, xRot); return; }
+        double fx = getX(), fy = getY(), fz = getZ();
+        blinkDepth++;
+        try {
+            super.moveTo(x, y, z, yRot, xRot);
+        } finally {
+            blinkDepth--;
+        }
+        Blink.moved(this, fx, fy, fz, null);
+    }
+
+    /**
+     * [tp43] Up out of bed: the game stands a sleeper up on whatever floor beside its bed it finds, as much as two blocks
+     * off, in a blink. In a player's sight a folk gets up onto its bed where it lay instead (a step up of a few pixels) and
+     * walks off it.
+     */
+    @Override
+    public void stopSleeping() {
+        if (level().isClientSide) { super.stopSleeping(); return; }
+        java.util.Optional<BlockPos> lay = getSleepingPos();
+        double fx = getX(), fy = getY(), fz = getZ();
+        blinkDepth++;
+        try {
+            super.stopSleeping();
+        } finally {
+            blinkDepth--;
+        }
+        if (lay.isPresent() && distanceToSqr(fx, fy, fz) > 1.45 * 1.45 && Blink.seen(this)
+                && level().getBlockState(lay.get()).getBlock() instanceof net.minecraft.world.level.block.BedBlock) {
+            BlockPos b = lay.get();
+            blinkDepth++;
+            try {
+                super.setPos(b.getX() + 0.5, b.getY() + 0.5625, b.getZ() + 0.5);
+            } finally {
+                blinkDepth--;
+            }
+        }
+        if (Blink.on()) Blink.moved(this, fx, fy, fz, "out of bed (the game's own stand-up)");
+    }
+
+    /** [tp43] Getting down off a cart, a boat or a horse is the game's own step down (riding, not a jump). */
+    @Override
+    public void stopRiding() {
+        if (isPassenger()) Blink.note(this, "~dismount");
+        super.stopRiding();
+    }
+
+    @Override
+    public void teleportTo(double x, double y, double z) {
+        if (blinkDepth > 0 || !Blink.on()) { super.teleportTo(x, y, z); return; }
+        double fx = getX(), fy = getY(), fz = getZ();
+        blinkDepth++;
+        try {
+            super.teleportTo(x, y, z);
+        } finally {
+            blinkDepth--;
+        }
+        Blink.moved(this, fx, fy, fz, null);
+    }
+
     /**
      * The one place every folk's thinking meets the game's loop, and the last
      * thing standing between a bug in any of it and a crash report. An exception
@@ -322,6 +418,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int accounts = level().isClientSide ? -1 : Accounts.enter(this);   // [econ-1a] whose account its takes are, while it ticks
         long[] coinBefore = accounts >= 0 && CoinCensus.probingFolk() && ownerId() != null ? CoinCensus.quick(ownerId(), this) : null;
         try {
+            if (accounts >= 0 && Blink.on()) Blink.tickCheck(this);       // [tp43] the jump detector
             super.tick();
             if (accounts >= 0 && (tickCount + getId()) % 20 == 0) showRegalia();   // [regalia19] the ruler's dress, put on and off
         } catch (VirtualMachineError | ThreadDeath fatal) {
@@ -339,6 +436,7 @@ public class VillageFolkEntity extends AssistantEntity {
      *  tick (FolkLod). */
     @Override
     public void travel(net.minecraft.world.phys.Vec3 input) {
+        if (!level().isClientSide && Stroll.step(this)) return;          // [tp43] led along a way, a step a tick
         if (!level().isClientSide && FolkLod.rests(this, input)) return;
         super.travel(input);
     }

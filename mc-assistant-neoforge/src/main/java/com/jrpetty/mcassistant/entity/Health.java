@@ -508,6 +508,11 @@ public final class Health {
         double d = f.distanceToSqr(bed.getX() + 0.5, bed.getY(), bed.getZ() + 0.5);
         if (d <= 2.6 * 2.6) {
             f.getNavigation().stop();
+            // [tp43] In a player's sight it steps up to the bed and onto it first (no hop of two blocks into it).
+            if (d > 1.3 * 1.3 && Blink.seen(f)) {
+                if (!Stroll.led(f)) f.stepOntoBed(bed);
+                return true;
+            }
             BlockState st = level.getBlockState(bed);
             if (st.getBlock() instanceof BedBlock && st.getValue(BedBlock.OCCUPIED)) {
                 release(s, f);                                   // somebody is in it: another, next look

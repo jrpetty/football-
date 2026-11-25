@@ -33,6 +33,7 @@ public final class StepOut {
         if (to == null) return false;
         if (f.isSleeping()) f.stopSleeping();
         f.getNavigation().stop();
+        Blink.safety(f, "step out of the wall (suffocating)");          // [tp43] a step or two, for its life
         f.teleportTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
         f.resetFallDistance();
         return true;

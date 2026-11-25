@@ -904,6 +904,8 @@ public final class Wagons {
     private static void holdHandles(ServerLevel level, TradeWagon w, VillageFolkEntity d) {
         Vec3 at = w.spot(level, TradeWagon.HANDLES, 0);
         d.getNavigation().stop();
+        // [tp43] Not yet at the handles (just come to the cart): in a player's sight it walks the last steps to them.
+        if (d.position().distanceTo(at) > 1.2 && Blink.seen(d)) at = d.position().add(at.subtract(d.position()).normalize().scale(0.3));
         d.moveTo(at.x, at.y, at.z, w.getYRot(), 0.0F);
         d.setYHeadRot(w.getYRot());
         d.yBodyRot = w.getYRot();
@@ -1740,7 +1742,7 @@ public final class Wagons {
             double dx = p.getX() - x, dz = p.getZ() - z;
             if (dx * dx + dz * dz < range * range) return true;
         }
-        return false;
+        return Blink.watchedAt(level, x, z, range);                      // [tp43] a headless run's pretend player
     }
 
     // ------------------------------------------------------------------ its ground, and its record

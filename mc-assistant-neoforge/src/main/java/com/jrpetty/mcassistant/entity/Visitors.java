@@ -594,7 +594,8 @@ public final class Visitors {
         }
         if (f.tickCount - w.gained > 400) {
             BlockPos step = surface(level, toward(f.blockPosition(), to, (int) Math.min(6, Math.sqrt(d))));
-            if (level.getBlockState(step).isAir() && level.getBlockState(step.above()).isAir()) {
+            if (level.getBlockState(step).isAir() && level.getBlockState(step.above()).isAir()
+                    && Blink.mayJumpTo(f, step.getX() + 0.5, step.getZ() + 0.5, "visitor: set down a few steps on")) {   // [tp43] not in sight
                 f.getNavigation().stop();
                 f.moveTo(step.getX() + 0.5, step.getY(), step.getZ() + 0.5, f.getYRot(), 0.0F);
             }

@@ -111,6 +111,13 @@ public final class MineRoof {
         if (ON.merge(f.getUUID(), 1, Integer::sum) < LOOKS) return;
         ON.remove(f.getUUID());
         BlockPos was = f.blockPosition(), to = down(level, w);
+        // [tp43] In a player's sight it climbs down off the beams on its own legs (the pathfinder drops it the two or three
+        // blocks to the pithead's floor, a short fall), never put down.
+        if (!Blink.mayJumpTo(f, to.getX() + 0.5, to.getZ() + 0.5, "mine: off the headframe")) {
+            f.getNavigation().moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, 1.0D);
+            MineWhy.note(f, "on the headframe at " + was.toShortString() + " in sight: climbing down to " + to.toShortString());
+            return;
+        }
         f.getNavigation().stop();
         f.teleportTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
         DOWNS++;

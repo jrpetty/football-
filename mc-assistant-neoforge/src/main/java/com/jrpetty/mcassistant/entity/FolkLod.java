@@ -59,7 +59,7 @@ public final class FolkLod {
             if (p.isSpectator()) continue;
             if (p.distanceToSqr(x, y, z) < r * r) return false;
         }
-        return true;
+        return !Blink.watchedAt(level, x, z, r);                    // [tp43] a headless run's pretend player
     }
 
     /** Beyond sight by this much is where a travelled walk into sight hands over to walking. */
@@ -79,7 +79,7 @@ public final class FolkLod {
         Vec3 step = way.scale(EDGE_STEP / length);
         for (double d = EDGE_STEP; d < length; d += EDGE_STEP) {
             Vec3 at = to.add(step.scale(d / EDGE_STEP));
-            if (!unseenAt(level, at.x, at.y, at.z, EDGE_MARGIN)) continue;
+            if (!unseenAt(level, at.x, at.y, at.z, EDGE_MARGIN) || Blink.seenAt(level, at.x, at.z, EDGE_MARGIN)) continue;   // [tp43]
             BlockPos column = BlockPos.containing(at);
             for (int dy = 0; dy <= 4; dy++) {
                 if (standable(level, column.above(dy))) return column.above(dy);
