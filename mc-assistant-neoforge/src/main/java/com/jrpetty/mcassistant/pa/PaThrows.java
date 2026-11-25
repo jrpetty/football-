@@ -36,6 +36,8 @@ final class PaThrows {
     }
 
     private static final Map<PlayerAssistantEntity, List<Watch>> OUT = new WeakHashMap<>();
+    /** The last hurt of each mob already put down to a throw (its own tick count), so one hurt is one hit, not one per throw in the air. */
+    private static final Map<LivingEntity, Integer> CREDITED = new WeakHashMap<>();
 
     static void watch(PlayerAssistantEntity a, Projectile p, LivingEntity t, boolean ledge) {
         OUT.computeIfAbsent(a, k -> new ArrayList<>()).add(new Watch(p, t, a.tickCount, ledge));
@@ -53,8 +55,11 @@ final class PaThrows {
         for (java.util.Iterator<Watch> it = l.iterator(); it.hasNext(); ) {
             Watch w = it.next();
             int age = a.tickCount - w.at;
-            if (!w.hit && w.t.getLastHurtByMob() == a && w.t.getLastHurtByMobTimestamp() >= w.tAt) {
+            // a hit: the mob hurt by it since this throw, and this snowball gone (it breaks on what it hits); one hurt, one hit
+            int hurtAt = w.t.getLastHurtByMobTimestamp();
+            if (!w.hit && w.p.isRemoved() && w.t.getLastHurtByMob() == a && hurtAt >= w.tAt && !Integer.valueOf(hurtAt).equals(CREDITED.get(w.t))) {
                 w.hit = true;
+                CREDITED.put(w.t, hurtAt);
                 f.throwHits++;
             }
             if (w.hit && !w.said) {
