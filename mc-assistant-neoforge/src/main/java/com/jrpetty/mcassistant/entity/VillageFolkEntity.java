@@ -311,6 +311,66 @@ public class VillageFolkEntity extends AssistantEntity {
         return net.minecraft.sounds.SoundEvents.VILLAGER_DEATH;
     }
 
+    // ------------------------------------------------------------------ [tp43] the jump detector's hooks (Blink)
+
+    /** [tp43] The tick of the last instant move the hooks counted; where it stood at the last tick; riding then. */
+    int blinkTick = -100;
+    @javax.annotation.Nullable double[] blinkLast;
+    boolean blinkRode;
+    private int blinkDepth;
+    private boolean blinkPhysics;
+
+    /** [tp43] The game's own movement (a step, a fall, a shove) is never a jump. */
+    @Override
+    public void move(net.minecraft.world.entity.MoverType type, net.minecraft.world.phys.Vec3 by) {
+        if (blinkPhysics || !Blink.on()) { super.move(type, by); return; }
+        blinkPhysics = true;
+        try {
+            super.move(type, by);
+        } finally {
+            blinkPhysics = false;
+        }
+    }
+
+    @Override
+    public void setPos(double x, double y, double z) {
+        if (blinkPhysics || blinkDepth > 0 || !Blink.on()) { super.setPos(x, y, z); return; }
+        double fx = getX(), fy = getY(), fz = getZ();
+        blinkDepth++;
+        try {
+            super.setPos(x, y, z);
+        } finally {
+            blinkDepth--;
+        }
+        Blink.moved(this, fx, fy, fz, null);
+    }
+
+    @Override
+    public void moveTo(double x, double y, double z, float yRot, float xRot) {
+        if (blinkDepth > 0 || !Blink.on()) { super.moveTo(x, y, z, yRot, xRot); return; }
+        double fx = getX(), fy = getY(), fz = getZ();
+        blinkDepth++;
+        try {
+            super.moveTo(x, y, z, yRot, xRot);
+        } finally {
+            blinkDepth--;
+        }
+        Blink.moved(this, fx, fy, fz, null);
+    }
+
+    @Override
+    public void teleportTo(double x, double y, double z) {
+        if (blinkDepth > 0 || !Blink.on()) { super.teleportTo(x, y, z); return; }
+        double fx = getX(), fy = getY(), fz = getZ();
+        blinkDepth++;
+        try {
+            super.teleportTo(x, y, z);
+        } finally {
+            blinkDepth--;
+        }
+        Blink.moved(this, fx, fy, fz, null);
+    }
+
     /**
      * The one place every folk's thinking meets the game's loop, and the last
      * thing standing between a bug in any of it and a crash report. An exception
@@ -322,6 +382,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int accounts = level().isClientSide ? -1 : Accounts.enter(this);   // [econ-1a] whose account its takes are, while it ticks
         long[] coinBefore = accounts >= 0 && CoinCensus.probingFolk() && ownerId() != null ? CoinCensus.quick(ownerId(), this) : null;
         try {
+            if (accounts >= 0 && Blink.on()) Blink.tickCheck(this);       // [tp43] the jump detector
             super.tick();
             if (accounts >= 0 && (tickCount + getId()) % 20 == 0) showRegalia();   // [regalia19] the ruler's dress, put on and off
         } catch (VirtualMachineError | ThreadDeath fatal) {
