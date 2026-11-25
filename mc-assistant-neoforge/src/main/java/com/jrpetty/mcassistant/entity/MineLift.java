@@ -152,8 +152,11 @@ public final class MineLift {
     private static Stop stop(MineWorks.Works w, int corner, String name) {
         int[] o = MineWorks.diag((corner / 4) % 4);
         int y = w.top - MineWorks.drop(corner);
-        return new Stop(corner, y, MineWorks.stepPoint(w, corner), new BlockPos(w.sx + 3 * o[0], y, w.sz + 2 * o[1]), name,
-            new BlockPos(w.sx + 2 * o[0], y, w.sz + 3 * o[1]));
+        // [stairs44] The lever and the button on the landing's flat cells, never on a riser (a stair: nothing stands on it).
+        BlockPos a = new BlockPos(w.sx + 3 * o[0], y, w.sz + 2 * o[1]), b = new BlockPos(w.sx + 2 * o[0], y, w.sz + 3 * o[1]);
+        BlockPos outer = new BlockPos(w.sx + 3 * o[0], y, w.sz + 3 * o[1]);
+        boolean aRiser = ShaftStair.isRiser(w, corner, a);
+        return new Stop(corner, y, MineWorks.stepPoint(w, corner), aRiser ? outer : a, name, aRiser ? b : outer);
     }
 
     /**
@@ -272,6 +275,12 @@ public final class MineLift {
                 + stops.get(stops.size() - 1).name());
         }
         return true;
+    }
+
+    /** [stairs44] Is this cell of the pillar a window of one of the works' stops (ShaftStair leaves it to the cage)? */
+    static boolean windowAt(MineWorks.Works w, BlockPos c) {
+        Lift l = LIFTS.get(w.village);
+        return l != null && window(l.stops, w, c);
     }
 
     /** Is this cell of the pillar a window of a stop (left to the bars)? */
@@ -569,7 +578,13 @@ public final class MineLift {
 
     /** [econ32d] On ground: never on a roof, a beam, a fence or leaves (MineRoof.standable). */
     static boolean standable(ServerLevel level, BlockPos p) {
-        return MineRoof.standable(level, p);
+        if (MineRoof.standable(level, p)) return true;
+        // [stairs44] A landing's riser (a stair laid as its floor) is stood on as well as the flat of it.
+        BlockState under = level.getBlockState(p.below());
+        return under.getBlock() instanceof net.minecraft.world.level.block.StairBlock
+            && under.getValue(net.minecraft.world.level.block.StairBlock.HALF) == Half.BOTTOM
+            && level.getBlockState(p).getCollisionShape(level, p).isEmpty() && !level.getBlockState(p).liquid()
+            && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty();
     }
 
     /** Anybody in the well who is not riding the cage (a server stopped mid-ride, a chunk unloaded): out at the nearest stop. */
