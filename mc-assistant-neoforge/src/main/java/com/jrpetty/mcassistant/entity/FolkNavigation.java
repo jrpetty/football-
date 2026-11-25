@@ -329,6 +329,8 @@ public class FolkNavigation extends GroundPathNavigation {
         planning = true;
         try {
             Path was = this.path;
+            // [tp47] Held off the water a moment ago, from here, for the same place: the same answer.
+            if (heldTo != null && targets.contains(heldTo) && this.level.getGameTime() - heldAt < 20 && this.mob.blockPosition().equals(heldFrom)) return heldPath;
             Path p = plan(targets, regionOffset, offsetUpward, accuracy);
             // [tp46] Water is the last resort: a folk at its work never swims where there is a dry way (round the pond, over the
             // bridge), on its errands, its deposits, the walk home at dusk. A way planned through water is planned again with
@@ -340,19 +342,36 @@ public class FolkNavigation extends GroundPathNavigation {
                 // (A wet way that gets there against a dry one that does not: the dry one only if it gets there too; a far
                 // errand's way cut short either way: the dry one if it ends as near, near enough.)
                 if (dry != null && !swims(dry) && (dry.canReach() || !p.canReach() && endOff(dry, target) <= endOff(p, target) + 4.0)) {
-                    mustSwim = false;
                     DRY_WAYS++;
                     return dry;
                 }
-                BlockPos via = MineWay.detour(f, target);
-                if (via != null && !targets.contains(via)) {
+                // [tp47] Else a leg of it along the way its town opened to its mine (over the bridge), the furthest stop on it that a
+                // dry walk reaches (a walk the length of the way is beyond one search; a walk to the next stop is not).
+                for (BlockPos via : MineWay.legs(f, target)) {
+                    if (targets.contains(via)) continue;
                     Path q = planDry(f, java.util.Set.of(via), regionOffset, offsetUpward, 1);
-                    if (q != null && !swims(q)) { mustSwim = false; DRY_WAYS++; return q; }
+                    if (q != null && !swims(q) && q.canReach()) { DRY_WAYS++; return q; }
                 }
-                mustSwim = true;                                         // no dry way to be had: it swims, and is let
+                // [tp47] And never into the water while that way stands open between it and where it is going; nor on a swim that
+                // gets nowhere (a wet way that cannot get there and ends in the water: to a stop up on a bridge's deck out over a
+                // lake, from the shore beside it, the way swam out under the deck and stopped). As far as the dry ground goes
+                // instead, or a stand till it is asked again (planned afresh from wherever it is then; asked again at once from
+                // the same spot, the same answer, not the same searches over).
+                net.minecraft.world.level.pathfinder.Node end = p.getEndNode();
+                boolean endsWet = !p.canReach() && end != null && this.level.getFluidState(end.asBlockPos()).is(net.minecraft.tags.FluidTags.WATER);
+                if (endsWet || MineWay.dryWayBetween(f, target)) {
+                    HELD_DRY++;
+                    heldTo = target;
+                    heldFrom = this.mob.blockPosition();
+                    heldAt = this.level.getGameTime();
+                    heldPath = dry != null && !swims(dry) && dry.getNodeCount() > 1 ? dry : null;
+                    return heldPath;
+                }
+                wetPath = p;                                             // no dry way to be had: it swims, and is let
+                wetWhy = "dry " + (dry == null ? "none" : swims(dry) ? "wet too" : (dry.canReach() ? "" : "short ") + (int) endOff(dry, target) + " off against "
+                    + (int) endOff(p, target)) + ", legs " + MineWay.legs(f, target).size() + ", the way " + MineWay.status(f.ownerId());
                 return p;
             }
-            if (p != null && p != was) mustSwim = false;
             return p;
         } finally {
             planning = false;
@@ -360,13 +379,31 @@ public class FolkNavigation extends GroundPathNavigation {
         }
     }
 
-    /** [tp46] The way it walks now goes through water because there is no dry one (climbing out is not forced on it). */
-    private boolean mustSwim;
+    /** [tp46] The last way planned through water because there was no dry one. [tp47] Kept with the way itself, not as a mark
+     *  on the folk: a way planned only to be looked at (can it get round, can it reach the bed) and never walked set the mark
+     *  as much as the walk did, and it stayed while the folk walked another, the edge guard and the quick climb out off. */
+    @Nullable private Path wetPath;
+    /** [tp47] The last walk held off the water: where to, from where, when, and the dry way given instead (or none). */
+    @Nullable private BlockPos heldTo, heldFrom;
+    @Nullable private Path heldPath;
+    private long heldAt;
+
+    /** [tp47] Why the last wet way was let be (the log). */
+    private String wetWhy = "";
+
+    public String wetWhy() {
+        return wetWhy;
+    }
+
     /** [tp46] Ways planned dry instead of through water (the tests). */
     public static volatile long DRY_WAYS;
+    /** [tp47] Wet ways not taken because its town's way stood open between the folk and where it was going (the tests). */
+    public static volatile long HELD_DRY;
 
+    /** [tp46] Is the walk it is on through water because there is no dry way (it is let swim)? */
     public boolean mustSwim() {
-        return mustSwim;
+        Path p = this.path, w = this.wetPath;
+        return p != null && w != null && !p.isDone() && (p == w || p.sameAs(w));   // (the game keeps the old way for a same one)
     }
 
     /** [tp46] Does this folk keep out of the water on this walk: not one whose work is in it, not already in it, and not
