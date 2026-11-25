@@ -82,7 +82,7 @@ public final class MineWay {
         if (!cutOff(id)) return;
         Way w = WAYS.get(id);
         if (w == null) return;
-        if (!near(f.blockPosition(), w.site, 48)) {
+        if (!atTheMine(f, w)) {
             Job j = f.peekJob();
             BlockPos at = j == null ? null : posOf(j.arg());
             if (at != null && near(at, w.site, 48)) {
@@ -111,7 +111,16 @@ public final class MineWay {
         UUID id = f.ownerId();
         if (!cutOff(id)) return false;
         Way w = WAYS.get(id);
-        return w != null && near(f.blockPosition(), w.site, 48);
+        return w != null && atTheMine(f, w);
+    }
+
+    /** At the mine: on its ground round the pithead, or down in its works (well under the ground there, not far off). */
+    private static boolean atTheMine(AssistantEntity f, Way w) {
+        BlockPos p = f.blockPosition();
+        if (near(p, w.site, 20)) return true;
+        if (!near(p, w.site, 64)) return false;
+        int ground = f.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, w.site.getX(), w.site.getZ());
+        return p.getY() < ground - 4;
     }
 
     private static boolean near(BlockPos a, BlockPos b, int r) {
