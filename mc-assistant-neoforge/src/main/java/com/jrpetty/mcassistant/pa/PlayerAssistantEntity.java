@@ -83,6 +83,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.goalSelector.addGoal(2, new PaFishGoal(this));                // [pa38] a real rod and line
         this.goalSelector.addGoal(2, new PaEnchantGoal(this));             // [pa38] the table's real offers, judged by its level
         this.goalSelector.addGoal(2, new PaThrowGoal(this));               // [pa38] snowballs and eggs: a mob pulled off its player
+        this.goalSelector.addGoal(2, new PaSidestep.Goal(this));           // [pa38] its player in the line of fire: a step aside
         this.goalSelector.addGoal(2, new PaRodPull(this));                 // [pa38] the rod in a fight
         this.goalSelector.addGoal(2, new PaMace(this));
         this.goalSelector.addGoal(2, new PaCureGoal(this));                // [pa38] a zombie villager cured when asked                    // [pa38] the mace's smash from height

@@ -1080,3 +1080,33 @@ Tool corrected.
 Using the right tool now.
 Switched tools.
 Correct tool equipped.
+
+== field.sidestep
+You're in my line. I'll go round.
+Excuse me. Finding an angle that isn't you.
+Hold still. I'll come to the shot.
+Stepping over. You make a poor shield.
+Not through you. One moment.
+A step to the side. Much better view.
+[daft] Pardon me, coming through. Well, coming round.
+== field.sidestep@gloomy
+You're in the way. Of course you are. I'll move.
+Can't shoot through you. More's the pity.
+I'll shuffle over. It's what I do.
+Moving. The view was too good to last.
+You're between us. I'll find another spot.
+Round you, then. Again.
+== field.sidestep@serious
+You're in my line of fire. Moving.
+Stepping aside for a clear shot.
+Repositioning: you're in the way.
+Moving for a clear line.
+Clear line needed. Shifting left or right.
+Holding fire. Changing position.
+== field.sidestep@sincere
+Stay where you are. I'll move, not you.
+I won't risk hitting you. Stepping round.
+You're fine there. I'll find another angle.
+I'd rather walk a bit than hit you.
+Don't mind me. Getting a clear line.
+Careful of you first. Moving over.

@@ -141,7 +141,8 @@ final class PaThrowGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return target != null && target.isAlive() && shooter != null && a.tickCount - startAt < 40;
+        return target != null && target.isAlive() && shooter != null && (a.tickCount - startAt < 40
+            || PaSidestep.busy(a) && a.tickCount - startAt < 40 + PaSidestep.LIMIT);              // [pa38] held while it steps aside
     }
 
     @Override
@@ -175,7 +176,7 @@ final class PaThrowGoal extends Goal {
         shooter.see(eye.x, eye.y, eye.z, at.x, at.y, at.z);
         PaBow.face(a, shooter.yaw, shooter.pitch);
         if (elapsed < WINDUP || !shooter.ready()) return;
-        if (!com.jrpetty.mcassistant.entity.FolkCombat.clearShot(a, t)) { if (elapsed > 30) shooter = null; return; }
+        if (!PaSidestep.clear(a, t, 3, 16)) { if (elapsed > 30 && !PaSidestep.busy(a)) shooter = null; return; }   // its player in the way: a step aside, or wait
         throwAt(t, shooter);
         shooter = null;
     }

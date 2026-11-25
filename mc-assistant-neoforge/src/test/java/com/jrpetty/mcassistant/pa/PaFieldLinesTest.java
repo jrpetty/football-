@@ -57,4 +57,12 @@ class PaFieldLinesTest {
         for (String s : PaLogiTalk.lines("logi.not_allowed", "serious", false))
             assertTrue(s.contains("take from this chest") || s.contains("Take") || s.contains("Storage"), "says how to allow it: " + s);
     }
+
+    @Test
+    void theStepAsideHasItsSincereCornerToo() {
+        for (String corner : List.of("", "gloomy", "serious", "sincere")) {
+            List<String> l = PaLogiTalk.lines("field.sidestep", corner, false);
+            assertTrue(l.size() >= 6, "field.sidestep@" + corner + " has " + l.size());
+        }
+    }
 }

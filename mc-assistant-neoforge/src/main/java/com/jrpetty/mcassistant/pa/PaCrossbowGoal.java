@@ -79,7 +79,8 @@ final class PaCrossbowGoal extends Goal {
         if (!inRange && CrossbowItem.isCharged(a.getMainHandItem())) return;   // loaded: hold it till there's a shot
         if (--rest > 0) return;
         rest = 6;
-        PaCrossbow.atEntity(a, t, null, () -> t.isAlive() && a.hasLineOfSight(t) && com.jrpetty.mcassistant.entity.FolkCombat.clearShot(a, t));
+        double least = Math.sqrt(minSq), most = range();
+        PaCrossbow.atEntity(a, t, null, () -> t.isAlive() && a.hasLineOfSight(t) && PaSidestep.clear(a, t, least, most));   // [pa38] a step aside (PaSidestep)
     }
 
     /** Every half second: for a ranged fight, the crossbow over the bow once it may use one (and has something to load);

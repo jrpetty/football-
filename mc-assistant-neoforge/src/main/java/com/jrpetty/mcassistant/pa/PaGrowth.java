@@ -75,7 +75,8 @@ public final class PaGrowth {
         new Metric("villagers", "Villagers compared", "n", true, l -> PaKnack.villagersCompared(l), "How many villagers near the one you sent it to it checks for a better price"),
         new Metric("misplace", "Misplaced blocks", "%.", false, l -> 100 * PaKnack.misplace(l), "A block set one cell off now and then, put right straight away (never your builds, never anything rare)"),
         new Metric("wrongturn", "Wrong turns", "%", false, l -> 100 * PaKnack.wrongTurn(l), "On a long walk: a few steps the wrong way, then it re-paths"),
-        new Metric("wrongtool", "Wrong tool first", "%", false, l -> 100 * PaKnack.wrongTool(l), "For a new job: one swing with the wrong tool before it switches"));
+        new Metric("wrongtool", "Wrong tool first", "%", false, l -> 100 * PaKnack.wrongTool(l), "For a new job: one swing with the wrong tool before it switches"),
+        new Metric("sidestep", "Steps out of your line", "s", false, l -> PaKnack.sideNotice(l) / 20.0, "With you between it and its target: how soon it notices and steps aside for a clear shot (and the better the angle it picks)"));
 
     /** Break speed reads as a player's at every level, and says so. */
     public static final String BREAKING = "As a player, by your tool";
