@@ -1405,6 +1405,7 @@ public final class MineWorks {
         }
         if (w.sunk >= 2) rail(level, v, w);
         int spoil = ShaftStair.upkeep(level, w);              // [stairs44] the stair kept walkable, clear, shored and lit
+        ShaftStair.drain(level, w);                          // [tp47] and the drifts kept dry
         if (spoil > 0) { w.dug += spoil; changed = true; }
         MineLift.upkeep(level, w);                           // [econ32c] the cage, once the works are deep enough
         IronPace.tick(level, w);                             // [econ32d] poor iron levels left for the next, while the age waits on iron
@@ -1820,6 +1821,31 @@ public final class MineWorks {
             int b = 0;
             for (int[] x : d.branches) if (x[2] > 0) b++;
             out.add(new int[]{ d.id, d.level, d.by == null ? 0 : d.by.hashCode(), d.path.length(), d.turns, d.bends, b, d.closed });
+        }
+        return out;
+    }
+
+    /**
+     * [tp47] Every cell of tunnel the works have cut on every level opened (drifts, their branches, the landing rooms), at its
+     * floor height, with how high it is cut (two, a room three): the works' own ground, for keeping them dry (ShaftStair.drain).
+     */
+    static Map<Long, Integer> tunnels(ServerLevel level, Works w) {
+        Map<Long, Integer> out = new HashMap<>();
+        List<Lvl> plan = plan(level, w);
+        for (Lvl l : plan) {
+            if ((w.rooms & (1 << l.id())) != 0) for (BlockPos c : roomCells(w, l)) out.put(c.asLong(), 3);
+        }
+        for (Drift d : w.drifts) {
+            Lvl l = lvl(plan, d.level);
+            if (l == null) continue;
+            List<BlockPos> cells = d.cells(l.y());
+            for (BlockPos c : cells) out.putIfAbsent(c.asLong(), 2);
+            for (int[] b : d.branches) {
+                if (b[0] >= cells.size()) continue;
+                Direction along = dirOf(d.path.charAt(b[0]));
+                Direction o = b[1] > 0 ? along.getClockWise() : along.getCounterClockWise();
+                for (int j = 1; j <= b[2]; j++) out.putIfAbsent(cells.get(b[0]).relative(o, j).asLong(), 2);
+            }
         }
         return out;
     }

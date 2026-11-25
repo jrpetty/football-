@@ -174,14 +174,17 @@ public final class MineLift {
         l.top = w.top;
         int bottom = stops.get(stops.size() - 1).y();
         int put = 0;
-        // The well, and the pillar round it made good.
-        for (int y = bottom; y <= w.top - 1; y++) {
+        // The well, and the pillar round it made good. [tp47] Its pool a block under the deepest stop's floor, a sump: at the
+        // floor's own height the riders in the cage stood in it at the deepest stop, getting in and out (the soak's miners in
+        // the water at the foot of the shaft).
+        int sump = bottom - 1;
+        for (int y = sump; y <= w.top - 1; y++) {
             BlockPos p = new BlockPos(w.sx, y, w.sz);
             BlockState want = y == w.top - 1 ? Blocks.SPRUCE_TRAPDOOR.defaultBlockState().setValue(TrapDoorBlock.HALF, Half.BOTTOM)
-                : y == bottom ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState();
+                : y == sump ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState();
             BlockState now = level.getBlockState(p);
             if (now.is(Blocks.BEDROCK)) return false;
-            boolean ok = y == w.top - 1 ? now.getBlock() instanceof TrapDoorBlock : y == bottom ? now.is(Blocks.WATER) : now.isAir();
+            boolean ok = y == w.top - 1 ? now.getBlock() instanceof TrapDoorBlock : y == sump ? now.is(Blocks.WATER) : now.isAir();
             if (!ok) { level.setBlock(p, want, 2); put++; }
             if (y >= w.top - 1) continue;
             for (Direction d : Direction.Plane.HORIZONTAL) {
@@ -194,7 +197,7 @@ public final class MineLift {
                 }
             }
         }
-        BlockPos under = new BlockPos(w.sx, bottom - 1, w.sz);                // a floor under the pool
+        BlockPos under = new BlockPos(w.sx, sump - 1, w.sz);                  // a floor under the pool
         if (!level.getBlockState(under).isFaceSturdy(level, under, Direction.UP)) { level.setBlock(under, Blocks.STONE_BRICKS.defaultBlockState(), 2); put++; }
         // The stops: a window of bars onto the well, a lever on the landing's floor.
         for (Stop s0 : new ArrayList<>(stops)) {
@@ -644,7 +647,7 @@ public final class MineLift {
         for (Display.BlockDisplay d : level.getEntitiesOfClass(Display.BlockDisplay.class, round)) {
             if (d.getTags().contains(TAG) && !l.cage.contains(d.getUUID())) d.discard();
         }
-        AABB well = new AABB(l.sx, l.bottom(), l.sz, l.sx + 1, l.top - 1, l.sz + 1);
+        AABB well = new AABB(l.sx, l.bottom() - 1, l.sz, l.sx + 1, l.top - 1, l.sz + 1);   // [tp47] the sump too
         for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, well)) {
             if (state(e.getUUID()) == State.RIDING) continue;
             Stop best = null;

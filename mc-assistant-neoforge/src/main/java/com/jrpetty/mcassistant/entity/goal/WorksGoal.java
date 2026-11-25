@@ -766,6 +766,14 @@ public class WorksGoal extends Goal {
             if (!s.getFluidState().isEmpty() && s.canBeReplaced()) { seal(p, s.getFluidState().is(FluidTags.LAVA)); return; }
             UVillage v = village();
             if (!MineWorks.mayCut(level, v.id, p, s)) { blocks.clear(); report("made"); return; }
+            // [tp47] Water behind this block (a lake's bed over the drift, a flooded cave in its wall) and nothing in the pack to
+            // stop it with: a drift is not cut into it (it turns, as at water in its way); the water is never let in.
+            if ((t.kind == MineWorks.Kind.FACE || t.kind == MineWorks.Kind.BRANCH) && waterBehind(level, p) && !hasSealer()
+                    && !s.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD) && !s.is(net.minecraft.world.level.block.Blocks.COBBLESTONE)) {   // (stone breaks to the block it wants)
+                blocks.clear();
+                report("water");
+                return;
+            }
             a.equipBestTool(s);
             digging = p;
             workTicks = 0;
@@ -826,6 +834,7 @@ public class WorksGoal extends Goal {
             if (a instanceof VillageFolkEntity folk) com.jrpetty.mcassistant.entity.FolkSkills.oreLuck(folk, state, pos);
         }
         a.damageHeldTool();
+        sweep(pos);                                          // [tp47] what it broke in hand first: the block to stop water with
         // What the break opened onto: water and lava stopped, the fall of gravel over it taken down, ore in the walls followed.
         boolean openLava = false;
         for (Direction d : Direction.values()) {
@@ -972,6 +981,26 @@ public class WorksGoal extends Goal {
         for (Direction d : Direction.values()) {
             BlockState s = level.getBlockState(p.relative(d));
             if (s.isAir() || s.canBeReplaced() && s.getFluidState().isEmpty()) return true;
+        }
+        return false;
+    }
+
+    /** [tp47] Is there water (or lava) beside this block, not in a cell of this task, that breaking it would let in? */
+    private boolean waterBehind(ServerLevel level, BlockPos p) {
+        for (Direction d : Direction.values()) {
+            if (d == Direction.DOWN) continue;
+            BlockPos side = p.relative(d);
+            if (!level.getFluidState(side).isEmpty() && !inTask(side)) return true;
+        }
+        return false;
+    }
+
+    /** [tp47] Has it a block in its pack to stop water with (seal's)? */
+    private boolean hasSealer() {
+        for (ItemStack s : a.getInventoryItems()) {
+            if (!BuildGoal.isBuildingBlock(s)) continue;
+            if (((net.minecraft.world.item.BlockItem) s.getItem()).getBlock().defaultBlockState().getBlock() instanceof FallingBlock) continue;
+            return true;
         }
         return false;
     }

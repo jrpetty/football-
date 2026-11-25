@@ -260,6 +260,72 @@ public final class ShaftStair {
         return cx.spoil;
     }
 
+    /** [tp47] Water let into the drifts stopped, and the drifts let drain, all told (the tests, the soak). */
+    static int drained;
+
+    /** [tp47] Tests and the soak: water let into the drifts stopped, all told. */
+    public static int drainedForTests() {
+        return drained;
+    }
+
+    /**
+     * [tp47] Every half minute (MineWorks.tick): the drifts, their branches and the landings kept dry. Where water stands in a
+     * tunnel of the works (a drift cut in under a lake's bed before it was sealed as it went, a cave's spring, a block of the
+     * wall taken up since), every way it comes in (water in the wall, the floor or the roof, outside the works' own cells) is
+     * stopped with a block of rubble (the stores', else the works' own), and what stood in the tunnel is let out (it would
+     * drain away by itself, its springs stopped, all but what lay still). The miners walked through flooded drifts under the
+     * southern lake to their faces, and swam there. True if any was found.
+     */
+    static boolean drain(ServerLevel level, MineWorks.Works w) {
+        if (w.drifts.isEmpty() && w.rooms == 0) return false;
+        Map<Long, Integer> cells = MineWorks.tunnels(level, w);
+        Ctx cx = null;
+        boolean any = false;
+        BlockPos.MutableBlockPos q = new BlockPos.MutableBlockPos();
+        for (Map.Entry<Long, Integer> e : cells.entrySet()) {
+            BlockPos c = BlockPos.of(e.getKey());
+            int high = e.getValue();
+            if (!level.isLoaded(c)) continue;
+            boolean wet = false;
+            for (int h = 0; h < high && !wet; h++) wet = !level.getFluidState(q.set(c.getX(), c.getY() + h, c.getZ())).isEmpty();
+            if (!wet) continue;
+            if (cx == null) cx = new Ctx(level, w, null);
+            any = true;
+            // Its ways in, first: the walls, the roof, the floor.
+            for (int h = -1; h <= high; h++) {
+                BlockPos p = c.above(h);
+                if (h == -1 || h == high) {                                 // the block under the floor, over the roof
+                    if (inWorks(cells, p)) continue;
+                    BlockState s = level.getBlockState(p);
+                    if (!s.getFluidState().isEmpty() && !ours(s) && !s.hasBlockEntity()) { seal(cx, p); drained++; }
+                    continue;
+                }
+                for (Direction d : Direction.Plane.HORIZONTAL) {
+                    BlockPos n = p.relative(d);
+                    if (inWorks(cells, n)) continue;
+                    BlockState s = level.getBlockState(n);
+                    if (!s.getFluidState().isEmpty() && !ours(s) && !s.hasBlockEntity()) { seal(cx, n); drained++; }
+                }
+            }
+            // Then what stands in the tunnel itself, let out.
+            for (int h = 0; h < high; h++) {
+                BlockPos p = c.above(h);
+                BlockState s = level.getBlockState(p);
+                if (!s.getFluidState().isEmpty() && s.canBeReplaced() && !s.hasBlockEntity()) level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
+        return any;
+    }
+
+    /** [tp47] Is this place inside one of the works' tunnels (a cell, or a cell's head room)? */
+    private static boolean inWorks(Map<Long, Integer> cells, BlockPos p) {
+        for (int h = 0; h <= 2; h++) {
+            Integer high = cells.get(BlockPos.asLong(p.getX(), p.getY() - h, p.getZ()));
+            if (high != null && h < high) return true;
+        }
+        return false;
+    }
+
     /** A step just cut, by this miner (MineWorks.dress): kept at once, out of its pack first. */
     static void cut(ServerLevel level, MineWorks.Works w, @Nullable AssistantEntity a, int step) {
         Ctx cx = new Ctx(level, w, a);
