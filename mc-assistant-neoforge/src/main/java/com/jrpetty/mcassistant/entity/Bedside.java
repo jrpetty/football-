@@ -63,6 +63,10 @@ public final class Bedside {
         FLOOR_NIGHTS = 0;
     }
 
+    /** [tp46] The hour past which a bed this far off is not walked to: the night is spent on a floor nearer. */
+    public static final long TOO_LATE = 17500L;
+    public static final int TOO_FAR = 40;
+
     /** Is this folk asleep on a floor (not in a bed)? */
     public static boolean onAFloor(AssistantEntity f) {
         return f.isSleeping() && LYING.containsKey(f.getUUID());
@@ -78,6 +82,11 @@ public final class Bedside {
      * false if it found nowhere (it stands the night out at home, as before).
      */
     public static boolean onTheFloor(VillageFolkEntity f) {
+        return onTheFloor(f, false);
+    }
+
+    /** As above; {@code here}: a floor round where it stands, not round its house (its bed too far to walk to tonight). */
+    public static boolean onTheFloor(VillageFolkEntity f, boolean here) {
         if (!(f.level() instanceof ServerLevel level) || f.isPassenger()) return false;
         long night = nightOf(level.getDayTime());
         Spot s = SPOTS.get(f.getUUID());
@@ -87,7 +96,7 @@ public final class Bedside {
         }
         if (s.at == null) {
             if (s.tries >= MOST_TRIES) return lastResort(f, s);
-            s.at = choose(level, f, s);
+            s.at = choose(level, f, s, here);
             s.tries++;
             s.since = f.tickCount;
             s.gained = f.tickCount;
@@ -232,8 +241,8 @@ public final class Bedside {
      * tried tonight, none another lies on.
      */
     @Nullable
-    static BlockPos choose(ServerLevel level, VillageFolkEntity f, Spot s) {
-        BlockPos base = Homes.homeOf(f);
+    static BlockPos choose(ServerLevel level, VillageFolkEntity f, Spot s, boolean here) {
+        BlockPos base = here ? f.blockPosition() : Homes.homeOf(f);
         if (base == null && f.workZone() != null && f.villageCentre() != null
                 && f.workZone().center().distSqr(f.villageCentre()) < 64 * 64) base = f.workZone().center();
         if (base == null) base = f.getHome();

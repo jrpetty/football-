@@ -3434,6 +3434,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         // The end of the day is for company before it is for bed (VillageFolkEntity).
         if (!isSleeping() && eveningSocial()) { night("the evening out"); return true; }
+        if (isSleeping() && Bedside.onAFloor(this)) { night("asleep on a floor"); return true; }   // [tp46] down for the night where it lies
         BlockPos bed = bedPos;
         if (bed != null && (!(level().getBlockState(bed).getBlock()
                 instanceof net.minecraft.world.level.block.BedBlock) || !bedFit(bed))) {
@@ -3483,6 +3484,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // stood all night two blocks from their beds, "stepped over to its bed" and "stepped aside out of a wedge" in turn.
         if (!isSleeping() && this instanceof VillageFolkEntity && bedsideOf(bed)) {
             if (bedside(bed)) return true;
+        }
+        // [tp46] Half past eleven and its bed still the far side of the town (a bed given back to its household late, the only one
+        // free across the town): the night on a floor indoors near where it is, not a walk at one in the morning.
+        if (!isSleeping() && this instanceof VillageFolkEntity vfl && level().getDayTime() % 24000L >= Bedside.TOO_LATE
+                && level().getDayTime() % 24000L < 23000L && bed.distSqr(blockPosition()) > (double) Bedside.TOO_FAR * Bedside.TOO_FAR
+                && Bedside.onTheFloor(vfl, true)) {
+            night(isSleeping() ? "asleep on a floor" : "walking to a floor indoors: its bed too far tonight");
+            return true;
         }
         if (bed.distSqr(blockPosition()) > 4.0) {
             if (isSleeping()) stopSleeping();
