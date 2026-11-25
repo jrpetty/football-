@@ -70,6 +70,7 @@ public final class MineWay {
         long cutAt = -1, openedAt = -1;
         /** [tp46] The walk the way was planned along, heart first ({x, z}), and its cells' ground; null for one never cut off. */
         @Nullable List<int[]> line;
+        boolean lined;
         String status = "";
         Way(BlockPos site) { this.site = site; }
     }
@@ -147,7 +148,7 @@ public final class MineWay {
         if (f.stationTask() != AssistantEntity.StationTask.MINE) return null;
         UUID id = f.ownerId();
         Way w = id == null ? null : WAYS.get(id);
-        if (w == null || w.line == null || !w.open || !w.walkable || w.line.size() < 2) return null;
+        if (w == null || w.line == null || !w.walkable || w.line.size() < 2 || !w.plans.isEmpty() && !w.open) return null;
         List<int[]> line = w.line;
         int[] heart = line.get(0), pit = line.get(line.size() - 1);
         long toPit = sq(dest.getX() - pit[0], dest.getZ() - pit[1]), toHeart = sq(dest.getX() - heart[0], dest.getZ() - heart[1]);
@@ -255,6 +256,12 @@ public final class MineWay {
         w.known = true;
         boolean was = w.walkable;
         w.walkable = ok;
+        if (ok && w.line == null && w.plans.isEmpty() && !w.lined) {
+            // [tp46] The walk over the ground as it stands (over a footbridge, round a pond), kept for the miners' far walks.
+            w.lined = true;
+            if (!waterRuns(level, Roads.bresenham(v.centre().getX(), v.centre().getZ(), w.site.getX(), w.site.getZ())).isEmpty())
+                w.line = route(level, v.centre(), w.site, false);
+        }
         if (ok) {
             // Its decks across, but not its railings yet: still cut off (a deck a block wide between the railings' beams, and
             // six miners crowding over it, shouldered each other off into the river).
@@ -574,6 +581,12 @@ public final class MineWay {
      */
     @Nullable
     static List<int[]> route(ServerLevel level, BlockPos from, BlockPos to) {
+        return route(level, from, to, true);
+    }
+
+    /** As above; {@code build} false: the walk as the ground stands (no water crossed, no bank climbed), for a way already open. */
+    @Nullable
+    static List<int[]> route(ServerLevel level, BlockPos from, BlockPos to, boolean build) {
         int x0 = Math.min(from.getX(), to.getX()) - MARGIN, x1 = Math.max(from.getX(), to.getX()) + MARGIN;
         int z0 = Math.min(from.getZ(), to.getZ()) - MARGIN, z1 = Math.max(from.getZ(), to.getZ()) + MARGIN;
         int w = x1 - x0 + 1, h = z1 - z0 + 1;
@@ -622,6 +635,7 @@ public final class MineWay {
                 if (kind[nb] == 2) continue;
                 int dy = Math.abs(top[nb] - top[c]);
                 int nd;
+                if (!build && (kind[nb] != 0 || dy > 1)) continue;
                 if (dy <= (kind[nb] == 1 || kind[c] == 1 ? 2 : 1)) nd = dist[c] + (kind[nb] == 1 ? WATER_COST : 1);
                 // [tp46] A bank of the world's own ground too steep to walk: a stair cut up it, at a cost a block of height.
                 else if (kind[nb] == 0 && kind[c] == 0 && dy <= MOST_CLIMB && (top[nb] > top[c] ? earth[nb] : earth[c])) nd = dist[c] + CLIMB_COST * dy;

@@ -2869,6 +2869,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Raids.underAlarm(ownerId())) return false;       // the bell is ringing: no evening out
         long t = level().getDayTime() % 24000L;
         long bedtime = bedtimeTick();
+        // [tp46] Off home in time to be in bed at its hour, however far its bed is (a walk across a town of thirty is a minute
+        // and more: folk with beds at the far end were still on their way at one in the morning).
+        BlockPos bed = bedPos();
+        if (bed != null) bedtime -= Math.min(2000L, (long) (Math.sqrt(bed.distSqr(blockPosition())) * 8.0));
         if (t < 12000L || t >= bedtime) return false;
         if (isBaby()) return false;
         if (Diners.evening(this, t)) return true;             // [dining] out to dinner at the café, the tavern, the restaurant

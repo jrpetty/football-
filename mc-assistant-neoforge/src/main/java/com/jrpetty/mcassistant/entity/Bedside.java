@@ -205,8 +205,9 @@ public final class Bedside {
         for (Map.Entry<UUID, BlockPos> e : LYING.entrySet()) {
             if (!e.getKey().equals(f.getUUID()) && e.getValue().distManhattan(p) <= 1) return true;
         }
+        long night = nightOf(f.level().getDayTime());
         for (Map.Entry<UUID, Spot> e : SPOTS.entrySet()) {
-            if (e.getKey().equals(f.getUUID()) || e.getValue().at == null) continue;
+            if (e.getKey().equals(f.getUUID()) || e.getValue().at == null || e.getValue().night != night) continue;
             if (e.getValue().at.distManhattan(p) <= 1) return true;
         }
         return false;
