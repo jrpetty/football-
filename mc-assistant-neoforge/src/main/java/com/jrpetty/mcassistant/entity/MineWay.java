@@ -247,6 +247,16 @@ public final class MineWay {
         return true;
     }
 
+    /** The bank by a bridge's end: from this place along it, outward till the ground is dry (a hand stood in the river before). */
+    private static BlockPos dry(ServerLevel level, BridgeKit.Shape s, int major, int out) {
+        BlockPos first = Visitors.surface(level, s.at(major, 0, s.deckY()));
+        for (int k = 0; k <= 8; k++) {
+            BlockPos p = Visitors.surface(level, s.at(major + k * out, 0, s.deckY()));
+            if (level.getFluidState(p).isEmpty() && level.getFluidState(p.below()).isEmpty()) return p;
+        }
+        return first;
+    }
+
     /** Every deck of the crossings across (the railings and lights may be to come). */
     private static boolean decksDown(ServerLevel level, Way w) {
         for (BridgeKit.Plan p : w.plans) {
@@ -276,7 +286,7 @@ public final class MineWay {
             if (p.cursor >= p.pieces.size()) continue;
             BridgeKit.Shape s = p.shape();
             // The gang stands on the bank at the town's end of it.
-            BlockPos a = Visitors.surface(level, s.at(s.w0() - 2, 0, s.deckY())), b = Visitors.surface(level, s.at(s.w1() + 2, 0, s.deckY()));
+            BlockPos a = dry(level, s, s.w0() - 2, -1), b = dry(level, s, s.w1() + 2, 1);
             BlockPos stand = a.distSqr(v.centre()) <= b.distSqr(v.centre()) ? a : b;
             if (!TownJobs.atWork(level, v, "mineway", stand, "building the bridge on the way to the mine", AssistantEntity.StationTask.HAUL)) {
                 w.status = "waiting for a hand";

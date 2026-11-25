@@ -542,6 +542,8 @@ public class WorksGoal extends Goal {
             double dd = a.position().distanceTo(Vec3.atBottomCenterOf(cells.get(i)));
             if (dd <= nearD) { nearD = dd; near = i; }
         }
+        // [tp43] A few steps off the way's next cell (round the corner of a landing from it): from where it stands, round the corner.
+        if (near < 0 && !cells.isEmpty() && a.position().distanceTo(Vec3.atBottomCenterOf(cells.get(0))) <= 4.5) near = 0;
         if (near >= 0 && a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.Stroll.along(f, squared(cells.subList(near, cells.size())))) {
             replans = 0;
             LEAD_STROLLS++;
@@ -589,13 +591,33 @@ public class WorksGoal extends Goal {
         BlockPos prev = a.blockPosition();
         out.add(prev);
         for (BlockPos c : cells) {
-            if (c.getX() != prev.getX() && c.getZ() != prev.getZ()) {
+            int dx = c.getX() - prev.getX(), dz = c.getZ() - prev.getZ();
+            if (dx != 0 && dz != 0 && Math.abs(dx) + Math.abs(dz) <= 6) {
+                // Round the corner one way or the other (along x then z, or z then x), at either end's height: the first
+                // way whose every cell is open with a floor under it.
                 int hi = Math.max(prev.getY(), c.getY()), lo = Math.min(prev.getY(), c.getY());
-                BlockPos[] corners = { new BlockPos(c.getX(), lo, prev.getZ()), new BlockPos(prev.getX(), lo, c.getZ()),
-                    new BlockPos(c.getX(), hi, prev.getZ()), new BlockPos(prev.getX(), hi, c.getZ()) };
-                for (BlockPos k : corners) {
-                    if (open(k) && !a.level().getBlockState(k.below()).getCollisionShape(a.level(), k.below()).isEmpty()) { out.add(k); break; }
+                List<BlockPos> way = null;
+                for (int y : new int[]{ lo, hi }) {
+                    for (boolean xFirst : new boolean[]{ true, false }) {
+                        List<BlockPos> w = new ArrayList<>();
+                        int x = prev.getX(), z = prev.getZ();
+                        boolean ok = true;
+                        for (int leg = 0; leg < 2 && ok; leg++) {
+                            boolean alongX = (leg == 0) == xFirst;
+                            int n = alongX ? Math.abs(dx) : Math.abs(dz), st = alongX ? Integer.signum(dx) : Integer.signum(dz);
+                            for (int k = 0; k < n && ok; k++) {
+                                if (alongX) x += st; else z += st;
+                                if (x == c.getX() && z == c.getZ()) break;
+                                BlockPos q = new BlockPos(x, y, z);
+                                ok = open(q) && !a.level().getBlockState(q.below()).getCollisionShape(a.level(), q.below()).isEmpty();
+                                if (ok) w.add(q);
+                            }
+                        }
+                        if (ok) { way = w; break; }
+                    }
+                    if (way != null) break;
                 }
+                if (way != null) out.addAll(way);
             }
             out.add(c);
             prev = c;
