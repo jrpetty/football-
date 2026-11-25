@@ -788,8 +788,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (wetFor++ == 0) wetFrom = position();
         // [tp43] Out of breath (a long swim, a current carrying it along the river): out at once, whatever way it was making.
         boolean drowning = getAirSupply() < getMaxAirSupply() / 3;
-        if (wetFor < 10 && !drowning) return;
-        if (position().distanceToSqr(wetFrom) > 36.0 && !drowning) { wetFor = 0; return; }   // making way
+        // [tp46] A village's folk at its work is out within a couple of seconds (it swims only where there is no dry way, and
+        // then it is left to its swim: FolkNavigation.mustSwim); others as before.
+        boolean keepDry = this instanceof VillageFolkEntity && !(getNavigation() instanceof FolkNavigation fn && fn.mustSwim());
+        if (wetFor < (keepDry ? 2 : 10) && !drowning) return;
+        if (!keepDry && position().distanceToSqr(wetFrom) > 36.0 && !drowning) { wetFor = 0; return; }   // making way
         if (drowning) wetSwims = 3;
         net.minecraft.world.level.pathfinder.Path path = getNavigation().getPath();
         BlockPos goal = path != null ? path.getTarget() : (workZone != null ? workZone.center() : null);
@@ -804,7 +807,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     if (!level().getBlockState(feet).getCollisionShape(level(), feet).isEmpty()) continue;
                     if (!level().getBlockState(feet.above()).getCollisionShape(level(), feet.above()).isEmpty()) continue;
                     if (!level().getBlockState(feet.below()).isFaceSturdy(level(), feet.below(), net.minecraft.core.Direction.UP)) continue;
-                    double score = feet.distSqr(here) + (goal != null ? Math.sqrt(feet.distSqr(goal)) * 0.5 : 0)
+                    // [tp46] Kept dry, the bank on its own side (where it went in), not the far one across.
+                    double score = feet.distSqr(here) + (keepDry ? Math.sqrt(feet.distToCenterSqr(wetFrom)) * 0.8
+                        : goal != null ? Math.sqrt(feet.distSqr(goal)) * 0.5 : 0)
                         - (onWalkedGround(feet) ? 30 : 0);          // a bank that leads somewhere
                     if (score < bestScore) { bestScore = score; best = feet; }
                     break;
@@ -1192,6 +1197,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         double direct = dest.distSqr(blockPosition());
         // A long way to go, and in no mood to dawdle: break into a run, as anybody would.
         if (direct > 20.0 * 20.0 && speed >= 0.9D && fitToRun()) setSprinting(true);
+        // [tp46] Along its town's way to the mine where that is the way (the bridge's hand sent out a hundred blocks to the
+        // far end of an old bridge stood all day at the near end, its straight way too long for the pathfinder).
+        if (direct > 28.0 * 28.0 && this instanceof VillageFolkEntity) {
+            BlockPos via = MineWay.detour(this, dest);
+            if (via != null && via.distSqr(blockPosition()) > 9.0) {
+                roadDest = dest.immutable();
+                roadLeg = via;
+                roadUntil = tickCount + 400;
+                getNavigation().moveTo(via.getX() + 0.5, via.getY(), via.getZ() + 0.5, speed);
+                return;
+            }
+        }
         if (direct > 24.0 * 24.0 && ownerId != null) {
             java.util.Map<Long, Integer> map = TRAFFIC.get(ownerId);
             if (map != null) {
@@ -3418,6 +3435,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean restIfOffShift() {
         boolean resting = !onShift();
         if (!resting) {
+            endLyingIn();
             if (isSleeping()) stopSleeping();
             return false;
         }
@@ -3426,11 +3444,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // two bots that happen to share a field.
         handOver();
         if (getTarget() != null || retreating) {
+            endLyingIn();
             if (isSleeping()) stopSleeping(); // defend yourself first
+            night("fighting");
             return false;
         }
         // The end of the day is for company before it is for bed (VillageFolkEntity).
-        if (!isSleeping() && eveningSocial()) return true;
+        if (!isSleeping() && eveningSocial()) { night("the evening out: " + eveningWhy()); return true; }
+        if (isSleeping() && Bedside.onAFloor(this)) { night("asleep on a floor"); return true; }   // [tp46] down for the night where it lies
         BlockPos bed = bedPos;
         if (bed != null && (!(level().getBlockState(bed).getBlock()
                 instanceof net.minecraft.world.level.block.BedBlock) || !bedFit(bed))) {
@@ -3449,7 +3470,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 sayRoutine("Claimed the spare bed for myself.");
             }
         }
+        if (bed == null && !isSleeping() && this instanceof VillageFolkEntity vf0 && Bedside.onTheFloor(vf0)) {
+            night(isSleeping() ? "asleep on a floor" : "walking to a floor indoors: no bed to be had");   // [tp46] a corner indoors
+            return true;
+        }
+        if (bed == null && isSleeping()) return true;                   // [tp46] asleep on the floor (Bedside)
         if (bed == null) {
+            night("no bed: " + bedLookNote());
             // No bed assigned: at least go home rather than stand in a field.
             // Path starts are staggered — a whole crew clocking off at dusk
             // used to fire every pathfind on the same tick.
@@ -3469,9 +3496,24 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
             return homePos != null; // parked at home, off duty
         }
+        // [tp46] At its bedside (in the room, a step or three from the bed's head): over to the head and down. The pathfinder
+        // plans onto the bed and falls short of it, and the stuck look then stepped it aside again: of a town of thirty, eleven
+        // stood all night two blocks from their beds, "stepped over to its bed" and "stepped aside out of a wedge" in turn.
+        if (!isSleeping() && this instanceof VillageFolkEntity && bedsideOf(bed)) {
+            if (bedside(bed)) return true;
+        }
+        // [tp46] Half past eleven and its bed still the far side of the town (a bed given back to its household late, the only one
+        // free across the town): the night on a floor indoors near where it is, not a walk at one in the morning.
+        if (!isSleeping() && this instanceof VillageFolkEntity vfl && level().getDayTime() % 24000L >= Bedside.TOO_LATE
+                && level().getDayTime() % 24000L < 23000L && bed.distSqr(blockPosition()) > (double) Bedside.TOO_FAR * Bedside.TOO_FAR
+                && Bedside.onTheFloor(vfl, true)) {
+            night(isSleeping() ? "asleep on a floor" : "walking to a floor indoors: its bed too far tonight");
+            return true;
+        }
         if (bed.distSqr(blockPosition()) > 4.0) {
             if (isSleeping()) stopSleeping();
             bedSideSince = tickCount;                                   // [tp43]
+            night("walking to its bed: " + (int) Math.sqrt(bed.distSqr(blockPosition())) + " off" + (bedSeenFails > 0 ? ", no headway in sight x" + bedSeenFails : ""));
             // A watch on the walk home: no nearer in twenty seconds, and a villager is set down
             // by its bed; one that still cannot get there gives the bed up for a nearer one.
             // (A whole village spent two nights "on the way" to beds a hundred blocks off.)
@@ -3497,7 +3539,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     // over to it and onto it, led, as anybody climbs into a bed from the side they can reach.
                     brain("stepped over to its bed");
                     return true;
-                } else if (isSettler() && this instanceof VillageFolkEntity && Blink.seen(this) && ++bedSeenFails < 4
+                } else if (isSettler() && this instanceof VillageFolkEntity && Blink.seen(this)
+                        && ++bedSeenFails < (toBed != null && !toBed.canReach() ? 2 : 4)     // [tp46] a way that cannot get there: given up sooner
                         && (toBed == null || toBed.canReach() || getNavigation().isDone())) {
                     // [tp43] In a player's sight it is never put beside its bed: it walks on (a fresh way each look) a
                     // minute or so; a bed it still cannot get to is given up below for one it can.
@@ -3509,6 +3552,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     if (this instanceof VillageFolkEntity) badBeds.put(bed.immutable(), tickCount + 24000);   // [tp43] not this one again today
                     bedPos = null;                        // a bed it can get to, next look
                     bedClaimTick = tickCount - 6000;
+                    bedGaveUp++;
                     brain("gave up a bed it could not reach");
                     return true;
                 }
@@ -3547,6 +3591,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     } else {
                         // A wall or a chest between it and the bed's head: never through it. This bed is given up for one
                         // it can lie down in.
+                        bedGaveUp++;
                         badBeds.put(bed.immutable(), tickCount + 24000);
                         bedPos = null;
                         bedClaimTick = tickCount - 6000;
@@ -3557,11 +3602,286 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 return true;
             }
             getNavigation().stop();
-            startSleeping(bed);
+            if (!lieDown(bed)) return true;
         }
         bedSideSince = tickCount;
+        night("asleep");
         return true;
     }
+
+    // ------------------------------------------------------------------ [tp46] the bedside, and the night's notes
+
+    /** [tp46] What the bedtime routine last did with it, and when (the night census: why a folk is not in bed). */
+    private String nightNote = "";
+    private int nightNoteTick = -100000;
+    /** [tp46] Beds it gave up tonight as out of its reach (the census). */
+    private int bedGaveUp;
+    /** [tp46] Since when it has been at its bedside, the nearest it has got to the head, and when it last got nearer. */
+    private int bedsideFrom = -100000, bedsideLast = -100000, bedsideGain;
+    private double bedsideBest = Double.MAX_VALUE;
+    private int bedsideLookTick = -1000;
+    private boolean bedsideRoom;
+
+    private void night(String what) {
+        nightNote = what;
+        nightNoteTick = tickCount;
+    }
+
+    /** [tp46] What the bedtime routine is doing with it now ("" if it has not run for a couple of seconds: it is elsewhere). */
+    public String nightNote() {
+        return tickCount - nightNoteTick <= 140 ? nightNote : "";       // (the agenda looks in every five seconds)
+    }
+
+    /** [tp46] Beds given up as out of reach (the census). */
+    public int bedsGivenUp() {
+        return bedGaveUp;
+    }
+
+    /** [tp46] What of the evening keeps it up (VillageFolkEntity says; the census). */
+    protected String eveningWhy() {
+        return "";
+    }
+
+    /** [tp46] What the last look for a bed found (VillageFolkEntity says; the census). */
+    protected String bedLookNote() {
+        return "none free";
+    }
+
+    /**
+     * [tp46] Into the bed: only if nobody else lies in it already. One in it (a lodger who took it as it stood free, a mate
+     * who claimed it at the same look): this bed given up for another tonight. False if it did not lie down.
+     */
+    private boolean lieDown(BlockPos bed) {
+        BlockState st = level().getBlockState(bed);
+        if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock && st.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) {
+            night("its bed taken: another");
+            badBeds.put(bed.immutable(), tickCount + 2400);
+            bedPos = null;
+            bedClaimTick = tickCount - 6000;
+            brain("somebody in my bed: another");
+            return false;
+        }
+        startSleeping(bed);
+        bedsideFrom = -100000;
+        return true;
+    }
+
+    /**
+     * [tp46] Is it at this bed's side: on its floor, within three blocks of its head, nothing but beds between it and the bed
+     * (a wall between, the bed beyond it in the next room or on the floor above, is a walk round, not a step over)?
+     */
+    private boolean bedsideOf(BlockPos bed) {
+        double bx = bed.getX() + 0.5 - getX(), bz = bed.getZ() + 0.5 - getZ();
+        if (bx * bx + bz * bz > 3.6 * 3.6 || Math.abs(getY() - (bed.getY() + 0.3)) > 1.4) return false;
+        if (tickCount - bedsideLookTick >= 10) {
+            bedsideLookTick = tickCount;
+            net.minecraft.world.phys.Vec3 eye = getEyePosition(), top = new net.minecraft.world.phys.Vec3(bed.getX() + 0.5, bed.getY() + 0.75, bed.getZ() + 0.5);
+            net.minecraft.world.phys.BlockHitResult hit = level().clip(new net.minecraft.world.level.ClipContext(eye, top,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, this));
+            bedsideRoom = hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS
+                || level().getBlockState(hit.getBlockPos()).getBlock() instanceof net.minecraft.world.level.block.BedBlock
+                || bedsideWay(bed) != null;                              // round a partition by the floor
+        }
+        return bedsideRoom;
+    }
+
+    /**
+     * [tp46] A tick at its bedside: out of a player's sight it lies down now (the game's own way into a bed); in sight it
+     * walks the last steps itself, cell by cell over the room's floor (round a partition, along the carpet, never through a
+     * bed or a wall), to the floor beside the bed's head, and lies down from there (the game's own step into a bed from beside
+     * it, a block). A bed with no floor beside its head (against the wall on both sides) is got into from beside its foot,
+     * stepping up onto the bed if the room has the height. One it cannot get to so in half a minute is given up for another.
+     * True while it has it.
+     */
+    private boolean bedside(BlockPos bed) {
+        if (!(this instanceof VillageFolkEntity vf)) return false;
+        if (tickCount - bedsideLast > 20) {
+            bedsideFrom = tickCount;
+            bedsideBest = Double.MAX_VALUE;
+            bedsideGain = tickCount;
+        }
+        bedsideLast = tickCount;
+        bedWalkBest = Double.MAX_VALUE;
+        bedWalkSince = tickCount;
+        if (lyingIn != null) {
+            if (!lyingIn.equals(bed)) endLyingIn();
+            else { night("at its bedside: in from its foot"); return true; }   // (drawn up the bed a tick at a time: lyingInStep)
+        }
+        double bx = bed.getX() + 0.5 - getX(), bz = bed.getZ() + 0.5 - getZ();
+        double d2 = bx * bx + bz * bz;
+        if (d2 <= 1.1 * 1.1 || !Blink.seen(this)) {
+            Stroll.stop(vf);
+            getNavigation().stop();
+            bedWalkFails = 0;
+            bedSeenFails = 0;
+            if (lieDown(bed)) night("asleep");
+            return true;
+        }
+        if (Stroll.led(vf)) { night("at its bedside: led onto it"); return true; }
+        BlockPos on = BlockPos.containing(getX(), bed.getY(), getZ());
+        if (on.equals(bed) || on.equals(otherHalf(bed))) {               // up on the bed already (its foot): down, and up to the pillow
+            startLyingIn(bed);
+            night("at its bedside: in from its foot");
+            return true;
+        }
+        if (d2 < bedsideBest - 0.04) { bedsideBest = d2; bedsideGain = tickCount; }
+        if (tickCount - bedsideFrom > 600) {
+            // Half a minute at its side and never beside its head: a bed it cannot get into. Another.
+            bedGaveUp++;
+            badBeds.put(bed.immutable(), tickCount + 24000);
+            bedPos = null;
+            bedClaimTick = tickCount - 6000;
+            bedsideFrom = -100000;
+            night("its bed given up: could not get round to it");
+            brain("could not get round to its bed's head: another bed");
+            return true;
+        }
+        getNavigation().stop();
+        // Its way over the floor to beside the bed, walked a step a tick (Stroll: the folk's own brain looks in only now and
+        // then), round a partition and along the carpet, never through a bed or a wall.
+        java.util.List<BlockPos> way = bedsideWay(bed);
+        if (way == null) {
+            // No floor from here to beside the bed (a wall between after all): the long way round, by the pathfinder.
+            if (tickCount - bedStepTick > 200) {
+                bedStepTick = tickCount;
+                if (stepOntoBed(bed)) { night("at its bedside: led round to it"); return true; }
+            }
+            night("at its bedside: no floor to it from here");
+            return false;
+        }
+        if (way.isEmpty()) {
+            // Beside the foot only (or at it): it lies down there and draws itself up the bed to the pillow, as anybody gets
+            // into a bed from its foot under a ceiling too low to stand on the bed.
+            if (d2 <= 2.4 * 2.4) {
+                startLyingIn(bed);
+                night("at its bedside: in from its foot");
+                return true;
+            }
+            night("at its bedside: stepping over to it");
+            return true;
+        }
+        if (!Stroll.along(vf, way)) bedsideGain = tickCount - 101;
+        night("at its bedside: stepping over to it");
+        return true;
+    }
+
+    /** [tp46] A tick of drawing itself up into its bed from the foot (VillageFolkEntity.travel, in place of the game's
+     *  movement); true while it is. */
+    public boolean lyingInStep() {
+        if (lyingIn == null) return false;
+        if (!(level().getBlockState(lyingIn).getBlock() instanceof net.minecraft.world.level.block.BedBlock)) { endLyingIn(); return false; }
+        slideIn(lyingIn);
+        return true;
+    }
+
+    /** [tp46] The bed it is drawing itself up into from its foot, lying (the last tick of it lies down in it), and since when. */
+    @Nullable private BlockPos lyingIn;
+    private int lyingInFrom;
+
+    /** [tp46] Down at the bed's foot: lying, the bed its own from now (nobody else lies down in it meanwhile). */
+    private void startLyingIn(BlockPos bed) {
+        BlockState st = level().getBlockState(bed);
+        if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock && st.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) {
+            lieDown(bed);                                                   // somebody in it: lieDown gives it up for another
+            return;
+        }
+        getNavigation().stop();
+        lyingIn = bed.immutable();
+        lyingInFrom = tickCount;
+        if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock) {
+            float yaw = st.getValue(net.minecraft.world.level.block.BedBlock.FACING).getOpposite().toYRot();
+            setYRot(yaw);
+            yBodyRot = yaw;
+            yHeadRot = yaw;
+        }
+        setPose(net.minecraft.world.entity.Pose.SLEEPING);
+    }
+
+    /** [tp46] A tick of drawing itself up the bed, lying: a quarter of a block toward the pillow; there, it is asleep in it. */
+    private void slideIn(BlockPos bed) {
+        double tx = bed.getX() + 0.5, ty = bed.getY() + 0.6875, tz = bed.getZ() + 0.5;
+        double dx = tx - getX(), dy = ty - getY(), dz = tz - getZ();
+        double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        if (d <= 0.26 || tickCount - lyingInFrom > 60) {
+            lyingIn = null;
+            if (lieDown(bed)) night("asleep");
+            else setPose(net.minecraft.world.entity.Pose.STANDING);
+            return;
+        }
+        double k = 0.25 / d;
+        setPos(getX() + dx * k, getY() + dy * k, getZ() + dz * k);
+        resetFallDistance();
+        night("at its bedside: in from its foot");
+    }
+
+    /** [tp46] Up again from drawing itself into a bed (the morning, a fight, the bed gone). */
+    private void endLyingIn() {
+        if (lyingIn == null) return;
+        lyingIn = null;
+        if (!isSleeping() && getPose() == net.minecraft.world.entity.Pose.SLEEPING) setPose(net.minecraft.world.entity.Pose.STANDING);
+    }
+
+    /** [tp46] Is this floor cell beside the bed's head (a step from lying down)? */
+    private static boolean headSide(BlockPos bed, BlockPos cell) {
+        return cell.getY() == bed.getY() && Math.abs(cell.getX() - bed.getX()) + Math.abs(cell.getZ() - bed.getZ()) == 1;
+    }
+
+    /** [tp46] A floor cell a folk can stand in: nothing to stand in but a carpet, a light or a plate, room for its head, a floor under. */
+    private boolean floorCell(BlockPos p) {
+        BlockState feet = level().getBlockState(p);
+        if (feet.getBlock() instanceof net.minecraft.world.level.block.BedBlock || !feet.getFluidState().isEmpty()) return false;
+        net.minecraft.world.phys.shapes.VoxelShape sh = feet.getCollisionShape(level(), p);
+        if (!sh.isEmpty() && sh.max(Direction.Axis.Y) > 0.1) return false;
+        if (feet.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) return false;
+        BlockPos up = p.above();
+        if (!level().getBlockState(up).getCollisionShape(level(), up).isEmpty()) return false;
+        BlockPos down = p.below();
+        return sh.isEmpty() ? !level().getBlockState(down).getCollisionShape(level(), down).isEmpty() : true;
+    }
+
+    /**
+     * [tp46] Its way over the floor, a cell at a time (four ways round, never through a bed), from its own cell to the nearest
+     * cell beside the bed's head, else beside its foot; within four blocks of the bed. The list's last cell is where it lies
+     * down from; empty if it already stands there; null if there is no such way.
+     */
+    @Nullable
+    private java.util.List<BlockPos> bedsideWay(BlockPos bed) {
+        BlockPos foot = otherHalf(bed);
+        BlockPos from = BlockPos.containing(getX(), bed.getY() + 0.2, getZ());
+        if (!floorCell(from)) from = blockPosition();
+        java.util.Set<BlockPos> heads = new java.util.HashSet<>(), feet = new java.util.HashSet<>();
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockPos h = bed.relative(d), f = foot.relative(d);
+            if (!h.equals(foot) && floorCell(h)) heads.add(h);
+            if (!f.equals(bed) && floorCell(f)) feet.add(f);
+        }
+        if (heads.isEmpty() && feet.isEmpty()) return null;
+        java.util.Map<BlockPos, BlockPos> prev = new java.util.HashMap<>();
+        java.util.ArrayDeque<BlockPos> q = new java.util.ArrayDeque<>();
+        prev.put(from, from);
+        q.add(from);
+        BlockPos footEnd = null, end = null;
+        while (!q.isEmpty() && prev.size() < 120) {
+            BlockPos c = q.poll();
+            if (heads.contains(c)) { end = c; break; }
+            if (footEnd == null && feet.contains(c)) footEnd = c;
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                BlockPos n = c.relative(d);
+                if (prev.containsKey(n) || Math.abs(n.getX() - bed.getX()) > 4 || Math.abs(n.getZ() - bed.getZ()) > 4 || !floorCell(n)) continue;
+                prev.put(n, c);
+                q.add(n);
+            }
+        }
+        if (end == null) end = footEnd;
+        if (end == null) return null;
+        java.util.LinkedList<BlockPos> way = new java.util.LinkedList<>();
+        for (BlockPos c = end; !c.equals(from); c = prev.get(c)) way.addFirst(c);
+        if (!heads.contains(end) && way.isEmpty()) return new java.util.ArrayList<>();
+        if (way.isEmpty()) way.add(end);                                 // beside the head already: a last step to its middle
+        return new java.util.ArrayList<>(way);
+    }
+
     private boolean wentHomeTonight;  // one trip per night
     private double bedWalkBest = Double.MAX_VALUE;   // the nearest it has got to its bed on the way
     private int bedWalkSince;
@@ -3694,15 +4014,33 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return new net.minecraft.world.phys.Vec3(dx, vec.y, dz);
     }
 
+    /** [tp46] Does it keep out of the water now: a village's folk, not one whose work is in it, not on a planned swim. */
+    private boolean keepsDry() {
+        if (!(this instanceof VillageFolkEntity) || isInWater()) return false;
+        if (stationTask == StationTask.DIVER || stationTask == StationTask.FERRY) return false;
+        return !(getNavigation() instanceof FolkNavigation fn && fn.mustSwim());
+    }
+
     /** [sf] Would a step this far leave it over open air deeper than {@code limit}, with no water or ladder under it? */
     private boolean overDrop(double dx, double dz, int limit) {
         net.minecraft.world.phys.AABB moved = getBoundingBox().move(dx, 0.0, dz);
+        // [tp46] A step straight into water (a river flush with its bank) is kept from as an edge, by a folk keeping dry.
+        if (keepsDry()) {
+            BlockPos under = BlockPos.containing((moved.minX + moved.maxX) / 2.0, moved.minY - 0.2, (moved.minZ + moved.maxZ) / 2.0);
+            if (level().getFluidState(under).is(net.minecraft.tags.FluidTags.WATER) && level().getBlockState(under).getCollisionShape(level(), under).isEmpty()
+                    || level().getFluidState(under.above()).is(net.minecraft.tags.FluidTags.WATER)
+                        && level().getBlockState(under.above()).getCollisionShape(level(), under.above()).isEmpty()
+                        && level().getBlockState(under).getCollisionShape(level(), under).isEmpty()) return true;
+        }
         net.minecraft.world.phys.AABB below = new net.minecraft.world.phys.AABB(moved.minX, moved.minY - limit - 0.5, moved.minZ, moved.maxX, moved.minY, moved.maxZ);
         if (!level().noCollision(this, below)) return false;          // ground within the drop it takes
         BlockPos.MutableBlockPos p = BlockPos.containing((moved.minX + moved.maxX) / 2.0, moved.minY, (moved.minZ + moved.maxZ) / 2.0).mutable();
         for (int i = 0; i < 32; i++) {
             BlockState st = level().getBlockState(p);
-            if (st.getFluidState().is(net.minecraft.tags.FluidTags.WATER) || st.is(net.minecraft.tags.BlockTags.CLIMBABLE)) return false;
+            // [tp46] Water under the edge is no fall, but a folk at its work keeps out of it as it keeps off a drop (a miner
+            // walked off the open side of an old bridge's landing into the lake), unless its way is a swim (no dry one).
+            if (st.getFluidState().is(net.minecraft.tags.FluidTags.WATER)) return keepsDry();
+            if (st.is(net.minecraft.tags.BlockTags.CLIMBABLE)) return false;
             if (!st.getCollisionShape(level(), p).isEmpty() || !st.getFluidState().isEmpty()) break;
             p.move(net.minecraft.core.Direction.DOWN);
         }

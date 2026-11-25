@@ -1088,7 +1088,9 @@ public final class Ferries {
         // [tp43] A miner whose mine the town is bridging waits for the bridge (MineWay): the ferry's one seat and the landing's
         // wait sent six miners to the bank of a morning, and those it could not carry in time swam.
         // And once the town's bridge is across, the miners walk it.
-        if (f.stationTask() == AssistantEntity.StationTask.MINE && (MineWay.cutOff(id) || MineWay.bridged(id))) return;
+        // [tp46] Nor where the mine is reached on foot at all (a pond across the straight way with a dry way round its end):
+        // the walk to the landing put a miner in the water.
+        if (f.stationTask() == AssistantEntity.StationTask.MINE && (MineWay.cutOff(id) || MineWay.bridged(id) || MineWay.onFoot(id))) return;
         long now = level.getGameTime();
         if (NEXT_LOOK.getOrDefault(f.getUUID(), 0L) > now) return;
         WorkZone z = f.workZone();

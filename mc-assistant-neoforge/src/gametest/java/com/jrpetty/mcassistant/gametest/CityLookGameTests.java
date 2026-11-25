@@ -253,7 +253,8 @@ public class CityLookGameTests {
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 if (TownPlan.isStreet(dx, dz)) {
                     cells++;
-                    if (walked[dx + off][dz + off]) walkedCells++;
+                    // [tp46] A town grown past the plan's reach (over the lake) has streets beyond the walk's map: not walked by it.
+                    if (Math.abs(dx) <= off && Math.abs(dz) <= off && walked[dx + off][dz + off]) walkedCells++;
                     continue;
                 }
                 if (TownPlan.isSquare(dx, dz) || footprint.contains(BlockPos.asLong(dx, 0, dz))) continue;

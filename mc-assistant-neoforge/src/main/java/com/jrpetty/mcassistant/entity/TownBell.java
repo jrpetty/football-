@@ -777,7 +777,11 @@ public final class TownBell {
         if (d == null) return false;
         if (d.calling != null && f.getUUID().equals(d.ringer)) return true;
         Answer a = ANSWERS.get(f.getUUID());
-        return a != null && a.bellDay == d.bellDay && (a.meal == 1 || a.meal == 2 || a.homeward);
+        // [tp46] The walk home at the dusk bell is over after its time whether or not the folk's tick looked in on it (held by
+        // other business first, it never did): thirty-two of a town of eighty stood all night "on the way home at the dusk
+        // bell", never let go to bed.
+        boolean homeward = a != null && a.homeward && f.level().getGameTime() - a.stageAt <= 1500;
+        return a != null && a.bellDay == d.bellDay && (a.meal == 1 || a.meal == 2 || homeward);
     }
 
     /**

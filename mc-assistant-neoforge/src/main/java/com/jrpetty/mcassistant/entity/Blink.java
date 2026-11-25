@@ -177,6 +177,7 @@ public final class Blink {
         if (!on || f.level().isClientSide) return;
         boolean miner = miner(f);
         boolean seen = seen(f);
+        if (miner && f.isInWater() && f.ownerId() != null) MINER_WET.merge(f.ownerId(), 1L, Long::sum);   // [tp46]
         synchronized (TICKS) {
             TICKS[miner ? 0 : 2]++;
             if (seen) TICKS[miner ? 1 : 3]++;
@@ -241,7 +242,11 @@ public final class Blink {
 
     // ------------------------------------------------------------------ readings
 
+    /** [tp46] Ticks the town's miners have spent in the water since the counts were reset (the soak). */
+    private static final Map<java.util.UUID, Long> MINER_WET = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static void reset() {
+        MINER_WET.clear();
         BY.clear();
         HELD.clear();
         SEEN.clear();
@@ -351,6 +356,7 @@ public final class Blink {
             .then(Commands.literal("seen").executes(ctx -> say(ctx.getSource(), String.join("\n", seenLines()))))
             .then(Commands.literal("held").executes(ctx -> say(ctx.getSource(), String.join("\n", HELD_LINES))))
             .then(Commands.literal("miners").executes(ctx -> say(ctx.getSource(), miners(ctx.getSource().getLevel()))))
+            .then(Commands.literal("beds").executes(ctx -> say(ctx.getSource(), beds(ctx.getSource().getLevel()))))
             .then(Commands.literal("unwatch").executes(ctx -> { WATCH.clear(); return say(ctx.getSource(), "watchers cleared"); }))
             .then(Commands.literal("watch")
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg()).then(Commands.argument("z", DoubleArgumentType.doubleArg())
@@ -369,6 +375,7 @@ public final class Blink {
             net.minecraft.core.BlockPos site = TownMine.siteOf(v.id());
             if (site == null || !v.dim().equals(level.dimension())) continue;
             int all = 0, atMine = 0, below = 0, wet = 0;
+            StringBuilder wetAt = new StringBuilder();
             int ground = level.hasChunk(site.getX() >> 4, site.getZ() >> 4)
                 ? level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, site.getX(), site.getZ()) : 64;
             for (AssistantEntity a : Villages.folkOf(v.id())) {
@@ -378,10 +385,40 @@ public final class Blink {
                 boolean near = dx * dx + dz * dz <= 160 * 160 && (dx * dx + dz * dz <= 24 * 24 || a.getY() < ground - 4);   // at the pithead, or in the works
                 if (near) atMine++;
                 if (near && a.getY() < ground - 4) below++;
-                if (a.isInWater()) wet++;
+                if (a.isInWater()) {
+                    wet++;
+                    if (wetAt.length() < 400) wetAt.append(' ').append(a.getAssistantName()).append('@').append(a.blockPosition().toShortString())
+                        .append(a instanceof VillageFolkEntity vf ? "(" + MineLift.state(a.getUUID()) + ", " + vf.brainNoteForBooks() + ")" : "");
+                }
             }
             b.append(Villages.name(v.id())).append(": miners ").append(all).append(", at the mine ").append(atMine).append(" (below ").append(below)
-                .append("), in the water ").append(wet).append("; ").append(MineWay.status(v.id())).append('\n');
+                .append("), in the water ").append(wet).append(" (miner-ticks in the water so far ").append(MINER_WET.getOrDefault(v.id(), 0L))
+                .append("); ").append(MineWay.status(v.id())).append(wetAt.length() > 0 ? "; wet:" + wetAt : "").append('\n');
+        }
+        return b.toString();
+    }
+
+    /** [tp46] Each town's night: how many asleep (on a floor), with a bed, and why the rest are not (Bedside.whyAwake). */
+    static String beds(ServerLevel level) {
+        StringBuilder b = new StringBuilder();
+        for (Villages.Village v : Villages.every()) {
+            if (!v.dim().equals(level.dimension())) continue;
+            int all = 0, asleep = 0, floor = 0, bed = 0;
+            java.util.Map<String, Integer> why = new java.util.TreeMap<>();
+            StringBuilder each = new StringBuilder();
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                all++;
+                if (a.bedPos() != null) bed++;
+                if (a.isSleeping()) { asleep++; if (Bedside.onAFloor(a)) floor++; continue; }
+                String w = Bedside.whyAwake(a);
+                why.merge(Bedside.kind(w), 1, Integer::sum);
+                net.minecraft.core.BlockPos bp = a.bedPos();
+                each.append("  ").append(a.getAssistantName()).append(" (").append(w).append(") at ").append(a.blockPosition().toShortString())
+                    .append(bp == null ? "" : " bed " + bp.toShortString() + " " + (int) Math.sqrt(bp.distSqr(a.blockPosition())) + " off").append('\n');
+            }
+            if (all == 0) continue;
+            b.append(Villages.name(v.id())).append(": ").append(asleep).append(" of ").append(all).append(" asleep (").append(floor)
+                .append(" on a floor), ").append(bed).append(" with a bed; awake: ").append(why).append('\n').append(each);
         }
         return b.toString();
     }

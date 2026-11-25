@@ -369,6 +369,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void stopSleeping() {
         if (level().isClientSide) { super.stopSleeping(); return; }
+        Bedside.up(this);                                                 // [tp46] off its floor, if it lay on one
         java.util.Optional<BlockPos> lay = getSleepingPos();
         double fx = getX(), fy = getY(), fz = getZ();
         blinkDepth++;
@@ -439,6 +440,7 @@ public class VillageFolkEntity extends AssistantEntity {
      *  tick (FolkLod). */
     @Override
     public void travel(net.minecraft.world.phys.Vec3 input) {
+        if (!level().isClientSide && lyingInStep()) return;              // [tp46] drawing itself up into its bed from the foot
         if (!level().isClientSide && Stroll.step(this)) return;          // [tp43] led along a way, a step a tick
         if (!level().isClientSide && FolkLod.rests(this, input)) return;
         super.travel(input);
@@ -1729,6 +1731,10 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Being hit is not forgotten — by it, or by anybody who saw. */
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+        // [tp46] A cage rider walked into the cage or out of it (LiftGlide) cuts a rock corner at a stop for a tick or two: no
+        // hurt from the wall, and no step out of it (stepped out, it was walked back into the rock, two hundred times in a soak).
+        if (!level().isClientSide && source.is(net.minecraft.world.damagesource.DamageTypes.IN_WALL)
+                && MineLift.state(getUUID()) == MineLift.State.RIDING) return false;
         if (!level().isClientSide && StepOut.fromTheWall(this, source)) return false;   // [soak40] out of the wall, not buried in it
         boolean took = super.hurt(source, amount);
         if (took) Individual.wounded(this, source, amount);   // [individual] a real wound leaves a scar
@@ -2084,7 +2090,7 @@ public class VillageFolkEntity extends AssistantEntity {
         net.minecraft.world.entity.EntityDimensions base = super.getDefaultDimensions(pose);
         if (this.entityData == null || pose == net.minecraft.world.entity.Pose.SLEEPING) return base;
         long look = this.entityData.get(DATA_LOOK);
-        if (!Looks.known(look)) return base;
+        if (!Looks.known(look)) return base.scale(1.0F, Individual.TALLEST);   // [tp46] under a carpet in a room two high
         return base.scale(1.0F, Individual.hitboxScale(Looks.heightOfStep(Looks.heightStepOf(look))));
     }
 
@@ -2867,6 +2873,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Raids.underAlarm(ownerId())) return false;       // the bell is ringing: no evening out
         long t = level().getDayTime() % 24000L;
         long bedtime = bedtimeTick();
+        // [tp46] Off home in time to be in bed at its hour, however far its bed is (a walk across a town of thirty is a minute
+        // and more: folk with beds at the far end were still on their way at one in the morning).
+        BlockPos bed = bedPos();
+        if (bed != null) bedtime -= Math.min(2000L, (long) (Math.sqrt(bed.distSqr(blockPosition())) * 8.0));
         if (t < 12000L || t >= bedtime) return false;
         if (isBaby()) return false;
         if (Diners.evening(this, t)) return true;             // [dining] out to dinner at the café, the tavern, the restaurant
@@ -2877,6 +2887,18 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Leisure.evening(this, t)) return true;
         socialise();
         return true;
+    }
+
+    /** [tp46] The night census: what of the evening has it now (a gathering, the town's culture, supper...). */
+    @Override
+    protected String eveningWhy() {
+        if (Assemblies.attending(this)) return "at the town's gathering";
+        if (FireworkShows.crewing(this)) return "at the fireworks";
+        if (TownJobs.busy(this)) return "on the town's work";
+        if (School.teaching(this)) return "teaching";
+        if (TownCalendar.busy(this)) return "the town's calendar (bell, dusk bell, a present)";
+        if (Culture.busy(this)) return "the town's culture (a play, the band, a toast)";
+        return "an evening out before its bedtime";
     }
 
     /** When it last passed the time of day with somebody (Smalltalk). */
@@ -3012,6 +3034,11 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** What the last look for a bed found (the report line). */
     private String bedLook = "";
+
+    @Override
+    protected String bedLookNote() {
+        return bedLook.isEmpty() ? "not looked yet" : bedLook;
+    }
 
     /**
      * A bed down in the ground (a buried ruin's, a vault's) is nobody's home: three folk of one
@@ -8504,6 +8531,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     @Nullable
     protected BlockPos wayToward(BlockPos dest) {
+        BlockPos mine = MineWay.waypoint(this, dest);                  // [tp46] a miner on its town's way to the mine
+        if (mine != null) return mine;
         UUID village = ownerId();
         BlockPos heart = villageCentre;
         if (village == null || heart == null || !(level() instanceof net.minecraft.server.level.ServerLevel sl)) return null;

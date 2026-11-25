@@ -88,8 +88,9 @@ public final class Stroll {
         }
         if (!f.level().noCollision(f, f.getBoundingBox().move(at.subtract(from)).deflate(0.01))) openDoors(f, at);   // a door on the way: opened
         if (!f.level().noCollision(f, f.getBoundingBox().move(at.subtract(from)).deflate(0.01))) {
-            Vec3 up = at.add(0, 0.6, 0), step = at.add(0, 1.0, 0);         // onto a bed or a slab; up a step
-            if (f.level().noCollision(f, f.getBoundingBox().move(up.subtract(from)).deflate(0.01))) at = up;
+            Vec3 rug = at.add(0, 0.0635, 0), up = at.add(0, 0.6, 0), step = at.add(0, 1.0, 0);   // a carpet; onto a bed or a slab; up a step
+            if (f.level().noCollision(f, f.getBoundingBox().move(rug.subtract(from)).deflate(0.01))) at = rug;
+            else if (f.level().noCollision(f, f.getBoundingBox().move(up.subtract(from)).deflate(0.01))) at = up;
             else if (f.level().noCollision(f, f.getBoundingBox().move(step.subtract(from)).deflate(0.01))) at = step;
             else { WALKS.remove(f.getUUID()); return false; }              // a wall: no further, and never through it
         }

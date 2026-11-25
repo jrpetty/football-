@@ -185,6 +185,8 @@ public final class BridgeKit {
         final Family family;
         final List<Piece> pieces;
         int cursor;
+        /** [tp46] Planks bought for this bridge alone (MineWay): laid before the stores' are touched; nothing else takes them. */
+        @Nullable int[] purse;
 
         Plan(String key, Shape shape, Family family, List<Piece> pieces) {
             this.key = key;
@@ -228,10 +230,17 @@ public final class BridgeKit {
 
     /** The deck's level: a clear block over the water, or level with the lower bank where both banks stand higher. */
     static int deckY(ServerLevel level, boolean alongX, int minor, int w0, int w1, int waterY) {
-        int deck = waterY + 2;
+        return deckY(level, alongX, minor, w0, w1, waterY, 6);
+    }
+
+    /** As above, the deck never more than {@code rise} over the water (the ramps take it up to banks higher than that). */
+    static int deckY(ServerLevel level, boolean alongX, int minor, int w0, int w1, int waterY, int rise) {
+        // [tp46] A low deck (the mine's) still two clear over the water: one over a river flush with its banks left a swimmer's
+        // head in the deck.
+        int deck = waterY + (rise <= MineWay.RISE ? 3 : 2);
         Column a = column(level, alongX ? w0 - 1 : minor, alongX ? minor : w0 - 1);
         Column b = column(level, alongX ? w1 + 1 : minor, alongX ? minor : w1 + 1);
-        if (a != null && b != null && !a.water() && !b.water()) deck = Math.max(deck, Math.min(Math.min(a.y(), b.y()), waterY + 6));
+        if (a != null && b != null && !a.water() && !b.water()) deck = Math.max(deck, Math.min(Math.min(a.y(), b.y()), waterY + rise));
         return deck;
     }
 
@@ -241,6 +250,12 @@ public final class BridgeKit {
      */
     @Nullable
     static Shape shape(ServerLevel level, List<int[]> line, int a, int b, int half) {
+        return shape(level, line, a, b, half, 6);
+    }
+
+    /** As above, the deck at most {@code rise} over the water. */
+    @Nullable
+    static Shape shape(ServerLevel level, List<int[]> line, int a, int b, int half, int rise) {
         int[] pa = line.get(a), pb = line.get(b);
         boolean alongX = Math.abs(pb[0] - pa[0]) >= Math.abs(pb[1] - pa[1]);
         int ma = alongX ? pa[0] : pa[1], mb = alongX ? pb[0] : pb[1];
@@ -258,7 +273,7 @@ public final class BridgeKit {
         while (w0 > lo - 6 && wet(level, alongX, minor, w0 - 1, half, waterY)) w0--;
         while (w1 < hi + 6 && wet(level, alongX, minor, w1 + 1, half, waterY)) w1++;
         int wy = waterY[0];
-        return new Shape(alongX, minor, w0, w1, wy, deckY(level, alongX, minor, w0, w1, wy), half);
+        return new Shape(alongX, minor, w0, w1, wy, deckY(level, alongX, minor, w0, w1, wy, rise), half);
     }
 
     /** Is there water under any of the strip's columns at this step along it (its top kept, the highest)? */
@@ -452,12 +467,48 @@ public final class BridgeKit {
     /** The piece's block out of the stores; null (and what is short in {@code why}) if they cannot run to it. */
     @Nullable
     static BlockState pay(ServerLevel level, Villages.Village v, Family f, Piece p, String[] why) {
+        return pay(level, v, f, p, why, null);
+    }
+
+    /** [tp46] What a piece costs in planks (a wooden bridge's: a railing two, a log beam none, any other block one). */
+    static int planksFor(Family f, Piece p) {
+        if (!f.wood() || p.kind() == 'Q' || p.state().isAir()) return 0;
+        Block b = p.state().getBlock();
+        if (b == f.rail()) return 2;
+        if (f.logs() && (b == f.beam() || b == f.post())) return 0;
+        return 1;
+    }
+
+    /** [tp46] The planks a plan still wants (its pieces not yet laid; a block already standing there counted as laid). */
+    static int planksWanted(ServerLevel level, Plan plan) {
+        int n = 0;
+        for (int i = plan.cursor; i < plan.pieces.size(); i++) {
+            Piece p = plan.pieces.get(i);
+            int c = planksFor(plan.family, p);
+            if (c == 0) continue;
+            if (level.isLoaded(p.pos())) {
+                BlockState st = level.getBlockState(p.pos());
+                if (done(st, p) || theirs(st)) continue;
+            }
+            n += c;
+        }
+        return n;
+    }
+
+    /** As above; {@code purse}: planks bought for this bridge, spent first. */
+    @Nullable
+    static BlockState pay(ServerLevel level, Villages.Village v, Family f, Piece p, String[] why, @Nullable int[] purse) {
         BlockState want = p.state();
         Block b = want.getBlock();
         if (p.kind() == 'Q') {
             Block light = Masonry.light(level, v);
             if (light == null) return null;
             return light.defaultBlockState();
+        }
+        int cost = planksFor(f, p);
+        if (purse != null && cost > 0 && purse[0] >= cost) {
+            purse[0] -= cost;
+            return want;
         }
         if (f.wood()) {
             if (b == f.rail()) {
@@ -504,7 +555,7 @@ public final class BridgeKit {
             } else if (free || v == null) {
                 put = p.state();
             } else {
-                put = pay(level, v, plan.family, p, why);
+                put = pay(level, v, plan.family, p, why, plan.purse);
                 if (put == null) {
                     if (p.kind() == 'Q') {               // no light to hand: the bridge goes on without it for now
                         plan.cursor++;
@@ -515,7 +566,8 @@ public final class BridgeKit {
             }
             if (!free && v != null) {
                 Item up = back(was);
-                if (up != Items.AIR) Crafts.giveBack(level, v, up, 1);
+                // [tp46] A stair's cutting gives its stone back; its earth is spread (a hillside's worth of dirt in the stores).
+                if (up != Items.AIR && !(p.kind() == 'C' && up != Items.COBBLESTONE && plan.key.contains("/stair"))) Crafts.giveBack(level, v, up, 1);
             }
             if (!was.getFluidState().isEmpty() && put.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED)) {
                 put = put.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true);
@@ -593,6 +645,69 @@ public final class BridgeKit {
         note(owner, road, known);
         LOG.info("[MCA-BRIDGE] {} crossing at {}..{}: {}", road, a, b, sh.encode());
         return s;
+    }
+
+    /**
+     * [tp46] The crossing of the water between land at index a and land at index b of the line, whatever lies between (a
+     * lake with an island or two in it is one bridge over them all, not a bridge to each island with a ramp down onto it and
+     * up off it), the deck at most {@code rise} over the water; as noted for the road, or found now and noted.
+     */
+    @Nullable
+    static Span spanOver(ServerLevel level, UUID owner, String road, List<int[]> line, int a, int b, int half, int rise) {
+        List<Span> known = spans(owner, road);
+        for (Span s : known) if (s.a() == a && s.b() == b) return s;
+        Shape sh = shape(level, line, a, b, half, rise);
+        if (sh == null) return null;
+        Span s = new Span(a, b, sh);
+        known.removeIf(k -> k.a() < b && k.b() > a);                  // an older, shorter crossing inside this one
+        known.add(s);
+        note(owner, road, known);
+        LOG.info("[MCA-BRIDGE] {} crossing over {}..{}: {}", road, a, b, sh.encode());
+        return s;
+    }
+
+    /** [tp46] The longest stair cut up a bank, and the most cut out over a tread. */
+    static final int MOST_STAIR = 40, MOST_CUT = 24;
+
+    /**
+     * [tp46] A stair up a bank too steep to walk (a cliff at the end of a bridge, the bank over a river): from the foot of it
+     * at {@code low}, going {@code up} the bank, a tread a block forward and a block up at a time, cut into the bank (all that
+     * stands over the tread taken out, so it is a cutting open to the sky, not a hole in the hill) and filled under where the
+     * ground falls away, as wide as the road, until the tread meets the ground. Null if it would never meet it within
+     * {@link #MOST_STAIR} steps, or there is nothing to climb.
+     */
+    @Nullable
+    static Plan bankStair(ServerLevel level, String key, BlockPos low, Direction up, int half, Family f) {
+        Column foot = column(level, low.getX(), low.getZ());
+        if (foot == null || foot.water()) return null;
+        int walk = foot.y() + 1;
+        Direction side = up.getClockWise();
+        List<Piece> out = new ArrayList<>();
+        boolean met = false;
+        for (int k = 1; k <= MOST_STAIR; k++) {
+            BlockPos cell = low.relative(up, k);
+            Column g = column(level, cell.getX(), cell.getZ());
+            if (g == null || g.water()) break;
+            if (g.y() + 1 <= walk) { met = true; break; }
+            int y = walk;
+            for (int c = -half; c <= half; c++) {
+                BlockPos at = cell.relative(side, c).atY(y);
+                Column under = column(level, at.getX(), at.getZ());
+                int base = under == null || under.water() ? g.y() : under.y();
+                for (int q = base + 1; q < y; q++) out.add(new Piece(at.atY(q), f.deck().defaultBlockState(), 'A'));
+                out.add(new Piece(at, stair(f.stairs(), up, false), 'S'));
+                int over = under == null ? y + 3 : Math.max(y + 3, Math.min(under.y(), y + MOST_CUT));
+                for (int q = y + 1; q <= over; q++) out.add(new Piece(at.atY(q), Blocks.AIR.defaultBlockState(), 'C'));
+            }
+            walk++;
+        }
+        if (!met || out.isEmpty()) return null;
+        boolean alongX = up.getAxis() == Direction.Axis.X;
+        Shape sh = new Shape(alongX, alongX ? low.getZ() : low.getX(), alongX ? low.getX() : low.getZ(), alongX ? low.getX() : low.getZ(),
+            foot.y(), foot.y(), half);
+        Plan p = new Plan(key, sh, f, out);
+        LOG.info("[MCA-BRIDGE] {}: a stair up the bank from {} going {}, {} blocks", key, low.toShortString(), up.getName(), out.size());
+        return p;
     }
 
     /** The old kind of bridge's blocks on this crossing: planks flush on the water across the road, and its rails. */
