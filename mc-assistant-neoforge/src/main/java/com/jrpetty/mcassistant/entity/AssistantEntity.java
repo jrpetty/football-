@@ -7588,7 +7588,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     return false;
                 }
                 // [tp43] The mine cut off by water, the town bridging it: no shift out to it; the town's other work meanwhile.
-                if (isSettler() && MineWay.cutOff(ownerId)) {
+                if (isSettler() && MineWay.cutOff(ownerId) && !MineWay.farSide(this)) {   // (one over there already works on)
                     brain("the mine is cut off by water till the bridge is built: other work meanwhile");
                     return false;
                 }

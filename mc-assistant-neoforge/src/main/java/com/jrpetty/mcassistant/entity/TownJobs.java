@@ -382,7 +382,10 @@ public final class TownJobs {
             if (trade == AssistantEntity.StationTask.NONE && f.workZone() == null) continue;
             double score = 0;
             if (prefer != null && trade == prefer) score += 60;
-            if (MINEWAY.equals(works) && trade == AssistantEntity.StationTask.MINE) score += 80;   // [tp43] the miners build their own way out
+            if (MINEWAY.equals(works) && trade == AssistantEntity.StationTask.MINE) {
+                if (MineWay.farSide(f)) continue;                        // [tp43] over the water at the mine: it cannot come over
+                score += 80;                                             // [tp43] the miners build their own way out
+            }
             if (f.workZone() == null && trade != AssistantEntity.StationTask.HAUL
                 && trade != AssistantEntity.StationTask.STORE && trade != AssistantEntity.StationTask.GUARD) score += 40;   // between grounds
             switch (trade) {

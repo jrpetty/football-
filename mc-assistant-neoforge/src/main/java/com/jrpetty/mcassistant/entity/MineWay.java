@@ -103,6 +103,14 @@ public final class MineWay {
         }
     }
 
+    /** Is this folk over the water at its town's mine while the mine is cut off (it works there; it cannot come over to help)? */
+    public static boolean farSide(AssistantEntity f) {
+        UUID id = f.ownerId();
+        if (!cutOff(id)) return false;
+        Way w = WAYS.get(id);
+        return w != null && near(f.blockPosition(), w.site, 48);
+    }
+
     private static boolean near(BlockPos a, BlockPos b, int r) {
         return Math.abs(a.getX() - b.getX()) <= r && Math.abs(a.getZ() - b.getZ()) <= r;
     }
