@@ -337,7 +337,9 @@ public class FolkNavigation extends GroundPathNavigation {
             if (p != null && p != was && !targets.isEmpty() && this.mob instanceof VillageFolkEntity f && keepsDry(f, targets) && swims(p)) {
                 BlockPos target = targets.iterator().next();
                 Path dry = planDry(f, targets, regionOffset, offsetUpward, accuracy);
-                if (dry != null && !swims(dry) && (dry.canReach() || endOff(dry, target) <= endOff(p, target) + 8.0)) {
+                // (A wet way that gets there against a dry one that does not: the dry one only if it gets there too; a far
+                // errand's way cut short either way: the dry one if it ends as near, near enough.)
+                if (dry != null && !swims(dry) && (dry.canReach() || !p.canReach() && endOff(dry, target) <= endOff(p, target) + 4.0)) {
                     mustSwim = false;
                     DRY_WAYS++;
                     return dry;
