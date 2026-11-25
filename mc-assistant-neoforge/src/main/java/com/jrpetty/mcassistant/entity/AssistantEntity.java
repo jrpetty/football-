@@ -784,6 +784,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private void climbOutOfTheWater() {
         if (!isInWater() || isPassenger() || isSleeping()) { wetFor = 0; wetSwims = 0; return; }
         if (underwaterWork()) { wetFor = 0; return; }        // [diver] down there on purpose, or being pulled out
+        if (MineLift.state(getUUID()) == MineLift.State.RIDING) { wetFor = 0; wetSwims = 0; return; }   // [tp43] in the cage, at the well's foot
         if (wetFor++ == 0) wetFrom = position();
         // [tp43] Out of breath (a long swim, a current carrying it along the river): out at once, whatever way it was making.
         boolean drowning = getAirSupply() < getMaxAirSupply() / 3;

@@ -45,6 +45,9 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public VillageFolkEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
+        // [tp43] A town's folk go round by a bridge where there is one rather than swim (it still swims where there is no
+        // other way): a river seven across costs as much as a walk of a hundred and forty blocks round to the bridge.
+        setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, 40.0F);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
