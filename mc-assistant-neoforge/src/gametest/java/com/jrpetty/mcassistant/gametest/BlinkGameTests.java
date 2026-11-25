@@ -503,7 +503,11 @@ public class BlinkGameTests {
             if (ran % 6000 == 0) Kit.stockForGrowth(level, com.jrpetty.mcassistant.entity.Villages.get(id[0]));   // the stores kept up, as by a day's trade
             for (int i = 0; i < miners.size(); i++) {
                 VillageFolkEntity m = miners.get(i);
-                if (m.isInWater()) wet[i]++;
+                if (m.isInWater()) {
+                    if (wet[i]++ % 40 == 0) Kit.log("[VT] " + label + " WET " + m.getAssistantName() + " at " + m.blockPosition().toShortString() + " goals " + running(m)
+                        + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg()) + " nav " + m.getNavigation().getTargetPos()
+                        + " | " + m.brainNoteForBooks());
+                }
                 if (reached[i] == 0 && m.getX() > rx + 10 && Math.abs(m.getX() - sx) <= 8 && Math.abs(m.getZ() - cz) <= 8) reached[i] = (int) ran;
                 if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
             }

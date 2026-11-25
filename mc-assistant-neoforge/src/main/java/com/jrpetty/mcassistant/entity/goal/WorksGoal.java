@@ -496,6 +496,13 @@ public class WorksGoal extends Goal {
                 hopNote(dest);
                 return leadOn(dest);
             }
+            // [tp43] Out of sight too, led on along the way first (round a stair's corner, up its riser): put there only if
+            // that got it nowhere either.
+            if (open(dest) && !dest.equals(ledTo) && a instanceof VillageFolkEntity) {
+                ledTo = dest.immutable();
+                LEAD_UNSEEN++;
+                return leadOn(dest);
+            }
             if (open(dest)) {
                 a.getNavigation().stop();
                 hopNote(dest);                                   // [fixes14] why it was stuck, for the tests
@@ -510,6 +517,10 @@ public class WorksGoal extends Goal {
 
     /** [tp43] Fresh ways planned in a row for a walk that was stuck in sight; three, and it waits on its way instead. */
     private int replans;
+    /** [tp43] The spot it was last led on to out of sight (stuck again on the way there, it is put there). */
+    @Nullable private BlockPos ledTo;
+    /** [tp43] Leads tried out of sight before a hop (the tests). */
+    public static int LEAD_UNSEEN;
 
     /**
      * [tp43] Stuck on its way with a player watching: led along the cells of its route from the next to this one, if it
