@@ -50,6 +50,19 @@ public class BlinkGameTests {
             + (p.canReach() ? "" : " (cannot reach)");
     }
 
+    /** The nodes of the walk it is on from the next one (the log). */
+    static String pathNodes(com.jrpetty.mcassistant.entity.AssistantEntity a) {
+        net.minecraft.world.level.pathfinder.Path p = a.getNavigation().getPath();
+        if (p == null) return "none";
+        StringBuilder b = new StringBuilder();
+        for (int i = Math.max(0, p.getNextNodeIndex() - 2); i < p.getNodeCount(); i++) {
+            BlockPos q = p.getNodePos(i);
+            b.append(i == p.getNextNodeIndex() ? "*" : "").append(q.getX() % 1000).append(',').append(q.getY()).append(',').append(q.getZ() % 1000)
+                .append(a.level().getFluidState(q).isEmpty() ? "" : "~").append(' ');
+        }
+        return b.toString();
+    }
+
     static String running(com.jrpetty.mcassistant.entity.AssistantEntity a) {
         StringBuilder b = new StringBuilder();
         for (net.minecraft.world.entity.ai.goal.WrappedGoal g : a.goalsForTests().getAvailableGoals())
@@ -533,10 +546,15 @@ public class BlinkGameTests {
         Kit.hold(level, rx, cz, 64);
         Kit.hold(level, sx, cz, 32);
         UUID[] id = { null };
+        BlockPos[] pit = { null };
         long[] began = { -1 };
         ServerPlayer[] you = { null };
         List<VillageFolkEntity> miners = new java.util.ArrayList<>();
         int[] wet = new int[n], reached = new int[n];
+        // What each miner was at over its last couple of seconds, told when it goes into the water (the log, to see how).
+        List<java.util.ArrayDeque<String>> trail = new java.util.ArrayList<>();
+        for (int i = 0; i < n; i++) trail.add(new java.util.ArrayDeque<>());
+        boolean[] wasWet = new boolean[n];
         helper.onEachTick(() -> {
             if (began[0] == -2) return;
             if (id[0] == null) {
@@ -565,6 +583,7 @@ public class BlinkGameTests {
                     }
                 }
                 BlockPos site = Kit.surface(level, sx, cz);
+                pit[0] = site;
                 com.jrpetty.mcassistant.village.Ledger.note(v.id(), "mine.site", sx + "," + cz);
                 for (com.jrpetty.mcassistant.entity.AssistantEntity a : com.jrpetty.mcassistant.entity.Villages.folkOf(v.id())) {
                     if (miners.size() >= n || !(a instanceof VillageFolkEntity f) || f.isBaby()) continue;
@@ -588,19 +607,50 @@ public class BlinkGameTests {
             if (ran % 6000 == 0) Kit.stockForGrowth(level, com.jrpetty.mcassistant.entity.Villages.get(id[0]));   // the stores kept up, as by a day's trade
             for (int i = 0; i < miners.size(); i++) {
                 VillageFolkEntity m = miners.get(i);
+                java.util.ArrayDeque<String> tr = trail.get(i);
+                if (m.isInWater() && !wasWet[i]) {
+                    Kit.log("[VT] " + label + " INTO THE WATER " + m.getAssistantName() + " at " + String.format("%.2f %.2f %.2f", m.getX(), m.getY(), m.getZ()) + "; the ticks before:\n  " + String.join("\n  ", tr)
+                        + "\n  path " + pathNodes(m));
+                    if (java.util.stream.IntStream.range(0, n).allMatch(k -> wet[k] == 0)) {     // the first: the ground there
+                        StringBuilder g = new StringBuilder();
+                        for (int y = m.getBlockY() + 5; y >= m.getBlockY() - 1; y--) {
+                            g.append("\n  y").append(y).append(' ');
+                            for (int z = m.getBlockZ() - 3; z <= m.getBlockZ() + 3; z++) {
+                                g.append(" z").append(z % 1000).append(':');
+                                for (int x = m.getBlockX() - 6; x <= m.getBlockX() + 6; x++) {
+                                    net.minecraft.world.level.block.state.BlockState st = level.getBlockState(new BlockPos(x, y, z));
+                                    g.append(st.isAir() ? '.' : !st.getFluidState().isEmpty() ? '~' : st.getCollisionShape(level, new BlockPos(x, y, z)).isEmpty() ? ',' : '#');
+                                }
+                            }
+                        }
+                        Kit.log("[VT] " + label + " the ground round it (x " + (m.getBlockX() - 6) % 1000 + ".." + (m.getBlockX() + 6) % 1000 + "):" + g);
+                    }
+                }
+                wasWet[i] = m.isInWater();
+                tr.addLast(ran + " " + String.format("%.2f %.2f %.2f", m.getX(), m.getY(), m.getZ()) + (m.onGround() ? " g" : " -") + (m.isInWater() ? " WET" : "")
+                    + " path " + pathLine(m) + (m.getNavigation() instanceof com.jrpetty.mcassistant.entity.FolkNavigation fn && fn.mustSwim() ? " MUSTSWIM" : "")
+                    + " goals " + running(m) + " | " + m.brainNoteForBooks());
+                if (tr.size() > 40) tr.removeFirst();
                 if (m.isInWater()) {
                     if (wet[i]++ % 40 == 0) Kit.log("[VT] " + label + " WET " + m.getAssistantName() + " at " + m.blockPosition().toShortString() + " goals " + running(m)
                         + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg()) + " nav " + m.getNavigation().getTargetPos()
                         + " | " + m.brainNoteForBooks());
                 }
                 if (reached[i] == 0 && m.getX() > rx + 10 && Math.abs(m.getX() - sx) <= 8 && Math.abs(m.getZ() - cz) <= 8) reached[i] = (int) ran;
-                if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+                // Kept at the mine: its trade, and its ground with it ([tp47] the town short of a ferryman took one of the six on,
+                // the trade was put back and the ferry's ground was left: a "miner" walking back to a plot out on the river).
+                if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) {
+                    m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+                    m.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pit[0], 6, pit[0].getY() - 3), "Mine");
+                }
             }
             if (ran % 250 == 0 && ran <= 3000) for (VillageFolkEntity m : miners) Kit.log("[VT] " + label + "   " + m.getAssistantName() + " at "
                 + m.blockPosition().toShortString() + (m.isInWater() ? " IN WATER" : "") + " goals " + running(m) + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg())
                 + " lent " + (m.isPassenger() ? "riding" : "") + " | " + m.brainNoteForBooks());
             if (ran % 1000 == 0) Kit.log("[VT] " + label + " @" + ran + ": " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]) + "; bridges " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0])
-                + "; reached " + java.util.Arrays.toString(reached) + "; in the water " + java.util.Arrays.toString(wet) + "; seen jumps " + Blink.seenJumps());
+                + "; reached " + java.util.Arrays.toString(reached) + "; in the water " + java.util.Arrays.toString(wet) + "; seen jumps " + Blink.seenJumps()
+                + "; the ferry " + (com.jrpetty.mcassistant.entity.Ferries.crossing(id[0]) == null ? "none" : com.jrpetty.mcassistant.entity.Ferries.crossing(id[0]).state().words)
+                + "; wet ways held dry " + com.jrpetty.mcassistant.entity.FolkNavigation.HELD_DRY);
             boolean all = java.util.Arrays.stream(reached).limit(miners.size()).allMatch(t -> t > 0);
             if (pond ? ran < 24000 : !all && ran < 30000) return;           // (the pond: a whole day and night)
             began[0] = -2;

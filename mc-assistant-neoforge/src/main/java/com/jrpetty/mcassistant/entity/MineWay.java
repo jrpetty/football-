@@ -71,6 +71,8 @@ public final class MineWay {
         /** [tp46] The walk the way was planned along, heart first ({x, z}), and its cells' ground; null for one never cut off. */
         @Nullable List<int[]> line;
         boolean lined, relined;
+        /** [tp47] The town's ferry is out of this bridge's way (Ferries.giveWay). */
+        boolean ferryClear;
         String status = "";
         Way(BlockPos site) { this.site = site; }
     }
@@ -391,8 +393,17 @@ public final class MineWay {
         if (w == null || !w.site.equals(site)) { w = new Way(site); WAYS.put(id, w); }
         long now = level.getGameTime();
         if (w.looked < 0 || now - w.looked >= LOOK_EVERY || now < w.looked) look(level, v, w);
+        // [tp47] A ferry over the water the town is to bridge on the way to its mine, at the same crossing (both put where it is
+        // narrowest), gives way to the bridge as soon as it is planned, whenever the ferry was found: its landing would be a
+        // pocket under the deck, walled off from the bank by the abutment, and nobody is rowed to the mine meanwhile anyway.
+        if (!w.plans.isEmpty()) {
+            List<BlockPos> ground = new ArrayList<>();
+            for (BridgeKit.Plan p : w.plans) for (BridgeKit.Piece pc : p.pieces) ground.add(pc.pos());
+            w.ferryClear = Ferries.giveWay(level, v, ground);
+        }
         if (!w.plans.isEmpty() && (cutOff(id) || w.walkable) && (w.built < 0 || now - w.built >= BUILD_EVERY || now < w.built)) {
             w.built = now;
+            if (!w.ferryClear) { w.status = "waiting for the ferry's last crossing"; return; }
             build(level, v, w);
         }
     }
