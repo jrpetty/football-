@@ -255,14 +255,17 @@ public final class Blink {
     private static final Map<java.util.UUID, Long> MINER_WET = new java.util.concurrent.ConcurrentHashMap<>();
     /** [tp47] Each miner's last couple of seconds (where, on what walk, at what), told in the log when it goes into the water. */
     private static final Map<java.util.UUID, java.util.ArrayDeque<String>> TRAILS = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final Map<java.util.UUID, Boolean> WAS_WET = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<java.util.UUID, Long> DRY_FROM = new java.util.concurrent.ConcurrentHashMap<>();
     private static int trailsTold;
 
     private static void trail(VillageFolkEntity f) {
         java.util.ArrayDeque<String> t = TRAILS.computeIfAbsent(f.getUUID(), k -> new java.util.ArrayDeque<>());
         boolean wet = f.isInWater();
-        Boolean was = WAS_WET.put(f.getUUID(), wet);
-        if (wet && Boolean.FALSE.equals(was) && trailsTold < 80) {
+        long now = f.level().getGameTime();
+        Long dryFrom = DRY_FROM.get(f.getUUID());
+        if (wet) DRY_FROM.remove(f.getUUID()); else if (dryFrom == null) DRY_FROM.put(f.getUUID(), now);
+        // (Told once a time in: bobbing at the surface in and out of the water is the same time.)
+        if (wet && dryFrom != null && now - dryFrom >= 40 && trailsTold < 80) {
             trailsTold++;
             net.minecraft.world.level.pathfinder.Path p = f.getNavigation().getPath();
             StringBuilder nodes = new StringBuilder();
@@ -297,7 +300,7 @@ public final class Blink {
         MINER_WET_AT.clear();
         TRAILS.clear();
         SLOW.clear();
-        WAS_WET.clear();
+        DRY_FROM.clear();
         trailsTold = 0;
         BY.clear();
         HELD.clear();
