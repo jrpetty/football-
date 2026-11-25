@@ -57,7 +57,7 @@ public final class MineWay {
     static final class Way {
         BlockPos site;
         long looked = -1, built = -1;
-        boolean known, walkable = true, gaveUp, wasCut;
+        boolean known, walkable = true, gaveUp, wasCut, open;
         final List<BridgeKit.Plan> plans = new ArrayList<>();
         String status = "";
         Way(BlockPos site) { this.site = site; }
@@ -128,7 +128,7 @@ public final class MineWay {
     public static String status(@Nullable UUID village) {
         Way w = village == null ? null : WAYS.get(village);
         if (w == null || !w.known) return "the way to the mine not looked at yet";
-        if (w.walkable) return "the mine is reached on foot" + (w.wasCut ? " (over the town's new bridge)" : "");
+        if (w.walkable) return "the mine is reached on foot" + (w.wasCut ? " (over the town's new bridge" + (w.plans.isEmpty() ? ")" : ", its railings going on)") : "");
         if (w.gaveUp) return "no way on foot to the mine, and none the town can bridge";
         return "the mine is cut off by water: the town is bridging it (" + w.plans.size() + " crossing(s)" + (w.status.isEmpty() ? "" : "; " + w.status) + ")";
     }
@@ -150,7 +150,7 @@ public final class MineWay {
         if (w == null || !w.site.equals(site)) { w = new Way(site); WAYS.put(id, w); }
         long now = level.getGameTime();
         if (w.looked < 0 || now - w.looked >= LOOK_EVERY || now < w.looked) look(level, v, w);
-        if (cutOff(id) && (w.built < 0 || now - w.built >= BUILD_EVERY || now < w.built)) {
+        if (!w.plans.isEmpty() && (cutOff(id) || w.walkable) && (w.built < 0 || now - w.built >= BUILD_EVERY || now < w.built)) {
             w.built = now;
             build(level, v, w);
         }
@@ -165,11 +165,13 @@ public final class MineWay {
         boolean was = w.walkable;
         w.walkable = ok;
         if (ok) {
-            if (!w.plans.isEmpty()) {
+            if (!w.plans.isEmpty() && !w.open) {
+                // Its deck across: the way is open (the railings and lights go on as the stores run to them).
+                w.open = true;
+                BRIDGED.merge(id, 1, Integer::sum);
                 Villages.tell(id, level.getDayTime() / 24000L, "the way to the mine is open on foot, over the new bridge");
                 LOG.info("[MCA-MINEWAY] {}: the way to the mine is open", Villages.name(id));
             }
-            w.plans.clear();
             return;
         }
         if (w.gaveUp) return;
@@ -241,7 +243,7 @@ public final class MineWay {
             }
             String out = BridgeKit.lay(level, v, p, PER_VISIT, false);
             if (out == null) {
-                BRIDGED.merge(v.id(), 1, Integer::sum);
+                if (!w.open) { w.open = true; BRIDGED.merge(v.id(), 1, Integer::sum); }
                 w.status = "";
                 w.looked = -1;                                                 // looked at again at once
                 Villages.tell(v.id(), level.getDayTime() / 24000L, "a " + p.family().name() + " bridge was finished on the way to the mine");
@@ -251,6 +253,7 @@ public final class MineWay {
             }
             return;
         }
+        w.plans.clear();                                                    // all of it down
         w.looked = -1;
     }
 
