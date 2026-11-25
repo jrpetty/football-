@@ -492,30 +492,37 @@ public final class ShaftStair {
         return false;
     }
 
-    /** A lantern hung over the landing's outer cell (out of the stores or the pack); else a torch on its wall. */
+    /**
+     * A lantern hung in a niche cut in the roof over the landing's outer cell, above the four of headroom (hung in the top
+     * block of it, a player jumping on the landing put their head into it): out of the stores or the pack where there is one,
+     * else the works' own, as their torches are (filmed: a town with no lanterns in store had one at its level landings and
+     * an old wall torch at every other corner). A landing open to the sky, with no roof to hang one from: a torch on its wall.
+     */
     private static void landingLight(Ctx cx, int i, List<BlockPos> cells) {
         ServerLevel level = cx.level;
-        if (lightIn(level, cells, s -> s.getBlock() instanceof LanternBlock)) return;
         BlockPos outer = cells.get(3);
-        BlockPos lamp = outer.above(HEAD - 1), hook = lamp.above();
-        boolean hang = level.getBlockState(lamp).isAir() && Block.canSupportCenter(level, hook, Direction.DOWN);
-        boolean torch = lightIn(level, cells, s -> s.getLightEmission() > 0);
-        if (hang && cx.pay(LANTERN)) {
+        BlockPos lamp = outer.above(HEAD), hook = lamp.above();
+        if (level.getBlockState(lamp).getBlock() instanceof LanternBlock) return;
+        BlockState ls = level.getBlockState(lamp);
+        boolean hang = (ls.isAir() || MineStairs.ground(ls) && !ls.hasBlockEntity() && ls.getDestroySpeed(level, lamp) >= 0)
+            && cx.mayPlace(lamp) && Block.canSupportCenter(level, hook, Direction.DOWN);
+        if (hang) {
+            for (BlockPos c : cells) {                                         // one hung in the headroom before: taken down
+                BlockPos low = c.above(HEAD - 1);
+                if (level.getBlockState(low).getBlock() instanceof LanternBlock) level.setBlock(low, Blocks.AIR.defaultBlockState(), 3);
+            }
+            cx.pay(LANTERN);
             level.setBlock(lamp, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
             lit++;
             return;
         }
-        if (torch) return;
+        if (lightIn(level, cells, s -> s.getLightEmission() > 0)) return;
         int[] o = MineWorks.diag(side(i));
         Direction ox = o[0] < 0 ? Direction.WEST : Direction.EAST, oz = o[1] < 0 ? Direction.NORTH : Direction.SOUTH;
         for (BlockPos c : new BlockPos[]{ outer, cells.get(1), cells.get(2) }) {
             for (Direction d : new Direction[]{ ox, oz }) {
                 if (wallTorch(cx, c.above(), d)) return;
             }
-        }
-        if (hang) {                                                           // no wall to hang a torch on: a lantern all the same
-            level.setBlock(lamp, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
-            lit++;
         }
     }
 
@@ -653,6 +660,11 @@ public final class ShaftStair {
             for (int h = 0; h < HEAD; h++) {
                 BlockPos p = a.above(h);
                 BlockState s = level.getBlockState(p);
+                if (s.getBlock() instanceof net.minecraft.world.level.block.AbstractFurnaceBlock && level.getBlockEntity(p) instanceof net.minecraft.world.Container box && box.isEmpty()) {
+                    level.destroyBlock(p, true);                              // an empty furnace left in the way in (filmed): taken up
+                    cleared++;
+                    continue;
+                }
                 if (s.isAir() || ours(s) || s.hasBlockEntity()) continue;
                 if (!natural(level, p, s)) return;                              // something built there: left as it is
                 if (!cx.mayPlace(p)) return;
