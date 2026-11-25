@@ -4014,15 +4014,33 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return new net.minecraft.world.phys.Vec3(dx, vec.y, dz);
     }
 
+    /** [tp46] Does it keep out of the water now: a village's folk, not one whose work is in it, not on a planned swim. */
+    private boolean keepsDry() {
+        if (!(this instanceof VillageFolkEntity) || isInWater()) return false;
+        if (stationTask == StationTask.DIVER || stationTask == StationTask.FERRY) return false;
+        return !(getNavigation() instanceof FolkNavigation fn && fn.mustSwim());
+    }
+
     /** [sf] Would a step this far leave it over open air deeper than {@code limit}, with no water or ladder under it? */
     private boolean overDrop(double dx, double dz, int limit) {
         net.minecraft.world.phys.AABB moved = getBoundingBox().move(dx, 0.0, dz);
+        // [tp46] A step straight into water (a river flush with its bank) is kept from as an edge, by a folk keeping dry.
+        if (keepsDry()) {
+            BlockPos under = BlockPos.containing((moved.minX + moved.maxX) / 2.0, moved.minY - 0.2, (moved.minZ + moved.maxZ) / 2.0);
+            if (level().getFluidState(under).is(net.minecraft.tags.FluidTags.WATER) && level().getBlockState(under).getCollisionShape(level(), under).isEmpty()
+                    || level().getFluidState(under.above()).is(net.minecraft.tags.FluidTags.WATER)
+                        && level().getBlockState(under.above()).getCollisionShape(level(), under.above()).isEmpty()
+                        && level().getBlockState(under).getCollisionShape(level(), under).isEmpty()) return true;
+        }
         net.minecraft.world.phys.AABB below = new net.minecraft.world.phys.AABB(moved.minX, moved.minY - limit - 0.5, moved.minZ, moved.maxX, moved.minY, moved.maxZ);
         if (!level().noCollision(this, below)) return false;          // ground within the drop it takes
         BlockPos.MutableBlockPos p = BlockPos.containing((moved.minX + moved.maxX) / 2.0, moved.minY, (moved.minZ + moved.maxZ) / 2.0).mutable();
         for (int i = 0; i < 32; i++) {
             BlockState st = level().getBlockState(p);
-            if (st.getFluidState().is(net.minecraft.tags.FluidTags.WATER) || st.is(net.minecraft.tags.BlockTags.CLIMBABLE)) return false;
+            // [tp46] Water under the edge is no fall, but a folk at its work keeps out of it as it keeps off a drop (a miner
+            // walked off the open side of an old bridge's landing into the lake), unless its way is a swim (no dry one).
+            if (st.getFluidState().is(net.minecraft.tags.FluidTags.WATER)) return keepsDry();
+            if (st.is(net.minecraft.tags.BlockTags.CLIMBABLE)) return false;
             if (!st.getCollisionShape(level(), p).isEmpty() || !st.getFluidState().isEmpty()) break;
             p.move(net.minecraft.core.Direction.DOWN);
         }
