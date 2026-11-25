@@ -372,6 +372,8 @@ public class FolkNavigation extends GroundPathNavigation {
                     + (int) endOff(p, target)) + ", legs " + MineWay.legs(f, target).size() + ", the way " + MineWay.status(f.ownerId());
                 return p;
             }
+            // [tp47] A walk that cannot get there, by a folk keeping dry, ending down on a shore: as far as its first drop only.
+            if (p != null && p != was && !p.canReach() && !targets.isEmpty() && this.mob instanceof VillageFolkEntity f && keepsDry(f, targets)) return shoreTrim(p);
             return p;
         } finally {
             planning = false;
@@ -430,6 +432,38 @@ public class FolkNavigation extends GroundPathNavigation {
             f.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, water);
         }
     }
+
+    /**
+     * [tp47] A way that cannot get there (a far errand, a stop up a slope it does not know the way onto) heads for whatever
+     * comes nearest, and down a hill that is the shore: dropped down a bank or two it could not climb again, a folk was on a
+     * strip of beach under a bluff with the only way off it through the water (beside an old bridge's ends, round a lake's
+     * north shore, a dozen times a soak). Such a way, ending three or more below where it set out within a few blocks of
+     * water, is walked as far as the top of its first drop (a fall of two or more), and planned again from there: the drop
+     * is taken only on a way that gets there.
+     */
+    private Path shoreTrim(Path p) {
+        net.minecraft.world.level.pathfinder.Node end = p.getEndNode();
+        if (end == null || end.y > this.mob.getBlockY() - 3 || !nearWater(end.asBlockPos())) return p;
+        for (int i = Math.max(1, p.getNextNodeIndex()); i < p.getNodeCount(); i++) {
+            if (p.getNode(i - 1).y - p.getNode(i).y < 2) continue;
+            if (i <= 1) return null;                                   // at the drop's top already: it stands (asked again later)
+            java.util.List<net.minecraft.world.level.pathfinder.Node> keep = new java.util.ArrayList<>();
+            for (int k = 0; k < i; k++) keep.add(p.getNode(k));
+            SHORE_TRIMS++;
+            return new Path(keep, keep.get(keep.size() - 1).asBlockPos(), false);
+        }
+        return p;
+    }
+
+    /** [tp47] Water within three blocks of this place, at its feet or a block under. */
+    private boolean nearWater(BlockPos at) {
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) for (int dy = -1; dy <= 0; dy++)
+            if (this.level.getFluidState(at.offset(dx, dy, dz)).is(net.minecraft.tags.FluidTags.WATER)) return true;
+        return false;
+    }
+
+    /** [tp47] Ways cut short at a drop to a shore (the tests, the soak). */
+    public static volatile long SHORE_TRIMS;
 
     /** [tp46] How far short of the target a way ends. */
     private static double endOff(Path p, BlockPos target) {
