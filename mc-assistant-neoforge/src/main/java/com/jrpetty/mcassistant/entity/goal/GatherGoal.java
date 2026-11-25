@@ -170,6 +170,7 @@ public class GatherGoal extends Goal {
         this.announcedReroute = false;
         this.unreachable.clear();
         this.toppingSaid = false;
+        this.tidyTicks = 0;
         assistant.setMidTree(false);
         if (request.kind() != Kind.LOGS) tree.clear();
         // NB: pending stumps deliberately survive between runs — a felling
@@ -287,9 +288,15 @@ public class GatherGoal extends Goal {
     @Override
     public void tick() {
         if (request == null) return;
+        if (wholeTrees()) {
+            // [tree] The job isn't over while the tree it is on still stands, or while its own steps and bridges are
+            // still up there (the plan waited for neither: a pillar of logs was left standing where the oak had been).
+            boolean more = collected < request.amount() + TOP_OFF && ((targetPos != null && tree.contains(targetPos)) || nextInTree() != null);
+            assistant.setMidTree(more || !com.jrpetty.mcassistant.entity.Footholds.leftBy(assistant, assistant.feetPos(), TIDY_WITHIN).isEmpty());
+        }
 
         if (collected >= request.amount() && !topping()) {
-            if (com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return;   // [mines] down its steps first
+            if (tidyUp()) return;   // [mines] down its steps first ([tree] and every block of its own about, taken back)
             finish("Done — gathered " + collected + " " + request.kind().label + ".");
             return;
         }
@@ -301,12 +308,12 @@ public class GatherGoal extends Goal {
             // [tree] The rest of the tree it is on first, a fresh tree only when that one is down (or what is left of
             // it can't be got at: out of reach, out of its zone, part of a build, a wood its level doesn't allow).
             BlockPos inTree = nextInTree();
-            if (inTree == null && collected >= request.amount()) {
-                if (com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return;
+            if (inTree == null && (collected >= request.amount() || (wholeTrees() && assistant.gatherMet()))) {
+                if (tidyUp()) return;
                 finish("Done — gathered " + collected + " " + request.kind().label + ".");
                 return;
             }
-            if (inTree == null && com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return;
+            if (inTree == null && tidyUp()) return;
             targetPos = inTree != null ? inTree : findNearest();
             if (inTree == null && targetPos != null && wholeTrees()) {
                 tree.clear();
@@ -438,8 +445,6 @@ public class GatherGoal extends Goal {
             if (wholeTrees()) {
                 tree.remove(pos);
                 readTree(pos);
-                // [tree] Still logs to come on this tree: the plan must not call the job done on the count alone.
-                assistant.setMidTree(collected < request.amount() + TOP_OFF && nextInTree() != null);
                 if (collected >= request.amount()) topping();
             }
             if (assistant.isPackFull() && collected < request.amount()) {
@@ -451,6 +456,38 @@ public class GatherGoal extends Goal {
     /** [tree] Felling whole trees: a player's assistant gathering logs. */
     private boolean wholeTrees() {
         return request != null && request.kind() == Kind.LOGS && assistant.fellsWholeTrees();
+    }
+
+    /** [tree] How far round it looks for blocks of its own to take back when a tree is done. */
+    private static final int TIDY_WITHIN = 10;
+    private int tidyTicks;
+
+    /**
+     * Down its steps, a block at a time, each back into its pack (Footholds). [tree] A player's assistant then takes
+     * back the rest of its own about (a bridge block out of reach from the foot of the pillar, a step left up a trunk):
+     * it walks over to them. For fifteen seconds at most; True while it is still at it.
+     */
+    private boolean tidyUp() {
+        if (com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return true;
+        if (!assistant.fellsWholeTrees() || tidyTicks > 300) return false;
+        BlockPos feet = assistant.feetPos();
+        BlockPos near = null;
+        double nd = Double.MAX_VALUE;
+        for (BlockPos p : com.jrpetty.mcassistant.entity.Footholds.leftBy(assistant, feet, TIDY_WITHIN)) {
+            double d = p.distSqr(feet);
+            if (d < nd) { nd = d; near = p; }
+        }
+        if (near == null) return false;
+        tidyTicks++;
+        if (assistant.getNavigation().isDone() || tidyTicks % 40 == 0) {
+            BlockPos stand = near;
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                BlockPos q = near.relative(d);
+                if (standable(q) || standable(q.below())) { stand = standable(q) ? q : q.below(); break; }
+            }
+            assistant.getNavigation().moveTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5, 1.0D);
+        }
+        return true;
     }
 
     /** [tree] Most logs it takes past the count asked to finish the tree it is on. */

@@ -4141,6 +4141,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (!level().isClientSide) CoinCensus.back(getUUID());               // [econ-1e] back in the world: its purse counted as it is
     }
 
+    /** Tests: give it this trait (and the hearts that go with it, or don't). */
+    public void traitForTests(Trait t) { trait = t; applyLevelPerks(); }
+
     public void setOwner(@Nullable Player player) {
         this.ownerId = player == null ? null : player.getUUID();
         if (this.ownerId != null) {
@@ -4702,10 +4705,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [tree] Does it fell the whole of a tree before it starts on the next (the Player AI Assistant does; a town's hands take the nearest log)? */
     public boolean fellsWholeTrees() { return false; }
 
+    /** [hearts] Are its hearts its level's alone (the Player AI Assistant: ten at level 1 to twenty at level 10), with
+     *  none of a folk's extras (a sturdy trait, loyalty, the watch)? */
+    public boolean heartsByLevelOnly() { return false; }
+
     /** [tree] Part way down a tree it means to finish (its count may be made already): the job is not over yet. */
     private boolean midTree;
     public boolean midTree() { return midTree; }
     public void setMidTree(boolean on) { midTree = on; }
+
+    /** [tree] Has the job it is gathering for got what it was sent for (the Player AI Assistant's plan step)? Then no fresh tree is started. */
+    public boolean gatherMet() { return false; }
 
     /** [tree] The count is made, the tree it is on still stands: it says it is finishing the tree. */
     public void toppingOff(int got) { sayRoutine("That's " + got + ". Just finishing this tree."); }
@@ -6011,6 +6021,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             hp.removeModifier(VETERAN_HP_ID);
             double hearts = (veteranLevel() >= 20 ? 4.0 : 0.0) + loyaltyHearts() * 2.0
                 + (trait == Trait.STURDY ? 2.0 : 0.0);
+            if (heartsByLevelOnly()) hearts = 0.0;                     // [hearts] the Player AI Assistant: its level's hearts and no others
             if (hearts > 0) {
                 hp.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
                     VETERAN_HP_ID, hearts,
@@ -6019,8 +6030,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // The watch stands between the town and whatever comes at night: a guard has twice the health of any
             // other folk (its sturdiness and its years doubled with it). Off the watch, it is as the rest again.
             hp.removeModifier(GUARD_HP_ID);
-            if (stationTask == StationTask.GUARD || stationTask == StationTask.CAVE           // [caves] the cave dwellers as hardy
-                    || stationTask == StationTask.NETHER) {                                       // [nether] and the Nether runners
+            if (!heartsByLevelOnly() && (stationTask == StationTask.GUARD || stationTask == StationTask.CAVE           // [caves] the cave dwellers as hardy
+                    || stationTask == StationTask.NETHER)) {                                      // [nether] and the Nether runners
                 hp.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
                     GUARD_HP_ID, GUARD_HEALTH - 1.0,
                     net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));

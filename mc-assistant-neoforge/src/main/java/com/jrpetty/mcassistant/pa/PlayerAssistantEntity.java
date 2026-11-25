@@ -305,6 +305,16 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Override
     public boolean fellsWholeTrees() { return true; }
 
+    /** [hearts] Ten hearts at level 1 to twenty at level 10 (PaVitals), whatever its trait: no folk's extra two for a sturdy one. */
+    @Override
+    public boolean heartsByLevelOnly() { return true; }
+
+    @Override
+    public boolean gatherMet() {
+        PaPlan.Step cur = plan.current;
+        return cur != null && (cur.stopAtTarget || "GATHER".equals(cur.kind)) && cur.target > 0 && cur.percent(this) >= 100;
+    }
+
     @Override
     public void toppingOff(int got) {
         if (!level().isClientSide) PaTalk.comment(this, 1, PaTalk.line(this, "topping", "n", String.valueOf(got)));
@@ -466,6 +476,8 @@ public class PlayerAssistantEntity extends AssistantEntity {
             PaVitals.tick(this);                                     // [pa33c-2b] hearts and hunger, as a player's
             if (animUntil > 0 && tickCount >= animUntil) { animUntil = 0; this.entityData.set(DATA_ANIM, (++animTurn << 8)); }
             PaBrain.tick(this);
+            // [tree] A step or a bridge block of its own left standing (a job cut short up a tree): taken back as it passes.
+            if (tickCount % 20 == 7 && getTarget() == null && plan.current == null && jobCount() == 0) com.jrpetty.mcassistant.entity.Footholds.tidy(this);
         }
     }
 

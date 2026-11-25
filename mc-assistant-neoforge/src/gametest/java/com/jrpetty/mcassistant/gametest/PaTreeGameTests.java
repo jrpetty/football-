@@ -168,4 +168,36 @@ public class PaTreeGameTests {
             Kit.log("pat02 took " + logsHeld(a) + " logs for 8 asked; said " + allWords(a));
         });
     }
+
+    /**
+     * pat03: a tall oak whose crown it can't reach from the ground, and nothing to build with but the logs it cuts
+     * (filmed: it pillared up on them for the crown and left a column of logs, a bridge block hanging off it, standing
+     * where the oak had been). Now the whole oak comes down, and every block it laid to get up there is taken back:
+     * nothing but air where the tree stood.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "pat03_takes_its_steps_down")
+    public static void pat03_takes_its_steps_down(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 7_960_000, y = ground(level, x);
+        BlockPos a1 = new BlockPos(x + 3, y, Z);
+        tree(level, a1, 10);
+        ServerPlayer p = player(helper, level, new BlockPos(x, y, Z));
+        PlayerAssistantEntity a = assistant(helper, p);
+        a.insertGiven(new ItemStack(Items.IRON_AXE));
+        say(p, a, "gather 4 logs");
+        helper.succeedWhen(() -> {
+            helper.assertTrue(a.plan.idle(), "done (" + a.state() + "; " + logsHeld(a) + " logs)");
+            int stray = 0;
+            String what = "";
+            for (BlockPos q : BlockPos.betweenClosed(a1.offset(-5, 0, -5), a1.offset(5, 12, 5))) {
+                var st = level.getBlockState(q);
+                if (st.isAir() || st.getBlock() instanceof LeavesBlock) continue;
+                stray++;
+                if (what.length() < 200) what += st.getBlock().getName().getString() + " at " + (q.getX() - a1.getX()) + "," + (q.getY() - y) + "," + (q.getZ() - a1.getZ()) + "; ";
+            }
+            helper.assertTrue(stray == 0, "nothing left standing where the oak was (no logs, no steps, no bridge): " + stray + " " + what);
+            helper.assertTrue(logsHeld(a) >= 10, "it has the whole oak: " + logsHeld(a));
+            Kit.log("pat03 took " + logsHeld(a) + " logs for 4 asked; said " + allWords(a));
+        });
+    }
 }
