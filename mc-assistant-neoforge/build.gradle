@@ -205,6 +205,8 @@ if (project.findProperty('bundleVoice') in ['true', true]) {
                 if (got.length() != size || sha256(got) != sha) { got.delete(); throw new GradleException("${name} failed its size or SHA-256 check; run the build again") }
                 File dest = new File(voiceOut, "assets/mc_assistant/voicepack/${group}/${name}")
                 if (name == 'onnxruntime.jar') repack(got, dest) { String n -> !n.contains('.dSYM/') }
+                // [voice42] the Intel Mac runtime (1.23.2): its classes and only the osx-x64 library, the rest is in onnxruntime.jar
+                else if (name == 'onnxruntime-macx64.jar') repack(got, dest) { String n -> !n.contains('.dSYM/') && (!n.startsWith('ai/onnxruntime/native/') || n == 'ai/onnxruntime/native/' || n.startsWith('ai/onnxruntime/native/osx-x64/')) }
                 else if (name == 'voices-v1.0.bin') repack(got, dest) { String n -> kokoroVoicesKept.contains(n.replace('.npy', '')) }
                 else { dest.parentFile.mkdirs(); java.nio.file.Files.copy(got.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING) }
                 manifest.append("${group}\t${name}\t${dest.length()}\t${sha256(dest)}\n")

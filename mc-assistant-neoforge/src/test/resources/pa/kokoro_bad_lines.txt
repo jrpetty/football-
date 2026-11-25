@@ -1,0 +1,46 @@
+# [voice42] Lines Kokoro int8 broke (NaN, huge samples, silence, clicks) in two or more of the four British voices under
+# ONNX Runtime 1.23.2 on a CPU with Intel AMX. PaKokoroCleanTest speaks each in all four and wants speech every time.
+Gathering a stack of oak logs now.
+pelt it with eggs
+gather a hundred stone and put it in this chest
+what's in your pack
+wait there
+snowball that creeper
+smelt the iron
+put bookshelves round the table
+mine some stone
+follow me
+fetch me some coal
+farm this field
+dig down
+chop me some wood
+There's a creeper behind you!
+I'll wait here until you come back.
+Good morning. The wheat is ready to harvest.
+where's your bed
+what have you got
+what do you remember
+what are you doing
+trade with that villager
+throw snowballs at that zombie
+stop making jokes
+stay here
+shoot that
+right then pop over here
+put it all in the chest
+mine that iron
+make me a crafting table
+go to the mine
+get me sixteen logs
+fish for a bit
+enchant my sword
+cure that zombie villager
+come here
+chop down that tree
+build a small house
+bring me some food
+attack that zombie
+That zombie won't bother us again.
+Shall I light the furnace?
+Right, I'm on my way.
+Done. Twenty iron ingots, all smelted.

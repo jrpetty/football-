@@ -37,7 +37,7 @@ import java.util.zip.ZipInputStream;
  * where Hugging Face often isn't), each resumed where it stopped and checked by its SHA-256 before use: the int8 model
  * (about 92 MB) and the voice pack (about 28 MB) from kokoro-onnx's model-files-v1.0 release, its vocabulary, misaki's
  * British and American pronouncing dictionaries (about 13 MB; PaG2p reads them, so no other program is needed), and ONNX
- * Runtime (about 75 MB; [voice37] 1.23.2, shared with the expressive voice). An offline pack (a zip in the config folder, tools/voice/build_voice_pack.py) does the same
+ * Runtime (about 75 MB; [voice37] 1.23.2, shared with the expressive voice; [voice42] 1.25.1, and 1.23.2 for Intel Macs). An offline pack (a zip in the config folder, tools/voice/build_voice_pack.py) does the same
  * with no network. espeak-ng, if the player happens to have it, only helps with words the dictionaries lack.
  *
  * <p>Not run here: downloading and running native code needs the player's go-ahead on their own computer. The paths,
@@ -52,11 +52,19 @@ public final class PaKokoro {
     public static final String CONFIG_URL = "https://raw.githubusercontent.com/thewh1teagle/kokoro-onnx/3596b26764286a7de9d90c363e988d50578918e5/src/kokoro_onnx/config.json";
     /** [pa35] misaki's pronouncing dictionaries (Apache-2.0), the ones Kokoro was trained with, pinned to a commit. */
     public static final String LEXICON_URL = "https://raw.githubusercontent.com/hexgrad/misaki/fba1236595f2d2bf21d414ba6e57d25256afada3/misaki/data/";
-    /** [voice37] 1.23.2: the newest with Intel Mac libraries, and new enough for the expressive voice's 4-bit models. */
-    public static final String ORT_VERSION = "1.23.2";
-    public static final String ORT_URL = "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime/" + ORT_VERSION + "/onnxruntime-" + ORT_VERSION + ".jar";
+    /**
+     * [voice42] 1.25.1, shared with the expressive voice (new enough for its 4-bit models). [voice37] had 1.23.2, whose int8
+     * convolutions come out wrong on CPUs with Intel AMX, so Kokoro gave NaN, silence and clicks there (PaOrt.JAR). Intel
+     * Macs (no AMX, and no 1.24+ build) keep 1.23.2 as a second, cut-down jar.
+     */
+    public static final String ORT_VERSION = "1.25.1", ORT_INTEL_MAC_VERSION = "1.23.2";
+    public static final String ORT_URL = ortUrl(ORT_VERSION), ORT_INTEL_MAC_URL = ortUrl(ORT_INTEL_MAC_VERSION);
     /** Sizes as published (bytes), to check a download and to tell the player before they agree. */
-    public static final long MODEL_BYTES = 92_361_271L, VOICES_BYTES = 28_214_398L, ORT_BYTES = 75_255_976L;
+    public static final long MODEL_BYTES = 92_361_271L, VOICES_BYTES = 28_214_398L, ORT_BYTES = 41_804_437L, ORT_INTEL_MAC_BYTES = 75_255_976L;
+
+    static String ortUrl(String version) {
+        return "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime/" + version + "/onnxruntime-" + version + ".jar";
+    }
     public static final int SAMPLE_RATE = 24_000, MAX_TOKENS = 510, STYLE = 256;
 
     /** [pa35] One download: what, from where, the file, its size and SHA-256 (checked before it's used), its licence. */
@@ -70,7 +78,8 @@ public final class PaKokoro {
         new Part("British pronouncing dictionary (more words)", LEXICON_URL + "gb_silver.json", "gb_silver.json", 3_663_898L, "48131e2d92ccc41655f4543e87e0f938e71463eb5a54be7f0693bb712ebb6bce", "Apache-2.0 (misaki)"),
         new Part("American pronouncing dictionary", LEXICON_URL + "us_gold.json", "us_gold.json", 3_000_469L, "dc414872a49a28ae6c141463d502fd945f3b2fde040484fdc47d00cc4612686f", "Apache-2.0 (misaki)"),
         new Part("American pronouncing dictionary (more words)", LEXICON_URL + "us_silver.json", "us_silver.json", 3_099_517L, "de8f67be911bb6c659187b4a65fd966b6a30e56350e0f790d763210b053ac475", "Apache-2.0 (misaki)"),
-        new Part("ONNX Runtime for Java", ORT_URL, "onnxruntime.jar", ORT_BYTES, "e0ab4a1af57d2da09097202f2dfd691e390c82e81183314788ccde4cf7c3cc38", "MIT"));
+        new Part("ONNX Runtime for Java", ORT_URL, PaOrt.JAR, ORT_BYTES, "749793ebed63743fec853d093da7987a86ea5cd592d54fba898cd3233100c381", "MIT"),
+        new Part("ONNX Runtime for Java (Intel Macs)", ORT_INTEL_MAC_URL, PaOrt.JAR_INTEL_MAC, ORT_INTEL_MAC_BYTES, "e0ab4a1af57d2da09097202f2dfd691e390c82e81183314788ccde4cf7c3cc38", "MIT"));
 
     /** The download, in megabytes, said before the player agrees. */
     public static int totalMb() {
@@ -489,7 +498,7 @@ public final class PaKokoro {
             try (InputStream in = Files.newInputStream(dir.resolve(VOICES_FILE))) {
                 voices = readVoices(in);
             }
-            ort = PaOrt.loader(dir.resolve("onnxruntime.jar"));       // [voice37] one runtime for both neural voices
+            ort = PaOrt.loader(PaOrt.jar(dir));                       // [voice37] one runtime for both neural voices ([voice42] this computer's)
             Class<?> envC = ort.loadClass("ai.onnxruntime.OrtEnvironment");
             env = PaOrt.env(ort);
             Class<?> optsC = ort.loadClass("ai.onnxruntime.OrtSession$SessionOptions");
@@ -505,6 +514,54 @@ public final class PaKokoro {
             session = null;
             return false;
         }
+    }
+
+    // ------------------------------------------------------------------ [voice42] never clicks or broken silence
+
+    /** A checked piece: its samples (null when it wasn't speech even after the retry), and what was wrong first, if anything. */
+    public record Said(float[] samples, String fault, boolean retried) {
+        public boolean ok() { return samples != null; }
+    }
+
+    /**
+     * [voice42] One piece's phonemes as speech, checked (PaAudio.fault): when what comes back isn't speech (NaN, absurd
+     * samples, near-silence, a spike), it is made once more another way that changes every length inside the model: split
+     * in two at the word nearest the middle, or, for a single word, a touch slower. Still not speech: samples null, so the
+     * caller can use the basic voice instead of playing clicks or silence.
+     */
+    public Said speak(String phonemes, Voice v, float speed) throws Exception {
+        float[] raw = synth(phonemes, v, speed);
+        String fault = PaAudio.fault(raw, SAMPLE_RATE, tokenCount(phonemes));
+        if (fault == null) return new Said(raw, null, false);
+        String[] halves = halves(phonemes);
+        if (halves == null) {
+            float[] again = synth(phonemes, v, speed * 0.94f);
+            return new Said(PaAudio.fault(again, SAMPLE_RATE, tokenCount(phonemes)) == null ? again : null, fault, true);
+        }
+        float[] a = synth(halves[0], v, speed), b = synth(halves[1], v, speed);
+        if (PaAudio.fault(a, SAMPLE_RATE, tokenCount(halves[0])) != null || PaAudio.fault(b, SAMPLE_RATE, tokenCount(halves[1])) != null) return new Said(null, fault, true);
+        float[] both = java.util.Arrays.copyOf(a, a.length + b.length);
+        System.arraycopy(b, 0, both, a.length, b.length);
+        return new Said(both, fault, true);
+    }
+
+    /** Phonemes cut in two at the space nearest the middle (each half keeps its own words whole); null for a single word. */
+    public static String[] halves(String phonemes) {
+        String p = phonemes.trim();
+        int mid = p.length() / 2, cut = -1;
+        for (int d = 0; d <= mid && cut < 0; d++) {
+            if (mid - d > 0 && p.charAt(mid - d) == ' ') cut = mid - d;
+            else if (mid + d < p.length() - 1 && p.charAt(mid + d) == ' ') cut = mid + d;
+        }
+        if (cut < 0) return null;
+        String a = p.substring(0, cut).trim(), b = p.substring(cut + 1).trim();
+        return a.isEmpty() || b.isEmpty() ? null : new String[]{a, b};
+    }
+
+    /** How many tokens the model gets for these phonemes (what the vocabulary knows; a guess before it's loaded). */
+    public int tokenCount(String phonemes) {
+        Map<Integer, Integer> v = vocab;
+        return v == null ? phonemes.codePointCount(0, phonemes.length()) : tokens(phonemes, v).length;
     }
 
     /** One clause's phonemes as samples at 24 kHz. */
