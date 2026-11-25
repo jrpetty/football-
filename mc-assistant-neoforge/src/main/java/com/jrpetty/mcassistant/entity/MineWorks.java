@@ -40,7 +40,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <ul>
  * <li><b>The shaft</b>: a broad stair two blocks wide winding down round a square pillar of rock (seven blocks across in
  * all), at the middle of the mine's first face. Each side of the square drops three steps and turns on a flat landing at
- * the corner, twelve blocks down a turn, three blocks of headroom all the way, so a folk or a player walks it up and down.
+ * the corner, twelve blocks down a turn, four blocks of headroom all the way, so a folk or a player walks it up and down
+ * (ShaftStair: the corner's risers stairs too, never a whole block to climb; kept clear, shored, lit and signed).
  * The steps are dressed as stairs in the rock they are cut in; a torch at each landing, a timber set across the middle of
  * each side. Only its first few steps are open to the sky, fenced round; the headframe stands over the pillar.</li>
  * <li><b>The levels</b>: off a corner landing at the depths where the ores lie (MineDemand): the coal level as near ninety-six
@@ -610,7 +611,7 @@ public final class MineWorks {
     private static Task shaftTask(Works w, List<Lvl> plan) {
         int bottom = plan.get(plan.size() - 1).corner();
         if (w.sunk > bottom) return null;
-        Task t = new Task(Kind.SHAFT, -1, 0, w.sunk, 0, 3, "shaft");
+        Task t = new Task(Kind.SHAFT, -1, 0, w.sunk, 0, ShaftStair.HEAD, "shaft");   // [stairs44] four high: a jump up it clears the roof
         for (int i = w.sunk; i < Math.min(w.sunk + 4, bottom + 1); i++) {
             BlockPos from = i == 0 ? approach(w) : stepPoint(w, i - 1);
             for (BlockPos c : stepCells(w, i)) {
@@ -1283,34 +1284,9 @@ public final class MineWorks {
         }
     }
 
-    /** A step finished: its floor laid as stairs of the rock it is cut in; a torch on each landing; a set across mid-side. */
+    /** A step finished: kept as the stair is kept (ShaftStair): its floor laid as stairs, the corner's risers, a light, a set. */
     private static void dressStep(ServerLevel level, Works w, AssistantEntity a, int step) {
-        int side = (step / 4) % 4, k = step % 4;
-        List<BlockPos> cells = stepCells(w, step);
-        if (k == 0) {
-            BlockPos outer = cells.get(3);
-            int[] o = diag(side);
-            torch(level, a, outer.above(), o[0] < 0 ? Direction.WEST : Direction.EAST);
-            return;
-        }
-        Direction down = walk(side);
-        for (BlockPos c : cells) {
-            BlockPos floor = c.below();
-            BlockState was = level.getBlockState(floor);
-            Block stair = stairFor(was);
-            BlockState st = stair.defaultBlockState().setValue(StairBlock.FACING, down.getOpposite());
-            if (was.isAir() || !was.getFluidState().isEmpty()) {
-                if (a.removeMatching(s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE), 1) == 0) continue;
-            } else if (!com.jrpetty.mcassistant.entity.goal.MineGoal.wild(level, floor, was)) continue;
-            level.setBlock(floor, st, 3);
-        }
-        if (k == 2) frame(level, w, cells.get(0), down, 3);
-    }
-
-    private static Block stairFor(BlockState rock) {
-        if (rock.is(Blocks.DEEPSLATE) || rock.is(Blocks.COBBLED_DEEPSLATE) || rock.is(Blocks.TUFF) || rock.is(BlockTags.DEEPSLATE_ORE_REPLACEABLES)) return Blocks.COBBLED_DEEPSLATE_STAIRS;
-        if (rock.is(Blocks.STONE) || rock.is(BlockTags.STONE_ORE_REPLACEABLES)) return Blocks.STONE_STAIRS;
-        return Blocks.COBBLESTONE_STAIRS;
+        ShaftStair.cut(level, w, a, step);
     }
 
     /** A wall torch here on the wall to that side, out of the miner's pack, where it is dark and the wall is rock. */
@@ -1330,7 +1306,7 @@ public final class MineWorks {
         Direction side = along.getClockWise();
         // A post in each wall: the shaft's two-wide steps have theirs a lane further out.
         BlockPos left = c.relative(side.getOpposite()), right = c.relative(side);
-        if (high == 3) {
+        if (high >= 3) {
             BlockPos other = c.relative(side);
             boolean two = level.getBlockState(other).isAir() && level.getBlockState(other.above()).isAir();
             if (two) right = other.relative(side);
@@ -1428,6 +1404,8 @@ public final class MineWorks {
             }
         }
         if (w.sunk >= 2) rail(level, v, w);
+        int spoil = ShaftStair.upkeep(level, w);              // [stairs44] the stair kept walkable, clear, shored and lit
+        if (spoil > 0) { w.dug += spoil; changed = true; }
         MineLift.upkeep(level, w);                           // [econ32c] the cage, once the works are deep enough
         IronPace.tick(level, w);                             // [econ32d] poor iron levels left for the next, while the age waits on iron
         int want = Math.min(60, w.dug / 96);
@@ -1773,7 +1751,7 @@ public final class MineWorks {
         if (w == null) return;
         for (int i = w.sunk; i < steps; i++) {
             for (BlockPos c : stepCells(w, i)) {
-                for (int h = 0; h < 3; h++) level.setBlock(c.above(h), Blocks.AIR.defaultBlockState(), 2);
+                for (int h = 0; h < ShaftStair.HEAD; h++) level.setBlock(c.above(h), Blocks.AIR.defaultBlockState(), 2);
                 if (!level.getBlockState(c.below()).isSolid()) level.setBlock(c.below(), Blocks.STONE.defaultBlockState(), 2);
             }
             if (a != null) dressStep(level, w, a, i);

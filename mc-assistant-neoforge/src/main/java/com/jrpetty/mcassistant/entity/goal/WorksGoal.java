@@ -825,6 +825,10 @@ public class WorksGoal extends Goal {
         sweep(pos);
         if (openLava) { beginOut("Lava, and nothing to stop it with — out of here."); return; }
         BlockPos above = pos.above();
+        // [stairs44] In the shaft and a landing what would fall in from over the cut (sand, gravel) is made firm where it lies,
+        // not dug up after: a shaft sunk in sand was a chimney of falling sand, and its sand filled the steps under it.
+        if (task != null && (task.kind == MineWorks.Kind.SHAFT || task.kind == MineWorks.Kind.ROOM) && !inTask(above)
+                && com.jrpetty.mcassistant.entity.ShaftStair.shoreIfFalls(level, above)) above = above.above(64);
         for (int g = 0; g < 6 && level.getBlockState(above).getBlock() instanceof FallingBlock; g++) {
             blocks.addFirst(above);
             above = above.above();

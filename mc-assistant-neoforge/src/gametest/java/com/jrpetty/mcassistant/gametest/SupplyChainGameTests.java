@@ -1605,8 +1605,11 @@ public class SupplyChainGameTests {
         if (com.jrpetty.mcassistant.entity.MineRoof.onHeadframeForTests(level, r.v(), p)) return "on the headframe";
         if (p.getY() > MineWorksGameTests.TOP + 1) return "above the pithead's floor (Y" + p.getY() + ")";
         net.minecraft.world.level.block.state.BlockState under = level.getBlockState(p.below());
+        // [stairs44] A landing's riser (a stair laid as its floor, its lower half) is ground as the flat of the landing is.
+        boolean riser = under.getBlock() instanceof net.minecraft.world.level.block.StairBlock
+            && under.getValue(net.minecraft.world.level.block.StairBlock.HALF) == net.minecraft.world.level.block.state.properties.Half.BOTTOM;
         if (under.is(net.minecraft.tags.BlockTags.LOGS) || under.is(net.minecraft.tags.BlockTags.LEAVES) || under.is(net.minecraft.tags.BlockTags.FENCES)
-            || !under.isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) return "not on ground (" + under.getBlock() + ")";
+            || !riser && !under.isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) return "not on ground (" + under.getBlock() + ")";
         // A way from it to the works' way in, the walk to the town (the rig's pithead stands on a tower over the flat).
         BlockPos in = com.jrpetty.mcassistant.entity.MineRoof.cellsForTests(level, r.v())[3];
         m.teleportTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);

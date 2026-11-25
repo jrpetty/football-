@@ -187,6 +187,38 @@ public class PaFieldGameTests {
         });
     }
 
+    /** pf17: the first fish it reels in drifts off on the water and never reaches its pack (here: it is taken off the
+     *  water). It used to count that fish all the same and stop a fish short ("caught 3", two in its pack); now it counts
+     *  what it picks up, and fishes on for the one that got away. */
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "pf17_fish_drifted")
+    public static void pf17_fish_drifted(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 10_048_000, y = ground(level, x);
+        pond(level, x, y);
+        ServerPlayer p = player(helper, level, new BlockPos(x - 4, y, Z + 4));
+        PlayerAssistantEntity a = assistant(helper, p, 3);
+        a.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.FISHING_ROD));
+        a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.STAY);
+        boolean[] gone = {false};
+        helper.runAfterDelay(10, () -> {
+            a.teleportTo(x + 0.5, y, Z + 0.5);
+            say(p, a, "catch 3 fish", null, -1);
+        });
+        helper.onEachTick(() -> {
+            if (gone[0]) return;
+            for (net.minecraft.world.entity.item.ItemEntity ie : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, a.getBoundingBox().inflate(20)))
+                if (ie.getItem().is(ItemTags.FISHES) && ie.distanceTo(a) > 2.5) { ie.discard(); gone[0] = true; break; }
+        });
+        helper.succeedWhen(() -> {
+            int fish = a.countMatching(s -> s.is(ItemTags.FISHES));
+            PaField f = a.mind.field;
+            helper.assertTrue(gone[0], "a fish got away on the water");
+            helper.assertTrue(a.plan.idle(), "done (" + a.state() + "; " + fish + " fish)");
+            helper.assertTrue(fish >= 3, "three fish in its pack, the one that got away fished again: " + fish + " (casts " + f.casts + ")");
+            Kit.log("[VT] pf17 " + fish + " fish in its pack after one got away; casts " + f.casts + "; said " + lastWords(a));
+        });
+    }
+
     /** pf02: "catch 2 fish and put them in this chest" at a chest: caught on its rod, carried there by the logistics job. */
     @GameTest(template = EMPTY, timeoutTicks = 8000, batch = "pf02_fish_chest")
     public static void pf02_fish_chest(GameTestHelper helper) {
