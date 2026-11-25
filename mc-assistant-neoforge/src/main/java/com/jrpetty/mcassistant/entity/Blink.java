@@ -169,7 +169,7 @@ public final class Blink {
         if (why == null) why = via != null ? via : site();
         f.blinkTick = f.tickCount;
         if (why.startsWith("~")) return;                                    // carried (the cage moving with it inside): no jump
-        count(f, why, fx, fy, fz);
+        count(f, why, fx, fy, fz, site());
     }
 
     /** VillageFolkEntity, once a tick: a change of place since the last tick from nowhere the hooks saw. */
@@ -191,7 +191,7 @@ public final class Blink {
         if (Math.sqrt(dx * dx + dy * dy + dz * dz) <= HOP) return;
         if (dy < 0 && flat <= 1.0) return;                                   // a fall
         if (f.hurtTime > 0 || f.getDeltaMovement().lengthSqr() > 0.5) return; // knocked back, flung
-        count(f, "untraced (between ticks)", last[0], last[1], last[2]);
+        count(f, "untraced (between ticks)", last[0], last[1], last[2], "");
     }
 
     /** Tests driving a thing by hand (the cage run tick by tick): the once-a-tick look, now. */
@@ -203,7 +203,7 @@ public final class Blink {
         return f.stationTask() == AssistantEntity.StationTask.MINE;
     }
 
-    private static void count(VillageFolkEntity f, String why, double fx, double fy, double fz) {
+    private static void count(VillageFolkEntity f, String why, double fx, double fy, double fz, String at) {
         boolean seen = seen(f) || seenAt(f.level(), fx, fz, 0);
         boolean miner = miner(f);
         BY.computeIfAbsent(why, k -> new long[4])[(miner ? 0 : 2) + (seen ? 0 : 1)]++;
@@ -211,8 +211,8 @@ public final class Blink {
         if (why.startsWith("!")) { excusedSeen++; return; }
         seenAll++;
         double d = Math.sqrt(f.distanceToSqr(fx, fy, fz));
-        String line = String.format("%s %s (%s) %.0f,%.0f,%.0f -> %.0f,%.0f,%.0f (%.1f): %s", f.level().getGameTime(), f.getAssistantName(),
-            miner ? "miner" : f.stationTask().name().toLowerCase(), fx, fy, fz, f.getX(), f.getY(), f.getZ(), d, why);
+        String line = String.format("%s %s (%s) %.1f,%.1f,%.1f -> %.1f,%.1f,%.1f (%.1f): %s", f.level().getGameTime(), f.getAssistantName(),
+            miner ? "miner" : f.stationTask().name().toLowerCase(), fx, fy, fz, f.getX(), f.getY(), f.getZ(), d, why + (at.isEmpty() || at.equals(why) ? "" : " @" + at));
         if (SEEN.size() < 400) SEEN.add(line);
     }
 

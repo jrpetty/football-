@@ -1742,7 +1742,7 @@ public final class Wagons {
             double dx = p.getX() - x, dz = p.getZ() - z;
             if (dx * dx + dz * dz < range * range) return true;
         }
-        return false;
+        return Blink.watchedAt(level, x, z, range);                      // [tp43] a headless run's pretend player
     }
 
     // ------------------------------------------------------------------ its ground, and its record

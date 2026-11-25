@@ -815,9 +815,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             wetSwims++;
             // The swim for it first; then, the bank a step or two over the water, it wades to it and climbs out (led, a step a
             // tick: up the bank, not lifted onto it).
+            net.minecraft.world.phys.Vec3 bank = net.minecraft.world.phys.Vec3.atBottomCenterOf(best);
+            net.minecraft.world.phys.Vec3 dir = new net.minecraft.world.phys.Vec3(bank.x - getX(), 0, bank.z - getZ());
+            net.minecraft.world.phys.Vec3 face = dir.lengthSqr() < 1.0E-4 ? bank : bank.subtract(dir.normalize().scale(0.85));
+            // Over to the foot of the bank, up its face, and onto it.
             if (wetSwims >= 2 && Math.sqrt(best.distToCenterSqr(position())) <= 6.0
-                    && Stroll.alongPoints(vf, java.util.List.of(position(), new net.minecraft.world.phys.Vec3(best.getX() + 0.5, Math.max(getY(), best.getY() - 0.5), best.getZ() + 0.5),
-                        net.minecraft.world.phys.Vec3.atBottomCenterOf(best)))) {
+                    && Stroll.alongPoints(vf, java.util.List.of(position(), new net.minecraft.world.phys.Vec3(face.x, getY(), face.z),
+                        new net.minecraft.world.phys.Vec3(face.x, Math.max(getY(), bank.y + 0.05), face.z), bank))) {
                 brain("climbing out of the water onto the bank");
                 wetSwims = 0;
                 return;
@@ -7064,7 +7068,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** [tp43] Led over to its bed and up onto it (a few steps at most), to lie down there. True if it set off. */
     protected boolean stepOntoBed(BlockPos bed) {
-        if (!(this instanceof VillageFolkEntity vf)) return false;
+        if (!(this instanceof VillageFolkEntity vf) || isPassenger() || getPose() == net.minecraft.world.entity.Pose.SITTING) return false;
         net.minecraft.world.phys.Vec3 top = new net.minecraft.world.phys.Vec3(bed.getX() + 0.5, bed.getY() + 0.5625, bed.getZ() + 0.5);
         return Stroll.alongPoints(vf, java.util.List.of(position(), top));
     }

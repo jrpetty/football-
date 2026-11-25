@@ -31,8 +31,8 @@ public final class Stroll {
     private static final class Walk {
         final List<Vec3> points;
         int leg;
-        double along;
         int ticks;
+        @javax.annotation.Nullable Vec3 last;
         Walk(List<Vec3> points) { this.points = points; }
     }
 
@@ -69,31 +69,32 @@ public final class Stroll {
     /** Walks led all told (the tests). */
     public static volatile int LED;
 
-    /** A tick of its led walk (VillageFolkEntity.travel, in place of the game's movement); true while it is led. */
+    /** A tick of its led walk (VillageFolkEntity.travel, in place of the game's movement); true while it is led. Each
+     *  step goes from where it stands toward the next point (never back onto a line it was pushed off), and never into
+     *  a block: a step that would put its body in one is taken a little higher (a step up), or the walk ends there. */
     static boolean step(VillageFolkEntity f) {
         Walk w = WALKS.get(f.getUUID());
         if (w == null) return false;
-        if (!f.isAlive() || f.isPassenger() || ++w.ticks > LONGEST) { WALKS.remove(f.getUUID()); return false; }
+        if (!f.isAlive() || f.isRemoved() || f.isPassenger() || ++w.ticks > LONGEST) { WALKS.remove(f.getUUID()); return false; }
+        Vec3 from = f.position(), at = from;
+        // Moved by something else since its last step (sat down, set on a seat, put in a cart): that has it now.
+        if (w.last != null && w.last.distanceToSqr(from) > 0.05 * 0.05) { WALKS.remove(f.getUUID()); return false; }
         double go = PACE;
-        Vec3 at = f.position();
-        while (go > 0 && w.leg < w.points.size() - 1) {
-            Vec3 a = w.leg == 0 && w.along == 0 ? at : w.points.get(w.leg), b = w.points.get(w.leg + 1);
-            if (w.leg == 0 && w.along == 0) w.points.set(0, at);
-            double len = a.distanceTo(b);
-            if (w.along + go >= len) {
-                go -= len - w.along;
-                w.leg++;
-                w.along = 0;
-                at = b;
-            } else {
-                w.along += go;
-                at = a.add(b.subtract(a).scale(w.along / len));
-                go = 0;
-            }
+        while (go > 1.0E-6 && w.leg < w.points.size() - 1) {
+            Vec3 b = w.points.get(w.leg + 1);
+            double len = at.distanceTo(b);
+            if (len <= go) { at = b; go -= len; w.leg++; }
+            else { at = at.add(b.subtract(at).scale(go / len)); go = 0; }
         }
-        Vec3 from = f.position();
+        if (!f.level().noCollision(f, f.getBoundingBox().move(at.subtract(from)).deflate(0.01))) {
+            Vec3 up = at.add(0, 0.6, 0), step = at.add(0, 1.0, 0);         // onto a bed or a slab; up a step
+            if (f.level().noCollision(f, f.getBoundingBox().move(up.subtract(from)).deflate(0.01))) at = up;
+            else if (f.level().noCollision(f, f.getBoundingBox().move(step.subtract(from)).deflate(0.01))) at = step;
+            else { WALKS.remove(f.getUUID()); return false; }              // a wall: no further, and never through it
+        }
         Blink.note(f, "stroll (led walk)");
         f.setPos(at.x, at.y, at.z);
+        w.last = f.position();
         f.setDeltaMovement(Vec3.ZERO);
         f.resetFallDistance();
         f.getNavigation().stop();
