@@ -788,8 +788,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (wetFor++ == 0) wetFrom = position();
         // [tp43] Out of breath (a long swim, a current carrying it along the river): out at once, whatever way it was making.
         boolean drowning = getAirSupply() < getMaxAirSupply() / 3;
-        if (wetFor < 10 && !drowning) return;
-        if (position().distanceToSqr(wetFrom) > 36.0 && !drowning) { wetFor = 0; return; }   // making way
+        // [tp46] A village's folk at its work is out within a couple of seconds (it swims only where there is no dry way, and
+        // then it is left to its swim: FolkNavigation.mustSwim); others as before.
+        boolean keepDry = this instanceof VillageFolkEntity && !(getNavigation() instanceof FolkNavigation fn && fn.mustSwim());
+        if (wetFor < (keepDry ? 2 : 10) && !drowning) return;
+        if (!keepDry && position().distanceToSqr(wetFrom) > 36.0 && !drowning) { wetFor = 0; return; }   // making way
         if (drowning) wetSwims = 3;
         net.minecraft.world.level.pathfinder.Path path = getNavigation().getPath();
         BlockPos goal = path != null ? path.getTarget() : (workZone != null ? workZone.center() : null);
@@ -804,7 +807,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     if (!level().getBlockState(feet).getCollisionShape(level(), feet).isEmpty()) continue;
                     if (!level().getBlockState(feet.above()).getCollisionShape(level(), feet.above()).isEmpty()) continue;
                     if (!level().getBlockState(feet.below()).isFaceSturdy(level(), feet.below(), net.minecraft.core.Direction.UP)) continue;
-                    double score = feet.distSqr(here) + (goal != null ? Math.sqrt(feet.distSqr(goal)) * 0.5 : 0)
+                    // [tp46] Kept dry, the bank on its own side (where it went in), not the far one across.
+                    double score = feet.distSqr(here) + (keepDry ? Math.sqrt(feet.distToCenterSqr(wetFrom)) * 0.8
+                        : goal != null ? Math.sqrt(feet.distSqr(goal)) * 0.5 : 0)
                         - (onWalkedGround(feet) ? 30 : 0);          // a bank that leads somewhere
                     if (score < bestScore) { bestScore = score; best = feet; }
                     break;
@@ -3433,7 +3438,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             return false;
         }
         // The end of the day is for company before it is for bed (VillageFolkEntity).
-        if (!isSleeping() && eveningSocial()) { night("the evening out"); return true; }
+        if (!isSleeping() && eveningSocial()) { night("the evening out: " + eveningWhy()); return true; }
         if (isSleeping() && Bedside.onAFloor(this)) { night("asleep on a floor"); return true; }   // [tp46] down for the night where it lies
         BlockPos bed = bedPos;
         if (bed != null && (!(level().getBlockState(bed).getBlock()
@@ -3618,6 +3623,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [tp46] Beds given up as out of reach (the census). */
     public int bedsGivenUp() {
         return bedGaveUp;
+    }
+
+    /** [tp46] What of the evening keeps it up (VillageFolkEntity says; the census). */
+    protected String eveningWhy() {
+        return "";
     }
 
     /** [tp46] What the last look for a bed found (VillageFolkEntity says; the census). */

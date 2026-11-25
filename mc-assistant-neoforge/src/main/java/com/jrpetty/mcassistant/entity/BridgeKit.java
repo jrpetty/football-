@@ -235,7 +235,9 @@ public final class BridgeKit {
 
     /** As above, the deck never more than {@code rise} over the water (the ramps take it up to banks higher than that). */
     static int deckY(ServerLevel level, boolean alongX, int minor, int w0, int w1, int waterY, int rise) {
-        int deck = waterY + 2;
+        // [tp46] A low deck (the mine's) still two clear over the water: one over a river flush with its banks left a swimmer's
+        // head in the deck.
+        int deck = waterY + (rise <= MineWay.RISE ? 3 : 2);
         Column a = column(level, alongX ? w0 - 1 : minor, alongX ? minor : w0 - 1);
         Column b = column(level, alongX ? w1 + 1 : minor, alongX ? minor : w1 + 1);
         if (a != null && b != null && !a.water() && !b.water()) deck = Math.max(deck, Math.min(Math.min(a.y(), b.y()), waterY + rise));

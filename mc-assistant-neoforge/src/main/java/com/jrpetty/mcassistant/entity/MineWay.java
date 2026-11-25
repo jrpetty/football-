@@ -170,6 +170,33 @@ public final class MineWay {
 
     private static long sq(long dx, long dz) { return dx * dx + dz * dz; }
 
+    /**
+     * [tp46] For any folk of a town whose way to the mine is open over water it bridged: a walk planned through the water
+     * (a far errand's way cut short at the river, the nearest the pathfinder got) is a walk to the next stop along the way
+     * over the bridge instead, toward the end of it its errand lies at (FolkNavigation). Null when the water is none of the
+     * way's (no line, the folk or its errand nowhere near it, both at the same end).
+     */
+    @Nullable
+    public static BlockPos detour(AssistantEntity f, BlockPos target) {
+        UUID id = f.ownerId();
+        Way w = id == null ? null : WAYS.get(id);
+        if (w == null || w.line == null || !w.walkable || !w.wasCut || w.line.size() < 8 || !w.plans.isEmpty() && !w.open) return null;
+        List<int[]> line = w.line;
+        int nf = -1, nt = -1;
+        long bf = Long.MAX_VALUE, bt = Long.MAX_VALUE;
+        for (int i = 0; i < line.size(); i++) {
+            int[] c = line.get(i);
+            long df = sq(f.getBlockX() - c[0], f.getBlockZ() - c[1]), dt = sq(target.getX() - c[0], target.getZ() - c[1]);
+            if (df < bf) { bf = df; nf = i; }
+            if (dt < bt) { bt = dt; nt = i; }
+        }
+        if (nf < 0 || bf > 40L * 40L || Math.abs(nt - nf) < 6) return null;
+        int to = bf > 4L * 4L ? nf : nf + Integer.signum(nt - nf) * Math.min(12, Math.abs(nt - nf));
+        int[] c = line.get(to);
+        if (!(f.level() instanceof ServerLevel level)) return null;
+        return Visitors.surface(level, new BlockPos(c[0], 0, c[1]));
+    }
+
     /** Is this folk over the water at its town's mine while the mine is cut off (it works there; it cannot come over to help)? */
     public static boolean farSide(AssistantEntity f) {
         UUID id = f.ownerId();

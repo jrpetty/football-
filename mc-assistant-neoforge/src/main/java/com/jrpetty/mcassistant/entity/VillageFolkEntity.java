@@ -2889,6 +2889,18 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
+    /** [tp46] The night census: what of the evening has it now (a gathering, the town's culture, supper...). */
+    @Override
+    protected String eveningWhy() {
+        if (Assemblies.attending(this)) return "at the town's gathering";
+        if (FireworkShows.crewing(this)) return "at the fireworks";
+        if (TownJobs.busy(this)) return "on the town's work";
+        if (School.teaching(this)) return "teaching";
+        if (TownCalendar.busy(this)) return "the town's calendar (bell, dusk bell, a present)";
+        if (Culture.busy(this)) return "the town's culture (a play, the band, a toast)";
+        return "an evening out before its bedtime";
+    }
+
     /** When it last passed the time of day with somebody (Smalltalk). */
     int lastSmalltalk = -100000;
     /** The day it last sat down to supper with its family. */

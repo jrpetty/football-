@@ -328,11 +328,82 @@ public class FolkNavigation extends GroundPathNavigation {
         long t0 = System.nanoTime();
         planning = true;
         try {
-            return plan(targets, regionOffset, offsetUpward, accuracy);
+            Path was = this.path;
+            Path p = plan(targets, regionOffset, offsetUpward, accuracy);
+            // [tp46] Water is the last resort: a folk at its work never swims where there is a dry way (round the pond, over the
+            // bridge), on its errands, its deposits, the walk home at dusk. A way planned through water is planned again with
+            // the water barred; if that one gets there, or as near (a far errand's way cut short), it is taken; else the way
+            // the town planned to its mine over its bridge; only with neither does it swim.
+            if (p != null && p != was && !targets.isEmpty() && this.mob instanceof VillageFolkEntity f && keepsDry(f, targets) && swims(p)) {
+                BlockPos target = targets.iterator().next();
+                Path dry = planDry(f, targets, regionOffset, offsetUpward, accuracy);
+                if (dry != null && !swims(dry) && (dry.canReach() || endOff(dry, target) <= endOff(p, target) + 8.0)) {
+                    mustSwim = false;
+                    DRY_WAYS++;
+                    return dry;
+                }
+                BlockPos via = MineWay.detour(f, target);
+                if (via != null && !targets.contains(via)) {
+                    Path q = planDry(f, java.util.Set.of(via), regionOffset, offsetUpward, 1);
+                    if (q != null && !swims(q)) { mustSwim = false; DRY_WAYS++; return q; }
+                }
+                mustSwim = true;                                         // no dry way to be had: it swims, and is let
+                return p;
+            }
+            if (p != null && p != was) mustSwim = false;
+            return p;
         } finally {
             planning = false;
             spentNanos += System.nanoTime() - t0;
         }
+    }
+
+    /** [tp46] The way it walks now goes through water because there is no dry one (climbing out is not forced on it). */
+    private boolean mustSwim;
+    /** [tp46] Ways planned dry instead of through water (the tests). */
+    public static volatile long DRY_WAYS;
+
+    public boolean mustSwim() {
+        return mustSwim;
+    }
+
+    /** [tp46] Does this folk keep out of the water on this walk: not one whose work is in it, not already in it, and not
+     *  bound for the water itself (a spot to fish from it, a boat). */
+    private boolean keepsDry(VillageFolkEntity f, Set<BlockPos> targets) {
+        if (f.isInWater() || f.isPassenger()) return false;
+        AssistantEntity.StationTask t = f.stationTask();
+        if (t == AssistantEntity.StationTask.DIVER || t == AssistantEntity.StationTask.FERRY) return false;
+        for (BlockPos q : targets) if (!this.level.getFluidState(q).isEmpty()) return false;
+        return true;
+    }
+
+    /** [tp46] A way planned with the water barred (the folk's own reckoning of it put back after). */
+    @Nullable
+    private Path planDry(VillageFolkEntity f, Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy) {
+        float water = f.getPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER);
+        Path keep = this.path;
+        f.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, -1.0F);
+        try {
+            this.path = null;                                            // (not the walk under way handed back as it is)
+            return plan(targets, regionOffset, offsetUpward, accuracy);
+        } finally {
+            this.path = keep;
+            f.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, water);
+        }
+    }
+
+    /** [tp46] How far short of the target a way ends. */
+    private static double endOff(Path p, BlockPos target) {
+        net.minecraft.world.level.pathfinder.Node end = p.getEndNode();
+        return end == null ? Double.MAX_VALUE : Math.sqrt(end.asBlockPos().distSqr(target));
+    }
+
+    /** [tp46] Does this way go through water (a node standing in it)? */
+    private boolean swims(Path p) {
+        for (int i = p.getNextNodeIndex(); i < p.getNodeCount(); i++) {
+            if (this.level.getFluidState(p.getNodePos(i)).is(net.minecraft.tags.FluidTags.WATER)) return true;
+        }
+        return false;
     }
 
     /** [health] A way being planned just now (createPath), for canUpdatePath. */

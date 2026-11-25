@@ -503,7 +503,22 @@ public class BlinkGameTests {
         overTheRiver(helper, "bk07", 6764000, true);
     }
 
+    /**
+     * [tp46] bk09: a pond beside the miners' way out to the mine (seven wide, thirty-six long, flush with the ground, across
+     * the straight line but not the whole way: round its end is dry and a little longer). A full day and night with the time
+     * running (out in the morning, home at dusk, errands and deposits between): not one tick in the water for any miner, not
+     * one jump in the player's sight, and nothing built.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 40000, batch = "bk09_pond_beside_the_way")
+    public static void bk09_pond_beside_the_way(GameTestHelper helper) {
+        overTheRiver(helper, "bk09", 6768000, false, true);
+    }
+
     static void overTheRiver(GameTestHelper helper, String label, int cx, boolean bridged) {
+        overTheRiver(helper, label, cx, bridged, false);
+    }
+
+    static void overTheRiver(GameTestHelper helper, String label, int cx, boolean bridged, boolean pond) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
@@ -538,7 +553,7 @@ public class BlinkGameTests {
                 }
                 Kit.stockForGrowth(level, v);
                 // The river: seven wide and three deep, a hundred and forty long, across the way out to the mine.
-                for (int x = rx; x < rx + 7; x++) for (int z = cz - 70; z <= cz + 70; z++) {
+                for (int x = rx; x < rx + 7; x++) for (int z = cz - (pond ? 30 : 70); z <= cz + (pond ? 5 : 70); z++) {
                     BlockPos top = Kit.surface(level, x, z);
                     for (int dy = 1; dy <= 3; dy++) level.setBlock(top.below(dy), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 2);
                     for (int dy = 0; dy <= 3; dy++) level.setBlock(top.above(dy), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
@@ -569,7 +584,7 @@ public class BlinkGameTests {
                 return;
             }
             long ran = level.getGameTime() - began[0];
-            if (level.getDayTime() % 24000L > 10500L) level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 1000L);   // by day
+            if (!pond && level.getDayTime() % 24000L > 10500L) level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 1000L);   // by day
             if (ran % 6000 == 0) Kit.stockForGrowth(level, com.jrpetty.mcassistant.entity.Villages.get(id[0]));   // the stores kept up, as by a day's trade
             for (int i = 0; i < miners.size(); i++) {
                 VillageFolkEntity m = miners.get(i);
@@ -587,7 +602,7 @@ public class BlinkGameTests {
             if (ran % 1000 == 0) Kit.log("[VT] " + label + " @" + ran + ": " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]) + "; bridges " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0])
                 + "; reached " + java.util.Arrays.toString(reached) + "; in the water " + java.util.Arrays.toString(wet) + "; seen jumps " + Blink.seenJumps());
             boolean all = java.util.Arrays.stream(reached).limit(miners.size()).allMatch(t -> t > 0);
-            if (!all && ran < 30000) return;
+            if (pond ? ran < 24000 : !all && ran < 30000) return;           // (the pond: a whole day and night)
             began[0] = -2;
             Kit.log("[VT] " + label + " jumps:\n" + Blink.report());
             for (String l : Blink.seenLines()) Kit.log("[VT] " + label + " seen: " + l);
@@ -596,8 +611,9 @@ public class BlinkGameTests {
             ok.that(all, "every miner walked to the pithead: " + java.util.Arrays.toString(reached));
             ok.that(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenJumps());
             ok.that(dead == 0, "nobody drowned: " + dead + " dead");
-            ok.that(java.util.Arrays.stream(wet).allMatch(t -> t < 60), "nobody swam the river: " + java.util.Arrays.toString(wet));
-            if (bridged) ok.that(com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]) == 0, "nothing more built where a crossing stood: " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]));
+            ok.that(java.util.Arrays.stream(wet).allMatch(t -> t < 1), "nobody in the water (a dry way there): " + java.util.Arrays.toString(wet));
+            if (pond) ok.that(com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]) == 0, "nothing built where a dry way round stood: " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]));
+            else if (bridged) ok.that(com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]) == 0, "nothing more built where a crossing stood: " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]));
             else ok.that(com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]) >= 1, "the town bridged the river: " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]));
             ok.that(!com.jrpetty.mcassistant.entity.MineWay.cutOff(id[0]), "the mine reached on foot: " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]));
             if (!bridged) com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);

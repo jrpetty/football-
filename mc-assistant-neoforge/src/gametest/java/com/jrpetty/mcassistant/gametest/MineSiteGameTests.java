@@ -55,6 +55,7 @@ public class MineSiteGameTests {
             } catch (RuntimeException ex) {
                 over[0] = true;
                 Kit.log("[VT] ms test stopped: " + ex);
+                for (StackTraceElement f : ex.getStackTrace()) if (f.getClassName().startsWith("com.jrpetty")) Kit.log("[VT]   at " + f);   // [tp46] where
                 standDown(helper.getLevel());
                 helper.runAfterDelay(1, () -> { throw ex; });
             }
