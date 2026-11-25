@@ -70,7 +70,7 @@ public final class MineWay {
         long cutAt = -1, openedAt = -1;
         /** [tp46] The walk the way was planned along, heart first ({x, z}), and its cells' ground; null for one never cut off. */
         @Nullable List<int[]> line;
-        boolean lined;
+        boolean lined, relined;
         String status = "";
         Way(BlockPos site) { this.site = site; }
     }
@@ -163,9 +163,21 @@ public final class MineWay {
         int to = best > 6L * 6L ? near : out ? Math.min(line.size() - 1, near + 16) : Math.max(0, near - 16);
         // Nearly there: the last stretch is the pathfinder's own.
         if (out ? near >= line.size() - 4 : near <= 3) return null;
-        int[] c = line.get(to);
         if (!(f.level() instanceof ServerLevel level)) return null;
-        return Visitors.surface(level, new BlockPos(c[0], 0, c[1]));
+        return dryStop(level, line, to, out ? 1 : -1);
+    }
+
+    /** [tp46] The stop on the line at {@code i}, or the nearest dry one past it (never a stop out in the water). */
+    @Nullable
+    private static BlockPos dryStop(ServerLevel level, List<int[]> line, int i, int dir) {
+        for (int k = 0; k <= 8; k++) {
+            for (int j : new int[]{ i + dir * k, i - dir * k }) {
+                if (j < 0 || j >= line.size()) continue;
+                BlockPos at = Visitors.surface(level, new BlockPos(line.get(j)[0], 0, line.get(j)[1]));
+                if (!wet(level, at)) return at;
+            }
+        }
+        return null;
     }
 
     private static long sq(long dx, long dz) { return dx * dx + dz * dz; }
@@ -192,9 +204,8 @@ public final class MineWay {
         }
         if (nf < 0 || bf > 40L * 40L || Math.abs(nt - nf) < 6) return null;
         int to = bf > 4L * 4L ? nf : nf + Integer.signum(nt - nf) * Math.min(12, Math.abs(nt - nf));
-        int[] c = line.get(to);
         if (!(f.level() instanceof ServerLevel level)) return null;
-        return Visitors.surface(level, new BlockPos(c[0], 0, c[1]));
+        return dryStop(level, line, to, Integer.signum(nt - nf));
     }
 
     /** Is this folk over the water at its town's mine while the mine is cut off (it works there; it cannot come over to help)? */
@@ -293,6 +304,14 @@ public final class MineWay {
             // Its decks across, but not its railings yet: still cut off (a deck a block wide between the railings' beams, and
             // six miners crowding over it, shouldered each other off into the river).
             if (!w.plans.isEmpty() && !allDown(level, w)) { w.walkable = false; return; }
+            // [tp46] Open: the walk as it now stands (over the new deck, up the new stair) is the way its folk are led by. The way
+            // it was planned along crossed the water where the river was narrowest, a cell or two beside where the deck went
+            // (square across): led by that, miners walked off the bank into the river beside the bridge.
+            if (w.wasCut && !w.relined) {
+                w.relined = true;
+                List<int[]> dry = route(level, v.centre(), w.site, false);
+                if (dry != null) w.line = dry;
+            }
             if (w.wasCut && !w.open) {
                 w.open = true;
                 w.openedAt = level.getGameTime();
