@@ -112,3 +112,11 @@ It's been {n} days. Thank you for every one.
 {n} days now. I'm lucky.
 {n} days together. They've been good ones.
 {n} days. I wouldn't swap them.
+
+== say.topping@sincere
+That's {n}. I'll finish this tree so it doesn't spoil the view.
+{n} logs. Just finishing this one off for you.
+That's {n}. The rest of the tree too, it'll look tidier.
+{n}. Taking the top as well, then I'm all yours.
+That's {n}. Won't be a moment, finishing this tree.
+{n}. I'd rather leave it tidy. Nearly done.

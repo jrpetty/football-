@@ -1071,3 +1071,71 @@ Recipe: {answer}
 {answer}
 Ingredients: {answer}
 Here's the recipe. {answer}
+
+# [pa38] On its own account it went to a chest it may not take from. Say why and how to allow it, never "it had none".
+== logi.not_allowed
+{chest} has {item}, but it isn't one I'm allowed to take from. Say "you can take from this chest", or set Take in Storage on my Pack tab.
+I could see {item} in {chest}. Not mine to take, though. If you'd like it to be, say "you can take from this chest" at it.
+{chest} is hands-off for me, {item} or not. To change that: Pack tab, Storage, Take. Or just tell me I can take from it.
+There's {item} in {chest}, and I've been told to keep out. Say "you can take from this chest" if you've changed your mind.
+I'm not allowed into {chest}, so no {item} from there. Storage on my Pack tab sets what I may take, or tell me at the chest.
+{chest} has what I wanted and a rule against me having it. "You can take from this chest" fixes that, or Take in my Storage view.
+[daft] {chest} is full of {item} and I'm not allowed any. This is how dogs feel about the kitchen. Say "you can take from this chest" to let me in.
+== logi.not_allowed@gloomy
+{item} in {chest}. Right there. Not for me. Say "you can take from this chest" if you ever feel generous.
+{chest} has {item}. I'm not allowed. Story of my life. Pack tab, Storage, Take, if you want to change that.
+I looked into {chest}. {item}. Forbidden {item}. Tell me "you can take from this chest" and I'll stop sulking.
+Not allowed in {chest}. I'll go without. Storage on my Pack tab can say otherwise. Or you can, at the chest.
+{chest}: {item} inside, me outside. Say "you can take from this chest" and that changes.
+There's {item} in {chest} and a rule saying no. I'll just stand here. Or set Take in my Storage view.
+== logi.not_allowed@serious
+{chest} has {item}, but I'm not allowed to take from it. To allow it: say "you can take from this chest", or set Take in Storage on my Pack tab.
+Not allowed: {chest}. It has {item}. Say "you can take from this chest" at it, or set Take in my Storage view.
+{chest} is not one I may take from. Allow it with "you can take from this chest", or Pack tab, Storage, Take.
+I can't take {item} from {chest}: it isn't allowed. Change it in Storage on my Pack tab, or tell me at the chest.
+{chest} holds {item}, but its Take setting is no. Say "you can take from this chest" to allow basics.
+No {item} from {chest}: not permitted. Pack tab, Storage, Take sets it; "you can take from this chest" works too.
+
+== logi.not_allowed_valuable
+{chest} lets me have the basics, and {item} isn't basics. Say "you can take anything from this chest" if you want it to be.
+I may take basics from {chest}. {item} counts as your valuables, so it stays. "You can take anything from this chest" changes that.
+{item} is in {chest}, but that chest is basics only for me. Set Take to anything in Storage on my Pack tab if you're sure.
+Basics only from {chest}, and {item} is the good stuff. Tell me "you can take anything from this chest" and I'll take it.
+{chest} is for bread and planks, as far as I'm concerned. {item} needs "you can take anything from this chest".
+I'll leave the {item} in {chest}: basics only there. Pack tab, Storage, Take: anything, if you'd like me to help myself.
+== logi.not_allowed_valuable@gloomy
+{item} in {chest}. Basics only for me, though. The good things always are for someone else. Say "you can take anything from this chest" otherwise.
+{chest} trusts me with bread, not {item}. Fair, probably. "You can take anything from this chest" if that changes.
+Basics only from {chest}. {item} looked at me. I looked back. Set Take to anything if you want me to have it.
+Not the {item}. {chest} is basics only. I'll make do. Tell me "you can take anything from this chest" if not.
+{chest} keeps its {item} from me. Pack tab, Storage, Take: anything, if you feel reckless.
+I'm a basics sort of assistant, apparently. {item} stays in {chest} unless you say "you can take anything from this chest".
+== logi.not_allowed_valuable@serious
+{chest} allows basics only; {item} is a valuable. Say "you can take anything from this chest" to allow it.
+Not taken: {item} from {chest}. Its Take setting is basics. Set it to anything in Storage on my Pack tab.
+{chest} is basics only. {item} stays. To allow valuables: "you can take anything from this chest".
+{item} is excluded at {chest} (basics only). Change Take to anything on my Pack tab, Storage.
+Basics-only chest: {chest}. No {item} taken. "You can take anything from this chest" allows it.
+{chest}: valuables not permitted, so no {item}. Pack tab, Storage, Take: anything.
+
+== logi.not_allowed_stock
+{chest} has {item}, but only what you asked me to keep there. I won't go under that. Change the rule in Storage on my Pack tab.
+I'd take {item} from {chest}, but it's down to the amount you keep stocked. I'll leave it. The rule lives in Storage on my Pack tab.
+The {item} in {chest} is what you told me to keep there, so it stays. Storage on my Pack tab has the rule.
+{chest} is at its keep-stocked amount of {item}. Taking from it would only mean filling it again. I'll leave it.
+Nothing spare in {chest}: the {item} left is the stock you asked for. Storage on my Pack tab if you want to change it.
+No spare {item} in {chest}. It's at the level you set, and I'm keeping it there.
+== logi.not_allowed_stock@gloomy
+{chest} has exactly the {item} you told me to keep there. Not one more. So none for me.
+I'd only have to put the {item} back in {chest}. It's at its keep-stocked amount. I'll go without.
+{item} in {chest}, all of it spoken for. Like most things. Storage on my Pack tab has the rule.
+{chest} is at its stock of {item}. I'm not allowed to make it sad. Change the rule if you like.
+The {item} in {chest} is reserved. By you. For a rainy day that never ends.
+None spare in {chest}. Its {item} is the stock you set. I'll manage.
+== logi.not_allowed_stock@serious
+{chest} is at its keep-stocked amount of {item}: nothing taken. The rule is in Storage on my Pack tab.
+No spare {item} in {chest} above the stock you set. Left as it is.
+{item} at {chest} is held at its stock rule. Not taken. Change it on my Pack tab, Storage.
+Not taken: {item} from {chest}. It would go under the keep-stocked amount.
+{chest}: {item} at its stock level. I won't draw it down.
+Keep-stocked rule at {chest} stops me taking {item}. Change it in my Storage view.

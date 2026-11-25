@@ -421,7 +421,7 @@ public class PaMemoryGameTests {
         t.putString("text", "mine that iron");
         t.putInt("bx", ore.getX()); t.putInt("by", ore.getY()); t.putInt("bz", ore.getZ());
         PaServer.act(p, "talk", t);
-        helper.assertTrue(a.plan.idle() && fromKey(a, "say.lock.refuse", lastWords(a), Map.of()) || lastWords(a).contains("level 4"), "refused, with how far off: " + lastWords(a));
+        helper.assertTrue(a.plan.idle() && fromKey(a, "say.lock.refuse", lastWords(a), Map.of()) || lastWords(a).toLowerCase(java.util.Locale.ROOT).contains("level 4"), "refused, with how far off: " + lastWords(a));   // [voice37] "Level 4 ..." opens a sentence
         say(p, a, "mine iron until you have 1");
         helper.assertTrue(a.plan.idle(), "the gathering order refused too: " + lastWords(a));
         say(p, a, "gather 6 stone");                                     // it digs round the iron, and leaves it

@@ -224,6 +224,8 @@ public final class PaUnderstand {
      *  at a ping, challenges. Null when it's none of these. */
     static PaIntent skills(String c, String raw) {
         java.util.regex.Matcher m;
+        PaIntent field = field(c, raw);                                 // [pa38] its rod, throws, mace, cure and bookshelves
+        if (field != null) return field;
         m = Pattern.compile("^enchant (?:my |your |the |this |that |some |all )?(sword|pickaxe|axe|bow|armour|armor|helmet|chestplate|leggings|boots|gear|tools|tool|stuff|items|things|it)?(?: .*)?$").matcher(c);
         if (m.find()) return new PaIntent(Kind.ENCHANT, m.group(1) == null ? "gear" : m.group(1), 0, Place.NONE, raw);
         if (c.matches("^(?:come |let us go |go |head |follow me )?(?:to|into|through) the nether(?: with me)?$|^nether trip$|^go nether$")) return new PaIntent(Kind.NETHER, "netherrack", 32, Place.NONE, raw);
@@ -266,6 +268,36 @@ public final class PaUnderstand {
             return new PaIntent(Kind.CHALLENGE, "xbow", 0, Place.LOOKED, raw);
         if (c.matches("^(?:shooting|archery) (?:contest|competition|match|challenge)$|^(?:who can|let us see who can|bet i can|bet you cant) (?:shoot|hit the target) (?:better|more|best)$"))
             return new PaIntent(Kind.CHALLENGE, "shoot", 0, Place.LOOKED, raw);
+        return null;
+    }
+
+    /** [pa38] The pointer words for a thing it's to act on ("that", "the zombie", "that creeper there"). */
+    private static final String AT = "(?:that|this|it|him|her|them|those|these|the|a|an)(?: [a-z]+){0,2}?";
+
+    /** [pa38] Snowballs or eggs at something, the rod's hook, the mace's smash, a cure, bookshelves round the table. */
+    static PaIntent field(String c, String raw) {
+        java.util.regex.Matcher m;
+        m = Pattern.compile("^(?:throw|lob|chuck|fling|toss|pelt|bung) (?:some |a few |a |an |the |your |(\\d+) )?(snowballs?|snow balls?|eggs?) (?:at|over at|towards?) " + AT + "(?: (?:there|over there|now))?$").matcher(c);
+        if (m.find()) return new PaIntent(Kind.THROW, m.group(2).startsWith("egg") ? "egg" : "snowball", m.group(1) == null ? 0 : Integer.parseInt(m.group(1)), Place.LOOKED, raw);
+        m = Pattern.compile("^(?:pelt|hit|bombard|pepper|splat) " + AT + " with (?:some |a |your )?(snowballs?|snow balls?|eggs?)$").matcher(c);
+        if (m.find()) return new PaIntent(Kind.THROW, m.group(1).startsWith("egg") ? "egg" : "snowball", 0, Place.LOOKED, raw);
+        m = Pattern.compile("^(snowball|egg) (?:that|it|him|her|them)(?: [a-z]+)?$").matcher(c);
+        if (m.find()) return new PaIntent(Kind.THROW, m.group(1), 0, Place.LOOKED, raw);
+        if (c.matches("^(?:distract|draw|draw off|draw away|lure away|lure|pull) " + AT + "(?: off me| away from me| away)?$") && !c.matches("^pull (?:that|this|it|the) (?:lever|switch|rope|chain)$")
+            || c.matches("^(?:pull|draw|take) (?:its|their|the) aggro(?: off me)?$") || c.matches("^get (?:its|their) attention$"))
+            return new PaIntent(Kind.THROW, "", 0, Place.LOOKED, raw);
+        if (c.matches("^(?:hook|reel in|reel|yank|fish out|drag) " + AT + "(?: in| over| down| off(?: the (?:edge|ledge|cliff|side))?| over the (?:edge|ledge|side))?(?: with (?:the|your|a) (?:fishing )?rod)?$")
+            || c.matches("^use (?:the|your) (?:fishing )?rod on " + AT + "$"))
+            return new PaIntent(Kind.HOOK, "rod", 0, Place.LOOKED, raw);
+        if (c.matches("^(?:smash|mace|ground pound|slam|squash) " + AT + "(?: with (?:the|your) mace)?$") && !c.matches(".* (?:area|place|ground|land|field|wall|house|floor)$") || c.matches("^use (?:the|your) mace(?: on " + AT + ")?$")
+            || c.matches("^(?:do a |show me a )?mace smash(?: on " + AT + ")?$"))
+            return new PaIntent(Kind.SMASH, "mace", 0, Place.LOOKED, raw);
+        if (c.matches("^(?:cure|heal|save|fix|turn back) (?:that|this|the|a) zombie villager(?: back)?$") || c.matches("^cure (?:that|this|it|him|her|them)$")
+            || c.matches("^turn (?:that|this|the) zombie villager back(?: into a villager)?$"))
+            return new PaIntent(Kind.CURE, "zombie villager", 0, Place.LOOKED, raw);
+        if (c.matches("^(?:place|put|set|set up|stick|arrange|build|lay) (?:some |the |my |your |all the |\\d+ )?bookshel(?:f|ves|fs) (?:up )?(?:round|around|by|next to|near|at|beside|about) (?:the|that|this|my|your) (?:enchanting |enchantment )?table$")
+            || c.matches("^(?:power up|max out|surround|ring) (?:the|that|this|my) (?:enchanting |enchantment )?table(?: with (?:the )?bookshel(?:f|ves|fs))?$"))
+            return new PaIntent(Kind.SHELVES, "bookshelf", 0, Place.LOOKED, raw);
         return null;
     }
 

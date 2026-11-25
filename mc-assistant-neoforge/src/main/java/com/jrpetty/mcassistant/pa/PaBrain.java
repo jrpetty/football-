@@ -91,6 +91,8 @@ public final class PaBrain {
         /** When to open its player's panel after it first arrives (0: not pending). */
         public int openPanelAt;
         int askedFoodTick = -100000;
+        /** [pa38] Fishing, throws, the rod's pull, the mace, enchanting, trading and its learner's slips (PaField). */
+        public final PaField field = new PaField();
         /** [pa33b] Lines said lately (a long memory: no repeats within a long session). */
         public final PaPersona.Recent recent = new PaPersona.Recent(400);
         /** [pa33b] Its player's last death: where, which world, how, when (game time). */
@@ -226,7 +228,8 @@ public final class PaBrain {
         cur.best = Math.max(cur.best, pct);                                // [pa33d] logs handed over mid-way still count
         if (!running) pct = Math.max(pct, cur.best);
         // like a player, it stops when it has what it was sent for (a dig "until you have 20", or 16 logs)
-        if ((cur.stopAtTarget || "GATHER".equals(cur.kind)) && cur.target > 0 && pct >= 100 && running) {
+        // ...but a tree it is part way down it finishes first (GatherGoal: no crowns left floating in the sky)
+        if ((cur.stopAtTarget || "GATHER".equals(cur.kind)) && cur.target > 0 && pct >= 100 && running && !a.midTree()) {
             a.clearQueue();
             a.task = null;
             running = false;

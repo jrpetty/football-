@@ -75,7 +75,8 @@ final class PaBowGoal extends Goal {
         if (PaBow.drawing(a)) return;
         boolean inRange = distSq <= range() * range() && a.hasLineOfSight(t);
         if (!inRange || --rest > 0) return;
+        double least = Math.sqrt(minSq), most = range();
         PaBow.atEntity(a, t, shot -> rest = 8, null,
-            () -> t.isAlive() && a.hasLineOfSight(t) && com.jrpetty.mcassistant.entity.FolkCombat.clearShot(a, t));
+            () -> t.isAlive() && a.hasLineOfSight(t) && PaSidestep.clear(a, t, least, most));   // [pa38] its player in the way: a step aside (PaSidestep)
     }
 }

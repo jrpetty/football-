@@ -89,7 +89,9 @@ public final class PaWords {
         "quick", "simple", "basic", "nice", "everything", "anything", "something", "auto", "yourself", "own",
         "market", "shop", "coins", "money",
         "ping", "pings", "mark", "marker", "bridge", "waypoint", "route", "skip", "closest", "nearest", "died",   // [pa33c-2b]
-        "tame", "lever", "button", "wolf", "pillar", "enchant", "quartz", "parrot", "ocelot", "upgrade", "netherrack"));   // [pa33d]
+        "tame", "lever", "button", "wolf", "pillar", "enchant", "quartz", "parrot", "ocelot", "upgrade", "netherrack",   // [pa33d]
+        "mace", "smash", "snowball", "snowballs", "eggs", "hook", "rod", "fishing", "aggro", "distract", "bookshelves", "bookshelf", "cure",
+        "ravager", "brute", "pound", "ground", "pelt", "lob", "reel", "ledge"));   // [pa38]
 
     /** Plain English the assistant must not "correct" into an order word ("mind" is not "mine", "your" is not "you"). */
     public static final Set<String> COMMON = new java.util.HashSet<>(List.of(("gear target trick shot armor armour villager race contest nether bell wake bedtime that this those these them they their there then than with have want need some when "
@@ -146,6 +148,9 @@ public final class PaWords {
         {"^(?:you alright|you all right|are you alright|are you all right|you ok|alright mate|how's it going|hows it going|how you doing)$", "how are you"},
         {"\\bwhereabouts\\b", "where"},
         {"\\bgo and (get|fetch|grab|chop|mine|find|bring)\\b", "$1"},
+        {"\\b(?:nip|pop|run|dash|whizz) (?:out |off |over |down )?and (get|fetch|grab|chop|mine|find|bring|catch)\\b", "$1"},   // [pa38] "nip and grab some wood"
+        {"\\b(?:pop|nip|come) (?:over|across|round) (?:here|to me)\\b", "come here"},                                 // [pa38] "pop over here"
+        {"^(?:could|can|would|will) you (?:please |just |quickly )?(?!mind\\b)(?=\\S)", ""},                                        // [pa38] "could you ..."
         {"\\b(?:colour|color)\\b", "colour"},
         {"\\bstoreys?\\b", "storey"},
         {"\\b(\\d+|one|two|three|four|five|six|seven|eight|nine|ten) metres? (?:away|off|over)\\b", "over there"},
@@ -170,6 +175,23 @@ public final class PaWords {
         {"\\b(?:coal ore|cole|kohl)\\b", "coal"},
         {"\\bstay hair\\b", "stay here"},
         {"\\bcome hair\\b", "come here"},
+        // [pa38] what Vosk made of British voices in the spoken-orders test (PaVoiceEndToEndTest), put right
+        {"^(?:the|uh|um|er|erm) (?=(?:shoot|throw|hook|smash|cure|come|go|follow|stop|put|get|chop)\\b)", ""},
+        {"\\b(in|into|from|out of|to) chest\\b", "$1 the chest"},
+        {"\\b(guard|follow|help) meat$", "$1 me"},
+        {"\\b(?:books? helps?|book shelves|books shelves|book selves|bookshelf's)\\b", "bookshelves"},
+        {"^but (?=bookshel)", "put "},
+        {"^might up\\b", "light up"},
+        {"\\byou can (?:torch|toss|tour|took|torque) again\\b", "you can talk again"},
+        {"\\bwhat have you (?:guard|god|gone|gut)$", "what have you got"},
+        {"\\bwhere ours? you\\b", "where are you"},
+        {"\\bremember they (spot|place|chest)\\b", "remember this $1"},
+        {"\\bgo two\\b", "go to"},
+        {"\\b(go to|to|at) the minds?$", "$1 the mine"},
+        {"\\b(chop|cut|fell)( down)? (that|this|the) three\\b", "$1$2 $3 tree"},
+        {"\\bpelted with\\b", "pelt it with"},
+        {"\\bcure (?:home|tame|hum|them|team|him)$", "cure him"},
+        {"\\bhook (?:home|came|hum|cam) in$", "hook him in"},
     };
 
     /** [pa33b] A spoken order with the recogniser's usual British-vowel slips put right (see MISHEARD). */

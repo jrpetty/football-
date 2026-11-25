@@ -44,6 +44,10 @@ public final class PaProgress {
             case "elytra" -> "elytra";
             case "pearl" -> "ender_pearl";
             case "end" -> "end_crystal";
+            case "fish" -> "fishing_rod";                    // [pa38]
+            case "throw" -> "snowball";
+            case "cure" -> "golden_apple";
+            case "mace" -> "mace";
             default -> "book";
         };
     }

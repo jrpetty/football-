@@ -48,7 +48,8 @@ public class EnchantGoal extends Goal {
     @Override
     public boolean canUse() {
         Job j = assistant.peekJob();
-        return j != null && j.type() == Job.Type.ENCHANT && assistant.getTarget() == null;
+        return j != null && j.type() == Job.Type.ENCHANT && assistant.getTarget() == null
+            && !assistant.ownsJob(Job.Type.ENCHANT);                     // [pa38] the Player AI Assistant's own table work
     }
 
     @Override

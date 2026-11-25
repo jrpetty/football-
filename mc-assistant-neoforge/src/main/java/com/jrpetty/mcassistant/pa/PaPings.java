@@ -16,7 +16,8 @@ public final class PaPings {
 
     /** What a ping lands on. */
     public enum Target { GROUND, TREE, ORE, STONE, MOB, ANIMAL, CHEST, CROP, BED, FURNACE, PLAYER, ASSISTANT, WATER, LAVA, AREA, VILLAGER, TABLE,
-        COMPOSTER, BREWING }                                                                         // [pa36]
+        COMPOSTER, BREWING,                                                                          // [pa36]
+        ZOMBIE_VILLAGER }                                                                            // [pa38]
 
     /** The kind of thing an option is, for its colour and shape (colour-blind safe: each has its own shape too). */
     public enum Sort {
@@ -73,6 +74,14 @@ public final class PaPings {
             case MOB -> {
                 o.add(new Option("attack", "Attack that", Sort.ATTACK, "attack that"));
                 o.add(new Option("shoot", "Shoot that", Sort.ATTACK, "shoot that"));
+                o.add(new Option("throw", "Throw snowballs at it", Sort.ATTACK, "throw snowballs at that"));   // [pa38]
+                o.add(new Option("hook", "Hook it with the rod", Sort.ATTACK, "hook that"));                  // [pa38]
+                o.add(new Option("leave", "Leave it alone", Sort.LOOK, ""));
+            }
+            case ZOMBIE_VILLAGER -> {                                                                  // [pa38]
+                o.add(new Option("cure", "Cure it", Sort.GATHER, "cure that zombie villager"));
+                o.add(new Option("throw", "Throw snowballs at it", Sort.ATTACK, "throw snowballs at that"));
+                o.add(new Option("attack", "Attack that", Sort.ATTACK, "attack that"));
                 o.add(new Option("leave", "Leave it alone", Sort.LOOK, ""));
             }
             case ANIMAL -> {
@@ -96,6 +105,7 @@ public final class PaPings {
             }
             case ASSISTANT -> o.add(new Option("hi", "Say hi", Sort.LOOK, ""));
             case WATER -> {
+                o.add(new Option("fish", "Go fishing", Sort.GATHER, "go fishing"));                          // [pa38]
                 o.add(new Option("bridge", "Bridge over", Sort.BUILD, "build a bridge"));
                 o.add(new Option("go", "Go there", Sort.MOVE, "go there"));
             }
@@ -109,6 +119,7 @@ public final class PaPings {
             }
             case TABLE -> {
                 o.add(new Option("enchant", "Enchant my gear here", Sort.BUILD, "enchant your gear"));
+                o.add(new Option("shelves", "Bookshelves round it", Sort.BUILD, "put bookshelves round the table"));   // [pa38]
                 o.add(new Option("go", "Go there", Sort.MOVE, "go there"));
             }
             case AREA -> {

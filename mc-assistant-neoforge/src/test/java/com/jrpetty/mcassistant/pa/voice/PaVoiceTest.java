@@ -156,7 +156,7 @@ class PaVoiceTest {
         PaVosk v = new PaVosk(dir.resolve("vosk"));
         assertFalse(v.installed());
         assertFalse(v.load());
-        assertTrue(v.status().contains("downloaded"), v.status());
+        assertTrue(v.status().contains("unpacked"), v.status());   // [voice37] inside the jar now: unpacked, never downloaded
         assertTrue(v.session(List.of("follow")) == null);
     }
 
@@ -276,7 +276,7 @@ class PaVoiceTest {
 
     @Test
     void kokoroDownloadIsSaidAndCheckedAndNothingIsThereYet(@TempDir Path dir) {
-        assertTrue(PaKokoro.totalMb() > 200 && PaKokoro.totalMb() < 230, PaKokoro.totalMb() + " MB");
+        assertTrue(PaKokoro.totalMb() > 200 && PaKokoro.totalMb() < 260, PaKokoro.totalMb() + " MB");   // [voice42] two runtime jars (1.25.1, and 1.23.2 for Intel Macs)
         for (PaKokoro.Part p : PaKokoro.PARTS) {
             assertTrue(p.url().startsWith("https://github.com/") || p.url().startsWith("https://raw.githubusercontent.com/")
                 || p.url().startsWith("https://repo1.maven.org/"), p.url());

@@ -10,7 +10,8 @@ public final class PaAnimWords {
 
     /** The gestures a line may ask for (the folk's acts that suit a companion). */
     public static final Set<String> KNOWN = Set.of("wave", "shrug", "bow", "cheer", "clap", "think", "point", "salute", "beckon", "dance", "talk",
-        "listen", "mourn", "kneel", "quarrel", "protest", "lost", "eat", "drink", "fall", "handshake");
+        "listen", "mourn", "kneel", "quarrel", "protest", "lost", "eat", "drink", "fall", "handshake",
+        "hammer");                                                                                  // [pa38] the mace tapped in its palm
 
     /** The "[anim:x]" among a line's tags, or null. */
     public static String tagged(Set<String> tags) {

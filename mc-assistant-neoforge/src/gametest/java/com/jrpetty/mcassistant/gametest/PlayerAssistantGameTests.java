@@ -1166,7 +1166,8 @@ public class PlayerAssistantGameTests {
         int n0 = said(a);
         stranger(pb, a, "Hello");
         got[0] = since(a, n0);
-        helper.assertTrue(fromLists(got[0], "stranger.polite") && got[0].contains(pb.getGameProfile().getName()), "friendly, by name: " + got[0]);
+        helper.assertTrue(fromLists(got[0], "stranger.polite") && got[0].toLowerCase(java.util.Locale.ROOT).contains(pb.getGameProfile().getName().toLowerCase(java.util.Locale.ROOT)),
+            "friendly, by name: " + got[0]);   // [voice37] a name opening a sentence is capitalised ("Test-mock-player, ..."): compare without case
         helper.runAfterDelay(170, () -> {
             AssistantEntity.Mode m0 = a.getMode();
             int planned = a.plan.steps.size();
@@ -1184,7 +1185,8 @@ public class PlayerAssistantGameTests {
                     int n3 = said(a);
                     stranger(pb, a, "Your owner's rubbish");
                     got[3] = since(a, n3);
-                    helper.assertTrue(got[3].contains(pa.getGameProfile().getName()), "sticks up for its player: " + got[3]);
+                    helper.assertTrue(got[3].toLowerCase(java.util.Locale.ROOT).contains(pa.getGameProfile().getName().toLowerCase(java.util.Locale.ROOT)),
+                        "sticks up for its player: " + got[3]);   // [voice37] without case, as above
                     int n = said(a);
                     stranger(pb, a, "you're rubbish");                // within eight seconds
                     helper.assertTrue(said(a) == n, "one reply in eight seconds to the same player");

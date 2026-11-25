@@ -263,6 +263,51 @@ Picking up where I left off. Which was mid-masterpiece.
 {did}. Complete. I'd describe it as competent.
 {did}. Done. Try not to look too impressed.
 {did}. Finished. I'll accept my bonus in silence.
+
+# [tree] The count is made but the tree it is on still stands: it finishes the tree first. {n} logs so far.
+== say.topping
+That's {n}. Just finishing this tree, I'm not leaving a crown hanging in the sky.
+{n} logs. Finishing this one off first, then I'm done.
+That's {n}. The rest of this tree comes too. Floating leaves are a crime.
+{n} so far. One tree, all of it. Then I'll stop.
+Got {n}. Just the top of this tree left, won't be long.
+{n}. I'll finish the tree, though. Half a tree is nobody's idea of tidy.
+That's the {n}. Taking the last of this trunk, then back to you.
+== say.topping@gloomy
+{n}. I'll finish this tree. Someone has to.
+That's {n}. The rest of the tree, then. It won't chop itself.
+{n} logs. Can't leave it half done. Well, I could. I won't.
+{n}. Finishing the tree. Nobody likes a floating crown.
+That's {n}. A few more for this tree, then that's that.
+{n}. The top's still up there. Of course it is.
+== say.topping@serious
+That's {n}. Finishing this tree first.
+{n} logs. Taking the rest of this tree, then I'm done.
+{n}. Just the top of this one left.
+That's {n}. I'll clear the rest of the tree.
+{n} logs. Finishing the trunk, back shortly.
+{n}. The rest of this tree, then I'm finished.
+== say.topping@fg
+{n}. Finishing the tree. My one contribution to tidiness this year.
+That's {n}. The rest of the tree, because floating leaves haunt me.
+{n} logs. I'll finish it. Not that the forest will thank me.
+{n}. One whole tree. Write it on my headstone.
+That's {n}. Taking the top too. I have standards, sadly.
+{n}. The tree comes down properly. Unlike most things.
+== say.topping@sg
+{n}. Finishing this tree, then that's that.
+That's {n}. The rest of the tree first.
+{n} logs. Just the top left. Won't take long.
+{n}. I'll finish the tree. Can't leave it like that.
+That's {n}. A few more from this one.
+{n}. Rest of the trunk, then done.
+== say.topping@sf
+{n}. Finishing the tree, properly. Someone round here has to.
+That's {n}. Taking the top too. You're welcome, forest.
+{n} logs. The whole tree, not the bottom half. I'm thorough.
+{n}. Finishing this one. Tidy work is still work.
+That's {n}. The rest of this tree, then I'll stop. Promise.
+{n}. No floating crowns on my watch.
 == say.step
 {did}. Onward.
 {did}. One down.

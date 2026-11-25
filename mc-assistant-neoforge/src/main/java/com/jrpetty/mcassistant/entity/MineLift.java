@@ -109,6 +109,8 @@ public final class MineLift {
         int idle;
         double lastY = Double.NaN;
         long trips, carried;
+        int step;                                                    // [film39] ticks into the riders' walk in or out (LiftGlide)
+        final Map<UUID, Vec3> glideFrom = new HashMap<>();           // [film39]
         Lift(UUID village) { this.village = village; }
 
         @Nullable Stop stop(int index) {
@@ -412,9 +414,19 @@ public final class MineLift {
                     if (e instanceof Mob m) m.getNavigation().stop();
                 }
                 if (l.riding.isEmpty()) { l.phase = 0; drawCage(level, l); return; }
+                if (LiftGlide.onFoot(level, l, from)) { l.phase = 3; LiftGlide.begin(level, l); }      // [film39] they step in first
+                else {
+                    l.phase = 2;
+                    level.playSound(null, from.board(), SoundEvents.CHAIN_STEP, SoundSource.BLOCKS, 1.0F, 0.8F);
+                }
+            }
+        } else if (l.phase == 3) {                                   // [film39] the riders stepping into the cage at the pithead
+            if (LiftGlide.in(level, l, from)) {
                 l.phase = 2;
                 level.playSound(null, from.board(), SoundEvents.CHAIN_STEP, SoundSource.BLOCKS, 1.0F, 0.8F);
             }
+        } else if (l.phase == 4) {                                   // [film39] and stepping out of it
+            if (LiftGlide.out(level, l, to, exit(level, l, to))) arrive(level, l, to);
         } else if (l.phase == 2) {
             boolean there = toward(l, to.y());
             for (Ask a : l.riding) {
@@ -423,26 +435,34 @@ public final class MineLift {
                 afloat(e, true);
                 place(e, l.sx + 0.5, l.cageY, l.sz + 0.5);
             }
-            if (there) {
-                for (Ask a : l.riding) {
-                    Entity e = level.getEntity(a.who);
-                    if (e != null && e.isAlive()) {
-                        BlockPos out = exit(level, l, to);
-                        place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
-                        afloat(e, false);
-                        STATE.put(a.who, State.ARRIVED);
-                        l.carried++;
-                        if (e instanceof ServerPlayer p) p.displayClientMessage(Component.literal("The cage: " + to.name() + " (Y" + to.y() + ")"), true);
-                    } else {
-                        STATE.remove(a.who);
-                    }
-                }
-                level.playSound(null, to.board(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 0.6F, 1.6F);
-                l.trips++;
-                endTrip(l);
+            if (there && LiftGlide.onFoot(level, l, to)) {              // [film39] up at the pithead: they step out
+                l.phase = 4;
+                LiftGlide.begin(level, l);
+            } else if (there) {
+                arrive(level, l, to);
             }
         }
         drawCage(level, l);
+    }
+
+    /** The riders put out at their stop and the trip ended. */
+    private static void arrive(ServerLevel level, Lift l, Stop to) {
+        for (Ask a : l.riding) {
+            Entity e = level.getEntity(a.who);
+            if (e != null && e.isAlive()) {
+                BlockPos out = exit(level, l, to);
+                place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
+                afloat(e, false);
+                STATE.put(a.who, State.ARRIVED);
+                l.carried++;
+                if (e instanceof ServerPlayer p) p.displayClientMessage(Component.literal("The cage: " + to.name() + " (Y" + to.y() + ")"), true);
+            } else {
+                STATE.remove(a.who);
+            }
+        }
+        level.playSound(null, to.board(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 0.6F, 1.6F);
+        l.trips++;
+        endTrip(l);
     }
 
     private static void endTrip(Lift l) {

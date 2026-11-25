@@ -105,6 +105,49 @@ public final class PaAudio {
         return out;
     }
 
+    /**
+     * [voice37] The true peak in dBFS (ITU-R BS.1770-4 style: four times oversampled, a windowed-sinc between samples), so a
+     * peak that falls between two samples is found too; -inf for silence.
+     */
+    public static double truePeakDb(float[] a) {
+        double peak = 0;
+        for (int i = 0; i < a.length; i++) {
+            peak = Math.max(peak, Math.abs(a[i]));
+            for (int k = 0; k < TP_OVER - 1; k++) {
+                double v = 0;
+                double[] c = TP_KERNEL[k];
+                for (int j = 0; j < c.length; j++) {
+                    int n = i + j - TP_TAPS + 1;
+                    if (n >= 0 && n < a.length) v += a[n] * c[j];
+                }
+                peak = Math.max(peak, Math.abs(v));
+            }
+        }
+        return peak <= 0 ? Double.NEGATIVE_INFINITY : 20 * Math.log10(peak);
+    }
+
+    private static final int TP_OVER = 4, TP_TAPS = 8;
+    /** The interpolation weights for each in-between point (a Hann-windowed sinc), worked out once. */
+    private static final double[][] TP_KERNEL = new double[TP_OVER - 1][2 * TP_TAPS];
+    static {
+        for (int k = 1; k < TP_OVER; k++)
+            for (int j = -TP_TAPS + 1; j <= TP_TAPS; j++) {
+                double x = k / (double) TP_OVER - j;
+                double sinc = Math.abs(x) < 1e-9 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x);
+                TP_KERNEL[k - 1][j + TP_TAPS - 1] = sinc * (0.5 + 0.5 * Math.cos(Math.PI * x / TP_TAPS));
+            }
+    }
+
+    /** [voice37] Turned down just enough that the true peak is at or under the ceiling (a whole-clip gain: no distortion). */
+    public static float[] truePeakCeiling(float[] a, double ceilingDb) {
+        double tp = truePeakDb(a);
+        if (!(tp > ceilingDb - 0.05)) return a;
+        double g = Math.pow(10, (ceilingDb - 0.1 - tp) / 20);
+        float[] out = new float[a.length];
+        for (int i = 0; i < a.length; i++) out[i] = (float) (a[i] * g);
+        return out;
+    }
+
     /** Raised-cosine fades in and out (milliseconds): no click at either end. */
     public static float[] fade(float[] a, int rate, double inMs, double outMs) {
         float[] out = a.clone();
@@ -158,6 +201,7 @@ public final class PaAudio {
         float[] a = trim(raw, rate, 25);
         a = resample(a, pitch);
         a = normalise(a, rate, TARGET_LUFS);
+        a = truePeakCeiling(a, CEILING_DB);                                 // [voice37] between the samples too, not only on them
         return fade(a, rate, 6, 18);
     }
 
@@ -171,6 +215,52 @@ public final class PaAudio {
             b[2 * i + 1] = (byte) (s >> 8);
         }
         return b;
+    }
+
+    // ------------------------------------------------------------------ [voice42] is this speech at all?
+
+    /**
+     * Above this (raw, before levelling) a neural voice has gone wrong. Kokoro's own speech, measured over 72 lines in four
+     * British voices on a sound runtime: peaks 0.4 to 2.3, RMS 0.07 to 0.15, peak over RMS 4.6 to 18.7. Its broken output
+     * (ONNX Runtime 1.23.2 on an AMX CPU): NaN or infinity, peaks of 3.6 to 10^35, or RMS under 0.009, with peak over RMS
+     * of 45 and up.
+     */
+    public static final double ABSURD_PEAK = 4.0;
+    /** Under this RMS (raw) it is near-silence. */
+    public static final double QUIET_RMS = 0.012;
+    /** A peak this many times the RMS is a click or a spike, not a voice. */
+    public static final double SPIKY_CREST = 30;
+
+    /**
+     * [voice42] What is wrong with a voice's raw output for a piece of so many tokens (phonemes), or null when it sounds
+     * like speech: nothing at all; samples that are NaN or infinite; samples far louder than any voice makes; near-silence
+     * overall, or mostly silence with a burst; a lone spike over quiet sound; or far too short for what was asked. Raw means
+     * straight from the model, before finish(), which would turn each of these into silence or clicks. Pure, so it can be
+     * tested on made-up samples.
+     */
+    public static String fault(float[] raw, int rate, int tokens) {
+        if (raw == null || raw.length == 0) return tokens > 0 ? "no sound" : null;
+        double ss = 0;
+        float pk = 0;
+        for (float v : raw) {
+            if (!Float.isFinite(v)) return "non-finite samples";
+            ss += (double) v * v;
+            pk = Math.max(pk, Math.abs(v));
+        }
+        if (pk > ABSURD_PEAK) return "samples far too loud (peak " + Math.round(pk * 100) / 100.0 + ")";
+        double rms = Math.sqrt(ss / raw.length);
+        if (rms < QUIET_RMS) return "near-silence";
+        if (pk / rms > SPIKY_CREST) return "a spike, not speech";
+        int frame = Math.max(1, rate / 50), frames = 0, loud = 0;               // 20 ms frames
+        for (int s = 0; s + frame <= raw.length; s += frame) {
+            double fs = 0;
+            for (int i = s; i < s + frame; i++) fs += (double) raw[i] * raw[i];
+            frames++;
+            if (Math.sqrt(fs / frame) > QUIET_RMS) loud++;
+        }
+        if (frames >= 5 && loud < frames * 0.25) return "mostly silence";
+        if (raw.length < tokens * 0.015 * rate) return "far too short";
+        return null;
     }
 
     /** A pause of so many milliseconds (between sentences). */

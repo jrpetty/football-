@@ -369,6 +369,9 @@ public final class PaOrders {
                 a.equipBestWeapon();
                 return "I'll guard " + (i.item().equals("here") ? "this spot" : "the " + i.item()) + ". Nothing gets past me.";
             }
+            case THROW, HOOK, SMASH, CURE -> {                             // [pa38] its rod, throws, mace and the cure
+                return PaFieldOrders.now(p, a, i, look);
+            }
             case FIGHT -> {
                 PaCome.end(a);                                            // [pa33g] another order ends a come-here
                 LivingEntity target = null;
@@ -1045,12 +1048,10 @@ public final class PaOrders {
                 return null;
             }
             case FISH -> {
-                PaPlan.Step s = step("catch " + (n > 0 ? n : 5) + " fish", Kind.FISH, 30 * Math.max(1, n > 0 ? n : 5));
-                s.jobs.add(Job.fish(n > 0 ? n : 5));
-                s.count = "fish";
-                s.target = n > 0 ? n : 5;
-                out.add(s);
-                return null;
+                return PaFieldOrders.planFish(a, i, out);                   // [pa38] a real rod, from level 3
+            }
+            case SHELVES -> {
+                return PaFieldOrders.planShelves(a, out);                   // [pa38]
             }
             case BREED -> {
                 String lockB = locked(a, "tame");                    // [pa33d] animals at level 2

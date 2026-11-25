@@ -170,6 +170,8 @@ public final class PaLevels {
         new Skill("tame", "taming and breeding animals", 2),
         new Skill("pack3", "a third row in its pack", 3),
         new Skill("trade", "trading with villagers (your emeralds)", 3),
+        new Skill("fish", "fishing with a real rod and line", 3),                         // [pa38]
+        new Skill("throw", "snowball and egg distractions", 3),                           // [pa38]
         new Skill("shield", "blocking with a shield", 4),
         new Skill("lead", "reading a moving target's lead (the bow)", 4),
         new Skill("redstone", "levers, buttons and doors on order", 4),
@@ -181,9 +183,11 @@ public final class PaLevels {
         new Skill("upgrade", "crafting better tools and armour for itself", 6),
         new Skill("trick", "trick shots (long range, at a ping)", 7),
         new Skill("parkour", "sprint-jumping after you", 7),
+        new Skill("cure", "curing a zombie villager when asked (cheaper trades)", 7),     // [pa38]
         new Skill("clutch", "a water-bucket clutch on a long fall", 8),
         new Skill("elytra", "following you on elytra", 8),
         new Skill("pearl", "ender pearls", 9),
+        new Skill("mace", "the mace's fall-smash", 9),                                    // [pa38]
         new Skill("end", "the End: crystals and the dragon", 10));
 
     public static boolean has(int level, String id) {
@@ -235,6 +239,8 @@ public final class PaLevels {
             case "explore" -> 10;
             case "trick" -> 6;
             case "challenge" -> 8;
+            case "fish" -> 2;           // [pa38] a catch on its own rod
+            case "cure" -> 25;          // [pa38] a zombie villager cured
             default -> 0;
         };
     }

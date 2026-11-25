@@ -125,10 +125,15 @@ public class WithdrawGoal extends Goal {
             }
         }
         this.word = arg;
+        assistant.lastBarredChest = null;                           // [pa38]
         this.chestPos = anchor != null
             ? assistant.findChestWithNear(anchor, matcherFor(word), radius)
             : assistant.findChestWith(matcherFor(word), 24);
         if (chestPos == null) {
+            // [pa38] There is one, but not one it may take from on its own account: say so, and how to allow it.
+            BlockPos barred = anchor == null ? assistant.lastBarredChest : null;
+            String notAllowed = barred != null ? assistant.refusedTakeLine(barred, word) : null;
+            if (notAllowed != null) { finish(notAllowed.isEmpty() ? null : notAllowed); return; }
             finish("I can't find a chest with " + word + " "
                 + (anchor != null ? "in the stores." : "within 24 blocks."));
         }
@@ -144,7 +149,7 @@ public class WithdrawGoal extends Goal {
     }
 
     private void finish(String message) {
-        assistant.say(message);
+        if (message != null) assistant.say(message);                // [pa38] null: nothing to say
         assistant.pollJob();
         this.job = null;
         this.chestPos = null;
@@ -221,12 +226,13 @@ public class WithdrawGoal extends Goal {
         Predicate<ItemStack> match = matcherFor(word);
         int wanted = job.amount();
         int moved = 0;
+        boolean refused = false;                                    // [pa38] a match was there, but not its to take
         java.util.List<ItemStack> took = new java.util.ArrayList<>();
         for (int i = 0; i < container.getContainerSize() && moved < wanted; i++) {
             ItemStack slot = container.getItem(i);
             if (slot.isEmpty() || !match.test(slot)) continue;
             int take = Math.min(wanted - moved, Math.min(slot.getCount(), assistant.mayTake(chestPos, container, slot)));   // [pa36]
-            if (take <= 0) continue;
+            if (take <= 0) { refused = true; continue; }            // [pa38]
             ItemStack taking = slot.copyWithCount(take);
             ItemStack leftover = assistant.insertGiven(taking);
             int actuallyTaken = take - leftover.getCount();
@@ -248,8 +254,13 @@ public class WithdrawGoal extends Goal {
             com.jrpetty.mcassistant.entity.Storekeeping.withdrew((com.jrpetty.mcassistant.entity.VillageFolkEntity) assistant, keeper, took);
         }
         assistant.rememberChest(chestPos, container);
+        // [pa38] Not allowed to take from that chest (a Player AI Assistant on its own account): say so, and how to allow
+        // it, not "had none". An empty line: said a moment ago, so nothing this time.
+        String notAllowed = moved == 0 && refused ? assistant.refusedTakeLine(chestPos, word) : null;
+        if (notAllowed != null && notAllowed.isEmpty()) { finish(null); return; }
         finish(moved > 0
             ? "Got " + moved + " " + word + " from the chest."
+            : notAllowed != null ? notAllowed
             : "That chest had no " + word + " (or my pack is full).");
     }
 }

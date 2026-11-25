@@ -388,6 +388,8 @@ public final class PaLogiJob {
     }
 
     /** Get {@code n} more of the thing into its pack: the gatherer, the recipe book, a furnace, a hunt, or its player's other chests. */
+    private int fishes;                                                    // [pa38] fishing trips for a fill
+
     private void acquire(PlayerAssistantEntity a, Predicate<ItemStack> p, int n, int carried) {
         String item = o.item();
         GatherGoal.Kind k = o.src() == Src.CRAFT ? null : PaLogiItems.kind(item);
@@ -449,6 +451,14 @@ public final class PaLogiJob {
             run = new Run(others, this);
             run.noOverflow = true;
             phase = "take";
+            return;
+        }
+        // [pa38] fish: caught on its own rod (from level 3, with a rod), as many trips as it takes
+        if (fishes < 4 && p.test(new ItemStack(net.minecraft.world.item.Items.COD)) && PaLevels.has(a.veteranLevel(), "fish")
+                && (a.getMainHandItem().is(net.minecraft.world.item.Items.FISHING_ROD) || a.countMatching(s -> s.is(net.minecraft.world.item.Items.FISHING_ROD)) > 0)) {
+            fishes++;
+            a.enqueue(Job.fish(Math.max(1, Math.min(32, n))));
+            phase = "engine";
             return;
         }
         String target2 = CraftPlanner.matchTarget(item.startsWith("item:") ? item.substring(item.indexOf(':', 5) + 1) : item);
