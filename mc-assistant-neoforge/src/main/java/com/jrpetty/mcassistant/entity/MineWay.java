@@ -1,6 +1,7 @@
 package com.jrpetty.mcassistant.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -58,10 +59,34 @@ public final class MineWay {
         BlockPos site;
         long looked = -1, built = -1;
         boolean known, walkable = true, gaveUp, wasCut, open;
-        int crossings;
+        int crossings, stairs;
         final List<BridgeKit.Plan> plans = new ArrayList<>();
+        /** [tp46] Where the hand stands for each stair (its foot), by the plan's key. */
+        final Map<String, BlockPos> stands = new java.util.HashMap<>();
+        /** [tp46] Planks bought for the way alone (every plan's purse), and when the traders were last asked. */
+        final int[] purse = { 0 };
+        long boughtAt = -100000L;
+        /** [tp46] When the way was found cut off, and when it opened (the tests, the log). */
+        long cutAt = -1, openedAt = -1;
         String status = "";
         Way(BlockPos site) { this.site = site; }
+    }
+
+    /** [tp46] A water run with no more land than this between it and the next is one crossing over both (a lake's islands). */
+    static final int ISLAND = 8;
+    /** [tp46] The mine's bridge's deck at most this far over the water (the ramps take it up a higher bank). */
+    static final int RISE = 3;
+    /** [tp46] A bank too steep to walk, climbed by a stair: the highest, and its cost a block of height against a step of walk. */
+    static final int MOST_CLIMB = 24, CLIMB_COST = 10;
+    /** [tp46] Blocks of a stair laid (or cut) a visit: digging is quicker than carrying planks out over the water. */
+    static final int STAIR_PER_VISIT = 24;
+    /** [tp46] Ticks between asks of the traders for the bridge's planks. */
+    static final long BUY_EVERY = 600L;
+
+    /** [tp46] Tests and the soak: how long the way took to open (ticks from found cut to open), or -1. */
+    public static long openedAfterForTests(UUID village) {
+        Way w = WAYS.get(village);
+        return w == null || w.openedAt < 0 || w.cutAt < 0 ? -1 : w.openedAt - w.cutAt;
     }
 
     private static final Map<UUID, Way> WAYS = new ConcurrentHashMap<>();
@@ -160,7 +185,8 @@ public final class MineWay {
         if (w == null || !w.known) return "the way to the mine not looked at yet";
         if (w.walkable) return "the mine is reached on foot" + (w.wasCut ? " (over the town's new bridge" + (w.plans.isEmpty() ? ")" : ", its railings going on)") : "");
         if (w.gaveUp) return "no way on foot to the mine, and none the town can bridge";
-        return "the mine is cut off by water: the town is bridging it (" + w.crossings + " crossing(s)" + (w.status.isEmpty() ? "" : "; " + w.status) + ")";
+        return "the mine is cut off by water: the town is bridging it (" + w.crossings + " crossing(s)" + (w.stairs > 0 ? ", " + w.stairs + " stair(s)" : "")
+            + (w.status.isEmpty() ? "" : "; " + w.status) + ")";
     }
 
     /** Tests: looked at again on the next tick. */
@@ -200,9 +226,10 @@ public final class MineWay {
             if (!w.plans.isEmpty() && !allDown(level, w)) { w.walkable = false; return; }
             if (w.wasCut && !w.open) {
                 w.open = true;
+                w.openedAt = level.getGameTime();
                 BRIDGED.merge(id, 1, Integer::sum);
                 Villages.tell(id, level.getDayTime() / 24000L, "the way to the mine is open on foot, over the new bridge");
-                LOG.info("[MCA-MINEWAY] {}: the way to the mine is open", Villages.name(id));
+                LOG.info("[MCA-MINEWAY] {}: the way to the mine is open ({} ticks after it was found cut off)", Villages.name(id), w.cutAt < 0 ? -1 : w.openedAt - w.cutAt);
             }
             return;
         }
@@ -211,17 +238,23 @@ public final class MineWay {
         // crossed; what else the flood finds (the pithead's own diggings) the miners know their way round.
         if (w.plans.isEmpty() && w.wasCut) {
             w.walkable = true;
-            if (!w.open) { w.open = true; BRIDGED.merge(id, 1, Integer::sum); }
+            if (!w.open) { w.open = true; w.openedAt = level.getGameTime(); BRIDGED.merge(id, 1, Integer::sum); }
             return;
         }
         if (w.plans.isEmpty()) {
             // The cheapest way over: the walk from the heart to the pithead that crosses the least water (a river crossed
             // once on a short walk round, rather than four times on the straight line); the straight line if that cannot be had.
             List<int[]> line = route(level, v.centre(), w.site);
+            boolean routed = line != null;
             if (line == null) line = Roads.bresenham(v.centre().getX(), v.centre().getZ(), w.site.getX(), w.site.getZ());
             List<BridgeKit.Plan> drawn = new ArrayList<>();
-            for (int[] run : waterRuns(level, line)) {
-                BridgeKit.Span s = BridgeKit.spanAt(level, id, ROAD, line, run[0] + run[1] / 2, 1);
+            // [tp46] Along the cheapest walk (an old bridge's deck on it is ground, not water to bridge again), each stretch of
+            // open water, a lake's islands and all, is one crossing, its deck low over the water.
+            List<int[]> runs = routed ? openRuns(level, line) : waterRuns(level, line);
+            for (int[] run : runs) {
+                BridgeKit.Span s = routed && run[0] >= 1 && run[0] + run[1] < line.size()
+                    ? BridgeKit.spanOver(level, id, ROAD, line, run[0] - 1, run[0] + run[1], 1, RISE)
+                    : BridgeKit.spanAt(level, id, ROAD, line, run[0] + run[1] / 2, 1);
                 if (s == null) continue;
                 // The cheapest that serves: planks through (no log beams to wait on), unless the town drew it in timber already.
                 String fam = "b18.fam/" + ROAD + "/" + s.a() + "/w";
@@ -230,6 +263,27 @@ public final class MineWay {
                 BridgeKit.Plan p = BridgeKit.plan(level, v, id, ROAD, line, s, false, false);
                 if (p != null && !drawn.contains(p)) drawn.add(p);
             }
+            // [tp46] And each bank on it too steep to walk (a cliff at an old bridge's end, a bank high over a river): a stair cut
+            // up it in cobblestone, the cut stone back into the stores.
+            List<BridgeKit.Plan> stairs = new ArrayList<>();
+            java.util.Set<Long> cut = new java.util.HashSet<>();               // the ground a stair already climbs
+            if (routed) {
+                for (int i = 0; i + 1 < line.size(); i++) {
+                    int[] a = line.get(i), b = line.get(i + 1);
+                    if (cut.contains(BlockPos.asLong(a[0], 0, a[1])) || cut.contains(BlockPos.asLong(b[0], 0, b[1]))) continue;
+                    BlockPos pa = Visitors.surface(level, new BlockPos(a[0], 0, a[1])), pb = Visitors.surface(level, new BlockPos(b[0], 0, b[1]));
+                    if (Math.abs(pa.getY() - pb.getY()) <= 1 || wet(level, pa) || wet(level, pb)) continue;
+                    BlockPos low = pa.getY() < pb.getY() ? pa : pb, high = low == pa ? pb : pa;
+                    Direction up = Direction.getNearest(high.getX() - low.getX(), 0, high.getZ() - low.getZ());
+                    String key = ROAD + "/stair/" + low.getX() + "," + low.getZ();
+                    BridgeKit.Plan st = BridgeKit.bankStair(level, key, low, up, 1, BridgeKit.COBBLE);
+                    if (st == null) continue;
+                    for (BridgeKit.Piece pc : st.pieces) for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++)
+                        cut.add(BlockPos.asLong(pc.pos().getX() + dx, 0, pc.pos().getZ() + dz));
+                    stairs.add(st);
+                    w.stands.put(key, low);
+                }
+            }
             // Every deck across first, nearest the town first, and only then the railings, end posts and lights: a town with
             // four rivers between it and its mine had its first bridge's railings waiting on planks while the other three
             // decks waited on them (and its miners on all four).
@@ -237,26 +291,37 @@ public final class MineWay {
             for (BridgeKit.Plan p : drawn) {
                 List<BridgeKit.Piece> deck = new ArrayList<>(), rest = new ArrayList<>();
                 for (BridgeKit.Piece pc : p.pieces) ("REQ".indexOf(pc.kind()) >= 0 ? rest : deck).add(pc);
-                w.plans.add(new BridgeKit.Plan(p.key, p.shape, p.family, deck));
-                if (!rest.isEmpty()) finish.add(new BridgeKit.Plan(p.key, p.shape, p.family, rest));
+                BridgeKit.Plan d = new BridgeKit.Plan(p.key, p.shape, p.family, deck);
+                d.purse = w.purse;
+                w.plans.add(d);
+                if (!rest.isEmpty()) {
+                    BridgeKit.Plan r = new BridgeKit.Plan(p.key, p.shape, p.family, rest);
+                    r.purse = w.purse;
+                    finish.add(r);
+                }
             }
+            w.plans.addAll(stairs);
             w.plans.addAll(finish);
             w.crossings = drawn.size();
+            w.stairs = stairs.size();
             if (w.plans.isEmpty()) {
                 if (was) LOG.info("[MCA-MINEWAY] {}: no way on foot to the mine at {}, and no water on the way to bridge", Villages.name(id), w.site.toShortString());
                 w.gaveUp = true;
                 return;
             }
             w.wasCut = true;
-            Villages.tell(id, level.getDayTime() / 24000L, "the mine is cut off from the town by water: the town is to bridge it before its miners go out to it");
-            LOG.info("[MCA-MINEWAY] {}: the mine at {} cut off by water; {} crossing(s) to bridge", Villages.name(id), w.site.toShortString(), w.crossings);
+            if (w.cutAt < 0) w.cutAt = level.getGameTime();
+            Villages.tell(id, level.getDayTime() / 24000L, "the mine is cut off from the town" + (w.crossings > 0 ? " by water: the town is to bridge it" : ": the town is to cut a stair up the bank")
+                + " before its miners go out to it");
+            LOG.info("[MCA-MINEWAY] {}: the mine at {} cut off; {} crossing(s) to bridge, {} stair(s) to cut ({})", Villages.name(id), w.site.toShortString(), w.crossings, w.stairs,
+                routed ? "along the cheapest walk" : "on the straight line");
         } else if (allDown(level, w)) {
             // All of it down, and the flood still finds no way (a cliff past the river, the pithead dug about, a ramp onto
             // an island between two spans): the water is crossed, and that is what the town could do; the miners go as they
             // always did.
             w.walkable = true;
             w.plans.clear();
-            if (!w.open) { w.open = true; BRIDGED.merge(id, 1, Integer::sum); }
+            if (!w.open) { w.open = true; w.openedAt = level.getGameTime(); BRIDGED.merge(id, 1, Integer::sum); }
             LOG.info("[MCA-MINEWAY] {}: the bridge is down (the flood finds no way still, stopping at {}: left to the miners)", Villages.name(id), floodEnd);
         }
     }
@@ -295,22 +360,32 @@ public final class MineWay {
             skipDone(level, p);
             if (p.cursor >= p.pieces.size()) continue;
             BridgeKit.Shape s = p.shape();
-            // The gang stands on the bank at the town's end of it.
-            BlockPos a = dry(level, s, s.w0() - 2, -1), b = dry(level, s, s.w1() + 2, 1);
-            BlockPos stand = a.distSqr(v.centre()) <= b.distSqr(v.centre()) ? a : b;
-            if (!TownJobs.atWork(level, v, "mineway", stand, "building the bridge on the way to the mine", AssistantEntity.StationTask.HAUL)) {
+            BlockPos stand = w.stands.get(p.key);
+            boolean stair = stand != null;
+            if (stand == null) {
+                // The gang stands on the bank at the town's end of it.
+                BlockPos a = dry(level, s, s.w0() - 2, -1), b = dry(level, s, s.w1() + 2, 1);
+                stand = a.distSqr(v.centre()) <= b.distSqr(v.centre()) ? a : b;
+            }
+            // [tp46] The bridge's planks bought from the traders for it, ahead of the hand (what the stores and their logs cannot
+            // run to, over and above what the town's other works use): a town short of planks had its bridge "waiting for planks"
+            // for two days while its houses and carts took every plank that came in.
+            if (p.family().wood()) buyPlanks(level, v, w);
+            if (!TownJobs.atWork(level, v, "mineway", stand, stair ? "cutting the stair on the way to the mine" : "building the bridge on the way to the mine",
+                    AssistantEntity.StationTask.HAUL)) {
                 w.status = "waiting for a hand";
                 return;
             }
-            String out = BridgeKit.lay(level, v, p, PER_VISIT, false);
+            String out = BridgeKit.lay(level, v, p, stair ? STAIR_PER_VISIT : PER_VISIT, false);
             if (out == null) {
                 boolean deck = false;
                 for (BridgeKit.Piece pc : p.pieces) if (pc.kind() == 'D') { deck = true; break; }
                 w.status = "";
                 w.looked = -1;                                                 // looked at again at once
-                String what = deck ? "deck was laid across the water" : "railings and lights were finished";
-                Villages.tell(v.id(), level.getDayTime() / 24000L, "a " + p.family().name().toLowerCase() + " bridge's " + what + " on the way to the mine");
-                LOG.info("[MCA-MINEWAY] {}: a {} bridge's {} on the way to the mine", Villages.name(v.id()), p.family().name(), what);
+                String what = stair ? "stair was cut up the bank" : deck ? "deck was laid across the water" : "railings and lights were finished";
+                Villages.tell(v.id(), level.getDayTime() / 24000L, stair ? "a " + p.family().name().toLowerCase() + " " + what + " on the way to the mine"
+                    : "a " + p.family().name().toLowerCase() + " bridge's " + what + " on the way to the mine");
+                LOG.info("[MCA-MINEWAY] {}: a {} {} on the way to the mine", Villages.name(v.id()), p.family().name(), stair ? what : "bridge's " + what);
             } else {
                 w.status = BridgeKit.MORE.equals(out) ? "building" : "waiting for " + out;
             }
@@ -321,6 +396,57 @@ public final class MineWay {
     }
 
     // ------------------------------------------------------------------ the look
+
+    /** [tp46] Is the ground's top here water (the heightmap's: an old bridge's deck over it is ground)? */
+    private static boolean wet(ServerLevel level, BlockPos surface) {
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, surface.getX(), surface.getZ());
+        return level.getFluidState(new BlockPos(surface.getX(), y - 1, surface.getZ())).is(net.minecraft.tags.FluidTags.WATER);
+    }
+
+    /**
+     * [tp46] The runs of open water on the walk (an old bridge's deck over the water is ground), beyond the first few steps,
+     * three wide or more, with runs no more than {@link #ISLAND} of land apart (a lake's islands) taken as one: {start, length}.
+     */
+    static List<int[]> openRuns(ServerLevel level, List<int[]> line) {
+        List<int[]> raw = new ArrayList<>();
+        int run = 0, first = -1;
+        for (int i = 0; i <= line.size(); i++) {
+            boolean w = i < line.size() && i >= 2 && wet(level, new BlockPos(line.get(i)[0], 0, line.get(i)[1]));
+            if (w) { if (run == 0) first = i; run++; continue; }
+            if (run > 0) raw.add(new int[]{ first, run });
+            run = 0;
+        }
+        List<int[]> out = new ArrayList<>();
+        for (int[] r : raw) {
+            int[] last = out.isEmpty() ? null : out.get(out.size() - 1);
+            if (last != null && r[0] - (last[0] + last[1]) <= ISLAND) last[1] = r[0] + r[1] - last[0];
+            else out.add(new int[]{ r[0], r[1] });
+        }
+        out.removeIf(r -> r[1] < LEAST_WIDE);
+        return out;
+    }
+
+    /**
+     * [tp46] Planks for the way's bridges, bought from the traders into the way's own purse when the stores (with their logs
+     * sawn) cannot run to what is left to lay: never more than is wanted, at most a few lots a visit and a visit every half
+     * minute (Market.importFor: the town's price, a quarter of what the treasury has free).
+     */
+    private static void buyPlanks(ServerLevel level, Villages.Village v, Way w) {
+        long now = level.getGameTime();
+        if (now - w.boughtAt < BUY_EVERY && now >= w.boughtAt) return;
+        w.boughtAt = now;
+        int want = 0;
+        for (BridgeKit.Plan p : w.plans) want += BridgeKit.planksWanted(level, p);
+        int have = w.purse[0] + Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.PLANKS))
+            + 4 * Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.LOGS)) / 2;   // (half the logs: the houses want theirs)
+        int shortBy = want - have;
+        if (shortBy <= 0) return;
+        int got = Market.importFor(level, v, level.getDayTime() / 24000L, net.minecraft.world.item.Items.SPRUCE_PLANKS, shortBy, "the bridge on the way to the mine", false);
+        if (got > 0) {
+            w.purse[0] += got;
+            LOG.info("[MCA-MINEWAY] {}: bought {} planks for the bridge on the way to the mine ({} wanted, {} to hand)", Villages.name(v.id()), got, want, have);
+        }
+    }
 
     /** The runs of water three wide or more on this line, beyond the first few steps: {start index, length}. */
     static List<int[]> waterRuns(ServerLevel level, List<int[]> line) {
@@ -420,6 +546,7 @@ public final class MineWay {
         int n = w * h;
         int[] top = new int[n];
         byte[] kind = new byte[n];                                       // 0 land, 1 water, 2 neither (lava, a fence, a wall)
+        boolean[] earth = new boolean[n];                                // [tp46] the world's own ground (a bank a stair may be cut up)
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         for (int i = 0; i < w; i++) {
             for (int k = 0; k < h; k++) {
@@ -430,6 +557,7 @@ public final class MineWay {
                 BlockState st = level.getBlockState(m);
                 if (st.getFluidState().is(net.minecraft.tags.FluidTags.WATER)) kind[i * h + k] = 1;
                 else if (!st.getFluidState().isEmpty() || st.is(net.minecraft.tags.BlockTags.FENCES) || st.is(net.minecraft.tags.BlockTags.WALLS)) kind[i * h + k] = 2;
+                else earth[i * h + k] = BridgeKit.earth(st);
             }
         }
         boolean[] ok = new boolean[n];
@@ -457,8 +585,11 @@ public final class MineWay {
                 int nb = ni * h + nk;
                 if (kind[nb] == 2) continue;
                 int dy = Math.abs(top[nb] - top[c]);
-                if (dy > (kind[nb] == 1 || kind[c] == 1 ? 2 : 1)) continue;
-                int nd = dist[c] + (kind[nb] == 1 ? WATER_COST : 1);
+                int nd;
+                if (dy <= (kind[nb] == 1 || kind[c] == 1 ? 2 : 1)) nd = dist[c] + (kind[nb] == 1 ? WATER_COST : 1);
+                // [tp46] A bank of the world's own ground too steep to walk: a stair cut up it, at a cost a block of height.
+                else if (kind[nb] == 0 && kind[c] == 0 && dy <= MOST_CLIMB && (top[nb] > top[c] ? earth[nb] : earth[c])) nd = dist[c] + CLIMB_COST * dy;
+                else continue;
                 if (nd >= dist[nb]) continue;
                 dist[nb] = nd;
                 prev[nb] = c;
