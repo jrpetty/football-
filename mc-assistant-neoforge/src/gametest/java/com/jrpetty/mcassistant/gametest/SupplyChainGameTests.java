@@ -1267,7 +1267,9 @@ public class SupplyChainGameTests {
             MineWorks.tick(level, Villages.get(v));                         // the works looked at again
             com.jrpetty.mcassistant.entity.MineLift.watchForTests(level, v);
             com.jrpetty.mcassistant.entity.MineLift.Stop near = null;
-            for (com.jrpetty.mcassistant.entity.MineLift.Stop s : stops) if (atStop(m, s)) near = s;
+            // [tp43] On the stop's landing: put out at its corner, it may have stepped to its place in the cage's queue since.
+            for (com.jrpetty.mcassistant.entity.MineLift.Stop s : stops)
+                if (m.blockPosition().getY() == s.y() && m.blockPosition().distManhattan(s.board()) <= 4) near = s;
             Kit.log("[VT] sc18 after: fell to Y" + (int) fell + ", then at " + m.blockPosition().toShortString() + " (a stop " + (near == null ? "none" : near.name())
                 + "); health " + hp + " -> " + m.getHealth());
             helper.assertTrue(m.isAlive() && m.getHealth() >= hp - 0.01F, "unhurt: " + m.getHealth());
