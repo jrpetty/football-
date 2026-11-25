@@ -295,4 +295,113 @@ public class BlinkGameTests {
             else helper.fail("jumps in the player's sight over a day and a night: " + seen);
         });
     }
+
+    // ============================================================ bk04 / bk05: before the cage
+
+    /** bk04: a young mine, its shaft not yet begun (no headframe, no cage): six miners sink it and work it by the stair. */
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "bk04_young_mine")
+    public static void bk04_young_mine(GameTestHelper helper) {
+        beforeTheCage(helper, "bk04", 6752000, 6, 0, 5000);
+    }
+
+    /** bk05: the shaft sunk to the coal level, the headframe up but no cage yet (the works under forty deep): eight miners at a
+     *  shift change at the pithead, down the stair and up it again at dusk. */
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "bk05_headframe_no_cage")
+    public static void bk05_headframe_no_cage(GameTestHelper helper) {
+        beforeTheCage(helper, "bk05", 6756000, 8, -1, 5000);
+    }
+
+    /**
+     * A mine with no cage, a player standing by the shaft's head: miners at a shift change at the pithead. {@code sinkTo} 0:
+     * not begun; -1: sunk to the coal level and its room cut, the headframe up. Not one jump in sight; never a knot of more
+     * than four standing at the stair's head; the shaft sunk on (bk04) or every miner down at work (bk05); up again at dusk.
+     */
+    static void beforeTheCage(GameTestHelper helper, String label, int x, int n, int sinkTo, int dayTicks) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, x, n);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        MineLift.forgetForTests(v);
+        com.jrpetty.mcassistant.entity.MineRoof.resetForTests();
+        int coal = com.jrpetty.mcassistant.entity.MineWorks.levelY(level, v, com.jrpetty.mcassistant.entity.MineWorks.COAL);
+        Kit.hold(level, r.sx(), r.sz(), 48);
+        MineWorksGameTests.tower(r, -59);
+        MineWorksGameTests.bed(r, coal, 32, net.minecraft.world.level.block.Blocks.COAL_ORE, 80, 4401L);
+        if (sinkTo < 0) {
+            com.jrpetty.mcassistant.entity.MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - coal) / 3) + 1, null);
+            com.jrpetty.mcassistant.entity.MineWorks.roomForTests(level, v, com.jrpetty.mcassistant.entity.MineWorks.COAL);
+            com.jrpetty.mcassistant.entity.MineWorks.tick(level, com.jrpetty.mcassistant.entity.Villages.get(v));
+        }
+        int[] shaft0 = com.jrpetty.mcassistant.entity.MineWorks.shaftForTests(level, v);
+        MineDemand.stockForTests(v, MineWorksGameTests.plenty());
+        for (int i = 0; i < n; i++) {
+            VillageFolkEntity m = r.miners().get(i);
+            MineWorksGameTests.kit(m, Items.IRON_PICKAXE);
+            MineWorksGameTests.zone(r, m, coal);
+            int dx = -5 + (i % 4) * 3, dz = i < 4 ? -5 : 5;
+            m.teleportTo(r.sx() + dx + 0.5, MineWorksGameTests.TOP, r.sz() + dz + 0.5);
+        }
+        ServerPlayer you = watcher(helper, level, r.sx() + 5.5, MineWorksGameTests.TOP + 1, r.sz() - 5.5);
+        Kit.log("[VT] " + label + " the works: sunk " + shaft0[0] + " steps, headframe " + (shaft0[4] == 1) + ", a cage " + MineLift.has(v) + "; coal level Y" + coal);
+        WorksGoal.resetCountsForTests();
+        Blink.reset();
+        Blink.setOn(true);
+        MineWorksGameTests.fast(level);
+        level.setDayTime(1000);
+        final int[] tick = { 0 }, crowd = { 0 }, dusk = { -1 };
+        final int[] downAt = new int[n], upAt = new int[n];
+        java.util.Arrays.fill(downAt, -1);
+        java.util.Arrays.fill(upAt, -1);
+        BlockPos head = new BlockPos(r.sx() - 2, MineWorksGameTests.TOP, r.sz() - 2);      // the stair's head (its first step)
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            int knot = 0;
+            for (int i = 0; i < n; i++) {
+                VillageFolkEntity m = r.miners().get(i);
+                if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+                if (dusk[0] < 0) {
+                    if (tick[0] % 100 == 0) m.removeMatching(st -> !st.is(net.minecraft.tags.ItemTags.PICKAXES) && !st.is(Items.TORCH) && !st.is(Items.BREAD)
+                        && !st.is(Items.COBBLESTONE), 64 * 36);
+                    if (m.peekJob() != null && m.peekJob().type() != com.jrpetty.mcassistant.entity.Job.Type.MINE) m.clearQueue();
+                    MineWorksGameTests.keepAtIt(r, m);
+                }
+                boolean below = m.getY() <= MineWorksGameTests.TOP - 4, up = m.getY() >= MineWorksGameTests.TOP - 1;
+                if (below && downAt[i] < 0) downAt[i] = tick[0];
+                if (dusk[0] > 0 && up && upAt[i] < 0) upAt[i] = tick[0];
+                if (up && m.position().distanceTo(net.minecraft.world.phys.Vec3.atBottomCenterOf(head)) <= 2.5 && m.getDeltaMovement().horizontalDistanceSqr() < 0.003) knot++;
+            }
+            if (tick[0] > 100 && knot > crowd[0]) crowd[0] = knot;
+            if (tick[0] % 500 == 0) {
+                int[] sh = com.jrpetty.mcassistant.entity.MineWorks.shaftForTests(level, v);
+                Kit.log("[VT] " + label + " @" + tick[0] + ": sunk " + sh[0] + ", headframe " + (sh[4] == 1) + ", knot at the stair head now " + knot + " (most " + crowd[0]
+                    + "), seen jumps " + Blink.seenJumps() + ", leads " + WorksGoal.LEADS);
+                if (tick[0] % 1500 == 0) for (VillageFolkEntity m : r.miners()) Kit.log("[VT] " + label + "   " + m.getAssistantName() + " at " + m.blockPosition().toShortString()
+                    + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg()) + " works " + WorksGoal.stateForTests(m) + " | " + m.brainNoteForBooks());
+            }
+            if (dusk[0] < 0 && tick[0] >= dayTicks) {
+                dusk[0] = tick[0];
+                level.setDayTime(12100);
+                Kit.log("[VT] " + label + " dusk at " + tick[0]);
+            }
+            boolean allUp = dusk[0] > 0 && java.util.Arrays.stream(upAt).allMatch(t -> t > 0 || false);
+            if (!(allUp || dusk[0] > 0 && tick[0] - dusk[0] > 3000)) return false;
+            int[] sh = com.jrpetty.mcassistant.entity.MineWorks.shaftForTests(level, v);
+            int wentDown = (int) java.util.Arrays.stream(downAt).filter(t -> t > 0).count();
+            Kit.log("[VT] " + label + " jumps:\n" + Blink.report());
+            for (String l : Blink.seenLines()) Kit.log("[VT] " + label + " seen: " + l);
+            Kit.log("[VT] " + label + " sunk " + shaft0[0] + " -> " + sh[0] + ", headframe " + (sh[4] == 1) + "; went below " + wentDown + " of " + n + " "
+                + java.util.Arrays.toString(downAt) + "; up after dusk " + java.util.Arrays.toString(upAt) + "; most at the stair head at once " + crowd[0]
+                + "; leads " + WorksGoal.LEADS + " (digs " + WorksGoal.LEAD_DIGS + "), hops " + WorksGoal.TELEPORTS);
+            Kit.Expect ok = new Kit.Expect();
+            ok.that(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenJumps());
+            ok.that(crowd[0] <= 4, "never more than four stood at the stair's head: " + crowd[0]);
+            if (sinkTo == 0) ok.that(sh[0] >= shaft0[0] + 4, "the shaft sunk on: " + shaft0[0] + " -> " + sh[0]);
+            else ok.that(wentDown == n, "every miner down the stair at work: " + wentDown + " of " + n);
+            ok.that(java.util.Arrays.stream(upAt).filter(t -> t > 0).count() >= n - 1, "up at the pithead again after dusk: " + java.util.Arrays.toString(upAt));
+            letGo(level, you);
+            level.setDayTime(1000);
+            helper.assertTrue(ok.clean(), ok.summary());
+            MineWorksGameTests.done(helper);
+            return true;
+        });
+    }
 }

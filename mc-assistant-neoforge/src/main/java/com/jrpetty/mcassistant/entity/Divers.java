@@ -1375,8 +1375,12 @@ public final class Divers {
         back = back.normalize().scale(-1.1);
         if (d.job == Job.RESCUE && e instanceof VillageFolkEntity who) {
             double y = Math.max(f.getY(), DiverSwim.surfaceOver(level, f.blockPosition()).y - 0.6);
+            // [tp43] Drawn to its rescuer's back at a swimmer's pace, not snapped there (the diver turning swung it round
+            // two blocks at a time before).
+            Vec3 want = new Vec3(f.getX() + back.x, y, f.getZ() + back.z), here = who.position();
+            if (here.distanceTo(want) > 0.45) want = here.add(want.subtract(here).normalize().scale(0.45));
             Blink.safety(who, "diver: a drowning folk towed");               // [tp43] held by its rescuer
-            who.moveTo(f.getX() + back.x, y, f.getZ() + back.z, who.getYRot(), 0.0F);
+            who.moveTo(want.x, want.y, want.z, who.getYRot(), 0.0F);
             who.setDeltaMovement(Vec3.ZERO);
             who.getNavigation().stop();
         } else if (d.job == Job.TOW && e instanceof Boat b) {
