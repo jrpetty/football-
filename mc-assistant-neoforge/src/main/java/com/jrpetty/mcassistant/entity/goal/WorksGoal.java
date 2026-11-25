@@ -536,6 +536,15 @@ public class WorksGoal extends Goal {
             LEAD_STROLLS++;
             return false;
         }
+        // Below the spot, close under it (fallen down a lip or into a pit beside the stair): it builds itself up a block at
+        // a time out of the cobblestone in its pack (Footholds, taken up again after), and walks on from the top.
+        Vec3 flat = new Vec3(dest.getX() + 0.5 - a.getX(), 0, dest.getZ() + 0.5 - a.getZ());
+        if (dest.getY() > a.getY() + 1.2 && flat.length() <= 4.5 && com.jrpetty.mcassistant.entity.Footholds.rise(a, com.jrpetty.mcassistant.entity.Footholds.Purpose.ESCAPE)) {
+            stuck = 150;                                                        // the next block in half a second
+            replans = 0;
+            LEAD_RISES++;
+            return false;
+        }
         // The spot a few blocks off and the way to it shut (a block it sealed a spring with, a lip of rock): it digs through
         // (its own works), a block or two a look, and steps on.
         if (a.position().distanceTo(Vec3.atBottomCenterOf(dest)) <= 4.5 && a.level() instanceof ServerLevel dl && a instanceof VillageFolkEntity f2) {
@@ -592,7 +601,7 @@ public class WorksGoal extends Goal {
     }
 
     /** [tp43] Stuck walks led on (or re-planned) in a player's sight instead of put there. */
-    public static volatile int LEADS, LEAD_STROLLS, LEAD_REPLANS, LEAD_DIGS;
+    public static volatile int LEADS, LEAD_STROLLS, LEAD_REPLANS, LEAD_DIGS, LEAD_RISES;
 
     /**
      * [fixes14] Is this spot a short straight walk from where it stands, every block of the way open two high (at its
@@ -1028,6 +1037,7 @@ public class WorksGoal extends Goal {
         LEAD_STROLLS = 0;
         LEAD_REPLANS = 0;
         LEAD_DIGS = 0;
+        LEAD_RISES = 0;
         BROKEN = 0;
         SEALED = 0;
         LEFT = 0;
