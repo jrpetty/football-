@@ -90,7 +90,10 @@ public final class MineWay {
                 f.brain("the mine is cut off by water: that errand waits for the bridge");
             }
             BlockPos to = f.getNavigation().getTargetPos();
-            if (to != null && near(to, w.site, 48) && !f.getNavigation().isDone()) f.getNavigation().stop();
+            if (to != null && near(to, w.site, 48) && !f.getNavigation().isDone()) {
+                f.getNavigation().stop();
+                if (f.peekJob() != null) f.clearQueue();                  // the errand that sent it (a load for the pithead's chest)
+            }
         }
         // A miner's walk that would take it into the water (round to its plot by some way of its own, or home from the mine
         // over the water at a shift's end): not while it waits; one at the mine stays on its side till the bridge is done.

@@ -476,7 +476,6 @@ public final class MineLift {
                     if (e instanceof ServerPlayer) continue;
                     // In the cage, or on its way in over the well's edge (left there it would drop down the well): it rides.
                     if (e != null && e.isAlive() && e.position().subtract(well).horizontalDistance() <= 1.3 && Math.abs(e.getY() - well.y) <= 1.0) continue;
-                    if (e != null && e.isAlive() && !e.onGround() && Math.abs(e.getY() - well.y) <= 1.0) continue;
                     STATE.remove(a.who);
                     l.glideFrom.remove(a.who);
                     it.remove();
@@ -527,10 +526,20 @@ public final class MineLift {
         if (Math.abs(e.getY() - from.y()) > (e instanceof ServerPlayer ? 2.5 : 1.5)) return false;
         if (e instanceof ServerPlayer) return true;
         Vec3 b = Vec3.atBottomCenterOf(from.board());
-        if (e.position().subtract(b).horizontalDistance() <= 2.5) return true;
-        if (!(e instanceof Mob m)) return false;
-        net.minecraft.world.level.pathfinder.Path path = m.getNavigation().createPath(from.board(), 1);
-        return path != null && path.canReach() && path.getNodeCount() <= 12;
+        if (e.position().subtract(b).horizontalDistance() <= 1.5) return true;
+        // The walk in goes straight from where it stands to the board (LiftGlide): the way there clear at its head and its
+        // feet (a stair or a slab underfoot is no wall), or it would be walked through the rock.
+        Vec3 p = e.position();
+        double len = p.subtract(b).horizontalDistance();
+        if (len > 6.0) return false;
+        for (double t = 0.25; t < len; t += 0.25) {
+            Vec3 q = p.add(b.subtract(p).scale(t / len));
+            BlockPos feet = BlockPos.containing(q.x, from.y() + 0.1, q.z), head = feet.above();
+            if (!e.level().getBlockState(head).getCollisionShape(e.level(), head).isEmpty()) return false;
+            net.minecraft.world.phys.shapes.VoxelShape fs = e.level().getBlockState(feet).getCollisionShape(e.level(), feet);
+            if (!fs.isEmpty() && fs.max(net.minecraft.core.Direction.Axis.Y) > 0.6) return false;
+        }
+        return true;
     }
 
     /** The riders put out at their stop and the trip ended. */
