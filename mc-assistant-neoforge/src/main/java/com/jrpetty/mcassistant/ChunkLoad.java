@@ -150,6 +150,7 @@ public final class ChunkLoad {
                 for (int dz = -radius; dz <= radius; dz++) {
                     Key key = new Key(level.dimension(), owner, ChunkPos.asLong(cx + dx, cz + dz));
                     FORCED.remove(key);
+                    com.jrpetty.mcassistant.entity.TownLod.unpark(owner, key.chunk());   // [soak40] nor kept for a sleeping town's waking
                     Want w = WANTED.remove(key);
                     if (w != null) dropAsk(w);
                     CONTROLLER.forceChunk(level, owner, cx + dx, cz + dz, false, true);
@@ -157,6 +158,7 @@ public final class ChunkLoad {
             }
             return;
         }
+        com.jrpetty.mcassistant.entity.SleepClaims.asking(owner);   // [soak40] whose folk asks, for a sleeping town's sorting
         // The centre first, then outward: the heart of a village is awake in a
         // moment and its far fields follow.
         List<int[]> cells = new ArrayList<>((2 * radius + 1) * (2 * radius + 1));
@@ -179,6 +181,7 @@ public final class ChunkLoad {
         Key key = new Key(level.dimension(), owner, ChunkPos.asLong(cx, cz));
         if (!on) {
             FORCED.remove(key);
+            com.jrpetty.mcassistant.entity.TownLod.unpark(owner, key.chunk());   // [soak40]
             Want w = WANTED.remove(key);
             if (w != null) dropAsk(w);
             CONTROLLER.forceChunk(level, owner, cx, cz, false, true);
@@ -197,6 +200,7 @@ public final class ChunkLoad {
     /** [pa33g] Let go of everything held for owners that match (in any world): tickets left from an earlier session. */
     public static int releaseOwners(net.minecraft.server.MinecraftServer server, java.util.function.Predicate<UUID> which) {
         int n = 0;
+        com.jrpetty.mcassistant.entity.TownLod.unparkOwners(which);   // [soak40]
         for (Iterator<Key> it = FORCED.iterator(); it.hasNext(); ) {
             Key k = it.next();
             if (!which.test(k.owner())) continue;

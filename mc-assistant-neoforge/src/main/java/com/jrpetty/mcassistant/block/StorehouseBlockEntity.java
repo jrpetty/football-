@@ -160,22 +160,39 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
         int before = used();
         List<ItemStack> all = takeAll();
         List<ItemStack> merged = new ArrayList<>();
+        // [soak40] Like with like by a lookup, not by setting each stack against every stack kept so far: a city's
+        // storehouse of a few thousand stacks (hundreds of them marked, each its own) took two seconds a tidy, every
+        // ten seconds after a big delivery, and stalled the whole server. There is only ever one part stack of a kind
+        // to top up (a new stack is only begun when the ones before are full), so that one is all the map keeps.
+        java.util.Map<Like, ItemStack> open = new java.util.HashMap<>();
         for (ItemStack s : all) {
             ItemStack left = s;
-            for (ItemStack m : merged) {
-                if (left.isEmpty()) break;
+            Like like = new Like(left);
+            ItemStack m = open.get(like);
+            if (m != null) {
                 int cap = Math.min(m.getMaxStackSize(), getMaxStackSize());
-                if (ItemStack.isSameItemSameComponents(m, left) && m.getCount() < cap) {
-                    int move = Math.min(cap - m.getCount(), left.getCount());
+                int move = Math.min(cap - m.getCount(), left.getCount());
+                if (move > 0) {
                     m.grow(move);
                     left.shrink(move);
                 }
+                if (m.getCount() >= cap) open.remove(like);
             }
-            if (!left.isEmpty()) merged.add(left);
+            if (!left.isEmpty()) {
+                merged.add(left);
+                if (left.getCount() < Math.min(left.getMaxStackSize(), getMaxStackSize())) open.put(like, left);
+            }
+        }
+        // [soak40] Each stack's kind and name worked out once, not again at every comparison of the sort.
+        java.util.Map<net.minecraft.world.item.Item, String> names = new java.util.HashMap<>();
+        java.util.Map<ItemStack, Integer> kinds = new java.util.IdentityHashMap<>();
+        for (ItemStack s : merged) {
+            kinds.put(s, com.jrpetty.mcassistant.entity.Stacking.kind(s));
+            names.computeIfAbsent(s.getItem(), it -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).toString());
         }
         merged.sort(java.util.Comparator
-            .comparingInt(com.jrpetty.mcassistant.entity.Stacking::kind)
-            .thenComparing((ItemStack s) -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).toString())
+            .comparingInt((ItemStack s) -> kinds.get(s))
+            .thenComparing((ItemStack s) -> names.get(s.getItem()))
             .thenComparing(s -> -s.getCount()));
         NonNullList<ItemStack> into = items();
         while (into.size() < merged.size()) into.add(ItemStack.EMPTY);
@@ -183,6 +200,27 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
         roomToSpare();
         setChanged();
         return new int[]{ before, merged.size() };
+    }
+
+    /** [soak40] A stack's kind for the tidy's lookup: the same item with the same components. */
+    private static final class Like {
+        final ItemStack stack;
+        final int hash;
+
+        Like(ItemStack stack) {
+            this.stack = stack.copyWithCount(1);
+            this.hash = ItemStack.hashItemAndComponents(stack);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Like l && l.hash == hash && ItemStack.isSameItemSameComponents(l.stack, stack);
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
     }
 
     // ------------------------------------------------------------------ Container

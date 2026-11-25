@@ -33,7 +33,33 @@ public final class SleepClaims {
     static UUID townOf(ServerLevel level, UUID owner) {
         if (Villages.get(owner) != null) return owner;
         if (level.getEntity(owner) instanceof VillageFolkEntity f) return f.ownerId();
+        UUID by = ASKED_BY.get(owner);                                   // [soak40] a trip's window: the town of the folk that asked
+        if (by != null && Villages.get(by) != null) return by;
         return null;
+    }
+
+    /**
+     * [soak40] The towns whose folk asked for a request under a name of its own (a caravan's, a scout's, a job seeker's
+     * window as it walks, its own station while it is not loaded): kept as the request is made, from the folk whose tick
+     * is making it (Accounts.actor). Such a request could not be put to anybody, and went with the town whose ground it
+     * lay on: a caravan of an awake town crossing a sleeping colony's ground had its window let go (or parked for the
+     * colony's waking) under it, and stood frozen in an unticked chunk, its courier's runs undone, for days (the soak's
+     * Tybalt, a hundred and forty blocks out, on day forty-six).
+     */
+    private static final java.util.Map<UUID, UUID> ASKED_BY = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** [soak40] ChunkLoad's word that this owner is asking for chunks now: whose folk asks, if a folk's tick is asking. */
+    public static void asking(UUID owner) {
+        VillageFolkEntity f = Accounts.actor();
+        UUID town = f == null ? null : f.ownerId();
+        if (town == null || town.equals(owner) || Villages.get(owner) != null) return;
+        if (ASKED_BY.size() > 20000) ASKED_BY.clear();
+        ASKED_BY.put(owner, town);
+    }
+
+    /** [soak40] Forget who asked (a world closing). */
+    static void reset() {
+        ASKED_BY.clear();
     }
 
     /** Of the towns in this level whose ground covers this chunk, the one whose heart is nearest; null for none. */

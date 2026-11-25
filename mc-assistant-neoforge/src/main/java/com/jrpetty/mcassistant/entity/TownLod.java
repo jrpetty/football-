@@ -105,7 +105,9 @@ public final class TownLod {
         final Map<String, Double> pending = new HashMap<>();
         double coinDue, birthsDue;
         long sleptAt;
-        final List<Parked> parked = new ArrayList<>();
+        // [soak40] A set: a request is parked once, found and let go of by its key (a list of twenty thousand was walked
+        // end to end for every chunk asked for while the town slept).
+        final java.util.LinkedHashSet<Parked> parked = new java.util.LinkedHashSet<>();
         // Woken: the goods and children still to be put into the world, from when.
         boolean applying;
         long wokeAt;
@@ -147,8 +149,13 @@ public final class TownLod {
     @Nullable private static Lod forced;
 
     /** Forget every town's level (a world closing, or a test). */
+    /** [soak40] The sleeping towns put back from their books since the world opened. */
+    private static boolean rollRestored;
+
     public static void reset() {
+        if (com.jrpetty.mcassistant.SessionReset.opening()) rollRestored = false;   // [soak40] a world opening, not a test's reset
         TOWNS.clear();
+        SleepClaims.reset();                                             // [soak40]
         TownScheduler.reset();
         asleep = 0;
         liveInTests = false;
@@ -234,6 +241,10 @@ public final class TownLod {
     }
 
     private static void tick(MinecraftServer server) {
+        if (!rollRestored) {                                             // [soak40] the towns asleep at the last stop, back on the map
+            rollRestored = true;
+            TownRoll.restore(server);
+        }
         if (!dirtyParked.isEmpty()) {
             for (UUID id : dirtyParked) {
                 Town t = TOWNS.get(id);
@@ -382,6 +393,7 @@ public final class TownLod {
         t.parked.addAll(let);
         save(v.id(), t);
         saveParked(v.id(), t);
+        TownRoll.keep(v);                                                // [soak40] on the map again after a restart
         LOG.info("[MCA-LOD] {} sleeps (nobody near): {} forced chunks let go, its stores counted at {} kinds",
             Villages.name(v.id()), let.size(), t.held.size());
     }
@@ -403,6 +415,7 @@ public final class TownLod {
         t.counts.clear();
         Ledger.forget(v.id(), AWAY_NOTE);
         Ledger.forget(v.id(), PARKED_NOTE);
+        TownRoll.forget(v.id());                                         // [soak40]
         LOG.info("[MCA-LOD] {} wakes after {} days: {} chunks asked for again, {} kinds of goods and {} children to settle",
             Villages.name(v.id()), String.format(Locale.ROOT, "%.2f", (t.wokeAt - t.sleptAt) / 24000.0), parked,
             t.pending.size(), (int) t.birthsDue);
@@ -424,11 +437,40 @@ public final class TownLod {
         Town sleeper = asleepId == null ? null : TOWNS.get(asleepId);
         if (sleeper == null) return false;
         Parked p = new Parked(owner, chunk);
-        if (!sleeper.parked.contains(p)) {
-            sleeper.parked.add(p);
-            dirtyParked.add(asleepId);
-        }
+        if (sleeper.parked.add(p)) dirtyParked.add(asleepId);
         return true;
+    }
+
+    /**
+     * [soak40] ChunkLoad's word that a request is let go of (a traveller's window moved on, a trip over, a plot left): a
+     * sleeping town that kept it for its waking forgets it too. Before, it was kept all the same, forced again under its
+     * owner's name when the town woke — where nobody would ever let go of it, the owner long gone on — and let go and
+     * kept again at the next sleep: every window a caravan, a job seeker or a cave dweller opened on a sleeping town's
+     * ground, for good. Over four hundred days the towns' forced chunks grew from a few hundred to thirty thousand.
+     */
+    public static void unpark(UUID owner, long chunk) {
+        if (asleep == 0) return;
+        Parked p = new Parked(owner, chunk);
+        for (Map.Entry<UUID, Town> e : TOWNS.entrySet()) {
+            if (e.getValue().lod == Lod.AWAY && e.getValue().parked.remove(p)) dirtyParked.add(e.getKey());
+        }
+    }
+
+    /** [soak40] As unpark, for every request kept for owners that match (ChunkLoad.releaseOwners). */
+    public static void unparkOwners(java.util.function.Predicate<UUID> which) {
+        if (asleep == 0) return;
+        for (Map.Entry<UUID, Town> e : TOWNS.entrySet()) {
+            if (e.getValue().lod == Lod.AWAY && e.getValue().parked.removeIf(p -> which.test(p.owner()))) dirtyParked.add(e.getKey());
+        }
+    }
+
+    /** [soak40] Tests: the requests a sleeping town keeps for its waking from this owner. */
+    public static int parkedForTests(UUID village, UUID owner) {
+        Town t = TOWNS.get(village);
+        if (t == null) return 0;
+        int n = 0;
+        for (Parked p : t.parked) if (p.owner().equals(owner)) n++;
+        return n;
     }
 
     // ------------------------------------------------------------------ the step (asleep)
@@ -848,7 +890,7 @@ public final class TownLod {
      * of forty folk parked some two thousand, and the old note (an owner's id before every chunk) ran past what one saved
      * string holds and was lost on every save: Ledger now keeps long notes in pieces, and this one is a third the size.
      */
-    static String writeParked(List<Parked> parked) {
+    static String writeParked(java.util.Collection<Parked> parked) {
         Map<UUID, StringBuilder> by = new java.util.LinkedHashMap<>();
         for (Parked p : parked) by.computeIfAbsent(p.owner(), k -> new StringBuilder(k.toString())).append('@').append(p.chunk());
         StringBuilder out = new StringBuilder();

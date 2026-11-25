@@ -442,6 +442,43 @@ public class StorehouseGameTests {
     }
 
     /**
+     * [soak40] A city's storehouse tidied in good time: six thousand stacks — three thousand part stacks of
+     * cobblestone and three thousand loaves each marked as its own (named, so none may join another) —
+     * come out as whole cobblestone stacks and every marked loaf on its own, nothing lost, well inside a tick. Set
+     * each against every stack kept so far, this took seconds, and a big town tidied every ten seconds.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "sh_st07_big_tidy")
+    public static void st07_big_tidy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x = 9_410_000, z = 40000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        BlockPos heart = Kit.surface(level, x, z);
+        StorehouseBlockEntity store = storehouse(helper, level, heart, 4, 4);
+        for (int i = 0; i < 3000; i++) {
+            store.setItem(2 * i, new ItemStack(Items.COBBLESTONE, 10));
+            ItemStack loaf = new ItemStack(Items.BREAD, 1);
+            loaf.set(DataComponents.CUSTOM_NAME, Component.literal("Loaf " + i));
+            store.setItem(2 * i + 1, loaf);
+        }
+        helper.assertTrue(store.used() == 6000, "six thousand stacks in: " + store.used());
+        long t0 = System.nanoTime();
+        int[] r = store.tidy();
+        long ms = (System.nanoTime() - t0) / 1_000_000L;
+        int whole = 30000 / 64, part = 30000 % 64;
+        Kit.log("st07 tidied " + r[0] + " -> " + r[1] + " stacks in " + ms + " ms; cobblestone " + count(store, Items.COBBLESTONE)
+            + " in " + stacks(store, Items.COBBLESTONE) + ", bread " + count(store, Items.BREAD) + " in " + stacks(store, Items.BREAD));
+        helper.assertTrue(count(store, Items.COBBLESTONE) == 30000 && stacks(store, Items.COBBLESTONE) == whole + (part > 0 ? 1 : 0),
+            "the cobblestone whole and none lost: " + count(store, Items.COBBLESTONE) + " in " + stacks(store, Items.COBBLESTONE));
+        helper.assertTrue(count(store, Items.BREAD) == 3000 && stacks(store, Items.BREAD) == 3000, "every marked loaf on its own: "
+            + stacks(store, Items.BREAD));
+        helper.assertTrue(r[0] == 6000 && r[1] == 3000 + whole + 1, "the books: " + java.util.Arrays.toString(r));
+        helper.assertTrue(ms < 250, "a big tidy well inside a tick or two: " + ms + " ms");
+        helper.succeed();
+    }
+
+    /**
      * A request at the storehouse is booked as served by the storekeeper when it is on duty at the
      * counter, and as self-served when it is not (away from the counter): the village never waits on it.
      */

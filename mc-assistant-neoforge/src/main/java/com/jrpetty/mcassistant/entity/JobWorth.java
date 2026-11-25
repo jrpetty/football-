@@ -535,16 +535,15 @@ public final class JobWorth {
             Post farm = postFor(StationTask.FARM, null);
             double farmFactor = clamp(Math.sqrt(Math.max(0.0, st.val(StationTask.FARM, ref) * farm.makes) / ref), VALUE_LO, VALUE_HI)
                 * scarOf(id, st, StationTask.FARM) * farm.difficulty();              // [labour]
-            int farmRate = Math.max(1, (int) Math.round(payLevel * UNIT * farmFactor * JOURNEYMAN_HAND));
-            Cost cost = null;
-            for (int round = 0; round < 6; round++) {
-                FARM_GUESS.put(id, farmRate);
-                cost = costOfLiving(level, id);
-                int next = Math.max(Math.max(1, (int) Math.ceil(cost.coins() - 1e-6)),
-                    (int) Math.round(payLevel * UNIT * farmFactor * JOURNEYMAN_HAND));
-                if (next == farmRate) break;
-                farmRate = next;
-            }
+            int market = (int) Math.round(payLevel * UNIT * farmFactor * JOURNEYMAN_HAND);
+            // [soak40] Settled where it settles; where the cheapest rent follows the wage at more than one for one there
+            // is no settling, and the rounds are not taken that only make it dearer (WageSettle).
+            int farmRate = com.jrpetty.mcassistant.village.WageSettle.settle(market, r -> {
+                FARM_GUESS.put(id, r);
+                return Math.max(1, (int) Math.ceil(costOfLiving(level, id).coins() - 1e-6));
+            }, 6);
+            FARM_GUESS.put(id, farmRate);
+            Cost cost = costOfLiving(level, id);
             FARM_GUESS.remove(id);
             Scale s = new Scale(id, day, Wealth.standing(id) / 10.0, afford, ref, tune, cost.coins(), cost.words(), st.ref > 0);
             Map<StationTask, Integer> have = new EnumMap<>(StationTask.class);

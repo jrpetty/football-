@@ -443,8 +443,8 @@ public class WorksGoal extends Goal {
             best = d;
             stuck = 0;
             if (!straight) go(dest, far);
-        } else if (!straight && a.getNavigation().isDone()) {
-            go(dest, far);
+        } else if (!straight && a.getNavigation().isDone() && a.tickCount - lastGo >= REPLAN) {
+            go(dest, far);                                       // [soak40] again, but not every tick (see REPLAN)
         }
         if (straight) {
             if (!a.getNavigation().isDone()) a.getNavigation().stop();
@@ -508,6 +508,7 @@ public class WorksGoal extends Goal {
     }
 
     private void go(BlockPos dest, boolean far) {
+        lastGo = a.tickCount;                                    // [soak40]
         if (far) { a.walkTo(dest, 1.1D); return; }
         // [fixes14] To the spot itself (the pathfinder's own reach of a block stopped it a cell short).
         net.minecraft.world.level.pathfinder.Path path = a.getNavigation().createPath(dest, 0);
@@ -521,6 +522,15 @@ public class WorksGoal extends Goal {
      * a quarter at the face, three fifths walking.
      */
     private static final double PACE = 1.5D;
+
+    /**
+     * [soak40] The least ticks between one way to the spot and the next while the last has run out short of it. A path
+     * that ended short (a partial one, or none) was planned again the very next tick, every tick of the three seconds
+     * before the hop and the eight before the last resort (ten for a long walk): six miners in the drifts of a town of
+     * seventy spent a fifteenth of the server's whole tick in the pathfinder.
+     */
+    private static final int REPLAN = 10;
+    private int lastGo = -REPLAN;
 
     private boolean open(BlockPos p) {
         return a.level().getBlockState(p).getCollisionShape(a.level(), p).isEmpty()

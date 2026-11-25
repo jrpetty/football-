@@ -1627,6 +1627,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Being hit is not forgotten — by it, or by anybody who saw. */
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+        if (!level().isClientSide && StepOut.fromTheWall(this, source)) return false;   // [soak40] out of the wall, not buried in it
         boolean took = super.hurt(source, amount);
         if (took) Individual.wounded(this, source, amount);   // [individual] a real wound leaves a scar
         if (took && !level().isClientSide && source.getEntity() instanceof net.minecraft.world.entity.player.Player p

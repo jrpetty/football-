@@ -371,6 +371,15 @@ public final class Ledger extends SavedData {
     }
 
     /** Every note a village keeps (a copy). */
+    /** [soak40] Every town with this note in its books. */
+    public static java.util.Set<UUID> notedTowns(String key) {
+        Ledger l = of();
+        java.util.Set<UUID> out = new java.util.HashSet<>();
+        if (l == null) return out;
+        for (Map.Entry<UUID, Map<String, String>> e : l.notes.entrySet()) if (e.getValue().containsKey(key)) out.add(e.getKey());
+        return out;
+    }
+
     public static Map<String, String> notes(UUID village) {
         Ledger l = of();
         return l == null ? Map.of() : new HashMap<>(l.notes.getOrDefault(village, Map.of()));
