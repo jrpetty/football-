@@ -214,12 +214,21 @@ public class PaFieldGameTests {
 
     // ================================================================== throws and the rod
 
-    /** pf03: a zombie after its hurt player, the assistant (level 3, snowballs, no bow) throws: the zombie turns on it. */
+    /**
+     * pf03: a zombie after its hurt player, the assistant (level 3, snowballs, no bow) throws: the zombie turns on it.
+     * The player is up on a little pillar, out of the zombie's reach, so the zombie mills about below them (and never
+     * hugs them: with its player within a block of the zombie the assistant rightly holds its throw). The zombie wears a
+     * helmet: bare-headed in the morning sun it burns, and after each tick of fire the game shrugs off a snowball (no
+     * damage, so no hurt and no turning on the thrower) for half a second, which made this a coin toss.
+     */
     @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "pf03_snowball")
     public static void pf03_snowball(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 10_006_000, y = ground(level, x);
-        ServerPlayer p = player(helper, level, new BlockPos(x + 10, y, Z));
+        for (Zombie old : level.getEntitiesOfClass(Zombie.class, new net.minecraft.world.phys.AABB(x - 40, y - 8, Z - 40, x + 40, y + 16, Z + 40)))
+            old.discard();                                                          // none left from an earlier run here
+        for (int dy = 0; dy < 3; dy++) level.setBlock(new BlockPos(x + 10, y + dy, Z), Blocks.COBBLESTONE.defaultBlockState(), 3);
+        ServerPlayer p = player(helper, level, new BlockPos(x + 10, y + 3, Z));
         p.setHealth(8.0F);
         PlayerAssistantEntity a = assistant(helper, p, 3);
         a.removeMatching(s -> s.is(Items.BOW) || s.is(Items.ARROW), 999);
@@ -230,6 +239,7 @@ public class PaFieldGameTests {
             a.teleportTo(x + 0.5, y, Z + 0.5);
             Zombie zz = EntityType.ZOMBIE.create(level);
             zz.moveTo(x + 9.5, y, Z + 8.5, 0, 0);
+            zz.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));    // no sunburn (see above)
             zz.setPersistenceRequired();
             level.addFreshEntity(zz);
             zz.setTarget(p);
@@ -243,6 +253,7 @@ public class PaFieldGameTests {
             helper.assertTrue(z[0].getTarget() == a, "the zombie turned on it: " + z[0].getTarget() + " (thrown " + f.throwsDone + ", hits " + f.throwHits
                 + ", hurt by " + z[0].getLastHurtByMob() + ", distance " + String.format("%.1f", z[0].distanceTo(a)) + ")");
             helper.assertTrue(a.countMatching(s -> s.is(Items.SNOWBALL)) < 16, "snowballs from its own pack");
+            helper.assertTrue(f.throwHits <= f.throwsDone, "one hurt, one hit: " + f.throwHits + " of " + f.throwsDone);
             Kit.log("[VT] pf03 " + f.throwsDone + " thrown, " + f.throwHits + " hit; the zombie turned on it; " + allWords(a));
         });
     }
@@ -286,10 +297,11 @@ public class PaFieldGameTests {
         a.insertGiven(new ItemStack(Items.FISHING_ROD));
         a.setMode(com.jrpetty.mcassistant.entity.AssistantEntity.Mode.STAY);
         Pig[] pig = {null};
-        double[] start = {0}, pulledTo = {99};
+        double[] start = {0}, before = {0}, pulledTo = {99};
         int[] pullAt = {Integer.MAX_VALUE};
         helper.onEachTick(() -> {
-            if (pig[0] == null || a.mind.field.pulls < 1) return;
+            if (pig[0] == null) return;
+            if (a.mind.field.pulls < 1) { before[0] = pig[0].distanceTo(a); return; }           // where it stood the tick before the tug
             if (pullAt[0] == Integer.MAX_VALUE) pullAt[0] = a.tickCount;
             if (a.tickCount - pullAt[0] <= 20) pulledTo[0] = Math.min(pulledTo[0], pig[0].distanceTo(a));   // nearest it came in the tug's second
         });
@@ -298,6 +310,8 @@ public class PaFieldGameTests {
             Pig pg = EntityType.PIG.create(level);
             pg.moveTo(x + 6.5, y, Z + 0.5, 0, 0);                                  // with its wits (a pig with no AI ignores a tug)
             level.addFreshEntity(pg);
+            pg.goalSelector.removeAllGoals(g -> true);                             // ...but standing still: a wander away isn't a weak tug
+            pg.getNavigation().stop();
             pig[0] = pg;
             start[0] = pg.distanceTo(a);
             say(p, a, "hook that", null, pg.getId());
@@ -306,8 +320,9 @@ public class PaFieldGameTests {
             helper.assertTrue(pig[0] != null && a.mind.field.pulls >= 1, "a pull: " + a.mind.field.pulls);
             helper.assertTrue(a.tickCount - pullAt[0] >= 12, "a moment for the tug to tell");
             double now = pulledTo[0];
-            helper.assertTrue(now < start[0] - 1.0, "pulled in: " + start[0] + " -> " + now);
-            Kit.log("[VT] pf05 pulled the pig from " + String.format("%.1f", start[0]) + " to " + String.format("%.1f", now));
+            // the game's tug is a tenth of the gap as speed: about 1.3 blocks on grass from 6 off
+            helper.assertTrue(now < before[0] - 1.0, "pulled in: " + before[0] + " -> " + now + " (placed at " + start[0] + ")");
+            Kit.log("[VT] pf05 pulled the pig from " + String.format("%.1f", before[0]) + " to " + String.format("%.1f", now));
         });
     }
 
