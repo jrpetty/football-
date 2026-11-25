@@ -208,12 +208,12 @@ public final class Blink {
         boolean miner = miner(f);
         BY.computeIfAbsent(why, k -> new long[4])[(miner ? 0 : 2) + (seen ? 0 : 1)]++;
         if (!seen) return;
-        if (why.startsWith("!")) { excusedSeen++; return; }
-        seenAll++;
+        boolean excused = why.startsWith("!");
+        if (excused) excusedSeen++; else seenAll++;
         double d = Math.sqrt(f.distanceToSqr(fx, fy, fz));
         String line = String.format("%s %s (%s) %.1f,%.1f,%.1f -> %.1f,%.1f,%.1f (%.1f): %s", f.level().getGameTime(), f.getAssistantName(),
             miner ? "miner" : f.stationTask().name().toLowerCase(), fx, fy, fz, f.getX(), f.getY(), f.getZ(), d, why + (at.isEmpty() || at.equals(why) ? "" : " @" + at));
-        if (SEEN.size() < 400) SEEN.add(line);
+        if (SEEN.size() < 400) SEEN.add(line);                            // (a safety jump's line marked by its "!")
     }
 
     /** The method outside the folk that moved it (the stack read only on a jump, never each tick). */
@@ -350,6 +350,7 @@ public final class Blink {
             .then(Commands.literal("reset").executes(ctx -> { reset(); return say(ctx.getSource(), "counts reset"); }))
             .then(Commands.literal("seen").executes(ctx -> say(ctx.getSource(), String.join("\n", seenLines()))))
             .then(Commands.literal("held").executes(ctx -> say(ctx.getSource(), String.join("\n", HELD_LINES))))
+            .then(Commands.literal("miners").executes(ctx -> say(ctx.getSource(), miners(ctx.getSource().getLevel()))))
             .then(Commands.literal("unwatch").executes(ctx -> { WATCH.clear(); return say(ctx.getSource(), "watchers cleared"); }))
             .then(Commands.literal("watch")
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg()).then(Commands.argument("z", DoubleArgumentType.doubleArg())
@@ -359,6 +360,30 @@ public final class Blink {
                         watch(level, x, z);
                         return say(ctx.getSource(), "a watcher at " + (int) x + ", " + (int) z + " in " + level.dimension().location());
                     })))));
+    }
+
+    /** [tp43] Each town's miners: how many, at the mine (and below), in the water; and how the way to the mine stands. */
+    static String miners(ServerLevel level) {
+        StringBuilder b = new StringBuilder();
+        for (Villages.Village v : Villages.every()) {
+            net.minecraft.core.BlockPos site = TownMine.siteOf(v.id());
+            if (site == null || !v.dim().equals(level.dimension())) continue;
+            int all = 0, atMine = 0, below = 0, wet = 0;
+            int ground = level.hasChunk(site.getX() >> 4, site.getZ() >> 4)
+                ? level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, site.getX(), site.getZ()) : 64;
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                if (a.stationTask() != AssistantEntity.StationTask.MINE) continue;
+                all++;
+                double dx = a.getX() - site.getX(), dz = a.getZ() - site.getZ();
+                boolean near = dx * dx + dz * dz <= 160 * 160 && (dx * dx + dz * dz <= 24 * 24 || a.getY() < ground - 4);   // at the pithead, or in the works
+                if (near) atMine++;
+                if (near && a.getY() < ground - 4) below++;
+                if (a.isInWater()) wet++;
+            }
+            b.append(Villages.name(v.id())).append(": miners ").append(all).append(", at the mine ").append(atMine).append(" (below ").append(below)
+                .append("), in the water ").append(wet).append("; ").append(MineWay.status(v.id())).append('\n');
+        }
+        return b.toString();
     }
 
     private static int say(CommandSourceStack src, String text) {

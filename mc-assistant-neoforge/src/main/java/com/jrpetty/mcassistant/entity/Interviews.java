@@ -1967,7 +1967,9 @@ public final class Interviews {
                 f.walkTo(BlockPos.containing(spot), 0.85D);
                 w[2] = f.tickCount;
             }
-            if (f.tickCount - w[1] > (hurry ? 80 : 300)) {
+            if (f.tickCount - w[1] > (hurry ? 80 : 300) && !Blink.mayJumpTo(f, spot.x, spot.z, "interview: set down at its place")) {
+                w[1] = f.tickCount;                                          // [tp43] in sight: it walks on
+            } else if (f.tickCount - w[1] > (hurry ? 80 : 300)) {
                 f.getNavigation().stop();
                 f.moveTo(spot.x, spot.y, spot.z, f.getYRot(), 0.0F);
                 w[0] = 0;

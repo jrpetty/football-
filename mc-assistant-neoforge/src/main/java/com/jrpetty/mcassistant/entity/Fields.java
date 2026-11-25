@@ -432,6 +432,7 @@ public final class Fields {
         }
         if (now - s[2] < 6000 || !f.onShift() || f.ticksSinceWork() < 12000 || f.workZone() == null) return;
         if (f.workZone().containsColumn(here)) return;                // at its own work, whatever it is about
+        if (f.stationTask() == AssistantEntity.StationTask.MINE && MineWay.cutOff(f.ownerId())) return;   // [tp43] its mine over the water
         STILL.remove(f.getUUID());
         f.clearQueue();
         f.unstickToPlot();

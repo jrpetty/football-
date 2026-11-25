@@ -56,6 +56,7 @@ public final class Transport {
                     Railways.tick(level, v);
                     RailCarts.work(level, v);
                     Ferries.tick(level, v);
+                    MineWay.tick(level, v);                                   // [tp43] a way to the mine on foot
                 }
             }
         });

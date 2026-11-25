@@ -50,7 +50,7 @@ public final class Stroll {
     public static boolean alongPoints(VillageFolkEntity f, List<Vec3> pts) {
         double len = 0;
         for (int i = 1; i < pts.size(); i++) len += pts.get(i - 1).distanceTo(pts.get(i));
-        if (pts.size() < 2 || len > MOST) return false;
+        if (pts.size() < 2 || len > MOST || MineLift.state(f.getUUID()) == MineLift.State.RIDING) return false;   // (the cage has a rider)
         f.getNavigation().stop();
         WALKS.put(f.getUUID(), new Walk(new ArrayList<>(pts)));
         LED++;

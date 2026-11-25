@@ -1379,6 +1379,15 @@ public final class Divers {
             // two blocks at a time before).
             Vec3 want = new Vec3(f.getX() + back.x, y, f.getZ() + back.z), here = who.position();
             if (here.distanceTo(want) > 0.45) want = here.add(want.subtract(here).normalize().scale(0.45));
+            // [tp43] Never drawn up into a bridge's deck or a jetty over the water (it choked there, stepped out onto the
+            // deck, and was drawn back under, a jump each time, till the diver landed it): ducked under it, or held where it is.
+            Vec3 fits = null;
+            for (double dy = 0; dy >= -1.6 && fits == null; dy -= 0.4) {
+                Vec3 at = new Vec3(want.x, want.y + dy, want.z);
+                if (level.noCollision(who, who.getDimensions(who.getPose()).makeBoundingBox(at.x, at.y, at.z).deflate(1.0E-3))) fits = at;
+            }
+            if (fits == null) return;
+            want = fits;
             Blink.safety(who, "diver: a drowning folk towed");               // [tp43] held by its rescuer
             who.moveTo(want.x, want.y, want.z, who.getYRot(), 0.0F);
             who.setDeltaMovement(Vec3.ZERO);

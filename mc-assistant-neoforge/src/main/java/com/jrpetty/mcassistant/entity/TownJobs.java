@@ -354,7 +354,7 @@ public final class TownJobs {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (a instanceof VillageFolkEntity g && Busywork.spare(g)) {
                 String why = !fit(g, works) ? "unfit" : ON.containsKey(g.getUUID()) && busy(g) ? "on other works"
-                    : PostStints.busy(g) ? "post" : g.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id()) ? "mine kept"
+                    : PostStints.busy(g) ? "post" : g.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id()) && !MINEWAY.equals(works) ? "mine kept"
                     : SmelterFuel.kept(level, g) ? "furnaces kept"                                        // [econ32]
                     : Enterprise.benchFirst(g) ? "its firm's shelf short"                                // [biz30d]
                     : g.stationTask() == AssistantEntity.StationTask.NONE && g.workZone() == null ? "no trade yet" : "";
@@ -370,7 +370,8 @@ public final class TownJobs {
             if (idleOnly && !idleHand) continue;
             if (over != null && !spare(f, over) && !idleHand) continue;  // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();
-            if (trade == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id())) continue;   // [growth24] the age waits on the mine
+            // [growth24] the age waits on the mine; [tp43] but its miners are the first hands for the bridge out to it
+            if (trade == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id()) && !MINEWAY.equals(works)) continue;
             if (SmelterFuel.kept(level, f)) continue;                    // [econ32] the age's iron raw at the smelters
             // [biz30d] A firm's hand whose firm's shelf is short is at its bench (Enterprise.benchFirst), not the town's works:
             // a bakery's two hands were called out to washing lines, rain barrels and the green on the square eight times in a
@@ -381,6 +382,10 @@ public final class TownJobs {
             if (trade == AssistantEntity.StationTask.NONE && f.workZone() == null) continue;
             double score = 0;
             if (prefer != null && trade == prefer) score += 60;
+            if (MINEWAY.equals(works) && trade == AssistantEntity.StationTask.MINE) {
+                if (MineWay.farSide(f)) continue;                        // [tp43] over the water at the mine: it cannot come over
+                score += 80;                                             // [tp43] the miners build their own way out
+            }
             if (f.workZone() == null && trade != AssistantEntity.StationTask.HAUL
                 && trade != AssistantEntity.StationTask.STORE && trade != AssistantEntity.StationTask.GUARD) score += 40;   // between grounds
             switch (trade) {
@@ -439,8 +444,11 @@ public final class TownJobs {
      *  standing idle in a trade with hands to spare only, or any hand. */
     public static final int NONE_TO_SPARE = 0, IDLE_ONLY = 1, ANY = 2;
 
+    /** [tp43] The bridge on the way to a mine cut off by water (MineWay). */
+    static final String MINEWAY = "mineway";
+
     public static int allowance(int adults, int busy, String works) {
-        if (adults < SETTLED && !essential(works) && !paid(works)) return NONE_TO_SPARE;   // a young village: its trades first
+        if (adults < SETTLED && !essential(works) && !paid(works) && !MINEWAY.equals(works)) return NONE_TO_SPARE;   // [tp43] (the mine's bridge: its miners wait on it)   // a young village: its trades first
         // Never more than one hand in eight — unless hands are standing idle in trades with more
         // hands than they want (or short of their kit): then up to one in four, and the hands past
         // the eighth only from those. The hundred had sixty standing about while its works waited,
@@ -462,6 +470,8 @@ public final class TownJobs {
         // and a villa ordered and paid for in a town of sixty sat all day at "waiting for a hand the town can spare",
         // its one hand in eight always taken by the town's beds, signs and gardens first.
         if (paid(works) && busy < Math.max(cap + 2, adults / 2)) extra = true;
+        // [tp43] Nor the bridge on the way to the mine: the mine waits on it, its miners kept off it meanwhile.
+        if (MINEWAY.equals(works) && busy < cap + 2) extra = true;
         if (busy < cap || extra) return ANY;
         return busy >= Math.max(1, adults / 4) ? NONE_TO_SPARE : IDLE_ONLY;
     }

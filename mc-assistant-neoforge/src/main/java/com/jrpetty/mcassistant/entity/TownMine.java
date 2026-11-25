@@ -75,7 +75,8 @@ public final class TownMine {
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
                 if (!fit(level, village, heart, top)) continue;
-                double score = (stony.test(top) ? 100.0 : 0.0) + (top.getY() - heart.getY()) * 2.0 - (d - near) * 0.25;
+                double score = (stony.test(top) ? 100.0 : 0.0) + (top.getY() - heart.getY()) * 2.0 - (d - near) * 0.25
+                    - MineWay.waterOnTheWay(level, heart, top) * 3.0;                // [tp43] a bridge to build counts against it
                 if (score > bestScore) {
                     bestScore = score;
                     best = top;

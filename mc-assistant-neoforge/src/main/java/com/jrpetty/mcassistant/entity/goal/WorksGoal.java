@@ -496,6 +496,13 @@ public class WorksGoal extends Goal {
                 hopNote(dest);
                 return leadOn(dest);
             }
+            // [tp43] Out of sight too, led on along the way first (round a stair's corner, up its riser): put there only if
+            // that got it nowhere either.
+            if (open(dest) && !dest.equals(ledTo) && a instanceof VillageFolkEntity) {
+                ledTo = dest.immutable();
+                LEAD_UNSEEN++;
+                return leadOn(dest);
+            }
             if (open(dest)) {
                 a.getNavigation().stop();
                 hopNote(dest);                                   // [fixes14] why it was stuck, for the tests
@@ -510,6 +517,10 @@ public class WorksGoal extends Goal {
 
     /** [tp43] Fresh ways planned in a row for a walk that was stuck in sight; three, and it waits on its way instead. */
     private int replans;
+    /** [tp43] The spot it was last led on to out of sight (stuck again on the way there, it is put there). */
+    @Nullable private BlockPos ledTo;
+    /** [tp43] Leads tried out of sight before a hop (the tests). */
+    public static int LEAD_UNSEEN;
 
     /**
      * [tp43] Stuck on its way with a player watching: led along the cells of its route from the next to this one, if it
@@ -531,7 +542,7 @@ public class WorksGoal extends Goal {
             double dd = a.position().distanceTo(Vec3.atBottomCenterOf(cells.get(i)));
             if (dd <= nearD) { nearD = dd; near = i; }
         }
-        if (near >= 0 && a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.Stroll.along(f, cells.subList(near, cells.size()))) {
+        if (near >= 0 && a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.Stroll.along(f, squared(cells.subList(near, cells.size())))) {
             replans = 0;
             LEAD_STROLLS++;
             return false;
@@ -566,6 +577,50 @@ public class WorksGoal extends Goal {
         }
         if (phase == Phase.BREAK) { breakAt = null; phase = Phase.NEXT; return false; }
         return false;
+    }
+
+    /**
+     * [tp43] The way's cells with a corner put in wherever it goes on the slant (a turn of the stair a step up and a step
+     * across both): nobody walks through the corner of the rock between, and the lead stopped there, a shift long, short
+     * of a step it could have taken in two. Its own cell first, so the first step is looked at too.
+     */
+    private List<BlockPos> squared(List<BlockPos> cells) {
+        List<BlockPos> out = new ArrayList<>();
+        BlockPos prev = a.blockPosition();
+        out.add(prev);
+        for (BlockPos c : cells) {
+            int dx = c.getX() - prev.getX(), dz = c.getZ() - prev.getZ();
+            if (dx != 0 && dz != 0 && Math.abs(dx) + Math.abs(dz) <= 6) {
+                // Round the corner one way or the other (along x then z, or z then x), at either end's height: the first
+                // way whose every cell is open with a floor under it.
+                int hi = Math.max(prev.getY(), c.getY()), lo = Math.min(prev.getY(), c.getY());
+                List<BlockPos> way = null;
+                for (int y : new int[]{ lo, hi }) {
+                    for (boolean xFirst : new boolean[]{ true, false }) {
+                        List<BlockPos> w = new ArrayList<>();
+                        int x = prev.getX(), z = prev.getZ();
+                        boolean ok = true;
+                        for (int leg = 0; leg < 2 && ok; leg++) {
+                            boolean alongX = (leg == 0) == xFirst;
+                            int n = alongX ? Math.abs(dx) : Math.abs(dz), st = alongX ? Integer.signum(dx) : Integer.signum(dz);
+                            for (int k = 0; k < n && ok; k++) {
+                                if (alongX) x += st; else z += st;
+                                if (x == c.getX() && z == c.getZ()) break;
+                                BlockPos q = new BlockPos(x, y, z);
+                                ok = open(q) && !a.level().getBlockState(q.below()).getCollisionShape(a.level(), q.below()).isEmpty();
+                                if (ok) w.add(q);
+                            }
+                        }
+                        if (ok) { way = w; break; }
+                    }
+                    if (way != null) break;
+                }
+                if (way != null) out.addAll(way);
+            }
+            out.add(c);
+            prev = c;
+        }
+        return out;
     }
 
     /**

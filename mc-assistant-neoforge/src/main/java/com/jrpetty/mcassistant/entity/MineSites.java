@@ -154,7 +154,8 @@ public final class MineSites {
                 if (!TownMine.fit(level, village, heart, top)) continue;
                 boolean stony = level.getBlockState(top.below()).is(BlockTags.BASE_STONE_OVERWORLD)
                     || level.getBlockState(top.below(4)).is(BlockTags.BASE_STONE_OVERWORLD);
-                double score = (stony ? 100.0 : 0.0) + (top.getY() - heart.getY()) * 2.0 - (d - near) * 0.25;
+                double score = (stony ? 100.0 : 0.0) + (top.getY() - heart.getY()) * 2.0 - (d - near) * 0.25
+                    - MineWay.waterOnTheWay(level, heart, top) * 3.0;                // [tp43] a bridge to build counts against it
                 if (score > bestScore) {
                     bestScore = score;
                     best = top;

@@ -449,7 +449,8 @@ public final class MineLift {
                     Ask a = it.next();
                     Entity e = level.getEntity(a.who);
                     double near = e instanceof ServerPlayer ? 36.0 : 25.0;
-                    if (e == null || !e.isAlive() || e.isPassenger() || e.distanceToSqr(Vec3.atBottomCenterOf(from.board())) > near) {
+                    if (e == null || !e.isAlive() || e.isPassenger() || e.distanceToSqr(Vec3.atBottomCenterOf(from.board())) > near
+                        || !canBoard(e, from)) {
                         STATE.remove(a.who);
                         it.remove();
                         continue;
@@ -465,7 +466,26 @@ public final class MineLift {
                 }
             }
         } else if (l.phase == 3) {                                   // [film39] the riders stepping into the cage at the pithead
-            if (LiftGlide.in(level, l, from)) {
+            // [tp43] A rider not in the cage after this long (held by something, or walled off from the stop after all) is left
+            // behind for the next trip (its own goal asks again, or takes the stair): the cage waited on one such for good.
+            if (l.step >= BOARD_LIMIT) {
+                Vec3 well = new Vec3(l.sx + 0.5, from.y(), l.sz + 0.5);
+                for (Iterator<Ask> it = l.riding.iterator(); it.hasNext(); ) {
+                    Ask a = it.next();
+                    Entity e = level.getEntity(a.who);
+                    if (e instanceof ServerPlayer) continue;
+                    // In the cage, or on its way in over the well's edge (left there it would drop down the well): it rides.
+                    if (e != null && e.isAlive() && e.position().subtract(well).horizontalDistance() <= 1.3 && Math.abs(e.getY() - well.y) <= 1.0) continue;
+                    STATE.remove(a.who);
+                    l.glideFrom.remove(a.who);
+                    it.remove();
+                    DROPPED++;
+                }
+                if (l.riding.isEmpty()) { l.phase = 0; LiftGlide.shut(level, l); drawCage(level, l); return; }
+                l.phase = 2;
+                if (from.index() != 0) LiftGlide.shut(level, l);
+                level.playSound(null, from.board(), SoundEvents.CHAIN_STEP, SoundSource.BLOCKS, 1.0F, 0.8F);
+            } else if (LiftGlide.in(level, l, from)) {
                 l.phase = 2;
                 level.playSound(null, from.board(), SoundEvents.CHAIN_STEP, SoundSource.BLOCKS, 1.0F, 0.8F);
             }
@@ -490,6 +510,36 @@ public final class MineLift {
             }
         }
         drawCage(level, l);
+    }
+
+    /** [tp43] Ticks the riders have to step into the cage before the ones not in it are left for the next trip. */
+    static final int BOARD_LIMIT = 200;
+    /** [tp43] Riders left behind so (the tests). */
+    public static int DROPPED;
+
+    /**
+     * [tp43] Can it get into the cage from where it stands: on the stop's own floor (a step up or down at most), and either
+     * at the stop's board or a short walk from it. A miner in a tunnel beside the stop, near enough through the rock, was
+     * counted a rider, could never step in, and the cage waited on it for good.
+     */
+    static boolean canBoard(Entity e, Stop from) {
+        if (Math.abs(e.getY() - from.y()) > (e instanceof ServerPlayer ? 2.5 : 1.5)) return false;
+        if (e instanceof ServerPlayer) return true;
+        Vec3 b = Vec3.atBottomCenterOf(from.board());
+        if (e.position().subtract(b).horizontalDistance() <= 1.5) return true;
+        // The walk in goes straight from where it stands to the board (LiftGlide): the way there clear at its head and its
+        // feet (a stair or a slab underfoot is no wall), or it would be walked through the rock.
+        Vec3 p = e.position();
+        double len = p.subtract(b).horizontalDistance();
+        if (len > 6.0) return false;
+        for (double t = 0.25; t < len; t += 0.25) {
+            Vec3 q = p.add(b.subtract(p).scale(t / len));
+            BlockPos feet = BlockPos.containing(q.x, from.y() + 0.1, q.z), head = feet.above();
+            if (!e.level().getBlockState(head).getCollisionShape(e.level(), head).isEmpty()) return false;
+            net.minecraft.world.phys.shapes.VoxelShape fs = e.level().getBlockState(feet).getCollisionShape(e.level(), feet);
+            if (!fs.isEmpty() && fs.max(net.minecraft.core.Direction.Axis.Y) > 0.6) return false;
+        }
+        return true;
     }
 
     /** The riders put out at their stop and the trip ended. */
