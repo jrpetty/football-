@@ -1957,7 +1957,18 @@ public class CityScreen extends Screen {
         for (int i = 0; i < FOLK_HEADS.length; i++) {
             if (FOLK_COLS[i] >= cw - 20) break;
             String hd = FOLK_HEADS[i] + (i == sortColumn ? (sortDown ? " ▼" : " ▲") : "");
-            small(g, hd, x + FOLK_COLS[i], y, i == sortColumn ? Ui.GOOD : Ui.FAINT);
+            boolean overHead = mx >= x + FOLK_COLS[i] && mx < x + (i + 1 < FOLK_COLS.length ? FOLK_COLS[i + 1] : cw) && my >= y - 1 && my < y + 9;
+            small(g, hd, x + FOLK_COLS[i], y, i == sortColumn || overHead ? Ui.GOOD : Ui.FAINT);
+            // A click on a heading sorts by it (again: the other way). The click was looked for on the line above, where
+            // the town's money is summed, so the headings never sorted anything.
+            final int col = i;
+            int x1 = x + (i + 1 < FOLK_COLS.length ? Math.min(FOLK_COLS[i + 1], cw) : cw);
+            zones.add(new Zone(x + FOLK_COLS[i], y - 1, x1, y + 9, () -> {
+                UiStyle.click();
+                if (sortColumn == col) sortDown = !sortDown;
+                else { sortColumn = col; sortDown = col != 0 && col != 1 && col != 8; }
+                scroll = 0;
+            }));
         }
         int ry = y + 10;
         int rows = (ch - 22) / 10;
@@ -2065,7 +2076,7 @@ public class CityScreen extends Screen {
             case 9 -> Comparator.comparingInt(p -> p.getString("wealth").isEmpty() ? -1 : p.getInt("worth"));
             default -> Comparator.comparingInt(p -> p.getInt("made"));
         };
-        return sortDown ? c.reversed() : c;
+        return (sortDown ? c.reversed() : c).thenComparing(p -> p.getString("name"));   // a tie: by name, so the order holds still
     }
 
     private void leader(GuiGraphics g, int x, int y, int cw, int ch) {
@@ -4103,15 +4114,6 @@ public class CityScreen extends Screen {
                 String id = jobs.get(start + row).getString("id");
                 selectedTrade = id.equals(selectedTrade) ? null : id;
                 return true;
-            }
-        }
-        if (page().equals("Folk") && my >= y && my < y + 9) {
-            for (int i = FOLK_COLS.length - 1; i >= 0; i--) {
-                if (mx >= x + FOLK_COLS[i]) {
-                    if (sortColumn == i) sortDown = !sortDown;
-                    else { sortColumn = i; sortDown = i != 0 && i != 1 && i != 8; }
-                    return true;
-                }
             }
         }
         return super.mouseClicked(mx, my, button);
