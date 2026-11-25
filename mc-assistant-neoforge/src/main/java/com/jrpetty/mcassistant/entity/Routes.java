@@ -258,10 +258,13 @@ public final class Routes {
     @Nullable
     static List<int[]> lineIfReady(UUID a, UUID b, BlockPos s, BlockPos e) {
         UUID first = a.compareTo(b) < 0 ? a : b, second = first == a ? b : a;
-        if (decode(Ledger.note(first, NOTE + second)) != null) return line(a, b, s, e);
+        String key = first + "|" + second;
+        if (decode(Ledger.note(first, NOTE + second)) != null) {
+            UNDER_WAY.remove(key);                                       // surveyed meanwhile (a colony's road, at once)
+            return line(a, b, s, e);
+        }
         boolean flip = first != a;
         BlockPos fs = flip ? e : s, fe = flip ? s : e;
-        String key = first + "|" + second;
         Survey sv = UNDER_WAY.get(key);
         if (sv == null || !sv.s.equals(fs) || !sv.e.equals(fe)) {
             MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
