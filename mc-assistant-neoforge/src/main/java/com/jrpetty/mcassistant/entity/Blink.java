@@ -161,6 +161,7 @@ public final class Blink {
         if (why != null && at != null && f.level().getGameTime() - at > 2) why = null;    // a stale note: not this move's
         if (why == null) why = via != null ? via : site();
         f.blinkTick = f.tickCount;
+        if (why.startsWith("~")) return;                                    // carried (the cage moving with it inside): no jump
         count(f, why, fx, fy, fz);
     }
 
@@ -218,6 +219,17 @@ public final class Blink {
             .findFirst()
             .map(fr -> fr.getClassName().substring(fr.getClassName().lastIndexOf('.') + 1) + "." + fr.getMethodName() + ":" + fr.getLineNumber())
             .orElse("vanilla"));
+    }
+
+    /** [tp43] The method that called into the folk (for a reason's label; the stack read only with the detector on). */
+    public static String caller() {
+        return StackWalker.getInstance().walk(s -> s
+            .filter(fr -> fr.getClassName().startsWith("com.jrpetty.mcassistant")
+                && !fr.getClassName().endsWith(".Blink") && !fr.getClassName().endsWith(".AssistantEntity")
+                && !fr.getClassName().endsWith(".VillageFolkEntity"))
+            .findFirst()
+            .map(fr -> fr.getClassName().substring(fr.getClassName().lastIndexOf('.') + 1) + "." + fr.getMethodName())
+            .orElse("?"));
     }
 
     // ------------------------------------------------------------------ readings

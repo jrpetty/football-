@@ -79,7 +79,7 @@ public final class FolkLod {
         Vec3 step = way.scale(EDGE_STEP / length);
         for (double d = EDGE_STEP; d < length; d += EDGE_STEP) {
             Vec3 at = to.add(step.scale(d / EDGE_STEP));
-            if (!unseenAt(level, at.x, at.y, at.z, EDGE_MARGIN)) continue;
+            if (!unseenAt(level, at.x, at.y, at.z, EDGE_MARGIN) || Blink.seenAt(level, at.x, at.z, EDGE_MARGIN)) continue;   // [tp43]
             BlockPos column = BlockPos.containing(at);
             for (int dy = 0; dy <= 4; dy++) {
                 if (standable(level, column.above(dy))) return column.above(dy);

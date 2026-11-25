@@ -228,7 +228,7 @@ public final class Muster {
         // folk lift it through to it, as anybody would (it cannot shoulder its way in).
         if (d2 > 2.0 && (f.isBaby() || Neighbourly.frail(f)) && d2 <= (g.inner + 2.5) * (g.inner + 2.5)) {
             int at = g.atEdge.merge(f.getUUID(), 1, Integer::sum);
-            if (at >= LIFT_AFTER) {
+            if (at >= LIFT_AFTER && Blink.mayJump(f, "muster: lifted through the crowd")) {   // [tp43] in sight it waits at the edge
                 f.getNavigation().stop();
                 f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
                 g.atEdge.remove(f.getUUID());
@@ -389,7 +389,7 @@ public final class Muster {
                 if (level.getGameTime() - pr[2] >= 20) {                          // a look a second, whenever the brain calls
                     pr[2] = level.getGameTime();
                     if (d2 < pr[0] - 0.25) { pr[0] = d2; pr[1] = 0; }
-                    else if (++pr[1] >= STUCK_LOOKS && d2 <= LET_THROUGH * LET_THROUGH) {
+                    else if (++pr[1] >= STUCK_LOOKS && d2 <= LET_THROUGH * LET_THROUGH && Blink.mayJump(guard, "muster: a guard let through to its mark")) {
                         g.progress.remove(guard.getUUID());
                         guard.getNavigation().stop();
                         guard.teleportTo(tx, spot.getY(), tz);

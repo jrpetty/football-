@@ -412,6 +412,9 @@ public final class Fields {
             if (n >= 2) {
                 FROZEN.remove(f.getUUID());
                 BlockPos home = f.bedPos() != null ? f.bedPos() : v.centre();
+                // [tp43] Frozen where a player could see it (or see it arrive), it is left as it stands, as any mob out past the
+                // ticking ground is, till the ground ticks again or nobody is near.
+                if (!Blink.mayJumpTo(f, home.getX() + 0.5, home.getZ() + 0.5, "unstick: frozen past the town's ground, brought home")) return;
                 int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, home.getX(), home.getZ());
                 f.clearQueue();
                 f.teleportTo(home.getX() + 0.5, Math.max(y, home.getY()), home.getZ() + 0.5);

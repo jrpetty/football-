@@ -208,6 +208,7 @@ public final class Bonds {
         Villages.Village from = aMoves ? a : b, to = aMoves ? b : a;
         BlockPos home = stays.blockPosition();
         if (!level.isLoaded(home) || !level.isLoaded(mover.blockPosition())) return null;
+        if (!Blink.mayJumpTo(mover, home.getX() + 0.5, home.getZ() + 0.5, "marriage: moved to its partner's town")) return null;   // [tp43] not in sight
         mover.life().partnerWith(stays.getUUID(), stays.displayNameCap());
         stays.life().partnerWith(mover.getUUID(), mover.displayNameCap());
         // Off its old plot and into the new village: it takes up whatever trade its new home wants.

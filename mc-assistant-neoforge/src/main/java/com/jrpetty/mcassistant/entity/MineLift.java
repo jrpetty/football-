@@ -111,6 +111,7 @@ public final class MineLift {
         long trips, carried;
         int step;                                                    // [film39] ticks into the riders' walk in or out (LiftGlide)
         final Map<UUID, Vec3> glideFrom = new HashMap<>();           // [film39]
+        int gate = -1;                                               // [tp43] the stop whose window stands open for riders (LiftGlide)
         Lift(UUID village) { this.village = village; }
 
         @Nullable Stop stop(int index) {
@@ -196,7 +197,7 @@ public final class MineLift {
         for (Stop s0 : new ArrayList<>(stops)) {
             Stop s = s0;
             int[] o = MineWorks.diag((s.index() / 4) % 4);
-            if (s.y() <= w.top - 2) {
+            if (s.y() <= w.top - 2 && l.gate != s.index()) {            // [tp43] (not while it stands open for riders)
                 for (int h = 0; h < 2; h++) {
                     for (BlockPos c : new BlockPos[]{ new BlockPos(w.sx + o[0], s.y() + h, w.sz + o[1]), new BlockPos(w.sx + o[0], s.y() + h, w.sz),
                             new BlockPos(w.sx, s.y() + h, w.sz + o[1]) }) {
@@ -314,6 +315,39 @@ public final class MineLift {
         return true;
     }
 
+    /**
+     * [tp43] Where a folk waiting for the cage at this stop stands: the open floor round the stop's corner nearest it, a
+     * cell each in the order they asked (the first nearest), never the pillar, the well, the stair below or the lever. Ten
+     * miners at a shift change used to queue on the one cell at the head of the stair, a knot that blocked the stair for
+     * anybody taking it and pushed riders out of the cage's reach. Null: no lift, or not waiting here.
+     */
+    @Nullable
+    public static BlockPos queueSpot(ServerLevel level, UUID village, int stop, UUID who) {
+        Lift l = LIFTS.get(village);
+        Stop s = l == null ? null : l.stop(stop);
+        if (s == null) return null;
+        int place = 0;
+        boolean found = false;
+        for (Ask a : l.queue) {
+            if (a.from != stop) continue;
+            if (a.who.equals(who)) { found = true; break; }
+            place++;
+        }
+        if (!found) return null;
+        List<BlockPos> cells = new ArrayList<>();
+        BlockPos b = s.board();
+        for (int r = 1; r <= 3; r++)
+            for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                BlockPos p = b.offset(dx, 0, dz);
+                if (Math.max(Math.abs(p.getX() - l.sx), Math.abs(p.getZ() - l.sz)) <= 1) continue;
+                if (p.equals(s.lever()) || p.equals(s.button())) continue;
+                if (standable(level, p)) cells.add(p);
+            }
+        if (cells.isEmpty()) return b;
+        return cells.get(Math.min(place, cells.size() - 1));
+    }
+
     public static State state(UUID who) {
         return STATE.getOrDefault(who, State.NONE);
     }
@@ -376,6 +410,7 @@ public final class MineLift {
 
     private static void run(ServerLevel level, Lift l) {
         if (l.phase == 0) {
+            if (l.gate >= 0) LiftGlide.shut(level, l);                // [tp43]
             l.queue.removeIf(a -> STATE.get(a.who) != State.WAITING);
             Ask first = l.queue.peek();
             if (first == null) {
@@ -413,8 +448,8 @@ public final class MineLift {
                     STATE.put(a.who, State.RIDING);
                     if (e instanceof Mob m) m.getNavigation().stop();
                 }
-                if (l.riding.isEmpty()) { l.phase = 0; drawCage(level, l); return; }
-                if (LiftGlide.onFoot(level, l, from)) { l.phase = 3; LiftGlide.begin(level, l); }      // [film39] they step in first
+                if (l.riding.isEmpty()) { l.phase = 0; LiftGlide.shut(level, l); drawCage(level, l); return; }
+                if (LiftGlide.onFoot(level, l, from)) { l.phase = 3; LiftGlide.begin(level, l, from); }   // [film39] they step in first
                 else {
                     l.phase = 2;
                     level.playSound(null, from.board(), SoundEvents.CHAIN_STEP, SoundSource.BLOCKS, 1.0F, 0.8F);
@@ -433,11 +468,14 @@ public final class MineLift {
                 Entity e = level.getEntity(a.who);
                 if (e == null || !e.isAlive()) continue;
                 afloat(e, true);
+                // [tp43] Carried with the cage (a block and a half a tick) once it stands in it: no jump. Put in it from outside
+                // (a player, or a rider the walk in missed): a jump.
+                Blink.note(e, e.position().distanceTo(new Vec3(l.sx + 0.5, l.cageY, l.sz + 0.5)) <= SPEED + 0.25 ? "~lift: carried in the cage" : "lift: put in the cage");
                 place(e, l.sx + 0.5, l.cageY, l.sz + 0.5);
             }
-            if (there && LiftGlide.onFoot(level, l, to)) {              // [film39] up at the pithead: they step out
+            if (there && LiftGlide.onFoot(level, l, to)) {              // [film39] at the stop: they step out (tp43: at every stop)
                 l.phase = 4;
-                LiftGlide.begin(level, l);
+                LiftGlide.begin(level, l, to);
             } else if (there) {
                 arrive(level, l, to);
             }
@@ -451,6 +489,7 @@ public final class MineLift {
             Entity e = level.getEntity(a.who);
             if (e != null && e.isAlive()) {
                 BlockPos out = exit(level, l, to);
+                Blink.note(e, "lift: put out at the stop");                // [tp43] (a folk has walked out already: no move)
                 place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
                 afloat(e, false);
                 STATE.put(a.who, State.ARRIVED);
@@ -460,6 +499,7 @@ public final class MineLift {
                 STATE.remove(a.who);
             }
         }
+        LiftGlide.shut(level, l);                                   // [tp43] the stop's window shut behind them
         level.playSound(null, to.board(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 0.6F, 1.6F);
         l.trips++;
         endTrip(l);
@@ -546,6 +586,7 @@ public final class MineLift {
             for (Stop s : l.stops) if (best == null || Math.abs(s.y() - e.getY()) < Math.abs(best.y() - e.getY())) best = s;
             if (best == null) continue;
             BlockPos out = exit(level, l, best);
+            Blink.safety(e, "lift: found in the well, put out at a stop");   // [tp43] the well is no place to be left
             place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
             // A player left in the well by a stop mid-ride may have been saved with the cage's leave to fly: taken back.
             if (e instanceof ServerPlayer pl && pl.gameMode.getGameModeForPlayer().isSurvival() && pl.getAbilities().mayfly) {

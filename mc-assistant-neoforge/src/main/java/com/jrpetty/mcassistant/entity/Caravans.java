@@ -393,7 +393,9 @@ public final class Caravans {
             t.walkTick = f.tickCount;
         }
         // No nearer for half a minute (a river with no bridge yet, a cliff): set down at the next step.
-        if (f.tickCount - t.gainedTick > 600) {
+        if (f.tickCount - t.gainedTick > 600 && !Blink.mayJumpTo(f, onGround.getX() + 0.5, onGround.getZ() + 0.5, "caravan: set down at the next step")) {
+            t.gainedTick = f.tickCount - 300;                                 // [tp43] in sight: it walks on, and is looked at again
+        } else if (f.tickCount - t.gainedTick > 600) {
             f.moveTo(onGround.getX() + 0.5, onGround.getY(), onGround.getZ() + 0.5, f.getYRot(), 0.0F);
             if (llama != null) llama.moveTo(onGround.getX() + 1.5, onGround.getY(), onGround.getZ() + 0.5, llama.getYRot(), 0.0F);
             Riding.bringAlong(f, level, onGround.getX() + 0.5, onGround.getY(), onGround.getZ() + 0.5);

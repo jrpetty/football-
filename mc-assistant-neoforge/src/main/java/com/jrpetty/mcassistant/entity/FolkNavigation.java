@@ -88,7 +88,7 @@ public class FolkNavigation extends GroundPathNavigation {
         if (!scaling()) return true;
         if (this.path != null && !this.path.isDone() && targets.contains(getTargetPos())) return true;
         if (deferredAt == tick - 1 && deferredRun >= MOST_DEFERRED_TICKS) return true;
-        if (this.level.getNearestPlayer(this.mob, WATCHED) != null) return true;
+        if (this.level.getNearestPlayer(this.mob, WATCHED) != null || Blink.seen(this.mob)) return true;   // [tp43] in sight: never put off
         deferredRun = deferredAt == tick - 1 ? deferredRun + 1 : 1;
         deferredAt = tick;
         deferredInAll++;
@@ -201,9 +201,9 @@ public class FolkNavigation extends GroundPathNavigation {
             return true;
         }
         double d2 = f.distanceToSqr(x, y, z);
-        if (d2 < TRAVEL_FROM * TRAVEL_FROM || d2 > REACH * REACH || !FolkLod.unseen(f)) return false;
+        if (d2 < TRAVEL_FROM * TRAVEL_FROM || d2 > REACH * REACH || !FolkLod.unseen(f) || Blink.seen(f)) return false;   // [tp43]
         net.minecraft.world.phys.Vec3 goal = new net.minecraft.world.phys.Vec3(x, y, z);
-        if (FolkLod.unseenAt(this.level, x, y, z)) {
+        if (FolkLod.unseenAt(this.level, x, y, z) && !Blink.seenAt(this.level, x, z, FolkLod.EDGE_MARGIN)) {
             BlockPos to = FolkLod.standAt(this.level, BlockPos.containing(x, y, z), f.position());
             return to != null && travelTo(to, null, speed);
         }
@@ -244,7 +244,8 @@ public class FolkNavigation extends GroundPathNavigation {
         if ((this.level.getGameTime() + this.mob.getId()) % LOOK_EVERY != 0) return;
         BlockPos target = getTargetPos();
         if (target == null || this.path == null || this.path.isDone() || !this.path.canReach()) return;
-        if (!FolkLod.unseenAt(this.level, target.getX() + 0.5, target.getY(), target.getZ() + 0.5)) return;
+        if (!FolkLod.unseenAt(this.level, target.getX() + 0.5, target.getY(), target.getZ() + 0.5)
+                || Blink.seenAt(this.level, target.getX() + 0.5, target.getZ() + 0.5, FolkLod.EDGE_MARGIN)) return;   // [tp43]
         travel(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, this.speedModifier);
     }
 
@@ -278,7 +279,7 @@ public class FolkNavigation extends GroundPathNavigation {
             this.travelTo = null;
             net.minecraft.world.phys.Vec3 goal = this.travelGoal;
             this.travelGoal = null;
-            if (FolkLod.standable(this.level, to)) {
+            if (FolkLod.standable(this.level, to) && Blink.mayJumpTo(this.mob, to.getX() + 0.5, to.getZ() + 0.5, "travel out of sight")) {   // [tp43]
                 this.mob.teleportTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
                 this.mob.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 landed(to);                                                     // [health] where travels end, for the tests
@@ -299,7 +300,7 @@ public class FolkNavigation extends GroundPathNavigation {
         }
         // Somebody has come into sight of it: the rest of the way is walked, seen (looked at every tick: a player
         // can come over a hill, or out of a door, in any one).
-        if (!FolkLod.unseen(this.mob)) {
+        if (!FolkLod.unseen(this.mob) || Blink.seen(this.mob)) {                // [tp43] within a player's sight
             net.minecraft.world.phys.Vec3 goal = this.travelGoal != null ? this.travelGoal : net.minecraft.world.phys.Vec3.atBottomCenterOf(to);
             this.travelTo = null;
             this.travelGoal = null;

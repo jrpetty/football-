@@ -807,6 +807,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         wetFor = 0;
         if (best == null) return;
+        // [tp43] In a player's sight it swims for the bank and climbs out (the game's own swim and step), never put there.
+        if (this instanceof VillageFolkEntity && !Blink.mayJumpTo(this, best.getX() + 0.5, best.getZ() + 0.5, "out of the water onto the bank")) {
+            getNavigation().moveTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5, 1.2D);
+            brain("swimming for the bank");
+            return;
+        }
         moveTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5, getYRot(), getXRot());
         getNavigation().stop();
         idleKick = true;
@@ -3438,6 +3444,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         if (bed.distSqr(blockPosition()) > 4.0) {
             if (isSleeping()) stopSleeping();
+            bedSideSince = tickCount;                                   // [tp43]
             // A watch on the walk home: no nearer in twenty seconds, and a villager is set down
             // by its bed; one that still cannot get there gives the bed up for a nearer one.
             // (A whole village spent two nights "on the way" to beds a hundred blocks off.)
@@ -3448,8 +3455,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             } else if (tickCount - bedWalkSince > 400) {
                 bedWalkSince = tickCount;
                 bedWalkBest = Double.MAX_VALUE;
-                if (isSettler() && putBeside(bed)) {
+                net.minecraft.world.level.pathfinder.Path toBed = getNavigation().getPath();
+                if (isSettler() && putBeside(bed, "bed: could not walk to it, put beside it")) {
                     brain("could not walk to my bed — put beside it");
+                } else if (isSettler() && this instanceof VillageFolkEntity && Blink.seen(this)
+                        && (toBed == null || toBed.canReach() || getNavigation().isDone())) {
+                    // [tp43] In a player's sight it is never put beside its bed: it walks on (a fresh way each look),
+                    // and only a bed it truly cannot reach is given up below.
+                    getNavigation().stop();
+                    brain("on its way to bed in sight — walking on");
                 } else if (isSettler() && ++bedWalkFails >= 2) {
                     bedWalkFails = 0;
                     bedPos = null;                        // a bed it can get to, next look
@@ -3470,9 +3484,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         bedWalkSince = tickCount;
         bedWalkFails = 0;
         if (!isSleeping()) {
+            // [tp43] Lying down is a step onto the bed, not a hop of two blocks into it: in a player's sight it comes up to the
+            // bed's side first (a few seconds at most, then it lies down wherever it has got to).
+            double bx = bed.getX() + 0.5 - getX(), bz = bed.getZ() + 0.5 - getZ();
+            if (this instanceof VillageFolkEntity && bx * bx + bz * bz > 1.3 * 1.3 && tickCount - bedSideSince < 200 && Blink.seen(this)) {
+                if (getNavigation().isDone()) getNavigation().moveTo(bed.getX() + 0.5, bed.getY(), bed.getZ() + 0.5, 0.7D);
+                return true;
+            }
             getNavigation().stop();
             startSleeping(bed);
         }
+        bedSideSince = tickCount;
         return true;
     }
     private boolean wentHomeTonight;  // one trip per night
@@ -7010,6 +7032,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // [econ32d] A plot at a mine's pithead: its floor, not the top of the headframe over it (MineRoof.stand).
         BlockPos pit = level() instanceof net.minecraft.server.level.ServerLevel sl ? MineRoof.stand(sl, ownerId, c, y) : null;
         if (pit != null) { c = pit; y = pit.getY(); }
+        // [tp43] Never in a player's sight (neither where it stands nor its plot): it keeps walking, as anyone in view does.
+        if (this instanceof VillageFolkEntity && !Blink.mayJumpTo(this, c.getX() + 0.5, c.getZ() + 0.5, "put on its plot (could not walk there)")) return false;
         moveTo(c.getX() + 0.5, y, c.getZ() + 0.5, getYRot(), getXRot());
         getNavigation().stop();
         brain("could not walk to the plot — put there");
@@ -7017,6 +7041,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     private int putBesideTick = -100000;
+    /** [tp43] The last tick it was asleep or away from its bed: a few seconds to come up to the bed's side, then it lies down. */
+    private int bedSideSince;
 
     /**
      * A settler that cannot find a way to the chest it is going to is set down beside
@@ -7026,7 +7052,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * it "couldn't reach the chest" thirty feet below. At most once in twenty seconds.
      */
     public boolean putBeside(BlockPos target) {
+        return putBeside(target, Blink.on() ? "put beside (" + Blink.caller() + ")" : "put beside");
+    }
+
+    /** [tp43] As {@link #putBeside(BlockPos)}, the reason given for the jump detector; never in a player's sight (Blink). */
+    public boolean putBeside(BlockPos target, String why) {
         if (tickCount - putBesideTick < 400) return false;
+        if (this instanceof VillageFolkEntity && !Blink.mayJumpTo(this, target.getX() + 0.5, target.getZ() + 0.5, why)) return false;
         if (level().getChunkSource().getChunkNow(target.getX() >> 4, target.getZ() >> 4) == null) return false;
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;

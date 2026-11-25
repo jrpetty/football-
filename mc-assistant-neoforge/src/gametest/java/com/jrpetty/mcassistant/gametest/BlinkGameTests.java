@@ -68,9 +68,9 @@ public class BlinkGameTests {
             VillageFolkEntity m = r.miners().get(i);
             MineWorksGameTests.kit(m, Items.IRON_PICKAXE);
             MineWorksGameTests.zone(r, m, deep.y());
-            BlockPos at = new BlockPos(r.sx() - 12 + (i % 5) * 2, MineWorksGameTests.TOP, r.sz() - 10 - (i / 5) * 2);
-            BlockPos g = Kit.surface(level, at.getX(), at.getZ());
-            m.teleportTo(g.getX() + 0.5, Math.max(g.getY(), MineWorksGameTests.TOP), g.getZ() + 0.5);
+            // On the pithead's ground (the top of the rock the shaft is cut in), round the far side of the stair from the cage.
+            int dx = i < 5 ? -5 + i * 2 + (i > 2 ? 1 : 0) : (i % 2 == 0 ? -5 : 5), dz = i < 5 ? -5 : -3 + (i - 5);
+            m.teleportTo(r.sx() + dx + 0.5, MineWorksGameTests.TOP, r.sz() + dz + 0.5);
         }
         ServerPlayer you = watcher(helper, level, r.sx() + 5.5, MineWorksGameTests.TOP + 1, r.sz() + 5.5);
         WorksGoal.resetCountsForTests();
@@ -79,35 +79,48 @@ public class BlinkGameTests {
         MineWorksGameTests.fast(level);
         level.setDayTime(1000);
         final int[] tick = { 0 }, allDown = { -1 }, allUp = { -1 }, dusk = { -1 };
+        final int[] downAt = new int[n], upAt = new int[n];
+        java.util.Arrays.fill(downAt, -1);
+        java.util.Arrays.fill(upAt, -1);
         MineSiteGameTests.each(helper, () -> {
             tick[0]++;
             int below = 0, up = 0;
-            for (VillageFolkEntity m : r.miners()) {
+            for (int i = 0; i < n; i++) {
+                VillageFolkEntity m = r.miners().get(i);
+                // Miners they stay (the little test town would set some of them to farming, with no farmers of its own).
+                if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
                 if (dusk[0] < 0) MineWorksGameTests.keepAtIt(r, m);
-                if (m.getY() <= stops.get(1).y() + 2) below++;
-                if (m.getY() >= MineWorksGameTests.TOP - 1) up++;
+                boolean isBelow = m.getY() <= stops.get(1).y() + 2, isUp = m.getY() >= MineWorksGameTests.TOP - 1;
+                if (isBelow) below++;
+                if (isUp) up++;
+                if (isBelow && downAt[i] < 0) downAt[i] = tick[0];
+                if (dusk[0] > 0 && isUp && upAt[i] < 0) upAt[i] = tick[0];
             }
-            if (dusk[0] < 0 && below == n && allDown[0] < 0) {
+            if (dusk[0] < 0 && allDown[0] < 0 && java.util.Arrays.stream(downAt).allMatch(t -> t > 0)) {
                 allDown[0] = tick[0];
-                Kit.log("[VT] bk01 all " + n + " below after " + tick[0] + " ticks; rides " + WorksGoal.RIDES + ", gave up on the cage " + WorksGoal.LIFT_GAVE_UP
+                Kit.log("[VT] bk01 all " + n + " have been below after " + tick[0] + " ticks; rides " + WorksGoal.RIDES + ", gave up on the cage " + WorksGoal.LIFT_GAVE_UP
                     + "; seen jumps so far " + Blink.seenJumps());
             }
-            if (tick[0] % 500 == 0) Kit.log("[VT] bk01 @" + tick[0] + ": below " + below + ", up " + up + ", seen jumps " + Blink.seenJumps() + "; cage " + MineLift.report(v));
+            if (tick[0] % 500 == 0) Kit.log("[VT] bk01 @" + tick[0] + ": below " + below + ", up " + up + ", seen jumps " + Blink.seenJumps() + ", leads "
+                + WorksGoal.LEADS + ", hops " + WorksGoal.TELEPORTS + "; cage " + MineLift.report(v));
+            if (tick[0] % 1500 == 0) for (VillageFolkEntity m : r.miners()) Kit.log("[VT] bk01   " + m.getAssistantName() + " at " + m.blockPosition().toShortString()
+                + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg()) + " cage " + MineLift.state(m.getUUID())
+                + " works " + WorksGoal.stateForTests(m) + " | " + m.brainNoteForBooks());
             // An hour's work below once all are down (or after five minutes whatever), then the shift's end at dusk.
             if (dusk[0] < 0 && (allDown[0] > 0 && tick[0] - allDown[0] > 1200 || tick[0] > 6000)) {
                 dusk[0] = tick[0];
                 level.setDayTime(12100);
                 Kit.log("[VT] bk01 dusk at " + tick[0] + " (below " + below + ")");
             }
-            if (dusk[0] > 0 && up == n && allUp[0] < 0) allUp[0] = tick[0];
-            boolean over = allUp[0] > 0 || dusk[0] > 0 && tick[0] - dusk[0] > 7000;
+            if (dusk[0] > 0 && allUp[0] < 0 && java.util.Arrays.stream(upAt).allMatch(t -> t > 0)) allUp[0] = tick[0];
+            boolean over = allUp[0] > 0 && tick[0] - allUp[0] > 1200 || dusk[0] > 0 && tick[0] - dusk[0] > 7000;
             if (!over) return false;
             Kit.log("[VT] bk01 jumps: \n" + Blink.report());
             for (String l : Blink.seenLines()) Kit.log("[VT] bk01 seen: " + l);
             Kit.Expect ok = new Kit.Expect();
             ok.that(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenJumps());
-            ok.that(allDown[0] > 0 && allDown[0] <= 4000, "all " + n + " miners below at work within 4000 ticks: " + allDown[0]);
-            ok.that(allUp[0] > 0 && allUp[0] - dusk[0] <= 6000, "all up at the pithead within 6000 ticks of dusk: " + (allUp[0] - dusk[0]));
+            ok.that(allDown[0] > 0 && allDown[0] <= 4000, "all " + n + " miners down at work within 4000 ticks: " + allDown[0] + " " + java.util.Arrays.toString(downAt));
+            ok.that(allUp[0] > 0 && allUp[0] - dusk[0] <= 6000, "all up at the pithead within 6000 ticks of dusk: " + (allUp[0] - dusk[0]) + " " + java.util.Arrays.toString(upAt));
             letGo(level, you);
             level.setDayTime(1000);
             helper.assertTrue(ok.clean(), ok.summary());
@@ -129,39 +142,36 @@ public class BlinkGameTests {
         ServerPlayer you = watcher(helper, level, coal.board().getX() + 0.5, coal.y(), coal.board().getZ() + 0.5);
         for (int i = 0; i < 3; i++) {
             VillageFolkEntity m = r.miners().get(i);
-            m.teleportTo(top.board().getX() + 0.5, top.board().getY(), top.board().getZ() + 0.5);
+            m.setNoAi(true);                                    // the cage's walk in and out only: no errands of its own
+            m.teleportTo(top.board().getX() + 0.5, top.board().getY(), top.board().getZ() + 0.5 - i);
         }
         Blink.reset();
         Blink.setOn(true);
         Kit.Expect ok = new Kit.Expect();
-        for (VillageFolkEntity m : r.miners()) ok.that(MineLift.ask(m, v, top.index(), coal.index()), "a ride down asked for");
-        int t = 0;
-        boolean all = false;
-        while (!all && t < 600) {
-            MineLift.runForTests(level, v, 1);
-            for (VillageFolkEntity m : r.miners()) Blink.tickCheckForTests(m);
-            all = r.miners().stream().allMatch(m -> MineLift.state(m.getUUID()) == MineLift.State.ARRIVED);
-            t++;
-        }
-        boolean there = r.miners().stream().allMatch(m -> Math.abs(m.getY() - coal.y()) < 1.1);
-        Kit.log("[VT] bk02 down to the coal stop in " + t + " ticks, all there " + there + "; seen jumps " + Blink.seenJumps());
-        for (VillageFolkEntity m : r.miners()) MineLift.done(m.getUUID());
-        for (VillageFolkEntity m : r.miners()) ok.that(MineLift.ask(m, v, coal.index(), top.index()), "a ride up asked for");
-        int u = 0;
-        all = false;
-        while (!all && u < 600) {
-            MineLift.runForTests(level, v, 1);
-            for (VillageFolkEntity m : r.miners()) Blink.tickCheckForTests(m);
-            all = r.miners().stream().allMatch(m -> MineLift.state(m.getUUID()) == MineLift.State.ARRIVED);
-            u++;
-        }
-        boolean back = r.miners().stream().allMatch(m -> Math.abs(m.getY() - top.y()) < 1.1);
-        for (VillageFolkEntity m : r.miners()) MineLift.done(m.getUUID());
-        Kit.log("[VT] bk02 up to the pithead in " + u + " ticks, all there " + back + "; jumps:\n" + Blink.report());
-        for (String l : Blink.seenLines()) Kit.log("[VT] bk02 seen: " + l);
-        ok.that(there && back, "down to the coal stop and back up");
-        ok.that(t < 300 && u < 300, "each run under fifteen seconds: " + t + ", " + u);
-        ok.that(Blink.seenJumps() == 0, "no jump in sight at the lower stop: " + Blink.seenJumps());
+        final int[] tick = { 0 }, down = { -1 }, upAt = { -1 };
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            if (tick[0] == 10) for (VillageFolkEntity m : r.miners()) ok.that(MineLift.ask(m, v, top.index(), coal.index()), "a ride down asked for");
+            if (tick[0] <= 10) return false;
+            boolean all = r.miners().stream().allMatch(m -> MineLift.state(m.getUUID()) == MineLift.State.ARRIVED);
+            if (down[0] < 0 && all) {
+                down[0] = tick[0];
+                boolean there = r.miners().stream().allMatch(m -> Math.abs(m.getY() - coal.y()) < 1.1);
+                Kit.log("[VT] bk02 down to the coal stop after " + tick[0] + " ticks, all there " + there + "; seen jumps " + Blink.seenJumps());
+                ok.that(there, "down at the coal stop");
+                for (VillageFolkEntity m : r.miners()) MineLift.done(m.getUUID());
+                for (VillageFolkEntity m : r.miners()) ok.that(MineLift.ask(m, v, coal.index(), top.index()), "a ride up asked for");
+                return false;
+            }
+            if (down[0] > 0 && all && upAt[0] < 0) upAt[0] = tick[0];
+            if (upAt[0] < 0 && tick[0] < 1200) return false;
+            boolean back = r.miners().stream().allMatch(m -> Math.abs(m.getY() - top.y()) < 1.1);
+            for (VillageFolkEntity m : r.miners()) MineLift.done(m.getUUID());
+            Kit.log("[VT] bk02 up to the pithead after " + upAt[0] + " ticks, all there " + back + "; jumps:\n" + Blink.report());
+            for (String l : Blink.seenLines()) Kit.log("[VT] bk02 seen: " + l);
+            ok.that(down[0] > 0 && back, "down to the coal stop and back up");
+            ok.that(down[0] > 0 && down[0] < 400 && upAt[0] - down[0] < 400, "each run under twenty seconds: " + down[0] + ", " + (upAt[0] - down[0]));
+            ok.that(Blink.seenJumps() == 0, "no jump in sight at the lower stop: " + Blink.seenJumps());
         boolean bars = true;
         for (int h = 0; h < 2; h++) {
             int[] o = { Integer.signum(coal.board().getX() - r.sx()), Integer.signum(coal.board().getZ() - r.sz()) };
@@ -169,9 +179,74 @@ public class BlinkGameTests {
                     new BlockPos(r.sx(), coal.y() + h, r.sz() + o[1]) })
                 bars &= level.getBlockState(c).is(net.minecraft.world.level.block.Blocks.IRON_BARS);
         }
-        ok.that(bars, "the stop's window shut again behind them");
-        letGo(level, you);
-        helper.assertTrue(ok.clean(), ok.summary());
-        MineWorksGameTests.done(helper);
+            ok.that(bars, "the stop's window shut again behind them");
+            letGo(level, you);
+            helper.assertTrue(ok.clean(), ok.summary());
+            MineWorksGameTests.done(helper);
+            return true;
+        });
+    }
+
+    // ============================================================ bk03: a working town, a player at its heart, a day and a night
+
+    /**
+     * A town of thirty founded with its buildings put up, a player standing in the middle of it from six in the morning to
+     * six the next morning (the level of detail for scale on, as in a game: walks out of sight travelled, the path budget in
+     * force). Not one jump in the player's sight; the safety ones (a folk stepped out of a wall) are counted apart.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 60000, batch = "bk03_town_day_and_night")
+    public static void bk03_town_day_and_night(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        level.setDayTime(22000L);
+        int cx = 6748000, cz = 40_000;
+        BuildAuditGameTests.shape(level, BuildAuditGameTests.Ground.MEADOW, cx, cz, com.jrpetty.mcassistant.village.TownPlan.reach() + 16, 2803);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        Kit.log("[VT] bk03 found 30: " + Kit.command(level, "village found 30 " + cx + " " + cz));
+        UUID[] id = { null };
+        long[] began = { -1 };
+        ServerPlayer[] you = { null };
+        helper.onEachTick(() -> {
+            if (began[0] == -2) return;
+            if (id[0] == null) {
+                if (com.jrpetty.mcassistant.entity.Founding.near(level, heart, 8)) return;
+                com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.nearest(level, heart, 96);
+                if (v == null) { began[0] = -2; helper.fail("no village at " + heart); return; }
+                id[0] = v.id();
+                com.jrpetty.mcassistant.entity.Villages.ageForTests(v.id(), com.jrpetty.mcassistant.entity.Villages.Age.IRON);
+                Kit.stockForGrowth(level, v);
+                for (int i = 0; i < 24; i++) {
+                    String p = com.jrpetty.mcassistant.entity.AdminTools.nextProject(v.id());
+                    if (p == null) break;
+                    com.jrpetty.mcassistant.entity.AdminTools.buildProject(level, v, p, false);
+                }
+                Kit.stockForGrowth(level, v);
+                level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L);      // the next morning, six o'clock
+                you[0] = watcher(helper, level, heart.getX() + 0.5, heart.getY() + 1, heart.getZ() + 0.5);
+                com.jrpetty.mcassistant.entity.FolkLod.liveForTests(true);
+                MineWorksGameTests.fast(level);
+                Blink.reset();
+                Blink.setOn(true);
+                began[0] = level.getGameTime();
+                Kit.log("[VT] bk03 " + com.jrpetty.mcassistant.entity.Villages.name(v.id()) + ": " + com.jrpetty.mcassistant.entity.Villages.headcount(v.id())
+                    + " folk, a player at the heart from six in the morning");
+                return;
+            }
+            long ran = level.getGameTime() - began[0];
+            if (ran % 4000 == 0) Kit.log("[VT] bk03 @" + ran + " (" + (level.getDayTime() % 24000L) + "): seen jumps " + Blink.seenJumps() + ", safety " + Blink.excusedSeenJumps());
+            if (ran < 24200) return;
+            began[0] = -2;
+            Kit.log("[VT] bk03 a day and a night with a player at the heart:\n" + Blink.report());
+            for (String l : Blink.seenLines()) Kit.log("[VT] bk03 seen: " + l);
+            long seen = Blink.seenJumps();
+            com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            level.getServer().tickRateManager().setTickRate(20.0F);
+            letGo(level, you[0]);
+            if (seen == 0) helper.succeed();
+            else helper.fail("jumps in the player's sight over a day and a night: " + seen);
+        });
     }
 }

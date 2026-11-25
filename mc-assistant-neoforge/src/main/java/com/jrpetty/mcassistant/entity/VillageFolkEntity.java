@@ -102,8 +102,8 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     @Override
-    public boolean putBeside(BlockPos target) {
-        return MineSafety.climbInstead(this) || super.putBeside(target);
+    public boolean putBeside(BlockPos target, String why) {
+        return MineSafety.climbInstead(this) || super.putBeside(target, why);
     }
 
     /** A villager is not a hired hand on a clock: it eats a ration every five and a
@@ -358,6 +358,35 @@ public class VillageFolkEntity extends AssistantEntity {
         Blink.moved(this, fx, fy, fz, null);
     }
 
+    /**
+     * [tp43] Up out of bed: the game stands a sleeper up on whatever floor beside its bed it finds, as much as two blocks
+     * off, in a blink. In a player's sight a folk gets up onto its bed where it lay instead (a step up of a few pixels) and
+     * walks off it.
+     */
+    @Override
+    public void stopSleeping() {
+        if (level().isClientSide) { super.stopSleeping(); return; }
+        java.util.Optional<BlockPos> lay = getSleepingPos();
+        double fx = getX(), fy = getY(), fz = getZ();
+        blinkDepth++;
+        try {
+            super.stopSleeping();
+        } finally {
+            blinkDepth--;
+        }
+        if (lay.isPresent() && distanceToSqr(fx, fy, fz) > 1.45 * 1.45 && Blink.seen(this)
+                && level().getBlockState(lay.get()).getBlock() instanceof net.minecraft.world.level.block.BedBlock) {
+            BlockPos b = lay.get();
+            blinkDepth++;
+            try {
+                super.setPos(b.getX() + 0.5, b.getY() + 0.5625, b.getZ() + 0.5);
+            } finally {
+                blinkDepth--;
+            }
+        }
+        if (Blink.on()) Blink.moved(this, fx, fy, fz, "out of bed (the game's own stand-up)");
+    }
+
     @Override
     public void teleportTo(double x, double y, double z) {
         if (blinkDepth > 0 || !Blink.on()) { super.teleportTo(x, y, z); return; }
@@ -400,6 +429,7 @@ public class VillageFolkEntity extends AssistantEntity {
      *  tick (FolkLod). */
     @Override
     public void travel(net.minecraft.world.phys.Vec3 input) {
+        if (!level().isClientSide && Stroll.step(this)) return;          // [tp43] led along a way, a step a tick
         if (!level().isClientSide && FolkLod.rests(this, input)) return;
         super.travel(input);
     }
