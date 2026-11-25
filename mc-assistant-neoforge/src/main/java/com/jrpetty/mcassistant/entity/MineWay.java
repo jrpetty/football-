@@ -548,11 +548,16 @@ public final class MineWay {
     /** The bank by a bridge's end: from this place along it, outward till the ground is dry (a hand stood in the river before). */
     private static BlockPos dry(ServerLevel level, BridgeKit.Shape s, int major, int out) {
         BlockPos first = Visitors.surface(level, s.at(major, 0, s.deckY()));
-        for (int k = 0; k <= 8; k++) {
+        BlockPos made = null;
+        for (int k = 0; k <= 8 + BridgeKit.MOST_RAMP; k++) {
             BlockPos p = Visitors.surface(level, s.at(major + k * out, 0, s.deckY()));
-            if (level.getFluidState(p).isEmpty() && level.getFluidState(p.below()).isEmpty()) return p;
+            if (!level.getFluidState(p).isEmpty() || !level.getFluidState(p.below()).isEmpty()) continue;
+            // [tp47] Not on the ramp: its top step laid and the steps below it not yet, the hand's stand was up on the step,
+            // three blocks over the bank, and the hand stood under it the rest of the day ("waiting for a hand, 101 off").
+            if (BridgeKit.made(level.getBlockState(p.below()))) { if (made == null) made = p; continue; }
+            return p;
         }
-        return first;
+        return made != null ? made : first;
     }
 
     private static void skipDone(ServerLevel level, BridgeKit.Plan p) {
