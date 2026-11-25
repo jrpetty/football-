@@ -148,6 +148,12 @@ public final class MineWay {
         return w != null && w.known && !w.walkable && !w.plans.isEmpty();
     }
 
+    /** Has this town bridged the water on the way to its mine (its miners walk over it, not by the ferry)? */
+    public static boolean bridged(@Nullable UUID village) {
+        Way w = village == null ? null : WAYS.get(village);
+        return w != null && w.known && w.walkable && w.wasCut;
+    }
+
     /** For the books and the tests: how the way to the mine stands. */
     public static String status(@Nullable UUID village) {
         Way w = village == null ? null : WAYS.get(village);
