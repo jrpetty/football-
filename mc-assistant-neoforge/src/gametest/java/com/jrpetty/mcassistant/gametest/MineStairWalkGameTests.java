@@ -269,7 +269,7 @@ public class MineStairWalkGameTests {
             int[] lt = light(level, r.v(), steps);
             int lanterns = 0;
             for (int i = 0; i < steps; i += 4) for (BlockPos c : MineWorks.stepForTests(level, r.v(), i))
-                for (int h = 0; h < ShaftStair.HEAD; h++) if (level.getBlockState(c.above(h)).getBlock() instanceof LanternBlock) lanterns++;
+                for (int h = 0; h <= ShaftStair.HEAD; h++) if (level.getBlockState(c.above(h)).getBlock() instanceof LanternBlock) lanterns++;
             int[] n = ShaftStair.countsForTests();
             Kit.log("[VT] sw01 " + steps + " steps (Y" + TOP + " to Y" + (TOP - 36) + "): floors " + fl + "; light: darkest walking cell " + lt[0] + ", dark cells " + lt[1]
                 + "; lanterns at the landings " + lanterns + "; counts " + java.util.Arrays.toString(n) + lines(ws));
@@ -477,6 +477,12 @@ public class MineStairWalkGameTests {
         level.setBlock(web, Blocks.COBWEB.defaultBlockState(), 3);
         level.setBlock(sand, Blocks.SAND.defaultBlockState(), 3);
         level.setBlock(plank, Blocks.OAK_PLANKS.defaultBlockState(), 3);
+        // An empty furnace left in the way in (filmed: the pithead's furnace heap had one there, and the way in went round it).
+        BlockPos furnace = new BlockPos(r.sx() - 4, TOP, r.sz() - 3);
+        level.setBlock(furnace, Blocks.FURNACE.defaultBlockState(), 3);
+        // No lanterns in the stores or the dresser's pack: every corner landing gets one all the same (filmed: only the level
+        // landings had one; the rest kept an old wall torch).
+        m.removeMatching(st -> st.is(Items.LANTERN), 64);
         // Kept: the torches, lanterns and timbers the stair has now.
         int keptBefore = kept(level, v, steps);
         // A cave beside the twenty-second step (a drop in it), a spring beside the twenty-sixth, a drop beside the top landing.
@@ -497,7 +503,7 @@ public class MineStairWalkGameTests {
             if (tick[0] < 100) return false;
             if (tick[0] == 100) ShaftStair.keepAllForTests(level, v);       // what the water left on its way dried up, a torch it washed off put back
             String gone = "";
-            for (BlockPos x : new BlockPos[]{ dirt, snow, flower, web, sand, plank }) if (!level.getBlockState(x).isAir()) gone += " " + x.toShortString() + "=" + level.getBlockState(x).getBlock();
+            for (BlockPos x : new BlockPos[]{ dirt, snow, flower, web, sand, plank, furnace }) if (!level.getBlockState(x).isAir()) gone += " " + x.toShortString() + "=" + level.getBlockState(x).getBlock();
             int keptAfter = kept(level, v, steps);
             int caveOpen = 0;
             for (int h = 0; h < ShaftStair.HEAD; h++) if (level.getBlockState(caveWall.above(h)).getCollisionShape(level, caveWall.above(h)).isEmpty()) caveOpen++;
@@ -515,9 +521,22 @@ public class MineStairWalkGameTests {
                 if (b == Blocks.STONE_BRICK_STAIRS || b == Blocks.STONE_BRICKS) bricks++;
             }
             int plankItems = level.getEntitiesOfClass(ItemEntity.class, new AABB(plank).inflate(4), e -> e.getItem().is(Items.OAK_PLANKS)).size();
+            int corners = 0, lamps = 0;
+            String dark = "";
+            int lowLamps = 0;
+            for (int i = 0; i < steps; i += 4) {
+                List<BlockPos> cs = MineWorks.stepForTests(level, v, i);
+                for (BlockPos c : cs) for (int h = 0; h < ShaftStair.HEAD; h++) if (level.getBlockState(c.above(h)).getBlock() instanceof LanternBlock) lowLamps++;
+                if (level.canSeeSky(cs.get(3).above(ShaftStair.HEAD + 1))) continue;     // open to the sky: no roof to hang one from
+                corners++;
+                boolean lamp = false;
+                for (BlockPos c : cs) if (level.getBlockState(c.above(ShaftStair.HEAD)).getBlock() instanceof LanternBlock) lamp = true;
+                if (lamp) lamps++; else dark += " " + i;
+            }
             ServerPlayer p = walker(helper);
             List<Walk> ws = walks(level, p, v, steps);
             letGo(level, p);
+            Kit.log("[VT] sw04 lanterns in the roof at " + lamps + " of " + corners + " roofed corner landings (none in store), " + lowLamps + " in the headroom" + (dark.isEmpty() ? "" : "; without:" + dark));
             Kit.log("[VT] sw04 still in the way:" + (gone.isEmpty() ? " nothing" : gone) + " (the plank dropped where it stood: " + plankItems + "); torches, lanterns and timber "
                 + keptBefore + " before, " + keptAfter + " after; the cave's mouth open " + caveOpen + "/" + ShaftStair.HEAD + ", water by the way " + wet + ", the drop fenced " + fenced
                 + "; the level's sign [" + levelSign + "], the pithead's [" + pithead + "]; floors laid in stone brick " + bricks + "; counts "
@@ -530,6 +549,8 @@ public class MineStairWalkGameTests {
             ok.that(fenced, "the drop by the top landing fenced");
             ok.that(levelSign.contains("Coal Level") && levelSign.contains("Y "), "the level's sign: " + levelSign);
             ok.that(pithead.contains("Main Shaft") && pithead.contains("Stairs"), "the pithead's sign: " + pithead);
+            ok.that(lowLamps == 0, "no lantern hung in the four of headroom: " + lowLamps);
+            ok.that(lamps == corners, "a lantern at every corner landing, none in store: " + lamps + " of " + corners + (dark.isEmpty() ? "" : "; without:" + dark));
             ok.that(bricks >= 8, "some of the stair laid in stone bricks from the stores: " + bricks);
             ok.that(allWalked(ws), "walked down and up:" + lines(ws));
             helper.assertTrue(ok.clean(), ok.summary());
