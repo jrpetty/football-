@@ -190,8 +190,8 @@ public class SoakGameTests {
         com.jrpetty.mcassistant.entity.TownLod.ratesForTests(id, new com.jrpetty.mcassistant.entity.TownLod.Rates(java.util.Map.of("bread", 1.0), 1.0, 0.0, 5.0));
         com.jrpetty.mcassistant.entity.TownLod.forceForTests(level.getServer(), com.jrpetty.mcassistant.entity.TownLod.Lod.AWAY);
         helper.assertTrue(com.jrpetty.mcassistant.entity.TownLod.away(id), "with nobody near it sleeps");
-        // The server stops and starts: everything in memory gone, the books kept.
-        com.jrpetty.mcassistant.SessionReset.openingForTests(com.jrpetty.mcassistant.SessionReset::resetAll);
+        // The server stops and starts: the register in memory gone (none of its folk loaded to put it back), the books kept.
+        com.jrpetty.mcassistant.entity.Villages.offTheRegisterForTests(id);
         boolean gone = com.jrpetty.mcassistant.entity.Villages.get(id) == null;
         int back = com.jrpetty.mcassistant.entity.TownRoll.restoreForTests(level.getServer());
         com.jrpetty.mcassistant.entity.Villages.Village again = com.jrpetty.mcassistant.entity.Villages.get(id);
@@ -202,6 +202,7 @@ public class SoakGameTests {
         helper.assertTrue(again != null && again.centre().equals(v.centre()) && again.dim().equals(v.dim()), "put back on the map where it was");
         helper.assertTrue(com.jrpetty.mcassistant.entity.Villages.headcount(id) == roll && com.jrpetty.mcassistant.entity.Villages.builtList(id).equals(built),
             "as far as it had got: roll " + com.jrpetty.mcassistant.entity.Villages.headcount(id) + " of " + roll);
+        com.jrpetty.mcassistant.entity.TownLod.forceForTests(level.getServer(), null);
         helper.succeed();
     }
 }

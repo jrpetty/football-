@@ -645,6 +645,14 @@ public final class Villages {
     /** Restore a settlement from what one of its folk remembers. Village
      *  state lives in memory only, so the folk carry it: the first one to
      *  load puts its village — and how far it had got — back on the map. */
+    /** [soak40] Tests: the town off the register as a restart leaves a town none of whose folk have loaded (its books kept). */
+    public static void offTheRegisterForTests(UUID id) {
+        ALL.remove(id);
+        AGE.remove(id);
+        BUILT.remove(id);
+        POP.remove(id);
+    }
+
     public static void restore(Level level, UUID id, BlockPos centre, Age age,
                                List<String> built, int population) {
         ALL.putIfAbsent(id, new Village(id, centre, level.dimension()));
