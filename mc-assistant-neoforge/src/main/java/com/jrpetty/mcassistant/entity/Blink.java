@@ -177,6 +177,7 @@ public final class Blink {
         if (!on || f.level().isClientSide) return;
         boolean miner = miner(f);
         boolean seen = seen(f);
+        if (miner && f.isInWater() && f.ownerId() != null) MINER_WET.merge(f.ownerId(), 1L, Long::sum);   // [tp46]
         synchronized (TICKS) {
             TICKS[miner ? 0 : 2]++;
             if (seen) TICKS[miner ? 1 : 3]++;
@@ -241,7 +242,11 @@ public final class Blink {
 
     // ------------------------------------------------------------------ readings
 
+    /** [tp46] Ticks the town's miners have spent in the water since the counts were reset (the soak). */
+    private static final Map<java.util.UUID, Long> MINER_WET = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static void reset() {
+        MINER_WET.clear();
         BY.clear();
         HELD.clear();
         SEEN.clear();
@@ -382,7 +387,8 @@ public final class Blink {
                 if (a.isInWater()) wet++;
             }
             b.append(Villages.name(v.id())).append(": miners ").append(all).append(", at the mine ").append(atMine).append(" (below ").append(below)
-                .append("), in the water ").append(wet).append("; ").append(MineWay.status(v.id())).append('\n');
+                .append("), in the water ").append(wet).append(" (miner-ticks in the water so far ").append(MINER_WET.getOrDefault(v.id(), 0L))
+                .append("); ").append(MineWay.status(v.id())).append('\n');
         }
         return b.toString();
     }
