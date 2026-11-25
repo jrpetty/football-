@@ -195,8 +195,10 @@ public final class MineWay {
         boolean was = w.walkable;
         w.walkable = ok;
         if (ok) {
-            if (!w.plans.isEmpty() && !w.open) {
-                // Its deck across: the way is open (the railings and lights go on as the stores run to them).
+            // Its decks across, but not its railings yet: still cut off (a deck a block wide between the railings' beams, and
+            // six miners crowding over it, shouldered each other off into the river).
+            if (!w.plans.isEmpty() && !allDown(level, w)) { w.walkable = false; return; }
+            if (w.wasCut && !w.open) {
                 w.open = true;
                 BRIDGED.merge(id, 1, Integer::sum);
                 Villages.tell(id, level.getDayTime() / 24000L, "the way to the mine is open on foot, over the new bridge");
@@ -209,6 +211,7 @@ public final class MineWay {
         // crossed; what else the flood finds (the pithead's own diggings) the miners know their way round.
         if (w.plans.isEmpty() && w.wasCut) {
             w.walkable = true;
+            if (!w.open) { w.open = true; BRIDGED.merge(id, 1, Integer::sum); }
             return;
         }
         if (w.plans.isEmpty()) {
@@ -247,13 +250,14 @@ public final class MineWay {
             w.wasCut = true;
             Villages.tell(id, level.getDayTime() / 24000L, "the mine is cut off from the town by water: the town is to bridge it before its miners go out to it");
             LOG.info("[MCA-MINEWAY] {}: the mine at {} cut off by water; {} crossing(s) to bridge", Villages.name(id), w.site.toShortString(), w.crossings);
-        } else if (decksDown(level, w)) {
-            // Every deck across, and the flood still finds no way (a cliff past the river, the pithead dug about, a ramp onto
+        } else if (allDown(level, w)) {
+            // All of it down, and the flood still finds no way (a cliff past the river, the pithead dug about, a ramp onto
             // an island between two spans): the water is crossed, and that is what the town could do; the miners go as they
-            // always did (the railings and lights still going on).
+            // always did.
             w.walkable = true;
-            if (allDown(level, w)) w.plans.clear();
-            LOG.info("[MCA-MINEWAY] {}: the decks are across (the flood finds no way still, stopping at {}: left to the miners)", Villages.name(id), floodEnd);
+            w.plans.clear();
+            if (!w.open) { w.open = true; BRIDGED.merge(id, 1, Integer::sum); }
+            LOG.info("[MCA-MINEWAY] {}: the bridge is down (the flood finds no way still, stopping at {}: left to the miners)", Villages.name(id), floodEnd);
         }
     }
 
@@ -273,18 +277,6 @@ public final class MineWay {
             if (level.getFluidState(p).isEmpty() && level.getFluidState(p.below()).isEmpty()) return p;
         }
         return first;
-    }
-
-    /** Every deck of the crossings across (the railings and lights may be to come). */
-    private static boolean decksDown(ServerLevel level, Way w) {
-        for (BridgeKit.Plan p : w.plans) {
-            boolean deck = false;
-            for (BridgeKit.Piece pc : p.pieces) if (pc.kind() == 'D') { deck = true; break; }
-            if (!deck) continue;
-            skipDone(level, p);
-            if (p.cursor < p.pieces.size()) return false;
-        }
-        return true;
     }
 
     private static void skipDone(ServerLevel level, BridgeKit.Plan p) {
@@ -314,7 +306,6 @@ public final class MineWay {
             if (out == null) {
                 boolean deck = false;
                 for (BridgeKit.Piece pc : p.pieces) if (pc.kind() == 'D') { deck = true; break; }
-                if (deck && !w.open && decksDown(level, w)) { w.open = true; BRIDGED.merge(v.id(), 1, Integer::sum); }
                 w.status = "";
                 w.looked = -1;                                                 // looked at again at once
                 String what = deck ? "deck was laid across the water" : "railings and lights were finished";
