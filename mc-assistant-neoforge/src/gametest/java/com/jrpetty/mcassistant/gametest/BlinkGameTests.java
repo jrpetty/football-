@@ -410,4 +410,116 @@ public class BlinkGameTests {
             return true;
         });
     }
+
+    // ============================================================ bk06 / bk07: a mine over a river
+
+    /** bk06: the mine across a river with no crossing: the town bridges it first, then its miners walk to work over it. */
+    @GameTest(template = EMPTY, timeoutTicks = 40000, batch = "bk06_mine_over_the_river")
+    public static void bk06_mine_over_the_river(GameTestHelper helper) {
+        overTheRiver(helper, "bk06", 6760000, false);
+    }
+
+    /** bk07: the same with a footbridge already over the river on the way: nothing more is built, the miners walk over it. */
+    @GameTest(template = EMPTY, timeoutTicks = 40000, batch = "bk07_mine_river_bridged")
+    public static void bk07_mine_river_bridged(GameTestHelper helper) {
+        overTheRiver(helper, "bk07", 6764000, true);
+    }
+
+    static void overTheRiver(GameTestHelper helper, String label, int cx, boolean bridged) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
+        com.jrpetty.mcassistant.entity.MineWay.resetForTests();
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        level.setDayTime(22000L);
+        int cz = 40_000, n = 6;
+        int reach = com.jrpetty.mcassistant.village.TownPlan.reach();
+        BuildAuditGameTests.shape(level, BuildAuditGameTests.Ground.MEADOW, cx, cz, reach + 16, 2805);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        Kit.log("[VT] " + label + " found 20: " + Kit.command(level, "village found 20 " + cx + " " + cz));
+        int rx = cx + reach + 30, sx = rx + 45;                       // the river (seven wide), and the mine beyond it
+        Kit.hold(level, rx, cz, 64);
+        Kit.hold(level, sx, cz, 32);
+        UUID[] id = { null };
+        long[] began = { -1 };
+        ServerPlayer[] you = { null };
+        List<VillageFolkEntity> miners = new java.util.ArrayList<>();
+        int[] wet = new int[n], reached = new int[n];
+        helper.onEachTick(() -> {
+            if (began[0] == -2) return;
+            if (id[0] == null) {
+                if (com.jrpetty.mcassistant.entity.Founding.near(level, heart, 8)) return;
+                com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.nearest(level, heart, 96);
+                if (v == null) { began[0] = -2; helper.fail("no village at " + heart); return; }
+                id[0] = v.id();
+                com.jrpetty.mcassistant.entity.Villages.ageForTests(v.id(), com.jrpetty.mcassistant.entity.Villages.Age.IRON);
+                Kit.stockForGrowth(level, v);
+                for (int i = 0; i < 16; i++) {
+                    String p = com.jrpetty.mcassistant.entity.AdminTools.nextProject(v.id());
+                    if (p == null) break;
+                    com.jrpetty.mcassistant.entity.AdminTools.buildProject(level, v, p, false);
+                }
+                Kit.stockForGrowth(level, v);
+                // The river: seven wide and three deep, a hundred and forty long, across the way out to the mine.
+                for (int x = rx; x < rx + 7; x++) for (int z = cz - 70; z <= cz + 70; z++) {
+                    BlockPos top = Kit.surface(level, x, z);
+                    for (int dy = 1; dy <= 3; dy++) level.setBlock(top.below(dy), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 2);
+                    for (int dy = 0; dy <= 3; dy++) level.setBlock(top.above(dy), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                }
+                if (bridged) {                                              // a plank footbridge, flush on the water, three wide
+                    for (int x = rx - 1; x < rx + 8; x++) for (int dz = -1; dz <= 1; dz++) {
+                        BlockPos top = Kit.surface(level, x, cz + dz);
+                        level.setBlock(top.below(), net.minecraft.world.level.block.Blocks.SPRUCE_PLANKS.defaultBlockState(), 2);
+                    }
+                }
+                BlockPos site = Kit.surface(level, sx, cz);
+                com.jrpetty.mcassistant.village.Ledger.note(v.id(), "mine.site", sx + "," + cz);
+                for (com.jrpetty.mcassistant.entity.AssistantEntity a : com.jrpetty.mcassistant.entity.Villages.folkOf(v.id())) {
+                    if (miners.size() >= n || !(a instanceof VillageFolkEntity f) || f.isBaby()) continue;
+                    f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+                    f.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(site, 6, site.getY() - 3), "Mine");
+                    MineWorksGameTests.kit(f, Items.IRON_PICKAXE);
+                    miners.add(f);
+                }
+                level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 1000L);
+                you[0] = watcher(helper, level, rx - 6.5, heart.getY() + 1, cz + 4.5);
+                MineWorksGameTests.fast(level);
+                Blink.reset();
+                Blink.setOn(true);
+                began[0] = level.getGameTime();
+                Kit.log("[VT] " + label + " " + com.jrpetty.mcassistant.entity.Villages.name(v.id()) + ": " + miners.size() + " miners, the mine at " + site.toShortString()
+                    + " over the river at x " + rx + ".." + (rx + 6) + (bridged ? " (bridged)" : " (no crossing)"));
+                return;
+            }
+            long ran = level.getGameTime() - began[0];
+            if (level.getDayTime() % 24000L > 10500L) level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 1000L);   // by day
+            for (int i = 0; i < miners.size(); i++) {
+                VillageFolkEntity m = miners.get(i);
+                if (m.isInWater()) wet[i]++;
+                if (reached[i] == 0 && m.getX() > rx + 10 && Math.abs(m.getX() - sx) <= 8 && Math.abs(m.getZ() - cz) <= 8) reached[i] = (int) ran;
+                if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+            }
+            if (ran % 1000 == 0) Kit.log("[VT] " + label + " @" + ran + ": " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]) + "; bridges " + com.jrpetty.mcassistant.entity.MineWay.BRIDGED
+                + "; reached " + java.util.Arrays.toString(reached) + "; in the water " + java.util.Arrays.toString(wet) + "; seen jumps " + Blink.seenJumps());
+            boolean all = java.util.Arrays.stream(reached).limit(miners.size()).allMatch(t -> t > 0);
+            if (!all && ran < 30000) return;
+            began[0] = -2;
+            Kit.log("[VT] " + label + " jumps:\n" + Blink.report());
+            for (String l : Blink.seenLines()) Kit.log("[VT] " + label + " seen: " + l);
+            Kit.Expect ok = new Kit.Expect();
+            long dead = miners.stream().filter(m -> !m.isAlive()).count();
+            ok.that(all, "every miner walked to the pithead: " + java.util.Arrays.toString(reached));
+            ok.that(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenJumps());
+            ok.that(dead == 0, "nobody drowned: " + dead + " dead");
+            ok.that(java.util.Arrays.stream(wet).allMatch(t -> t < 60), "nobody swam the river: " + java.util.Arrays.toString(wet));
+            if (bridged) ok.that(com.jrpetty.mcassistant.entity.MineWay.BRIDGED == 0, "nothing more built where a crossing stood: " + com.jrpetty.mcassistant.entity.MineWay.BRIDGED);
+            else ok.that(com.jrpetty.mcassistant.entity.MineWay.BRIDGED >= 1, "the town bridged the river: " + com.jrpetty.mcassistant.entity.MineWay.BRIDGED);
+            ok.that(!com.jrpetty.mcassistant.entity.MineWay.cutOff(id[0]), "the mine reached on foot: " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]));
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            level.getServer().tickRateManager().setTickRate(20.0F);
+            letGo(level, you[0]);
+            if (ok.clean()) helper.succeed();
+            else helper.fail(ok.summary());
+        });
+    }
 }

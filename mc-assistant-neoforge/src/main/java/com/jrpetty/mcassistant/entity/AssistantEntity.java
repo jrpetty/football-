@@ -7248,7 +7248,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Above the upkeep check for the same reason: a bot out of rations
         // must still be able to walk to the chest holding them.
         if (workZone != null && !walksAbroad() && stationTask != StationTask.HAUL
-                && !workZone.containsColumn(blockPosition())) {
+                && !workZone.containsColumn(blockPosition())
+                && !(stationTask == StationTask.MINE && isSettler() && MineWay.cutOff(ownerId))) {   // [tp43] no walk to the water
             brain("walking back to the plot" + headForPlot());
             return true;
         }
@@ -7545,6 +7546,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 if (isSettler() && workZone != null && TownDigs.plotInTown(this)) {
                     if (this instanceof VillageFolkEntity vf) vf.seekTheSeamForTests();
                     brain("no mine in the town's ground: waiting for a face of the town's mine");
+                    return false;
+                }
+                // [tp43] The mine cut off by water, the town bridging it: no shift out to it; the town's other work meanwhile.
+                if (isSettler() && MineWay.cutOff(ownerId)) {
+                    brain("the mine is cut off by water till the bridge is built: other work meanwhile");
                     return false;
                 }
                 // [mine8] A miner of a town with a mine works its levels from the pithead (MineWorks).
