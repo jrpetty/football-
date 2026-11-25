@@ -744,7 +744,9 @@ public final class BridgeKit {
         }
         String key = base + "/" + f.name();
         Family ff = f;
-        return PLANS.computeIfAbsent(key, k -> new Plan(k, s.shape(), ff, pieces(level, s.shape(), ff,
+        // [tp47] Drawn once for each town: two towns' crossings at the same step of a road of the same name (each town's way to
+        // its mine) are two bridges, and a town was handed another's bridge to build, a world away.
+        return PLANS.computeIfAbsent(owner + "|" + key, k -> new Plan(key, s.shape(), ff, pieces(level, s.shape(), ff,
             oldDeck(level, line, s, alongX(line, Math.max(0, line.size() / 2)), perStep))));
     }
 
