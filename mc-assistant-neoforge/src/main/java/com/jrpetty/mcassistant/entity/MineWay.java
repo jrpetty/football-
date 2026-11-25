@@ -462,7 +462,11 @@ public final class MineWay {
             if (p.family().wood()) buyPlanks(level, v, w);
             if (!TownJobs.atWork(level, v, "mineway", stand, stair ? "cutting the stair on the way to the mine" : "building the bridge on the way to the mine",
                     AssistantEntity.StationTask.HAUL)) {
-                w.status = "waiting for a hand";
+                VillageFolkEntity hand = TownJobs.handAt(level, v.id(), "mineway");
+                long t = level.getDayTime() % 24000L;
+                w.status = "waiting for a hand" + (t >= 12500L && t < 23500L ? " (by day)" : hand == null ? " (none to spare)"
+                    : " (" + hand.displayNameCap() + " " + (int) Math.sqrt(hand.blockPosition().distSqr(stand)) + " off, at " + hand.blockPosition().toShortString()
+                    + " for " + stand.toShortString() + ")");     // [tp46] the census
                 return;
             }
             String out = BridgeKit.lay(level, v, p, stair ? STAIR_PER_VISIT : PER_VISIT, false);
