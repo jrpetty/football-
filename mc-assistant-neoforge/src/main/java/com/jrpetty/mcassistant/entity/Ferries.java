@@ -1085,6 +1085,9 @@ public final class Ferries {
         if (id == null || f.isBaby() || f.isPassenger() || f.trip() != null || f.expedition() != null) return;
         Crossing c = crossing(id);
         if (c == null || c.state != State.RUNNING || badWeather(level) || ferrymanOf(level, c) == null) return;
+        // [tp43] A miner whose mine the town is bridging waits for the bridge (MineWay): the ferry's one seat and the landing's
+        // wait sent six miners to the bank of a morning, and those it could not carry in time swam.
+        if (f.stationTask() == AssistantEntity.StationTask.MINE && MineWay.cutOff(id)) return;
         long now = level.getGameTime();
         if (NEXT_LOOK.getOrDefault(f.getUUID(), 0L) > now) return;
         WorkZone z = f.workZone();

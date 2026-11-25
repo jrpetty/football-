@@ -531,7 +531,7 @@ public class WorksGoal extends Goal {
             double dd = a.position().distanceTo(Vec3.atBottomCenterOf(cells.get(i)));
             if (dd <= nearD) { nearD = dd; near = i; }
         }
-        if (near >= 0 && a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.Stroll.along(f, cells.subList(near, cells.size()))) {
+        if (near >= 0 && a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.Stroll.along(f, squared(cells.subList(near, cells.size())))) {
             replans = 0;
             LEAD_STROLLS++;
             return false;
@@ -566,6 +566,30 @@ public class WorksGoal extends Goal {
         }
         if (phase == Phase.BREAK) { breakAt = null; phase = Phase.NEXT; return false; }
         return false;
+    }
+
+    /**
+     * [tp43] The way's cells with a corner put in wherever it goes on the slant (a turn of the stair a step up and a step
+     * across both): nobody walks through the corner of the rock between, and the lead stopped there, a shift long, short
+     * of a step it could have taken in two. Its own cell first, so the first step is looked at too.
+     */
+    private List<BlockPos> squared(List<BlockPos> cells) {
+        List<BlockPos> out = new ArrayList<>();
+        BlockPos prev = a.blockPosition();
+        out.add(prev);
+        for (BlockPos c : cells) {
+            if (c.getX() != prev.getX() && c.getZ() != prev.getZ()) {
+                int hi = Math.max(prev.getY(), c.getY()), lo = Math.min(prev.getY(), c.getY());
+                BlockPos[] corners = { new BlockPos(c.getX(), lo, prev.getZ()), new BlockPos(prev.getX(), lo, c.getZ()),
+                    new BlockPos(c.getX(), hi, prev.getZ()), new BlockPos(prev.getX(), hi, c.getZ()) };
+                for (BlockPos k : corners) {
+                    if (open(k) && !a.level().getBlockState(k.below()).getCollisionShape(a.level(), k.below()).isEmpty()) { out.add(k); break; }
+                }
+            }
+            out.add(c);
+            prev = c;
+        }
+        return out;
     }
 
     /**

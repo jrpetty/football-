@@ -208,12 +208,12 @@ public final class Blink {
         boolean miner = miner(f);
         BY.computeIfAbsent(why, k -> new long[4])[(miner ? 0 : 2) + (seen ? 0 : 1)]++;
         if (!seen) return;
-        if (why.startsWith("!")) { excusedSeen++; return; }
-        seenAll++;
+        boolean excused = why.startsWith("!");
+        if (excused) excusedSeen++; else seenAll++;
         double d = Math.sqrt(f.distanceToSqr(fx, fy, fz));
         String line = String.format("%s %s (%s) %.1f,%.1f,%.1f -> %.1f,%.1f,%.1f (%.1f): %s", f.level().getGameTime(), f.getAssistantName(),
             miner ? "miner" : f.stationTask().name().toLowerCase(), fx, fy, fz, f.getX(), f.getY(), f.getZ(), d, why + (at.isEmpty() || at.equals(why) ? "" : " @" + at));
-        if (SEEN.size() < 400) SEEN.add(line);
+        if (SEEN.size() < 400) SEEN.add(line);                            // (a safety jump's line marked by its "!")
     }
 
     /** The method outside the folk that moved it (the stack read only on a jump, never each tick). */

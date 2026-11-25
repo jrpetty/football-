@@ -58,6 +58,7 @@ public final class MineWay {
         BlockPos site;
         long looked = -1, built = -1;
         boolean known, walkable = true, gaveUp, wasCut, open;
+        int crossings;
         final List<BridgeKit.Plan> plans = new ArrayList<>();
         String status = "";
         Way(BlockPos site) { this.site = site; }
@@ -130,7 +131,7 @@ public final class MineWay {
         if (w == null || !w.known) return "the way to the mine not looked at yet";
         if (w.walkable) return "the mine is reached on foot" + (w.wasCut ? " (over the town's new bridge" + (w.plans.isEmpty() ? ")" : ", its railings going on)") : "");
         if (w.gaveUp) return "no way on foot to the mine, and none the town can bridge";
-        return "the mine is cut off by water: the town is bridging it (" + w.plans.size() + " crossing(s)" + (w.status.isEmpty() ? "" : "; " + w.status) + ")";
+        return "the mine is cut off by water: the town is bridging it (" + w.crossings + " crossing(s)" + (w.status.isEmpty() ? "" : "; " + w.status) + ")";
     }
 
     /** Tests: looked at again on the next tick. */
@@ -182,7 +183,11 @@ public final class MineWay {
             return;
         }
         if (w.plans.isEmpty()) {
-            List<int[]> line = Roads.bresenham(v.centre().getX(), v.centre().getZ(), w.site.getX(), w.site.getZ());
+            // The cheapest way over: the walk from the heart to the pithead that crosses the least water (a river crossed
+            // once on a short walk round, rather than four times on the straight line); the straight line if that cannot be had.
+            List<int[]> line = route(level, v.centre(), w.site);
+            if (line == null) line = Roads.bresenham(v.centre().getX(), v.centre().getZ(), w.site.getX(), w.site.getZ());
+            List<BridgeKit.Plan> drawn = new ArrayList<>();
             for (int[] run : waterRuns(level, line)) {
                 BridgeKit.Span s = BridgeKit.spanAt(level, id, ROAD, line, run[0] + run[1] / 2, 1);
                 if (s == null) continue;
@@ -191,8 +196,20 @@ public final class MineWay {
                 if (com.jrpetty.mcassistant.village.Ledger.note(id, fam) == null || com.jrpetty.mcassistant.village.Ledger.note(id, fam).isEmpty())
                     com.jrpetty.mcassistant.village.Ledger.note(id, fam, BridgeKit.PLANKS.name());
                 BridgeKit.Plan p = BridgeKit.plan(level, v, id, ROAD, line, s, false, false);
-                if (p != null && !w.plans.contains(p)) w.plans.add(p);
+                if (p != null && !drawn.contains(p)) drawn.add(p);
             }
+            // Every deck across first, nearest the town first, and only then the railings, end posts and lights: a town with
+            // four rivers between it and its mine had its first bridge's railings waiting on planks while the other three
+            // decks waited on them (and its miners on all four).
+            List<BridgeKit.Plan> finish = new ArrayList<>();
+            for (BridgeKit.Plan p : drawn) {
+                List<BridgeKit.Piece> deck = new ArrayList<>(), rest = new ArrayList<>();
+                for (BridgeKit.Piece pc : p.pieces) ("REQ".indexOf(pc.kind()) >= 0 ? rest : deck).add(pc);
+                w.plans.add(new BridgeKit.Plan(p.key, p.shape, p.family, deck));
+                if (!rest.isEmpty()) finish.add(new BridgeKit.Plan(p.key, p.shape, p.family, rest));
+            }
+            w.plans.addAll(finish);
+            w.crossings = drawn.size();
             if (w.plans.isEmpty()) {
                 if (was) LOG.info("[MCA-MINEWAY] {}: no way on foot to the mine at {}, and no water on the way to bridge", Villages.name(id), w.site.toShortString());
                 w.gaveUp = true;
@@ -200,18 +217,31 @@ public final class MineWay {
             }
             w.wasCut = true;
             Villages.tell(id, level.getDayTime() / 24000L, "the mine is cut off from the town by water: the town is to bridge it before its miners go out to it");
-            LOG.info("[MCA-MINEWAY] {}: the mine at {} cut off by water; {} crossing(s) to bridge", Villages.name(id), w.site.toShortString(), w.plans.size());
-        } else if (allDown(level, w)) {
-            // Bridged, and the flood still finds no way (a cliff past the river, the pithead dug about): the water is crossed,
-            // and that is what the town could do; the miners go as they always did.
+            LOG.info("[MCA-MINEWAY] {}: the mine at {} cut off by water; {} crossing(s) to bridge", Villages.name(id), w.site.toShortString(), w.crossings);
+        } else if (decksDown(level, w)) {
+            // Every deck across, and the flood still finds no way (a cliff past the river, the pithead dug about, a ramp onto
+            // an island between two spans): the water is crossed, and that is what the town could do; the miners go as they
+            // always did (the railings and lights still going on).
             w.walkable = true;
-            w.plans.clear();
-            LOG.info("[MCA-MINEWAY] {}: the bridge is down (the flood finds no way still: left to the miners)", Villages.name(id));
+            if (allDown(level, w)) w.plans.clear();
+            LOG.info("[MCA-MINEWAY] {}: the decks are across (the flood finds no way still, stopping at {}: left to the miners)", Villages.name(id), floodEnd);
         }
     }
 
     private static boolean allDown(ServerLevel level, Way w) {
         for (BridgeKit.Plan p : w.plans) {
+            skipDone(level, p);
+            if (p.cursor < p.pieces.size()) return false;
+        }
+        return true;
+    }
+
+    /** Every deck of the crossings across (the railings and lights may be to come). */
+    private static boolean decksDown(ServerLevel level, Way w) {
+        for (BridgeKit.Plan p : w.plans) {
+            boolean deck = false;
+            for (BridgeKit.Piece pc : p.pieces) if (pc.kind() == 'D') { deck = true; break; }
+            if (!deck) continue;
             skipDone(level, p);
             if (p.cursor < p.pieces.size()) return false;
         }
@@ -243,11 +273,14 @@ public final class MineWay {
             }
             String out = BridgeKit.lay(level, v, p, PER_VISIT, false);
             if (out == null) {
-                if (!w.open) { w.open = true; BRIDGED.merge(v.id(), 1, Integer::sum); }
+                boolean deck = false;
+                for (BridgeKit.Piece pc : p.pieces) if (pc.kind() == 'D') { deck = true; break; }
+                if (deck && !w.open && decksDown(level, w)) { w.open = true; BRIDGED.merge(v.id(), 1, Integer::sum); }
                 w.status = "";
                 w.looked = -1;                                                 // looked at again at once
-                Villages.tell(v.id(), level.getDayTime() / 24000L, "a " + p.family().name() + " bridge was finished on the way to the mine");
-                LOG.info("[MCA-MINEWAY] {}: a {} bridge finished on the way to the mine", Villages.name(v.id()), p.family().name());
+                String what = deck ? "deck was laid across the water" : "railings and lights were finished";
+                Villages.tell(v.id(), level.getDayTime() / 24000L, "a " + p.family().name().toLowerCase() + " bridge's " + what + " on the way to the mine");
+                LOG.info("[MCA-MINEWAY] {}: a {} bridge's {} on the way to the mine", Villages.name(v.id()), p.family().name(), what);
             } else {
                 w.status = BridgeKit.MORE.equals(out) ? "building" : "waiting for " + out;
             }
@@ -317,10 +350,13 @@ public final class MineWay {
         seen[start] = true;
         int tx = to.getX() - x0, tz = to.getZ() - z0;
         int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        int nearest = Integer.MAX_VALUE;
         while (!q.isEmpty()) {
             int c = q.poll();
             int ci = c / h, ck = c % h;
-            if (Math.abs(ci - tx) <= AT_PITHEAD && Math.abs(ck - tz) <= AT_PITHEAD) return true;
+            int off = Math.max(Math.abs(ci - tx), Math.abs(ck - tz));
+            if (off < nearest) { nearest = off; floodEnd = (x0 + ci) + ", " + top[c] + ", " + (z0 + ck); }
+            if (off <= AT_PITHEAD) return true;
             for (int[] d : dirs) {
                 int ni = ci + d[0], nk = ck + d[1];
                 if (ni < 0 || nk < 0 || ni >= w || nk >= h) continue;
@@ -331,6 +367,79 @@ public final class MineWay {
             }
         }
         return false;
+    }
+
+    /** Where the last flood that found no way got nearest the pithead (the log). */
+    private static volatile String floodEnd = "-";
+
+    /** A block of water on the way costs as much as this many on land (a bridge's length against a walk round). */
+    static final int WATER_COST = 12;
+
+    /**
+     * The cheapest walk from the heart to the pithead with the water on it to bridge: over the same ground as the flood,
+     * where a block of water may be crossed too (at {@link #WATER_COST}) and a bank a block or two over the water stepped
+     * off and onto. The cells of the walk, {x, z}, heart first; null if the ground is not all loaded or there is no such walk.
+     */
+    @Nullable
+    static List<int[]> route(ServerLevel level, BlockPos from, BlockPos to) {
+        int x0 = Math.min(from.getX(), to.getX()) - MARGIN, x1 = Math.max(from.getX(), to.getX()) + MARGIN;
+        int z0 = Math.min(from.getZ(), to.getZ()) - MARGIN, z1 = Math.max(from.getZ(), to.getZ()) + MARGIN;
+        int w = x1 - x0 + 1, h = z1 - z0 + 1;
+        if ((long) w * h > 400L * 400L) return null;
+        for (int cx = x0 >> 4; cx <= x1 >> 4; cx++) for (int cz = z0 >> 4; cz <= z1 >> 4; cz++) if (!level.hasChunk(cx, cz)) return null;
+        int n = w * h;
+        int[] top = new int[n];
+        byte[] kind = new byte[n];                                       // 0 land, 1 water, 2 neither (lava, a fence, a wall)
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int i = 0; i < w; i++) {
+            for (int k = 0; k < h; k++) {
+                int x = x0 + i, z = z0 + k;
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                top[i * h + k] = y;
+                m.set(x, y - 1, z);
+                BlockState st = level.getBlockState(m);
+                if (st.getFluidState().is(net.minecraft.tags.FluidTags.WATER)) kind[i * h + k] = 1;
+                else if (!st.getFluidState().isEmpty() || st.is(net.minecraft.tags.BlockTags.FENCES) || st.is(net.minecraft.tags.BlockTags.WALLS)) kind[i * h + k] = 2;
+            }
+        }
+        boolean[] ok = new boolean[n];
+        for (int c = 0; c < n; c++) ok[c] = kind[c] == 0;
+        int start = nearestOk(ok, w, h, from.getX() - x0, from.getZ() - z0);
+        if (start < 0) return null;
+        int tx = to.getX() - x0, tz = to.getZ() - z0;
+        int[] dist = new int[n], prev = new int[n];
+        java.util.Arrays.fill(dist, Integer.MAX_VALUE);
+        dist[start] = 0;
+        prev[start] = -1;
+        java.util.PriorityQueue<long[]> q = new java.util.PriorityQueue<>(java.util.Comparator.comparingLong(a -> a[0]));
+        q.add(new long[]{ 0, start });
+        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        int end = -1;
+        while (!q.isEmpty()) {
+            long[] e = q.poll();
+            int c = (int) e[1];
+            if (e[0] > dist[c]) continue;
+            int ci = c / h, ck = c % h;
+            if (kind[c] == 0 && Math.abs(ci - tx) <= AT_PITHEAD && Math.abs(ck - tz) <= AT_PITHEAD) { end = c; break; }
+            for (int[] d : dirs) {
+                int ni = ci + d[0], nk = ck + d[1];
+                if (ni < 0 || nk < 0 || ni >= w || nk >= h) continue;
+                int nb = ni * h + nk;
+                if (kind[nb] == 2) continue;
+                int dy = Math.abs(top[nb] - top[c]);
+                if (dy > (kind[nb] == 1 || kind[c] == 1 ? 2 : 1)) continue;
+                int nd = dist[c] + (kind[nb] == 1 ? WATER_COST : 1);
+                if (nd >= dist[nb]) continue;
+                dist[nb] = nd;
+                prev[nb] = c;
+                q.add(new long[]{ nd, nb });
+            }
+        }
+        if (end < 0) return null;
+        List<int[]> out = new ArrayList<>();
+        for (int c = end; c >= 0; c = prev[c]) out.add(new int[]{ x0 + c / h, z0 + c % h });
+        java.util.Collections.reverse(out);
+        return out;
     }
 
     private static int nearestOk(boolean[] ok, int w, int h, int i0, int k0) {

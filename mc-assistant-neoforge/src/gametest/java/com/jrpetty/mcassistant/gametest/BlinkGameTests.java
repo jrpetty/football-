@@ -500,6 +500,7 @@ public class BlinkGameTests {
             }
             long ran = level.getGameTime() - began[0];
             if (level.getDayTime() % 24000L > 10500L) level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 1000L);   // by day
+            if (ran % 6000 == 0) Kit.stockForGrowth(level, com.jrpetty.mcassistant.entity.Villages.get(id[0]));   // the stores kept up, as by a day's trade
             for (int i = 0; i < miners.size(); i++) {
                 VillageFolkEntity m = miners.get(i);
                 if (m.isInWater()) wet[i]++;
