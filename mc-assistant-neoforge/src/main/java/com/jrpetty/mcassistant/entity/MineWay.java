@@ -652,8 +652,10 @@ public final class MineWay {
         w.boughtAt = now;
         int want = 0;
         for (BridgeKit.Plan p : w.plans) want += BridgeKit.planksWanted(level, p);
-        int have = w.purse[0] + Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.PLANKS))
-            + 4 * Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.LOGS)) / 2;   // (half the logs: the houses want theirs)
+        // [tp47] The planks in hand only, the stores' logs not counted on: counted as half the bridge's, they were sawn for the
+        // houses and the terraces before the bridge came to them, and by then the terraces had spent the treasury on brick (the
+        // bridge waited on planks two thirds of a day, its miners with it).
+        int have = w.purse[0] + Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.PLANKS));
         int shortBy = want - have;
         if (shortBy <= 0) return;
         int got = Market.importFor(level, v, level.getDayTime() / 24000L, net.minecraft.world.item.Items.SPRUCE_PLANKS, shortBy, "the bridge on the way to the mine", false);

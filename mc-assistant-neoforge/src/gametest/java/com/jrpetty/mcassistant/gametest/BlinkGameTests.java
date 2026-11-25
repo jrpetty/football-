@@ -651,6 +651,12 @@ public class BlinkGameTests {
                 + "; reached " + java.util.Arrays.toString(reached) + "; in the water " + java.util.Arrays.toString(wet) + "; seen jumps " + Blink.seenJumps()
                 + "; the ferry " + (com.jrpetty.mcassistant.entity.Ferries.crossing(id[0]) == null ? "none" : com.jrpetty.mcassistant.entity.Ferries.crossing(id[0]).state().words)
                 + "; wet ways held dry " + com.jrpetty.mcassistant.entity.FolkNavigation.HELD_DRY);
+            // [tp47] Once the way is open, where each miner not yet at the pithead is and what it is at (the log).
+            if (ran % 1000 == 0 && !com.jrpetty.mcassistant.entity.MineWay.cutOff(id[0])) for (int i = 0; i < miners.size(); i++) {
+                VillageFolkEntity m = miners.get(i);
+                if (reached[i] == 0) Kit.log("[VT] " + label + "   not there yet: " + m.getAssistantName() + " at " + m.blockPosition().toShortString() + " path " + pathLine(m)
+                    + " goals " + running(m) + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg()) + " | " + m.brainNoteForBooks());
+            }
             boolean all = java.util.Arrays.stream(reached).limit(miners.size()).allMatch(t -> t > 0);
             if (pond ? ran < 24000 : !all && ran < 30000) return;           // (the pond: a whole day and night)
             began[0] = -2;
