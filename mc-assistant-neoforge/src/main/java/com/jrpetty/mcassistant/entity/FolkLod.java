@@ -59,7 +59,7 @@ public final class FolkLod {
             if (p.isSpectator()) continue;
             if (p.distanceToSqr(x, y, z) < r * r) return false;
         }
-        return true;
+        return !Blink.watchedAt(level, x, z, r);                    // [tp43] a headless run's pretend player
     }
 
     /** Beyond sight by this much is where a travelled walk into sight hands over to walking. */

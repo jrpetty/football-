@@ -298,6 +298,17 @@ public final class Blink {
         WATCH.add(new Watch(level.dimension(), x, z));
     }
 
+    /** [tp43] Is a pretend player (a headless run's watcher) within this many blocks across the ground? */
+    static boolean watchedAt(Level level, double x, double z, double r) {
+        if (WATCH.isEmpty()) return false;
+        for (Watch w : WATCH) {
+            if (w.dim() != level.dimension()) continue;
+            double dx = w.x() - x, dz = w.z() - z;
+            if (dx * dx + dz * dz <= r * r) return true;
+        }
+        return false;
+    }
+
     public static void unwatchAll() {
         WATCH.clear();
         TEST_PLAYERS.clear();
