@@ -253,6 +253,12 @@ public final class MineWay {
         return w != null && w.known && w.walkable && w.wasCut;
     }
 
+    /** [tp46] Is this town's mine reached on foot (looked at, and the flood finds a way)? */
+    public static boolean onFoot(@Nullable UUID village) {
+        Way w = village == null ? null : WAYS.get(village);
+        return w != null && w.known && w.walkable;
+    }
+
     /** For the books and the tests: how the way to the mine stands. */
     public static String status(@Nullable UUID village) {
         Way w = village == null ? null : WAYS.get(village);
