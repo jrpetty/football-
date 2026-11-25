@@ -474,7 +474,9 @@ public final class MineLift {
                     Ask a = it.next();
                     Entity e = level.getEntity(a.who);
                     if (e instanceof ServerPlayer) continue;
-                    if (e != null && e.isAlive() && e.position().subtract(well).horizontalDistance() <= 0.6 && Math.abs(e.getY() - well.y) <= 0.6) continue;
+                    // In the cage, or on its way in over the well's edge (left there it would drop down the well): it rides.
+                    if (e != null && e.isAlive() && e.position().subtract(well).horizontalDistance() <= 1.3 && Math.abs(e.getY() - well.y) <= 1.0) continue;
+                    if (e != null && e.isAlive() && !e.onGround() && Math.abs(e.getY() - well.y) <= 1.0) continue;
                     STATE.remove(a.who);
                     l.glideFrom.remove(a.who);
                     it.remove();
