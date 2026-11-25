@@ -50,6 +50,13 @@ public class BlinkGameTests {
             + (p.canReach() ? "" : " (cannot reach)");
     }
 
+    static String running(com.jrpetty.mcassistant.entity.AssistantEntity a) {
+        StringBuilder b = new StringBuilder();
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal g : a.goalsForTests().getAvailableGoals())
+            if (g.isRunning()) b.append(g.getGoal().getClass().getSimpleName()).append(',');
+        return b.length() == 0 ? "-" : b.toString();
+    }
+
     static void letGo(ServerLevel level, ServerPlayer p) {
         Blink.unwatchForTests(p);
         Blink.setOn(false);
@@ -275,7 +282,8 @@ public class BlinkGameTests {
                     if (a.isSleeping()) { asleep++; continue; }
                     BlockPos bed = a.bedPos();
                     Kit.log("[VT] bk03   awake at night: " + a.getAssistantName() + " at " + a.blockPosition().toShortString() + " bed " + (bed == null ? "-" : bed.toShortString()
-                        + " " + (int) Math.sqrt(bed.distSqr(a.blockPosition())) + " off") + " path " + pathLine(a) + " | " + a.brainNoteForBooks());
+                        + " " + (int) Math.sqrt(bed.distSqr(a.blockPosition())) + " off") + " path " + pathLine(a) + " shift " + a.onShift()
+                        + " goals " + running(a) + " job " + (a.peekJob() == null ? "-" : a.peekJob().type()) + " | " + a.brainNoteForBooks());
                 }
                 Kit.log("[VT] bk03 at night: " + asleep + " of " + all + " asleep");
             }
@@ -499,6 +507,9 @@ public class BlinkGameTests {
                 if (reached[i] == 0 && m.getX() > rx + 10 && Math.abs(m.getX() - sx) <= 8 && Math.abs(m.getZ() - cz) <= 8) reached[i] = (int) ran;
                 if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
             }
+            if (ran % 250 == 0 && ran <= 3000) for (VillageFolkEntity m : miners) Kit.log("[VT] " + label + "   " + m.getAssistantName() + " at "
+                + m.blockPosition().toShortString() + (m.isInWater() ? " IN WATER" : "") + " goals " + running(m) + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg())
+                + " lent " + (m.isPassenger() ? "riding" : "") + " | " + m.brainNoteForBooks());
             if (ran % 1000 == 0) Kit.log("[VT] " + label + " @" + ran + ": " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]) + "; bridges " + com.jrpetty.mcassistant.entity.MineWay.BRIDGED
                 + "; reached " + java.util.Arrays.toString(reached) + "; in the water " + java.util.Arrays.toString(wet) + "; seen jumps " + Blink.seenJumps());
             boolean all = java.util.Arrays.stream(reached).limit(miners.size()).allMatch(t -> t > 0);

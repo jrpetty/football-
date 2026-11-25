@@ -785,8 +785,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (!isInWater() || isPassenger() || isSleeping()) { wetFor = 0; wetSwims = 0; return; }
         if (underwaterWork()) { wetFor = 0; return; }        // [diver] down there on purpose, or being pulled out
         if (wetFor++ == 0) wetFrom = position();
-        if (wetFor < 10) return;
-        if (position().distanceToSqr(wetFrom) > 36.0) { wetFor = 0; return; }   // making way
+        // [tp43] Out of breath (a long swim, a current carrying it along the river): out at once, whatever way it was making.
+        boolean drowning = getAirSupply() < getMaxAirSupply() / 3;
+        if (wetFor < 10 && !drowning) return;
+        if (position().distanceToSqr(wetFrom) > 36.0 && !drowning) { wetFor = 0; return; }   // making way
+        if (drowning) wetSwims = 3;
         net.minecraft.world.level.pathfinder.Path path = getNavigation().getPath();
         BlockPos goal = path != null ? path.getTarget() : (workZone != null ? workZone.center() : null);
         BlockPos here = blockPosition();
@@ -3344,6 +3347,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (bedState.getValue(net.minecraft.world.level.block.BedBlock.PART)
                 != net.minecraft.world.level.block.state.properties.BedPart.HEAD) return false;
         if (bedState.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) return false;
+        Integer bad = badBeds.get(pos);                                       // [tp43] one it could not get to today
+        if (bad != null && bad > tickCount) return false;
         return !isSomebodysHomeBed(pos) && !claimedByCrewmate(pos);
     }
 
@@ -3369,6 +3374,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     != net.minecraft.world.level.block.state.properties.BedPart.HEAD) continue;
             if (bedState.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) continue;
             if (isSomebodysHomeBed(pos)) continue;   // that one is a player's
+            Integer bad = badBeds.get(pos);
+            if (bad != null && bad > tickCount) continue;   // [tp43] one it could not get to today
             if (claimedByCrewmate(pos)) continue;
             double d = pos.distSqr(near);
             if (d < bestDist) { bestDist = d; best = pos.immutable(); }
@@ -3470,6 +3477,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             double far = bed.distSqr(blockPosition());
             if (far < bedWalkBest - 2.0) {
                 bedWalkBest = far;
+                bedSeenFails = 0;
                 bedWalkSince = tickCount;
             } else if (tickCount - bedWalkSince > 400) {
                 bedWalkSince = tickCount;
@@ -3482,14 +3490,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     // over to it and onto it, led, as anybody climbs into a bed from the side they can reach.
                     brain("stepped over to its bed");
                     return true;
-                } else if (isSettler() && this instanceof VillageFolkEntity && Blink.seen(this)
+                } else if (isSettler() && this instanceof VillageFolkEntity && Blink.seen(this) && ++bedSeenFails < 4
                         && (toBed == null || toBed.canReach() || getNavigation().isDone())) {
-                    // [tp43] In a player's sight it is never put beside its bed: it walks on (a fresh way each look),
-                    // and only a bed it truly cannot reach is given up below.
+                    // [tp43] In a player's sight it is never put beside its bed: it walks on (a fresh way each look) a
+                    // minute or so; a bed it still cannot get to is given up below for one it can.
                     getNavigation().stop();
                     brain("on its way to bed in sight — walking on");
                 } else if (isSettler() && ++bedWalkFails >= 2) {
                     bedWalkFails = 0;
+                    bedSeenFails = 0;
+                    if (this instanceof VillageFolkEntity) badBeds.put(bed.immutable(), tickCount + 24000);   // [tp43] not this one again today
                     bedPos = null;                        // a bed it can get to, next look
                     bedClaimTick = tickCount - 6000;
                     brain("gave up a bed it could not reach");
@@ -3507,6 +3517,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         bedWalkBest = Double.MAX_VALUE;
         bedWalkSince = tickCount;
         bedWalkFails = 0;
+        bedSeenFails = 0;
         if (!isSleeping()) {
             // [tp43] Lying down is a step onto the bed, not a hop of two blocks into it: in a player's sight it comes up to the
             // bed's side first (a few seconds at most, then it lies down wherever it has got to).
@@ -3535,6 +3546,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private double bedWalkBest = Double.MAX_VALUE;   // the nearest it has got to its bed on the way
     private int bedWalkSince;
     private int bedWalkFails;
+    /** [tp43] Looks in a player's sight that got it no nearer its bed (four, and the bed is given up for one it can reach). */
+    private int bedSeenFails;
+    /** [tp43] Beds it could not get to, and till when they are passed over when it looks for one. */
+    private final java.util.Map<BlockPos, Integer> badBeds = new java.util.HashMap<>();
     private int bedClaimTick = -99999; // one bed hunt per night, not per tick
     private boolean parkedForNight;   // the night routine parked it (un-park at dawn)
     private int baseStage;            // how far it has built up its home base (0=just home+chest)
@@ -7073,6 +7088,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         brain("could not walk to the plot — put there");
         return true;
     }
+
+    /** [tp43] Tests: its goals (which are running, at a night's census). */
+    public net.minecraft.world.entity.ai.goal.GoalSelector goalsForTests() { return goalSelector; }
 
     private int putBesideTick = -100000;
 

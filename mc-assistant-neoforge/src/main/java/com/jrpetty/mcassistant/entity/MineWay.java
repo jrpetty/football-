@@ -46,7 +46,7 @@ public final class MineWay {
     /** Blocks round the heart and the pithead the flood may go. */
     static final int MARGIN = 40;
     /** How near the pithead the flood must come. */
-    static final int AT_PITHEAD = 4;
+    static final int AT_PITHEAD = 8;
     /** Ticks between looks, and between visits to the bridge. */
     static final long LOOK_EVERY = 2400L, BUILD_EVERY = 100L;
     /** Blocks of the bridge a visit. */
@@ -127,6 +127,12 @@ public final class MineWay {
             return;
         }
         if (w.gaveUp) return;
+        // Bridged already (by this town, on an earlier look, or its road gang): the water was what stood between, and it is
+        // crossed; what else the flood finds (the pithead's own diggings) the miners know their way round.
+        if (w.plans.isEmpty() && w.wasCut) {
+            w.walkable = true;
+            return;
+        }
         if (w.plans.isEmpty()) {
             List<int[]> line = Roads.bresenham(v.centre().getX(), v.centre().getZ(), w.site.getX(), w.site.getZ());
             for (int[] run : waterRuns(level, line)) {
@@ -144,10 +150,11 @@ public final class MineWay {
             Villages.tell(id, level.getDayTime() / 24000L, "the mine is cut off from the town by water: the town is to bridge it before its miners go out to it");
             LOG.info("[MCA-MINEWAY] {}: the mine at {} cut off by water; {} crossing(s) to bridge", Villages.name(id), w.site.toShortString(), w.plans.size());
         } else if (allDown(level, w)) {
-            // Bridged, and still no way (a cliff past the river): left as it was, the miners going as they always did.
-            w.gaveUp = true;
+            // Bridged, and the flood still finds no way (a cliff past the river, the pithead dug about): the water is crossed,
+            // and that is what the town could do; the miners go as they always did.
+            w.walkable = true;
             w.plans.clear();
-            LOG.info("[MCA-MINEWAY] {}: the bridge is down but still no way on foot to the mine", Villages.name(id));
+            LOG.info("[MCA-MINEWAY] {}: the bridge is down (the flood finds no way still: left to the miners)", Villages.name(id));
         }
     }
 
