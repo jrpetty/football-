@@ -768,6 +768,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** How long this hand has been in the water, in seconds, and where it was when the count began. */
     private int wetFor;
+    /** [tp47] Looks for a bank in the water, to look further now and then. */
+    private int wetFar;
     /** [tp43] Swims for the bank in a player's sight that got it nowhere (three, and it is lifted out). */
     private int wetSwims;
     private net.minecraft.world.phys.Vec3 wetFrom = net.minecraft.world.phys.Vec3.ZERO;
@@ -799,20 +801,28 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         BlockPos here = blockPosition();
         BlockPos best = null;
         double bestScore = Double.MAX_VALUE;
-        for (int dx = -5; dx <= 5; dx++) {
-            for (int dz = -5; dz <= 5; dz++) {
-                for (int dy = 3; dy >= -1; dy--) {
-                    BlockPos feet = here.offset(dx, dy, dz);
-                    if (!level().getFluidState(feet).isEmpty() || !level().getFluidState(feet.below()).isEmpty()) continue;
-                    if (!level().getBlockState(feet).getCollisionShape(level(), feet).isEmpty()) continue;
-                    if (!level().getBlockState(feet.above()).getCollisionShape(level(), feet.above()).isEmpty()) continue;
-                    if (!level().getBlockState(feet.below()).isFaceSturdy(level(), feet.below(), net.minecraft.core.Direction.UP)) continue;
-                    // [tp46] Kept dry, the bank on its own side (where it went in), not the far one across.
-                    double score = feet.distSqr(here) + (keepDry ? Math.sqrt(feet.distToCenterSqr(wetFrom)) * 0.8
-                        : goal != null ? Math.sqrt(feet.distSqr(goal)) * 0.5 : 0)
-                        - (onWalkedGround(feet) ? 30 : 0);          // a bank that leads somewhere
-                    if (score < bestScore) { bestScore = score; best = feet; }
-                    break;
+        // [tp47] A folk kept dry with no bank within five blocks (out in a lake beside an old bridge's piers) looks further, to
+        // twelve: it swam on along the bridge after its walk for a minute, the bank never near enough to be seen.
+        int reach = keepDry && (wetFar++ % 10 == 0) ? 12 : 5;
+        for (int pass = 0; pass < 2 && best == null; pass++) {
+            int r = pass == 0 ? 5 : reach;
+            if (pass == 1 && r == 5) break;
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (pass == 1 && Math.max(Math.abs(dx), Math.abs(dz)) <= 5) continue;
+                    for (int dy = 3; dy >= -1; dy--) {
+                        BlockPos feet = here.offset(dx, dy, dz);
+                        if (!level().getFluidState(feet).isEmpty() || !level().getFluidState(feet.below()).isEmpty()) continue;
+                        if (!level().getBlockState(feet).getCollisionShape(level(), feet).isEmpty()) continue;
+                        if (!level().getBlockState(feet.above()).getCollisionShape(level(), feet.above()).isEmpty()) continue;
+                        if (!level().getBlockState(feet.below()).isFaceSturdy(level(), feet.below(), net.minecraft.core.Direction.UP)) continue;
+                        // [tp46] Kept dry, the bank on its own side (where it went in), not the far one across.
+                        double score = feet.distSqr(here) + (keepDry ? Math.sqrt(feet.distToCenterSqr(wetFrom)) * 0.8
+                            : goal != null ? Math.sqrt(feet.distSqr(goal)) * 0.5 : 0)
+                            - (onWalkedGround(feet) ? 30 : 0);          // a bank that leads somewhere
+                        if (score < bestScore) { bestScore = score; best = feet; }
+                        break;
+                    }
                 }
             }
         }
