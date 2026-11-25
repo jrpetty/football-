@@ -441,12 +441,14 @@ public class FolkNavigation extends GroundPathNavigation {
      * comes nearest, and down a hill that is the shore: dropped down a bank or two it could not climb again, a folk was on a
      * strip of beach under a bluff with the only way off it through the water (beside an old bridge's ends, round a lake's
      * north shore, a dozen times a soak). Such a way, ending three or more below where it set out within a few blocks of
-     * water, is walked as far as the top of its first drop (a fall of two or more), and planned again from there: the drop
-     * is taken only on a way that gets there.
+     * water and eight or more under where it is going, is walked as far as the top of its first drop (a fall of two or
+     * more), and planned again from there: the drop is taken only on a way that gets there.
      */
     private Path shoreTrim(Path p) {
         net.minecraft.world.level.pathfinder.Node end = p.getEndNode();
-        if (end == null || end.y > this.mob.getBlockY() - 3 || !nearWater(end.asBlockPos())) return p;
+        // (Only a way heading down to the shore away from a place well up above it: a walk home down to the street by a pond
+        // is a walk home.)
+        if (end == null || end.y > this.mob.getBlockY() - 3 || p.getTarget().getY() - end.y < 8 || !nearWater(end.asBlockPos())) return p;
         for (int i = Math.max(1, p.getNextNodeIndex()); i < p.getNodeCount(); i++) {
             if (p.getNode(i - 1).y - p.getNode(i).y < 2) continue;
             if (i <= 1) return null;                                   // at the drop's top already: it stands (asked again later)
