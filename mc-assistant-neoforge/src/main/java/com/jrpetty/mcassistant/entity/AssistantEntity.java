@@ -3511,8 +3511,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // [tp43] Lying down is a step onto the bed, not a hop of two blocks into it: in a player's sight it comes up to the
             // bed's side first (a few seconds at most, then it lies down wherever it has got to).
             double bx = bed.getX() + 0.5 - getX(), bz = bed.getZ() + 0.5 - getZ();
-            if (this instanceof VillageFolkEntity vf && bx * bx + bz * bz > 1.3 * 1.3 && tickCount - bedSideSince < 200 && Blink.seen(this)) {
-                if (!Stroll.led(vf)) stepOntoBed(bed);
+            if (this instanceof VillageFolkEntity vf && bx * bx + bz * bz > 1.0 && Blink.seen(this)) {
+                if (tickCount - bedSideSince < 100) {
+                    if (!Stroll.led(vf)) stepOntoBed(bed);
+                } else {
+                    // The led walk could not get it there (a bedpost, a chest at the foot): it shuffles over, a quarter of a
+                    // block a tick, onto the bed's head.
+                    Stroll.stop(vf);
+                    double len = Math.sqrt(bx * bx + bz * bz);
+                    double ty = bed.getY() + 0.5625;
+                    setPos(getX() + bx / len * 0.25, getY() + Mth.clamp(ty - getY(), -0.25, 0.25), getZ() + bz / len * 0.25);
+                    getNavigation().stop();
+                }
                 return true;
             }
             getNavigation().stop();
