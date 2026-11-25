@@ -3537,7 +3537,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     Stroll.stop(vf);
                     double len = Math.sqrt(bx * bx + bz * bz);
                     double ty = bed.getY() + 0.5625;
-                    setPos(getX() + bx / len * 0.25, getY() + Mth.clamp(ty - getY(), -0.25, 0.25), getZ() + bz / len * 0.25);
+                    double nx = getX() + bx / len * 0.25, ny = getY() + Mth.clamp(ty - getY(), -0.25, 0.25), nz = getZ() + bz / len * 0.25;
+                    net.minecraft.world.phys.Vec3 by = new net.minecraft.world.phys.Vec3(nx - getX(), ny - getY(), nz - getZ());
+                    if (level().noCollision(this, getBoundingBox().move(by).deflate(0.01))) {
+                        setPos(nx, ny, nz);
+                    } else if (level().noCollision(this, getBoundingBox().move(by.add(0, 0.6, 0)).deflate(0.01))) {
+                        setPos(nx, ny + 0.6, nz);
+                    } else {
+                        // A wall or a chest between it and the bed's head: never through it. This bed is given up for one
+                        // it can lie down in.
+                        badBeds.put(bed.immutable(), tickCount + 24000);
+                        bedPos = null;
+                        bedClaimTick = tickCount - 6000;
+                        brain("could not get round to its bed's head: another bed");
+                    }
                     getNavigation().stop();
                 }
                 return true;
