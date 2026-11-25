@@ -394,15 +394,20 @@ public final class Blink {
             if (!v.dim().equals(level.dimension())) continue;
             int all = 0, asleep = 0, floor = 0, bed = 0;
             java.util.Map<String, Integer> why = new java.util.TreeMap<>();
+            StringBuilder each = new StringBuilder();
             for (AssistantEntity a : Villages.folkOf(v.id())) {
                 all++;
                 if (a.bedPos() != null) bed++;
                 if (a.isSleeping()) { asleep++; if (Bedside.onAFloor(a)) floor++; continue; }
-                why.merge(Bedside.kind(Bedside.whyAwake(a)), 1, Integer::sum);
+                String w = Bedside.whyAwake(a);
+                why.merge(Bedside.kind(w), 1, Integer::sum);
+                net.minecraft.core.BlockPos bp = a.bedPos();
+                each.append("  ").append(a.getAssistantName()).append(" (").append(w).append(") at ").append(a.blockPosition().toShortString())
+                    .append(bp == null ? "" : " bed " + bp.toShortString() + " " + (int) Math.sqrt(bp.distSqr(a.blockPosition())) + " off").append('\n');
             }
             if (all == 0) continue;
             b.append(Villages.name(v.id())).append(": ").append(asleep).append(" of ").append(all).append(" asleep (").append(floor)
-                .append(" on a floor), ").append(bed).append(" with a bed; awake: ").append(why).append('\n');
+                .append(" on a floor), ").append(bed).append(" with a bed; awake: ").append(why).append('\n').append(each);
         }
         return b.toString();
     }
