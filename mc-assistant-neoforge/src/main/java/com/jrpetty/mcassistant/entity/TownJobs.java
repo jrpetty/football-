@@ -163,9 +163,10 @@ public final class TownJobs {
             Business firm = Enterprise.employerOf(id, f);               // [biz30d] the log: a firm's hand called off its bench
             if (firm != null) LOG_LIFE.info("[MCA-TOWNJOBS] {}: {}, a hand of {}, called to the town's work: {}", Villages.name(id), f.displayNameCap(), firm.name, what);
         }
-        // [tp46] The way to the mine keeps its hand till it is done (a fresh hand each turn spent its turn on the walk out to
-        // the bank, and the bridge stood "waiting for a hand" half of every day).
-        if (!MINEWAY.equals(works) && now - c.since > (works.startsWith("road/") ? ROAD_SHIFT : SHIFT)) {
+        // [tp46] The way to the mine keeps its hand till it is done, once it has got there (a fresh hand each turn spent its
+        // turn on the walk out to the bank, and the bridge stood "waiting for a hand" half of every day); one that never gets
+        // there in its turn is let go for another as ever.
+        if (!(MINEWAY.equals(works) && c.pieces > 0) && now - c.since > (works.startsWith("road/") ? ROAD_SHIFT : SHIFT)) {
             // Its turn is done: back to its own work, and the next call sends somebody else.
             CREW.remove(key);
             ON.remove(f.getUUID());
