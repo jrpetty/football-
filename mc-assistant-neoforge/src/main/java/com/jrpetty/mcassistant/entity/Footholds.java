@@ -353,6 +353,27 @@ public final class Footholds extends SavedData {
     }
 
     /**
+     * [tree] The Player AI Assistant as it goes about (once a second): its own climb's pillar, called away before it came
+     * down, down now; else a block of its own left in reach, taken up. Never in a climb under way, the air or a boat.
+     */
+    public static void tidy(AssistantEntity a) {
+        if (!(a.level() instanceof ServerLevel level)) return;
+        Footholds books = of(level);
+        if (books.holds.isEmpty()) return;
+        if (!a.onGround() || a.isPassenger() || a.isSleeping() || climbing(a)) return;
+        BlockPos under = a.feetPos().below();
+        Hold h = books.holds.get(under.asLong());
+        if (h != null && h.purpose() == Purpose.CLIMB && !h.kept() && isOwn(a, under)) {
+            comeDown(a);
+            return;
+        }
+        BlockPos next = nextInReach(a, level, false);
+        if (next == null) return;
+        if (strands(a, level, next)) keep(level, next, a);
+        else takeUp(a, level, next);
+    }
+
+    /**
      * The highest foothold within its reach it may take up now (its own; with others, a day-old one of its town's),
      * that nobody stands on and that is not under its own feet; null for none.
      */
