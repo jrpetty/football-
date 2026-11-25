@@ -192,7 +192,7 @@ public final class MineWay {
     public static BlockPos detour(AssistantEntity f, BlockPos target) {
         UUID id = f.ownerId();
         Way w = id == null ? null : WAYS.get(id);
-        if (w == null || w.line == null || !w.walkable || !w.wasCut || w.line.size() < 8 || !w.plans.isEmpty() && !w.open) return null;
+        if (w == null || w.line == null || !w.wasCut || w.line.size() < 8) return null;   // (being built too: the way out to its works)
         List<int[]> line = w.line;
         int nf = -1, nt = -1;
         long bf = Long.MAX_VALUE, bt = Long.MAX_VALUE;

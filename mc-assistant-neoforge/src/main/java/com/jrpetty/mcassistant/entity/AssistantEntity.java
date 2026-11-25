@@ -1197,6 +1197,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         double direct = dest.distSqr(blockPosition());
         // A long way to go, and in no mood to dawdle: break into a run, as anybody would.
         if (direct > 20.0 * 20.0 && speed >= 0.9D && fitToRun()) setSprinting(true);
+        // [tp46] Along its town's way to the mine where that is the way (the bridge's hand sent out a hundred blocks to the
+        // far end of an old bridge stood all day at the near end, its straight way too long for the pathfinder).
+        if (direct > 28.0 * 28.0 && this instanceof VillageFolkEntity) {
+            BlockPos via = MineWay.detour(this, dest);
+            if (via != null && via.distSqr(blockPosition()) > 9.0) {
+                roadDest = dest.immutable();
+                roadLeg = via;
+                roadUntil = tickCount + 400;
+                getNavigation().moveTo(via.getX() + 0.5, via.getY(), via.getZ() + 0.5, speed);
+                return;
+            }
+        }
         if (direct > 24.0 * 24.0 && ownerId != null) {
             java.util.Map<Long, Integer> map = TRAFFIC.get(ownerId);
             if (map != null) {
