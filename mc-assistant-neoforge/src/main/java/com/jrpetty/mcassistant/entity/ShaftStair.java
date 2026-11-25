@@ -312,6 +312,11 @@ public final class ShaftStair {
                 BlockState s = level.getBlockState(p);
                 if (s.isAir() || ours(s)) continue;
                 if (!s.getFluidState().isEmpty() && s.canBeReplaced()) { level.setBlock(p, Blocks.AIR.defaultBlockState(), 3); cleared++; continue; }
+                if (s.getBlock() instanceof net.minecraft.world.level.block.AbstractFurnaceBlock && level.getBlockEntity(p) instanceof net.minecraft.world.Container box && box.isEmpty()) {
+                    level.destroyBlock(p, true);                              // a furnace set down on the stair and left empty: taken up
+                    cleared++;
+                    continue;
+                }
                 if (s.hasBlockEntity() || s.getDestroySpeed(level, p) < 0) continue;
                 if (s.is(BlockTags.LOGS) && !com.jrpetty.mcassistant.entity.goal.BuildGoal.isTreeLog(level, p)) {
                     level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);   // an older timber set's cap, a block too low

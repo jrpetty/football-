@@ -174,7 +174,7 @@ public class MineStairWalkGameTests {
         int wrong = 0, risers = 0, stairs = 0, flats = 0;
         StringBuilder bad = new StringBuilder();
         for (int i = 0; i < steps; i++) {
-            List<BlockPos> riser = i % 4 == 0 && i + 1 < steps ? ShaftStair.risersForTests(level, v, i) : List.of();
+            List<BlockPos> riser = i % 4 == 0 ? ShaftStair.risersForTests(level, v, i) : List.of();
             Direction up = ShaftStair.upForTests(i);
             for (BlockPos c : MineWorks.stepForTests(level, v, i)) {
                 BlockState f = level.getBlockState(c.below());
@@ -274,6 +274,7 @@ public class MineStairWalkGameTests {
             Kit.log("[VT] sw01 " + steps + " steps (Y" + TOP + " to Y" + (TOP - 36) + "): floors " + fl + "; light: darkest walking cell " + lt[0] + ", dark cells " + lt[1]
                 + "; lanterns at the landings " + lanterns + "; counts " + java.util.Arrays.toString(n) + lines(ws));
             letGo(level, p);
+            dump(level, r, "sw01", TOP - 26, TOP + 6, 9);
             Kit.Expect ok = new Kit.Expect();
             ok.that(allWalked(ws), "walked down and up by both lanes, every rise within the step-up, no jump:" + lines(ws));
             ok.that(fl.startsWith("0|"), "every floor as it should be: " + fl);
@@ -350,6 +351,7 @@ public class MineStairWalkGameTests {
                 letGo(level, p);
                 String fl = floors(level, r.v(), want);
                 Kit.log("[VT] sw02 after the round the step holds " + now.getBlock() + "; floors " + fl + lines(ws));
+                dump(level, r, "sw02", TOP - 14, TOP + 6, 9);
                 Kit.Expect ok = new Kit.Expect();
                 ok.that(now.isAir(), "the sand cleared off the step: " + now);
                 ok.that(allWalked(ws), "walked up and down:" + lines(ws));
@@ -493,7 +495,7 @@ public class MineStairWalkGameTests {
             tick[0]++;
             if (tick[0] <= 5) { MineWorks.tick(level, Villages.get(v)); return false; }
             if (tick[0] < 100) return false;
-            if (tick[0] == 100) MineWorks.tick(level, Villages.get(v));     // what the water left on its way dried up
+            if (tick[0] == 100) ShaftStair.keepAllForTests(level, v);       // what the water left on its way dried up, a torch it washed off put back
             String gone = "";
             for (BlockPos x : new BlockPos[]{ dirt, snow, flower, web, sand, plank }) if (!level.getBlockState(x).isAir()) gone += " " + x.toShortString() + "=" + level.getBlockState(x).getBlock();
             int keptAfter = kept(level, v, steps);
@@ -534,6 +536,24 @@ public class MineStairWalkGameTests {
             MineWorksGameTests.done(helper);
             return true;
         });
+    }
+
+    /** The blocks round the shaft, a layer a line ("[VT] dump TAG y|x,z,block,facing,half;..."), for a picture of it. */
+    static void dump(ServerLevel level, MineWorksGameTests.Rig r, String tag, int y0, int y1, int half) {
+        for (int y = y0; y <= y1; y++) {
+            StringBuilder sb = new StringBuilder();
+            for (int x = r.sx() - half; x <= r.sx() + half; x++) for (int z = r.sz() - half; z <= r.sz() + half; z++) {
+                BlockState s = level.getBlockState(new BlockPos(x, y, z));
+                if (s.isAir()) continue;
+                String name = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath();
+                String f = s.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)
+                    ? s.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING).getName() : "-";
+                String hh = s.hasProperty(StairBlock.HALF) ? s.getValue(StairBlock.HALF).getSerializedName() : "-";
+                if (s.getBlock() instanceof LanternBlock) hh = s.getValue(LanternBlock.HANGING) ? "hanging" : "-";
+                sb.append(x - r.sx()).append(',').append(z - r.sz()).append(',').append(name).append(',').append(f).append(',').append(hh).append(';');
+            }
+            Kit.log("[VT] dump " + tag + " " + (y - TOP) + "|" + sb);
+        }
     }
 
     /** The works' own things in and round the stair: torches, lanterns, timbers. */
