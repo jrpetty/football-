@@ -44,6 +44,12 @@ public class BlinkGameTests {
         return p;
     }
 
+    static String pathLine(com.jrpetty.mcassistant.entity.AssistantEntity a) {
+        net.minecraft.world.level.pathfinder.Path p = a.getNavigation().getPath();
+        return p == null ? "none" : (p.isDone() ? "done " : "") + p.getNextNodeIndex() + "/" + p.getNodeCount() + " to " + p.getTarget().toShortString()
+            + (p.canReach() ? "" : " (cannot reach)");
+    }
+
     static void letGo(ServerLevel level, ServerPlayer p) {
         Blink.unwatchForTests(p);
         Blink.setOn(false);
@@ -52,11 +58,29 @@ public class BlinkGameTests {
 
     // ============================================================ bk01: a shift change at the pithead, a player watching
 
+    /** The cage's rig (SupplyChainGameTests.liftRig) with rock at the coal and copper levels for ten miners to work in. */
+    static MineWorksGameTests.Rig workedRig(GameTestHelper helper, int x, int miners) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, x, miners);
+        ServerLevel level = r.level();
+        MineLift.forgetForTests(r.v());
+        int coal = com.jrpetty.mcassistant.entity.MineWorks.levelY(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COAL);
+        int copper = com.jrpetty.mcassistant.entity.MineWorks.levelY(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COPPER);
+        Kit.hold(level, r.sx(), r.sz(), 48);
+        MineWorksGameTests.tower(r, copper - 3);
+        MineWorksGameTests.bed(r, coal, 32, net.minecraft.world.level.block.Blocks.COAL_ORE, 80, 4301L);
+        MineWorksGameTests.bed(r, copper, 32, net.minecraft.world.level.block.Blocks.COPPER_ORE, 80, 4302L);
+        com.jrpetty.mcassistant.entity.MineWorks.sinkForTests(level, r.v(), 4 * ((MineWorksGameTests.TOP - copper) / 3) + 1, null);
+        com.jrpetty.mcassistant.entity.MineWorks.roomForTests(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COAL);
+        com.jrpetty.mcassistant.entity.MineWorks.roomForTests(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COPPER);
+        com.jrpetty.mcassistant.entity.MineWorks.tick(level, com.jrpetty.mcassistant.entity.Villages.get(r.v()));
+        return r;
+    }
+
     @GameTest(template = EMPTY, timeoutTicks = 30000, batch = "bk01_pithead_shift_change")
     public static void bk01_pithead_shift_change(GameTestHelper helper) {
         final int n = 10;
         com.jrpetty.mcassistant.entity.MineRoof.resetForTests();
-        MineWorksGameTests.Rig r = SupplyChainGameTests.liftRig(helper, 6740000, n);
+        MineWorksGameTests.Rig r = workedRig(helper, 6740000, n);
         ServerLevel level = r.level();
         UUID v = r.v();
         List<MineLift.Stop> stops = MineLift.stops(v);
@@ -89,7 +113,14 @@ public class BlinkGameTests {
                 VillageFolkEntity m = r.miners().get(i);
                 // Miners they stay (the little test town would set some of them to farming, with no farmers of its own).
                 if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
-                if (dusk[0] < 0) MineWorksGameTests.keepAtIt(r, m);
+                if (dusk[0] < 0) {
+                    // What it digs banked for it, and no trip to the stores: the test's town lies a hundred and sixty blocks
+                    // under the pithead's rock, with no way down to it but the mine.
+                    if (tick[0] % 100 == 0) m.removeMatching(st -> !st.is(net.minecraft.tags.ItemTags.PICKAXES) && !st.is(Items.TORCH) && !st.is(Items.BREAD)
+                        && !st.is(Items.COBBLESTONE), 64 * 36);
+                    if (m.peekJob() != null && m.peekJob().type() != com.jrpetty.mcassistant.entity.Job.Type.MINE) m.clearQueue();
+                    MineWorksGameTests.keepAtIt(r, m);
+                }
                 boolean isBelow = m.getY() <= stops.get(1).y() + 2, isUp = m.getY() >= MineWorksGameTests.TOP - 1;
                 if (isBelow) below++;
                 if (isUp) up++;
@@ -116,6 +147,8 @@ public class BlinkGameTests {
             boolean over = allUp[0] > 0 && tick[0] - allUp[0] > 1200 || dusk[0] > 0 && tick[0] - dusk[0] > 7000;
             if (!over) return false;
             Kit.log("[VT] bk01 jumps: \n" + Blink.report());
+            Kit.log("[VT] bk01 leads " + WorksGoal.LEADS + " (led on " + WorksGoal.LEAD_STROLLS + ", fresh ways " + WorksGoal.LEAD_REPLANS + ", digs " + WorksGoal.LEAD_DIGS + "), hops " + WorksGoal.TELEPORTS);
+            for (String h : WorksGoal.hopsForTests()) Kit.log("[VT] bk01 stuck: " + h);
             for (String l : Blink.seenLines()) Kit.log("[VT] bk01 seen: " + l);
             Kit.Expect ok = new Kit.Expect();
             ok.that(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenJumps());
@@ -235,6 +268,17 @@ public class BlinkGameTests {
                 return;
             }
             long ran = level.getGameTime() - began[0];
+            if (ran == 14000 || ran == 19000) {                                   // the evening, and the middle of the night: who is in bed
+                int asleep = 0, all = 0;
+                for (com.jrpetty.mcassistant.entity.AssistantEntity a : com.jrpetty.mcassistant.entity.Villages.folkOf(id[0])) {
+                    all++;
+                    if (a.isSleeping()) { asleep++; continue; }
+                    BlockPos bed = a.bedPos();
+                    Kit.log("[VT] bk03   awake at night: " + a.getAssistantName() + " at " + a.blockPosition().toShortString() + " bed " + (bed == null ? "-" : bed.toShortString()
+                        + " " + (int) Math.sqrt(bed.distSqr(a.blockPosition())) + " off") + " path " + pathLine(a) + " | " + a.brainNoteForBooks());
+                }
+                Kit.log("[VT] bk03 at night: " + asleep + " of " + all + " asleep");
+            }
             if (ran % 4000 == 0) Kit.log("[VT] bk03 @" + ran + " (" + (level.getDayTime() % 24000L) + "): seen jumps " + Blink.seenJumps() + ", safety " + Blink.excusedSeenJumps());
             if (ran < 24200) return;
             began[0] = -2;

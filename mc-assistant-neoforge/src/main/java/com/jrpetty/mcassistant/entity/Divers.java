@@ -1125,8 +1125,13 @@ public final class Divers {
                 // Up onto the bank: a pull and a step, as a swimmer climbs out.
                 double dx = d.entry.getX() + 0.5 - f.getX(), dz = d.entry.getZ() + 0.5 - f.getZ();
                 if (d.worked++ % 10 == 0) f.setDeltaMovement(dx * 0.25, f.isInWater() ? 0.42 : f.getDeltaMovement().y, dz * 0.25);
-                if (now - d.stageSince > 100) {
+                // [tp43] In a player's sight it keeps climbing (and swims for where it went in) for half a minute before it is
+                // hauled out, for its breath's sake.
+                if (now - d.stageSince > 100 && now - d.stageSince <= 600 && !Blink.mayJumpTo(f, d.entry.getX() + 0.5, d.entry.getZ() + 0.5, "diver: hauled out where it went in")) {
+                    if (f.getNavigation().isDone()) f.getNavigation().moveTo(d.entry.getX() + 0.5, d.entry.getY(), d.entry.getZ() + 0.5, 1.0D);
+                } else if (now - d.stageSince > 100) {
                     // A bank too steep to climb: it hauls itself out where it went in.
+                    if (now - d.stageSince > 600) Blink.safety(f, "diver: hauled out after half a minute's climbing");
                     f.moveTo(d.entry.getX() + 0.5, d.entry.getY(), d.entry.getZ() + 0.5, f.getYRot(), 0.0F);
                     finish(level, v, w, f, d);
                     return false;

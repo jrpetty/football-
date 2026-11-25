@@ -524,11 +524,30 @@ public class WorksGoal extends Goal {
             cells.add(route.get(k));
             if (route.get(k).equals(dest)) break;
         }
-        boolean byTheWay = !cells.isEmpty() && a.position().distanceTo(Vec3.atBottomCenterOf(cells.get(0))) <= 2.5;
-        if (byTheWay && a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.Stroll.along(f, cells)) {
+        // From the cell of the way nearest where it stands (it may have come off it a little ahead or behind).
+        int near = -1;
+        double nearD = 2.5;
+        for (int i = 0; i < cells.size(); i++) {
+            double dd = a.position().distanceTo(Vec3.atBottomCenterOf(cells.get(i)));
+            if (dd <= nearD) { nearD = dd; near = i; }
+        }
+        if (near >= 0 && a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.Stroll.along(f, cells.subList(near, cells.size()))) {
             replans = 0;
+            LEAD_STROLLS++;
             return false;
         }
+        // The spot a few blocks off and the way to it shut (a block it sealed a spring with, a lip of rock): it digs through
+        // (its own works), a block or two a look, and steps on.
+        if (a.position().distanceTo(Vec3.atBottomCenterOf(dest)) <= 4.5 && a.level() instanceof ServerLevel dl && a instanceof VillageFolkEntity f2) {
+            int dug = digToward(dl, dest);
+            if (dug >= 0 && com.jrpetty.mcassistant.entity.Stroll.alongPoints(f2, List.of(a.position(), Vec3.atBottomCenterOf(dest)))) {
+                replans = 0;
+                LEAD_STROLLS++;
+                if (dug > 0) LEAD_DIGS++;
+                return false;
+            }
+        }
+        LEAD_REPLANS++;
         if (++replans > 3 || !(a.level() instanceof ServerLevel level)) { replans = 0; walking = null; return false; }
         walking = null;
         if (phase == Phase.OUT) { beginOut(bye); return false; }                // a fresh way up from here
@@ -540,8 +559,40 @@ public class WorksGoal extends Goal {
         return false;
     }
 
+    /**
+     * [tp43] The blocks on the straight way from its feet to this spot that would stop it (at its feet's height and its
+     * head's, at each end's), broken as it would break them at the face, up to three; -1 if the way is shut by something it
+     * may not or cannot break (bedrock, a chest, a fluid, a spring). The number broken otherwise.
+     */
+    private int digToward(ServerLevel level, BlockPos dest) {
+        Vec3 from = a.position(), to = Vec3.atBottomCenterOf(dest);
+        java.util.LinkedHashSet<BlockPos> shut = new java.util.LinkedHashSet<>();
+        int lo = Math.min(a.blockPosition().getY(), dest.getY()), hi = Math.max(a.blockPosition().getY(), dest.getY()) + 1;
+        double len = from.distanceTo(to);
+        int steps = Math.max(1, (int) Math.ceil(len / 0.4));
+        for (int i = 1; i <= steps; i++) {
+            double t = i / (double) steps;
+            int x = net.minecraft.util.Mth.floor(from.x + (to.x - from.x) * t), z = net.minecraft.util.Mth.floor(from.z + (to.z - from.z) * t);
+            int y = net.minecraft.util.Mth.floor(from.y + (to.y - from.y) * t);
+            for (int yy = Math.max(lo, y); yy <= Math.min(hi, y + 1); yy++) {
+                BlockPos p = new BlockPos(x, yy, z);
+                net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+                if (st.getCollisionShape(level, p).isEmpty()) continue;
+                if (!level.getFluidState(p).isEmpty() || st.hasBlockEntity() || st.getDestroySpeed(level, p) < 0) return -1;
+                shut.add(p);
+            }
+        }
+        if (shut.size() > 3) return -1;
+        for (BlockPos p : shut) {
+            a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            level.destroyBlock(p, true, a);
+            broke++;
+        }
+        return shut.size();
+    }
+
     /** [tp43] Stuck walks led on (or re-planned) in a player's sight instead of put there. */
-    public static volatile int LEADS;
+    public static volatile int LEADS, LEAD_STROLLS, LEAD_REPLANS, LEAD_DIGS;
 
     /**
      * [fixes14] Is this spot a short straight walk from where it stands, every block of the way open two high (at its
@@ -974,6 +1025,9 @@ public class WorksGoal extends Goal {
         ENDS.clear();
         TELEPORTS = 0;
         LEADS = 0;
+        LEAD_STROLLS = 0;
+        LEAD_REPLANS = 0;
+        LEAD_DIGS = 0;
         BROKEN = 0;
         SEALED = 0;
         LEFT = 0;

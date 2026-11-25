@@ -522,7 +522,9 @@ public final class Dining {
             f.getNavigation().stop();
             return true;
         }
-        if (now - t.legFrom > STUCK) {
+        if (now - t.legFrom > STUCK && !Blink.mayJumpTo(f, to.getX() + 0.5, to.getZ() + 0.5, "dining: stuck on the way, put there")) {
+            t.legFrom = now - STUCK / 2;                                     // [tp43] in sight: it walks on, looked at again
+        } else if (now - t.legFrom > STUCK) {
             f.teleportTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
             f.getNavigation().stop();
             return true;

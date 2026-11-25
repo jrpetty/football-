@@ -585,7 +585,7 @@ public final class Raids {
         // Twenty seconds and still not up there (a crowd in the way, a long way round): it gets
         // there somehow — a wall with nobody on it is no use to anybody.
         long sent = SENT.computeIfAbsent(g.getUUID(), k -> level.getGameTime());
-        if (!up && level.getGameTime() - sent > 400L) {
+        if (!up && level.getGameTime() - sent > 400L && Blink.mayJumpTo(g, sx, sz, "raid: a guard put on its post")) {   // [tp43] not in sight
             g.teleportTo(sx, stand.getY(), sz);
             g.getNavigation().stop();
             dx = 0;
@@ -595,6 +595,10 @@ public final class Raids {
         }
         // A step off the middle of the post: back onto it before it walks off the edge.
         if (!up && dx * dx + dz * dz < 4.0 && dy > -0.4 && dy < 1.5) {
+            if (dx * dx + dz * dz > 1.4 * 1.4 && Blink.seen(g)) {
+                g.getMoveControl().setWantedPosition(sx, stand.getY(), sz, 0.8D);   // [tp43] a step back onto it, seen
+                return true;
+            }
             g.teleportTo(sx, stand.getY(), sz);
             up = true;
         }
@@ -629,7 +633,7 @@ public final class Raids {
             }
             g.getMoveControl().setWantedPosition(sx, stand.getY(), sz, 1.0D);
             long started = CLIMB.computeIfAbsent(g.getUUID(), k -> level.getGameTime());
-            if (level.getGameTime() - started > 120L) {
+            if (level.getGameTime() - started > 120L && Blink.mayJumpTo(g, sx, sz, "raid: up the ladder somehow")) {
                 g.teleportTo(sx, stand.getY(), sz);           // (it got up there somehow)
                 CLIMB.remove(g.getUUID());
             }
@@ -665,7 +669,9 @@ public final class Raids {
         for (Watch.Post p : Watch.posts(level, id)) {
             if (!p.stand().equals(at)) continue;
             if (g.distanceToSqr(at.getX() + 0.5, at.getY(), at.getZ() + 0.5) < 4.0) {
-                g.teleportTo(p.foot().getX() + 0.5, p.foot().getY(), p.foot().getZ() + 0.5);   // down the ladder
+                // [tp43] In a player's sight it climbs down the ladder (the walk goes down it), never put at its foot.
+                if (!Blink.mayJump(g, "raid: down off the wall")) g.getNavigation().moveTo(p.foot().getX() + 0.5, p.foot().getY(), p.foot().getZ() + 0.5, 1.0D);
+                else g.teleportTo(p.foot().getX() + 0.5, p.foot().getY(), p.foot().getZ() + 0.5);   // down the ladder
             }
             return;
         }

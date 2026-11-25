@@ -768,6 +768,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** How long this hand has been in the water, in seconds, and where it was when the count began. */
     private int wetFor;
+    /** [tp43] Swims for the bank in a player's sight that got it nowhere (three, and it is lifted out). */
+    private int wetSwims;
     private net.minecraft.world.phys.Vec3 wetFrom = net.minecraft.world.phys.Vec3.ZERO;
 
     /**
@@ -780,7 +782,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * is getting somewhere, and is left to it.
      */
     private void climbOutOfTheWater() {
-        if (!isInWater() || isPassenger() || isSleeping()) { wetFor = 0; return; }
+        if (!isInWater() || isPassenger() || isSleeping()) { wetFor = 0; wetSwims = 0; return; }
         if (underwaterWork()) { wetFor = 0; return; }        // [diver] down there on purpose, or being pulled out
         if (wetFor++ == 0) wetFrom = position();
         if (wetFor < 10) return;
@@ -808,11 +810,24 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         wetFor = 0;
         if (best == null) return;
         // [tp43] In a player's sight it swims for the bank and climbs out (the game's own swim and step), never put there.
-        if (this instanceof VillageFolkEntity && !Blink.mayJumpTo(this, best.getX() + 0.5, best.getZ() + 0.5, "out of the water onto the bank")) {
+        // Thirty seconds of that and still in (a pool it cannot climb out of): lifted out for its life's sake.
+        if (this instanceof VillageFolkEntity vf && wetSwims < 3 && !Blink.mayJumpTo(this, best.getX() + 0.5, best.getZ() + 0.5, "out of the water onto the bank")) {
+            wetSwims++;
+            // The swim for it first; then, the bank a step or two over the water, it wades to it and climbs out (led, a step a
+            // tick: up the bank, not lifted onto it).
+            if (wetSwims >= 2 && Math.sqrt(best.distToCenterSqr(position())) <= 6.0
+                    && Stroll.alongPoints(vf, java.util.List.of(position(), new net.minecraft.world.phys.Vec3(best.getX() + 0.5, Math.max(getY(), best.getY() - 0.5), best.getZ() + 0.5),
+                        net.minecraft.world.phys.Vec3.atBottomCenterOf(best)))) {
+                brain("climbing out of the water onto the bank");
+                wetSwims = 0;
+                return;
+            }
             getNavigation().moveTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5, 1.2D);
             brain("swimming for the bank");
             return;
         }
+        if (wetSwims >= 3) Blink.safety(this, "out of the water after half a minute's swimming");
+        wetSwims = 0;
         moveTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5, getYRot(), getXRot());
         getNavigation().stop();
         idleKick = true;

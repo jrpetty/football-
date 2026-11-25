@@ -154,6 +154,12 @@ final class LiftGlide {
                 }
                 left -= seg;
             }
+            // Never more than a step a tick from where it stands (a rider that was not where the walk begins catches up).
+            Vec3 here = e.position();
+            if (here.distanceTo(at) > 0.6) {
+                at = here.add(at.subtract(here).normalize().scale(PACE * 1.5));
+                all = false;
+            }
             e.setDeltaMovement(Vec3.ZERO);
             e.fallDistance = 0;
             e.setPos(at.x, at.y, at.z);

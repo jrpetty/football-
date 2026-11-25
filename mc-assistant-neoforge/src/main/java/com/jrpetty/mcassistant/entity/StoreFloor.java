@@ -246,7 +246,8 @@ public final class StoreFloor {
         String place = p.building().structure().equals(Store.STRUCTURE) ? "the store" : "the shop";
         if (d > 1.0) {
             long started = WALKING.computeIfAbsent(f.getUUID(), k -> level.getGameTime());
-            if (Store.INSTANT || level.getGameTime() - started > 600L) {
+            if (Store.INSTANT || level.getGameTime() - started > 600L
+                    && Blink.mayJumpTo(f, stand.getX() + 0.5, stand.getZ() + 0.5, "shop: stuck at a doorway, put behind it")) {   // [tp43]
                 f.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);   // stuck at a doorway: put behind it
                 WALKING.remove(f.getUUID());
             } else if (f.getNavigation().isDone()) {

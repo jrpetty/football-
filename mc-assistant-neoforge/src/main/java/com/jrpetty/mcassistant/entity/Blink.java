@@ -74,6 +74,8 @@ public final class Blink {
     private static final Map<String, long[]> HELD = new ConcurrentHashMap<>();
     /** The last seen jumps, for the tests and the log. */
     private static final List<String> SEEN = new CopyOnWriteArrayList<>();
+    /** The jumps held back to a place, the first few hundred, for a look at why they were wanted. */
+    private static final List<String> HELD_LINES = new CopyOnWriteArrayList<>();
     private static long seenAll, excusedSeen;
 
     // ------------------------------------------------------------------ the rule
@@ -122,7 +124,12 @@ public final class Blink {
     /** As {@link #mayJump(Entity, String)}, for a jump to a place: neither end in sight. */
     public static boolean mayJumpTo(Entity e, double x, double z, String why) {
         if (seen(e) || seenAt(e.level(), x, z, 0)) {
-            if (on) HELD.computeIfAbsent(why, k -> new long[1])[0]++;
+            if (on) {
+                HELD.computeIfAbsent(why, k -> new long[1])[0]++;
+                if (HELD_LINES.size() < 300 && e instanceof AssistantEntity a)
+                    HELD_LINES.add(e.level().getGameTime() + " " + a.getAssistantName() + " (" + a.stationTask().name().toLowerCase() + ") at "
+                        + e.blockPosition().toShortString() + " for " + (int) x + "," + (int) z + ": " + why + " | " + a.brainNoteForBooks());
+            }
             return false;
         }
         note(e, why);
@@ -238,6 +245,7 @@ public final class Blink {
         BY.clear();
         HELD.clear();
         SEEN.clear();
+        HELD_LINES.clear();
         synchronized (TICKS) { java.util.Arrays.fill(TICKS, 0); }
         seenAll = 0;
         excusedSeen = 0;
@@ -336,6 +344,7 @@ public final class Blink {
             .then(Commands.literal("off").executes(ctx -> { on = false; return say(ctx.getSource(), "the jump detector off"); }))
             .then(Commands.literal("reset").executes(ctx -> { reset(); return say(ctx.getSource(), "counts reset"); }))
             .then(Commands.literal("seen").executes(ctx -> say(ctx.getSource(), String.join("\n", seenLines()))))
+            .then(Commands.literal("held").executes(ctx -> say(ctx.getSource(), String.join("\n", HELD_LINES))))
             .then(Commands.literal("unwatch").executes(ctx -> { WATCH.clear(); return say(ctx.getSource(), "watchers cleared"); }))
             .then(Commands.literal("watch")
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg()).then(Commands.argument("z", DoubleArgumentType.doubleArg())
