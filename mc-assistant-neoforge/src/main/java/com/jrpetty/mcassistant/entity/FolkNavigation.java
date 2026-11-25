@@ -358,7 +358,8 @@ public class FolkNavigation extends GroundPathNavigation {
                 // instead, or a stand till it is asked again (planned afresh from wherever it is then; asked again at once from
                 // the same spot, the same answer, not the same searches over).
                 net.minecraft.world.level.pathfinder.Node end = p.getEndNode();
-                boolean endsWet = !p.canReach() && end != null && this.level.getFluidState(end.asBlockPos()).is(net.minecraft.tags.FluidTags.WATER);
+                boolean endsWet = !p.canReach() && end != null && this.level.getFluidState(end.asBlockPos()).is(net.minecraft.tags.FluidTags.WATER)
+                    && !AssistantEntity.shallowWater(this.level, end.asBlockPos());
                 if (endsWet || MineWay.dryWayBetween(f, target)) {
                     HELD_DRY++;
                     heldTo = target;
@@ -476,7 +477,8 @@ public class FolkNavigation extends GroundPathNavigation {
     /** [tp46] Does this way go through water (a node standing in it)? */
     private boolean swims(Path p) {
         for (int i = p.getNextNodeIndex(); i < p.getNodeCount(); i++) {
-            if (this.level.getFluidState(p.getNodePos(i)).is(net.minecraft.tags.FluidTags.WATER)) return true;
+            BlockPos q = p.getNodePos(i);
+            if (this.level.getFluidState(q).is(net.minecraft.tags.FluidTags.WATER) && !AssistantEntity.shallowWater(this.level, q)) return true;   // [tp47] (a channel waded is no swim)
         }
         return false;
     }
