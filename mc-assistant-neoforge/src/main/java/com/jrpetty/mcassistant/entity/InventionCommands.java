@@ -142,7 +142,7 @@ public final class InventionCommands {
     static int withInvention(CommandContext<CommandSourceStack> ctx, InventionAct act) {
         Invention i = InventionTree.byId(StringArgumentType.getString(ctx, "invention"));
         if (i == null) {
-            ctx.getSource().sendFailure(Component.literal("No invention called that. /village inventions tree lists them."));
+            ctx.getSource().sendFailure(Component.literal("No invention called that. The Inventions page of the city books lists them."));
             return 0;
         }
         return say(ctx, (level, v) -> act.run(level, v, i));

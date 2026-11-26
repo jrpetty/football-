@@ -576,7 +576,7 @@ public final class Fair {
         long n = Festivals.next(id, day, Festivals.Feast.FAIR);
         Festivals.Town town = Festivals.town(id);
         StringBuilder sb = new StringBuilder("FAIR " + Villages.name(id) + ": ");
-        sb.append(open(level, v) ? "today! Entries are open at the board (right-click it with your entry, or /village fair enter)."
+        sb.append(open(level, v) ? "today! Entries are open at the board (right-click it with your entry, or Everything you can do, its Home tab)."
             : "next on day " + (n + 1) + (n - day == 1 ? " (tomorrow)." : " (in " + (n - day) + " days)."));
         if (!town.entries.isEmpty()) {
             List<String> es = new ArrayList<>();

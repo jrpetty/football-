@@ -281,7 +281,7 @@ public final class Knights {
         CivicLand.Spot at = CivicLand.beforeTheHall(level, v);
         CivicLand.tell(level.getServer(), player, Villages.name(id) + " means to knight you for your service! Come to "
             + (Villages.builtStructure(id, "hall") != null ? "the meeting hall" : "the board") + " (" + at.focus().getX() + ", " + at.focus().getZ()
-            + ") at dusk. Choose how you are to be called: /village knight style sir|dame|knight.", ChatFormatting.GOLD);
+            + ") at dusk. Choose how you are to be called on the Knights page: Sir, Dame or Knight.", ChatFormatting.GOLD);
     }
 
     /** The evening: a chosen player at the hall is knighted; one away three evenings running is knighted in its absence. */
@@ -413,7 +413,7 @@ public final class Knights {
         String words = "You are " + title + ", Knight of " + Villages.name(id) + "! " + land
             + (men.isEmpty() ? " The watch can spare no men for your retinue just yet." : " Your retinue: " + CivicLand.names(men) + " (say \"Retinue, to me!\").")
             + (banner ? " Your banner is woven." : " Your banner will be woven when the stores run to it.")
-            + " You have a vote on the council: /village knight vote lower|keep|raise.";
+            + " You have a vote on the council: lower, keep or raise, on the Knights page or a folk's Town, Council.";
         CivicLand.tell(level.getServer(), player, words, ChatFormatting.GOLD);
         return title + " knighted in " + Villages.name(id) + (absent ? " (in their absence)" : "") + ".";
     }
@@ -549,7 +549,7 @@ public final class Knights {
                 kn.putBoolean("answered", false);
                 CivicLand.changed();
                 CivicLand.tell(level.getServer(), p, Villages.name(id) + " calls its knights to muster: its army takes the field against "
-                    + Villages.name(foe) + ". Join it: /village war join (in the town).", ChatFormatting.RED);
+                    + Villages.name(foe) + ". Join it at the Town Hall: its Duties tab.", ChatFormatting.RED);
                 Villages.tell(id, day, style(p).word + " " + kn.getString("name") + " was called to the muster");
             } else if (c == null && kn.getLong("musterFor") > 0) {
                 boolean came = kn.getBoolean("answered");

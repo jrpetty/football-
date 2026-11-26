@@ -487,7 +487,7 @@ public final class BusinessBooks {
         Businesses.ensure(c.getSource().getLevel(), v.id());
         Business b = Businesses.of(v.id(), StringArgumentType.getString(c, "id"));
         if (b == null) {
-            c.getSource().sendFailure(Component.literal("No business called " + StringArgumentType.getString(c, "id") + " here. /village business lists them."));
+            c.getSource().sendFailure(Component.literal("No business called " + StringArgumentType.getString(c, "id") + " here. The Businesses page of the city books lists them."));
             return 0;
         }
         if (!text && c.getSource().getEntity() instanceof ServerPlayer p) {

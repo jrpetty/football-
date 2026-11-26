@@ -993,7 +993,7 @@ public class CityScreen extends Screen {
         if (loans.isEmpty()) {
             small(g, Ui.clip(font, "No mortgages yet: a household with a fifth of a house's price saved may borrow the rest.", (int) (w / 0.75)), x, ty, Ui.MUTED);
         } else if (shown < loans.size()) {
-            small(g, "and " + (loans.size() - shown) + " more: /village bank has them all", x + 4, ty, Ui.FAINT);
+            small(g, "and " + (loans.size() - shown) + " more: the bank's desk has them all", x + 4, ty, Ui.FAINT);
         }
     }
 

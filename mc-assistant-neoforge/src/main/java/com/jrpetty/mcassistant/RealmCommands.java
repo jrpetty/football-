@@ -142,7 +142,7 @@ public final class RealmCommands {
             .append(" (unrest ").append(TaxUnrest.level(id)).append(", the taxes take ").append(TaxUnrest.burden(id)).append(" in a hundred of a wage).");
         if (ctx.getSource().getEntity() instanceof ServerPlayer p) {
             int owed = TaxBook.owedBy(id, p.getUUID());
-            sb.append(owed > 0 ? "\nYou owe " + owed + " coins: /village taxes pay." : "\nYou owe nothing.");
+            sb.append(owed > 0 ? "\nYou owe " + owed + " coins: pay any folk (\"I'd like to pay my taxes\"), or at the Town Hall." : "\nYou owe nothing.");
         }
         if (!CivicLand.live()) sb.append("\n(The taxes are not at work in this world.)");
         return say(ctx, sb.toString());
