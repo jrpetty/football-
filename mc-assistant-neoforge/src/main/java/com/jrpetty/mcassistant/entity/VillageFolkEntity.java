@@ -101,12 +101,12 @@ public class VillageFolkEntity extends AssistantEntity {
     // it is never lifted out (MineSafety.climbInstead).
     @Override
     protected boolean rescueToPlot() {
-        return MineSafety.climbInstead(this) || super.rescueToPlot();
+        return MineSafety.climbInstead(this) || Quarry.climbInstead(this) || super.rescueToPlot();
     }
 
     @Override
     public boolean putBeside(BlockPos target, String why) {
-        return MineSafety.climbInstead(this) || super.putBeside(target, why);
+        return MineSafety.climbInstead(this) || Quarry.climbInstead(this) || super.putBeside(target, why);
     }
 
     /** A villager is not a hired hand on a clock: it eats a ration every five and a

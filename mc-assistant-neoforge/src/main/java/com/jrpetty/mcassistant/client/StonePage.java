@@ -21,16 +21,19 @@ final class StonePage {
         if (!q.getBoolean("has")) {
             int folk = q.getInt("folk");
             r.text(folk < 10 ? "No quarry yet: the town opens one at ten folk (it has " + folk + "), once its storehouse stands."
-                : q.getBoolean("wanted") ? "The council is looking for a site out past the growth line (" + q.getInt("growth")
+                : q.getBoolean("wanted") ? "The council is looking for a site 150 to 250 blocks out, past the growth line (" + q.getInt("growth")
                     + " blocks from the heart): a rock outcrop if there is one, off the roads, the farmland and the mine's ground."
                 : "No quarry yet: the town wants its storehouse first.", UiStyle.TEXT_MUTED);
             if (!q.getString("old").isEmpty()) r.text("Closed quarries (their terraces left as safe steps): " + q.getString("old"), UiStyle.TEXT_FAINT);
         } else {
-            r.showMe("A " + q.getInt("size") + "-across pit " + q.getInt("dist") + " blocks out, " + (q.getBoolean("outcrop") ? "at a rock outcrop" : "dug down")
-                + ", " + q.getInt("deep") + " terraces deep", UiStyle.TEXT, WorksPages.at(q), "the quarry",
-                "its terraces step down a block at a time; the fence and lanterns go round its rim.", "its ground is not loaded.");
+            r.showMe(q.getString("stageWords") + " — " + q.getInt("dist") + " blocks out, " + (q.getBoolean("outcrop") ? "at a rock outcrop" : "dug down"),
+                UiStyle.TEXT, WorksPages.at(q), "the quarry",
+                q.getBoolean("shaft") ? "its terraces step down a block at a time to the shaft; a ladder goes down the shaft, fenced round and lit."
+                    : "its terraces step down a block at a time; the fence and lanterns go round its rim.", "its ground is not loaded.");
             r.text(WorksPages.num(q.getLong("cut")) + " blocks cut so far. " + (q.getBoolean("fenced") ? "Fenced and lit all round." : "Its fence and lanterns are going up.")
-                + " It stays out past the town's growth line (" + q.getInt("growth") + " blocks) and opens wider as it is worked; if the town grows out to it,"
+                + " It grows a stage at a time as it is worked: wider to 33 across, then a shaft down to the bedrock"
+                + (q.getBoolean("bedrock") ? " (reached: now it is lengthened away from the town)" : "")
+                + "; a full yard lets it rest. It stays out past the town's growth line (" + q.getInt("growth") + " blocks); if the town grows out to it,"
                 + " it closes and a new one opens further out.", UiStyle.TEXT_MUTED);
             ListTag men = q.getList("men", Tag.TAG_COMPOUND);
             if (men.isEmpty()) r.text("No quarrymen yet: the miners come first, then a spare hand.", UiStyle.WARNING);

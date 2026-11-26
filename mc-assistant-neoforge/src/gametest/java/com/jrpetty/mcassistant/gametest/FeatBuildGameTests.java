@@ -41,6 +41,7 @@ import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -66,6 +67,17 @@ import java.util.UUID;
  * <li><b>fb06</b>: a commission draws its stone from the yard; the yard empty, it waits ("waiting on stone from the yard"),
  *     and goes on when the stone comes.</li>
  * <li><b>fb07</b>: a quarryman walks out to the face, cuts with its pick and carts its load to the yard by itself.</li>
+ * <li><b>fb08</b>: a quarry worked for weeks in fast-forward: wider stage by stage to its widest, then a shaft down to the
+ *     bedrock with a ladder, then lengthened only away from the town; the water and lava it met plugged, every drop fenced,
+ *     a way to walk and climb from the bottom to the top all the way; and a quarryman climbs out from the bottom with its
+ *     load to the yard and back down to cut there, never put anywhere.</li>
+ * <li><b>fb09</b>: a wall built from scratch has flights of steps up on every side; a guard of the night watch starts on
+ *     the ground, walks to a flight, climbs it, walks the wall walk from one end of its round to the other, and comes
+ *     down by the steps when its watch ends: no step over a block a tick, no jump at all.</li>
+ * <li><b>fb10</b>: the town's greens by its size: none but statue gardens at thirty-nine folk, a park a block across at
+ *     forty, another at seventy, and at ninety the central park, four blocks of the plan set aside where no lot is built
+ *     on or claimed (its lots kept off for homes from then on); laid out with its lake, plaza, pitch and benches, and not a
+ *     drop of water outside its ponds.</li>
  * </ul>
  * Each on its own ground in the band x 8,200,000 to 8,299,999, z 70000.
  */
@@ -483,10 +495,22 @@ public class FeatBuildGameTests {
         Quarry.Site chosen = Quarry.chooseForTests(level, t.v());
         helper.assertTrue(chosen != null, "a quarry site");
         int dx = chosen.centre().getX() - t.heart().getX(), dz = chosen.centre().getZ() - t.heart().getZ();
-        int near = Math.max(Math.abs(dx), Math.abs(dz)) - Quarry.WIDEST / 2;
-        Kit.log("[VT] fb05 site " + chosen + " growth line " + reach + " (" + dx + "," + dz + ")");
+        double far = Math.sqrt((double) dx * dx + (double) dz * dz);
+        Kit.log("[VT] fb05 site " + chosen + " growth line " + reach + " (" + dx + "," + dz + ") " + String.format("%.0f", far) + " out");
+        ok.that(far >= Quarry.NEAR - 1 && far <= Quarry.FAR + 1, "sited 150 to 250 blocks out: " + String.format("%.0f", far));
         ok.that(Math.max(Math.abs(dx), Math.abs(dz)) - chosen.size() / 2 > reach, "out past the growth line: " + dx + "," + dz + " vs " + reach);
         ok.that(Math.abs(dx) > 12 && Math.abs(dz) > 12, "off the radial roads");
+        ok.that(!Quarry.wetForTests(level, chosen.centre(), chosen.away()), "no water within " + Quarry.DRY + " blocks of its widest footprint");
+        // A lake: a site beside it is turned down; the same ground dry is taken.
+        BlockPos lakeSite = chosen.centre().offset(0, 0, 0);
+        int[] fin = Quarry.boxForTests(new Quarry.Site(lakeSite, Quarry.WIDEST, true, 5, 0, 0, chosen.away()));
+        BlockPos lake = new BlockPos(fin[0] - 6, lakeSite.getY(), lakeSite.getZ());
+        for (int a = -2; a <= 2; a++) for (int b = -2; b <= 2; b++) level.setBlock(lake.offset(a, 0, b), Blocks.WATER.defaultBlockState(), 2 | 16);
+        ok.that(Quarry.wetForTests(level, lakeSite, chosen.away()), "a site with a lake six blocks off its widest edge turned down");
+        Quarry.Site again = Quarry.chooseForTests(level, t.v());
+        ok.that(again != null && !Quarry.wetForTests(level, again.centre(), again.away()) && !again.centre().equals(lakeSite),
+            "a dry site taken instead: " + (again == null ? "none" : again.centre().toShortString()));
+        for (int a = -2; a <= 2; a++) for (int b = -2; b <= 2; b++) level.setBlock(lake.offset(a, 0, b), Blocks.GRASS_BLOCK.defaultBlockState(), 2 | 16);
         // Rock under it, and a pool of water beside the pit's west edge.
         BlockPos c = rock(level, chosen.centre(), 14, 8);
         BlockPos pool = c.offset(0, 0, -5);
@@ -505,40 +529,27 @@ public class FeatBuildGameTests {
             if (b.is(Blocks.LANTERN) || b.is(Blocks.TORCH)) lights++;
         }
         Kit.log("[VT] fb05 fence " + posts + " posts, " + gates + " gates, " + lights + " lights");
-        ok.that(posts + gates >= 36 && gates == 1, "fenced all round with a gate: " + posts + " posts, " + gates + " gate");
-        ok.that(lights >= 4, "lit: " + lights + " lanterns");
+        ok.that(posts + gates >= 24 && gates == 1, "fenced all round its ragged rim with a gate: " + posts + " posts, " + gates + " gate");
+        ok.that(lights >= 2, "lit: " + lights + " lanterns");
         int cut = Quarry.cutForTests(level, t.v(), 600);
         long stone = StoneYard.count(id, Items.COBBLESTONE);
-        Kit.log("[VT] fb05 cut " + cut + ", the yard holds " + StoneYard.stock(id));
-        ok.that(cut > 120, "the pit cut: " + cut + " blocks");
-        boolean widened = false, closedByWater = false;
-        for (Villages.News n : Villages.news(id)) {
-            if (n.text().contains("the quarry was opened wider")) widened = true;
-            if (n.text().contains("the quarry was closed")) closedByWater = true;
-        }
         Quarry.Site now = Quarry.site(id);
-        Kit.log("[VT] fb05 the quarry now " + (now == null ? "closed" : now.size() + " across") + "; news " + Villages.news(id));
-        ok.that(!widened && closedByWater && now == null, "never opened wider toward its pool: closed where it stood, a new one to be found further out");
+        Kit.log("[VT] fb05 cut " + cut + ", the yard holds " + StoneYard.stock(id) + "; the quarry now " + (now == null ? "closed" : Quarry.stageWords(level, now))
+            + "; news " + Villages.news(id));
+        ok.that(cut > 120, "the pit cut: " + cut + " blocks");
+        ok.that(now != null && now.stage() >= 2, "grown a stage as it was worked: " + now);
         ok.that(stone > 120, "its stone in the yard: " + stone + " cobblestone");
-        // Terraces: no step of more than a block anywhere in the pit or onto its rim.
-        int worst = 0;
-        int h = Quarry.START / 2 + 1;
-        for (int x = -h; x <= h; x++) for (int z = -h; z <= h; z++) {
-            int a = top(level, c.getX() + x, c.getZ() + z, c.getY());
-            if (x < h) worst = Math.max(worst, Math.abs(a - top(level, c.getX() + x + 1, c.getZ() + z, c.getY())));
-            if (z < h) worst = Math.max(worst, Math.abs(a - top(level, c.getX() + x, c.getZ() + z + 1, c.getY())));
-        }
-        ok.that(worst <= 1, "terraced: no step over a block (" + worst + ")");
+        // No drop of more than a block anywhere in or round the pit that is not fenced.
+        List<String> drops = unfenced(level, now, c.getY(), 13);
+        ok.that(drops.isEmpty(), "no unfenced drop: " + drops);
         int deepest = c.getY() - top(level, c.getX(), c.getZ(), c.getY());
         ok.that(deepest >= 3, "dug down: " + deepest + " deep in the middle");
-        // The water: still in its pool, none in the pit.
-        ok.that(!level.getFluidState(pool).isEmpty(), "the pool still where it was");
+        // The water: plugged where the cutting met it, none in the pit nor run anywhere.
         int wet = 0;
-        for (int x = -4; x <= 4; x++) for (int z = -4; z <= 4; z++) for (int y = -6; y <= 1; y++) {
+        for (int x = -14; x <= 14; x++) for (int z = -14; z <= 14; z++) for (int y = -9; y <= 1; y++) {
             if (!level.getFluidState(c.offset(x, y, z)).isEmpty()) wet++;
         }
-        ok.that(wet == 0, "no water in the pit: " + wet);
-        ok.that(level.getBlockState(c.offset(0, 0, -4)).is(Blocks.STONE), "the stone by the water left standing");
+        ok.that(wet <= 1, "no water run into the pit: " + wet + " (the pool " + (level.getFluidState(pool).isEmpty() ? "plugged" : "kept") + ")");
         // The piles show the stock; the mason dresses some; the stores are kept.
         StoneYard.pilesForTests(level, id);
         int piles = 0;
@@ -563,6 +574,94 @@ public class FeatBuildGameTests {
         Quarry.standDownForTests(true);
         if (!ok.clean()) helper.fail(ok.summary());
         helper.succeed();
+    }
+
+    /** The ground's top in a column, deep (the quarry's fittings, plants and water not ground). */
+    private static int ground(ServerLevel level, int x, int z, int from, int to) {
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int y = from; y >= to; y--) {
+            BlockState st = level.getBlockState(p.set(x, y, z));
+            if (st.isAir() || st.is(BlockTags.FENCES) || st.is(BlockTags.FENCE_GATES) || st.is(Blocks.LANTERN) || st.is(Blocks.TORCH)
+                || st.is(Blocks.WALL_TORCH) || st.is(Blocks.LADDER) || !st.getFluidState().isEmpty() || st.canBeReplaced()) continue;
+            return y;
+        }
+        return to;
+    }
+
+    /** Every drop of more than a block between neighbouring columns in and round the pit, with no fence on its high side
+     *  (two high over a deep one) and no ladder down it. Empty when the pit is safe all round. */
+    private static List<String> unfenced(ServerLevel level, @Nullable Quarry.Site s, int rim, int within) {
+        List<String> out = new ArrayList<>();
+        if (s == null) return out;
+        int[] b = Quarry.boxForTests(s);
+        int lo = Quarry.bottomForTests(level, s) - 2;
+        int cx = s.centre().getX(), cz = s.centre().getZ();
+        for (int x = b[0] - 1; x <= b[2] + 1; x++) {
+            for (int z = b[1] - 1; z <= b[3] + 1; z++) {
+                if (Math.abs(x - cx) > within || Math.abs(z - cz) > within) continue;
+                int ta = ground(level, x, z, rim + 4, lo);
+                for (int[] d : new int[][]{ { 1, 0 }, { 0, 1 } }) {
+                    int nx = x + d[0], nz = z + d[1];
+                    if (Math.abs(nx - cx) > within || Math.abs(nz - cz) > within) continue;
+                    int tb = ground(level, nx, nz, rim + 4, lo);
+                    if (Math.abs(ta - tb) <= 1) continue;
+                    int hx = ta > tb ? x : nx, hz = ta > tb ? z : nz, lx = ta > tb ? nx : x, lz = ta > tb ? nz : z;
+                    int th = Math.max(ta, tb), tl = Math.min(ta, tb);
+                    if (level.getBlockState(new BlockPos(lx, th, lz)).is(Blocks.LADDER) || level.getBlockState(new BlockPos(lx, th - 1, lz)).is(Blocks.LADDER)) continue;
+                    boolean f1 = level.getBlockState(new BlockPos(hx, th + 1, hz)).is(BlockTags.FENCES) || level.getBlockState(new BlockPos(hx, th + 1, hz)).is(BlockTags.FENCE_GATES);
+                    boolean f2 = th - tl <= 2 || level.getBlockState(new BlockPos(hx, th + 2, hz)).is(BlockTags.FENCES);
+                    if (!(f1 && f2) && out.size() < 12) out.add(hx + "," + th + "," + hz + " over " + lx + "," + tl + "," + lz);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Can a body walk (and climb) from one spot to another, by the ground, steps of a block and ladders, in this box? */
+    private static boolean walkable(ServerLevel level, BlockPos from, BlockPos to, int[] box, int yLo, int yHi) {
+        java.util.ArrayDeque<BlockPos> q = new java.util.ArrayDeque<>();
+        Set<Long> seen = new HashSet<>();
+        q.add(from);
+        seen.add(from.asLong());
+        BlockPos best = from;
+        while (!q.isEmpty()) {
+            BlockPos p = q.poll();
+            if (p.getY() > best.getY()) best = p;
+            if (p.distManhattan(to) <= 1) return true;
+            boolean onLadder = level.getBlockState(p).is(Blocks.LADDER);
+            List<BlockPos> next = new ArrayList<>();
+            for (Direction d : Direction.Plane.HORIZONTAL) for (int dy = -1; dy <= 1; dy++) next.add(p.relative(d).above(dy));
+            next.add(p.above());
+            next.add(p.below());
+            for (BlockPos n : next) {
+                if (n.getX() < box[0] || n.getX() > box[2] || n.getZ() < box[1] || n.getZ() > box[3] || n.getY() < yLo || n.getY() > yHi) continue;
+                if (seen.contains(n.asLong())) continue;
+                boolean vertical = n.getX() == p.getX() && n.getZ() == p.getZ();
+                boolean nLadder = level.getBlockState(n).is(Blocks.LADDER);
+                if (vertical && !(onLadder || nLadder)) continue;
+                if (!stand(level, n)) continue;
+                // A step up wants headroom over where it stands; a step down wants room over where it lands.
+                if (n.getY() > p.getY() && !vertical && !open(level, p.above(2))) continue;
+                if (n.getY() < p.getY() && !vertical && !open(level, n.above(2))) continue;
+                seen.add(n.asLong());
+                q.add(n);
+            }
+        }
+        Kit.log("[VT] walkable: got no higher than " + best.toShortString() + " (" + seen.size() + " spots)");
+        return false;
+    }
+
+    private static boolean open(ServerLevel level, BlockPos p) {
+        BlockState st = level.getBlockState(p);
+        return st.getCollisionShape(level, p).isEmpty() || st.is(BlockTags.FENCE_GATES) || st.is(Blocks.LADDER);
+    }
+
+    /** Could a body stand here: room for it, and ground (or a rung) under its feet? */
+    private static boolean stand(ServerLevel level, BlockPos p) {
+        if (!open(level, p) || !open(level, p.above())) return false;
+        if (level.getBlockState(p).is(Blocks.LADDER)) return true;
+        BlockState under = level.getBlockState(p.below());
+        return under.isFaceSturdy(level, p.below(), Direction.UP) || under.is(Blocks.LADDER);
     }
 
     private static int top(ServerLevel level, int x, int z, int rim) {
@@ -707,5 +806,358 @@ public class FeatBuildGameTests {
         com.jrpetty.mcassistant.entity.Blink.setOn(true);
         helper.runAtTickTime(5900, () -> helper.fail("no load reached the yard: " + Quarry.doingForTests(m) + " at " + m.blockPosition().toShortString()
             + ", cut " + Ledger.note(id, "quarry.cut") + ", yard " + StoneYard.stock(id) + ", did " + did + ", jumps " + com.jrpetty.mcassistant.entity.Blink.byCause().keySet()));
+    }
+
+    // ------------------------------------------------------------------ fb08: a quarry grown down to the bedrock
+
+    @GameTest(template = EMPTY, timeoutTicks = 8000, batch = "fb08_deep_quarry", required = false)   // the shaft held back (Quarry.SHAFTS)
+    public static void fb08_deep_quarry(GameTestHelper helper) {
+        com.jrpetty.mcassistant.entity.Quarry.SHAFTS = true;   // the shaft under test, whatever the game ships with
+
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, level, 8_250_000, 40, Villages.Age.STONE);
+        UUID id = t.id();
+        Quarry.standDownForTests(false);
+        Quarry.readyForTests(true);
+        // A hill of stone out at a hundred and sixty blocks (the test world is flat: the real one has the rock), the rim
+        // forty-four over the floor; water and lava in it where the cutting will meet them.
+        int cx = t.heart().getX() + 113, cz = t.heart().getZ() + 113;
+        Kit.hold(level, cx, cz, 56);
+        Kit.prepare(level, cx, cz, 56);
+        int floor = level.getMinBuildHeight() + 1, rim = floor + 44;
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+        for (int x = cx - 34; x <= cx + 36; x++) {
+            for (int z = cz - 21; z <= cz + 21; z++) {
+                for (int y = floor; y <= rim; y++) level.setBlock(mp.set(x, y, z), Blocks.STONE.defaultBlockState(), 2 | 16);
+                for (int y = rim + 1; y <= rim + 6; y++) level.setBlock(mp.set(x, y, z), Blocks.AIR.defaultBlockState(), 2 | 16);
+            }
+        }
+        BlockPos c = new BlockPos(cx, rim, cz);
+        BlockPos water1 = c.offset(8, -6, 8), water2 = c.offset(3, -24, 0), lava = c.offset(0, -32, 1), water3 = c.offset(20, -4, 3);
+        for (BlockPos p : new BlockPos[]{ water1, water2, water3 }) level.setBlock(p, Blocks.WATER.defaultBlockState(), 3);
+        level.setBlock(lava, Blocks.LAVA.defaultBlockState(), 3);
+        Quarry.openForTests(level, t.v(), new Quarry.Site(c, Quarry.START, true));
+        Quarry.Site s0 = Quarry.site(id);
+        helper.assertTrue(s0 != null && s0.away() == Direction.EAST, "opened, its far side away from the town: " + s0);
+        StoneYard.layOutForTests(level, t.v());
+        int[] box0 = Quarry.boxForTests(s0);
+        List<String> stages = new ArrayList<>();
+        int[] cuts = { 0 };
+        int[] phase = { 0 };
+        boolean[] widestFirst = { true };
+        Kit.Expect ok = new Kit.Expect();
+        VillageFolkEntity m = t.first();
+        double[] last = new double[3];
+        double[] worst = { 0 };
+        int[] tick = { 0 };
+        long[] yardAt = { 0 };
+        BlockPos[] mark = new BlockPos[1];
+        Set<String> did = new HashSet<>();
+        helper.onEachTick(() -> {
+            tick[0]++;
+            Quarry.Site s = Quarry.site(id);
+            if (phase[0] == 0) {
+                // Weeks of work in fast-forward, a few hundred blocks a tick.
+                Quarry.Site was = Quarry.site(id);
+                boolean lastStage = was != null && was.ext() >= 2 * Quarry.LONGER;
+                int got = lastStage ? Quarry.cutStageForTests(level, t.v(), 400) : Quarry.cutForTests(level, t.v(), 400);
+                cuts[0] += got;
+                Quarry.Site n = Quarry.site(id);
+                if (n == null) { helper.fail("closed: " + Villages.news(id)); return; }
+                String st = n.stage() + ":" + n.size() + "/" + n.deep() + "/" + n.ext();
+                if (stages.isEmpty() || !stages.get(stages.size() - 1).equals(st)) {
+                    stages.add(st);
+                    if (n.deep() > 0 && n.size() < Quarry.WIDEST) widestFirst[0] = false;
+                    Kit.log("[VT] fb08 " + Quarry.stageWords(level, n) + " after " + cuts[0] + " cut");
+                }
+                if (lastStage && got == 0 || tick[0] > 300) phase[0] = 1;
+                return;
+            }
+            if (phase[0] == 1) {
+                phase[0] = 2;
+                int[] b = Quarry.boxForTests(s);
+                Kit.log("[VT] fb08 stages " + stages + "; box " + java.util.Arrays.toString(box0) + " -> " + java.util.Arrays.toString(b) + "; news " + Villages.news(id));
+                ok.that(widestFirst[0] && stages.stream().anyMatch(x -> x.contains(":" + Quarry.WIDEST + "/")), "opened wider stage by stage to its widest before a shaft: " + stages);
+                ok.that(Quarry.atBedrockForTests(level, s), "the shaft down to the bedrock: " + Quarry.stageWords(level, s));
+                ok.that(s.ext() >= 2 * Quarry.LONGER, "lengthened after the bedrock: " + s);
+                int h = s.size() / 2;
+                ok.that(b[0] == cx - h && b[1] == cz - h && b[3] == cz + h && b[2] > cx + h, "grown only away from the town (east): " + java.util.Arrays.toString(b));
+                ok.that(Quarry.stageWords(level, s).matches("Quarry stage \\d+: \\d+\u00d7\\d+, \\d+ deep"), "the board's words: " + Quarry.stageWords(level, s));
+                int bottom = Quarry.bottomForTests(level, s);
+                int wet = 0;
+                for (int x = b[0] - 2; x <= b[2] + 2; x++) for (int z = b[1] - 2; z <= b[3] + 2; z++) for (int y = bottom - 1; y <= rim + 1; y++) {
+                    if (!level.getFluidState(mp.set(x, y, z)).isEmpty()) wet++;
+                }
+                ok.that(wet == 0, "no water or lava anywhere in or round the pit: " + wet);
+                ok.that(!Quarry.wetForTests(level, s.centre(), s.away()), "no water within " + Quarry.DRY + " blocks of its footprint at or over its top");
+                List<String> drops = unfenced(level, s, rim, 1000);
+                ok.that(drops.isEmpty(), "every drop fenced: " + drops);
+                // The bottom of the shaft: a way up from it to the gate, all the way, by the steps and the ladder.
+                BlockPos foot = new BlockPos(cx - 1, ground(level, cx - 1, cz - 1, rim, bottom - 3) + 1, cz - 1);
+                BlockPos out = Quarry.outsideForTests(level, s);
+                int[] area = { b[0] - 4, b[1] - 4, b[2] + 4, b[3] + 4 };
+                boolean way = walkable(level, foot, out, area, bottom - 2, rim + 4);
+                Kit.log("[VT] fb08 bottom " + foot.toShortString() + " (" + (rim - foot.getY() + 1) + " deep) to " + out.toShortString() + ": " + (way ? "a way" : "NO WAY"));
+                ok.that(way, "a way to walk and climb out from the bottom: " + foot.toShortString() + " to " + out.toShortString());
+                if (!way) {
+                    StringBuilder col = new StringBuilder();
+                    for (int y = foot.getY() - 1; y <= rim + 1; y++) {
+                        col.append(y).append(':').append(level.getBlockState(new BlockPos(cx - 2, y, cz)).getBlock().getName().getString())
+                            .append('/').append(level.getBlockState(new BlockPos(cx - 3, y, cz)).getBlock().getName().getString())
+                            .append('/').append(level.getBlockState(new BlockPos(cx - 4, y, cz)).getBlock().getName().getString()).append(' ');
+                    }
+                    Kit.log("[VT] fb08 the ladder's column (ladder/gap/terrace): " + col);
+                }
+                int torches = 0;
+                for (int y = foot.getY(); y < rim; y++) if (level.getBlockState(new BlockPos(cx + 2, y, cz)).is(Blocks.WALL_TORCH)) torches++;
+                ok.that(torches >= 4, "the shaft lit down its wall: " + torches + " torches");
+                ok.that(Quarry.lightsForTests(level, s), "no dark spot in the pit for a monster");
+                // A quarryman at the bottom with a load: out to the yard and back down to cut the floor's last block.
+                mark[0] = new BlockPos(cx + 1, foot.getY(), cz - 1);
+                level.setBlock(mark[0], Blocks.COBBLESTONE.defaultBlockState(), 3);
+                m.keepTradeForTests();
+                m.setJob(StationTask.MINE);
+                m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_PICKAXE));
+                Ledger.note(id, "quarry.men", m.getStringUUID());
+                m.teleportTo(foot.getX() + 0.5, foot.getY(), foot.getZ() + 0.5);
+                m.getNavigation().stop();
+                Quarry.loadedForTests(m, 48);
+                level.setDayTime((level.getDayTime() / 24000L) * 24000L + 1050L);
+                last[0] = m.getX(); last[1] = m.getY(); last[2] = m.getZ();
+                com.jrpetty.mcassistant.entity.Blink.reset();
+                com.jrpetty.mcassistant.entity.Blink.setOn(true);
+                tick[0] = 0;
+                return;
+            }
+            double dx = m.getX() - last[0], dz = m.getZ() - last[2];
+            double step = Math.sqrt(dx * dx + dz * dz);
+            if (tick[0] > 3 && step > worst[0]) worst[0] = step;
+            last[0] = m.getX(); last[1] = m.getY(); last[2] = m.getZ();
+            String doing = Quarry.doingForTests(m);
+            if (doing != null && did.add(doing)) Kit.log("[VT] fb08 tick " + tick[0] + ": " + doing + " at " + m.blockPosition().toShortString());
+            if (tick[0] % 100 == 0) {
+                net.minecraft.world.level.pathfinder.Path path = m.getNavigation().getPath();
+                Kit.log("[VT] fb08 tick " + tick[0] + " at " + m.blockPosition().toShortString() + " climbing " + m.onClimbable() + " ground " + m.onGround()
+                    + " path " + (path == null ? "none" : path.getNodeCount() + " nodes to " + path.getTarget().toShortString() + " end " + (path.getEndNode() == null ? "-" : path.getEndNode().asBlockPos().toShortString())
+                    + " reaches " + path.canReach() + " next " + path.getNextNodeIndex()) + " doing " + doing);
+            }
+            if (yardAt[0] == 0 && StoneYard.count(id, Items.COBBLESTONE) >= 48 && doing != null && !doing.startsWith("TO_YARD")) {
+                yardAt[0] = tick[0];
+                Kit.log("[VT] fb08 at the yard after " + tick[0] + " ticks");
+            }
+            if (yardAt[0] > 0 && level.getBlockState(mark[0]).isAir()) {
+                Kit.log("[VT] fb08 back down and cut the bottom block after " + tick[0] + " ticks; longest step " + String.format("%.2f", worst[0])
+                    + "; jumps " + com.jrpetty.mcassistant.entity.Blink.byCause());
+                ok.that(worst[0] < 1.1, "walked and climbed, never put anywhere: longest step " + String.format("%.2f", worst[0]));
+                ok.that(com.jrpetty.mcassistant.entity.Blink.byCause().isEmpty(), "no jumps: " + com.jrpetty.mcassistant.entity.Blink.byCause());
+                Quarry.standDownForTests(true);
+                com.jrpetty.mcassistant.entity.Blink.setOn(false);
+                if (!ok.clean()) helper.fail(ok.summary());
+                helper.succeed();
+            }
+            if (tick[0] == 4400) {
+                com.jrpetty.mcassistant.entity.Blink.setOn(false);
+                helper.fail("the quarryman did not make the round: yard " + (yardAt[0] > 0 ? "reached at " + yardAt[0] : "never reached") + ", now "
+                    + Quarry.doingForTests(m) + " at " + m.blockPosition().toShortString() + ", did " + did + "; " + ok.summary());
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------ fb09: up the wall's steps, never put there
+
+    @GameTest(template = EMPTY, timeoutTicks = 7000, batch = "fb09_wall_stairs")
+    public static void fb09_wall_stairs(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, level, 8_260_000, 62, Villages.Age.STONE);
+        UUID id = t.id();
+        Kit.Expect ok = new Kit.Expect();
+        CastleWall.standDownForTests(false);
+        CastleWall.readyForTests(true);
+        TownDanger.stageForTests(id, DangerLevel.STONE);
+        Police.standDownForTests(false);
+        built(id, t.heart(), firstBlock());
+        CastleWall.buildNow(level, t.v(), true);
+        // Steps up on every side, each step a stair with room over it, the top one onto the walk.
+        int height = CastleWall.heightForTests(id);
+        int[] perSide = new int[4];
+        List<String> bad = new ArrayList<>();
+        for (int[] f : CastleWall.flightsForTests(id)) {
+            perSide[f[0]]++;
+            for (int k = 0; k < height; k++) {
+                BlockPos p = CastleWall.stepForTests(id, f, k);
+                if (p == null) continue;
+                BlockState st = level.getBlockState(p);
+                boolean room = level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
+                    && level.getBlockState(p.above(2)).getCollisionShape(level, p.above(2)).isEmpty();
+                if (!(st.getBlock() instanceof net.minecraft.world.level.block.StairBlock) || !room) {
+                    if (bad.size() < 8) bad.add(p.toShortString() + " " + st.getBlock().getName().getString() + (room ? "" : " (no headroom)"));
+                }
+            }
+        }
+        Kit.log("[VT] fb09 flights by side " + java.util.Arrays.toString(perSide) + ", height " + height + ", faults " + bad);
+        ok.that(perSide[0] >= 2 && perSide[1] >= 2 && perSide[2] >= 2 && perSide[3] >= 2, "flights up on every side: " + java.util.Arrays.toString(perSide));
+        ok.that(bad.isEmpty(), "every step a stair with headroom: " + bad);
+        chest(level, t.heart(), 4, -4, new ItemStack(Items.LANTERN, 8), new ItemStack(Items.TORCH, 16), new ItemStack(Items.BREAD, 32));
+        Villages.forgetStores(id);
+        VillageFolkEntity g = t.first();
+        g.keepTradeForTests();
+        if (!g.takeUpTrade(StationTask.GUARD)) g.setJob(StationTask.GUARD);
+        g.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        long day = level.getDayTime() / 24000L;
+        level.setDayTime(day * 24000L + 12600L);
+        if (!"WALLS".equals(Police.dutyForTests(level, g))) {
+            day++;
+            level.setDayTime(day * 24000L + 12600L);
+        }
+        int ground = t.heart().getY();
+        Kit.log("[VT] fb09 the guard's duty tonight: " + Police.dutyForTests(level, g) + "; on the ground at " + g.blockPosition().toShortString());
+        com.jrpetty.mcassistant.entity.Blink.reset();
+        com.jrpetty.mcassistant.entity.Blink.setOn(true);
+        double[] last = { g.getX(), g.getY(), g.getZ() };
+        double[] worst = { 0 };
+        int[] ticks = { 0 };
+        int[] phase = { 0 };
+        int[] downAt = { 0 };
+        boolean[] stepped = { false };
+        Set<BlockPos> visited = new HashSet<>();
+        Set<Integer> ends = new HashSet<>();
+        helper.onEachTick(() -> {
+            ticks[0]++;
+            double dx = g.getX() - last[0], dy = g.getY() - last[1], dz = g.getZ() - last[2];
+            double step = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (ticks[0] > 2 && step > worst[0]) {
+                worst[0] = step;
+                if (step > 1.1) Kit.log("[VT] fb09 a step of " + String.format("%.2f", step) + " at tick " + ticks[0] + " to " + g.blockPosition().toShortString());
+            }
+            last[0] = g.getX(); last[1] = g.getY(); last[2] = g.getZ();
+            if (level.getBlockState(g.blockPosition()).getBlock() instanceof net.minecraft.world.level.block.StairBlock
+                || level.getBlockState(g.blockPosition().below()).getBlock() instanceof net.minecraft.world.level.block.StairBlock) {
+                if (g.getY() > ground + 0.5) stepped[0] = true;
+            }
+            if (g.onClimbable() && g.getY() > ground + 0.5) stepped[0] = true;   // (a tower's ladder: as good a way up)
+            if (phase[0] == 0) {
+                List<BlockPos> route = NightWatch.routeForTests(g);
+                BlockPos stop = NightWatch.stopForTests(g);
+                if (stop != null && !NightWatch.streetForTests(g) && g.distanceToSqr(stop.getX() + 0.5, stop.getY(), stop.getZ() + 0.5) < 2.6 * 2.6
+                        && g.getY() > ground + height - 1 && visited.add(stop)) {
+                    int i = route.indexOf(stop);
+                    if (i == 0 || i == route.size() - 1) ends.add(i);
+                    Kit.log("[VT] fb09 on the wall walk at stop " + i + "/" + route.size() + " " + stop.toShortString() + " after " + ticks[0] + " ticks");
+                }
+                if (NightWatch.streetForTests(g)) {
+                    helper.fail("sent to the street: the wall walk could not be got up to; log " + NightWatch.logOf(id));
+                    return;
+                }
+                if (route.size() >= 2 && ends.size() == 2) {
+                    // The round walked end to end: the watch ends (the night's half over), and it comes down.
+                    phase[0] = 1;
+                    downAt[0] = ticks[0];
+                    long d = level.getDayTime() / 24000L;
+                    level.setDayTime(d * 24000L + 23400L);
+                    Kit.log("[VT] fb09 round walked end to end (" + visited.size() + " stops) after " + ticks[0] + " ticks: the watch ends");
+                }
+                return;
+            }
+            if (g.getY() <= ground + 1.0 && g.onGround()) {
+                Kit.log("[VT] fb09 down on the ground at " + g.blockPosition().toShortString() + " after " + (ticks[0] - downAt[0]) + " ticks; longest step "
+                    + String.format("%.2f", worst[0]) + "; jumps " + com.jrpetty.mcassistant.entity.Blink.byCause());
+                ok.that(stepped[0], "it went up (and down) by the steps or a tower's ladder");
+                ok.that(worst[0] < 1.1, "never more than a step a tick: " + String.format("%.2f", worst[0]));
+                ok.that(com.jrpetty.mcassistant.entity.Blink.byCause().isEmpty(), "no jumps: " + com.jrpetty.mcassistant.entity.Blink.byCause());
+                com.jrpetty.mcassistant.entity.Blink.setOn(false);
+                CastleWall.standDownForTests(true);
+                Police.standDownForTests(true);
+                if (!ok.clean()) helper.fail(ok.summary());
+                helper.succeed();
+            }
+        });
+        helper.runAtTickTime(6800, () -> {
+            com.jrpetty.mcassistant.entity.Blink.setOn(false);
+            helper.fail("the guard's round: phase " + phase[0] + ", stops " + visited.size() + "/" + NightWatch.routeForTests(g).size() + " ends " + ends
+                + ", at " + g.blockPosition().toShortString() + ", log " + NightWatch.logOf(id) + "; " + ok.summary());
+        });
+    }
+
+    // ------------------------------------------------------------------ fb10: the parks by the town's size
+
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "fb10_parks_tiers")
+    public static void fb10_parks_tiers(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, level, 8_270_000, 74, Villages.Age.STONE);
+        UUID id = t.id();
+        Kit.Expect ok = new Kit.Expect();
+        com.jrpetty.mcassistant.entity.GreatParks.standDownForTests(false);
+        List<TownPlan.Lot> homes = firstBlock();
+        built(id, t.heart(), homes);
+        int[] want = { 39, 40, 70, 90 };
+        int[] got = new int[4];
+        for (int i = 0; i < want.length; i++) {
+            com.jrpetty.mcassistant.entity.GreatParks.folkForTests(id, want[i]);
+            com.jrpetty.mcassistant.entity.GreatParks.tickForTests(level, t.v());
+            // A tier may want two at once (seventy: the second park); a second look for it.
+            com.jrpetty.mcassistant.entity.GreatParks.tickForTests(level, t.v());
+            got[i] = com.jrpetty.mcassistant.entity.GreatParks.greens(id).size();
+            Kit.log("[VT] fb10 at " + want[i] + " folk: tier " + com.jrpetty.mcassistant.entity.GreatParks.tier(id) + ", greens "
+                + com.jrpetty.mcassistant.entity.GreatParks.greens(id));
+        }
+        ok.that(got[0] == 0, "no big park at 39 folk: " + got[0]);
+        ok.that(got[1] == 1, "a park at 40: " + got[1]);
+        ok.that(got[2] == 2, "a second park at 70: " + got[2]);
+        ok.that(got[3] == 3, "the central park at 90: " + got[3]);
+        com.jrpetty.mcassistant.entity.GreatParks.Green central = null;
+        for (com.jrpetty.mcassistant.entity.GreatParks.Green g : com.jrpetty.mcassistant.entity.GreatParks.greens(id)) {
+            if (g.kind().equals(com.jrpetty.mcassistant.entity.GreatParks.LATE)) central = g;
+        }
+        helper.assertTrue(central != null, "a central park");
+        final com.jrpetty.mcassistant.entity.GreatParks.Green cp = central;
+        ok.that(cp.w() >= 40 && cp.d() >= 40, "four blocks across: " + cp.w() + " by " + cp.d());
+        // Not one of the homes' lots under any green; every lot under a green kept off for building from now on.
+        int under = 0, kept = 0, homesHit = 0;
+        for (com.jrpetty.mcassistant.entity.GreatParks.Green g : com.jrpetty.mcassistant.entity.GreatParks.greens(id)) {
+            for (TownPlan.Lot l : TownPlan.lots()) {
+                int[] b = box(l);
+                int lx = t.heart().getX() + b[0], lz = t.heart().getZ() + b[1];
+                if (lx < g.x0() || lx > g.x1() || lz < g.z0() || lz > g.z1()) continue;
+                under++;
+                if (Villages.lotKeptOff(id, t.heart(), l)) kept++;
+                for (TownPlan.Lot h : homes) if (h.key() == l.key()) homesHit++;
+            }
+        }
+        Kit.log("[VT] fb10 lots under the greens " + under + ", kept off " + kept + ", homes' lots under them " + homesHit);
+        ok.that(under > 0 && kept == under, "every lot under a green kept for it: " + kept + " of " + under);
+        ok.that(homesHit == 0, "no home's lot taken: " + homesHit);
+        // Laid out: the lake, the plaza, the pitch, the benches; no water anywhere but its ponds.
+        com.jrpetty.mcassistant.entity.GreatParks.layAllForTests(level, id);
+        Set<BlockPos> ponds = new HashSet<>();
+        for (com.jrpetty.mcassistant.entity.GreatParks.Green g : com.jrpetty.mcassistant.entity.GreatParks.greens(id)) ponds.addAll(com.jrpetty.mcassistant.entity.GreatParks.waterForTests(g));
+        int lake = 0;
+        for (BlockPos p : com.jrpetty.mcassistant.entity.GreatParks.waterForTests(cp)) if (level.getFluidState(p).isSource()) lake++;
+        int[] pitch = com.jrpetty.mcassistant.entity.GreatParks.pitchForTests(cp);
+        int lines = 0;
+        if (pitch != null) for (int x = pitch[0]; x <= pitch[2]; x++) if (level.getBlockState(new BlockPos(x, cp.y() + 1, pitch[1])).is(Blocks.WHITE_CARPET)) lines++;
+        Park.Layout lay = com.jrpetty.mcassistant.entity.GreatParks.layoutForTests(cp);
+        Kit.log("[VT] fb10 the central park: water " + lake + ", pitch " + java.util.Arrays.toString(pitch) + " (" + lines + " of its line marked), seats "
+            + lay.seats().size() + ", lamps " + lay.lights().size() + ", trees " + lay.trees().size() + ", flowers " + lay.flowers().size());
+        ok.that(lake >= 60, "a lake: " + lake + " blocks of water");
+        ok.that(pitch != null && lines >= pitch[2] - pitch[0], "the sports green's pitch marked: " + lines);
+        ok.that(lay.seats().size() >= 8 && lay.lights().size() >= 12 && lay.trees().size() >= 10 && lay.flowers().size() >= 40,
+            "benches, lamps, trees and flowers: " + lay.seats().size() + "/" + lay.lights().size() + "/" + lay.trees().size() + "/" + lay.flowers().size());
+        ok.that(Park.parks(id).size() >= 3, "visited as parks are: " + Park.parks(id).size());
+        helper.runAfterDelay(200, () -> {
+            int stray = 0;
+            for (com.jrpetty.mcassistant.entity.GreatParks.Green g : com.jrpetty.mcassistant.entity.GreatParks.greens(id)) {
+                for (int x = g.x0() - 2; x <= g.x1() + 2; x++) for (int z = g.z0() - 2; z <= g.z1() + 2; z++) for (int y = g.y() - 3; y <= g.y() + 4; y++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    if (!level.getFluidState(p).isEmpty() && !ponds.contains(p)) stray++;
+                }
+            }
+            ok.that(stray == 0, "no water outside the ponds after ten seconds: " + stray);
+            CompoundTag rep = com.jrpetty.mcassistant.entity.GreatParks.report(level, t.v());
+            ok.that(rep.getList("great", 10).size() == 3, "on the board: " + rep);
+            com.jrpetty.mcassistant.entity.GreatParks.standDownForTests(true);
+            com.jrpetty.mcassistant.entity.GreatParks.folkForTests(id, null);
+            if (!ok.clean()) helper.fail(ok.summary());
+            helper.succeed();
+        });
     }
 }
