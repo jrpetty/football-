@@ -191,6 +191,7 @@ public final class ServicePoints {
         VillageFolkEntity best = null;
         double bestD = Double.MAX_VALUE;
         BlockPos near = point != null ? point.pos() : null;
+        if (role == ServiceRole.HALL) return TownHallDesk.clerk(level, village, point);   // [wpa] the elder or a councillor
         VillageFolkEntity hosting = Hospitality.keeperFor(village, role);      // [dining] the barkeep at its bar, the host at its counter
         if (hosting != null && usable(hosting)) return hosting;
         if (role == ServiceRole.SHOP) {
@@ -230,6 +231,7 @@ public final class ServicePoints {
             return new Status(false, keeper, "Closed. " + role.hours.nextOpening(t) + " (hours " + role.hours.words() + ").");
         }
         if (keeper == null) {
+            if (role == ServiceRole.HALL) return new Status(true, null, "Open. The clerk's out: the town's book lies on the desk.");   // [wpa]
             if (role.selfServe()) return new Status(true, null, "Open. Nobody behind the bar: the coin goes in the jar.");
             return new Status(false, null, "Closed: the town has no " + role.keeperNoun + " just now.");
         }
@@ -328,6 +330,7 @@ public final class ServicePoints {
     }
 
     private static void open(ServerPlayer p, Session s) {
+        if (s.role == ServiceRole.HALL) { TownHall.openAtDesk(p, s.point); return; }   // [wpa] the Town Hall's own page
         SESSIONS.put(p.getUUID(), s);
         send(p, s, true);
     }
@@ -586,7 +589,7 @@ public final class ServicePoints {
         if (village == null || !Market.isCoin(p.getMainHandItem()) || !(p.level() instanceof ServerLevel level)) return false;
         ServiceRole role = null;
         for (ServiceRole r : ServiceRole.values()) if (r.trade == keeper.stationTask()) { role = r; break; }
-        if (role == null || role == ServiceRole.TAVERN) return false;
+        if (role == null || role == ServiceRole.TAVERN || role == ServiceRole.HALL) return false;
         Point point = nearest(level, village, role, keeper.blockPosition());
         if (point == null || point.pos().distSqr(keeper.blockPosition()) > 4 * 4) return false;
         return openFor(p, keeper, role, "");
@@ -606,8 +609,9 @@ public final class ServicePoints {
         long day = level.getDayTime() / 24000L;
         if (FITTED.getOrDefault(v.id(), -1L) == day) return;
         FITTED.put(v.id(), day);
+        TownHallDesk.fitOut(level, v);                                      // [wpa] the Town Hall's desk, its own way
         for (ServiceRole role : ServiceRole.values()) {
-            if (role.point != ServiceRole.Point.COUNTER) continue;
+            if (role.point != ServiceRole.Point.COUNTER || role == ServiceRole.HALL) continue;
             for (String structure : role.structures) {
                 for (Ledger.Building b : Ledger.buildings(v.id())) {
                     if (!b.structure().equals(structure) || !level.isLoaded(b.anchor())) continue;

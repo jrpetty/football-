@@ -372,6 +372,7 @@ public final class FolkTalk {
             if (PlayerLeader.leads(village, p.getUUID())) sb.append(" leader");
             if (Laws.owes(village, p.getUUID()) > 0) sb.append(" fine");
             sb.append(CivicLand.contextFlags(village, p));           // [civic-land] " knight", " taxowed"
+            sb.append(TownHall.contextFlags(village, p));            // [wpa] " registered", " referendum", " juror"
         }
         if (Birthdays.today(f)) sb.append(" birthday");
         if (!f.isBaby() && Interviews.shortlisted(f)) sb.append(" interview");
