@@ -313,7 +313,7 @@ public final class VillageSpawner {
 
         Villages.Village village = Villages.found(level, ground);
         supplyChest(level, ground);
-        pitchCamp(level, ground, size);
+        pitchCamp(level, ground, size + spareBedding(size));                // [grow54] and a few beds to spare
 
         Set<String> used = new HashSet<>();
         for (int i = 0; i < size; i++) {
@@ -537,6 +537,17 @@ public final class VillageSpawner {
             }
         }
         return false;
+    }
+
+    /**
+     * [grow54] The beds a founding party lays at its camp over and above one each: a fifth more, two at least. A child is
+     * born only where there is a bed for it (Villages.housing), and a party that laid exactly one bed apiece had no room
+     * for one until its first house was built, which took a village of eight five days and more on real ground (it sat
+     * at eight, "every home is full, a house comes first", the larder piling up). Room for a few children from the
+     * first day; the houses still have to come after.
+     */
+    public static int spareBedding(int folk) {
+        return Math.max(2, folk / 5);
     }
 
     /** How many beds the camp has room for, on level ground. */

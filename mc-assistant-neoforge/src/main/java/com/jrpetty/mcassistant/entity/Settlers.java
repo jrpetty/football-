@@ -181,7 +181,7 @@ public final class Settlers {
     @Nullable
     private static BlockPos look(ServerLevel level, Villages.Village v, @Nullable BlockPos[] far) {
         BlockPos c = v.centre();
-        int from = Math.max(40, Villages.townReach(v.id()) + 24);
+        int from = Math.max(48, Villages.townReach(v.id()) + 40);           // a good walk in from the road, past the edge camp
         int bearing = level.getRandom().nextInt(16);
         for (int out = from; out <= from + FURTHEST; out += 8) {
             for (int k = 0; k < 16; k++) {
@@ -224,8 +224,8 @@ public final class Settlers {
         Villages.bedsMadeUp(level, town.id());
         int spare = Villages.housing(town.id()) - Villages.headcount(town.id());
         int laid = 0;
-        for (int i = 0; i < n - Math.max(0, spare); i++) {
-            if (VillageSpawner.campBed(level, town.centre(), BEDDING[(int) Math.floorMod(pid.hashCode() + i, BEDDING.length)])) laid++;
+        for (int i = 0; i < Math.max(n, n - spare); i++) {                // a bed each, brought with them, and more if the town is short
+            if (layBed(level, town.centre(), BEDDING[(int) Math.floorMod(pid.hashCode() + i, BEDDING.length)])) laid++;
         }
         if (laid > 0) {
             Villages.recountBeds(town.id());
@@ -236,6 +236,38 @@ public final class Settlers {
         ChunkLoad.setLoaded(level, town.id(), town.centre(), VillageSpawner.loadedRadiusFor(Villages.headcount(town.id())), true);
         LOG.info("[MCA-SETTLERS] {}: party {} of {} taken in ({} beds laid at the camp); now {} folk of {} wanted",
             Villages.name(town.id()), pid, n, laid, Villages.headcount(town.id()), base());
+    }
+
+    /**
+     * One settler's bedding laid by the heart: at the camp's own places (VillageSpawner.campBed); and where the ground
+     * there is too broken for one (a town that stood up on a knoll, unlevelled: the camp's places are within two blocks
+     * of the heart's height), on the nearest level pair of blocks within the camp's reach, up to six above or below the
+     * heart. A real run's eight on a hill took in twenty-two settlers and laid not one bed for them.
+     */
+    static boolean layBed(ServerLevel level, BlockPos heart, Block bed) {
+        if (VillageSpawner.campBed(level, heart, bed)) return true;
+        for (int r = 3; r <= VillageSpawner.CAMP_REACH - 1; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r || (dx & 1) != 0 || (dz & 1) != 0) continue;   // every other block: a gap between
+                    Direction out = Math.abs(dz) >= Math.abs(dx) ? (dz < 0 ? Direction.NORTH : Direction.SOUTH) : (dx < 0 ? Direction.WEST : Direction.EAST);
+                    BlockPos foot = ground(level, heart.getX() + dx, heart.getZ() + dz);
+                    if (foot == null || Math.abs(foot.getY() - heart.getY()) > 6) continue;
+                    BlockPos head = foot.relative(out);
+                    BlockPos headGround = ground(level, head.getX(), head.getZ());
+                    if (headGround == null || headGround.getY() != foot.getY()) continue;
+                    if (!level.getBlockState(foot.above()).isAir() || !level.getBlockState(head.above()).isAir()) continue;
+                    net.minecraft.world.level.block.state.BlockState st = bed.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.BedBlock.FACING, out);
+                    level.setBlock(foot, st.setValue(net.minecraft.world.level.block.BedBlock.PART,
+                        net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+                    level.setBlock(head, st.setValue(net.minecraft.world.level.block.BedBlock.PART,
+                        net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** The board's line: "Settlers arriving: 3 on the road." while any are; else, while it is under the base, that it has
