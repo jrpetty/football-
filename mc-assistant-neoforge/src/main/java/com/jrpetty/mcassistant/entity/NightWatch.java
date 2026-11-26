@@ -193,6 +193,7 @@ public final class NightWatch {
             r.sent = now;
             r.route = route(level, v, post, false);
             if (!post.wall() && r.route.isEmpty()) return false;
+            r.at = nearest(r.route, g.blockPosition());                    // its round begun from the nearest stop
             takeOver(level, v, g, post);
         }
         if (r.route.isEmpty()) {
@@ -235,7 +236,7 @@ public final class NightWatch {
             if (post.wall() && !r.street && r.skips >= 3) {
                 r.street = true;
                 r.route = route(level, v, post, true);
-                r.at = 0;
+                r.at = nearest(r.route, g.blockPosition());
                 r.skips = 0;
                 log(level, id, g.displayNameCap() + " could not get up onto " + post.name() + " and walked the street inside it instead");
                 if (r.route.isEmpty()) return false;
@@ -248,6 +249,16 @@ public final class NightWatch {
         Incidents.walk(g, r.route.get(r.at), post.wall() ? 0.6D : 0.8D);
         g.brain("to " + post.name() + " for the night watch");
         return true;
+    }
+
+    static int nearest(List<BlockPos> stops, BlockPos from) {
+        int best = 0;
+        double bd = Double.MAX_VALUE;
+        for (int i = 0; i < stops.size(); i++) {
+            double d = stops.get(i).distSqr(from);
+            if (d < bd) { bd = d; best = i; }
+        }
+        return best;
     }
 
     /** The stops of a post's round: a side's wall walk (or the street inside it), or the spot inside a gate. */
