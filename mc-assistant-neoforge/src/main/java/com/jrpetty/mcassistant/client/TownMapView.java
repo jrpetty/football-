@@ -47,7 +47,7 @@ final class TownMapView {
     private static final String[] LAND_WORDS = { "Not seen yet", "Grass", "Water", "Street or path", "Fields", "Trees", "Sand", "Rock",
         "Snow", "Built by others", "Lava" };
     /** Folk, by what they are at (TownMapReport: asleep, working, on the way, at leisure, laid up, at school). */
-    static final int[] FOLK = { 0xFF2B3170, 0xFFFFD23F, 0xFFFFFFFF, 0xFFFF7AB6, 0xFFE0362C, 0xFF8FE3FF };
+    static final int[] FOLK = { 0xFFB9B2F0, 0xFFFFD23F, 0xFFFFFFFF, 0xFFFF7AB6, 0xFFE0362C, 0xFF7FE0A0 };
     private static final String[] FOLK_WORDS = { "asleep", "working", "on the way", "at leisure", "laid up", "at school" };
     private static final int SITE = 0xFFF08A24, SALE = 0xFFF2C200, YOURS = 0xFFFFC400, CART = 0xFF6B4423, OPEN = 0xFF2FBF4A,
         SHUT = 0xFF8A8A8A, REPAIR = 0xFFD8342A, INK = 0xFF1C1C1C;
@@ -217,7 +217,7 @@ final class TownMapView {
             stores(g, m, cx, cy, k, mx, my, hover);
             carts(g, m, cx, cy, k, mx, my, hover, counts);
             folk(g, m, cx, cy, k, mx, my, hover, counts);
-            me(g, m, cx, cy, k, mx, my, hover);
+            me(g, m, cx, cy, k, mx, my, hover, labels);
             placeLabels(g, font, labels, x, y, mw, mh);
         } finally {
             g.disableScissor();
@@ -402,14 +402,18 @@ final class TownMapView {
                 dashed(g, r[0] - 1, r[1] - 1, bw + 2, bh + 2, 0xFFFFFFFF);
                 counts.toLet++;
             }
-            String name = e.contains("biz") ? e.getString("biz") : b.getString("title");
+            String name = e.contains("biz") ? e.getString("biz") : b.getString("title").replaceAll("\\d+$", "");
             if (use != Use.HOME && use != Use.DEFENCE) labels.add(new Label(name, (r[0] + r[2]) / 2, r[1], INK,
                 (use == Use.CIVIC || use == Use.STORES || use == Use.MINE ? 30 : use == Use.SHOP ? 25 : 15) + Math.min(9, bw * bh / 40)));
             if (over(r, mx, my)) {
                 List<Component> tip = new ArrayList<>();
                 tip.add(Component.literal(name).withColor(0xFFFFFF));
-                if (e.contains("biz")) tip.add(Component.literal(e.getString("biz_type") + " in the " + b.getString("title").toLowerCase(Locale.ROOT)
-                    + (e.getBoolean("open") ? " · open" : " · shut")).withColor(e.getBoolean("open") ? 0x9EE07A : 0xBBBBBB));
+                if (e.contains("biz")) {
+                    String in = b.getString("title").replaceAll("\\d+$", "");
+                    tip.add(Component.literal(e.getString("biz_type") + (in.equalsIgnoreCase(name) || in.equalsIgnoreCase(e.getString("biz_type"))
+                        ? "" : " in the " + in.toLowerCase(Locale.ROOT)) + (e.getBoolean("open") ? " · open now" : " · shut"))
+                        .withColor(e.getBoolean("open") ? 0x9EE07A : 0xBBBBBB));
+                }
                 tip.add(Component.literal(use.words + (e.contains("addr") ? " · " + e.getString("addr") : "")).withColor(use.colour & 0xFFFFFF | 0x404040));
                 if (e.contains("biz_owner") && !e.getString("biz_owner").isEmpty()) tip.add(Component.literal("Owned by " + e.getString("biz_owner")));
                 if (e.contains("owner")) tip.add(Component.literal("A player's: " + e.getString("owner")));
@@ -489,7 +493,7 @@ final class TownMapView {
                     g.fill(bx + 1, r[3] + 2, bx + 1 + Math.round((bw - 2) * pct / 100F), r[3] + 3, OPEN);
                 }
             }
-            String what = s.getString("what");
+            String what = s.getString("what").replaceAll("\\d+$", "");          // "House2": a house
             labels.add(new Label(what + (pct >= 0 ? " " + pct + "%" : ""), (r[0] + r[2]) / 2, r[1], 0xFF7A3A00, 50));
             if (over(r, mx, my)) {
                 List<Component> tip = new ArrayList<>();
@@ -540,7 +544,7 @@ final class TownMapView {
 
     private static void folk(GuiGraphics g, CompoundTag m, float cx, float cy, float k, int mx, int my, Hover hover, Counts counts) {
         ListTag folk = m.getList("folk", Tag.TAG_COMPOUND);
-        int s = k >= 3 ? 2 : 1;
+        int s = k >= 5 ? 3 : 2;
         int bestD = 26;
         CompoundTag best = null;
         for (int i = 0; i < folk.size(); i++) {
@@ -572,7 +576,7 @@ final class TownMapView {
         }
     }
 
-    private static void me(GuiGraphics g, CompoundTag m, float cx, float cy, float k, int mx, int my, Hover hover) {
+    private static void me(GuiGraphics g, CompoundTag m, float cx, float cy, float k, int mx, int my, Hover hover, List<Label> labels) {
         if (!m.contains("me")) return;
         CompoundTag me = m.getCompound("me");
         float dx = (float) me.getDouble("dx"), dz = (float) me.getDouble("dz");
@@ -591,6 +595,7 @@ final class TownMapView {
         g.fill(px - 3, pz - 3, px + 4, pz + 4, INK);
         g.fill(px - 2, pz - 2, px + 3, pz + 3, 0xFFFF4040);
         g.fill(px - 1, pz - 1, px + 2, pz + 2, 0xFFFFFFFF);
+        labels.add(new Label("You", px, pz - 4, 0xFFB00000, 95));
         if (Math.abs(mx - px) <= 4 && Math.abs(my - pz) <= 4) hover.offer(110, List.of(Component.literal("You").withColor(0xFF8080),
             Component.literal("Where you stood when the board opened").withColor(0xBBBBBB)), null);
     }
@@ -689,10 +694,12 @@ final class TownMapView {
             ky += 8;
         }
         ky += 3;
-        heading(g, font, "LAND", x, ky);
-        ky += 9;
+        // Short of room (a big GUI scale): what is happening now before the land's colours, which the map shows plainly.
         int[][] land = { { L_ROAD, 3 }, { L_WATER, 2 }, { L_FARM, 4 }, { L_GRASS, 1 }, { L_TREES, 5 }, { L_SQUARE, -1 }, { L_BUILT, 9 } };
-        for (int[] l : land) {
+        boolean roomForLand = bottom - ky >= 9 + 8 * land.length + 3 + 9 + 8 * 10;
+        if (roomForLand) heading(g, font, "LAND", x, ky);
+        if (roomForLand) ky += 9;
+        for (int[] l : roomForLand ? land : new int[0][]) {
             if (ky > bottom - 8) return;
             g.fill(x, ky, x + 7, ky + 7, l[0]);
             g.renderOutline(x, ky, 7, 7, shade(l[0], 0.7F));

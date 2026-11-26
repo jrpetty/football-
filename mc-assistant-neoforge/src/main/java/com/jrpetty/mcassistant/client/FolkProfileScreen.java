@@ -262,8 +262,23 @@ public class FolkProfileScreen extends Screen {
 
     // ------------------------------------------------------------------ drawing
 
+    /** [ui53] Opened from the board's Folk page: whatever fails in drawing it is logged once and costs the card, not the game. */
     @Override
     public void render(GuiGraphics g, int mx, int my, float partialTick) {
+        com.mojang.blaze3d.vertex.PoseStack.Pose mark = BoardGuard.mark(g);
+        try {
+            renderCard(g, mx, my, partialTick);
+            BoardGuard.done(g, mark);
+        } catch (Throwable e) {
+            if (!BoardGuard.catchable(e)) throw e;
+            BoardGuard.log("a folk's card", e);
+            BoardGuard.recover(g, mark, null);
+            UiStyle.panel(g, left, top, w, h);
+            BoardGuard.pageFailed(g, font, "a folk's card; Esc goes back", left + UiStyle.S2, top + UiStyle.S2, w - 2 * UiStyle.S2);
+        }
+    }
+
+    private void renderCard(GuiGraphics g, int mx, int my, float partialTick) {
         super.render(g, mx, my, partialTick);
         if (laidW != pageW() || laidTab != tab || laidEpoch != TextCache.epoch()) layout();
         UiStyle.shadow(g, left, top, w, h);
@@ -436,6 +451,15 @@ public class FolkProfileScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        try {                                                                    // [ui53] a click that fails costs the click
+            return clickCard(mx, my, button);
+        } catch (RuntimeException e) {
+            BoardGuard.log("a click on a folk's card", e);
+            return true;
+        }
+    }
+
+    private boolean clickCard(double mx, double my, int button) {
         if (button != 0) return super.mouseClicked(mx, my, button);
         int y = top + HEADER_H + 2, x = innerX();
         int each = Math.min(78, (left + w - UiStyle.S2 - innerX()) / TAB_NAMES.length);

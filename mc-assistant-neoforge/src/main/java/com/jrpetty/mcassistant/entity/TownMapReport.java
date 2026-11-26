@@ -237,7 +237,7 @@ public final class TownMapReport {
         for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(v.id()).entrySet()) {
             if (out.size() >= 24) break;
             Villages.Site s = e.getValue();
-            CompoundTag c = box(heart, s.anchor(), e.getKey().equals("fortify") ? "" : e.getKey(), TownLife.title(e.getKey()).replaceFirst("^The ", ""));
+            CompoundTag c = box(heart, s.anchor(), e.getKey().equals("fortify") ? "" : e.getKey(), TownLife.title(e.getKey()).replaceFirst("^The ", "").replaceAll("\\d+$", ""));
             if (e.getKey().equals("fortify")) { c.putInt("hx", s.radius()); c.putInt("hz", s.radius()); c.putBoolean("ring", true); }
             c.putString("kind", e.getKey());
             c.putInt("pct", progress(level, e.getKey(), s));
@@ -292,7 +292,7 @@ public final class TownMapReport {
             FolkSchedule.Kind k = FolkSchedule.now(f);
             boolean moving = f.getNavigation().isInProgress() || f.getDeltaMovement().horizontalDistanceSqr() > 0.0025;
             byte s = switch (k) {
-                case SLEEP -> ASLEEP;
+                case SLEEP -> moving ? WALKING : ASLEEP;                  // past its bedtime but still on its way home
                 case LAID_UP -> ILL;
                 case SCHOOL -> SCHOOL;
                 case WORK, WATCH -> moving ? WALKING : WORKING;
