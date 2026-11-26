@@ -657,11 +657,21 @@ public final class MineWay {
         w.boughtAt = now;
         int want = 0;
         for (BridgeKit.Plan p : w.plans) want += BridgeKit.planksWanted(level, p);
-        // [tp47] The planks in hand only, the stores' logs not counted on: counted as half the bridge's, they were sawn for the
-        // houses and the terraces before the bridge came to them, and by then the terraces had spent the treasury on brick (the
-        // bridge waited on planks two thirds of a day, its miners with it).
-        int have = w.purse[0] + Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.PLANKS));
-        int shortBy = want - have;
+        // [tp47] The bridge's planks put by out of the stores first (sawn from their logs if need be), then bought: counted on in
+        // the stores, they were sawn and spent on the houses and the terraces before the bridge came to them, and by then the
+        // terraces had spent the treasury on brick (the bridge waited on planks two thirds of a day, its miners taken on for the
+        // town's works meanwhile, and one of them never got to the mine at all).
+        int shortBy = want - w.purse[0];
+        if (shortBy <= 0) return;
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> plank = st -> st.is(net.minecraft.tags.ItemTags.PLANKS);
+        Crafts.planks(level, v, shortBy);                                   // (the logs sawn as far as they go)
+        int put = Math.min(shortBy, Crafts.stock(level, v, plank));
+        if (put > 0 && Crafts.take(level, v, plank, put)) {
+            w.purse[0] += put;
+            shortBy -= put;
+            LOG.info("[MCA-MINEWAY] {}: put by {} planks out of the stores for the bridge on the way to the mine", Villages.name(v.id()), put);
+        }
+        int have = w.purse[0];
         if (shortBy <= 0) return;
         int got = Market.importFor(level, v, level.getDayTime() / 24000L, net.minecraft.world.item.Items.SPRUCE_PLANKS, shortBy, "the bridge on the way to the mine", false);
         if (got > 0) {
