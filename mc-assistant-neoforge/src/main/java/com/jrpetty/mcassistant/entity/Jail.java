@@ -117,10 +117,29 @@ public final class Jail {
 
     @Nullable
     public static Ledger.Building of(@Nullable UUID village) {
+        return standing(village, STRUCTURE, new int[]{ -5, 0, 4 }, s -> s.is(net.minecraft.tags.BlockTags.BEDS));
+    }
+
+    /**
+     * The town's building of this kind that really stands: on its book, not still going up, and (where its ground is
+     * loaded) with the piece of it this probe looks for where the drawing puts it, so a lot booked but not yet raised (a
+     * town building out of sight) is never taken for the real thing.
+     */
+    @Nullable
+    static Ledger.Building standing(@Nullable UUID village, String structure, int[] probe, java.util.function.Predicate<BlockState> is) {
         if (village == null) return null;
-        Ledger.Building b = Villages.builtStructure(village, STRUCTURE);
-        if (b == null || Ledger.raising(village, b.anchor())) return null;
-        return b;
+        Villages.Village v = Villages.get(village);
+        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        ServerLevel level = v == null || server == null ? null : server.getLevel(v.dim());
+        Ledger.Building unseen = null;
+        for (Ledger.Building b : Ledger.buildings(village)) {
+            if (!b.structure().equals(structure) || Ledger.raising(village, b.anchor())) continue;
+            if (level == null) return b;
+            BlockPos at = at(b, probe);
+            if (!level.isLoaded(at)) { if (unseen == null) unseen = b; continue; }
+            if (is.test(level.getBlockState(at))) return b;
+        }
+        return unseen;
     }
 
     static BlockPos at(Ledger.Building b, int[] c) {

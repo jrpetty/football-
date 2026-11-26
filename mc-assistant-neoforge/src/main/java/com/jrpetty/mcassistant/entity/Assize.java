@@ -66,10 +66,7 @@ public final class Assize {
 
     @Nullable
     public static Ledger.Building courthouse(@Nullable UUID village) {
-        if (village == null) return null;
-        Ledger.Building b = Villages.builtStructure(village, COURTHOUSE);
-        if (b == null || Ledger.raising(village, b.anchor())) return null;
-        return b;
+        return Jail.standing(village, COURTHOUSE, new int[]{ 0, 0, 3 }, s -> s.is(net.minecraft.tags.BlockTags.FENCES));
     }
 
     /** Does the town want a courthouse: the Iron Age, a jail (or watch house), and thirty folk; none yet. */
