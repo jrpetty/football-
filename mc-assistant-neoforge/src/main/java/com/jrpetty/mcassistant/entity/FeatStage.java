@@ -130,6 +130,8 @@ public final class FeatStage {
             if (f == null) break;
             out.add("ENLISTED " + f.displayNameCap());
         }
+        Crafts.store(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN, 32));   // the watch's lanterns, in the stores
+        out.add("LANTERNS 32 into the stores");
         return out;
     }
 
