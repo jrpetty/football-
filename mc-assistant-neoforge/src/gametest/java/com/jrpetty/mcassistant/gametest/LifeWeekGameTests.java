@@ -274,6 +274,7 @@ public class LifeWeekGameTests {
             Ledger.addCoins(id, 300);
             Fairground.roundForTests(level, v);
             helper.assertTrue(Fairground.lampsUp(id) > 0, "lanterns round the square, the town can afford them: " + Fairground.lampsUp(id));
+            Kit.prepare(level, x, Z, 150);
             Blink.watch(level, heart.getX(), heart.getZ());
             trader[0] = Fairground.traderForTests(level, v);
             helper.assertTrue(trader[0] != null, "a trader on the road in");
