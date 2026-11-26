@@ -447,8 +447,12 @@ public final class Newcomers {
     /** The party from outside, made: {@code n} of them (or by the odds, given -1). Returns the party's number, or null. */
     static String outside(ServerLevel level, Villages.Village v, long day, int n) {
         // [grow54] Out of anybody's sight, out past the town on the way in (Settlers.start), never set down at its edge
-        // in front of a player: they walk the rest. Nowhere unseen and loaded yet: they come another day.
+        // in front of a player: they walk the rest. Nowhere unseen and loaded: they come another day.
         BlockPos start = Settlers.start(level, v);
+        if (start == null) {                                                // nothing loaded out there: the town's edge, if nobody sees it
+            BlockPos edge = Visitors.edge(level, v, level.getRandom());
+            if (edge != null && !Blink.seenAt(level, edge.getX() + 0.5, edge.getZ() + 0.5, Settlers.MARGIN)) start = edge;
+        }
         return start == null ? null : outside(level, v, day, n, start, false);
     }
 
