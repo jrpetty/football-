@@ -601,7 +601,7 @@ public final class TaxBook {
             me.putInt("weeks", before > 0 ? me.getInt("weeks") + 1 : 0);
             me.putLong("since", before > 0 ? me.getLong("since") : day + 1);
             CivicLand.tell(level.getServer(), c.getKey(), "Tax day in " + Villages.name(id) + ": you owe " + coins(me.getInt("owed"))
-                + (fee > 0 ? " (your knight's fee of " + coins(fee) + " with it)" : "") + ". Pay any of its folk (\"I'd like to pay my taxes\") or /village taxes pay.",
+                + (fee > 0 ? " (your knight's fee of " + coins(fee) + " with it)" : "") + ". Pay any of its folk (\"I'd like to pay my taxes\") or at the Town Hall.",
                 ChatFormatting.GOLD);
             if (me.getInt("weeks") == 3) {
                 for (AssistantEntity a : Villages.folkOf(id)) {

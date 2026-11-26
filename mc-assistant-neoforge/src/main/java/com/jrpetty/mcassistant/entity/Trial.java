@@ -84,6 +84,10 @@ final class Trial {
         int ayes, noes;
         Sentence sentence = Sentence.FINE;
         String sentenceWords = "";
+        /** [wpa] A jury of players sits: the verdict waits for its word (Jury), from when everything was heard. */
+        boolean jury;
+        long juryFrom;
+        int priors;
 
         Sitting(int caseId, UUID village, BlockPos at, BlockPos dock, Direction faces, boolean hall, long opened) {
             this.caseId = caseId;
@@ -204,6 +208,7 @@ final class Trial {
             councillors++;
         }
         SITTINGS.put(v.id(), s);
+        Jury.summon(level, v, c, at, inHall);                                // [wpa] the citizens on the jury roll called
         c.stage = Stage.TRIAL;
         c.note(day, "Before the council " + (inHall ? "at the hall" : "on the square") + ", " + s.judgeName + " presiding.");
         VillageFolkEntity judge = s.judge == null ? null : Civics.find(level, s.judge);
@@ -262,6 +267,17 @@ final class Trial {
             VillageFolkEntity speaker = who != null ? who : judge != null ? judge : accused;
             FolkTalk.speak(speaker, line[1]);
             s.nextAt = gt + Crime.pause(LINE);
+            return;
+        }
+        if (s.jury) {                                                        // [wpa] the jury's word, then the verdict
+            if (s.juryFrom == 0) { s.juryFrom = gt; Jury.heard(c.id); }
+            if (!Jury.ready(c.id) && gt - s.juryFrom < (Crime.hurry ? 200 : Jury.WAIT)) return;
+            int[] j = Jury.tally(c.id);
+            s.ayes += j[0];
+            s.noes += j[1];
+            s.jury = false;
+            verdict(level, v, c, s, accused.displayNameCap(), true);
+            Jury.close(level, c.id, s.guilty);
             return;
         }
         SITTINGS.remove(s.village, s);
@@ -324,16 +340,28 @@ final class Trial {
         }
         s.ayes = ayes;
         s.noes = noes;
-        s.guilty = ayes > noes;
-        if (s.guilty) {
-            s.sentence = sentence(level, v, c, priors);
-            s.sentenceWords = words(s.sentence, c, level);
-            s.lines.add(line(null, "The council has heard it. Guilty, " + ayes + " to " + noes + ". " + s.sentenceWords));
+        s.priors = priors;
+        if (Jury.seated(c.id)) {                                             // [wpa] the jury gives its word first
+            s.jury = true;
+            s.lines.add(line(null, "The council has heard it. The jury will give its word before we give ours."));
         } else {
-            s.lines.add(line(null, "The council finds you not guilty, " + noes + " to " + ayes + ". You're cleared, " + name + ", and free to go."));
+            verdict(level, v, c, s, name, false);
         }
         c.note(level.getDayTime() / 24000L, "The council weighed the evidence against " + name + " at " + String.format(Locale.ROOT, "%.1f", weight)
-            + " and voted " + ayes + " to " + noes + (s.guilty ? " to convict." : " to clear."));
+            + " and voted " + ayes + " to " + noes + (s.jury ? ", the jury's word to come." : s.guilty ? " to convict." : " to clear."));
+    }
+
+    /** The verdict by the votes counted (the council's, and the jury's if one sat), and the sentence. */
+    private static void verdict(ServerLevel level, Villages.Village v, Case c, Sitting s, String name, boolean jury) {
+        s.guilty = s.ayes > s.noes;
+        String who = jury ? "The council and the jury" : "The council";
+        if (s.guilty) {
+            s.sentence = sentence(level, v, c, s.priors);
+            s.sentenceWords = words(s.sentence, c, level);
+            s.lines.add(line(null, who + (jury ? " have" : " has") + " heard it. Guilty, " + s.ayes + " to " + s.noes + ". " + s.sentenceWords));
+        } else {
+            s.lines.add(line(null, who + (jury ? " find" : " finds") + " you not guilty, " + s.noes + " to " + s.ayes + ". You're cleared, " + name + ", and free to go."));
+        }
     }
 
     private static String[] line(@Nullable UUID who, String text) {

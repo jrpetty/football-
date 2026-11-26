@@ -29,7 +29,11 @@ public enum ServiceRole {
     // [roles-b] The brewer's stand (potions bought or brewed to order) and the enchanter's table (CraftDesk).
     BREWERY("brewery", "Brewery", "brewer", new ServiceHours(1000, 12000), Point.BREWING, List.of("brewery"), AssistantEntity.StationTask.BREW),
     ENCHANTER("enchanter", "Enchanter's", "enchanter", new ServiceHours(1000, 12000), Point.ENCHANTING, List.of(CraftScale.TOWER, CraftScale.LIBRARY),
-        AssistantEntity.StationTask.ENCHANT);
+        AssistantEntity.StationTask.ENCHANT),
+    // [wpa] The Town Hall's desk: the town's book, papers, citizenship, notices and the treasury (TownHallDesk, TownHall).
+    // Kept by the elder or a councillor at the hall (TownHallDesk.clerk), never by a trade: its trade is none.
+    HALL("hall", "Town Hall", "clerk", new ServiceHours(1000, 12000), Point.COUNTER, List.of("townhall", "hall"),
+        AssistantEntity.StationTask.NONE);
 
     /** What a role serves at. */
     public enum Point {
@@ -90,11 +94,12 @@ public enum ServiceRole {
             case RESTAURANT -> DiningDesk.INSTANCE;                       // [dining]
             case SMITHY, TAILOR -> MakerDesk.INSTANCE;
             case BREWERY, ENCHANTER -> CraftDesk.INSTANCE;                  // [roles-b]
+            case HALL -> TownHallDesk.INSTANCE;                             // [wpa]
         };
     }
 
     /** Can the bar serve itself when nobody keeps it (the honesty jar)? Only the tavern's. */
     public boolean selfServe() {
-        return this == TAVERN;
+        return this == TAVERN || this == HALL;                              // [wpa] the hall's book lies open on its desk
     }
 }

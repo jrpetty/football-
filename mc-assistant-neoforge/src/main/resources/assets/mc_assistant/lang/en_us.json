@@ -639,5 +639,16 @@
   "talk.mc_assistant.my_life": "My life in town",
   "talk.mc_assistant.my_life.tip": "Your work, shop, home, standing and what to do next (the U key)",
   "talk.mc_assistant.found_own": "Start a village of my own",
-  "talk.mc_assistant.found_own.tip": "The founding screen: where (here, or the best spots near), how big, its name"
+  "talk.mc_assistant.found_own.tip": "The founding screen: where (here, or the best spots near), how big, its name",
+  "talk.mc_assistant.town_hall": "The Town Hall",
+  "talk.mc_assistant.town_hall.tip": "Join the village, your papers, citizenship, taxes, notices and the treasury: the Town Hall's page",
+  "talk.mc_assistant.my_papers": "My papers",
+  "talk.mc_assistant.my_papers.tip": "Your ID card: your town name, your towns, your job and your respect",
+  "talk.mc_assistant.ref_aye": "Vote aye",
+  "talk.mc_assistant.ref_aye.tip": "A citizen's vote for what is put to the town",
+  "talk.mc_assistant.ref_nay": "Vote nay",
+  "talk.mc_assistant.ref_nay.tip": "A citizen's vote against what is put to the town",
+  "talk.mc_assistant.jury_duty": "Jury duty",
+  "talk.mc_assistant.jury_duty.tip": "You're called to a jury: hear the case and give your verdict at the Town Hall",
+  "item.mc_assistant.citizen_papers": "Citizen Papers"
 }

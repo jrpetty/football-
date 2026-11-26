@@ -279,7 +279,7 @@ public final class LandTitles {
     /** A player buys the title to the town's plot numbered so (its value, out of its coin into the treasury). */
     public static String playerBuys(ServerLevel level, Player p, UUID village, int n) {
         List<Map.Entry<String, CompoundTag>> l = listing(village);
-        if (n < 1 || n > l.size()) return "No plot numbered " + n + ". /village capital land lists them.";
+        if (n < 1 || n > l.size()) return "No plot numbered " + n + ". Everything you can do, its Capital tab, lists them.";
         Map.Entry<String, CompoundTag> e = l.get(n - 1);
         CompoundTag t = e.getValue();
         if (!buyable(e.getKey(), t)) return t.getString("name") + " is not the town's to sell (" + t.getString("holderName") + " holds it).";
@@ -297,7 +297,7 @@ public final class LandTitles {
         Accounts.add(book(village), "soldAll", price * 100L);
         CapitalBook.tell(village, day, p.getName().getString() + " bought the title to " + t.getString("name") + " from the town for " + price + Homes.coins(price));
         return "You hold the title to " + t.getString("name") + " now: its rent (" + Businesses.pence(t.getLong("earns")) + " a week) comes to you at the hall. "
-            + "/village capital land collect.";
+            + "Collect it on Everything you can do, its Capital tab.";
     }
 
     /** Businesses.overheads: a firm's rent to a player who holds its title instead of the treasury. True if it went there. */

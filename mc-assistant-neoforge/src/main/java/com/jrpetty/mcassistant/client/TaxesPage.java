@@ -132,7 +132,7 @@ public final class TaxesPage {
             if (!v.getString("ayeNames").isEmpty()) body.add(new String[]{ "M", "Aye: " + v.getString("ayeNames") });
             if (!v.getString("nayNames").isEmpty()) body.add(new String[]{ "M", "No: " + v.getString("nayNames") });
         }
-        body.add(new String[]{ "M", "Pay what you owe to any folk (\"I'd like to pay my taxes\") or /village taxes pay; urge the council: \"The taxes should be lower\"." });
+        body.add(new String[]{ "M", "Pay what you owe to any folk (\"I'd like to pay my taxes\") or at the Town Hall's Money tab; urge the council: \"The taxes should be lower\"." });
         int max = (int) ((rw - 4) / 0.75F), skip = Math.max(0, scroll), line = 0;
         for (String[] b : body) {
             if (b[0].equals("H")) {
