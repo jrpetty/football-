@@ -35,7 +35,10 @@ public final class Ceremonies {
 
     /** A leader into the seat without a vote (Government.install): its ceremony in the square, now or as soon as nothing else is on. */
     static void installed(ServerLevel level, UUID village, Government.Form form, VillageFolkEntity f, String how, long day) {
-        if (Identity.neutral() || !Government.appointed(form) || Villages.headcount(village) < 3) return;
+        if (Identity.neutral()) return;
+        Villages.Village vv = Villages.get(village);
+        if (vv != null) com.jrpetty.mcassistant.Guard.run("the new policy", () -> Policy.look(level, vv, day));
+        if (!Government.appointed(form) || Villages.headcount(village) < 3) return;
         Ledger.note(village, "ceremony.due", form.name() + "|" + f.getUUID() + "|" + f.displayNameCap().replace("|", " ") + "|" + how.replace("|", " ") + "|" + day);
         begin(level, village);
     }
@@ -211,6 +214,7 @@ public final class Ceremonies {
     static void elected(ServerLevel level, Villages.Village v, UUID winner, @Nullable UUID before, Elections.Result res, long day) {
         Regalia.freshForTests(v.id());
         if (Identity.neutral() && !Polls.visualForTests) return;           // a test's plain town: no rockets out of its stores
+        com.jrpetty.mcassistant.Guard.run("the new policy", () -> Policy.look(level, v, day));   // the new leader's policy, set out at once
         if (level.getEntity(winner) instanceof VillageFolkEntity f) {
             FolkAction.mark(f, FolkAction.Mark.STAR);
             FolkAction.play(f, FolkAction.Act.WAVE, 60);
