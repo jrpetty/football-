@@ -461,13 +461,22 @@ public final class Blink {
         StringBuilder b = new StringBuilder();
         for (Villages.Village v : Villages.every()) {
             if (!v.dim().equals(level.dimension())) continue;
-            int all = 0, asleep = 0, floor = 0, bed = 0, out = 0;
+            int all = 0, asleep = 0, floor = 0, bed = 0;
             java.util.Map<String, Integer> why = new java.util.TreeMap<>();
             StringBuilder each = new StringBuilder();
             for (AssistantEntity a : Villages.folkOf(v.id())) {
                 all++;
                 if (a.bedPos() != null) bed++;
-                if (a.isSleeping()) { asleep++; if (Bedside.onAFloor(a)) floor++; if (Bedside.outdoors(a)) out++; continue; }
+                if (a.isSleeping()) {
+                    asleep++;
+                    if (Bedside.onAFloor(a)) {
+                        floor++;                                                 // [tp50] where each sleeps on a floor, and how far from its bed
+                        net.minecraft.core.BlockPos bp = a.bedPos();
+                        each.append("  ").append(a.getAssistantName()).append(" (asleep on a floor) at ").append(a.blockPosition().toShortString())
+                            .append(bp == null ? "" : " bed " + bp.toShortString() + " " + (int) Math.sqrt(bp.distSqr(a.blockPosition())) + " off").append('\n');
+                    }
+                    continue;
+                }
                 String w = Bedside.whyAwake(a);
                 why.merge(Bedside.kind(w), 1, Integer::sum);
                 net.minecraft.core.BlockPos bp = a.bedPos();
@@ -477,7 +486,7 @@ public final class Blink {
             }
             if (all == 0) continue;
             b.append(Villages.name(v.id())).append(": ").append(asleep).append(" of ").append(all).append(" asleep (").append(floor)
-                .append(" on a floor, ").append(out).append(" of them out of doors), ").append(bed).append(" with a bed; awake: ").append(why).append('\n').append(each);
+                .append(" on a floor), ").append(bed).append(" with a bed; awake: ").append(why).append('\n').append(each);
         }
         return b.toString();
     }

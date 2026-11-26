@@ -3616,8 +3616,24 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                                 || toBed.getEndNode() != null && toBed.getEndNode().asBlockPos().distSqr(bed) < toVia.getEndNode().asBlockPos().distSqr(bed))) via = null;
                     }
                 }
-                if (via != null) getNavigation().moveTo(via.getX() + 0.5, via.getY(), via.getZ() + 0.5, 1.0D);
-                else getNavigation().moveTo(bed.getX() + 0.5, bed.getY(), bed.getZ() + 0.5, 1.0D);
+                BlockPos to = via != null ? via : bed;
+                // [tp50] Never a walk that ends short of where it goes down in a pit it cannot get out of (the slot behind the
+                // terrace row, the pathfinder's nearest to a bed in the sunken house beside it, where half the town stood all
+                // night): the other way (the bed, or the map's stop) if that does not, else it waits where it is (the night's
+                // floor, or the morning) rather than drop in. Looked at in a player's sight; out of it the walk is travelled.
+                if (this instanceof VillageFolkEntity && Blink.seen(this)) {
+                    net.minecraft.world.level.pathfinder.Path way = getNavigation().createPath(to, 1);
+                    if (shortIntoAPit(way) && via != null) {
+                        to = bed;
+                        way = getNavigation().createPath(to, 1);
+                    }
+                    if (shortIntoAPit(way)) {
+                        night("walking to its bed: its way ends down in a pit, waiting, " + (int) Math.sqrt(far) + " off");
+                        return true;
+                    }
+                    if (way != null) { getNavigation().moveTo(way, 1.0D); return true; }
+                }
+                getNavigation().moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, 1.0D);
             }
             return true;
         }
@@ -3686,6 +3702,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [tp46] What the bedtime routine is doing with it now ("" if it has not run for a couple of seconds: it is elsewhere). */
     public String nightNote() {
         return tickCount - nightNoteTick <= 140 ? nightNote : "";       // (the agenda looks in every five seconds)
+    }
+
+    /** [tp50] A way that does not get there and ends down in a pit it could not climb out of (PitStep.deadEnd)? */
+    private boolean shortIntoAPit(@Nullable net.minecraft.world.level.pathfinder.Path way) {
+        return way != null && !way.canReach() && way.getEndNode() != null
+            && PitStep.deadEnd(level(), way.getEndNode().asBlockPos(), blockPosition());
     }
 
     /** [tp50] How its walk to bed stands (the census): the way it has, how long since it last got nearer. */

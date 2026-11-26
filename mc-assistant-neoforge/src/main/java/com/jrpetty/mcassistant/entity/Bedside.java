@@ -60,9 +60,7 @@ public final class Bedside {
     public static void resetForTests() {
         SPOTS.clear();
         LYING.clear();
-        OUTDOORS.clear();
         FLOOR_NIGHTS = 0;
-        OUTDOOR_NIGHTS = 0;
     }
 
     /** [tp46] The hour past which a bed this far off is not walked to: the night is spent on a floor nearer. [tp50] Eleven, not
@@ -118,7 +116,6 @@ public final class Bedside {
         boolean level0 = Math.abs(f.getY() - at.getY()) < 1.2;
         if (d2 <= 0.8 * 0.8 && level0) {
             lie(f, at);
-            if (level.canSeeSky(at)) { OUTDOORS.add(f.getUUID()); OUTDOOR_NIGHTS++; }
             return true;
         }
         if (d2 < s.best - 1.0) { s.best = d2; s.gained = f.tickCount; }
@@ -153,30 +150,22 @@ public final class Bedside {
     }
 
     /**
-     * Spots all tried: down where it stands if that is indoors on a floor; [tp50] past {@link #TOO_LATE}, out of doors too, on dry
-     * ground with water nowhere beside it (a folk cut off from its bed on a shore under a steep bank, or the far side of a slot it
-     * cannot climb out of, used to stand there till morning: a sixth of the soak's big town). Else nothing (it stands the night
-     * out at home).
+     * Spots all tried: down where it stands if that is properly indoors on a floor. Else nothing (it stands the night out at
+     * home).
      */
     private static boolean lastResort(VillageFolkEntity f, Spot s) {
         if (!(f.level() instanceof ServerLevel level)) return false;
         BlockPos here = f.blockPosition();
-        long t = level.getDayTime() % 24000L;
-        boolean late = t >= TOO_LATE && t < 23000L;
-        if (layable(level, f, here, late) && f.onGround() && !f.isInWaterOrBubble()) {
+        if (layable(level, f, here) && f.onGround() && !f.isInWaterOrBubble()) {
             lie(f, here);
-            if (level.canSeeSky(here)) {
-                OUTDOORS.add(f.getUUID());
-                OUTDOOR_NIGHTS++;
-            }
             return true;
         }
-        // [tp50] Where it stands no place to lie (another lies beside it, a step's edge, the water at its feet): the nearest that
-        // is, a few steps off, walked to (a knot of the stranded on a shore stood all night shoulder to shoulder).
+        // [tp50] Where it stands no place to lie (another lies beside it, a doorway, under the sky): the nearest that is, a few
+        // steps off, walked to.
         BlockPos best = null;
         for (int dx = -4; dx <= 4; dx++) for (int dz = -4; dz <= 4; dz++) for (int dy = -1; dy <= 1; dy++) {
             BlockPos p = here.offset(dx, dy, dz);
-            if (s.tried.contains(p) || !layable(level, f, p, late)) continue;
+            if (s.tried.contains(p) || !layable(level, f, p)) continue;
             if (best == null || p.distSqr(here) < best.distSqr(here)) best = p;
         }
         if (best == null) return false;
@@ -187,22 +176,24 @@ public final class Bedside {
         return true;
     }
 
-    /** [tp50] A place to lie down for the night: a floor indoors; out of doors only {@code late}, on dry ground. */
-    private static boolean layable(ServerLevel level, VillageFolkEntity f, BlockPos p, boolean late) {
-        if (!level.isLoaded(p) || !standable(level, p) || taken(f, p)) return false;
-        if (!level.canSeeSky(p)) return true;
-        if (!late) return false;
-        for (Direction d : Direction.values()) if (!level.getFluidState(p.relative(d)).isEmpty()) return false;
-        return true;
+    /** [tp50] A place to lie down for the night: a floor properly indoors, nobody lying on it or beside it. */
+    private static boolean layable(ServerLevel level, VillageFolkEntity f, BlockPos p) {
+        return level.isLoaded(p) && standable(level, p) && indoors(level, p) && !taken(f, p);
     }
 
-    /** [tp50] Folk asleep out of doors now (the census), and nights so spent (the tests). */
-    private static final java.util.Set<UUID> OUTDOORS = ConcurrentHashMap.newKeySet();
-    public static volatile int OUTDOOR_NIGHTS;
-
-    /** [tp50] Is this folk asleep out of doors (no bed, no floor indoors it could get to)? */
-    public static boolean outdoors(AssistantEntity f) {
-        return onAFloor(f) && OUTDOORS.contains(f.getUUID());
+    /**
+     * [tp50] Properly indoors: a roof over it (not the sky, and something solid within four blocks up: not a ledge's overhang or
+     * a tree's), and floor beside it both along the room and across it, so never a slot a block wide (the slot behind the
+     * terrace row, open to the sky but for the eaves at its end, was a floor folk were walked to and lay down in), nor a passage.
+     */
+    static boolean indoors(net.minecraft.world.level.Level level, BlockPos p) {
+        if (level.canSeeSky(p)) return false;
+        boolean roof = false;
+        for (int k = 2; k <= 5 && !roof; k++) roof = !level.getBlockState(p.above(k)).getCollisionShape(level, p.above(k)).isEmpty();
+        if (!roof) return false;
+        boolean along = standable(level, p.east()) || standable(level, p.west());
+        boolean across = standable(level, p.north()) || standable(level, p.south());
+        return along && across;
     }
 
     /** Down on the floor: the sleeping pose, its "bed" the floor spot (the game lets it lie: canContinue below). */
@@ -223,13 +214,12 @@ public final class Bedside {
         f.setPose(Pose.SLEEPING);
         f.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         FLOOR_NIGHTS++;
-        f.brain(f.level().canSeeSky(at) ? "its bed out of reach tonight: asleep out of doors" : "no bed to be had tonight: asleep on the floor indoors");
+        f.brain("no bed to be had tonight: asleep on the floor indoors");
     }
 
     /** Up in the morning (or woken): its floor given back. */
     public static void up(AssistantEntity f) {
         LYING.remove(f.getUUID());
-        OUTDOORS.remove(f.getUUID());
     }
 
     /**
@@ -237,7 +227,7 @@ public final class Bedside {
      * its bed: 12 off"); "asleep" or "asleep on a floor" for one that is.
      */
     public static String whyAwake(AssistantEntity a) {
-        if (a.isSleeping()) return outdoors(a) ? "asleep out of doors" : onAFloor(a) ? "asleep on a floor" : "asleep";
+        if (a.isSleeping()) return onAFloor(a) ? "asleep on a floor" : "asleep";
         if (a instanceof VillageFolkEntity f) {
             if (f.stationTask() == AssistantEntity.StationTask.GUARD && f.onShift()) return "on watch";
             if (TownJobs.busy(f)) return "on the town's work: " + TownJobs.doing(f);
@@ -326,7 +316,7 @@ public final class Bedside {
             for (int dz = -REACH; dz <= REACH; dz++) {
                 for (int dy = -DEPTH; dy <= DEPTH; dy++) {
                     q.set(base.getX() + dx, base.getY() + dy, base.getZ() + dz);
-                    if (!level.isLoaded(q) || level.canSeeSky(q) || !standable(level, q)) continue;
+                    if (!level.isLoaded(q) || !standable(level, q) || !indoors(level, q)) continue;   // [tp50] properly indoors
                     BlockPos p = q.immutable();
                     if (s.tried.contains(p) || taken(f, p)) continue;
                     boolean room = false;

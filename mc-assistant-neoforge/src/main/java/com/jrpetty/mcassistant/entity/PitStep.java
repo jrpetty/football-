@@ -249,6 +249,24 @@ public final class PitStep {
      */
     @Nullable
     static List<BlockPos> pit(Level level, BlockPos start) {
+        return pit(level, start, MOST_CELLS);
+    }
+
+    /**
+     * Is this spot (a walk's end that does not get where it was going) down in a pit with no way up out of it, one the folk at
+     * {@code from} is not in already? A walk ending there drops it in to stand till somebody digs it out (the slot behind the
+     * terrace row: the pathfinder's nearest to a bed in the sunken house beside it). Small pits only: the look is cheap.
+     */
+    public static boolean deadEnd(Level level, BlockPos end, BlockPos from) {
+        if (end.distManhattan(from) <= 2) return false;
+        List<BlockPos> cells = pit(level, end, 64);
+        if (cells == null) return false;
+        for (BlockPos c : cells) if (c.distManhattan(from) <= 1) return false;
+        return true;
+    }
+
+    @Nullable
+    static List<BlockPos> pit(Level level, BlockPos start, int most) {
         if (!standable(level, start)) {
             if (standable(level, start.above())) start = start.above();
             else return null;
@@ -262,7 +280,7 @@ public final class PitStep {
         while (!todo.isEmpty()) {
             BlockPos p = todo.poll();
             cells.add(p);
-            if (cells.size() > MOST_CELLS) return null;
+            if (cells.size() > most) return null;
             if (!sky && level.canSeeSky(p)) sky = true;
             for (Direction d : Direction.Plane.HORIZONTAL) {
                 BlockPos n = p.relative(d);
