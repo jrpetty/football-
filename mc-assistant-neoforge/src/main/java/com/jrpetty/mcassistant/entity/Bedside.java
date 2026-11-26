@@ -183,17 +183,26 @@ public final class Bedside {
 
     /**
      * [tp50] Properly indoors: a roof over it (not the sky, and something solid within four blocks up: not a ledge's overhang or
-     * a tree's), and floor beside it both along the room and across it, so never a slot a block wide (the slot behind the
-     * terrace row, open to the sky but for the eaves at its end, was a floor folk were walked to and lay down in), nor a passage.
+     * a tree's), and the floor round it roofed as well, every step of it: so never the end of a slot under the eaves with the sky
+     * over the next step (the slot behind the terrace row was a floor folk were walked to and lay down in), nor a step inside
+     * an arch or a window open to the street.
      */
     static boolean indoors(net.minecraft.world.level.Level level, BlockPos p) {
+        if (!roofed(level, p)) return false;
+        boolean room = false;
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockPos n = p.relative(d);
+            if (!standable(level, n)) continue;
+            if (!roofed(level, n)) return false;
+            room = true;
+        }
+        return room;
+    }
+
+    private static boolean roofed(net.minecraft.world.level.Level level, BlockPos p) {
         if (level.canSeeSky(p)) return false;
-        boolean roof = false;
-        for (int k = 2; k <= 5 && !roof; k++) roof = !level.getBlockState(p.above(k)).getCollisionShape(level, p.above(k)).isEmpty();
-        if (!roof) return false;
-        boolean along = standable(level, p.east()) || standable(level, p.west());
-        boolean across = standable(level, p.north()) || standable(level, p.south());
-        return along && across;
+        for (int k = 2; k <= 5; k++) if (!level.getBlockState(p.above(k)).getCollisionShape(level, p.above(k)).isEmpty()) return true;
+        return false;
     }
 
     /** Down on the floor: the sleeping pose, its "bed" the floor spot (the game lets it lie: canContinue below). */
