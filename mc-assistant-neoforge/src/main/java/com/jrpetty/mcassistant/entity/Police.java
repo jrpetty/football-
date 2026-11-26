@@ -711,6 +711,7 @@ public final class Police extends SavedData {
         String cells = WatchHouse.boardLine(level, village);
         if (cells != null) out.add("RM|" + cells);
         out.addAll(PlayerLaw.boardLines(level, village));
+        out.addAll(Justice.boardLines(level, village));                        // [wpe] the wanted, the summoned, the held
         if (Beats.curfew(village)) out.add("RW|Curfew: everybody indoors from the tenth bell to first light, by order of the council.");
         long day = level.getDayTime() / 24000L;
         int arrests = tally(village, day - 6, "arrest", false), fights = tally(village, day - 6, "fight", false),

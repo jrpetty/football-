@@ -388,6 +388,7 @@ public final class FolkTalk {
         sb.append(" colour=").append(Integer.toHexString(FolkIdentity.rgb(f)));   // [ui] its colour, for the talk screen's band
         if (Favourites.has(p.getUUID(), f.getUUID())) sb.append(" fav");     // [ui] on the player's favourites
         sb.append(PlayerFamily.contextFlags(f, p));                           // [featfolk] courtable, courting, proposable, spouse, naming
+        sb.append(Justice.contextFlags(f, p));                                // [wpe] hurtme, wantedme, accusedme, jailedme
         return sb.toString();
     }
 

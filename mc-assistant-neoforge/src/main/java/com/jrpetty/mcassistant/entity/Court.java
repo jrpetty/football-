@@ -102,4 +102,26 @@ public final class Court {
         }
         return true;
     }
+
+    // ------------------------------------------------------------------ [wpe] small claims
+
+    /**
+     * [wpe] A small claim before the town's court (contract disputes, debts): {@code claimant} claims {@code coins} from
+     * {@code defendant} over {@code about} ("the cottage contract"). {@code evidence} is how strong the claimant's case is,
+     * 0 to 10 (a signed contract with escrow 8, a witness 5, a word against a word 3); five or more and the court finds for
+     * the claimant. Heard at the next free sitting (a few minutes off, on both parties' planners); a ruling for the claimant
+     * takes what the defendant (a player online, or a folk) can pay now and the rest is owed. {@code ruled} (may be null)
+     * is told the ruling: a tag with "state" ("for claimant" or "for defendant"), "coins", "paid", "owed", "about", and the
+     * parties' ids "c" and "d". Returns the claim's id (see {@link #claim}).
+     */
+    public static int smallClaim(ServerLevel level, UUID village, UUID claimant, String claimantName, UUID defendant, String defendantName,
+                                 int coins, String about, int evidence, @Nullable java.util.function.Consumer<net.minecraft.nbt.CompoundTag> ruled) {
+        return Assize.claim(level, village, claimant, claimantName, defendant, defendantName, coins, about, evidence, ruled);
+    }
+
+    /** [wpe] A small claim as it stands ("state" "listed" till it is heard), or null. */
+    @Nullable
+    public static net.minecraft.nbt.CompoundTag claim(int id) {
+        return Assize.claimOf(id);
+    }
 }

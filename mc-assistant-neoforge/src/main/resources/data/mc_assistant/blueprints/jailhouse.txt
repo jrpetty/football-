@@ -1,0 +1,104 @@
+# [wpe] The jailhouse (late game: Jail): a town with a sworn special constable, or folk enough, from the Iron Age.
+# Three cells across the back, each with a cot along its wall, a slop bucket in the back corner (a cauldron the watch
+# sets in) and a small barred window high in the back wall; the cells' fronts are drawn as fence posts either side of a
+# wooden door, and the watch sets iron bars and an iron door in each as soon as the house stands (Jail.fit). Before
+# them a passage; then the front room: the records down the left wall, the guard's desk of barrels with the casebook on
+# its lectern on the right, the key on its hook by the desk, and benches for visitors by the door. Lanterns hang in
+# each cell, the passage and the front room. Rows run from the back of the building (top) to the front (bottom, the door).
+name jailhouse
+layer -1
+...............
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.FFFFFFFFFFFFF.
+.......k.......
+layer 0
+...............
+.ZSSSSSSSSSSSZ.
+.S...S...S...S.
+.SB..SB..SB..S.
+.S...S...S...S.
+.SPDPSPDPSPDPS.
+.S...........S.
+.S...........S.
+.SK.......QQ.S.
+.SK.......4..S.
+.S...........S.
+.Svv.......vvS.
+.S...........S.
+.ZSSSSSDSSSSSZ.
+....P.....P....
+layer 1
+...............
+.ZSSSSSSSSSSSZ.
+.S...S...S...S.
+.S...S...S...S.
+.S...S...S...S.
+.SP.PSP.PSP.PS.
+.S...........S.
+.G...........G.
+.SK..........S.
+.GK..........G.
+.S...........S.
+.G...........G.
+.S...........S.
+.ZSSGSS.SSGSSZ.
+....l.....l....
+layer 2
+...............
+.ZSGSSSGSSSGSZ.
+.S...S...S...S.
+.S.j.S.j.S.j.S.
+.S...S...S...S.
+.SSSSSSSSSSSSS.
+.S...........S.
+.S...........S.
+.S.....j.....S.
+.S...........S.
+.S...........S.
+.S.....j.....S.
+.S...........S.
+.ZSSSSSSSSSSSZ.
+...............
+layer 3
+...............
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+.SSSSSSSSSSSSS.
+...............
+layer 4
+...............
+.sssssssssssss.
+.s...........s.
+.s...........s.
+.s...........s.
+.s...........s.
+.s...........s.
+.s...........s.
+.s...........s.
+.s...........s.
+.s...........s.
+.s...........s.
+.s...........s.
+.sssssssssssss.
+...............

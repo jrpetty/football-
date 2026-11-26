@@ -424,6 +424,12 @@ public final class TalkMenu {
                 say("ref_nay", Items.RED_DYE, "I vote nay", flag("referendum")),
                 say("jury_duty", Items.WRITTEN_BOOK, "I'm here for jury duty", flag("juror"))),
             group("law", Items.IRON_BARS,
+                // [wpe] Justice: an apology for a hurt (and the healer paid), your record, giving yourself up, a lawyer.
+                say("apologise", Items.WHITE_TULIP, "I'm sorry I hurt you", flag("hurtme")),
+                say("pay_healer", Items.GLISTERING_MELON_SLICE, "Let me pay for the healer", flag("hurtme")),
+                say("my_record", Items.WRITABLE_BOOK, "What's on my record?"),
+                say("surrender", Items.IRON_BARS, "I'll come quietly", flag("wantedme")),
+                say("lawyer", Items.WRITTEN_BOOK, "I need a lawyer", flag("accusedme")),
                 WATCH,
                 say("report", Items.REDSTONE_TORCH, "I want to report a crime"),
                 say("roster", Items.WRITABLE_BOOK, "Who's on the roster today?"),

@@ -81,6 +81,7 @@ public final class PlayerLife {
         PAGES.put("hall", new TownHall());           // [wpa] the Town Hall
         PAGES.put("arrival", new ArrivalCard());     // [wpa] the card on a first arrival
         PAGES.put("id", new IdCard());               // [wpa] a player's ID card
+        PAGES.put("record", new RecordPage());       // [wpe] your record, your case, the jail, the court
     }
 
     /** [wpa] Is there a page called this (another package's, not yet merged)? */
@@ -250,6 +251,8 @@ public final class PlayerLife {
         String t = text == null ? "" : text.toLowerCase(java.util.Locale.ROOT).trim();
         String hall = TownHall.heard(f, p, t);                              // [wpa] the Town Hall, jury duty, my papers
         if (hall != null) return hall;
+        String law = Justice.heard(f, p, t);                                // [wpe] an apology, the healer paid, my record, giving up, a lawyer
+        if (law != null) return law;
         if (t.contains("village of my own") || t.contains("town of my own")) {   // [found23] the founding screen
             FoundingEasy.open(p, "talk");
             return "A place of your own? Good. Here's what the land round about looks like.";

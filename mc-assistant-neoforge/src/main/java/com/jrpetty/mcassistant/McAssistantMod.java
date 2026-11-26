@@ -414,6 +414,7 @@ public final class McAssistantMod {
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, AnimConfig.SPEC);   // [anim] how much of the folk's life is drawn
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, UiConfig.SPEC, "mc_assistant-ui-client.toml");
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.jrpetty.mcassistant.pa.PaConfig.SPEC, "mc_assistant-assistant-server.toml");   // [pa33]
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, JusticeConfig.SPEC, "mc_assistant-justice-server.toml");   // [wpe] the courts, the jail
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, com.jrpetty.mcassistant.pa.PaClientConfig.SPEC, "mc_assistant-assistant-client.toml");   // [pa33] voice, HUD   // [ui] favourites' toasts and tracker
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);

@@ -390,6 +390,8 @@ public final class Villages {
             case "golemyard" -> "the golem yard";                 // [golems]
             case "watchhouse" -> "the watch house";               // [police]
             case "stockade" -> "the stockade";                    // [war-after]
+            case "jailhouse" -> "the jailhouse";                  // [wpe]
+            case "courthouse" -> "the courthouse";                // [wpe]
             case "powderhut" -> "the powder hut";                // [fireworks]
             case "maproom" -> "the map room";                     // [cartographer]
             case "tradingpost" -> "the Trading Post";             // [emerald]
@@ -1908,6 +1910,9 @@ public final class Villages {
         if (built(villageId, "well") < 1) out.add("well");
         // [war-after] Prisoners of war the cells will not take (or no cells at all): a stockade, from the Wood Age (Prisoners).
         if (Prisoners.stockadeWanted(villageId)) out.add(Prisoners.STOCKADE);
+        // [wpe] The jailhouse and the courthouse, late: the Iron Age, and a constable or folk enough (Jail, Assize).
+        if (Jail.wanted(villageId)) out.add(Jail.STRUCTURE);
+        if (Assize.courthouseWanted(villageId)) out.add(Assize.COURTHOUSE);
         // A house for the player the village has taken to its heart.
         if (com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId) != null
                 && built(villageId, "storage") > 0) out.add("guesthouse");
@@ -2405,6 +2410,8 @@ public final class Villages {
             case "golemyard" -> Golems.why(villageId);             // [golems]
             case "watchhouse" -> WatchHouse.why(villageId);        // [police]
             case "stockade" -> Prisoners.stockadeWhy(villageId);   // [war-after]
+            case "jailhouse" -> Jail.why(villageId);               // [wpe]
+            case "courthouse" -> Assize.courthouseWhy(villageId);  // [wpe]
             case "powderhut" -> FireworksMaker.why(villageId);     // [fireworks]
             case "maproom" -> Cartographers.why(villageId);        // [cartographer]
             case "tradingpost" -> EmeraldTrader.why(villageId);    // [emerald]
