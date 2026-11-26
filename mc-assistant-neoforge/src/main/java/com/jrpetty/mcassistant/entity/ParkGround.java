@@ -465,6 +465,7 @@ public final class ParkGround {
     /** Every second (Quarters' clock): any of the village's fountains that no longer holds, emptied. */
     public static void watch(ServerLevel level, Villages.Village v) {
         for (Ledger.Building b : Park.parks(v.id())) {
+            if (GreatParks.mine(b.structure())) continue;               // [featbuild] kept by its own round
             if (!level.isLoaded(b.anchor().offset(-BASIN - 1, 0, -BASIN - 1)) || !level.isLoaded(b.anchor().offset(BASIN + 1, 0, BASIN + 1))) continue;
             int n = stopLeaks(level, Park.layout(b));
             if (n > 0) LOG.info("[MCA-PARK] the fountain at {} would not hold its water: {} of it taken up till it is mended",
@@ -505,6 +506,7 @@ public final class ParkGround {
         Villages.Village v = Villages.nearest(level, pos, Villages.VILLAGE_RANGE);
         if (v == null) return;
         for (Ledger.Building b : Park.parks(v.id())) {
+            if (GreatParks.mine(b.structure())) continue;               // [featbuild] its own (GreatParks.onBreak)
             BlockPos c = b.anchor();
             if (Math.abs(pos.getX() - c.getX()) > BASIN + 1 || Math.abs(pos.getZ() - c.getZ()) > BASIN + 1) continue;
             if (pos.getY() < c.getY() - 1 || pos.getY() > c.getY() + 2) continue;

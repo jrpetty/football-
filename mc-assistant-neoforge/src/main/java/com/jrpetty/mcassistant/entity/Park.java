@@ -67,7 +67,7 @@ public final class Park {
 
     /** [featbuild] A park or a statue garden: a green the town keeps and its folk visit. */
     public static boolean isGreen(@Nullable String structure) {
-        return STRUCTURE.equals(structure) || GARDEN.equals(structure);
+        return STRUCTURE.equals(structure) || GARDEN.equals(structure) || GreatParks.mine(structure);
     }
     /** The town's size when it wants a park. */
     public static final int FOLK = 20;
@@ -116,6 +116,10 @@ public final class Park {
     }
 
     public static Layout layout(Ledger.Building b) {
+        if (GreatParks.mine(b.structure())) {                          // [featbuild] the bigger parks: their own drawing
+            Layout l = GreatParks.layout(b);
+            if (l != null) return l;
+        }
         return layout(b.anchor(), b.facing(), b.structure());
     }
 
@@ -164,6 +168,7 @@ public final class Park {
         if (village == null) return List.of();
         List<Ledger.Building> out = new ArrayList<>();
         for (Ledger.Building b : Ledger.buildings(village)) if (isGreen(b.structure())) out.add(b);   // [featbuild] and the statue gardens
+        out.addAll(GreatParks.buildings(village));                     // [featbuild] and the bigger parks, the central park
         return out;
     }
 
@@ -191,6 +196,8 @@ public final class Park {
 
     /** Is this spot inside a park's lot? */
     static boolean inside(Layout l, BlockPos p) {
+        int[] b = GreatParks.bounds(l);                                // [featbuild] a bigger park: its own bounds
+        if (b != null) return p.getX() >= b[0] && p.getX() <= b[2] && p.getZ() >= b[1] && p.getZ() <= b[3] && Math.abs(p.getY() - l.centre().getY()) <= 4;
         return Math.abs(p.getX() - l.centre().getX()) <= 5 && Math.abs(p.getZ() - l.centre().getZ()) <= 5
             && Math.abs(p.getY() - l.centre().getY()) <= 3;
     }
@@ -221,6 +228,7 @@ public final class Park {
      */
     @Nullable
     public static String tendOne(ServerLevel level, Villages.Village v, Ledger.Building b, int budget) {
+        if (GreatParks.mine(b.structure())) return null;               // [featbuild] kept by its own round (GreatParks)
         Layout l = layout(b);
         boolean iron = Villages.ageOf(v.id()).ordinal() >= Villages.Age.IRON.ordinal();
         // A stone of the fountain gone (its floor, its rim, its pillar): put back first (ParkGround).

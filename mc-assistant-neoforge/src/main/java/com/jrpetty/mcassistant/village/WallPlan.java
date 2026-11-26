@@ -301,17 +301,24 @@ public final class WallPlan {
 
     // ------------------------------------------------------------------ the steps up
 
+    /** [featbuild] Blocks of curtain between one flight of steps and the next along a side (a guard is never far from a way up). */
+    public static final int STAIR_EVERY = 24;
+
     /**
      * The flights of steps up to the walkway from inside, cut into the wall's inner face: one on each side of each
      * gate, the first run of curtain along from it where a flight of this many steps fits clear of the towers and
-     * the cross streets. Each is {side, the across of its foot, the way it climbs along the side (+1 or -1)}.
+     * the cross streets; and [featbuild] another every STAIR_EVERY blocks on along the side to its corner, so every
+     * stretch of the walk has a way up and down near it. Each is {side, the across of its foot, the way it climbs along
+     * the side (+1 or -1)}.
      */
     public static List<int[]> stairs(Sides s, List<Tower> towers, int steps) {
         List<int[]> out = new ArrayList<>();
         for (int side = 0; side < 4; side++) {
             for (int sign : new int[]{ 1, -1 }) {
                 int far = sign > 0 ? hi(s, side) : -lo(s, side);
-                for (int a = FLANK + TOWER + 1; a + steps - 1 <= far - 1; a++) {
+                int next = FLANK + TOWER + 1;
+                for (int a = next; a + steps - 1 <= far - 1; a++) {
+                    if (a < next) continue;
                     boolean clear = true;
                     for (int k = -1; k <= steps && clear; k++) {
                         int at = sign * (a + k);
@@ -322,7 +329,8 @@ public final class WallPlan {
                     if (!clear) continue;
                     // The foot at the far end, climbing toward the gate: its top step by the flank tower's side.
                     out.add(new int[]{ side, sign * (a + steps - 1), -sign });
-                    break;
+                    next = a + steps + STAIR_EVERY;
+                    a = next - 1;
                 }
             }
         }

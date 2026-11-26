@@ -57,6 +57,7 @@ final class Kit {
     /** A clean slate. Tests share one JVM, so they share every static. */
     static void reset(ServerLevel level) {
         VillagerTakeover.resetForTests();
+        com.jrpetty.mcassistant.entity.Quarry.SHAFTS = false;              // [featbuild] the shaft held back but in fb08
         List<Entity> doomed = new ArrayList<>();
         for (Entity e : level.getAllEntities()) {
             if (e instanceof AssistantEntity || e instanceof Villager) doomed.add(e);
@@ -80,6 +81,7 @@ final class Kit {
         com.jrpetty.mcassistant.entity.CastleWall.standDownForTests(true); com.jrpetty.mcassistant.entity.CastleWall.resetForTests();   // [defence] the town wall, for the defence tests only
         com.jrpetty.mcassistant.entity.Quarry.standDownForTests(true); com.jrpetty.mcassistant.entity.Quarry.resetForTests();   // [featbuild] the quarry and the yard,
         com.jrpetty.mcassistant.entity.Monuments.standDownForTests(true); com.jrpetty.mcassistant.entity.Monuments.resetForTests();   // the statue gardens: their own tests only
+        com.jrpetty.mcassistant.entity.GreatParks.standDownForTests(true); com.jrpetty.mcassistant.entity.GreatParks.resetForTests();   // the bigger parks: theirs too
         com.jrpetty.mcassistant.entity.Borders.switchForTests(false);      // [borders-map] the lands, disputes and markers: BordersMapGameTests only
         // [health] No test's own size of town for the auction or the fleet left over (FleetAuctionGameTests set both to
         // nought): with them a town of eleven held an auction (ent05's stall waited for market day) and fitted out boats.

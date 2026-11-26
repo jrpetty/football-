@@ -171,6 +171,7 @@ public final class Raids {
                     Quarry.tick(level, v);
                     StoneYard.tick(level, v);
                     Monuments.tick(level, v);
+                    GreatParks.tick(level, v);
                 }
             }
         });
@@ -589,35 +590,23 @@ public final class Raids {
     /** When each guard was sent to its post, this alarm. */
     private static final Map<UUID, Long> SENT = new ConcurrentHashMap<>();
 
-    /** To the post: up the ladder, onto the wall, and shoot from there. */
+    /**
+     * To the post: up the ladder, onto the wall, and shoot from there. [featbuild] Always on its own feet: the way-finder
+     * plans the climb up the tower's ladder (FolkWays) and the stairs as any other way, and a guard is never put on its
+     * post (nor back on the middle of it): it walks there. One that cannot get up in a minute holds the gate inside
+     * instead, and says why.
+     */
     static boolean man(ServerLevel level, VillageFolkEntity g, Watch.Post p) {
         BlockPos stand = p.stand();
         double sx = stand.getX() + 0.5, sz = stand.getZ() + 0.5;
         double dx = g.getX() - sx, dz = g.getZ() - sz, dy = g.getY() - stand.getY();
-        boolean up = dx * dx + dz * dz < 0.9 && dy > -0.4 && dy < 1.5;
-        // Twenty seconds and still not up there (a crowd in the way, a long way round): it gets
-        // there somehow — a wall with nobody on it is no use to anybody.
+        boolean level0 = dy > -0.4 && dy < 1.5;
+        boolean up = dx * dx + dz * dz < 0.9 && level0;
         long sent = SENT.computeIfAbsent(g.getUUID(), k -> level.getGameTime());
-        if (!up && level.getGameTime() - sent > 400L && Blink.mayJumpTo(g, sx, sz, "raid: a guard put on its post")) {   // [tp43] not in sight
-            g.teleportTo(sx, stand.getY(), sz);
-            g.getNavigation().stop();
-            dx = 0;
-            dz = 0;
-            dy = 0;
-            up = true;
-        }
-        // A step off the middle of the post: back onto it before it walks off the edge.
-        if (!up && dx * dx + dz * dz < 4.0 && dy > -0.4 && dy < 1.5) {
-            if (dx * dx + dz * dz > 1.4 * 1.4 && Blink.seen(g)) {
-                g.getMoveControl().setWantedPosition(sx, stand.getY(), sz, 0.8D);   // [tp43] a step back onto it, seen
-                return true;
-            }
-            g.teleportTo(sx, stand.getY(), sz);
-            up = true;
-        }
         if (up) {
-            if (dx * dx + dz * dz > 0.12) g.teleportTo(sx, stand.getY(), sz);
-            g.setDeltaMovement(0.0, Math.min(0.0, g.getDeltaMovement().y), 0.0);
+            // On the post: a small step back to its middle if it has drifted, walked, never set there.
+            if (dx * dx + dz * dz > 0.12) g.getMoveControl().setWantedPosition(sx, stand.getY(), sz, 0.5D);
+            else g.setDeltaMovement(0.0, Math.min(0.0, g.getDeltaMovement().y), 0.0);
             g.holdPost(stand);
             CLIMB.remove(g.getUUID());
             g.getNavigation().stop();
@@ -631,29 +620,23 @@ public final class Raids {
             return true;
         }
         g.holdPost(null);
-        BlockPos foot = p.foot();
-        double fx = g.getX() - (foot.getX() + 0.5), fz = g.getZ() - (foot.getZ() + 0.5);
-        boolean atFoot = fx * fx + fz * fz < 1.2 && g.getY() >= foot.getY() - 0.5 && g.getY() < stand.getY();
-        if (atFoot || g.onClimbable()) {
-            // Up the ladder: pushing into the wall on a ladder is climbing it.
+        // A step from it, on its level: onto it.
+        if (dx * dx + dz * dz < 4.0 && level0) {
             g.getNavigation().stop();
-            // At the top of the ladder: straight onto the post, not over the far side of the wall.
-            if (g.getY() >= stand.getY() - 1.2) {
-                g.teleportTo(sx, stand.getY(), sz);
-                g.setDeltaMovement(0.0, 0.0, 0.0);
-                CLIMB.remove(g.getUUID());
-                return true;
-            }
-            g.getMoveControl().setWantedPosition(sx, stand.getY(), sz, 1.0D);
-            long started = CLIMB.computeIfAbsent(g.getUUID(), k -> level.getGameTime());
-            if (level.getGameTime() - started > 120L && Blink.mayJumpTo(g, sx, sz, "raid: up the ladder somehow")) {
-                g.teleportTo(sx, stand.getY(), sz);           // (it got up there somehow)
-                CLIMB.remove(g.getUUID());
-            }
+            g.getMoveControl().setWantedPosition(sx, stand.getY(), sz, 0.8D);
             return true;
         }
+        // A minute and no nearer the top: no way up from here (a crowd on the ladder, the stair not built): the gate.
+        if (level.getGameTime() - sent > 1200L) {
+            if (CLIMB.putIfAbsent(g.getUUID(), level.getGameTime()) == null) {
+                g.brain("could not get up to its post on the wall: holding the gate below instead");
+                com.mojang.logging.LogUtils.getLogger().info("[featbuild] {} could not reach its wall post at {}: holds the gate", g.getAssistantName(), stand.toShortString());
+            }
+            Villages.Village v = g.ownerId() == null ? null : Villages.get(g.ownerId());
+            return v != null && holdGate(level, v, g);
+        }
         if (g.getNavigation().isDone() || g.tickCount % 40 == 0) {
-            g.getNavigation().moveTo(foot.getX() + 0.5, foot.getY(), foot.getZ() + 0.5, 1.3D);
+            g.getNavigation().moveTo(sx, stand.getY(), sz, 1.2D);
         }
         return true;
     }
@@ -682,9 +665,8 @@ public final class Raids {
         for (Watch.Post p : Watch.posts(level, id)) {
             if (!p.stand().equals(at)) continue;
             if (g.distanceToSqr(at.getX() + 0.5, at.getY(), at.getZ() + 0.5) < 4.0) {
-                // [tp43] In a player's sight it climbs down the ladder (the walk goes down it), never put at its foot.
-                if (!Blink.mayJump(g, "raid: down off the wall")) g.getNavigation().moveTo(p.foot().getX() + 0.5, p.foot().getY(), p.foot().getZ() + 0.5, 1.0D);
-                else g.teleportTo(p.foot().getX() + 0.5, p.foot().getY(), p.foot().getZ() + 0.5);   // down the ladder
+                // [featbuild] Down the ladder on its own hands and feet, seen or not: never put at its foot.
+                g.getNavigation().moveTo(p.foot().getX() + 0.5, p.foot().getY(), p.foot().getZ() + 0.5, 1.0D);
             }
             return;
         }

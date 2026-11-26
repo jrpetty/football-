@@ -142,6 +142,13 @@ public final class StoneYard {
         DIRTY.put(town, Boolean.TRUE);
     }
 
+    /** All the stone in the yard, of every kind. */
+    static int total(UUID town) {
+        int n = 0;
+        for (int c : stock(town).values()) n += c;
+        return n;
+    }
+
     public static int count(UUID town, Item it) {
         return stock(town).getOrDefault(it, 0);
     }
@@ -266,6 +273,11 @@ public final class StoneYard {
     /** What the stores want carted to them now (the item and how many), or null. */
     @Nullable
     static ItemStack deliveryDue(ServerLevel level, Villages.Village v) {
+        return deliveryDue(level, v, CART);
+    }
+
+    /** As above, with a cart this big (a handcart from a far quarry carries more). */
+    static ItemStack deliveryDue(ServerLevel level, Villages.Village v, int cart) {
         UUID id = v.id();
         Object[][] wants = { { Items.COBBLESTONE, STORES_ROUGH }, { Items.STONE_BRICKS, STORES_DRESSED }, { Items.BRICKS, STORES_BRICK } };
         for (Object[] w : wants) {
@@ -275,7 +287,7 @@ public final class StoneYard {
             if (inStores >= want) continue;
             int have = count(id, it);
             if (have < 8) continue;
-            return new ItemStack(it, Math.min(CART, Math.min(have, want - inStores + 16)));
+            return new ItemStack(it, Math.min(cart, Math.min(have, want - inStores + 16 + (cart - CART))));
         }
         return null;
     }

@@ -2475,6 +2475,29 @@ public final class CastleWall {
         return out;
     }
 
+    /** [featbuild] Tests: the wall's flights of steps, {side, foot's across, way it climbs}. */
+    public static List<int[]> flightsForTests(UUID id) {
+        State st = STATES.get(id);
+        return st == null || st.wall == null ? List.of() : st.wall.stairs;
+    }
+
+    /** [featbuild] Tests: where step k of a flight is (its block), or null while the wall is not planned. */
+    @Nullable
+    public static BlockPos stepForTests(UUID id, int[] flight, int k) {
+        State st = STATES.get(id);
+        Villages.Village v = Villages.get(id);
+        if (st == null || st.wall == null || v == null) return null;
+        Wall w = st.wall;
+        int across = flight[1] + k * flight[2];
+        int[] o = WallPlan.offset(flight[0], w.sides.of(flight[0]), across);
+        return new BlockPos(v.centre().getX() + o[0], w.top(flight[0], across) - w.height + k, v.centre().getZ() + o[1]);
+    }
+
+    public static int heightForTests(UUID id) {
+        State st = STATES.get(id);
+        return st == null || st.wall == null ? 0 : st.wall.height;
+    }
+
     /** [featbuild] The wall's works in figures for the board: {laid, wanted, left out, towers, portcullis 0/1, tier, stage
      *  lines' stage}; all nought while it is not planned. */
     public static int[] figures(UUID id) {
