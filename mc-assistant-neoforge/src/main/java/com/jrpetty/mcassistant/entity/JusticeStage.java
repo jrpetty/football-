@@ -100,9 +100,19 @@ public final class JusticeStage {
                 return "jailed in " + (s == null ? "?" : s.words);
             }
             case "court" -> {
+                Justice.hurryForTests(false);                              // the court at its own pace, for the camera
                 JCase c = witnessed(level, v, p, Charge.MANSLAUGHTER);
                 Jail.lockUp(level, v, p.getUUID(), c, Jail.spot(level, v, p.getUUID()), null);
-                Assize.defend(p, c, "lawyer", "");
+                Ledger.Building house = Assize.courthouse(v.id());
+                if (house != null) {                                       // already brought up to the dock
+                    BlockPos dock = Assize.at(house, Assize.DOCK);
+                    p.teleportTo(dock.getX() + 0.5, dock.getY(), dock.getZ() + 0.5);
+                    Restraint.on(p, null, Restraint.Kind.CUFFS);
+                    Restraint.pullTo(p, dock);
+                    Jail.outForCourt(p.getUUID(), true);
+                }
+                c.account = "accident";
+                Assize.defend(p, c, "public", "");
                 c.courtAt = level.getGameTime();
                 return "court called on " + c.title();
             }

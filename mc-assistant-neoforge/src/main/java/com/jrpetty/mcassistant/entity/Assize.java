@@ -214,7 +214,7 @@ public final class Assize {
         // The jury: players on the roll, called by Jury.
         s.jury = Jury.summonFor(level, v, c.id, c.accused, c.accusedName, c.chargeWords() + " at " + c.place, dock, hearing(c)) > 0;
         if (p != null) {
-            if (c.stage == Stage.TRIAL && Jail.held(p.getUUID())) Arrests.toCourt(level, v, c, p, dock);
+            if (Jail.held(p.getUUID()) && p.distanceToSqr(Vec3.atBottomCenterOf(dock)) > 3.0 * 3.0) Arrests.toCourt(level, v, c, p, dock);
             Justice.notice(p, "Your case is called", "The court sits now at " + courtWords(level, v) + " on the charge of " + c.chargeWords() + " at " + c.place + ". "
                     + s.judgeName + " presides" + (s.jury ? ", with a jury." : "."),
                 Jail.held(p.getUUID()) ? "A guard is walking you to the dock. Choose your defence on the Case tab if you haven't."
@@ -271,6 +271,10 @@ public final class Assize {
             case GATHER -> {
                 boolean present = p != null && p.distanceToSqr(Vec3.atBottomCenterOf(s.dock)) < (s.house ? 3.0 * 3.0 : 6.0 * 6.0);
                 long waited = now - s.opened;
+                // The bench waits a little for the judge to take its seat.
+                VillageFolkEntity judge = s.judge == null ? null : Civics.find(level, s.judge);
+                if (present && judge != null && judge.isAlive() && judge.distanceToSqr(Vec3.atBottomCenterOf(s.judgeAt)) > 3.0 * 3.0
+                        && waited < Justice.pause(2400)) return;
                 if (present || waited > Justice.pause(2400) && !Jail.held(c.accused) || waited > Justice.pause(4800)) {
                     if (!present && !Jail.held(c.accused)) {
                         // Did not come: a warrant.
