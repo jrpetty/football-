@@ -578,6 +578,8 @@ public final class Dissent {
             Villages.elderGone(id, oldLeader);
         }
         Government.set(level, v, r, to, day, coup ? "the watch seized the hall" : "the town rose against " + (oldName.isEmpty() ? "its rulers" : oldName));
+        // The new order's first pick fell on the very one put out (a guard lord, say, for the general): the next instead.
+        if (oldLeader != null && oldLeader.equals(Villages.elder(id))) Government.vacancy(level, id, oldName, day);
         String line = coup ? "the watch seized the hall: " + Villages.name(id) + " is under military rule, and " + (oldName.isEmpty() ? "the old order" : oldName) + " is out"
             : Villages.name(id) + " rose against " + was.words + (oldName.isEmpty() ? "" : " and " + oldName) + ": the town is " + to.words + " from today";
         log(id, day, line);

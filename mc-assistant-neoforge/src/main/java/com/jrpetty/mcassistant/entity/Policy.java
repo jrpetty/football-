@@ -16,7 +16,7 @@ import java.util.UUID;
  * the board's Policy page shows ("Taxes: leaning lower, because a coin left in a purse is spent at the market"), and it
  * does what it says: the council's tax votes lean the leader's way (TaxBook.judge), the council's choice of what goes up
  * first counts the leader's wish twice over (Council.vote), and the wages are paid a little more or less generously
- * (Ethos.wage). A new leader's policy is told in the chronicle the morning it takes office.
+ * (Ethos.wage; in a democracy or under a general). A new leader's policy is told in the chronicle the morning it takes office.
  */
 public final class Policy {
 
@@ -97,6 +97,9 @@ public final class Policy {
             style = "strict";
         } else if (form == Government.Form.COMMUNE) {
             wage = 0; wageWhy = "everybody paid the same";
+        } else if (form != Government.Form.DEMOCRACY) {
+            // Only a democracy's mayor (and a general) leans the wages; elsewhere they are paid as the town has always paid.
+            wage = 0; wageWhy = "the going rate, as the town has always paid";
         }
         return new Stance(f.displayNameCap(), tax, taxWhy, build, buildWhy, wage, wageWhy, style);
     }
