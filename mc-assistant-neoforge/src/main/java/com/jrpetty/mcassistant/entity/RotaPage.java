@@ -76,9 +76,9 @@ final class RotaPage {
                 colour = fe.mood() < 0 ? 2 : 0;
             }
             int late = Rota.lateDays(r, l.who);
-            page.row(new ItemStack(l.player ? Items.PLAYER_HEAD : l.owner ? Items.GOLDEN_HELMET : Items.LEATHER_HELMET),
+            face(level, id, l, page.row(null,
                     (l.who.toString().equals(chosen) ? "▶ " : "") + l.name + (l.player ? " (player)" : l.owner ? " (owner)" : ""),
-                    gridLine(l) + like + (late > 0 ? " · late " + late + "× in two weeks" : ""), l.weekHours() + "h · " + l.daysWorked() + " days")
+                    gridLine(l) + like + (late > 0 ? " · late " + late + "× in two weeks" : ""), l.weekHours() + "h · " + l.daysWorked() + " days"))
                 .button(l.who.toString().equals(chosen) ? "Editing" : "Edit", "redit", LifePage.args("w", l.who.toString()), edit && !l.who.toString().equals(chosen),
                     !edit ? no : "Editing now: below");
             if (colour == 2 && f != null) page.text("  " + f.displayNameCap() + " would rather " + (l.weekHours() > Rota.prefHours(f) ? "fewer" : "more") + " hours: about " + Rota.prefHours(f) + " a week.", 2);
@@ -185,6 +185,16 @@ final class RotaPage {
         }
         page.buttons().button("Copy " + Rota.DAY_SHORT[dsel] + " to every working day", "rcopy", a, on, "A day off: there's nothing to copy")
             .button("Done", "rdone", null).primary();
+    }
+
+    /** [rota] The row's picture: the person's own face (a folk's likeness, a player's skin), whether or not it is about. */
+    static LifePage.Row face(ServerLevel level, UUID village, Rota.Line l, LifePage.Row row) {
+        if (l.player) {
+            ServerPlayer sp = level.getServer().getPlayerList().getPlayer(l.who);
+            return row.face(l.who, sp == null ? -1 : sp.getId(), true, l.name);
+        }
+        VillageFolkEntity f = Homes.loaded(village, l.who);
+        return f != null ? row.face(f) : row.face(l.who, -1, false, l.name);
     }
 
     static CompoundTag adjArgs(CompoundTag a, String k, int d) {

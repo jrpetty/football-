@@ -160,6 +160,7 @@ public final class MyBusinesses implements PlayerLife.Page {
             page.row(null, f.displayNameCap() + (mgr ? " (" + Deputy.title(r).toLowerCase(Locale.ROOT) + (Deputy.on(r) ? "" : ", authority off") + ")" : ""),
                     "paid " + Wealth.wage(f) + "c a day · level " + f.tradeLevel(t == null ? f.stationTask() : t.work())
                     + " at the trade" + (c == null ? "" : " · since day " + c.since) + " · " + String.join(", ", DeputyPage.traits(f)), "")
+                .face(f)                                                    // [rota] its own face
                 .button("Raise", "raise", LifePage.args("h", f.getUUID().toString()), decide && c != null, c == null ? "Not on the town's books" : no)
                 .button("Cut", "cut", LifePage.args("h", f.getUUID().toString()), decide && c != null, c == null ? "Not on the town's books" : no)
                 .button(mgr ? "Remove as deputy" : "Set as deputy manager", mgr ? "undeputy" : "deputy", LifePage.args("h", f.getUUID().toString()), decide, no)
@@ -190,7 +191,7 @@ public final class MyBusinesses implements PlayerLife.Page {
                 card == null ? "No player job for this trade" : no);
         }
         for (ServerPlayer h : PlayerHiring.hands(level, "firm:" + b.id)) {
-            page.row(null, h.getGameProfile().getName() + " (a player hand)", PlayerJobs.line(h), "")
+            page.row(null, h.getGameProfile().getName() + " (a player hand)", PlayerJobs.line(h), "").face(h)
                 .button("Warn", "warn", LifePage.args("u", h.getUUID().toString()), decide, no).button("Let go", "dismiss", LifePage.args("u", h.getUUID().toString()), decide, no);
         }
     }

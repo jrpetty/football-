@@ -90,8 +90,12 @@ public final class CorePage implements PlayerLife.Page {
         Rota r = Rota.of(village, b);
         if (r == null) return;
         page.heading("Who's on today");
-        List<String> today = Rota.onToday(village, b, day);
-        page.text(today.isEmpty() ? "Nobody is rostered today." : String.join(" · ", today), today.isEmpty() ? 2 : 4);
+        List<Rota.Line> on = Rota.onTodayLines(village, b, day);
+        if (on.isEmpty()) page.text("Nobody is rostered today.", 2);
+        for (Rota.Line l : on) {
+            int[] s = r.slotsOn(l.who, day);
+            RotaPage.face(level, village, l, page.row(null, l.name + (l.owner ? " (owner)" : l.player ? " (player)" : ""), s == null ? "" : Rota.words(s), ""));
+        }
         List<String> week = new ArrayList<>();
         for (Rota.Line l : r.lines.values()) week.add(l.name + ": " + RotaPage.gridLine(l));
         week.add("Set by " + (r.setBy.isEmpty() ? "the owner" : r.setBy) + ".");
