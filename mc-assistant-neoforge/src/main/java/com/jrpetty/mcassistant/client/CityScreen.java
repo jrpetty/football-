@@ -137,6 +137,10 @@ public class CityScreen extends Screen {
             next.shopSeller = open.shopSeller;
             next.jobsMarket = open.jobsMarket;
             next.jobsLabour = open.jobsLabour;                                // [labour]
+            next.sortColumn = open.sortColumn;                                // [ui53] new books while open: the Folk page's order,
+            next.sortDown = open.sortDown;                                    // what is typed and the scroll kept (each page keeps its
+            next.finds.putAll(open.finds);                                    // scroll inside the new rows)
+            next.scroll = open.scroll;
         }
         if (data.getBoolean("jobmarket_view")) next.jobsMarket = true;       // /village jobs books
         if (data.getBoolean("labour_view")) { next.jobsLabour = true; next.jobsMarket = false; }   // [labour] /village labour books
@@ -150,6 +154,7 @@ public class CityScreen extends Screen {
 
     /** [ui29] The developer client's screen audit: turn to a page by its name. */
     void devPage(String name) {
+        if (name.equalsIgnoreCase("Town map")) { buildingsMap = true; name = "Buildings"; }   // [ui53] the town map, for its pictures
         int n = pageNumber(name);
         if (n >= 0) { tab = n; scroll = 0; }
     }
@@ -3138,15 +3143,20 @@ public class CityScreen extends Screen {
         int side = Math.min(170, cw / 3);
         int tw = cw - side - 8;
         // The list, or the map of the town's quarters (DistrictMap): a click on the corner, at the foot, changes it.
-        String toggle = buildingsMap ? "The list ›" : "Map of the quarters ›";
+        String toggle = buildingsMap ? "The list ›" : "Town map ›";
         int toggleW = (int) (font.width(toggle) * 0.75F) + 6, toggleY = y + ch - 11;
         g.fill(x + tw - toggleW, toggleY - 1, x + tw, toggleY + 9, buildingsMap ? Ui.ROW_PICK : Ui.HEADER);
         g.renderOutline(x + tw - toggleW, toggleY - 1, toggleW, 10, Ui.EDGE_SOFT);
         small(g, toggle, x + tw - toggleW + 3, toggleY + 1, Ui.INK);
         zones.add(new Zone(x + tw - toggleW, toggleY - 1, x + tw, toggleY + 9, () -> buildingsMap = !buildingsMap));
         if (buildingsMap) {
-            List<net.minecraft.network.chat.Component> tip = DistrictMap.draw(g, font, data, all, x, y, tw, ch - 14, mx, my);
+            // [ui53] The town map (TownMapView), the page wide; the quarters' map for a server that sends none.
+            boolean town = data.contains("townmap");
+            List<net.minecraft.network.chat.Component> tip = town
+                ? TownMapView.draw(g, font, data, all, x, y, cw, ch - 14, mx, my, (a, b, c, d, act) -> zones.add(new Zone(a, b, c, d, act)))
+                : DistrictMap.draw(g, font, data, all, x, y, tw, ch - 14, mx, my);
             if (tip != null) { hover = tip; hoverX = mx; hoverY = my; }
+            if (town) return;
         }
         for (int i = 0; i < BUILDING_HEADS.length && !buildingsMap; i++) {
             if (BUILDING_COLS[i] >= tw - 20) break;
@@ -4206,12 +4216,14 @@ public class CityScreen extends Screen {
 
     private boolean dragBoard(double mx, double my, int button, double dx, double dy) {
         if (page().equals("Inventions") && InventionsPage.mouseDragged(mx, my)) return true;          // [screens13] the tree panned
+        if (page().equals("Buildings") && buildingsMap && TownMapView.mouseDragged(mx, my, dx, dy)) return true;   // [ui53] the town map panned
         return super.mouseDragged(mx, my, button, dx, dy);
     }
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
         if (InventionsPage.mouseReleased()) return true;                                               // [screens13]
+        if (TownMapView.mouseReleased()) return true;                                                  // [ui53] a click on the town map
         return super.mouseReleased(mx, my, button);
     }
 
@@ -4222,6 +4234,7 @@ public class CityScreen extends Screen {
 
     private boolean scrollBoard(double mx, double my, double dx, double dy) {
         if (page().equals("Inventions") && InventionsPage.mouseScrolled(mx, my, dy, hasShiftDown(), hasControlDown())) return true;   // [screens13]
+        if (page().equals("Buildings") && buildingsMap && TownMapView.mouseScrolled(mx, my, dy)) return true;   // [ui53] the town map zoomed
         scroll = Math.max(0, scroll - (int) Math.signum(dy) * 3);
         return true;
     }

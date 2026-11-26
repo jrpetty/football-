@@ -19,6 +19,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -34,7 +35,7 @@ import java.util.List;
  * codec, both ways, with the game's own reckoning of a tag's size, which a grown town's books went past (the client
  * could not read them, and the server dropped the player).
  *
- * <p>Each on its own ground, x 5300000 to 5306000 on z 53000.
+ * <p>Each on its own ground, x 5300000 to 5308000 on z 53000.
  */
 @GameTestHolder("mc_assistant")
 @PrefixGameTestTemplate(false)
@@ -247,6 +248,56 @@ public class BoardSafetyGameTests {
             "the essentials and why: " + books.getAllKeys());
         helper.assertTrue(!w.back().getBoolean(CityStatsPayload.UNREADABLE) && w.back().getString("name").equals(books.getString("name")),
             "and they go over the wire");
+        helper.succeed();
+    }
+    /**
+     * The town map's report: the land read off the world (a pond is water, a laid path a street, under the cell it falls
+     * in), every folk on it with what it is at, every building with its use's facts; the viewer's own side; and the whole
+     * of it still well inside the wire's budget.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ui53_townmap")
+    public static void ui53_townmap(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        com.jrpetty.mcassistant.entity.TownMapReport.resetForTests();
+        Villages.Village v = town(helper, 5308000, 8);
+        BlockPos heart = v.centre();
+        Kit.pond(level, heart.getX() + 20, heart.getZ() + 20, 3);
+        for (int dx = -6; dx <= 6; dx++) for (int dz = -21; dz <= -19; dz++) {    // a path laid east-west, north of the heart
+            BlockPos top = Kit.surface(level, heart.getX() + dx, heart.getZ() + dz).below();
+            level.setBlock(top, net.minecraft.world.level.block.Blocks.DIRT_PATH.defaultBlockState(), 3);
+        }
+        CompoundTag books = Annals.snapshot(level, v);
+        CompoundTag map = books.getCompound("townmap");
+        byte[] land = map.getByteArray("land");
+        int step = map.getInt("step"), reach = map.getInt("land_reach");
+        int n = (int) Math.round(Math.sqrt(land.length));
+        java.util.function.BiFunction<Integer, Integer, Integer> at = (dx, dz) -> {
+            int i = Math.round((dx + reach) / (float) step), j = Math.round((dz + reach) / (float) step);
+            return i < 0 || j < 0 || i >= n || j >= n ? -1 : (int) land[j * n + i];
+        };
+        int water = at.apply(20, 20), road = at.apply(0, -20);
+        ListTag folk = map.getList("folk", Tag.TAG_COMPOUND);
+        Kit.log("ui53f the town map: " + n + "x" + n + " cells of " + step + " blocks, reach " + reach + "; water cell " + water + ", path cell " + road
+            + "; " + folk.size() + " folk, " + map.getList("bx", Tag.TAG_COMPOUND).size() + " buildings; keys " + map.getAllKeys());
+        helper.assertTrue(n * n == land.length && n > 10 && step >= 1, "the land read in a square: " + land.length + " cells");
+        helper.assertTrue(water == com.jrpetty.mcassistant.entity.TownMapReport.WATER, "the pond is water on the map: " + water);
+        helper.assertTrue(road == com.jrpetty.mcassistant.entity.TownMapReport.ROAD, "the path is a street on the map: " + road);
+        helper.assertTrue(folk.size() == folkOf(v).size(), "every folk on the map: " + folk.size() + " of " + folkOf(v).size());
+        for (int i = 0; i < folk.size(); i++) {
+            CompoundTag f = folk.getCompound(i);
+            helper.assertTrue(f.getByte("s") >= 0 && f.getByte("s") <= 5 && !f.getString("n").isEmpty() && f.hasUUID("u")
+                && Math.abs(f.getInt("x")) <= 60 && Math.abs(f.getInt("z")) <= 60, "a folk on the map, where it is, at what: " + f);
+        }
+        ServerPlayer p = helper.makeMockServerPlayerInLevel();
+        p.moveTo(heart.getX() + 3.5, heart.getY(), heart.getZ() - 2.5, 90F, 0F);
+        com.jrpetty.mcassistant.entity.TownMapReport.viewer(books, level, v, p);
+        CompoundTag me = books.getCompound("townmap").getCompound("me");
+        helper.assertTrue(Math.abs(me.getDouble("dx") - 3.5) < 0.01 && Math.abs(me.getDouble("dz") + 2.5) < 0.01 && me.getFloat("yaw") == 90F,
+            "you on the map, the way you face: " + me);
+        p.discard();
+        Wire w = wire(level, books);
+        sound(helper, "the town map", books, w);
+        helper.assertTrue(w.back().getCompound("townmap").getByteArray("land").length == land.length, "the land goes over the wire whole");
         helper.succeed();
     }
 }

@@ -111,6 +111,11 @@ public final class AssistantNetwork {
         } catch (RuntimeException e) {                                                  // [ui53] the books open without it
             com.mojang.logging.LogUtils.getLogger().error("[ui53] the viewer's side of the books left out", e);
         }
+        try {
+            com.jrpetty.mcassistant.entity.TownMapReport.viewer(books, level, v, player);   // [ui53] you, and yours, on the town map
+        } catch (RuntimeException e) {
+            com.mojang.logging.LogUtils.getLogger().error("[ui53] the viewer's side of the town map left out", e);
+        }
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CityStatsPayload(books));
     }
 

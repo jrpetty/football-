@@ -673,6 +673,7 @@ public final class Annals {
         String[] page = VillageBoards.page(VillageBoards.compose(level, id));
         out.putString("board_title", page[0]);
         out.putString("board", page[1].length() > 20000 ? page[1].substring(0, 20000) : page[1]);
+        out.put("townmap", TownMapReport.report(level, v, folk));        // [ui53] the town map: the land, the folk, the sites, the plots
         out.put("overview", BoardOverview.report(level, v, folk, out));   // [folk-ui] the Overview's readings and alerts
         return out;
     }

@@ -187,7 +187,23 @@ public final class CineDev {
                 // [ui53] the board test: a click on the Folk page's heading N, where it is drawn; the wheel N notches down
                 // (up if negative); a click at GUI X Y
                 case "cityhead" -> { if (mc.screen instanceof CityScreen c) c.devFolkHead(Integer.parseInt(w[1])); }
-                case "cityscroll" -> { if (mc.screen instanceof CityScreen c) c.mouseScrolled(c.width / 2.0, c.height / 2.0, 0, -Integer.parseInt(w[1])); }
+                case "cityscroll" -> {                                              // a notch at a time, as the wheel
+                    int n = Integer.parseInt(w[1]);
+                    for (int i = 0; i < Math.abs(n) && mc.screen instanceof CityScreen c; i++) c.mouseScrolled(c.width / 2.0, c.height / 2.0, 0, -Math.signum(n));
+                }
+                case "cursor" -> {                                                  // the pointer, at GUI X Y
+                    double px = d(w[1]) * mc.getWindow().getGuiScale(), py = d(w[2]) * mc.getWindow().getGuiScale();
+                    org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), px, py);
+                    try {                                                           // a window with no focus hears no move
+                        for (String f : new String[]{ "xpos", "ypos" }) {
+                            java.lang.reflect.Field fl = net.minecraft.client.MouseHandler.class.getDeclaredField(f);
+                            fl.setAccessible(true);
+                            fl.setDouble(mc.mouseHandler, f.equals("xpos") ? px : py);
+                        }
+                    } catch (ReflectiveOperationException | RuntimeException e) {
+                        com.mojang.logging.LogUtils.getLogger().warn("[ui53] cinedev cursor: {}", e.toString());
+                    }
+                }
                 case "cityclick" -> { if (mc.screen != null) mc.screen.mouseClicked(d(w[1]), d(w[2]), 0); }
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
