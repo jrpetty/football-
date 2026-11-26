@@ -89,6 +89,8 @@ public final class LifeTown implements PlayerLife.Page {
         List<Business> firms = MyBusinesses.mine(id, p.getUUID());
         if (firms.isEmpty()) page.text("None yet.", 4);
         for (Business b : firms) page.row(null, b.name, Enterprise.line(level, id, b), "").button("Run it", "firm", LifePage.args("firm", b.id));
+        for (PlayerFarms.Farm fm : PlayerFarms.ofOwner(id, p.getUUID())) page.row(new ItemStack(Items.WHEAT), fm.name + " (your " + fm.kind + ")",   // [wpb]
+            fm.area() + " blocks, " + fm.hands.size() + " hands" + (fm.paused ? ", paused" : ""), "").button("Run it", "farmpage", LifePage.args("farm", fm.id));
         page.buttons().button("Start a business", "start", null).button("The town's businesses", "books", LifePage.args("page", "Businesses"));
         // building
         List<BuildDesk.Status> builds = BuildDesk.mine(level, id, p.getUUID());
@@ -157,6 +159,7 @@ public final class LifeTown implements PlayerLife.Page {
             case "shopstep" -> { PlayerLife.open(p, "shop", LifePage.args("tab", args.getString("tab"))); return "#open:"; }   // [biz25]
             case "found" -> { FoundingEasy.open(p, "life"); return "#open:"; }   // [found23]
             case "firm" -> { PlayerLife.open(p, "firm", LifePage.args("firm", args.getString("firm"))); return "#open:"; }
+            case "farmpage" -> { PlayerLife.open(p, "farm", LifePage.args("farm", args.getString("farm"))); return "#open:"; }   // [wpb]
             case "earnings" -> { books(p, "Earnings"); return "#close"; }
             case "books" -> { books(p, args.getString("page")); return "#close"; }
             case "property" -> { return PropertyDesk.open(p, args.getString("what"), "life"); }

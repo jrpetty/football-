@@ -94,6 +94,15 @@ public final class StartBusiness implements PlayerLife.Page {
             page.text("Businesses are chartered by a town: go to one.", 3);
             return page;
         }
+        String planned = Regimes.businessBarred(v.id());                     // [featcivic] a planned state: no private business
+        if (planned != null) {
+            page.heading("No private business here");
+            page.text(planned, 3);
+            page.text("Why: " + Villages.name(v.id()) + " is a planned state. The committee owns every workshop, sets the week's quotas and pays "
+                + "every hand the same. What you can do: take a shift for the state on the jobs board, or vote for a reform if one is put.", 2);
+            page.buttons().button("The jobs board", "jobsboard", null).primary().button("How the town is run", "govhall", null);
+            return page;
+        }
         if (!c.tab.isEmpty()) {                                              // a tab clicked: that step
             c.args.putInt("step", ShopPage.parse(c.tab, 1));
             c.tab = "";
@@ -123,6 +132,8 @@ public final class StartBusiness implements PlayerLife.Page {
         String chosen = c.args.getString("kind");
         page.buttons().button("Next: premises", "step", LifePage.args("s", 2)).primary();   // [biz25] a label that fits
         BizShop.kindRow(level, p, v, chosen, page);                          // [biz25] a shop of your own, the easiest
+        page.row(new ItemStack(Items.WHEAT), "A farm of your own", "Register a field you hoed, or an orchard, ranch, woodlot, mine or fishery: "   // [wpb]
+            + "a business with books, land rates, outlets and hands", "").button("Register a farm", "farm", null);
         String standing = mayCharter(level, v, p);
         if (!standing.isEmpty()) {
             page.text("For a chartered business: " + standing, 2);
@@ -341,6 +352,7 @@ public final class StartBusiness implements PlayerLife.Page {
     static String mayCharter(ServerLevel level, Villages.Village v, ServerPlayer p) {
         // [biz25] The town charters anybody it knows and has nothing against: a visitor who has passed the time of day with
         // its folk will do. A stranger nobody has spoken to says hello first; an unwelcome one mends fences.
+        if (!Government.allowsPrivateFirms(v.id())) return "The state owns the firms in " + Villages.name(v.id()) + ": no private charter is granted here.";   // [wpb] feat-civic's planned state
         if (Citizens.is(v.id(), p.getUUID())) return "";
         Standing.Title t = Standing.of(v.id(), p.getUUID(), level.getGameTime()).title();
         if (t.atLeast(Standing.Title.VISITOR)) return "";
@@ -371,6 +383,7 @@ public final class StartBusiness implements PlayerLife.Page {
         Villages.Village v = PlayerLife.here(p);
         if (v == null) return "!No town here.";
         switch (action) {
+            case "farm" -> { PlayerLife.open(p, "farm", null); return "#open:"; }   // [wpb] a farm of your own
             case "tab" -> { c.args.putInt("step", Integer.parseInt(c.tab)); return ""; }
             case "step" -> { c.args.putInt("step", args.getInt("s")); return ""; }
             case "hello" -> {                                               // [biz25] passing the time of day: the town knows you now
@@ -421,7 +434,13 @@ public final class StartBusiness implements PlayerLife.Page {
                 return "";
             }
             case "citizen" -> { return LifeTown.sayToNearest(p, "May I live here?"); }
-            case "confirm" -> { return isShop(c) ? BizShop.confirmed(level, p, v, c, args.getInt("borrow")) : confirmed(level, p, v, c, args.getInt("borrow")); }   // [biz25]
+            case "confirm" -> {
+                String planned = Regimes.businessBarred(v.id());             // [featcivic] a planned state: not chartered
+                if (planned != null) return "!" + planned;
+                return isShop(c) ? BizShop.confirmed(level, p, v, c, args.getInt("borrow")) : confirmed(level, p, v, c, args.getInt("borrow"));   // [biz25]
+            }
+            case "jobsboard" -> { PlayerLife.open(p, "jobs", null); return "#open:"; }      // [featcivic] work for the state
+            case "govhall" -> { GovActions.openHall(p, "Overview"); return "#close"; }       // [featcivic] how the town is run
             case "buycounter" -> { return BizGuide.buyCounter(p); }
             case "life" -> { PlayerLife.open(p, "life", null); return "#open:"; }
             case "shophelp" -> { PlayerLife.open(p, "shop", null); return "#open:"; }

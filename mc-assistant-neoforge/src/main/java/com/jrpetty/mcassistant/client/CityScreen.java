@@ -39,7 +39,7 @@ public class CityScreen extends Screen {
     private static final String NO_BOOKS_TITLE = "The town's books are written each morning",
         NO_BOOKS_HINT = "Come back tomorrow. Overview, Folk, Society, Leader and News have today's figures already.";
     /** The pages that read today's figures, not the books (so they show from the first day). */
-    private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Families", "Apprentices", "Respect", "Overview", "Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
+    private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Defences", "Parks", "Stone", "Families", "Apprentices", "Respect", "Overview", "Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
         "Fashion",                                                                                    // [fashion]
         "Cases",                                                                                      // [crime]
@@ -58,7 +58,8 @@ public class CityScreen extends Screen {
         "Taxes", "Knights",                                                                           // [civic-land]
         "Inventions",                                                                                 // [tech-tree]
         "Harbour", "Roads",                                                                           // [trade-world]
-        "Region");                                                                                    // [links12]
+        "Region",                                                                                     // [links12]
+        "Government");                                                                                // [featcivic]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -373,6 +374,11 @@ public class CityScreen extends Screen {
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "School" -> school(g, x, y, cw, ch, mouseX, mouseY);
+                case "Defences", "Parks", "Stone" -> {                                 // [featbuild] the walls and watch, the greens, the stone
+                    List<Component> tip = WorksPages.draw(page(), g, font, data, x, y, cw, ch, scroll, mouseX, mouseY,
+                        (a, b, c, d, act) -> zones.add(new Zone(a, b, c, d, act)));
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 case "Families", "Apprentices", "Respect" -> {                         // [featfolk] the town's lines (FolkLinesPages)
                     List<Component> tip = FolkLinesPages.draw(page(), g, font, data, x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
@@ -475,6 +481,11 @@ public class CityScreen extends Screen {
                 }
                 case "Interviews" -> {                                                 // [interviews] coming and held (InterviewsPage)
                     List<Component> tip = InterviewsPage.draw(g, font, data.getCompound("interviews"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Government" -> {                                                 // [featcivic] how the town is governed (GovernmentPage)
+                    List<Component> tip = GovernmentPage.draw(g, font, data.getCompound("government"), x, y, cw, ch, scroll, mouseX, mouseY,
+                        (a, b, c, d, act) -> zones.add(new Zone(a, b, c, d, act)));
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "Identity" -> {                                                   // [identity] what makes the town itself (IdentityPage)

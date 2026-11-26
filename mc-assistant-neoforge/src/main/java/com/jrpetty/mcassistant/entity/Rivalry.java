@@ -149,7 +149,7 @@ public final class Rivalry {
 
     /** Trade between these two shut by an embargo. */
     public static boolean embargoed(@Nullable UUID x, @Nullable UUID y) {
-        return x != null && y != null && !x.equals(y) && state(x, y).embargo != 0;
+        return x != null && y != null && !x.equals(y) && (state(x, y).embargo != 0 || Ideology.embargoed(x, y));   // [featcivic] or over how they are ruled
     }
 
     /** Who laid the embargo between these two, or null. */

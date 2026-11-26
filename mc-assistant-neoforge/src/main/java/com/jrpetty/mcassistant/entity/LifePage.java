@@ -59,6 +59,22 @@ public final class LifePage {
         return this;
     }
 
+    /**
+     * [wpb] A framed box: a title band and plain lines under it (a job's "How you're paid", a first-time hint, a question
+     * before money moves). Colour as for a paragraph: 0 plain, 1 good, 2 a warning, 3 bad, 4 for information.
+     */
+    public LifePage box(String title, java.util.List<String> lines, int colour) {
+        CompoundTag x = new CompoundTag();
+        x.putString("t", "box");
+        x.putString("title", title);
+        ListTag l = new ListTag();
+        for (String s : lines) l.add(net.minecraft.nbt.StringTag.valueOf(s));
+        x.put("lines", l);
+        x.putInt("c", colour);
+        blocks.add(x);
+        return this;
+    }
+
     public LifePage bar(String label, double frac, String right) {
         CompoundTag x = new CompoundTag();
         x.putString("t", "bar");

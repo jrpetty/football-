@@ -89,6 +89,8 @@ public final class PlayerLife {
         PAGES.put("debts", new Debts());             // [wpc] the debts ledger, credit score, bankruptcy
         PAGES.put("will", new Wills());              // [wpc] your will
         PAGES.put("away", new StandingOrders());     // [wpc] while you were away
+        PAGES.put("farm", new FarmPage());                                  // [wpb] a player's own farm as a business
+        PAGES.put("contracts", new ContractsPage());                        // [wpb] contracts between players, with escrow
     }
 
     /** [wpa] Is there a page called this (another package's, not yet merged)? */

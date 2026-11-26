@@ -714,6 +714,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // Called to the town's own work (TownJobs): to the spot, and at it.
         if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
                 && TownJobs.hold(this, works)) return;
+        // [featbuild] A quarryman's day: out to the face with its pick, its loads to the stone yard and on to the stores (Quarry).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel quarry
+                && (tickCount % 4 == 0 ? Quarry.hold(this, quarry) : Quarry.busy(this))) return;
         // [roles-e] Called away from its trade for a stint of its post's work (PostStints): the wheelwright to its bench or
         // the wagon's side, the town planner to the hall's table.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel posts
@@ -794,6 +797,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Cartographers.tick(polls, home);     // [cartographer] the town chooses its cartographer once its map room stands
                     Divers.tick(polls, home);            // [diver] a town by the water finds it, and takes up its diver
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
+                    Politics.tick(polls, home);          // [featcivic] the unrest, the policy, the rallies, the posters, ceremonies
                     }
                     TownScheduler.done(started);
                 }
@@ -1508,6 +1512,7 @@ public class VillageFolkEntity extends AssistantEntity {
             else m += led;
         }
         m = Quarters.mood(this, m, why);                // where it lives: the crafts' smoke and din, the park (Quarters)
+        m = Monuments.mood(this, day, m, why);          // [featbuild] by a statue garden or a statue; a statue of its own kin
         m = FolkSkills.mood(this, m, why);              // Bright Spirit, a bright friend near, Unflappable's floor
         m = Birthdays.mood(this, day, m, why);          // its birthday (Birthdays)
         m = Families.mood(this, day, m, why);           // its wedding anniversary (Families)
@@ -3191,12 +3196,15 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Assemblies.attending(this)) return false;
         // On the town's own work (TownJobs): its trade waits till that is done.
         if (TownJobs.busy(this)) return false;
+        // [featbuild] At the quarry (Quarry): its own trade waits.
+        if (Quarry.busy(this)) return false;
         // At the school's lectern (School): its trade waits for the afternoon.
         if (School.teaching(this)) return false;
         // The bell: every guard turns out, whichever watch it keeps; nobody else works.
         UUID alarmed = ownerId();
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;
         if (TaxUnrest.striking(this)) return false;          // [civic-land] on strike against the taxes: the picket, not the work
+        if (Dissent.striking(this)) return false;            // [featcivic] on strike against the government
         if (OutdoorWeather.keepsIn(this)) return false;     // [roles-d] the woodcutter and the hunter in out of the rain
         Boolean serving = Hospitality.shift(this);            // [dining] the bar's, the floor's and the baker's own hours
         if (serving != null) return serving;
@@ -5841,6 +5849,7 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean bedtime() {
         if (Muster.gather(this)) return true;               // [defence] the bell: to the square, not to bed
         if (!Raids.underAlarm(ownerId()) && TaxUnrest.picket(this)) return true;   // [civic-land] a striker's day before the hall
+        if (!Raids.underAlarm(ownerId()) && Dissent.picket(this)) return true;     // [featcivic] a striker's picket, a name on the petition
         if (Raids.underAlarm(ownerId()) && (bedPos() == null && !isBaby() || WatchClears.bedFar(this))) return Raids.shelter(this);
         // The day of rest, by day: the service, the games, walking out — not bed at noon.
         if (!Raids.underAlarm(ownerId()) && RestDay.now(ownerId(), level().getDayTime()) != null) {

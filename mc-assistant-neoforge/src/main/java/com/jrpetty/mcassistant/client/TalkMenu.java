@@ -400,6 +400,8 @@ public final class TalkMenu {
             ask("census", Items.ARMOR_STAND, TalkTopic.CENSUS),
             ask("repute", Items.PLAYER_HEAD, TalkTopic.REPUTE),
             group("council_group", Items.LECTERN,
+                say("town_hall", Items.BELL, "How is this town governed?"),          // [featcivic] the Town Hall screen
+                say("ballot", Items.WRITABLE_BOOK, "I'd like to vote in the election"),  // [featcivic] the ballot screen
                 ask("council", Items.BOOKSHELF, TalkTopic.COUNCIL),
                 prompt("build", Items.BRICK, TalkTopic.BUILD, "You should build a "),
                 ask("citizen", Items.BLUE_BANNER, TalkTopic.CITIZEN, c -> !c.has("citizen")),

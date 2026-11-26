@@ -223,6 +223,7 @@ public final class CineDev {
                     }
                 }
                 case "cityclick" -> { if (mc.screen != null) mc.screen.mouseClicked(d(w[1]), d(w[2]), 0); }
+                case "gov" -> GovScreen.dev(line.trim().substring(4).trim());          // [featcivic] the Town Hall: open TAB | tab TAB | hint on|off
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
         }

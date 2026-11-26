@@ -259,6 +259,7 @@ public final class LawBook {
         want[Law.SABBATH.ordinal()] = f >= Ethos.POLE || g == Government.Form.CHAPLAIN ? 2 : f <= -Ethos.POLE || y <= -50 ? 0 : 1;
         want[Law.HUNTING.ordinal()] = g == Government.Form.LORD || k <= -40 ? 1 : 0;
         want[Law.HOUSES.ordinal()] = g == Government.Form.COMMUNE ? 2 : d <= -Ethos.POLE ? 1 : 0;
+        Regimes.laws(g, r.axes, want);                                   // [featcivic] the planned state's, the general's
         return want;
     }
 
@@ -301,6 +302,7 @@ public final class LawBook {
             case GUILD -> 4;
             case COUNCIL -> 6;
             case COMMUNE -> 3;
+            case JUNTA -> 2;
             default -> 3;
         };
         if (g == Government.Form.COMMUNE) {
@@ -318,6 +320,18 @@ public final class LawBook {
         List<VillageFolkEntity> deciders = new ArrayList<>();
         String body;
         VillageFolkEntity leader = Identity.leader(id);
+        // [featcivic] A representative democracy's laws are voted by its elected town council; a planned state's by its committee.
+        if (g == Government.Form.DEMOCRACY || g == Government.Form.PLANNED) {
+            List<VillageFolkEntity> house = g == Government.Form.DEMOCRACY ? Factions.memberFolk(id) : Elections.voters(id);
+            if (house.size() >= 3) {
+                String house2 = g == Government.Form.DEMOCRACY ? "the town council" : "the committee";
+                int ayes = 0, nays = 0;
+                for (VillageFolkEntity f : house) if (judge(level, f, l, value).aye() ^ Factions.whipAgainst(id, f, l, value)) ayes++; else nays++;
+                if (ayes > nays) enact(level, v, r, l, value, day, house2 + " voted " + ayes + " to " + nays);
+                else refuse(v, r, l, value, day, house2 + " voted " + ayes + " to " + nays + " against " + what);
+                return;
+            }
+        }
         if (g == Government.Form.COUNCIL || g == Government.Form.GUILD || leader == null) {
             List<VillageFolkEntity> all = Elections.voters(id);
             if (g == Government.Form.GUILD) {
