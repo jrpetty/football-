@@ -41,7 +41,38 @@ import java.util.UUID;
  * </ul>
  * Kept on the Business record (saved with it).
  */
+@net.neoforged.fml.common.EventBusSubscriber(modid = com.jrpetty.mcassistant.McAssistantMod.MODID)
 public final class Rota {
+
+    private static long lastMorning = -1;
+
+    /**
+     * Each morning (checked every ten seconds): a player's rota brought up to date with its staff, its folk asking for
+     * their club night or a family day off (the owner told), the old one-off changes and answered requests let go.
+     */
+    @net.neoforged.bus.api.SubscribeEvent
+    public static void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post e) {
+        if (e.getServer().getTickCount() % 200 != 77) return;
+        ServerLevel level = e.getServer().overworld();
+        long day = level.getDayTime() / 24000L;
+        if (day == lastMorning) return;
+        lastMorning = day;
+        for (Villages.Village v : Villages.every()) {
+            try {
+                for (Business b : Businesses.all(v.id())) {
+                    Rota r = b.rota;
+                    if (r == null || r.auto || !r.active() || !b.open) continue;
+                    sync(level, v.id(), b, r);
+                    folkAsk(v.id(), b, r, day);
+                    r.overrides.keySet().removeIf(d -> d < day - 7);
+                    r.requests.removeIf(q -> q.day < day - 7);
+                    pushPlanner(level, v.id(), b);
+                }
+            } catch (RuntimeException ex) {
+                com.mojang.logging.LogUtils.getLogger().warn("[rota] the morning's rotas failed for a town", ex);
+            }
+        }
+    }
 
     // ------------------------------------------------------------------ the rules
 
@@ -433,8 +464,9 @@ public final class Rota {
             int hit = Math.min(8, (rostered - pref) / 3);
             return new Feeling(-hit, f.displayNameCap() + (w.isEmpty() ? "" : " is " + w + ":") + " likes about " + pref + " hours, rostered " + rostered);
         }
-        if (rostered < pref - 12 && (LifeWeights.has(f, LifeWeights.Mark.AMBITIOUS) || LifeWeights.has(f, LifeWeights.Mark.HARDWORKING) || f.purse() < 10)) {
-            return new Feeling(-2, f.displayNameCap() + (w.isEmpty() ? " is short of money" : " is " + w) + ": asks for more hours (" + rostered + " of the " + pref + " wanted)");
+        if (rostered < pref - 12 && (LifeWeights.has(f, LifeWeights.Mark.AMBITIOUS) || LifeWeights.has(f, LifeWeights.Mark.HARDWORKING) && f.purse() < 10)) {
+            return new Feeling(-2, f.displayNameCap() + " is " + w + (f.purse() < 10 && !w.equals("ambitious") ? " and short of money" : "") + ": asks for more hours ("
+                + rostered + " of the " + pref + " wanted)");
         }
         if (Math.abs(rostered - pref) <= 4 && rostered > 0) return new Feeling(1, f.displayNameCap() + " is happy with " + rostered + " hours");
         return new Feeling(0, "");
@@ -533,7 +565,7 @@ public final class Rota {
     }
 
     /** The rota's lines brought up to date with who works there: new hands added (off till rostered), the gone taken off. */
-    static void sync(ServerLevel level, UUID village, Business b, Rota r) {
+    public static void sync(ServerLevel level, UUID village, Business b, Rota r) {
         Set<UUID> here = new HashSet<>();
         for (VillageFolkEntity f : staffOf(village, b)) { here.add(f.getUUID()); r.line(f.getUUID(), f.displayNameCap(), false); }
         for (ServerPlayer p : PlayerHiring.hands(level, "firm:" + b.id)) { here.add(p.getUUID()); r.line(p.getUUID(), p.getGameProfile().getName(), true); }
@@ -559,12 +591,20 @@ public final class Rota {
     /** The days of the coming week a folk has somewhere to be (a club's meeting, a christening, a funeral), by day of the week. */
     static Map<Integer, String> commitments(VillageFolkEntity f, UUID village, long today) {
         Map<Integer, String> out = new HashMap<>();
-        for (Clubs.Club c : Clubs.clubsOf(f)) out.put(c.day.ordinal(), c.title + " " + WorkHours.hour(c.from) + ":00");
+        for (Clubs.Club c : Clubs.clubsOf(f)) out.put(c.day.ordinal(), WorkHours.hour(c.from) + "|" + c.title + " " + WorkHours.hour(c.from) + ":00");
         for (int i = 0; i < 7; i++) {
             String e = Church.familyEvent(village, f.getUUID(), today + i);
-            if (e != null) out.put(Calendar.dow(today + i), e);
+            if (e != null) out.put(Calendar.dow(today + i), "-1|" + e);     // a family day: the whole day
         }
         return out;
+    }
+
+    /** Does a commitment ("hour|words", hour -1 for all day) fall in this shift? */
+    static boolean clash(@Nullable String c, int from, int to) {
+        if (c == null) return false;
+        int hr;
+        try { hr = Integer.parseInt(c.substring(0, c.indexOf('|'))); } catch (RuntimeException e) { return true; }
+        return hr < 0 || hr >= from && hr < to;
     }
 
     // ------------------------------------------------------------------ coverage
@@ -711,7 +751,7 @@ public final class Rota {
                         Line l = r.lines.get(s.who());
                         int[] today = l.day(d);
                         if (at(today, bl[0])) continue;                                   // on already
-                        if (s.busy().containsKey(d)) continue;                          // somewhere to be
+                        if (clash(s.busy().get(d), bl[0], bl[1])) continue;             // somewhere to be: its club, a family day
                         boolean onToday = works(today);
                         if (!onToday && days.get(s.who()) >= MOST_DAYS) continue;        // two days off
                         if (onToday && hours(today) + (bl[1] - bl[0]) > LONGEST_SHIFT) continue;
@@ -747,7 +787,7 @@ public final class Rota {
             Line l = r.lines.get(s.who());
             for (int d : order) {
                 if (l.weekHours() >= s.pref() - 6 || l.daysWorked() >= MOST_DAYS) break;
-                if (!h.openOn(d) || works(l.day(d)) || s.busy().containsKey(d)) continue;
+                if (!h.openOn(d) || works(l.day(d)) || s.busy().containsKey(d)) continue;   // its club's day too: kept clear
                 int open = h.open(), close = Math.min(24, h.close());
                 l.set(d, new int[]{ open, Math.min(close, open + 8), 0, 0 });
             }
@@ -788,7 +828,7 @@ public final class Rota {
     /** Who may change a business's rota: the owner who decides (Partners.canDecide). "" if this player may, else why not. */
     public static String whyNotEdit(UUID village, Business b, UUID player) {
         if (!b.ownedBy(player)) return "Only the owner or manager sets the rota";
-        if (!Partners.canDecide(village, b, player)) return "Only the owner or manager sets the rota: " + Partners.whyNot(village, b).toLowerCase(Locale.ROOT).replace("only ", "");
+        if (!Partners.canDecide(village, b, player)) return "Only the owner or manager sets the rota (" + Partners.whyNot(village, b) + ")";
         return "";
     }
 
@@ -1204,5 +1244,31 @@ public final class Rota {
 
     public static void resetForTests() {
         dayForTests = -1;
+    }
+
+    /** Tests: the business's own rota (a player's), made if need be, with its staff on it (all days off). */
+    public static Rota ensureForTests(ServerLevel level, UUID village, Business b) {
+        if (b.rota == null || b.rota.auto) b.rota = new Rota();
+        sync(level, village, b, b.rota);
+        return b.rota;
+    }
+
+    /** Tests: WorkLife's five-second look at a player hand on a rota. */
+    public static boolean tickHandForTests(ServerLevel level, ServerPlayer p) {
+        CompoundTag j = PlayerJobs.job(p);
+        long dt = level.getDayTime();
+        boolean b = tickHand(level, p, j, dt / 24000L, dt % 24000L);
+        return b;
+    }
+
+    /** Tests: the planner's shifts put up now. */
+    public static void plannerForTests(ServerLevel level, UUID village, Business b) {
+        pushPlanner(level, village, b);
+    }
+
+    /** Tests: the deputy's turn at the rota. */
+    @Nullable
+    public static String deputyForTests(ServerLevel level, UUID village, Business b, @Nullable VillageFolkEntity d, long day) {
+        return deputyAdjust(level, village, b, d, d == null ? "the deputy" : d.displayNameCap(), day);
     }
 }
