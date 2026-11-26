@@ -819,6 +819,7 @@ public final class Enterprise {
     @Nullable
     static String barred(UUID village, VillageFolkEntity f, BusinessType t) {
         if (f.isBaby() || !f.isAlive() || f.isHired() || f.isShowcase()) return "not one who could";
+        if (Regimes.businessBarred(village) != null) return "no private business in a planned state";   // [featcivic]
         VillageFolkEntity elder = Orders.elderOf(village);
         if (elder == f) return "the elder has the town to run";
         if (ownsAny(village, f.getUUID())) {                                // [biz30] a second, a third, as its success carries it (FirmBranches)
@@ -1158,6 +1159,8 @@ public final class Enterprise {
         BusinessType t = BusinessTypes.of(kind);
         if (t == null) return "No such kind of business. The kinds: " + String.join(", ", BusinessTypes.keys()) + ".";
         UUID id = v.id();
+        String planned = Regimes.businessBarred(id);                       // [featcivic] a planned state: the state runs them all
+        if (planned != null) return planned;
         BlockPos hall = Villages.builtAt(id, "hall");
         BlockPos at = hall != null ? hall : v.centre();
         if (!p.blockPosition().closerThan(at, hall != null ? 24 : 48)) return "Charters are granted at " + (hall != null ? "the hall" : "the town's heart") + ": go there first.";

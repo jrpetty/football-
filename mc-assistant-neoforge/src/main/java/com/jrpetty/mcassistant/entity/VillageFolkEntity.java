@@ -766,6 +766,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Cartographers.tick(polls, home);     // [cartographer] the town chooses its cartographer once its map room stands
                     Divers.tick(polls, home);            // [diver] a town by the water finds it, and takes up its diver
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
+                    Politics.tick(polls, home);          // [featcivic] the unrest, the policy, the rallies, the posters, ceremonies
                     }
                     TownScheduler.done(started);
                 }
@@ -3153,6 +3154,7 @@ public class VillageFolkEntity extends AssistantEntity {
         UUID alarmed = ownerId();
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;
         if (TaxUnrest.striking(this)) return false;          // [civic-land] on strike against the taxes: the picket, not the work
+        if (Dissent.striking(this)) return false;            // [featcivic] on strike against the government
         if (OutdoorWeather.keepsIn(this)) return false;     // [roles-d] the woodcutter and the hunter in out of the rain
         Boolean serving = Hospitality.shift(this);            // [dining] the bar's, the floor's and the baker's own hours
         if (serving != null) return serving;
@@ -5785,6 +5787,7 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean bedtime() {
         if (Muster.gather(this)) return true;               // [defence] the bell: to the square, not to bed
         if (!Raids.underAlarm(ownerId()) && TaxUnrest.picket(this)) return true;   // [civic-land] a striker's day before the hall
+        if (!Raids.underAlarm(ownerId()) && Dissent.picket(this)) return true;     // [featcivic] a striker's picket, a name on the petition
         if (Raids.underAlarm(ownerId()) && (bedPos() == null && !isBaby() || WatchClears.bedFar(this))) return Raids.shelter(this);
         // The day of rest, by day: the service, the games, walking out — not bed at noon.
         if (!Raids.underAlarm(ownerId()) && RestDay.now(ownerId(), level().getDayTime()) != null) {

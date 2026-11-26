@@ -168,9 +168,14 @@ public final class Elections {
         Campaign c = new Campaign(id, day, voteDay);
         c.candidates.addAll(nominate(level, id, day));
         Hustings.enter(level, v, c, day);                              // [player-civic] the players standing, and a player who leads
+        if (c.candidates.isEmpty() && !Identity.neutral()) {           // [featcivic] nobody stood: a caretaker until the next
+            Polls.nobodyStood(level, v, day);
+            return c;
+        }
         NOW.put(id, c);
         save(c);
         if (c.candidates.isEmpty()) return c;
+        com.jrpetty.mcassistant.Guard.run("the posters", () -> Polls.called(level, v, c, day));   // [featcivic] the box, the posters, the notice
         String when = voteDay - day <= 1 ? "tomorrow" : "in " + (voteDay - day) + " days";
         Villages.tell(id, day, "an election for " + title(id) + " was called for day " + voteDay + ": " + standing(c));
         Market.assemblyNews(id, "We choose our " + title(id) + " " + when + ". Standing: " + standing(c) + ".");
@@ -186,6 +191,13 @@ public final class Elections {
     /** Who stands: the ones the village thinks most of, the leader again if it will, each for something of its own. */
     static List<Candidate> nominate(ServerLevel level, UUID village, long day) {
         List<VillageFolkEntity> folk = voters(village);
+        if (!Identity.neutral() && Government.of(village) == Government.Form.DEMOCRACY) {   // [featcivic] the parties put up their own
+            List<Candidate> parties = Factions.nominate(level, village, folk, day);
+            if (parties.size() >= 2) {
+                WarAndPeace.peaceCandidate(level, village, parties, folk, parties.size() + 1, day);
+                return parties;
+            }
+        }
         UUID leader = Villages.elder(village);
         Map<VillageFolkEntity, Integer> score = new HashMap<>();
         // A newcomer does not stand, unless there are hardly any others (a village just founded).
@@ -434,6 +446,11 @@ public final class Elections {
             since = now;
             if (level.getRandom().nextInt(3) == 0) FolkTalk.speak(f, FolkTalk.pick(level.getRandom(), "Off to vote.", "Time I cast my vote.", "Back soon: the vote."));
         }
+        if (Polls.vote(f, level, c, since)) {                          // [featcivic] the queue at the ballot box, and the ballot in
+            if (c.ballots.containsKey(f.getUUID())) WALKING.remove(f.getUUID());
+            return true;
+        }
+        if (c.ballots.containsKey(f.getUUID())) { WALKING.remove(f.getUUID()); return false; }
         Villages.Village v = Villages.get(id);
         BlockPos board = VillageBoards.lectern(id);
         if (board == null) board = v != null ? v.centre() : f.blockPosition();
@@ -493,9 +510,26 @@ public final class Elections {
             if (b.id().equals(leader)) return 1;
             return 0;
         });
+        // [featcivic] A tie with nobody in office among the tied: settled by drawing lots, the same way every time.
+        String how = order.size() == 1 ? "unopposed" : "";
+        if (order.size() >= 2 && fc.votesFor(order.get(0).id()) == fc.votesFor(order.get(1).id())) {
+            int top = fc.votesFor(order.get(0).id());
+            List<Candidate> tied = new ArrayList<>();
+            for (Candidate k : order) if (fc.votesFor(k.id()) == top) tied.add(k);
+            boolean incumbent = false;
+            for (Candidate k : tied) if (k.id().equals(leader)) incumbent = true;
+            if (incumbent) how = "a tie, which keeps the one in office";
+            else {
+                Candidate lot = tied.get(Math.floorMod(Objects.hash(id, day, tied.size()), tied.size()));
+                order.remove(lot);
+                order.add(0, lot);
+                how = "a tie, decided by drawing lots";
+            }
+        }
         for (Candidate k : order) votes.put(k, c.votesFor(k.id()));
         Candidate winner = order.isEmpty() ? null : order.get(0);
-        Result r = new Result(winner, votes, c.ballots.size(), voters.size());
+        int playerVotes = Polls.players(c);
+        Result r = new Result(winner, votes, c.ballots.size(), voters.size() + playerVotes);
         c.counted = true;
         save(c);
         NOW.remove(id);
@@ -503,6 +537,9 @@ public final class Elections {
         Ledger.note(id, "election.next", Long.toString(day + Government.term(id, TERM)));   // [identity] a commune's seven, the elders' fourteen
         String tally = tally(r);
         Ledger.note(id, "election.last", day + "|" + (winner == null ? "" : winner.name()) + "|" + tally);
+        final String howFinal = how;
+        com.jrpetty.mcassistant.Guard.run("the result", () -> Polls.counted(level, v, r, howFinal, day));   // [featcivic] the chart, the seats
+        if (!how.isEmpty() && winner != null) Villages.tell(id, day, "the election was " + how + ": " + winner.name());
         if (winner == null) return r;
         if (speech == null) {
             install(level, v, winner, day);
@@ -568,11 +605,32 @@ public final class Elections {
         Result res = count(level, v, day, s);
         if (res.winner() == null) return;
         Candidate win = res.winner();
-        s.add(new Assemblies.Line(null, res.voted() + " of " + res.voters() + " have voted. The count: " + tally(res).replaceAll(" \\(.*\\)$", "") + ".", '?', null));
+        // [featcivic] The box opened and the ballots read out one by one: the notice over the box counts them up as they come.
+        s.add(new Assemblies.Line(null, FolkTalk.pick(r, "The polls are closed. The box is open: every ballot read out, every ballot counted.",
+            "The box is open. We count them here, in front of everyone.", "Polls closed. Let's count.", "The box, then. One at a time, out loud.",
+            "Every ballot is read out. Nobody touches the box but the counters.", "The count begins. Keep an eye on the notice."), '~',
+            () -> Polls.startCount(level, v, res)));
+        s.add(new Assemblies.Line(null, FolkTalk.pick(r, "That's one pile... and another.", "Counted twice, to be sure.", "Close, this.",
+            "Nearly there.", "A few more.", "Quiet at the back, please."), ' ', null));
+        s.add(new Assemblies.Line(null, res.voted() + " of " + res.voters() + " have voted. The count: " + tally(res).replaceAll(" \\(.*\\)$", "") + ".", '?',
+            () -> {
+                BlockPos bell = Polls.speechSpot(level, v);
+                level.playSound(null, bell, SoundEvents.BELL_BLOCK, SoundSource.NEUTRAL, 2.0F, 1.0F);
+                level.playSound(null, bell, SoundEvents.BELL_RESONATE, SoundSource.NEUTRAL, 1.5F, 1.0F);
+            }));
+        UUID before = Villages.elder(village);
         s.add(new Assemblies.Line(null, win.name() + " is our " + title + ", for " + win.platform().cares + "!", '!', () -> {
             install(level, v, win, day);
             Villages.tell(village, day, win.name() + " was elected " + title + " for " + win.platform().cares + " (" + tally(res) + ")");
+            com.jrpetty.mcassistant.Guard.run("the result's show", () -> Ceremonies.elected(level, v, win.id(), before, res, day));   // [featcivic]
         }));
+        VillageFolkEntity outgoing = before == null || before.equals(win.id()) ? null : loaded(village, before);
+        if (outgoing != null) {
+            s.add(new Assemblies.Line(before, FolkTalk.pick(r, "The chain's yours, " + win.name() + ". Look after it.", "Here. It's heavier than it looks.",
+                "Congratulations. The books are in order; mostly.", "It's yours now. Don't lose the key to the hall.", "Good luck. You'll need less of it than I did.",
+                "Over to you, " + win.name() + "."), '!', () -> Ceremonies.handOver(level, village, before, win.id())));
+        }
+        s.add(new Assemblies.Line(win.id(), Ceremonies.victorySpeech(r, win, title), '!', null));
         s.add(new Assemblies.Line(win.id(), FolkTalk.pick(r, "Thank you. I'll keep my word.", "I won't let you down.",
             "Thank you all. Now, to work!"), '!', null));
         int said = 0;

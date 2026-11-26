@@ -65,7 +65,8 @@ public final class Newcomers {
     /** Why they left. */
     public enum Cause {
         WAR("fleeing the war", "the war"), FAMINE("fleeing the famine", "the famine"), FIRE("burnt out of their homes", "the fire"),
-        FLOOD("flooded out of their homes", "the flood"), OUTSIDE("from far away", "trouble far away");
+        FLOOD("flooded out of their homes", "the flood"), OUTSIDE("from far away", "trouble far away"),
+        POLITICS("seeking a town run more to their liking", "the way their town was run");      // [featcivic] emigrants (Ideology)
 
         public final String words, what;
 
@@ -325,6 +326,11 @@ public final class Newcomers {
         Villages.tell(from.id(), day, who + " left for " + Villages.name(to.id()) + ", " + c.words);
         if (!household.isEmpty()) FolkTalk.speak(household.get(0), switch (c) {
             case WAR -> "We can't stand another day of this war. " + Villages.name(to.id()) + " might take us in.";
+            case POLITICS -> FolkTalk.pick(household.get(0).getRandom(), "We'd rather live where we have a say. " + Villages.name(to.id()) + ", then.",
+                "This isn't the town we signed up for. " + Villages.name(to.id()) + " might suit us better.",
+                "I'm told they do things differently in " + Villages.name(to.id()) + ". We'll see.",
+                "Pack the cart. We're trying " + Villages.name(to.id()) + ".",
+                "Nobody asked us. Somewhere else might.", "We've had enough of how things are run here.");   // [featcivic]
             case FAMINE -> "There's nothing left to eat here. We'll ask " + Villages.name(to.id()) + " to take us in.";
             default -> "Everything we had is gone. We'll try " + Villages.name(to.id()) + ".";
         });
