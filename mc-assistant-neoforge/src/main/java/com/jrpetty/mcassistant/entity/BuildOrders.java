@@ -1209,6 +1209,8 @@ public final class BuildOrders {
                 try (Accounts.Scope paid = Accounts.free("a player's commission, paid by the block")) { had = takeOne(level, v, c); }
                 if (!had) {
                     if (c.fitting() && left(o, day)) { laid.set(i); o.putInt("leftOut", o.getInt("leftOut") + 1); continue; }
+                    if (shortOf.isEmpty() && StoneYard.yardWork(c.item()) && StoneYard.has(id))             // [quarry2] the site waits: the quarry's cart comes
+                        StoneYard.waitAt(level, id, c.item(), remainingOf(seq, laid, c.item(), i), o.getString("buyerName") + "'s " + o.getString("name"), anchor);
                     if (shortOf.isEmpty()) shortOf = StoneYard.yardWork(c.item()) && StoneYard.has(id)          // [featbuild] the yard's stone
                         ? StoneYard.waitWords(remainingOf(seq, laid, c.item(), i), c.item())
                         : remainingOf(seq, laid, c.item(), i) + " " + new ItemStack(c.item()).getHoverName().getString().toLowerCase(Locale.ROOT);

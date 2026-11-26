@@ -131,6 +131,8 @@ public class TradeWagon extends Entity {
     boolean prop;
     /** The leg's ambush has been rolled (once a leg). */
     boolean ambushRolled;
+    /** [quarry2] The quarry's own handcart (QuarryCart drives it), not the town's trade wagon. */
+    boolean quarry;
     private double groundY = Double.NaN, frontY, rearY;
 
     // ------------------------------------------------------------------ client state (cached; no allocation per frame)
@@ -565,6 +567,7 @@ public class TradeWagon extends Entity {
         }
         tag.putFloat("Hp", hp);
         tag.putBoolean("Ambushed", ambushRolled);
+        if (quarry) tag.putBoolean("Quarry", true);
     }
 
     @Override
@@ -601,6 +604,7 @@ public class TradeWagon extends Entity {
         parkYaw = tag.getFloat("ParkYaw");
         hp = tag.contains("Hp") ? tag.getFloat("Hp") : kind().health;
         ambushRolled = tag.getBoolean("Ambushed");
+        quarry = tag.getBoolean("Quarry");
         cargoChanged();
         setShownFill(phase == Phase.LOADING || phase == Phase.UNLOADING ? 0 : realFill());
     }

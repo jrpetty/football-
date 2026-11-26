@@ -661,7 +661,7 @@ public class FeatBuildGameTests {
         if (!open(level, p) || !open(level, p.above())) return false;
         if (level.getBlockState(p).is(Blocks.LADDER)) return true;
         BlockState under = level.getBlockState(p.below());
-        return under.isFaceSturdy(level, p.below(), Direction.UP) || under.is(Blocks.LADDER);
+        return under.isFaceSturdy(level, p.below(), Direction.UP) || under.is(Blocks.LADDER) || under.is(BlockTags.STAIRS);
     }
 
     private static int top(ServerLevel level, int x, int z, int rim) {
@@ -810,13 +810,14 @@ public class FeatBuildGameTests {
 
     // ------------------------------------------------------------------ fb08: a quarry grown down to the bedrock
 
-    @GameTest(template = EMPTY, timeoutTicks = 8000, batch = "fb08_deep_quarry", required = false)   // the shaft held back (Quarry.SHAFTS)
+    @GameTest(template = EMPTY, timeoutTicks = 8000, batch = "fb08_deep_quarry")
     public static void fb08_deep_quarry(GameTestHelper helper) {
         com.jrpetty.mcassistant.entity.Quarry.SHAFTS = true;   // the shaft under test, whatever the game ships with
 
         ServerLevel level = helper.getLevel();
         Town t = town(helper, level, 8_250_000, 40, Villages.Age.STONE);
         UUID id = t.id();
+        Villages.setFieldsSide(id, TownPlan.WEST);             // the farmland on the far side from the quarry (the test is of the pit)
         Quarry.standDownForTests(false);
         Quarry.readyForTests(true);
         // A hill of stone out at a hundred and sixty blocks (the test world is flat: the real one has the rock), the rim
@@ -851,6 +852,7 @@ public class FeatBuildGameTests {
         double[] worst = { 0 };
         int[] tick = { 0 };
         long[] yardAt = { 0 };
+        int[] yard0 = { 0 };
         BlockPos[] mark = new BlockPos[1];
         Set<String> did = new HashSet<>();
         helper.onEachTick(() -> {
@@ -885,15 +887,21 @@ public class FeatBuildGameTests {
                 ok.that(Quarry.stageWords(level, s).matches("Quarry stage \\d+: \\d+\u00d7\\d+, \\d+ deep"), "the board's words: " + Quarry.stageWords(level, s));
                 int bottom = Quarry.bottomForTests(level, s);
                 int wet = 0;
+                List<String> wetAt = new ArrayList<>();
                 for (int x = b[0] - 2; x <= b[2] + 2; x++) for (int z = b[1] - 2; z <= b[3] + 2; z++) for (int y = bottom - 1; y <= rim + 1; y++) {
-                    if (!level.getFluidState(mp.set(x, y, z)).isEmpty()) wet++;
+                    if (level.getFluidState(mp.set(x, y, z)).isEmpty()) continue;
+                    // Open to the pit or the stair: a neighbour that is air (shut in the rock all round, it runs nowhere).
+                    boolean open = false;
+                    for (Direction d : Direction.values()) open |= level.getBlockState(mp.immutable().relative(d)).isAir();
+                    if (open) { wet++; if (wetAt.size() < 6) wetAt.add(mp.toShortString()); }
                 }
-                ok.that(wet == 0, "no water or lava anywhere in or round the pit: " + wet);
+                ok.that(wet == 0, "no water or lava open anywhere in or round the pit: " + wet + " " + wetAt);
                 ok.that(!Quarry.wetForTests(level, s.centre(), s.away()), "no water within " + Quarry.DRY + " blocks of its footprint at or over its top");
                 List<String> drops = unfenced(level, s, rim, 1000);
                 ok.that(drops.isEmpty(), "every drop fenced: " + drops);
-                // The bottom of the shaft: a way up from it to the gate, all the way, by the steps and the ladder.
-                BlockPos foot = new BlockPos(cx - 1, ground(level, cx - 1, cz - 1, rim, bottom - 3) + 1, cz - 1);
+                // The bottom of the shaft: a way up from it to the gate, all the way, by the stair and the terraces.
+                BlockPos foot = Quarry.stairFootForTests(level, s);
+                if (foot == null) { helper.fail("no stair down the shaft: " + ok.summary()); return; }
                 BlockPos out = Quarry.outsideForTests(level, s);
                 int[] area = { b[0] - 4, b[1] - 4, b[2] + 4, b[3] + 4 };
                 boolean way = walkable(level, foot, out, area, bottom - 2, rim + 4);
@@ -908,12 +916,23 @@ public class FeatBuildGameTests {
                     }
                     Kit.log("[VT] fb08 the ladder's column (ladder/gap/terrace): " + col);
                 }
-                int torches = 0;
-                for (int y = foot.getY(); y < rim; y++) if (level.getBlockState(new BlockPos(cx + 2, y, cz)).is(Blocks.WALL_TORCH)) torches++;
-                ok.that(torches >= 4, "the shaft lit down its wall: " + torches + " torches");
+                List<int[]> steps = Quarry.stairForTests(level, s);
+                int torches = 0, gap = 0, worstGap = 0, floors = 0;
+                for (int[] st : steps) {
+                    if (st[1] == 1) { torches++; gap = 0; } else worstGap = Math.max(worstGap, ++gap);
+                    floors += st[2];
+                }
+                Kit.log("[VT] fb08 the stair: " + steps.size() + " steps, " + torches + " torches, " + floors + " stair floors, longest dark run " + worstGap);
+                ok.that(steps.size() >= 16 && steps.get(steps.size() - 1)[0] == foot.getY(), "a stair all the way down: " + steps.size() + " steps to " + foot.toShortString());
+                ok.that(torches >= steps.size() / Quarry.TORCH_EVERY && worstGap < Quarry.TORCH_EVERY, "the stair lit, a torch at least every "
+                    + Quarry.TORCH_EVERY + " steps: " + torches + " torches, longest dark run " + worstGap);
+                ok.that(floors >= steps.size() - 2, "its steps laid as stairs: " + floors + " of " + steps.size());
                 ok.that(Quarry.lightsForTests(level, s), "no dark spot in the pit for a monster");
-                // A quarryman at the bottom with a load: out to the yard and back down to cut the floor's last block.
-                mark[0] = new BlockPos(cx + 1, foot.getY(), cz - 1);
+                // A quarryman at the bottom with a load: out to the yard and back down to cut a block left in the stair's foot.
+                mark[0] = foot.above(Quarry.HEAD - 1);
+                chest(level, t.heart(), 4, -4, new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.STONE_BRICKS, 64),
+                    new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.BRICKS, 64));   // the stores full: no load wanted in town
+                Villages.forgetStores(id);
                 level.setBlock(mark[0], Blocks.COBBLESTONE.defaultBlockState(), 3);
                 m.keepTradeForTests();
                 m.setJob(StationTask.MINE);
@@ -922,6 +941,7 @@ public class FeatBuildGameTests {
                 m.teleportTo(foot.getX() + 0.5, foot.getY(), foot.getZ() + 0.5);
                 m.getNavigation().stop();
                 Quarry.loadedForTests(m, 48);
+                yard0[0] = StoneYard.count(id, Items.COBBLESTONE);
                 level.setDayTime((level.getDayTime() / 24000L) * 24000L + 1050L);
                 last[0] = m.getX(); last[1] = m.getY(); last[2] = m.getZ();
                 com.jrpetty.mcassistant.entity.Blink.reset();
@@ -941,7 +961,9 @@ public class FeatBuildGameTests {
                     + " path " + (path == null ? "none" : path.getNodeCount() + " nodes to " + path.getTarget().toShortString() + " end " + (path.getEndNode() == null ? "-" : path.getEndNode().asBlockPos().toShortString())
                     + " reaches " + path.canReach() + " next " + path.getNextNodeIndex()) + " doing " + doing);
             }
-            if (yardAt[0] == 0 && StoneYard.count(id, Items.COBBLESTONE) >= 48 && doing != null && !doing.startsWith("TO_YARD")) {
+            com.jrpetty.mcassistant.entity.TradeWagon cart = com.jrpetty.mcassistant.entity.QuarryCart.cartForTests(level, id);
+            boolean up = StoneYard.count(id, Items.COBBLESTONE) >= yard0[0] + 48 || cart != null && com.jrpetty.mcassistant.entity.QuarryCart.aboardForTests(cart) >= 48;
+            if (yardAt[0] == 0 && up && doing != null && !doing.startsWith("TO_YARD")) {
                 yardAt[0] = tick[0];
                 Kit.log("[VT] fb08 at the yard after " + tick[0] + " ticks");
             }
@@ -959,6 +981,115 @@ public class FeatBuildGameTests {
                 com.jrpetty.mcassistant.entity.Blink.setOn(false);
                 helper.fail("the quarryman did not make the round: yard " + (yardAt[0] > 0 ? "reached at " + yardAt[0] : "never reached") + ", now "
                     + Quarry.doingForTests(m) + " at " + m.blockPosition().toShortString() + ", did " + did + "; " + ok.summary());
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------ fb11: the quarry's cart
+
+    /**
+     * [quarry2] fb11: a quarryman brings a load up to the quarry's handcart at its rim; full, it pushes it to the stone yard
+     * and on to the storehouse (the stores low on stone), unloads at each, and pushes it home again. The yard's stock and the
+     * stores' rise; the driver walks every step (never put anywhere: no jump, seen or not); the Stone page says where it is.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 7200, batch = "fb11_quarry_cart")
+    public static void fb11_quarry_cart(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, level, 8_270_000, 70, Villages.Age.STONE);
+        UUID id = t.id();
+        Villages.setFieldsSide(id, TownPlan.WEST);
+        Quarry.standDownForTests(false);
+        Quarry.readyForTests(true);
+        BlockPos c = rock(level, Kit.surface(level, t.heart().getX() + 40, t.heart().getZ() + 40), 14, 0);
+        Quarry.openForTests(level, t.v(), new Quarry.Site(c, Quarry.START, true));
+        helper.assertTrue(StoneYard.site(id) != null, "a yard");
+        StoneYard.layOutForTests(level, t.v());
+        chest(level, t.heart(), 4, -4, new ItemStack(Items.OAK_FENCE, 64), new ItemStack(Items.OAK_FENCE_GATE, 2), new ItemStack(Items.LANTERN, 16),
+            new ItemStack(Items.STONE_PICKAXE, 2), new ItemStack(Items.BREAD, 32));
+        Villages.forgetStores(id);
+        Quarry.fenceForTests(level, t.v());
+        com.jrpetty.mcassistant.entity.QuarryCart.ensureForTests(level, t.v());
+        com.jrpetty.mcassistant.entity.TradeWagon cart = com.jrpetty.mcassistant.entity.QuarryCart.cartForTests(level, id);
+        helper.assertTrue(cart != null, "a handcart stood at the quarry's rim");
+        BlockPos station = cart.blockPosition();
+        Kit.log("[VT] fb11 the cart at " + station.toShortString() + " (quarry " + c.toShortString() + ", yard " + StoneYard.site(id).centre().toShortString()
+            + ", stores " + t.heart().offset(4, 0, -4).toShortString() + ")");
+        VillageFolkEntity m = t.first();
+        m.keepTradeForTests();
+        m.setJob(StationTask.MINE);
+        m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_PICKAXE));
+        Ledger.note(id, "quarry.men", m.getStringUUID());
+        level.setDayTime((level.getDayTime() / 24000L) * 24000L + 1200L);
+        // The stores out of stone (the cart takes them some, and the yard's stone bricks with it), the yard with bricks to pick up.
+        for (BlockPos sc : Villages.storeChests(level, id)) {
+            if (!(level.getBlockEntity(sc) instanceof Container box)) continue;
+            for (int i = 0; i < box.getContainerSize(); i++) if (box.getItem(i).is(Items.COBBLESTONE) || box.getItem(i).is(Items.STONE_BRICKS)) box.setItem(i, ItemStack.EMPTY);
+            box.setChanged();
+        }
+        StoneYard.stockForTests(id, Items.STONE_BRICKS, 64);
+        int yard0 = StoneYard.count(id, Items.COBBLESTONE);
+        int stores0 = com.jrpetty.mcassistant.entity.Market.stock(level, id, x -> x.is(Items.COBBLESTONE) || x.is(Items.STONE_BRICKS));
+        int bricks0 = com.jrpetty.mcassistant.entity.Market.stock(level, id, x -> x.is(Items.STONE_BRICKS));
+        Quarry.loadedForTests(m, com.jrpetty.mcassistant.entity.QuarryCart.FULL);
+        com.jrpetty.mcassistant.entity.Blink.reset();
+        com.jrpetty.mcassistant.entity.Blink.setOn(true);
+        double[] last = { m.getX(), m.getY(), m.getZ() };
+        double[] worst = { 0 };
+        int[] tick = { 0 };
+        boolean[] drove = { false };
+        List<String> said = new ArrayList<>();
+        Set<String> did = new HashSet<>();
+        helper.onEachTick(() -> {
+            tick[0]++;
+            double dx = m.getX() - last[0], dz = m.getZ() - last[2];
+            double step = Math.sqrt(dx * dx + dz * dz);
+            if (tick[0] > 3 && step > worst[0]) {
+                worst[0] = step;
+                if (step > 1.0) Kit.log("[VT] fb11 a step of " + String.format("%.2f", step) + " at tick " + tick[0] + " doing " + Quarry.doingForTests(m));
+            }
+            last[0] = m.getX(); last[1] = m.getY(); last[2] = m.getZ();
+            String doing = Quarry.doingForTests(m);
+            if (doing != null && did.add(doing.replaceAll("\\d+", "#"))) Kit.log("[VT] fb11 tick " + tick[0] + ": " + doing + " at " + m.blockPosition().toShortString());
+            String words = com.jrpetty.mcassistant.entity.QuarryCart.words(id);
+            if (words != null && (said.isEmpty() || !said.get(said.size() - 1).equals(words))) {
+                said.add(words);
+                Kit.log("[VT] fb11 tick " + tick[0] + " " + words + " (cart at " + cart.blockPosition().toShortString() + ", trip " + com.jrpetty.mcassistant.entity.QuarryCart.tripForTests(id) + ")");
+            }
+            if (m.getUUID().equals(com.jrpetty.mcassistant.entity.QuarryCart.driverForTests(cart))) drove[0] = true;
+            if (tick[0] % 200 == 0) Kit.log("[VT] fb11 tick " + tick[0] + " cart " + com.jrpetty.mcassistant.entity.QuarryCart.phaseForTests(cart) + " at "
+                + String.format("%.1f,%.1f", cart.getX(), cart.getZ()) + " along " + String.format("%.1f/%.1f", com.jrpetty.mcassistant.entity.Wagons.alongForTests(cart),
+                com.jrpetty.mcassistant.entity.Wagons.lengthForTests(cart)) + "; driver at " + String.format("%.1f,%.1f", m.getX(), m.getZ()) + " " + Quarry.doingForTests(m));
+            long[] tally = com.jrpetty.mcassistant.entity.QuarryCart.tallyForTests(id);
+            int yard = StoneYard.count(id, Items.COBBLESTONE);
+            int stores = com.jrpetty.mcassistant.entity.Market.stock(level, id, x -> x.is(Items.COBBLESTONE) || x.is(Items.STONE_BRICKS));
+            if (tally[0] >= 1 && "PARKED".equals(com.jrpetty.mcassistant.entity.QuarryCart.phaseForTests(cart))) {
+                Kit.Expect ok = new Kit.Expect();
+                ok.that(drove[0], "the quarryman pushed the cart");
+                ok.that(yard > yard0, "the yard's stock rose: " + yard0 + " -> " + yard);
+                ok.that(stores > stores0, "the stores' stone rose: " + stores0 + " -> " + stores);
+                int bricks = com.jrpetty.mcassistant.entity.Market.stock(level, id, x -> x.is(Items.STONE_BRICKS));
+                ok.that(bricks > bricks0 && StoneYard.count(id, Items.STONE_BRICKS) < 64, "the yard's stone bricks picked up and taken to the stores: stores "
+                    + bricks0 + " -> " + bricks + ", yard " + StoneYard.count(id, Items.STONE_BRICKS));
+                ok.that(tally[1] >= com.jrpetty.mcassistant.entity.QuarryCart.FULL - 8, "the load carried: " + tally[1]);
+                ok.that(cart.blockPosition().distSqr(station) <= 9, "home at its station: " + cart.blockPosition().toShortString() + " (station " + station.toShortString() + ")");
+                ok.that(said.stream().anyMatch(x -> x.startsWith("Cart: on the road to the yard, ")), "the board said it was on the road to the yard: " + said);
+                ok.that(said.stream().anyMatch(x -> x.matches("Cart: taking \\d+ stone to the storehouse.*")), "the board said where it took the rest: " + said);
+                ok.that(worst[0] < 1.1, "the driver walked every step, never put anywhere: longest step " + String.format("%.2f", worst[0]));
+                ok.that(com.jrpetty.mcassistant.entity.Blink.byCause().isEmpty(), "no jumps: " + com.jrpetty.mcassistant.entity.Blink.byCause());
+                net.minecraft.nbt.CompoundTag rep = Quarry.report(level, t.v());
+                ok.that(rep.getString("cart").startsWith("Cart: ") && rep.getLong("cartTrips") >= 1, "the Stone page's cart line: " + rep.getString("cart") + ", " + rep.getLong("cartTrips") + " trips");
+                Kit.log("[VT] fb11 home after " + tick[0] + " ticks: yard " + yard0 + " -> " + yard + ", stores " + stores0 + " -> " + stores + ", carried " + tally[1]
+                    + "; said " + said + "; last " + rep.getString("cartLast"));
+                Quarry.standDownForTests(true);
+                com.jrpetty.mcassistant.entity.Blink.setOn(false);
+                if (!ok.clean()) helper.fail(ok.summary());
+                helper.succeed();
+            }
+            if (tick[0] == 7000) {
+                com.jrpetty.mcassistant.entity.Blink.setOn(false);
+                helper.fail("the cart never made the round: " + said + "; cart " + com.jrpetty.mcassistant.entity.QuarryCart.phaseForTests(cart) + " at "
+                    + cart.blockPosition().toShortString() + " aboard " + com.jrpetty.mcassistant.entity.QuarryCart.aboardForTests(cart) + "; quarryman "
+                    + Quarry.doingForTests(m) + " at " + m.blockPosition().toShortString() + "; yard " + yard + ", stores " + stores + ", did " + did);
             }
         });
     }

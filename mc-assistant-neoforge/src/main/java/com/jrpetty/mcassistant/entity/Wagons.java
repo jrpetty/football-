@@ -598,6 +598,7 @@ public final class Wagons {
     /** TradeWagon.tick (server): whatever its phase asks. */
     static void tick(ServerLevel level, TradeWagon w) {
         if (w.prop) return;                                              // [roles-e] a prop for the pictures: nothing to do
+        if (w.quarry) { QuarryCart.tick(level, w); return; }             // [quarry2] the quarry's handcart: its own round
         if (w.town == null || w.tickCount % 100 == 17 && Villages.get(w.town) == null) {
             letGo(level, w);                                             // its town is no more: nothing to carry for
             w.wrecked = true;
@@ -1391,7 +1392,11 @@ public final class Wagons {
         w.giveWayTicks = 0;
         int stage = ++w.stage;
         String did;
-        if (stage == 1 && reroute(level, w)) {
+        if (w.quarry && stage >= 3) {
+            QuarryCart.replan(level, w);                                 // [quarry2] its way found afresh, never nudged on
+            w.stage = 0;
+            did = "found its way again";
+        } else if (stage == 1 && reroute(level, w)) {
             did = "drove round";
         } else if (stage <= 2) {
             w.stage = 2;
@@ -1540,7 +1545,9 @@ public final class Wagons {
             d.trip(null);
         }
         long day = level.getDayTime() / 24000L;
-        if (w.town != null) {
+        if (w.town != null && w.quarry) {
+            Villages.tell(w.town, day, "the quarry's handcart was " + why + (spilt.isEmpty() ? "" : ", and its load spilt") + "; another will be made");
+        } else if (w.town != null) {
             Villages.tell(w.town, day, "our " + w.kind().label + " was " + why + (spilt.isEmpty() ? "" : ", and its load spilt on the road"));
             disown(w.town);
         }
@@ -1797,7 +1804,7 @@ public final class Wagons {
     }
 
     /** The ground round it kept loaded while it is out in sight: moved along when it has gone a chunk. */
-    private static void keepWindow(ServerLevel level, TradeWagon w) {
+    static void keepWindow(ServerLevel level, TradeWagon w) {
         BlockPos here = w.blockPosition();
         if (w.window != null && w.window.distSqr(here) < 16 * 16) return;
         ChunkLoad.setLoaded(level, windowOwner(w), here, TradeWagon.WINDOW_RADIUS, true);
@@ -1807,7 +1814,7 @@ public final class Wagons {
         w.window = here.immutable();
     }
 
-    private static void releaseWindow(ServerLevel level, TradeWagon w) {
+    static void releaseWindow(ServerLevel level, TradeWagon w) {
         if (w.window == null) return;
         ChunkLoad.setLoaded(level, windowOwner(w), w.window, TradeWagon.WINDOW_RADIUS, false);
         w.window = null;

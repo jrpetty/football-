@@ -28,13 +28,20 @@ final class StonePage {
         } else {
             r.showMe(q.getString("stageWords") + " — " + q.getInt("dist") + " blocks out, " + (q.getBoolean("outcrop") ? "at a rock outcrop" : "dug down"),
                 UiStyle.TEXT, WorksPages.at(q), "the quarry",
-                q.getBoolean("shaft") ? "its terraces step down a block at a time to the shaft; a ladder goes down the shaft, fenced round and lit."
+                q.getBoolean("shaft") ? "its terraces step down a block at a time to the shaft; a stair winds down the shaft's walls to the bottom, fenced at its head and lit all the way."
                     : "its terraces step down a block at a time; the fence and lanterns go round its rim.", "its ground is not loaded.");
             r.text(WorksPages.num(q.getLong("cut")) + " blocks cut so far. " + (q.getBoolean("fenced") ? "Fenced and lit all round." : "Its fence and lanterns are going up.")
                 + " It grows a stage at a time as it is worked: wider to 33 across, then a shaft down to the bedrock"
                 + (q.getBoolean("bedrock") ? " (reached: now it is lengthened away from the town)" : "")
                 + "; a full yard lets it rest. It stays out past the town's growth line (" + q.getInt("growth") + " blocks); if the town grows out to it,"
                 + " it closes and a new one opens further out.", UiStyle.TEXT_MUTED);
+            if (!q.getString("cart").isEmpty()) {
+                // [quarry2] The quarry's handcart: where it is, and what it has done.
+                r.text(q.getString("cart"), UiStyle.TEXT);
+                r.text(q.getLong("cartTrips") + (q.getLong("cartTrips") == 1 ? " trip" : " trips") + ", " + WorksPages.num(q.getLong("cartCarried"))
+                    + " stone carried" + (q.getString("cartLast").isEmpty() ? "" : "; last: " + q.getString("cartLast")) + ". It takes the stone wherever it"
+                    + " is wanted: a building waiting on it first, then the mason, the storehouse, and the yard the rest.", UiStyle.TEXT_MUTED, 1);
+            }
             ListTag men = q.getList("men", Tag.TAG_COMPOUND);
             if (men.isEmpty()) r.text("No quarrymen yet: the miners come first, then a spare hand.", UiStyle.WARNING);
             for (Tag t : men) {
@@ -54,7 +61,7 @@ final class StonePage {
             r.bar("Rough stone", WorksPages.frac(rough, most), 0xFF8A8A8A, WorksPages.num(rough) + " (stores " + y.getInt("storesRough") + ")");
             r.bar("Stone bricks", WorksPages.frac(dressed, most), UiStyle.INFO_FILL, WorksPages.num(dressed) + " (stores " + y.getInt("storesDressed") + ")");
             r.bar("Bricks", WorksPages.frac(brick, most), 0xFFB5523B, WorksPages.num(brick) + " (stores " + y.getInt("storesBrick") + ")");
-            r.text("City buildings draw their stone from the yard first, then the stores. A quarryman carts a load to the stores whenever they run under"
+            r.text("City buildings draw their stone from the yard first, then the stores. The quarry's cart takes a load to the stores whenever they run under"
                 + " 64 cobblestone, 64 stone bricks or 32 bricks. The mason dresses cobblestone into stone bricks (a coal for eight) and fires clay into"
                 + " bricks while a quarryman is at the yard.", UiStyle.TEXT_FAINT);
         }

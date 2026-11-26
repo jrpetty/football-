@@ -197,7 +197,7 @@ public final class StoneYard {
      */
     public static boolean forBuild(ServerLevel level, Villages.Village v, Item it, int n, String who) {
         if (!isYardStone(it) || !has(v.id())) return false;
-        if (take(v.id(), it, n)) {
+        if (takeAtSite(v.id(), it, n) || take(v.id(), it, n)) {      // [quarry2] what the cart brought to the sites first
             flow(level, v.id(), 3, n);
             Map<Item, Short> s = SHORT.get(v.id());
             if (s != null) s.remove(it);
@@ -207,6 +207,61 @@ public final class StoneYard {
         SHORT.computeIfAbsent(v.id(), k -> new ConcurrentHashMap<>()).merge(it, new Short(n, day, who),
             (a, b) -> new Short(Math.min(9999, a.wanted() + b.wanted()), a.since(), b.who()));
         return false;
+    }
+
+    // ------------------------------------------------------------------ [quarry2] the building sites the cart brings stone to
+
+    static final String AT_SITE = "yard.atsite";
+    /** A building site waiting on the yard's stone: what, how many more, whose, where, and when it last said so. */
+    public record Wait(Item item, int wanted, String who, BlockPos at, long when) {}
+
+    private static final Map<UUID, Map<String, Wait>> WAITS = new ConcurrentHashMap<>();
+
+    /** A site waiting on this many of a yard stone (a cut stone counted as the blocks it is cut from), marked where it stands. */
+    public static void waitAt(ServerLevel level, UUID town, Item it, int n, String who, BlockPos at) {
+        Item base = isYardStone(it) ? it : baseFor(it);
+        if (base == null || n <= 0) return;
+        Map<String, Wait> m = WAITS.computeIfAbsent(town, k -> new ConcurrentHashMap<>());
+        m.put(BuiltInRegistries.ITEM.getKey(base) + "@" + at.asLong(), new Wait(base, n, who, at.immutable(), level.getGameTime()));
+        if (m.size() > 32) m.values().removeIf(w -> level.getGameTime() - w.when() > 2400L);
+    }
+
+    /** The sites waiting on the yard's stone now (said so in the last two minutes), less what the cart has brought them. */
+    public static List<Wait> waiting(UUID town) {
+        List<Wait> out = new ArrayList<>();
+        Map<String, Wait> m = WAITS.get(town);
+        if (m == null || m.isEmpty()) return out;
+        long newest = 0;
+        for (Wait w : m.values()) newest = Math.max(newest, w.when());
+        Map<Item, Integer> there = atSite(town);
+        for (Wait w : m.values()) {
+            if (newest - w.when() > 2400L) continue;
+            int still = w.wanted() - there.getOrDefault(w.item(), 0);
+            if (still > 0) out.add(new Wait(w.item(), still, w.who(), w.at(), w.when()));
+        }
+        return out;
+    }
+
+    /** The stone the cart has set down at the building sites, not yet laid. */
+    public static Map<Item, Integer> atSite(UUID town) {
+        return QuarryCart.items(Ledger.note(town, AT_SITE));
+    }
+
+    /** The cart's load set down at a building site: the builders there draw on it before the yard. */
+    static void toSite(ServerLevel level, UUID town, Item it, int n) {
+        Map<Item, Integer> m = atSite(town);
+        m.merge(it, n, Integer::sum);
+        Ledger.note(town, AT_SITE, QuarryCart.items(m));
+        flow(level, town, 2, n);
+    }
+
+    private static boolean takeAtSite(UUID town, Item it, int n) {
+        Map<Item, Integer> m = atSite(town);
+        int have = m.getOrDefault(it, 0);
+        if (have < n) return false;
+        m.put(it, have - n);
+        Ledger.note(town, AT_SITE, QuarryCart.items(m));
+        return true;
     }
 
     /** The yard's block a cut stone is cut from (stairs, slabs and walls of cobblestone, stone, stone bricks and bricks), or null. */
@@ -309,6 +364,7 @@ public final class StoneYard {
     private static final Map<UUID, Long> LOOKED = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
+        WAITS.clear();
         SHORT.clear();
         DIRTY.clear();
         DRESSED_AT.clear();
