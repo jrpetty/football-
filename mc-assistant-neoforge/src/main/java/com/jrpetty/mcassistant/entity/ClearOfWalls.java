@@ -6,6 +6,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.level.BlockGrowFeatureEvent;
 
 /**
@@ -24,7 +25,9 @@ import net.neoforged.neoforge.event.level.BlockGrowFeatureEvent;
  * that it is no hair's breadth but a block set down in it, which StepOut sees to.
  *
  * <p>And a sapling does not grow into a tree while a folk stands where its trunk would go (a woodsman back at its plot
- * stood on the sapling it had planted, and the oak came up through it): it grows on a later try, the folk gone.
+ * stood on the sapling it had planted, and the oak came up through it): it grows on a later try, the folk gone. Nor does
+ * sand or gravel come down on a folk standing under it (two children hiding under a gravel path laid across a passage,
+ * with nothing under it, were walled in where they crouched when it fell): it stays where it hung till they are gone.
  */
 @EventBusSubscriber(modid = McAssistantMod.MODID)
 public final class ClearOfWalls {
@@ -77,6 +80,28 @@ public final class ClearOfWalls {
         }
         if (best != null) f.getNavigation().moveTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5, 1.0D);
     }
+
+    /** Gravel or sand about to fall: not onto a folk under it. It is put back as it hung (no neighbour told, so it does not
+     *  fall again at once), and falls at a later look with nobody under it. */
+    @SubscribeEvent
+    public static void blockFalls(EntityJoinLevelEvent e) {
+        if (e.loadedFromDisk() || !(e.getEntity() instanceof net.minecraft.world.entity.item.FallingBlockEntity fb)
+                || !(e.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) return;
+        BlockPos from = fb.blockPosition();
+        BlockPos land = from;
+        for (int i = 0; i < FALL_LOOK && level.getBlockState(land.below()).getCollisionShape(level, land.below()).isEmpty(); i++) land = land.below();
+        AABB column = new AABB(from.getX(), land.getY(), from.getZ(), from.getX() + 1, from.getY() + 1, from.getZ() + 1);
+        if (level.getEntitiesOfClass(VillageFolkEntity.class, column, VillageFolkEntity::isAlive).isEmpty()) return;
+        if (!level.getBlockState(from).canBeReplaced()) return;                 // its place taken already: let it be
+        e.setCanceled(true);
+        level.setBlock(from, fb.getBlockState(), 2 | 16);
+        HELD_UP++;
+    }
+
+    /** How far down under a falling block a folk is looked for. */
+    static final int FALL_LOOK = 8;
+    /** Falls held up over a folk so far (the tests, the soak). */
+    public static volatile long HELD_UP;
 
     /** Bodies set clear so far (the tests, the soak). */
     public static volatile long CLEARED;

@@ -303,4 +303,46 @@ public class SoakGameTests {
         helper.assertTrue(grew, "with nobody on it, the sapling grows");
         helper.succeed();
     }
+
+    /**
+     * [tp49] Gravel hung over a folk (a path laid across a passage with nothing under it) that is set to fall stays where it
+     * hung while the folk is under it, and falls once it is gone (ClearOfWalls.blockFalls): it never comes down on the folk.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "soak_sk07_gravel_held")
+    public static void sk07_gravel_held(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int x = 9_448_000, z = 92000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        // A pit a block across and two deep up in the clear air, gravel hung over it with nothing under the gravel.
+        int y = heart.getY() + 12, x0 = x + 6, z0 = z + 6;
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int dy = -1; dy <= 4; dy++) {
+            boolean pit = dx == 0 && dz == 0 && dy >= 0 && dy <= 1;
+            level.setBlock(new BlockPos(x0 + dx, y + dy, z0 + dz), (dy == -1 || dy <= 1 && !pit ? Blocks.STONE : Blocks.AIR).defaultBlockState(), 3);
+        }
+        BlockPos hung = new BlockPos(x0, y + 2, z0);
+        level.setBlock(hung, Blocks.GRAVEL.defaultBlockState(), 2 | 16);
+        f.moveTo(x0 + 0.5, y, z0 + 0.5, 0.0F, 0.0F);
+        f.getNavigation().stop();
+        level.scheduleTick(hung, Blocks.GRAVEL, 1);
+        helper.runAfterDelay(12, () -> {
+            boolean held = level.getBlockState(hung).is(Blocks.GRAVEL);
+            boolean walled = f.isInWall() || level.getBlockState(new BlockPos(x0, y + 1, z0)).is(Blocks.GRAVEL);
+            // The folk gone: it falls.
+            f.moveTo(x0 + 0.5, y + 3, z0 + 3.5, 0.0F, 0.0F);
+            level.scheduleTick(hung, Blocks.GRAVEL, 1);
+            helper.runAfterDelay(30, () -> {
+                boolean fell = !level.getBlockState(hung).is(Blocks.GRAVEL) && level.getBlockState(new BlockPos(x0, y, z0)).is(Blocks.GRAVEL);
+                Kit.log("sk07 gravel over a folk in a pit: held " + held + " (the folk walled in " + walled + "); with the folk gone, fell " + fell);
+                helper.assertTrue(held && !walled, "the gravel stays hung while the folk is under it");
+                helper.assertTrue(fell, "and falls once it is gone");
+                helper.succeed();
+            });
+        });
+    }
 }
