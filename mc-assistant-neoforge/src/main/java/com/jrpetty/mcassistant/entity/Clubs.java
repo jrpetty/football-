@@ -142,6 +142,9 @@ public final class Clubs {
         MEETING_TOLD.clear();
         MATCHES.clear();
         QUIZZES.clear();
+        GREENS.clear();
+        WATER.clear();
+        DRY.clear();
         forceForTests.clear();
     }
 
@@ -279,12 +282,16 @@ public final class Clubs {
     }
 
     private static final Map<UUID, BlockPos> WATER = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> DRY = new ConcurrentHashMap<>();
 
     /** The water's edge nearest the town: a dry block beside water, within forty-eight blocks of the heart. */
     @Nullable
     static BlockPos water(ServerLevel level, Villages.Village v) {
         BlockPos known = WATER.get(v.id());
         if (known != null && level.isLoaded(known) && waterBeside(level, known)) return known;
+        Long looked = DRY.get(v.id());
+        if (looked != null && level.getGameTime() - looked < 1200 && level.getGameTime() >= looked) return null;
+        DRY.put(v.id(), level.getGameTime());
         BlockPos c = v.centre();
         for (int r = 8; r <= 48; r += 4) {
             for (int k = 0; k < 24; k++) {
@@ -530,6 +537,17 @@ public final class Clubs {
 
     /** The green: the town's pitch if it has one; else open, level ground near the park or the edge of the square. */
     static Field green(ServerLevel level, Villages.Village v) {
+        Object[] c = GREENS.get(v.id());
+        long now = level.getGameTime();
+        if (c != null && now - (Long) c[0] < 1200 && now >= (Long) c[0]) return (Field) c[1];
+        Field f = findGreen(level, v);
+        GREENS.put(v.id(), new Object[]{ now, f });
+        return f;
+    }
+
+    private static final Map<UUID, Object[]> GREENS = new ConcurrentHashMap<>();
+
+    static Field findGreen(ServerLevel level, Villages.Village v) {
         Ledger.Building p = Pitch.of(v.id());
         if (p != null) return new Field(p.anchor(), p.facing(), true);
         Object[] pg = Pastimes.playground(v.id(), v);

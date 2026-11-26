@@ -67,6 +67,79 @@ public final class LifeTick {
         }
     }
 
+    /**
+     * Operators only, for the camera and the smoke test: {@code /village life weekend|stalls|fair|match|choir|service|off}. A
+     * player never needs it: everything here happens by itself on its day.
+     */
+    @SubscribeEvent
+    public static void onCommands(net.neoforged.neoforge.event.RegisterCommandsEvent e) {
+        e.getDispatcher().register(net.minecraft.commands.Commands.literal("village").then(net.minecraft.commands.Commands.literal("life")
+            .requires(s -> s.hasPermission(2))
+            .then(net.minecraft.commands.Commands.argument("what", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c -> {
+                ServerLevel level = c.getSource().getLevel();
+                Villages.Village v = Villages.nearest(level, net.minecraft.core.BlockPos.containing(c.getSource().getPosition()), 400);
+                if (v == null) { c.getSource().sendFailure(net.minecraft.network.chat.Component.literal("No town near.")); return 0; }
+                String said = camera(level, v, com.mojang.brigadier.arguments.StringArgumentType.getString(c, "what"));
+                c.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(said), false);
+                return 1;
+            }))));
+    }
+
+    static String camera(ServerLevel level, Villages.Village v, String what) {
+        long day = level.getDayTime() / 24000L;
+        switch (what) {
+            case "weekend" -> { WorkHours.forceForTests = true; return "The week kept in this town whatever its age."; }
+            case "off" -> {
+                WorkHours.forceForTests = false;
+                Fairground.forceForTests(v.id(), false);
+                for (Clubs.Club cl : Clubs.Club.values()) Clubs.forceMeetingForTests(v.id(), cl, false);
+                Church.forceAll = false;
+                Stalls.clear(level, v.id());
+                Clubs.endMatch(level, v, day, "off");
+                return "Back to the calendar.";
+            }
+            case "stalls" -> {
+                WorkHours.forceForTests = true;
+                int n = 0, shoppers = 0;
+                net.minecraft.world.item.ItemStack[] samples = { new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.POPPY, 3),
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 4), new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COD, 2),
+                    new net.minecraft.world.item.ItemStack(McAssistantMod.WOODEN_TOY.get(), 1), new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.APPLE, 6),
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SWEET_BERRIES, 6) };
+                for (AssistantEntity a : Villages.folkOf(v.id())) {
+                    if (!(a instanceof VillageFolkEntity f) || f.isBaby() || Visitors.is(f)) continue;
+                    if (n < 6) {
+                        java.util.List<net.minecraft.world.item.ItemStack> w = Stalls.surplus(level, f);
+                        if (w.isEmpty()) w = java.util.List.of(samples[n % samples.length].copy(), samples[(n + 2) % samples.length].copy());
+                        if (Stalls.raise(level, v, f.getUUID(), f.displayNameCap(), w, day, false) != null) {
+                            WeekendLife.forceForTests(f, WeekendLife.Outing.SELL);
+                            n++;
+                            continue;
+                        }
+                    }
+                    WeekendLife.forceForTests(f, WeekendLife.Outing.MARKET);
+                    f.earn(10);
+                    shoppers++;
+                }
+                return n + " stalls up in the square; " + shoppers + " folk out shopping.";
+            }
+            case "fair" -> {
+                WorkHours.forceForTests = true;
+                Fairground.forceForTests(v.id(), true);
+                Fairground.round(level, v);
+                return "Fair day: " + Fairground.lampsUp(v.id()) + " lanterns; traders on the road in.";
+            }
+            case "match" -> {
+                WorkHours.forceForTests = true;
+                Clubs.forceMeetingForTests(v.id(), Clubs.Club.SPORTS, true);
+                String m = Clubs.matchForTests(level, v);
+                return m == null ? "No match: " + Clubs.whyNot(level, v.id(), Clubs.Club.SPORTS) : "Kick-off: " + m;
+            }
+            case "choir" -> { Clubs.forceMeetingForTests(v.id(), Clubs.Club.CHOIR, true); return "Choir practice now."; }
+            case "service" -> { Church.forceAll = true; return "Everybody to the Sunday service (set the time to a Sunday morning)."; }
+            default -> { return "weekend, stalls, fair, match, choir, service or off."; }
+        }
+    }
+
     /** A town's round. */
     public static void round(ServerLevel level, Villages.Village v) {
         try {

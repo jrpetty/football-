@@ -42,7 +42,9 @@ public final class WorkHours {
 
     public static void resetForTests() {
         LATE.clear();
+        CACHE.clear();
         forceForTests = false;
+        cacheOff = false;
     }
 
     /** Tests: keep the hours in a young town too. */
@@ -119,6 +121,23 @@ public final class WorkHours {
      */
     @Nullable
     public static Boolean shift(VillageFolkEntity f) {
+        if (cacheOff) return shiftNow(f);
+        // Asked many times a tick (onShift): the answer kept for a second, the clock's hour being all it turns on.
+        long now = f.level().getGameTime();
+        Object[] c = CACHE.get(f.getUUID());
+        if (c != null && now - (Long) c[0] < 20 && now >= (Long) c[0] && f.stationTask() == c[2]) return (Boolean) c[1];
+        Boolean b = shiftNow(f);
+        if (CACHE.size() > 8192) CACHE.clear();
+        CACHE.put(f.getUUID(), new Object[]{ now, b, f.stationTask() });
+        return b;
+    }
+
+    private static final Map<UUID, Object[]> CACHE = new ConcurrentHashMap<>();
+    /** Tests that move the clock by hand turn the cache off. */
+    public static volatile boolean cacheOff = false;
+
+    @Nullable
+    static Boolean shiftNow(VillageFolkEntity f) {
         UUID village = f.ownerId();
         if (village == null || f.isBaby() || f.isHired() || f.stationTask() == AssistantEntity.StationTask.GUARD) return null;
         long dt = f.level().getDayTime(), day = dt / 24000L;
