@@ -503,6 +503,10 @@ public final class NightWatch {
         return r != null && r.street;
     }
 
+    public static void tickForTests(ServerLevel level, Villages.Village v) {
+        tick(level, v);
+    }
+
     public static Set<String> heldForTests(UUID id) {
         return new HashSet<>(HOLDERS.getOrDefault(id, Map.of()).keySet());
     }

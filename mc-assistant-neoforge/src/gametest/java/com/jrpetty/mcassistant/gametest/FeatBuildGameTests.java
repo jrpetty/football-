@@ -317,6 +317,8 @@ public class FeatBuildGameTests {
         double[] last = { g.getX(), g.getY(), g.getZ() };
         boolean[] lit = { false };
         int[] ticks = { 0 };
+        int[] rang = { 0 };
+        List<net.minecraft.world.entity.Mob> raiders = new ArrayList<>();
         helper.onEachTick(() -> {
             ticks[0]++;
             double dx = g.getX() - last[0], dy = g.getY() - last[1], dz = g.getZ() - last[2];
@@ -332,8 +334,33 @@ public class FeatBuildGameTests {
                 visited.add(stop);
                 Kit.log("[VT] fb03 at stop " + stop.toShortString() + " after " + ticks[0] + " ticks" + (NightWatch.streetForTests(g) ? " (street)" : " (wall walk)"));
             }
-            if (visited.size() >= 2 && lit[0] && ticks[0] > 60) {
+            if (visited.size() >= 2 && lit[0] && ticks[0] > 60 && rang[0] == 0) {
+                // Trouble seen from the wall: raiders out past it, in the watchman's sight. The bell.
+                rang[0] = ticks[0];
+                BlockPos at = g.blockPosition();
+                int side = NightWatch.streetForTests(g) ? 0 : 0;
+                for (int i = 0; i < 3; i++) {
+                    net.minecraft.world.entity.monster.Pillager p = net.minecraft.world.entity.EntityType.PILLAGER.create(level);
+                    if (p == null) continue;
+                    BlockPos out = Kit.surface(level, at.getX() - 6 + 6 * i, at.getZ() - 14);
+                    p.moveTo(out.getX() + 0.5, out.getY(), out.getZ() + 0.5, 0F, 0F);
+                    p.setNoAi(true);
+                    p.setPersistenceRequired();
+                    level.addFreshEntity(p);
+                    raiders.add(p);
+                }
+                return;
+            }
+            if (rang[0] > 0 && ticks[0] - rang[0] < 400 && !com.jrpetty.mcassistant.entity.Raids.underAlarm(id)) {
+                NightWatch.tickForTests(level, t.v());
+                return;
+            }
+            if (rang[0] > 0 && visited.size() >= 2 && lit[0]) {
                 Kit.Expect ok = new Kit.Expect();
+                ok.that(com.jrpetty.mcassistant.entity.Raids.underAlarm(id), "raiders seen from the wall: the bell rung");
+                ok.that(String.join(" ", NightWatch.logOf(id)).contains("rang the bell"), "the bell in the night's log: " + NightWatch.logOf(id));
+                for (net.minecraft.world.entity.Mob p : raiders) p.discard();
+                com.jrpetty.mcassistant.entity.Raids.allClear(level, t.v());
                 List<String> log = NightWatch.logOf(id);
                 CompoundTag rep = NightWatch.report(level, t.v());
                 Kit.log("[VT] fb03 log " + log + " | rota " + rep.getList("rota", 10));
@@ -484,6 +511,8 @@ public class FeatBuildGameTests {
         long stone = StoneYard.count(id, Items.COBBLESTONE);
         Kit.log("[VT] fb05 cut " + cut + ", the yard holds " + StoneYard.stock(id));
         ok.that(cut > 150, "the pit cut: " + cut + " blocks");
+        Quarry.Site wider = Quarry.site(id);
+        ok.that(wider != null && wider.size() > Quarry.START, "opened wider as it was worked: " + (wider == null ? "closed" : wider.size() + " across"));
         ok.that(stone > 150, "its stone in the yard: " + stone + " cobblestone");
         // Terraces: no step of more than a block anywhere in the pit or onto its rim.
         int worst = 0;
