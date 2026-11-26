@@ -55,6 +55,8 @@ public final class Restraint {
         Kind kind;
         @Nullable BlockPos pullTo;
         long since;
+        /** Where its leader has walked lately: the prisoner follows the leader's own path, round corners and through doors. */
+        final java.util.ArrayDeque<Vec3> trail = new java.util.ArrayDeque<>();
 
         Hold(UUID who, int entity, @Nullable UUID leader, Kind kind, long since) {
             this.who = who;
@@ -90,6 +92,7 @@ public final class Restraint {
             h.kind = kind;
         }
         h.pullTo = null;
+        h.trail.clear();
         if (e instanceof Player p) {
             slow(p, true);
             p.setSprinting(false);
@@ -131,6 +134,7 @@ public final class Restraint {
         if (h == null) return;
         h.leader = leader == null ? null : leader.getUUID();
         h.pullTo = null;
+        h.trail.clear();
         dirty = true;
     }
 
@@ -257,15 +261,21 @@ public final class Restraint {
                         com.jrpetty.mcassistant.Guard.run("a prisoner broke away", () -> Justice.brokeAway(level, p, h.leader));
                         continue;
                     }
-                    if (d > SLACK) to = l.position();
+                    Vec3 lp = l.position();
+                    if (h.trail.isEmpty() || h.trail.peekLast().distanceToSqr(lp) > 0.8 * 0.8) h.trail.addLast(lp);
+                    while (h.trail.size() > 48) h.trail.pollFirst();
+                    // The leader's path, from the step nearest the prisoner on: the crumbs it has reached dropped.
+                    while (h.trail.size() > 1 && h.trail.peekFirst().distanceToSqr(p.position()) < 1.1 * 1.1) h.trail.pollFirst();
+                    if (d > SLACK) to = h.trail.isEmpty() ? lp : h.trail.peekFirst();
                 }
-            }
+            } else h.trail.clear();
             if (to == null || t % 2 != 0) continue;
             Vec3 at = p.position();
             Vec3 dir = new Vec3(to.x - at.x, 0, to.z - at.z);
             double len = dir.length();
             if (len < (h.pullTo != null ? 0.35 : 0.01)) continue;
-            double speed = h.pullTo != null ? Math.min(0.22, 0.06 + len * 0.08) : Math.min(0.42, 0.1 + (len - SLACK) * 0.09);
+            double behind = h.pullTo != null ? len : (h.leader == null ? len : Math.max(len, distTo(level, server, h.leader, p) - SLACK + 0.5));
+            double speed = h.pullTo != null ? Math.min(0.22, 0.06 + len * 0.08) : Math.min(0.42, 0.12 + behind * 0.09);
             Vec3 v = dir.scale(speed / len);
             double y = p.getDeltaMovement().y;
             if (p.horizontalCollision && p.onGround()) y = 0.42;                 // a step up: over it
@@ -273,6 +283,12 @@ public final class Restraint {
             p.hurtMarked = true;
         }
         if (dirty || t % 60 == 0) sync(server);
+    }
+
+    private static double distTo(ServerLevel level, MinecraftServer server, UUID leader, ServerPlayer p) {
+        Entity l = level.getEntity(leader);
+        if (l == null) l = server.getPlayerList().getPlayer(leader);
+        return l == null || l.level() != level ? 0 : l.distanceTo(p);
     }
 
     // ------------------------------------------------------------------ to the clients

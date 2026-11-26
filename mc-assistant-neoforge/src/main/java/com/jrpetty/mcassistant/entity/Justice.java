@@ -903,6 +903,20 @@ public final class Justice extends SavedData {
         return d == null ? 0 : d.copyTag().getInt(STOLEN);
     }
 
+    // ------------------------------------------------------------------ a special constable's badge shown to a wanted player
+
+    @SubscribeEvent
+    public static void onBadge(PlayerInteractEvent.EntityInteract e) {
+        if (!(e.getTarget() instanceof ServerPlayer target) || !(e.getEntity() instanceof ServerPlayer p) || !enabled()) return;
+        if (!e.getItemStack().is(com.jrpetty.mcassistant.item.PoliceItems.CONSTABLE_BADGE.get())) return;
+        e.setCanceled(true);
+        e.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
+        com.jrpetty.mcassistant.Guard.run("a constable's arrest of a player", () -> {
+            String said = Arrests.constableArrest((ServerLevel) p.level(), p, target);
+            if (said != null) p.displayClientMessage(Component.literal(said), false);
+        });
+    }
+
     // ------------------------------------------------------------------ fraud: a forged coin passed
 
     @SubscribeEvent
@@ -950,6 +964,7 @@ public final class Justice extends SavedData {
                     round(level, v);
                 }
                 apologies(level);
+                Arrests.constableRound(level);
                 Jail.tick(level);
                 Assize.sittings(level);
             }

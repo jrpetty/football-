@@ -63,6 +63,7 @@ final class Arrests {
     private static final Map<UUID, Integer> PATHED = new ConcurrentHashMap<>();
 
     static void resetForTests() {
+        CONSTABLE_LED.clear();
         TASKS.clear();
         LOST.clear();
         PATHED.clear();
@@ -298,6 +299,17 @@ final class Arrests {
         Task t = gid == null ? null : TASKS.get(gid);
         VillageFolkEntity g = gid == null ? null : Civics.find(level, gid);
         JCase c = t == null ? null : Justice.get(t.caseId);
+        Object[] led = CONSTABLE_LED.remove(p.getUUID());
+        if (t == null && led != null) {                                    // away from a special constable
+            JCase k = Justice.get((int) led[2]);
+            if (k != null) {
+                addCharge(k, Charge.RESISTING, "pulled free of a special constable");
+                k.stage = Stage.WARRANT;
+                Justice.notice(p, "Resisting arrest", "You pulled free of the special constable: resisting arrest has been added to the charges.",
+                    "The warrant stands; the watch will come for you. Giving yourself up counts in your favour.");
+            }
+            return;
+        }
         if (t == null || g == null || c == null) return;
         Villages.Village v = Villages.get(c.village);
         addCharge(c, Charge.RESISTING, "pulled free of " + g.displayNameCap());
@@ -474,6 +486,69 @@ final class Arrests {
         g.getLookControl().setLookAt(p, 30.0F, 30.0F);
         Jail.fed(level, v, p, g);
         end(g, p);
+    }
+
+    // ------------------------------------------------------------------ a special constable's arrest of a player
+
+    /** By prisoner: the player constable walking it to the jail, and where to. */
+    private static final Map<UUID, Object[]> CONSTABLE_LED = new ConcurrentHashMap<>();
+
+    /**
+     * A sworn special constable shows its badge to a player with a warrant out (right-click): the irons on, and the
+     * constable walks it to the jail on the lead itself. Null if there is nothing to arrest it for.
+     */
+    @Nullable
+    static String constableArrest(ServerLevel level, ServerPlayer constable, ServerPlayer target) {
+        JCase c = null;
+        for (JCase o : Justice.namedAgainst(target.getUUID())) if (o.stage == Stage.WARRANT && o.joinedTo == 0) { c = o; break; }
+        if (c == null) return "There's no warrant out for " + Belonging.called(target) + ". A constable arrests only on the watch's warrant.";
+        Villages.Village v = Villages.get(c.village);
+        if (v == null || !PlayerLaw.sworn(c.village, constable.getUUID())) return "You're not sworn to the watch of the town that wants them.";
+        if (constable.distanceTo(target) > 4) return "Get closer: within arm's reach.";
+        UUID g = guardOn(target.getUUID());
+        if (g != null) TASKS.remove(g);
+        Restraint.on(target, constable, Jail.irons(level, v) ? Restraint.Kind.CUFFS : Restraint.Kind.ROPE);
+        c.stage = Stage.ARREST;
+        c.officer = constable.getUUID();
+        c.officerName = Belonging.called(constable) + " (special constable)";
+        c.notes.add(Belonging.called(constable) + ", special constable, arrested " + c.accusedName);
+        List<String> found = search(level, v, target, c);
+        Jail.Spot s = Jail.spot(level, v, target.getUUID());
+        CONSTABLE_LED.put(target.getUUID(), new Object[]{ constable.getUUID(), s, c.id });
+        Justice.notice(target, "You are under arrest",
+            "Special constable " + Belonging.called(constable) + " has arrested you for " + c.chargeWords() + " at " + c.place + " (witness: "
+                + Justice.nonEmpty(c.firstWitness(), "the watch's evidence") + ")." + (found.isEmpty() ? "" : " Searched: " + String.join(", ", found) + " taken as evidence."),
+            "You're being walked to " + (s == null ? "the watch" : s.words) + ". Pulling away is resisting arrest. Prepare your defence on this page.");
+        Police.log(v.id(), level.getDayTime(), "arrest", c.accusedName + " was arrested by special constable " + Belonging.called(constable), null, 0);
+        Justice.changed();
+        return "You've arrested " + c.accusedName + " for " + c.chargeWords() + ". Walk them to " + (s == null ? "the watch" : s.words)
+            + " (the arrow points there); the cell takes them when you're at its door.";
+    }
+
+    /** Each second: a constable's prisoner at the cell door is taken in. */
+    static void constableRound(ServerLevel level) {
+        for (Map.Entry<UUID, Object[]> e : CONSTABLE_LED.entrySet()) {
+            ServerPlayer p = level.getServer().getPlayerList().getPlayer(e.getKey());
+            JCase c = Justice.get((int) e.getValue()[2]);
+            if (p == null || c == null || !Restraint.restrained(p)) { CONSTABLE_LED.remove(e.getKey()); continue; }
+            Jail.Spot s = (Jail.Spot) e.getValue()[1];
+            Villages.Village v = Villages.get(c.village);
+            if (v == null) { CONSTABLE_LED.remove(e.getKey()); continue; }
+            BlockPos front = s == null ? null : s.front;
+            if (front == null || p.blockPosition().distSqr(front) <= 2.5 * 2.5) {
+                if (s != null && s.door != null) WatchHouse.setDoor(level, s.door, true);
+                if (s != null) {
+                    double dx = p.getX() - (s.inside.getX() + 0.5), dz = p.getZ() - (s.inside.getZ() + 0.5);
+                    if (dx * dx + dz * dz > 0.9 * 0.9) { Restraint.pullTo(p, s.inside); continue; }
+                    if (s.door != null) WatchHouse.setDoor(level, s.door, false);
+                }
+                CONSTABLE_LED.remove(e.getKey());
+                Restraint.off(p);
+                Jail.lockUp(level, v, p.getUUID(), c, s, null);
+                ServerPlayer k = level.getServer().getPlayerList().getPlayer((UUID) e.getValue()[0]);
+                if (k != null) k.sendSystemMessage(Component.literal(c.accusedName + " is locked up for the court. Your wage comes when the case closes.").withStyle(ChatFormatting.GOLD));
+            }
+        }
     }
 
     // ------------------------------------------------------------------ fines unpaid
