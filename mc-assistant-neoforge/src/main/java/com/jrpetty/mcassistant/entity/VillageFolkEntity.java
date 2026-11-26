@@ -462,6 +462,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!level().isClientSide && lyingInStep()) return;              // [tp46] drawing itself up into its bed from the foot
         if (!level().isClientSide && Stroll.step(this)) return;          // [tp43] led along a way, a step a tick
         if (!level().isClientSide && FolkLod.rests(this, input)) return;
+        // [tp49] Never a step begun from a body a hair into a block: it would walk on into it (ClearOfWalls). Not a rider in
+        // the cage, whose glide is its own.
+        if (!level().isClientSide && !isPassenger() && !isSleeping() && !noPhysics && MineLift.state(getUUID()) != MineLift.State.RIDING) ClearOfWalls.clear(this);
         super.travel(input);
     }
 
