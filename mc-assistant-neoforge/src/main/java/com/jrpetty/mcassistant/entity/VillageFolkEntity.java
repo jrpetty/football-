@@ -2402,7 +2402,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 learned = schooled.title.toLowerCase(java.util.Locale.ROOT);
             }
             if (village != null && learned == null && apprenticeTo != StationTask.NONE && apprenticeTo != StationTask.GUARD
-                    && !Villages.overStaffed(village, apprenticeTo)) {
+                    && (!Villages.overStaffed(village, apprenticeTo)
+                        || lines.skill() >= Apprenticeship.QUALIFY && apprenticeTo.name().equals(lines.trade()))) {   // [featfolk] a qualified hand keeps its trade
                 setStation(blockPosition(), apprenticeTo);
                 awardXp(APPRENTICE_XP);
                 learned = apprenticeTo.title.toLowerCase(java.util.Locale.ROOT);

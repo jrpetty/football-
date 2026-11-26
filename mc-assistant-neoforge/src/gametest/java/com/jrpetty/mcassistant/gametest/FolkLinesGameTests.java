@@ -196,10 +196,12 @@ public class FolkLinesGameTests {
             child.setStation(heart.offset(-12, 0, 0), StationTask.FARM);
             mother.setAgeForTests(Lineage.RETIRE_AT + 1);
             BlockPos post = mother.stationPos();
+            com.jrpetty.mcassistant.entity.WorkZone ground = mother.workZone();
             Lineage.daily(level, mother, level.getDayTime() / 24000L);
             Kit.log("[VT] fl01 retired " + mother.lines().retired() + " heir post " + child.stationPos() + " inherited " + child.lines().inherited());
             helper.assertTrue(mother.lines().retired() && mother.stationTask() == StationTask.NONE, "the old mother retires");
-            helper.assertTrue(post.equals(child.stationPos()) && child.stationTask() == StationTask.FARM, "her post is her child's now");
+            helper.assertTrue((ground != null ? ground.center().equals(child.workZone() == null ? null : child.workZone().center()) : post.equals(child.stationPos()))
+                && child.stationTask() == StationTask.FARM, "her post and ground are her child's now");
             helper.assertTrue(!child.lines().inherited().isEmpty() && Lineage.cardLine(mother) != null, "the card says what was handed down");
             helper.assertTrue("Retired".equals(mother.tradeTitle()), "she is retired: " + mother.tradeTitle());
             // Kept across a save.
@@ -478,6 +480,11 @@ public class FolkLinesGameTests {
             String who = p.getName().getString();
             f.life().widowed();
             PlayerFamily.forgetForTests(id, p.getUUID());
+            // Room for a child: a house of four beds.
+            BlockPos hp = Kit.surface(level, heart.getX() - 16, heart.getZ() + 16);
+            BuildGoal.stamp(level, "house", hp, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
+            Ledger.built(id, "house", hp, Direction.NORTH);
+            Villages.recountBeds(id);
             // Not respected yet: no.
             String no = PlayerFamily.talk(f, p, "Will you walk out with me?");
             helper.assertTrue(PlayerFamily.courting(id, p.getUUID()) == null, "nobody walks out with a player the town does not respect: " + no);
