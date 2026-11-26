@@ -686,6 +686,8 @@ public class FolkProfileScreen extends Screen {
             p.add(new Goal(font, capital(you.getString("standing")), (aff + 100) * 5, (aff > 0 ? "+" : "") + aff
                 + (you.getBoolean("knows") ? "" : you.getString("heard_from").isEmpty() ? " · you have never spoken"
                 : " · only heard of you, from " + you.getString("heard_from")), p.w));
+            ListTag seen = you.getList("seen", Tag.TAG_STRING);                // [featfolk] what it saw of you (Witness)
+            for (int i = 0; i < seen.size(); i++) p.text("• " + seen.getString(i), UiStyle.TEXT_MUTED);
         }
     }
 

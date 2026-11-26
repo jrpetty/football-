@@ -732,6 +732,8 @@ public final class PlayerLaw {
         bind(badge, village, p.getName().getString());
         if (!own && !p.getInventory().add(badge)) p.drop(badge, false);
         Police.town(village).remove("badgeFor");
+        Witness.dealt(f, p, Witness.Kind.SERVED_WATCH, "");                   // [featfolk] sworn before it, and seen sworn
+        Witness.seen(level, p, Witness.Kind.SERVED_WATCH, "", f, 2);
         CompoundTag c = constable(village, p.getUUID());
         c.putString("name", p.getName().getString());
         c.putLong("sworn", Math.max(1, level.getDayTime() / 24000L));

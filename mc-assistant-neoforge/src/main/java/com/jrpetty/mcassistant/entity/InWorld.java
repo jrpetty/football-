@@ -124,6 +124,10 @@ public final class InWorld implements PlayerLife.Page {
         r("library", "home", "The library: the Library page", "page:Library"),
         r("museum", "home", "The museum: the Museum page", "page:Museum"),
         r("school", "home", "The school: the School page", "page:School"),
+        r("families", "home", "The town's family trees: the Families page", "page:Families"),                   // [featfolk]
+        r("courting", "home", "Courting a folk: talk to it, About, Home, \"Walk out with me?\"", "talk:Will you walk out with me?"),
+        r("apprentices", "home", "Masters, journeymen and apprentices: the Apprentices page", "page:Apprentices"),
+        r("respect", "civic", "Your respect in the town, from those who saw you: the Respect page", "page:Respect"),
         r("care", "home", "The town's care: the Society page", "page:Society"),
         r("lifespans", "home", "Lifespans: the People page", "page:People"),
         // ---------------------------------------------------------------- the town's books

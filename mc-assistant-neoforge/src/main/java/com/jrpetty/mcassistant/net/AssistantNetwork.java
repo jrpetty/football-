@@ -116,6 +116,11 @@ public final class AssistantNetwork {
         } catch (RuntimeException e) {
             com.mojang.logging.LogUtils.getLogger().error("[ui53] the viewer's side of the town map left out", e);
         }
+        try {
+            com.jrpetty.mcassistant.entity.FolkLinesReport.viewer(books, level, v, player);   // [featfolk] families, apprentices, respect
+        } catch (RuntimeException e) {                                                  // [ui53] the books open without it
+            com.mojang.logging.LogUtils.getLogger().error("[featfolk] the viewer's families and respect left out", e);
+        }
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CityStatsPayload(books));
     }
 

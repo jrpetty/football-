@@ -262,6 +262,13 @@ public final class QuestTalk {
             if (f.getUUID().equals(q.giver)) continue;
             String g = q.flag("gossip");
             String who = p.getUUID().equals(q.player) ? "you" : q.playerName;
+            // [featfolk] Of you, only from a folk that dealt with you itself; anybody else has it from the one who asked
+            // you, and says so (Witness).
+            if (who.equals("you") && !Witness.contact(f, p.getUUID())) {
+                if (q.kind != Kind.BOARD && !q.giverName.isEmpty()) out.add(q.giverName + " says you did them a good turn: "
+                    + QuestRun.lower(q.title) + ". I've only their word for it.");
+                continue;
+            }
             if (!g.isEmpty()) out.add(g.replace("{who}", who));
             else if (q.kind != Kind.BOARD) out.add("Did you hear? " + capFirst(who) + " " + (who.equals("you") ? "did" : "did") + " "
                 + q.giverName + " a good turn: " + QuestRun.lower(q.title) + ".");

@@ -845,6 +845,11 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public FolkSkills.Book knacks() { return knacks; }
 
+    /** [featfolk] What it has seen of the players, its line of masters, its courting, what it handed down (FolkLines). */
+    private final FolkLines lines = new FolkLines();
+
+    public FolkLines lines() { return lines; }
+
     /** Its experience at a trade, nought for one it never worked (FolkSkills: how near its next knack point is). */
     public int xpInTrade(StationTask t) { return t == StationTask.NONE ? 0 : tradeXp.getOrDefault(t, 0); }
 
@@ -1748,10 +1753,9 @@ public class VillageFolkEntity extends AssistantEntity {
             stopTalking();
             if (isFollowing(p)) stopFollowing();
             FolkTalk.speak(this, FolkTalk.ouch(this));
-            for (VillageFolkEntity saw : level().getEntitiesOfClass(VillageFolkEntity.class, getBoundingBox().inflate(12.0),
-                    f -> f != this && f.isAlive() && f.persona.rolled())) {
-                saw.persona.feelFor(p.getUUID(), who, -8);
-            }
+            // [featfolk] It remembers who hit it; those who saw it (in sight and range: Witness) think the worse of them.
+            Witness.dealt(this, p, Witness.Kind.HIT, "");
+            if (level() instanceof net.minecraft.server.level.ServerLevel sl) Witness.seen(sl, p, Witness.Kind.HIT, "", this, -8);
             refreshMood();
         } else if (took && !level().isClientSide && !showcase
                 && source.getEntity() instanceof net.minecraft.world.entity.monster.Enemy
@@ -1799,10 +1803,13 @@ public class VillageFolkEntity extends AssistantEntity {
             Villages.tell(village, day, you + " saved " + displayNameCap() + " from a " + monster);
             Standing.stir(village, p.getUUID());
         }
-        for (VillageFolkEntity f : level().getEntitiesOfClass(VillageFolkEntity.class, getBoundingBox().inflate(16.0),
-                f -> f != this && f.isAlive() && f.persona.rolled())) {
-            int warmth = f.life.affinity(getUUID());
-            if (warmth >= Social.FRIEND || getUUID().equals(f.life.partner())) f.persona.feelFor(p.getUUID(), you, 5);
+        // [featfolk] It remembers who saved it; those who saw it remember it too, and its friends among them are grateful.
+        Witness.dealt(this, p, Witness.Kind.RESCUED, FolkTalk.article(monster));
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            for (VillageFolkEntity f : Witness.seen(sl, p, Witness.Kind.RESCUED, FolkTalk.article(monster), this, 0)) {
+                int warmth = f.life.affinity(getUUID());
+                if (warmth >= Social.FRIEND || getUUID().equals(f.life.partner())) f.persona.feelFor(p.getUUID(), you, 5);
+            }
         }
         getLookControl().setLookAt(p, 30.0F, 30.0F);
         FolkTalk.speak(this, FolkTalk.pick(getRandom(), "You saved my life, " + you + "! I'll never forget it.",
@@ -1821,6 +1828,11 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!level().isClientSide) NetherRuns.fell(this, cause);         // [nether] lost on a Nether run: the team and the town know where
         if (!level().isClientSide) Fashion.died(this);                   // [fashion] what it wore falls where it fell, with its pack
         if (!level().isClientSide) Individual.died(this);                // [individual] its keepsake to its eldest child; mourned
+        if (level() instanceof net.minecraft.server.level.ServerLevel seen
+                && cause.getEntity() instanceof net.minecraft.world.entity.player.Player killer) {
+            Witness.seen(seen, killer, Witness.Kind.STRUCK_DOWN, "", this, -20);   // [featfolk] those who saw it
+        }
+        if (level() instanceof net.minecraft.server.level.ServerLevel heirs) Lineage.died(heirs, this);   // [featfolk] its trade and house to its heir
         if (!level().isClientSide) Favourites.died(this);                // [ui] remembered on the lists of those who follow it
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
         if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
@@ -2230,8 +2242,12 @@ public class VillageFolkEntity extends AssistantEntity {
             if (offWork) getLookControl().setLookAt(other, 30.0F, 30.0F);
             if (!partners && life.partner() == null && other.life.partner() == null && !isBaby() && !other.isBaby()
                     && now >= Beliefs.weddingWarmth(village) && other.life.affinity(getUUID()) >= Beliefs.weddingWarmth(village)   // [culture2] sooner by the Hearth
-                    && !life.parents().contains(other.displayNameCap()) && !other.life.parents().contains(displayNameCap())) {
+                    && !life.parents().contains(other.displayNameCap()) && !other.life.parents().contains(displayNameCap())
+                    // [featfolk] after walking out (Courtship), or two already as close as two folk get
+                    && (Courtship.ready(this, other) || now >= 90 && other.life.affinity(getUUID()) >= 90 && Courtship.free(this, other) && Courtship.free(other, this))) {
                 courted(other, server, village);
+            } else if (!partners && offWork && !isBaby() && !other.isBaby() && getRandom().nextInt(4) == 0) {
+                Courtship.notice(this, other, village);                   // [featfolk] fond enough: they start walking out
             }
             if (offWork && persona.rolled() && other.persona.rolled() && tickCount - lastChatterTick > 1200
                     && getRandom().nextInt(6) == 0 && level().getNearestPlayer(this, 16.0) != null) {
@@ -2340,8 +2356,9 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Two who have grown as close as two folk get pledge themselves; the village
      *  holds the wedding the next evening. */
-    private void courted(VillageFolkEntity other, net.minecraft.server.level.ServerLevel server, UUID village) {
+    void courted(VillageFolkEntity other, net.minecraft.server.level.ServerLevel server, UUID village) {
         long day = level().getDayTime() / 24000L;
+        Courtship.pledged(this, other);                                    // [featfolk] the walking out is over
         life.partnerWith(other.getUUID(), other.displayNameCap());
         other.life.partnerWith(getUUID(), displayNameCap());
         Villages.tell(village, day, displayNameCap() + " and " + other.displayNameCap() + " are to be wed");
@@ -2357,18 +2374,11 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Tell another folk what this one thinks of the player it has most to say about. */
     public void gossip(VillageFolkEntity other, boolean trusted, boolean aloud, UUID village) {
-        UUID about = persona.talkedAbout();
-        if (about == null) return;
-        String name = persona.nameOf(about);
-        int mine = persona.affinity(about);
-        boolean news = !other.persona.knows(about);
-        if (!other.persona.hearsay(about, name, mine, displayNameCap(), trusted)) return;
-        Standing.stir(village, about);
-        if (!aloud || isSleeping() || other.isSleeping() || tickCount - lastChatterTick < 600
-                || level().getNearestPlayer(this, 16.0) == null || getRandom().nextInt(3) != 0) return;
-        lastChatterTick = tickCount;
-        getLookControl().setLookAt(other, 30.0F, 30.0F);
-        FolkTalk.gossip(this, other, name, mine, news);
+        // [featfolk] Only what it saw or did with a player itself, and only a witness passes word on (Witness.passOn):
+        // a folk with nothing of its own to tell says nothing of anybody.
+        boolean out = aloud && !isSleeping() && !other.isSleeping() && tickCount - lastChatterTick >= 600
+            && level().getNearestPlayer(this, 16.0) != null && getRandom().nextInt(3) == 0;
+        if (Witness.passOn(this, other, trusted, out) && out) lastChatterTick = tickCount;
     }
 
     /** A child's day: play, and stay near its mother or father; bed at dark. */
@@ -2392,7 +2402,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 learned = schooled.title.toLowerCase(java.util.Locale.ROOT);
             }
             if (village != null && learned == null && apprenticeTo != StationTask.NONE && apprenticeTo != StationTask.GUARD
-                    && !Villages.overStaffed(village, apprenticeTo)) {
+                    && (!Villages.overStaffed(village, apprenticeTo)
+                        || lines.skill() >= Apprenticeship.QUALIFY && apprenticeTo.name().equals(lines.trade()))) {   // [featfolk] a qualified hand keeps its trade
                 setStation(blockPosition(), apprenticeTo);
                 awardXp(APPRENTICE_XP);
                 learned = apprenticeTo.title.toLowerCase(java.util.Locale.ROOT);
@@ -2414,12 +2425,15 @@ public class VillageFolkEntity extends AssistantEntity {
                     called = true;
                 }
             }
+            String rank = village == null || !(level() instanceof net.minecraft.server.level.ServerLevel lv) ? ""
+                : Apprenticeship.cameOfAge(lv, this, stationTask(), day);            // [featfolk] journeyman, or apprentice still
             if (village != null) Assemblies.cameOfAge(village, this, learned);
             if (village != null) Villages.tell(village, day, displayNameCap() + " grew up"
                 + (learned == null ? "" : schooled != StationTask.NONE ? " and went to work as " + School.a(schooled) + ", level "
                     + veteranLevel() + " from the school"
                     : called ? " and went to work as a " + learned
-                    : " and became a " + learned + ", as " + mentorName() + " taught them"));
+                    : " and became a " + learned + ", as " + mentorName() + " taught them")
+                + (rank.isEmpty() ? "" : " (" + rank + ")"));
             FolkTalk.speak(this, schooled != StationTask.NONE
                 ? FolkTalk.pick(getRandom(), "I'm " + School.a(schooled) + " at last — I learned it at school!", "All grown up, and "
                     + School.a(schooled) + " already: level " + veteranLevel() + "!")
@@ -2435,6 +2449,8 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || villageCentre == null) return;
+        if (SchoolDays.homeLesson(this, server)) return;      // [featfolk] no school (or no teacher): its lessons at home
+        if (SchoolDays.recess(this, server)) return;          // [featfolk] break in the school yard
         // Mornings, once it is old enough: at a grown-up's side at work, learning the trade.
         if (day - bornDay >= LawBook.apprenticeFrom(ownerId(), 1) && level().getDayTime() % 24000L < 7000L && apprentice(server)) return;   // [identity] the apprentice age
         // Afternoons in the park, when the town has one (Park).
@@ -2620,12 +2636,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         getLookControl().setLookAt(teacher, 30.0F, 30.0F);
         if (getRandom().nextInt(12) == 0) swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-        if (getRandom().nextInt(40) == 0 && level().getNearestPlayer(this, 16.0) != null) {
-            FolkTalk.speak(this, FolkTalk.pick(getRandom(), "Like this?", "Can I have a go?", "Why do you do it that way?",
-                "I'm going to be a " + apprenticeTo.title.toLowerCase(java.util.Locale.ROOT) + " too!"));
-            teacher.sayLater(FolkTalk.pick(getRandom(), "That's it — gently now.", "Watch my hands.", "You'll get the knack.",
-                "Not bad at all!"), 40);
-        }
+        Apprenticeship.beside(this, teacher);                    // [featfolk] its skill rises with its master's teaching; a word now and then
         return true;
     }
 
@@ -2655,6 +2666,9 @@ public class VillageFolkEntity extends AssistantEntity {
         bornDay = level().getDayTime() / 24000L - daysOld;
         childhood();
     }
+
+    /** [featfolk] This bed its own from now (a spouse moving into a player's home: PlayerFamily). */
+    public void moveIntoBed(BlockPos pos) { takeBed(pos); }
 
     /** [tidy] Tests only: this bed its own, as though it had lain down in it. */
     public void takeBedForTests(BlockPos pos) { takeBed(pos); }
@@ -2719,6 +2733,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // A shopping trip once begun is seen through: the favourite spot or a friend would otherwise turn it round
         // halfway, every tick, till the trip ran out of time with nothing bought and the larder at home still bare.
         if (ShoppingTrips.underWay(this) && ShoppingTrips.errand(this, server)) return;
+        if (Courtship.walk(this, server)) return;      // [featfolk] walking out: the day's walk with the other
         // [folk-ui] Its needs first (FolkNeeds): lonely, it goes looking for company before anything it would do on its
         // own; short of comfort, its savings go on its home before its favourite spot.
         if (FolkNeeds.low(this, FolkNeeds.SOCIAL) && keepCompany(server)) return;
@@ -3080,6 +3095,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public String tradeTitle() {
+        if (!isBaby() && lines.retired()) return "Retired";             // [featfolk] its trade handed down (Lineage)
         return isBaby() ? "Child" : super.tradeTitle();
     }
 
@@ -3505,6 +3521,10 @@ public class VillageFolkEntity extends AssistantEntity {
             growingOld(today);
             if (!isAlive()) return;
             refreshOldAgeGait();
+            if (level() instanceof net.minecraft.server.level.ServerLevel lines) {
+                Apprenticeship.daily(lines, this, today);           // [featfolk] an apprentice qualifies, a journeyman a master
+                Lineage.daily(lines, this, today);                  // [featfolk] an old folk with an heir hands its trade on
+            }
         }
         if (isBaby()) { childhood(); return; }
         // On the road with a caravan: that is the day's work, day and night until it is home.
@@ -3522,6 +3542,13 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (Militia.muster(this)) return;               // [war-prep] a morning of the war: the militia musters and drills
+        if (WeddingDecor.dressing(this)) return;        // [featfolk] dressing the wedding's place (or taking it down): the day waits
+        if (lines.retired()) {                          // [featfolk] retired: its trade handed down, its days its own (Lineage)
+            if (!(level() instanceof net.minecraft.server.level.ServerLevel old) || level().isNight() || isSleeping()) {
+                if (!isSleeping() && peekJob() == null) bedtime();
+            } else if (!(offWorkNow() && Courtship.walk(this, old))) Lineage.retiredDay(this, old);
+            return;
+        }
         // Nobody goes looking for ground after dark: a folk with no trade yet spends the
         // night like everybody else, and looks in the morning.
         if (workZone() == null && !onShift()) {
@@ -7117,7 +7144,9 @@ public class VillageFolkEntity extends AssistantEntity {
     private VillageFolkEntity bear(net.minecraft.server.level.ServerLevel server, VillageFolkEntity partner, UUID village, long bornOn) {
         VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(server);
         if (child == null) return null;
-        child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
+        BlockPos born = Lineage.birthplace(server, this);            // [featfolk] at home, when its mother is near it
+        if (born.equals(blockPosition())) child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
+        else child.moveTo(born.getX() + 0.5, born.getY(), born.getZ() + 0.5, getYRot(), 0.0F);
         child.rename(Beliefs.childName(village, server.getRandom(), this, partner));   // [culture2] a name of its town's faith
         // Less than its parents spent on it — see childKit. A village that
         // could breed its way to a full larder would never have to farm.
@@ -8927,6 +8956,7 @@ public class VillageFolkEntity extends AssistantEntity {
         for (java.util.Map.Entry<StationTask, Integer> e : tradeXp.entrySet()) trades.putInt(e.getKey().name(), e.getValue());
         tag.put("TradeXp", trades);
         if (!knacks.isEmpty()) tag.put("Knacks", knacks.save());
+        if (!lines.isEmpty()) tag.put("FolkLines", lines.save());       // [featfolk]
         tag.putInt("Comforts", comforts);
         tag.putLong("ComfortDay", comfortDay);
         if (isBaby()) tag.putBoolean("Child", true);
@@ -9021,6 +9051,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         refreshLevelPerks();
         knacks.load(tag.getCompound("Knacks"));                 // none in an older save
+        lines.load(tag.getCompound("FolkLines"));               // [featfolk] none in an older save
         this.comforts = tag.getInt("Comforts");
         this.comfortDay = tag.contains("ComfortDay") ? tag.getLong("ComfortDay") : -10;
         if (tag.getBoolean("Child")) setChild(true);

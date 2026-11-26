@@ -6,13 +6,15 @@
       "title": "Love and weddings",
       "icon": "minecraft:poppy",
       "kind": "what",
-      "q": ["do villagers get married", "how do folk marry", "weddings in the village", "can folk fall in love", "who is married to who", "wedding ceremony", "romance between villagers", "can i marry a villager"],
-      "kw": ["marry", "marriage", "wedding", "love", "partner", "couple"],
-      "answer": "Folk fall in love and marry by themselves, with a wedding at the town's heart the next evening. Players don't marry folk.",
-      "more": ["Two folk who grow as fond of each other as folk get pledge themselves, and the next evening the town holds the wedding: the couple at the heart, the town in a ring, the bell, vows, cheers and dancing.", "They move into the better of their two houses."],
-      "tips": ["Ask 'Family & friends' (About tab) or 'Gossip' to hear who's together and who's sweet on whom.", "A widow or widower may love and marry again."],
-      "related": ["life_children", "festivals_feasts", "talk_about"],
-      "covers": []
+      "q": ["do villagers get married", "how do folk marry", "weddings in the village", "can folk fall in love", "who is married to who", "wedding ceremony", "romance between villagers", "can i marry a villager", "how do i court a villager", "propose to a villager", "how do i get married", "wedding decorations"],
+      "kw": ["marry", "marriage", "wedding", "love", "partner", "couple", "court", "courting", "propose", "spouse"],
+      "answer": "Folk walk out, then marry in the chapel (or the square) the next evening. You can court and marry a folk too, all from the talk screen.",
+      "more": ["Two folk fond of each other walk out first: a walk together each evening, and a flower picked on the way. After two walks they are ready, and one asks the other at the end of a walk.", "The wedding is dressed for what the town has: wildflowers and candles in a poor town; a carpet, flowers in pots, lanterns and banners in a middling one; an arch of flowers, coloured glass, a feast table and music in a rich one. A folk puts it all up that afternoon from the stores, the couple pay for it, and it comes down the morning after.", "The guests sit, the officiant leads the vows, then the rings, a kiss, petals and the bell, a reception, and the couple walk out together.", "Courting a folk yourself: it must be grown, unmarried, like you, and the town must respect you (Accepted or better)."],
+      "tips": ["The town's news and the Families page say who is walking out with whom.", "A widow or widower may love and marry again."],
+      "related": ["life_children", "festivals_feasts", "talk_about", "life_generations"],
+      "covers": [],
+      "steps": ["Talk to the folk: About, Home, then 'Walk out with me?'.", "Then 'Take a walk' (once a day, twice in all), 'Supper tonight?' (five coins) and give it a present. Each reply shows how fond it is.", "When it is fond enough, 'Will you marry me?' asks properly; say it twice to confirm. The wedding is the next evening; be there.", "Wed, it moves in by your bed, keeps its own work and greets you as its spouse ('How was your day?')."],
+      "controls": ["[Right-click] a folk → About → Home → Walk out with me? · Take a walk · Supper tonight? · Will you marry me?"]
     },
     {
       "id": "life_children",
@@ -20,12 +22,12 @@
       "icon": "minecraft:cake",
       "kind": "what",
       "q": ["how do villagers have babies", "children in the village", "can i be a godparent", "be godparent option", "when do kids grow up", "what do children do", "twins"],
-      "kw": ["child", "children", "baby", "godparent", "kid", "school"],
-      "answer": "Fed couples in work have children when there's room and food; children play, go to school and take a trade at three days old. Friends can be godparents.",
-      "more": ["For three days it plays (tag, trailing its parents, exploring), goes to school, then grows up and takes a trade.", "A friend of the town can ask a child 'Be godparent': it thinks the world of you, and its parents the better of you."],
-      "controls": ["[Right-click] a child → About → Home & pet → Be godparent"],
+      "kw": ["child", "children", "baby", "godparent", "kid", "school", "pregnant", "expecting", "crib"],
+      "answer": "Couples have children when the town has room and food; children play, go to school and to a parent's side at work, and grow up in three days. You can have children with your spouse.",
+      "more": ["For three days it plays (tag, trailing its parents, exploring), goes to school, then grows up and takes a trade.", "A friend of the town can ask a child 'Be godparent': it thinks the world of you, and its parents the better of you.", "With a spouse, ask 'Try for a baby?'. That night, home asleep in the same house, hearts show over the bed. Soon after, your spouse says you are expecting and puts a crib up by the bed.", "A few days later the child is born at home, with the healer there and the bell rung, and you name it ('Name the baby', said twice to confirm). It grows from baby to child to youngster to grown, and your page shows its schooling."],
+      "controls": ["[Right-click] a child → About → Home & pet → Be godparent", "[Right-click] your spouse → About → Home → Try for a baby? · Name the baby"],
       "tips": ["Ask a child about itself and it says what it'll be when it grows up.", "A child born into a full house gets a bed its parents buy at the shop."],
-      "related": ["progress_growth", "life_marriage", "life_school"],
+      "related": ["progress_growth", "life_marriage", "life_school", "life_generations"],
       "covers": ["talk:GODPARENT"]
     },
     {
@@ -108,7 +110,7 @@
       "q": ["is there a school", "children go to school", "library in the village", "borrow books from the library", "slate and chalk", "school page", "library page", "write a book"],
       "kw": ["school", "library", "books", "learning", "teacher", "slate"],
       "answer": "Children go to school each morning, and the town's library lends real books. The town's books show both.",
-      "more": ["Children go to school each morning (a schoolteacher, desks, a blackboard; Slate and Chalk helps them learn a quarter faster).", "The town library keeps a catalogue of real books by its writers and lends them; the store buys written books for it."],
+      "more": ["Children go to school each morning (a schoolteacher, desks, a blackboard; Slate and Chalk helps them learn a quarter faster).", "The town library keeps a catalogue of real books by its writers and lends them; the store buys written books for it.", "In class the teacher points at the board while the children write on their slates and put their hands up; after the lesson they play in the yard, then go on to their afternoon and home.", "No school or no teacher yet: the children are taught at home of a morning, by a retired folk or a parent. No school on the day of rest.", "Grown folk who went to school start their trade further on; the Apprentices page shows how many of the town's grown folk were schooled."],
       "controls": ["Town's books → People → School", "Town's books → Culture → Library"],
       "items": ["mc_assistant:slate_and_chalk"],
       "related": ["life_children", "life_museum", "progress_research"],
@@ -167,6 +169,20 @@
       "controls": ["Town's books → Overview (the season) · News"],
       "items": ["mc_assistant:rain_barrel"],
       "related": ["festivals_feasts", "items_field_tools"],
+      "covers": []
+    },
+    {
+      "id": "life_generations",
+      "title": "Family trees and generations",
+      "icon": "minecraft:oak_sapling",
+      "kind": "what",
+      "q": ["family tree", "who is related to who", "do villagers retire", "inherit the house", "who takes over the farm", "generations of villagers", "what happens when a villager gets old"],
+      "kw": ["tree", "family", "retire", "retired", "inherit", "heir", "generations"],
+      "answer": "Each town keeps its family trees on the board's Families page. Old folk hand their trade to a grown child or their journeyman and retire; a house passes to the children.",
+      "more": ["At sixty-six a folk with an heir hands over its post and ground, and a knack for the trade, and retires: it watches its heir work of a morning and sits in the square of an afternoon.", "A folk who dies with its trade in hand leaves it to its heir; the house stays with the household, and to the grown children when both parents are gone.", "The town only has children while there is room, and builds houses for households waiting for one."],
+      "controls": ["Town's books → People → Families", "[Right-click] a folk → its profile → Life"],
+      "tips": ["A folk's profile shows its parents, partner, children, whom it is walking out with and what it came into."],
+      "related": ["life_marriage", "life_children", "jobs_apprentice"],
       "covers": []
     }
   ]

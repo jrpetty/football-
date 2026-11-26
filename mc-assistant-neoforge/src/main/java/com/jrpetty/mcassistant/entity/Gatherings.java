@@ -57,6 +57,12 @@ public final class Gatherings {
             .addLast(new Wedding(a.getUUID(), b.getUUID(), a.displayNameCap() + " and " + b.displayNameCap(), day));
     }
 
+    /** [featfolk] A folk and a player pledged (PlayerFamily): the wedding the next evening, the player its second. */
+    public static void pledgedWithPlayer(UUID village, VillageFolkEntity a, net.minecraft.world.entity.player.Player p, long day) {
+        WEDDINGS.computeIfAbsent(village, k -> new ArrayDeque<>())
+            .addLast(new Wedding(a.getUUID(), p.getUUID(), a.displayNameCap() + " and " + p.getName().getString(), day));
+    }
+
     /** Tonight's feast, paid for by a player (Dealings.sponsor): who, and which night. */
     private static final Map<UUID, Long> SPONSORED_ON = new ConcurrentHashMap<>();
     private static final Map<UUID, String> SPONSOR = new ConcurrentHashMap<>();

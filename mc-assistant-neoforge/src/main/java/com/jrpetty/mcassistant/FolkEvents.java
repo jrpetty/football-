@@ -40,13 +40,18 @@ public final class FolkEvents {
         if (!(event.getEntity().level() instanceof ServerLevel level) || !(event.getEntity() instanceof Enemy)) return;
         if (!(event.getSource().getEntity() instanceof Player player)) return;
         Errands.monsterKilled(level, player, event.getEntity().blockPosition());
-        List<VillageFolkEntity> saw = level.getEntitiesOfClass(VillageFolkEntity.class,
-            event.getEntity().getBoundingBox().inflate(24.0), f -> f.isAlive() && f.persona().rolled() && !f.isSleeping());
-        if (saw.isEmpty()) return;
-        String who = player.getName().getString();
-        for (VillageFolkEntity f : saw) f.persona().feelFor(player.getUUID(), who, 3);
-        // The one it had cornered owes them its life.
+        // [featfolk] Only folk who saw it (in sight and range of the player: Witness) think the better of them for it, and
+        // remember it: in a raid, as the player holding the square; else as a monster put down near the houses.
+        Villages.Village near = Villages.nearest(level, player.blockPosition(), 64);
+        boolean raid = near != null && com.jrpetty.mcassistant.entity.Raids.underAlarm(near.id());
+        List<VillageFolkEntity> saw = com.jrpetty.mcassistant.entity.Witness.seen(level, player,
+            raid ? com.jrpetty.mcassistant.entity.Witness.Kind.DEFENDED : com.jrpetty.mcassistant.entity.Witness.Kind.SLEW,
+            raid ? "" : com.jrpetty.mcassistant.entity.Witness.monster(event.getEntity()), null, 3);
+        // The one it had cornered owes them its life (it is beset: it saw, whatever stood in the way).
         String what = event.getEntity().getType().getDescription().getString().toLowerCase(java.util.Locale.ROOT);
+        for (VillageFolkEntity f : level.getEntitiesOfClass(VillageFolkEntity.class, event.getEntity().getBoundingBox().inflate(24.0),
+                f -> f.isAlive() && f.persona().rolled() && f.besetBy(event.getEntity().getUUID()) && !saw.contains(f))) saw.add(f);
+        if (saw.isEmpty()) return;
         boolean saved = false;
         for (VillageFolkEntity f : saw) {
             if (!f.besetBy(event.getEntity().getUUID())) continue;
@@ -65,6 +70,7 @@ public final class FolkEvents {
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.tickCount % 40 != 0) return;
+        com.jrpetty.mcassistant.entity.PlayerFamily.tick((ServerLevel) player.level(), player);   // [featfolk] the night, the news, the crib, the birth
         Villages.Village v = Villages.nearest(player.level(), player.blockPosition(), 64);
         UUID now = v == null ? null : v.id();
         UUID was = IN.get(player.getUUID());
@@ -84,7 +90,8 @@ public final class FolkEvents {
         Standing.View view = Standing.of(now, player.getUUID(), player.level().getGameTime());
         Component banner = Component.literal(Villages.name(now)).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
             .append(Component.literal(" · " + Villages.ageOf(now).label + " · " + Villages.headcount(now) + " people · you are "
-                + view.title().words).withStyle(ChatFormatting.WHITE));
+                + view.title().words + " · respect: " + com.jrpetty.mcassistant.entity.TownOpinion.ratingOf(now, player.getUUID(),
+                player.level().getGameTime())).withStyle(ChatFormatting.WHITE));   // [featfolk] the town's respect, from its witnesses
         player.displayClientMessage(banner, true);
         welcomeBack((ServerLevel) player.level(), player, now);
         com.jrpetty.mcassistant.entity.Identity.entered((ServerLevel) player.level(), player, now);   // [identity] its character, its laws, its welcome
@@ -107,6 +114,7 @@ public final class FolkEvents {
         double nearest = 24.0 * 24.0;
         for (VillageFolkEntity f : level.getEntitiesOfClass(VillageFolkEntity.class, player.getBoundingBox().inflate(24.0),
                 f -> f.isAlive() && !f.isSleeping() && !f.isBaby() && f.persona().rolled() && f.persona().knows(player.getUUID())
+                    && com.jrpetty.mcassistant.entity.Witness.contact(f, player.getUUID())   // [featfolk] one who has met them
                     && f.persona().affinity(player.getUUID()) >= 0)) {
             double d = f.distanceToSqr(player);
             if (d < nearest) { nearest = d; greeter = f; }

@@ -48,9 +48,16 @@ public final class Guide {
         if (p != null) {
             com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.guest(village, p.getUUID());
             if (g != null && g.built) out.add(new Place("yours", "your house", new BlockPos((int) g.x, (int) g.y, (int) g.z)));
+            BlockPos family = PlayerFamily.homeOf(village, p.getUUID());              // [featfolk] the home you share with your spouse
+            if (family != null) out.add(new Place("family", "your family's home", family));
+            BlockPos chapel = Villages.builtAt(village, "chapel");                     // [featfolk] the church, for a wedding
+            if (chapel != null) out.add(new Place("church", "the chapel", chapel));
+            BlockPos school = Villages.builtAt(village, "school");                     // [featfolk] the school
+            if (school != null) out.add(new Place("schoolhouse", "the schoolhouse", school));
         }
         out.addAll(Scouts.places(f, 4));                 // a scout knows the way to what it has found
         java.util.Set<String> seen = new java.util.HashSet<>();
+        for (Place pl : out) if (pl.key().equals("church")) seen.add("chapel"); else if (pl.key().equals("schoolhouse")) seen.add("school");   // [featfolk] named once
         List<Ledger.Building> buildings = new ArrayList<>(Ledger.buildings(village));
         buildings.sort(java.util.Comparator.comparingDouble(b -> b.anchor().distSqr(f.blockPosition())));
         for (Ledger.Building b : buildings) {
