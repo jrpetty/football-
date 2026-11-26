@@ -349,7 +349,16 @@ public final class Contracts extends SavedData {
 
     /** WP-E's small-claims seam: a disputed contract to be heard. A stub till then (the escrow stays held). */
     public static void claimHook(ServerLevel level, Deal d, UUID by) {
-        com.mojang.logging.LogUtils.getLogger().info("[wpb] contract {} disputed by {}: awaiting small claims (WP-E)", d.id, by);
+        // [wpe] Heard by the town's small-claims court: the escrow released to whoever the court finds for.
+        boolean buyer = by.equals(d.buyer);
+        UUID other = buyer ? d.seller : d.buyer;
+        int evidence = buyer ? (d.sellerDone ? 3 : 5) : (d.sellerDone ? 5 : 3);
+        Court.smallClaimEscrow(level, d.town, by, buyer ? d.buyerName : d.sellerName, other, buyer ? d.sellerName : d.buyerName, d.price,
+            "contract #" + d.id + " (" + (d.kind.equals("service") ? d.service : d.qty + " " + d.item) + ")", evidence, t -> {
+                if (!d.state.equals("DISPUTED")) return;
+                boolean forClaimant = t.getString("state").equals("for claimant");
+                settle(level, d, forClaimant == buyer ? "LAPSED" : "DONE");
+            });
     }
 
     /** Released: done (price to the seller, bonds back), or lapsed (price back to the buyer, with the seller's bond). */

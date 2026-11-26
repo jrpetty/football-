@@ -55,6 +55,33 @@ public final class Jury {
         return seats.size();
     }
 
+    /** [wpe] What a juror hears of a case that is not one of Crime's (Justice's graver cases), by case. */
+    private static final Map<Integer, List<String>> HEARINGS = new ConcurrentHashMap<>();
+
+    /** [wpe] The jurors called for a case of Justice's: the same roll, the same seats; the lines it hears given here. */
+    static int summonFor(ServerLevel level, Villages.Village v, int caseId, UUID accusedId, String accused, String charge, BlockPos court, List<String> hearing) {
+        Map<UUID, Boolean> seats = new LinkedHashMap<>();
+        for (ServerPlayer p : level.players()) {
+            if (seats.size() >= MOST) break;
+            if (p.getUUID().equals(accusedId) || !Belonging.onJuryRoll(v.id(), p.getUUID()) || !Citizens.is(v.id(), p.getUUID())) continue;
+            if (p.blockPosition().distSqr(v.centre()) > 4.0 * Villages.VILLAGE_RANGE * Villages.VILLAGE_RANGE) continue;
+            seats.put(p.getUUID(), null);
+        }
+        HEARINGS.put(caseId, List.copyOf(hearing));
+        if (seats.isEmpty()) return 0;
+        SEATS.put(caseId, seats);
+        WHERE.put(caseId, new Object[]{ v.id(), court.immutable() });
+        long now = level.getDayTime();
+        for (UUID u : seats.keySet()) {
+            ServerPlayer p = level.getServer().getPlayerList().getPlayer(u);
+            if (p == null) continue;
+            p.sendSystemMessage(Component.literal("Jury duty: the court sits on the case against " + accused + " (" + charge
+                + "). Hear it and give your verdict on the Town Hall's Duties tab.").withStyle(ChatFormatting.GOLD));
+            Planner.add(p, now, "jury", "Jury duty: " + accused + ", " + charge, court);
+        }
+        return seats.size();
+    }
+
     public static boolean seated(int caseId) {
         Map<UUID, Boolean> s = SEATS.get(caseId);
         return s != null && !s.isEmpty();
@@ -114,6 +141,8 @@ public final class Jury {
 
     /** What a juror hears: the charge, the evidence and the witnesses. */
     public static List<String> hearing(int caseId) {
+        List<String> custom = HEARINGS.get(caseId);                       // [wpe]
+        if (custom != null) return new ArrayList<>(custom);
         List<String> out = new ArrayList<>();
         Crime.Case c = Crime.get(caseId);
         if (c == null) return out;
@@ -161,6 +190,7 @@ public final class Jury {
 
     /** The verdict given: the jury thanked and stood down. */
     static void close(ServerLevel level, int caseId, boolean guilty) {
+        HEARINGS.remove(caseId);                                           // [wpe]
         Map<UUID, Boolean> s = SEATS.remove(caseId);
         Object[] w = WHERE.remove(caseId);
         WAITING.remove(caseId);
@@ -190,5 +220,6 @@ public final class Jury {
         SEATS.clear();
         WHERE.clear();
         WAITING.clear();
+        HEARINGS.clear();                                                  // [wpe]
     }
 }

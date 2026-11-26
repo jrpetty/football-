@@ -69,6 +69,28 @@ class ScreenFitTest {
         }
     }
 
+    /** [wpe] The Record page ("You and the law"): its five tabs in one row, and its longest rows of buttons, at every GUI size. */
+    @Test
+    void theRecordPageFitsAtEveryScale() {
+        String[][] tabs = { { "notice", "Notice" }, { "case", "Case" }, { "jail", "Jail" }, { "record", "Record" }, { "how", "How it works" } };
+        String[][] rows = {
+            { "Show me the court", "Show me the jail", "Show me the watch house" },
+            { "It was an accident", "I wasn't there" },
+            { "I was provoked", "I ask for mercy" },
+            { "Hire a lawyer (15c)", "Public defender" },
+            { "Your case", "Got it" },
+            { "Give myself up" },
+            { "Pay 120c" } };
+        for (int[] size : ScreenFit.GUI_SIZES) {
+            int page = HallLayout.pageWidth(size[0]);
+            assertTrue(HallLayout.stripWidth(tabs) <= page - 8, "the record's tabs at " + size[0] + ": " + HallLayout.stripWidth(tabs) + " in " + page);
+            for (String[] r : rows) {
+                assertTrue(HallLayout.buttonsWidth(r) <= HallLayout.rowRoom(size[0]), String.join(" | ", r) + " at " + size[0] + ": "
+                    + HallLayout.buttonsWidth(r) + " in " + HallLayout.rowRoom(size[0]));
+            }
+        }
+    }
+
     @Test
     void aPanelNeverOutgrowsItsScreen() {
         for (int[] size : ScreenFit.GUI_SIZES) {

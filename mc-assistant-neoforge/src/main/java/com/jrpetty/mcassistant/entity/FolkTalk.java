@@ -392,6 +392,7 @@ public final class FolkTalk {
         sb.append(PlayerFamily.contextFlags(f, p));                           // [featfolk] courtable, courting, proposable, spouse, naming
         if (Friends.asked(f.getUUID(), p.getUUID())) sb.append(" invite");   // [featlife] it has asked you to dinner: yes or no
         if (!f.isBaby() && !Clubs.clubsOf(f).isEmpty()) sb.append(" club");   // [featlife] it is in a club you could join
+        sb.append(Justice.contextFlags(f, p));                                // [wpe] hurtme, wantedme, accusedme, jailedme
         return sb.toString();
     }
 

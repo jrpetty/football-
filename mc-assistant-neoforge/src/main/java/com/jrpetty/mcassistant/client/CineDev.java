@@ -103,6 +103,8 @@ public final class CineDev {
                                 id = a.getId();
                             }
                         }
+                    } else if (w[1].equals("me") && mc.player != null) {             // [wpe] the player itself (in irons, in the dock)
+                        id = mc.player.getId();
                     } else if (w[1].equals("nearest") && mc.level != null && mc.player != null) {
                         double best = Double.MAX_VALUE;
                         for (Entity e : mc.level.entitiesForRendering()) {
@@ -179,6 +181,7 @@ public final class CineDev {
                 }
                 case "size" -> mc.getWindow().setWindowed(Integer.parseInt(w[1]), Integer.parseInt(w[2]));
                 case "close" -> mc.setScreen(null);
+                case "persp" -> mc.options.setCameraType(net.minecraft.client.CameraType.valueOf(w[1].toUpperCase(Locale.ROOT)));   // [wpe] FIRST_PERSON, THIRD_PERSON_BACK, THIRD_PERSON_FRONT
                 case "page" -> LifeClient.open(w[1]);                               // a player page, as its button asks
                 case "lifeact" -> {                                                 // [wpa] a page's button: page action k=v...
                     net.minecraft.nbt.CompoundTag args = new net.minecraft.nbt.CompoundTag();

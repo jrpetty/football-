@@ -142,7 +142,12 @@ public final class PlayerLaw {
      * lets it. True if the watch had it (Laws' own ladder is not run then).
      */
     public static boolean offence(ServerLevel level, Villages.Village v, Player p, String what, int fine) {
-        if (!enabled() || Patrols.watch(v.id()).isEmpty() || Laws.exempt(p)) return false;
+        if (Laws.exempt(p)) return false;
+        if (Justice.offence(level, v, p, what, fine, TAKEN.get(p.getUUID()))) {    // [wpe] a burglary, a theft from a shop: a case
+            TAKEN.remove(p.getUUID());
+            return true;
+        }
+        if (!enabled() || Patrols.watch(v.id()).isEmpty()) return false;
         VillageFolkEntity seen = Laws.witness(level, v.id(), p);
         if (seen == null) return true;
         Offence kind = what.startsWith("taking") ? Offence.THEFT : what.startsWith("damaging") ? Offence.DAMAGE
@@ -320,15 +325,17 @@ public final class PlayerLaw {
     @SubscribeEvent
     public static void onHurt(LivingIncomingDamageEvent e) {
         if (!(e.getEntity() instanceof VillageFolkEntity f) || !(f.level() instanceof ServerLevel level)) return;
-        if (!(e.getSource().getEntity() instanceof ServerPlayer p) || Laws.exempt(p) || !enabled()) return;
+        if (!(e.getSource().getEntity() instanceof ServerPlayer p) || Laws.exempt(p) || !enabled() && !Justice.enabled()) return;   // [wpe] justice's too
         com.jrpetty.mcassistant.Guard.run("the watch and a blow struck", () -> struck(level, p, f, e.getAmount()));
     }
 
     static void struck(ServerLevel level, ServerPlayer p, VillageFolkEntity f, float amount) {
         UUID village = f.ownerId();
         Villages.Village v = village == null ? null : Villages.get(village);
-        if (v == null || f.isHired() || f.isShowcase() || Patrols.watch(village).isEmpty()) return;
+        if (v == null || f.isHired() || f.isShowcase()) return;
         if (f.getTarget() == p) return;                                          // it went for the player: the player's to answer
+        if (Justice.harm(level, v, p, f, amount)) return;                        // [wpe] an accident to apologise for, or an assault
+        if (Patrols.watch(village).isEmpty()) return;
         if (known(village, p.getUUID()) && record(village, p.getUUID()).getLong("outUntil") > level.getGameTime()
                 && f.stationTask() == AssistantEntity.StationTask.GUARD) {
             // Struck back at the watch driving it out: now the watch fights.

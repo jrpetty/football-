@@ -148,6 +148,7 @@ final class WatchHouse {
         for (Cell c : cells(b)) {
             if (occupied(village, c.index())) continue;
             if (PlayerLaw.cellTaken(village, c.index())) continue;
+            if (Jail.watchCellTaken(village, c.index())) continue;          // [wpe] a player held for the court
             if (Prisoners.cellTaken(village, c.index())) continue;          // [war-after] a prisoner of war's
             return c;
         }
@@ -267,6 +268,7 @@ final class WatchHouse {
         if (!got) return false;
         t.putBoolean("lead", true);
         f.setLeashedTo(guard, true);
+        Restraint.on(f, guard, Restraint.Kind.CUFFS);                     // [wpe] the irons on its wrists, seen
         Police.changed();
         return true;
     }
@@ -274,6 +276,7 @@ final class WatchHouse {
     /** Off the lead, and the lead back in the guard's pack (or, the guard gone, the stores). */
     static void unlead(ServerLevel level, VillageFolkEntity f, @Nullable VillageFolkEntity g, @Nullable CompoundTag t) {
         boolean had = t != null && t.getBoolean("lead");
+        Restraint.off(f);                                                  // [wpe]
         if (f.isLeashed()) f.dropLeash(true, false);
         else if (had) {
             // The lead snapped (the prisoner too far behind): it lies on the ground by them. Picked up.
@@ -469,6 +472,7 @@ final class WatchHouse {
 
     static boolean freeFor(VillageFolkEntity g) {
         return g.isAlive() && !g.isSleeping() && !g.isBaby() && !Police.engaged(g) && !Patrols.away(g) && !g.onWatch()
+            && !Arrests.busy(g)                                                    // [wpe] a warrant or a prisoner of Justice's
             && (g.getTarget() == null || !g.getTarget().isAlive());
     }
 

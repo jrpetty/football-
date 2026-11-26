@@ -146,6 +146,10 @@ public final class LifeTown implements PlayerLife.Page {
         if (s == null) page.row(new ItemStack(Items.BARREL), "Open a shop", "A building with a counter, a door and a chest: yours, built for you, or bought", "").button("Open a shop", "start", LifePage.args("kind", "shop"));   // [biz25]
         if (firms.isEmpty()) page.row(new ItemStack(Items.WRITABLE_BOOK), "Start a business", "A charter, premises, hands of your own", "").button("Start", "start", null);
         page.row(new ItemStack(Items.EMERALD), "Sell what you carry", "The town's counters buy their trades' goods: the store, the smithy, the café", "").button("Selling prices", "earnings", null);
+        // [wpe] the law: your record, any case against you, the jail, the court
+        List<Justice.JCase> lawCases = Justice.namedAgainst(p.getUUID());
+        page.row(new ItemStack(Items.IRON_BARS), "You and the law", lawCases.isEmpty() ? (Justice.convictions(p.getUUID()).isEmpty() ? "A clean record." : "Your record, and what it costs you.")
+            : lawCases.size() + " open case" + (lawCases.size() == 1 ? "" : "s") + " against you: your defence, the court's date.", "").button("Your record", "law", null);
         page.buttons().button("Everything you can do (no commands)", "all", null);
         return page;
     }
@@ -172,6 +176,7 @@ public final class LifeTown implements PlayerLife.Page {
             case "council" -> { return sayToNearest(p, "Who's on the council?"); }
             case "hall" -> { TownHall.open(p, "join"); return "#open:"; }                // [wpa]
             case "wpc" -> { PlayerLife.open(p, args.getString("p"), null); return "#open:"; }   // [wpc] the property pages
+            case "law" -> { PlayerLife.open(p, "record", null); return "#open:"; }      // [wpe]
             case "hallweek" -> { TownHall.open(p, "week"); return "#open:"; }
             case "papers" -> { IdCard.openOwn(p); return "#open:"; }
             case "say" -> { return sayToNearest(p, args.getString("t")); }
