@@ -319,6 +319,17 @@ public final class PaErrand {
 
     /** One lot sold: out of its pack, the coins into its pack. The coins it took, or -1 with why in the notes. */
     static int sellOne(ServerLevel level, PlayerAssistantEntity a, Villages.Village v, Run r, Item it) {
+        // at a market the town trades out of its own stores: the town is asking, not this assistant (whose chest rules
+        // bar every town's stores while it thinks), so the counter sees what the stores hold (as PaTaskGoal.trade)
+        PlayerAssistantEntity was = PaChests.askAs(null);
+        try {
+            return sellOne0(level, a, v, r, it);
+        } finally {
+            PaChests.askAs(was);
+        }
+    }
+
+    private static int sellOne0(ServerLevel level, PlayerAssistantEntity a, Villages.Village v, Run r, Item it) {
         int slot = -1;
         var inv = a.getInventoryItems();
         for (int i = 0; i < inv.size(); i++) if (inv.get(i).is(it)) { slot = i; break; }
@@ -341,6 +352,15 @@ public final class PaErrand {
 
     /** One lot bought with its own coin: -1 with why in the notes when it can't. */
     static int buyOne(ServerLevel level, PlayerAssistantEntity a, Villages.Village v, Run r, Item it) {
+        PlayerAssistantEntity was = PaChests.askAs(null);                     // the town's stores, as the town sees them (sellOne)
+        try {
+            return buyOne0(level, a, v, r, it);
+        } finally {
+            PaChests.askAs(was);
+        }
+    }
+
+    private static int buyOne0(ServerLevel level, PlayerAssistantEntity a, Villages.Village v, Run r, Item it) {
         ServerPlayer fp = agent(level, a);
         ItemStack shown = new ItemStack(it);
         int price = Market.quoteFor(level, v, fp, shown);
