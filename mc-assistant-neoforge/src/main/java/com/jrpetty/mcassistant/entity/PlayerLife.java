@@ -78,6 +78,14 @@ public final class PlayerLife {
         PAGES.put("firm", new MyBusinesses());
         PAGES.put("jobs", new PlayerJobs.Board());
         PAGES.put("all", new InWorld());
+        PAGES.put("hall", new TownHall());           // [wpa] the Town Hall
+        PAGES.put("arrival", new ArrivalCard());     // [wpa] the card on a first arrival
+        PAGES.put("id", new IdCard());               // [wpa] a player's ID card
+    }
+
+    /** [wpa] Is there a page called this (another package's, not yet merged)? */
+    public static boolean has(String page) {
+        return PAGES.containsKey(page);
     }
 
     /** The page this player last had open (tests). */
@@ -240,6 +248,8 @@ public final class PlayerLife {
     @Nullable
     public static String heard(VillageFolkEntity f, ServerPlayer p, String text) {
         String t = text == null ? "" : text.toLowerCase(java.util.Locale.ROOT).trim();
+        String hall = TownHall.heard(f, p, t);                              // [wpa] the Town Hall, jury duty, my papers
+        if (hall != null) return hall;
         if (t.contains("village of my own") || t.contains("town of my own")) {   // [found23] the founding screen
             FoundingEasy.open(p, "talk");
             return "A place of your own? Good. Here's what the land round about looks like.";

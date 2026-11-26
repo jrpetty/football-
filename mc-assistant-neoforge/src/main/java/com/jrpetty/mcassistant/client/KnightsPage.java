@@ -40,7 +40,7 @@ public final class KnightsPage {
         section(g, font, "Your service to " + name, x, cy, lw);
         cy += 12;
         if (you.isEmpty()) {
-            TaxesPage.small(g, font, "Your own service shows when you open the books at the board, or with /village knight book.", x + 2, cy, Ui.FAINT);
+            TaxesPage.small(g, font, "Your own service shows when you open the books at the board, or on the Town Hall's Office tab.", x + 2, cy, Ui.FAINT);
             cy += 10;
         }
         int service = you.getInt("service"), needed = Math.max(1, you.getInt("needed"));
@@ -68,7 +68,7 @@ public final class KnightsPage {
             if (men.isEmpty()) body.add(new String[]{ "L", "No retinue yet: the watch keeps two at home and can spare nobody." });
             else for (int i = 0; i < men.size(); i++) body.add(new String[]{ "L", "Retinue: " + men.getString(i) });
             body.add(new String[]{ "L", "Your vote on the taxes: " + you.getString("vote") + "." });
-            if (you.getBoolean("muster")) body.add(new String[]{ "R", "The town calls you to muster: join its army (/village war join)." });
+            if (you.getBoolean("muster")) body.add(new String[]{ "R", "The town calls you to muster: join its army (the Town Hall's Duties tab)." });
         } else if (you.getBoolean("chosen")) {
             body.add(new String[]{ "G", "The council has chosen you for knighthood: come to the hall at dusk." });
         } else if (!you.getBoolean("citizen")) {
@@ -80,7 +80,7 @@ public final class KnightsPage {
         ListTag fallen = you.getList("fallen", Tag.TAG_STRING);
         for (int i = 0; i < fallen.size(); i++) body.add(new String[]{ "M", "Once " + fallen.getString(i) + "." });
         int max = (int) ((lw - 4) / 0.75F);
-        int buttonsAt = y + h - (knight ? 44 : you.getBoolean("say") ? 30 : 16);
+        int buttonsAt = y + h - (knight ? 58 : you.getBoolean("say") ? 30 : 16);   // [wpa] a row more for the retinue and the manor
         for (String[] b : body) {
             for (FormattedCharSequence p : TextCache.splitPlain(font, (b[0].equals("L") ? "· " : "") + b[1], max)) {
                 if (cy > buttonsAt - 9) break;
@@ -105,6 +105,13 @@ public final class KnightsPage {
             bx = button(g, font, "Stand down", bx, by, false, mx, my, clicks, "village knight retinue dismiss") + 6;
             for (String s : new String[]{ "Sir", "Dame", "Knight" }) bx = button(g, font, s, bx, by, s.equals(you.getString("style")), mx, my, clicks,
                 "village knight style " + s.toLowerCase(java.util.Locale.ROOT)) + 3;
+            by += 14;
+            // [wpa] The retinue hired and released, the manor: buttons, as everything else here, never typed.
+            bx = x + 2;
+            bx = button(g, font, "Hire a man", bx, by, false, mx, my, clicks, "village knight retinue hire") + 3;
+            bx = button(g, font, "Release all", bx, by, false, mx, my, clicks, "village knight retinue release") + 6;
+            bx = button(g, font, "My manor", bx, by, false, mx, my, clicks, "village knight manor") + 3;
+            button(g, font, "Grander manor", bx, by, false, mx, my, clicks, "village knight manor grand");
             by += 14;
         }
         if (you.getInt("owed") > 0) button(g, font, "Pay " + you.getInt("owed") + " coins of taxes", x + 2, by, false, mx, my, clicks, "village taxes pay");

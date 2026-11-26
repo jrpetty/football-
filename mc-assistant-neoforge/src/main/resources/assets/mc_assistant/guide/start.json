@@ -162,6 +162,7 @@
       "tips": ["Three recipes are taught by masters (the reinforced pickaxe, brewer's stout and farmhouse pie): learn them as an apprentice.", "The village coin has no recipe: it's struck at a town's mint, or traded for gold at a stall's counter."],
       "related": ["items_all", "jobs_apprentice", "money_coin"],
       "covers": []
-    }
-  ]
+    },
+    {"id": "start_first_week", "title": "Your first week in town", "icon": "minecraft:writable_book", "kind": "howto", "q": ["first week", "what should i do first in town", "new player guide in town", "checklist", "first steps in a town", "newcomer guide", "arrival card"], "kw": ["first week", "checklist", "newcomer", "arrival", "steps", "guide"], "answer": "When you sign a town's book, your first week starts: eight small steps that each teach one part of town life and pay a coin or two. Skip any you like.", "more": ["The steps: sign the book, find a room, take a first job, draw your first wage, put coin by, buy something, meet the neighbours, pay a first bill.", "After those, a second chapter: become a citizen, own a house, start a business.", "Each step has Show me (an arrow to where it's done) and ticks itself off however you do it.", "The arrival card the first time you walk into a town has the same ways in."], "steps": ["Town Hall → Week, or U → The checklist.", "Press Show me on the next step and walk there.", "Do it: the step ticks off and pays."], "controls": ["[U] → The checklist", "Town Hall → Week"], "tips": ["Hush the week's word in chat from the bottom of the list."], "related": ["civic_townhall", "civic_town_name"], "covers": ["id:start_first_week"]}
+]
 }

@@ -1810,7 +1810,7 @@ public final class LabourMarket {
         int applied = 0;
         for (Application a : vac.apps) if (a.verdict == Verdict.WAITING) applied++;
         return b.name + " posted an opening for " + aNoun(t) + " at " + vac.wage + " a day (#" + vac.id + "); " + applied + " applied so far."
-            + " Take the best with /village labour hire " + b.id + ".";
+            + " Take the best from Your businesses, its Hands tab.";
     }
 
     /** A player's firm takes on the best who applied to its opening, now. */
@@ -1818,7 +1818,7 @@ public final class LabourMarket {
         LabourBook.Town tw = LabourBook.town(village);
         Vacancy vac = null;
         for (Vacancy x : tw.vacancies) if (x.state == State.OPEN && x.employer.equals("firm:" + b.id)) vac = x;
-        if (vac == null) return b.name + " has no opening up: post one with /village labour post " + b.id + " [wage].";
+        if (vac == null) return b.name + " has no opening up: post one from Your businesses, its Hands tab.";
         Application best = null;
         for (Application a : vac.apps) if (a.verdict == Verdict.WAITING && (best == null || a.score > best.score)) best = a;
         if (best == null) return "Nobody has applied to " + b.name + "'s opening yet. A better wage brings more.";

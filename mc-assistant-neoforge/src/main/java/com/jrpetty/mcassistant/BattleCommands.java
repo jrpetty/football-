@@ -49,7 +49,7 @@ public final class BattleCommands {
     private BattleCommands() {}
 
     /** A sword for hire's pay. */
-    static final int HIRE = 10;
+    static final int HIRE = com.jrpetty.mcassistant.entity.Muster.HIRE;
 
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
@@ -96,7 +96,7 @@ public final class BattleCommands {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) return 0;
         Villages.Village v = near(ctx);
         if (v == null) return 0;
-        String said = Campaigns.join(ctx.getSource().getLevel(), v, p, Ledger.citizen(v.id(), p.getUUID()), HIRE);
+        String said = com.jrpetty.mcassistant.entity.Muster.playerJoins(ctx.getSource().getLevel(), v, p);   // [wpa] the same as the hall's button
         ctx.getSource().sendSuccess(() -> Component.literal(said), false);
         return 1;
     }

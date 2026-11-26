@@ -92,7 +92,7 @@ public final class FirmCommands {
     static Business owned(CommandContext<CommandSourceStack> c, Villages.Village v, ServerPlayer p) {
         Business b = Businesses.of(v.id(), StringArgumentType.getString(c, "id"));
         if (b == null || !Enterprise.isFirm(b) || !b.open) {
-            say(c, "No firm by that name here: /village firms lists them.");
+            say(c, "No firm by that name here: the Businesses page of the city books lists them.");
             return null;
         }
         if (!b.ownedBy(p.getUUID()) && !p.hasPermissions(2)) {

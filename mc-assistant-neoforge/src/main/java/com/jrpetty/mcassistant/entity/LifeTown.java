@@ -104,6 +104,24 @@ public final class LifeTown implements PlayerLife.Page {
             .button("What's for sale?", "say", LifePage.args("t", "Is there a house for sale?"))
             .button("Buy the one I'm in", "buyhouse", null)
             .button("Collect rent", "rent", null, houses[0] > 0, "You own no house here");
+        if (houses[0] > 0) {                                                 // [wpa] letting a house: a button, never typed
+            page.choice("letrent", "Let it for", new String[]{ "2", "3", "4", "5", "6", "8" },
+                new String[]{ "2 coins a day", "3 coins a day", "4 coins a day", "5 coins a day", "6 coins a day", "8 coins a day" }, "3");
+            page.buttons().button("Let my house to a household", "let", null);
+        }
+        // [wpa] The Town Hall: the town's book, your papers, and your first week.
+        page.heading("The Town Hall");
+        boolean onBook = Belonging.registered(id, p.getUUID());
+        Belonging.Rp rp = Belonging.rp(p.getUUID());
+        page.row(new ItemStack(Items.LECTERN), onBook ? (rp == null ? "On " + town + "'s book" : rp.full() + ", of " + town) : "Join " + town,
+                onBook ? (rp == null ? "Tell the town who you are: a name of your own, on the Join tab." : "Your papers, your vote, the jury, the treasury and the notices.")
+                    : "Sign the town's book at the Town Hall: a resident, a bed if you fall, a name of your own. Free.", "")
+            .button("The Town Hall", "hall", null).button("My card", "papers", null, rp != null, "Sign a town's book and give your name first");
+        if (FirstWeek.town(p.getUUID()) != null && FirstWeek.next(p.getUUID()) != null) {
+            FirstWeek.Step nx = FirstWeek.next(p.getUUID());
+            page.row(new ItemStack(nx.icon), "Your first week: " + FirstWeek.count(p.getUUID()) + " of " + FirstWeek.firstEight(), "Next: " + nx.label + ". " + nx.why, "")
+                .button("The checklist", "hallweek", null);
+        }
         // belonging
         page.heading("Belonging");
         page.buttons().button("The town's council and elections", "council", null).button("Taxes", "say", LifePage.args("t", "What are the taxes here?"))
@@ -143,10 +161,14 @@ public final class LifeTown implements PlayerLife.Page {
                 return said.startsWith("!") || v == null || Citizens.is(v.id(), p.getUUID()) ? said : "!" + said;
             }
             case "council" -> { return sayToNearest(p, "Who's on the council?"); }
+            case "hall" -> { TownHall.open(p, "join"); return "#open:"; }                // [wpa]
+            case "hallweek" -> { TownHall.open(p, "week"); return "#open:"; }
+            case "papers" -> { IdCard.openOwn(p); return "#open:"; }
             case "say" -> { return sayToNearest(p, args.getString("t")); }
             case "buyhouse" -> { return Homes.playerBuys(level, p); }
             case "envoy" -> { return PlayerLife.command(p, "village leader envoy " + (args.getBoolean("yes") ? "yes" : "no")); }
             case "rent" -> { return Homes.playerCollects(level, p); }
+            case "let" -> { return Homes.playerLets(level, p, ShopPage.parse(args.getCompound("f").getString("letrent"), 3)); }   // [wpa]
             default -> { return null; }
         }
     }

@@ -1055,7 +1055,7 @@ public final class Bank {
             : FolkTalk.pick(level.getRandom(), "A payment missed on " + where + ". A word in the right ear, I think.",
                 l.names + " are behind. I've written to them."));
         tellPlayer(level, l, (last ? "Last warning: " : "") + "you are " + l.missed + (l.missed == 1 ? " payment" : " payments") + " behind on your mortgage on "
-            + where + " (" + l.arrears + " coins). Put coin in your account at the bank (/village bank deposit) before its next round.");
+            + where + " (" + l.arrears + " coins). Put coin in your account at the bank's desk before its next round.");
     }
 
     /**
@@ -1355,7 +1355,7 @@ public final class Bank {
         if (!mortgage && (t.contains("borrow") || t.contains("a loan") || t.contains("lend") || repays && playerLoan(id, p.getUUID()) == null)) return null;
         VillageFolkEntity banker = banker(id);
         if (banker != null && banker != f) {
-            return "That's the bank's business — see " + banker.displayNameCap() + ", our banker, at the bank. Or /village bank, if you're in a hurry.";
+            return "That's the bank's business — see " + banker.displayNameCap() + ", our banker, at the bank's desk.";
         }
         return handle(level, id, p, t);
     }
