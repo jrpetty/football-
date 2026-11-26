@@ -88,7 +88,7 @@ public final class FeatStage {
     /** Level, open ground thirteen square near the heart (nothing built on it, no water): the first found going out. */
     static BlockPos openGround(ServerLevel level, Villages.Village v) {
         BlockPos c = v.centre();
-        for (int r = 24; r <= 150; r += 6) {
+        for (int r = 24; r <= 220; r += 6) {
             for (int k = 0; k < Math.max(8, r / 3); k++) {
                 double a = Math.PI * 2 * k / Math.max(8, r / 3);
                 int x = c.getX() + (int) Math.round(Math.cos(a) * r), z = c.getZ() + (int) Math.round(Math.sin(a) * r);
@@ -108,7 +108,7 @@ public final class FeatStage {
                         hi = Math.max(hi, y);
                     }
                 }
-                if (ok && hi - lo <= 1) return new BlockPos(x, hi + 1, z);
+                if (ok && hi - lo <= 3) return new BlockPos(x, (hi + lo) / 2 + 1, z);   // levelled by putUp (ParkGround.levelNow)
             }
         }
         return null;
