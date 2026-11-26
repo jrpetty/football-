@@ -62,9 +62,14 @@ public final class Values {
 
     /** What the folk's nature alone makes it care about. */
     static int[] base(Social.Life life, UUID id) {
+        return base(life.traits(), id);
+    }
+
+    /** [featcivic] The same from the traits alone (a unit test's founders). */
+    static int[] base(java.util.Collection<Social.Trait> traits, UUID id) {
         int[] v = new int[N];
         Arrays.fill(v, 20);
-        for (Social.Trait t : life.traits()) {
+        for (Social.Trait t : traits) {
             switch (t) {
                 case HARDWORKING -> { add(v, Value.PROGRESS, 20); add(v, Value.WEALTH, 10); add(v, Value.LEISURE, -10); }
                 case EASYGOING -> { add(v, Value.LEISURE, 20); add(v, Value.TRADITION, 10); add(v, Value.PROGRESS, -10); }

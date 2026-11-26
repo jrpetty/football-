@@ -41,11 +41,17 @@ public final class InWorld implements PlayerLife.Page {
         r("labour", "work", "The labour market: the Jobs page of the city books", "page:Jobs"),
         r("labour post", "business", "Post an opening for your firm: Your businesses, its Hands tab", "life:firm"),
         r("labour hire", "business", "Take the best who applied: Your businesses, its Hands tab", "life:firm"),
-        r("labour minwage", "civic", "The minimum wage (a leader's): the Leader's page", "talk:What are your plans for the town?"),
+        r("labour minwage", "civic", "The minimum wage (a leader's): the Town Hall's Office tab", "life:hall#office"),   // [wpa]
         r("wages", "work", "Wages: the Jobs page of the city books, and each folk's card", "page:Jobs"),
         r("interviews", "civic", "Interviews for the town's posts: the Interviews page of the city books (choose, recommend)", "page:Interviews"),
         r("bank", "money", "The bank's counter (right-click it, or the banker's Bank talk option): deposit, withdraw, mortgage, repay", ""),
         r("capital", "money", "Savings, loans and bonds at the bank's counter; land titles and shares on this page's Capital tab", "tab:capital"),
+        // [wpa] Before a bank opens, the Town Hall keeps the savings club, its loans and the town's bonds (its Money tab).
+        r("capital deposit", "money", "Save: the bank's counter, or the Town Hall's Money tab before there's a bank", "life:hall#money"),
+        r("capital withdraw", "money", "Withdraw savings: the bank's counter, or the Town Hall's Money tab", "life:hall#money"),
+        r("capital borrow", "money", "Borrow against your holdings: the Town Hall's Money tab (or the bank)", "life:hall#money"),
+        r("capital repay", "money", "Repay a loan: the Town Hall's Money tab (or the bank)", "life:hall#money"),
+        r("capital bonds", "money", "The town's bonds, bought and collected: the Town Hall's Money tab", "life:hall#money"),
         r("donate", "money", "Give to the town's treasury: this page (choose how much)", "tab:money"),
         r("accounts", "money", "The town's accounts: the Money page of the city books", "page:Money"),
         r("quests", "work", "Quests: the quest journal (its item), and any folk's Quests talk option", "talk:Any work for me?"),
@@ -79,10 +85,20 @@ public final class InWorld implements PlayerLife.Page {
         // ---------------------------------------------------------------- town and civic
         r("civic", "civic", "Standing for leader: a folk's \"I'd like to stand for election\" (the hustings page and its buttons)", "talk:I'd like to stand for election"),
         r("leader", "civic", "Leading the town: the Leader's page and its buttons (the Leader page of the city books)", "page:Leader"),
-        r("referendum", "civic", "A referendum: the Leader page; vote in talk", "page:Leader"),
+        r("referendum", "civic", "A question put to the town: vote aye or nay on the Town Hall's Duties tab, or a folk's Town, Hall, Vote aye", "life:hall#duties"),   // [wpa]
+        r("leader referendum", "civic", "Put a question to the town (the leader's): the Town Hall's Office tab", "life:hall#office"),
+        r("leader envoy", "civic", "An envoy's answer (the leader's): the Town Hall's Office tab, or Your life in town", "life:hall#office"),
+        r("leader plan", "civic", "The town's plan (the leader's): the Town Hall's Office tab, or the leader's page", "life:hall#office"),
+        r("leader tithe", "civic", "The tithe (the leader's): the Town Hall's Office tab, or the leader's page", "life:hall#office"),
+        r("leader wages", "civic", "The wages (the leader's): the Town Hall's Office tab, or the leader's page", "life:hall#office"),
+        r("leader build", "civic", "The next building (the leader's): the leader's page from the Town Hall's Office tab", "life:hall#office"),
+        r("war join", "civic", "Join the town's army in the field: the Town Hall's Duties tab (Join the army)", "life:hall#duties"),
+        r("identity law", "civic", "Set a law (the leader's): the Town Hall's Office tab", "life:hall#office"),
+        r("knight retinue", "civic", "A knight's retinue (call, stand down, hire, release): the Town Hall's Office tab", "life:hall#office"),
+        r("knight manor", "civic", "A knight's manor: the Town Hall's Office tab", "life:hall#office"),
         r("knight", "civic", "A knight's service, vote, manor and retinue: the Knights page of the city books (its buttons) and talk", "page:Knights"),
         r("taxes", "civic", "Taxes: the Taxes page; pay at any folk's \"I'll pay my taxes\"", "page:Taxes"),
-        r("taxes pay", "civic", "Pay your taxes: any folk's talk option", "talk:I'll pay my taxes"),
+        r("taxes pay", "civic", "Pay your taxes: the Town Hall's Money tab, or any folk's talk option", "life:hall#money"),   // [wpa]
         r("identity", "civic", "The town's identity and laws: the Identity page", "page:Identity"),
         r("inventions", "civic", "Research and inventions: the Inventions page (give, pick, sponsor, suggest)", "page:Inventions"),
         r("research", "civic", "Research: the Research page", "page:Research"),
@@ -261,7 +277,12 @@ public final class InWorld implements PlayerLife.Page {
             case "go" -> {
                 String a = args.getString("a");
                 if (a.startsWith("page:")) { LifeTown.books(p, a.substring(5)); return "#close"; }
-                if (a.startsWith("life:")) { PlayerLife.open(p, a.substring(5), null); return "#open:"; }
+                if (a.startsWith("life:")) {
+                    String pg = a.substring(5);
+                    int hash = pg.indexOf('#');                                     // [wpa] a page on one of its tabs
+                    PlayerLife.open(p, hash < 0 ? pg : pg.substring(0, hash), hash < 0 ? null : LifePage.args("tab", pg.substring(hash + 1)));
+                    return "#open:";
+                }
                 if (a.startsWith("talk:")) return LifeTown.sayToNearest(p, a.substring(5));
                 if (a.startsWith("tab:")) { c.tab = a.substring(4); return ""; }
                 if (a.startsWith("cmd:")) return PlayerLife.command(p, a.substring(4));

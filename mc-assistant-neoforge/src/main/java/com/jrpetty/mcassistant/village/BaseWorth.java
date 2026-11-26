@@ -176,5 +176,6 @@ public final class BaseWorth {
         // and a companion's memory core is nobody's to buy or sell: it is a friend, and nothing makes another.
         "mc_assistant:village_coin 1.0 C", "mc_assistant:memory_core 0 C",
         "mc_assistant:working_model 3.0 C",                          // [tech-tree] the scholars' model: a few makings, and the work
+        "mc_assistant:citizen_papers 0.3 C",                         // [wpa] its paper and ink; issued by the Town Hall, never sold
     };
 }

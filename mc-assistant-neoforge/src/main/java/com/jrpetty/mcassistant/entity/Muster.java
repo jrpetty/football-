@@ -57,6 +57,18 @@ public final class Muster {
     /** How near its mark a guard of the ring stands (blocks). */
     static final double PLACED = 0.3;
 
+    /**
+     * [wpa] A player joins the town's army in the field (the Town Hall's Duties tab, the war room, the Captain): a citizen
+     * as a volunteer, anybody else as a sword for hire out of the treasury (Campaigns.join). The one way in for the
+     * button and the old command alike. Returns what was said.
+     */
+    public static String playerJoins(ServerLevel level, Villages.Village v, net.minecraft.server.level.ServerPlayer p) {
+        return Campaigns.join(level, v, p, com.jrpetty.mcassistant.village.Ledger.citizen(v.id(), p.getUUID()), HIRE);
+    }
+
+    /** [wpa] What a sword for hire is paid out of the treasury. */
+    public static final int HIRE = 10;
+
     /** A town's muster: where, how big, and who stands where. */
     static final class Gathering {
         final BlockPos at;
@@ -123,6 +135,7 @@ public final class Muster {
             if (f.isSleeping()) f.stopSleeping();
             if (f.peekJob() != null) f.clearQueue();
         }
+        TownHall.militiaCalled(level, v, g.at);                           // [wpa] the players in the militia told, the arrow on the square
     }
 
     /** The town's muster, worked out once a bell. */

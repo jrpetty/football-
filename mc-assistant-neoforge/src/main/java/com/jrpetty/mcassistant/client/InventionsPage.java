@@ -410,7 +410,7 @@ public final class InventionsPage {
         rest.add("Eurekas " + m.getInt("eurekas") + ", failed experiments " + m.getInt("fails") + ", pages of notes " + m.getInt("notes") + ".");
         if (!m.getString("suggest").isEmpty()) rest.add("Suggested: " + m.getString("suggest") + ".");
         if (!m.getString("patrons").isEmpty()) rest.add("Patrons: " + m.getString("patrons") + ".");
-        rest.add("Suggest, sponsor or give books: /village inventions, or the academy's lectern.");
+        rest.add("Suggest, sponsor or give books: this page's buttons, or the academy's lectern.");
         for (String r : rest) {
             for (String line : wrap(font, r, side - 4)) {
                 if (sy > bottom - 8) return;

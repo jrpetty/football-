@@ -1330,7 +1330,7 @@ public final class Festivals extends SavedData {
         List<String> out = new ArrayList<>();
         Feast today = today(village, day);
         if (today == Feast.FAIR) {
-            out.add("RG|Fair day! Bring your best bread, wool, fish or honey: right-click this board with it (or /village fair enter). "
+            out.add("RG|Fair day! Bring your best bread, wool, fish or honey: right-click this board with it. "
                 + "Judged this evening.");
         } else if (today != null) {
             out.add("RG|Today: " + todayWords(today) + ".");

@@ -94,6 +94,15 @@ public final class StartBusiness implements PlayerLife.Page {
             page.text("Businesses are chartered by a town: go to one.", 3);
             return page;
         }
+        String planned = Regimes.businessBarred(v.id());                     // [featcivic] a planned state: no private business
+        if (planned != null) {
+            page.heading("No private business here");
+            page.text(planned, 3);
+            page.text("Why: " + Villages.name(v.id()) + " is a planned state. The committee owns every workshop, sets the week's quotas and pays "
+                + "every hand the same. What you can do: take a shift for the state on the jobs board, or vote for a reform if one is put.", 2);
+            page.buttons().button("The jobs board", "jobsboard", null).primary().button("How the town is run", "govhall", null);
+            return page;
+        }
         if (!c.tab.isEmpty()) {                                              // a tab clicked: that step
             c.args.putInt("step", ShopPage.parse(c.tab, 1));
             c.tab = "";
@@ -418,7 +427,13 @@ public final class StartBusiness implements PlayerLife.Page {
                 return "";
             }
             case "citizen" -> { return LifeTown.sayToNearest(p, "May I live here?"); }
-            case "confirm" -> { return isShop(c) ? BizShop.confirmed(level, p, v, c, args.getInt("borrow")) : confirmed(level, p, v, c, args.getInt("borrow")); }   // [biz25]
+            case "confirm" -> {
+                String planned = Regimes.businessBarred(v.id());             // [featcivic] a planned state: not chartered
+                if (planned != null) return "!" + planned;
+                return isShop(c) ? BizShop.confirmed(level, p, v, c, args.getInt("borrow")) : confirmed(level, p, v, c, args.getInt("borrow"));   // [biz25]
+            }
+            case "jobsboard" -> { PlayerLife.open(p, "jobs", null); return "#open:"; }      // [featcivic] work for the state
+            case "govhall" -> { GovActions.openHall(p, "Overview"); return "#close"; }       // [featcivic] how the town is run
             case "buycounter" -> { return BizGuide.buyCounter(p); }
             case "life" -> { PlayerLife.open(p, "life", null); return "#open:"; }
             case "shophelp" -> { PlayerLife.open(p, "shop", null); return "#open:"; }

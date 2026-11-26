@@ -661,7 +661,7 @@ public class PlayerLifeGameTests {
             CommandSourceStack src = p.createCommandSourceStack().withPermission(0);
             List<String> paths = new ArrayList<>();
             for (CommandNode<CommandSourceStack> n : level.getServer().getCommands().getDispatcher().getRoot().getChildren()) {
-                if (n instanceof LiteralCommandNode && n.getName().equals("village")) walk(n, src, "village", paths, 0);
+                if (n instanceof LiteralCommandNode && n.getName().equals("village")) walk(n, src, "village", paths, 0);   // [wpa] three levels down
             }
             List<String> missing = new ArrayList<>();
             int routed = 0;
@@ -672,14 +672,32 @@ public class PlayerLifeGameTests {
             }
             Kit.log("[VT] pl10 player commands " + paths.size() + ", routed " + routed + ", missing " + missing);
             helper.assertTrue(missing.isEmpty(), "every player command has a way in the world: missing " + missing);
+            // [wpa] And an action's way in does it: the commands that were command-only route to a button (a page of the player's
+            // own, "life:", a desk, a tab or a button of Everything you can do) or a talk option the talk menu offers, never to a
+            // read-only book ("page:").
+            java.util.Set<String> menu = new java.util.HashSet<>();
+            for (com.jrpetty.mcassistant.client.TalkMenu.Entry e : com.jrpetty.mcassistant.client.TalkMenu.all()) menu.add(e.text().toLowerCase(java.util.Locale.ROOT));
+            String[] actions = { "war join", "labour minwage", "identity law", "referendum vote", "leader referendum", "leader envoy", "leader plan",
+                "leader tithe", "leader wages", "knight retinue", "knight manor", "capital deposit", "capital withdraw", "capital borrow",
+                "capital repay", "capital bonds", "taxes pay", "civic stand" };
+            List<String> readOnly = new ArrayList<>();
+            for (String a : actions) {
+                InWorld.Route r = InWorld.route("village " + a);
+                String act = r == null ? "" : r.action();
+                boolean ok = act.startsWith("life:") || act.startsWith("desk:") || act.startsWith("tab:") || act.startsWith("cmd:")
+                    || act.startsWith("talk:") && menu.contains(act.substring(5).toLowerCase(java.util.Locale.ROOT));
+                if (!ok) readOnly.add(a + " -> " + (act.isEmpty() ? "nothing" : act));
+            }
+            Kit.log("[VT] pl10 actions " + actions.length + ", not a button " + readOnly);
+            helper.assertTrue(readOnly.isEmpty(), "every action's way in is a button or a talk option the menu offers: " + readOnly);
             helper.succeed();
         });
     }
 
     private static void walk(CommandNode<CommandSourceStack> n, CommandSourceStack src, String path, List<String> out, int depth) {
         if (!n.canUse(src)) return;
-        if (n.getCommand() != null || depth >= 2) out.add(path);
-        if (depth >= 2) return;
+        if (n.getCommand() != null || depth >= 3) out.add(path);
+        if (depth >= 3) return;
         for (CommandNode<CommandSourceStack> c : n.getChildren()) {
             if (!(c instanceof LiteralCommandNode)) { if (n.getCommand() == null) out.add(path); continue; }
             walk(c, src, path + " " + c.getName(), out, depth + 1);

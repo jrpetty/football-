@@ -2127,7 +2127,7 @@ public final class Homes {
         key.set(DataComponents.CUSTOM_NAME, Component.literal("Key to " + address(id, v, h)));
         if (!p.getInventory().add(key)) p.drop(key, false);
         Villages.tell(id, h.since, p.getName().getString() + " bought " + address(id, v, h) + " for " + price + coins(price));
-        return "It's yours: " + address(id, v, h) + ", for " + price + coins(price) + ". Sleep in its bed to make it your home, or let it out with /village house let <rent a day>.";
+        return "It's yours: " + address(id, v, h) + ", for " + price + coins(price) + ". Sleep in its bed to make it your home, or let it out from Your life in town (U), under Home.";
     }
 
     /** /village house let N: the player's house let out at N coins a day (0: taken off the market and the tenants given notice). */

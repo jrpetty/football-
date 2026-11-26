@@ -658,6 +658,7 @@ public final class Annals {
         out.put("emerald", EmeraldTrader.report(level, v));      // [emerald] the Trading Post page: the account, the villagers' villages
         out.put("lands", Borders.report(level, v));              // [borders-map] the Lands page: area, neighbours, disputes, markers
         out.put("realm", CivicLand.report(level, v));
+        out.put("government", GovReport.report(level, v, null));   // [featcivic] the Government page
         out.put("business", BusinessBooks.list(level, id));
         out.put("market", MarketMaker.page(level, id));                 // [econ-1a] the Market page: the storehouse's bid and ask, its trades            // [business-books] the Businesses page            // [civic-land] the Taxes and the Knights pages
         List<String> queue = new ArrayList<>();
