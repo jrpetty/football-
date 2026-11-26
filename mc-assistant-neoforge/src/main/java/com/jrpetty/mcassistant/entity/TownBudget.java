@@ -187,9 +187,91 @@ public final class TownBudget {
         return n;
     }
 
-    /** Does the town owe its market more than it can carry (and its market is open)? */
+    /** Does the town owe more than it can carry (and its market is open)? [econ51] Its IOUs and the bonds it sold to pay
+     *  them off alike (the load): an IOU paid with a bond is still owed. */
     public static boolean owesTooMuch(UUID village) {
-        return village != null && MarketMaker.live(village) && Accounts.debts(village) > limit(village);
+        return village != null && MarketMaker.live(village) && load(village) > limit(village);
+    }
+
+    /**
+     * [econ51] The debt that weighs on the works, pennies (DebtBrake.load): its IOUs to its market, and its bonds over a
+     * week's revenue. The IOUs alone are not the debt: each morning the treasurer sells bonds to pay off all but a quarter
+     * of what it can carry, so a brake on the IOUs alone let go every morning and the bonds climbed on (a long run's town
+     * owed four thousand coins in bonds and six on its IOUs, and was "at ease").
+     */
+    public static long load(UUID village) {
+        if (village == null) return 0;
+        return com.jrpetty.mcassistant.village.DebtBrake.load(Accounts.debts(village), TownBonds.outstanding(village), week(village));
+    }
+
+    /** [econ51] The least the works may spend in a day whatever is owed, pennies: two coins, and a quarter coin a grown folk. */
+    static final long LEAST_DAY = 200, LEAST_DAY_A_HEAD = 25;
+
+    /**
+     * [econ51] A day's revenue for the brake, pennies: the week's at a day's rate, or the last three days' if they were
+     * leaner (the market's share comes in only while its cash is over its float, and a fortnight's average let the works go
+     * on spending at last week's rate for a week after it stopped).
+     */
+    static long dayRevenue(UUID village) {
+        long opened = MarketMaker.openedDay(village);
+        long open = opened < 0 ? 7 : Math.max(1, Math.min(DAYS, Accounts.dayNow() - opened + 1));
+        long recent = Math.min(3, open);
+        long lately = revenueOver(village, recent) / recent;
+        return Math.min(week(village) / 7, lately);
+    }
+
+    /** [econ51] What the works may spend today, pennies (Long.MAX_VALUE: no bound): DebtBrake.allowance. */
+    public static long allowanceToday(UUID village) {
+        if (village == null || !MarketMaker.live(village)) return Long.MAX_VALUE;
+        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        long now = server == null ? -1 : server.overworld().getGameTime();
+        long[] c = ALLOWANCE.get(village);
+        if (c != null && now >= 0 && now >= c[0] && now - c[0] < 20) return c[1];
+        long a = com.jrpetty.mcassistant.village.DebtBrake.allowance(load(village), limit(village), dayRevenue(village),
+            Math.max(LEAST_DAY, LEAST_DAY_A_HEAD * grown(village)));
+        if (ALLOWANCE.size() > 1024) ALLOWANCE.clear();
+        ALLOWANCE.put(village, new long[]{ now, a });
+        return a;
+    }
+
+    private static final java.util.Map<UUID, long[]> ALLOWANCE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** [econ51] What the works may still spend today, pennies (Long.MAX_VALUE: no bound, its market not open). Over the
+     *  line, the day's allowance less what the works spent today; under it, the room to the line and a day's share more. */
+    public static long worksRoom(@javax.annotation.Nullable UUID village) {
+        if (village == null) return Long.MAX_VALUE;
+        Integer forced = PRESSURE_FOR_TESTS.get(village);
+        if (forced != null && forced < 2) return Long.MAX_VALUE;
+        long a = allowanceToday(village);
+        if (a == Long.MAX_VALUE) {
+            if (!MarketMaker.live(village)) return Long.MAX_VALUE;
+            // Under the line: as much as keeps it no further over the line than a day's share of its revenue (one builder's
+            // load of lanterns and stairs took a ten-day town from 55c to 150c on its Market Opening Day, under its line when
+            // the load was drawn).
+            long head = limit(village) - load(village);
+            return Math.max(0, head + Math.round(com.jrpetty.mcassistant.village.DebtBrake.TOP_SHARE * dayRevenue(village)));
+        }
+        return Math.max(0, a - Accounts.deptBook(village, Accounts.Dept.WORKS)[0]);
+    }
+
+    /**
+     * [econ51] How many of this thing the stores may let the town's works have now (the rest waits for tomorrow's money):
+     * all of them, unless the works pay for it (a builder's load, the town's small works out of the stores) while the town
+     * owes more than it can carry; then as many as the day's allowance left will buy at the market's ask. The tools of the
+     * town's own hands are never held back (they earn the revenue that pays the debt), nor what another account pays for.
+     * Read before the take (AssistantEntity.drawFrom, TownWork.takeFromStores, Crafts.takeOne), so nothing is taken that
+     * the town cannot pay for on the day: the stores are not emptied onto paper.
+     */
+    public static int mayTake(net.minecraft.server.level.ServerLevel level, @javax.annotation.Nullable UUID village, net.minecraft.world.item.ItemStack st, int n) {
+        if (village == null || n <= 0 || st.isEmpty() || !MarketMaker.live(village)) return n;
+        long room = worksRoom(village);
+        if (room == Long.MAX_VALUE) return n;
+        Accounts.Account a = Accounts.resolve(village, st).account();
+        if (a.kind() != Accounts.Kind.DEPT || a.deptOf() != Accounts.Dept.WORKS) return n;
+        if (Capital.durable(st)) return n;
+        if (room <= 0) return 0;
+        double each = Math.max(1.0, MarketMaker.ask(level, village, st.copyWithCount(1)) * 100.0);
+        return com.jrpetty.mcassistant.village.DebtBrake.fits(room, each, n);
     }
 
     /**
@@ -208,7 +290,7 @@ public final class TownBudget {
         long now = server == null ? -1 : server.overworld().getGameTime();
         long[] c = PRESSURE.get(village);
         if (c != null && now >= 0 && now >= c[0] && now - c[0] < 20) return (int) c[1];
-        long owed = Accounts.debts(village), lim = limit(village);
+        long owed = load(village), lim = limit(village);                 // [econ51] its bonds over a week's revenue too
         int p = owed > lim ? 2 : owed * 2 > lim || spentToday(village) > allowance(village) ? 1 : 0;
         if (PRESSURE.size() > 1024) PRESSURE.clear();
         PRESSURE.put(village, new long[]{ now, p });
@@ -225,14 +307,9 @@ public final class TownBudget {
 
     /** [econ-1d] What the works may spend in a day: a day's share of the week's revenue, and of what it may still borrow. */
     public static long allowance(UUID village) {
-        long room = Math.max(0, limit(village) - Accounts.debts(village));
+        long room = Math.max(0, limit(village) - load(village));            // [econ51] (the load)
         return Math.max(LEAST_LIMIT / 2, revenue7(village) / 7 + room / 4);
     }
-
-    /** [econ-1d] What the works may always spend in a day, whatever the town owes, pennies: its essentials go ahead, at a pace. */
-    static final long WORKS_FLOOR = 1000;
-    /** [econ-1d] The share of a day's revenue a short town lets its works spend: the rest pays its debts down. */
-    static final double SHORT_SHARE = 0.6;
 
     /**
      * [econ-1d] The dearest building block a careful town buys for its walls, coin each: three times the market's cobblestone
@@ -255,15 +332,18 @@ public final class TownBudget {
     }
 
     /**
-     * [econ-1d] Short (it owes its market more than it can carry) and the works have spent today what the town can find for
-     * them (three fifths of a day's share of its week's revenue, the rest to pay its debts down; ten coins at the least): its
-     * builders fetch no more for the day.
-     * Its essential buildings still go up every day, at the pace its money allows; nothing waits for ever.
+     * [econ-1d] Short (it owes more than it can carry) and the works have spent today the half of the day's allowance that is
+     * not kept for its homes and food ([econ51] DebtBrake: a share of a day's revenue, the rest to pay its debts down): its
+     * builders fetch no more for the day for what is not core. Its homes and food go on with the rest of the allowance;
+     * nothing waits for ever.
      */
     public static boolean worksWait(@javax.annotation.Nullable UUID village) {
         if (village == null || pressure(village) < 2) return false;
-        long today = Accounts.deptBook(village, Accounts.Dept.WORKS)[0];
-        return today > Math.max(WORKS_FLOOR, Math.round(revenue7(village) / 7.0 * SHORT_SHARE));
+        // [econ51] The day's allowance (DebtBrake), its first half for the homes and food alone: what is not core waits once
+        // the works have spent that much (it was three fifths of a day's revenue, ten coins at the least, for anything not core).
+        long a = allowanceToday(village);
+        if (a == Long.MAX_VALUE) return false;
+        return Accounts.deptBook(village, Accounts.Dept.WORKS)[0] * 2 >= a;
     }
 
     /**
@@ -288,7 +368,7 @@ public final class TownBudget {
     /** [econ-1e] Its builders wait for tomorrow's money for this project: short, the day's money for the works spent, and not a
      *  home, food or its age's building; or the town at its borrowing's end (halted), whatever it is. */
     public static boolean worksWait(@javax.annotation.Nullable UUID village, String project) {
-        if (halted(village)) return true;
+        if (worksRoom(village) <= 0) return true;                           // [econ51] the day's allowance spent: tomorrow
         return worksWait(village) && !core(project);
     }
 
@@ -304,7 +384,9 @@ public final class TownBudget {
      */
     public static boolean halted(@javax.annotation.Nullable UUID village) {
         if (village == null || !MarketMaker.live(village)) return false;
-        return Accounts.debts(village) > HALT * limit(village);
+        // [econ51] Deep in debt and the day's allowance spent: no longer a wall at the line, past which a town started nothing
+        // for days on end (the brake's slope holds its spending to its means; what it starts waits for the day's money).
+        return load(village) > HALT * limit(village) && worksRoom(village) <= 0;
     }
 
     /** [econ-1d] Careful with its money: the buildings go up plain (Villages' decorations not bought). */
@@ -361,6 +443,7 @@ public final class TownBudget {
     public static void resetForTests() {
         LAST.clear();
         PRESSURE.clear();
+        ALLOWANCE.clear();
     }
 
     /**
@@ -499,6 +582,7 @@ public final class TownBudget {
         b.putLong("spentAll", all);
         payDown(level, v, day);                                              // [econ-1d] what the treasury can spare, off the IOUs
         PRESSURE.remove(id);
+        ALLOWANCE.remove(id);                                                // [econ51] the new day's allowance
         LAST.put(id, pressure(id));
         boolean short_ = pressure(id) >= 1;                                  // [econ-1d] careful, not only short
         List<String> put = short_ ? putOff(id) : new ArrayList<>();
@@ -552,16 +636,40 @@ public final class TownBudget {
     /** The budget in a line, for the Market page and /village market. */
     public static String line(UUID village) {
         if (!MarketMaker.live(village)) return "";
+        return weekLine(village) + ". " + owingLine(village);
+    }
+
+    /** [econ51] The town's week in a line: what came in, by kind, and what its departments spent. */
+    public static String weekLine(UUID village) {
+        if (!MarketMaker.live(village)) return "";
         java.util.Map<String, Long> in = revenue7ByKind(village);
         List<String> parts = new ArrayList<>();
         for (java.util.Map.Entry<String, Long> e : in.entrySet()) parts.add(e.getKey() + " " + Businesses.pence(e.getValue()));
         return "The town's week: in " + Businesses.pence(revenue7(village)) + (parts.isEmpty() ? "" : " (" + String.join(", ", parts) + ")")
-            + ", spent " + Businesses.pence(spent7(village)) + "; IOUs " + Businesses.pence(Accounts.debts(village)) + " of the "
-            + Businesses.pence(limit(village)) + " it can carry" + switch (pressure(village)) {      // [econ-1d] how tight
-                case 2 -> ": short, the works that can wait put off, its buildings plain, one crew at a time";
-                case 1 -> ": careful, the works that can wait put off, its buildings plain";
-                default -> "";
-            } + "; profits tax " + TaxBook.profitsPercent(village) + "%";
+            + ", spent " + Businesses.pence(spent7(village)) + "; profits tax " + TaxBook.profitsPercent(village) + "%";
+    }
+
+    /**
+     * [econ51] What the town owes, in plain words, for the board (the Market page; the mouse over it says what an IOU is): its
+     * IOUs (the notes its treasury leaves its market for what its works took with no coin to pay), the bonds that count
+     * with them, what it can carry, and what that does to its builders today. "IOUs 367.23c of the 78.24c it can carry:
+     * short, ..." told a player nothing it could use.
+     */
+    public static String owingLine(UUID village) {
+        if (!MarketMaker.live(village)) return "";
+        long ious = Accounts.debts(village), load = load(village), carry = limit(village);
+        String s = "Owed to its own market on IOUs: " + Businesses.pence(ious);
+        if (load > ious) s += ", and " + Businesses.pence(load - ious) + " of bonds past a week's takings";
+        s += "; it can carry " + Businesses.pence(carry);
+        return s + switch (pressure(village)) {
+            case 2 -> {
+                long a = allowanceToday(village);
+                yield a == Long.MAX_VALUE ? ": over it, one building at a time"
+                    : ": over it, so the builders get " + Businesses.pence(a) + " today and the rest pays the debt off";
+            }
+            case 1 -> ": the extras put off and the buildings plain until it is down";
+            default -> ": nothing to worry about";
+        };
     }
 
     /** Tests: the profits tax on a business's week's profit, now. */

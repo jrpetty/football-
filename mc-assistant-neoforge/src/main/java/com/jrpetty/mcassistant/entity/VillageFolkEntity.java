@@ -758,6 +758,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Families.tick(polls, home);          // pets, gardens, graves visited, anniversaries (Families)
                     Health.tick(polls, home);            // [batchA] colds passed round, the healer's round (Health)
                     Neighbourly.tick(polls, home);       // [batchA] the old, newcomers, housewarmings, the poor box (Neighbourly)
+                    LandUse.tick(polls, home);           // [econ51] the fields in the town's way bought out and moved further out
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                     CaveDwellers.tick(polls, home);      // [caves] an Iron Age town takes up its cave dwellers
                     Fletchers.tick(polls, home);         // [fletcher] its fletcher, and the afternoon's practice at the range
@@ -5190,6 +5191,7 @@ public class VillageFolkEntity extends AssistantEntity {
         neighbours = Villages.folkOf(town);
         try {
             for (int[] f : Villages.fieldSquares(side)) {
+                if (LandUse.released(town, Villages.along(side, f[0], f[1]))) continue;   // [econ51] the town's now: further out
                 // A square the farmer cannot walk to from the town is no field of the town's.
                 if (walk != null && !walk.fieldReaches(heart.offset(f[0], 0, f[1]), FIELD_MOST / 2)) continue;   // [fixes14] most of it
                 BlockPos p = surfaceAt(heart.getX() + f[0], heart.getZ() + f[1]);
@@ -5356,9 +5358,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // fisher may cast from its banks: water is not a field).
         UUID town = ownerId();
         int keep = trade == StationTask.FARM ? FIELD_MOST : radius;
-        if (outdoor && town != null) reach = Math.max(reach, Villages.townReach(town) + keep + 8);
+        if (outdoor && town != null) reach = Math.max(reach, LandUse.growthReach(town) + keep + 8);   // [econ51] past the growth line
         java.util.function.Predicate<BlockPos> clear = p -> !outdoor || town == null
-            || Villages.outsideTown(town, heart, p, keep)
+            || Villages.outsideTown(town, heart, p, keep) && !LandUse.inGrowthRoom(town, heart, p, keep)   // [econ51] the town's room to grow kept clear
                && (trade == StationTask.FARM || trade == StationTask.FISH || !Villages.onFarmland(town, heart, p, radius))
                && !Bonds.overBorder(town, heart, p, keep)                  // never over the line toward a neighbour
                && !VanillaVillages.within(level(), p.getX(), p.getZ(), keep + VanillaVillages.MARGIN)   // [emerald] nor the villagers' ground
@@ -5388,7 +5390,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (plot != null) yield plot;
                 // Nowhere on the farmland (the ground not in yet, or no soil on it): the nearest water
                 // outside the town, or the nearest good soil.
-                int out = outdoor && town != null ? Villages.townReach(town) + keep + 2 : 8;
+                int out = outdoor && town != null ? LandUse.growthReach(town) + keep + 2 : 8;   // [econ51] past the growth line
                 BlockPos wet = nearestWaterField(heart, out, keep, near);
                 if (wet == null) wet = scan(from, SCAN, 6, keep, p -> near.test(p) && farmable(p));
                 if (wet == null) wet = scan(from, SCAN, 6, keep, p -> near.test(p) && soilField(p));

@@ -56,8 +56,11 @@ public final class TownPlan {
     /**
      * [city26] How many rings of blocks the plan can grow to: a town that has filled its first three lays out a fourth,
      * and a fifth, and a sixth, each as it fills the last (entity/CityGrowth), round its farmland and its mine's ground.
+     * [econ51] And on to a ninth (two hundred and thirty-eight blocks out): on a river among hills a long run's town had
+     * six rings laid out by seventy-seven folk, three lots in four of them wet or up a cliff, and twenty-three households
+     * waiting for a roof that no lot would take; the land past the sixth ring had more dry, level lots than all six.
      */
-    public static final int MAX_RINGS = 6;
+    public static final int MAX_RINGS = 9;
 
     /** Which way a building's back is, from its door: the door is on the opposite side. */
     public static final int NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3;

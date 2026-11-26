@@ -491,6 +491,7 @@ public final class TownBonds {
         t.putLong("arrears", arrears(village));
         t.putLong("ious", Accounts.debts(village));
         t.putLong("limit", TownBudget.limit(village));
+        t.putLong("load", TownBudget.load(village));                       // [econ51] what weighs on its works
         t.putLong("week", TownBudget.week(village));
         t.putLong("soldAll", book(village).getLong("soldAll"));
         t.put("thisWeek", book(village).getCompound("week").copy());

@@ -110,7 +110,7 @@ public final class EconReport {
         out.add(String.format(Locale.ROOT, "Price index %.1f (inflation %+.1f%% this week); money %d coins (deposits %d), the firms' loans %d.",
             EconIndex.cpi(id) / 100.0, EconIndex.inflationWeek(id) * 100, EconIndex.last(id, "money", 0), EconIndex.last(id, "deposits", 0),
             EconIndex.last(id, "loans", 0)));
-        out.add(String.format(Locale.ROOT, "Treasury %d coins; the town's debt %d (bonds %d, IOUs to its market %s).",
+        out.add(String.format(Locale.ROOT, "Treasury %d coins; the town's debt %d (bonds %d, owed to its own market on IOUs %s).",
             com.jrpetty.mcassistant.village.Ledger.coins(id), EconIndex.last(id, "debt", 0), EconIndex.last(id, "bonds", 0), Businesses.pence(Accounts.debts(id))));
         double[] c = EconCycle.stateForTests(id);
         out.add(String.format(Locale.ROOT, "The council's reckoning: employment %.1f%%, the wage share %.0f%%, profits %.0f%%, investment %.0f%% of output, the firms' debt %.2f; "

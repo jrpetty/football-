@@ -93,14 +93,17 @@ public final class CapitalPage {
                 + (r.getBoolean("forSale") ? ", for sale" : ""), r.getBoolean("forSale") ? Ui.GOOD : r.getBoolean("idle") ? Ui.BAD : Ui.INK));
         }
         CompoundTag d = t.getCompound("bonds");
-        rows.add(Row.head("The town's debt: bonds " + p(d.getLong("out")) + " at " + bp(d.getInt("bp")) + " a week; IOUs " + p(d.getLong("ious"))));
+        rows.add(Row.head("The town's debt: bonds " + p(d.getLong("out")) + " at " + bp(d.getInt("bp")) + " a week; owed to its own market on IOUs " + p(d.getLong("ious"))));
         rows.add(Row.text("Room for " + p(d.getLong("room")) + " more (at most " + p(d.getLong("ceiling")) + ": two weeks' revenue, a fifth of it in coupons); coupons "
             + p(d.getLong("coupons")) + " a week" + (d.getLong("arrears") > 0 ? ", " + p(d.getLong("arrears")) + " behind" : "") + ".", Ui.MUTED));
         CompoundTag tw = d.getCompound("thisWeek"), lw = d.getCompound("lastWeek");
         rows.add(Row.text("This week sold " + p(tw.getLong("sold")) + " (IOUs paid off " + p(tw.getLong("funded")) + "), coupons " + p(tw.getLong("coupons")) + ", repaid "
             + p(tw.getLong("repaid")) + ", rolled over " + p(tw.getLong("rolled")) + "; last week sold " + p(lw.getLong("sold")) + ".", Ui.MUTED));
-        rows.add(Row.text("IOUs to its market " + p(d.getLong("ious")) + " against the " + p(d.getLong("limit")) + " it can carry (half a week's revenue of "
-            + p(d.getLong("week")) + ").", d.getLong("ious") > d.getLong("limit") ? Ui.BAD : Ui.GOOD));
+        long load = d.contains("load") ? d.getLong("load") : d.getLong("ious");     // [econ51] the IOUs and the bonds past a week's revenue
+        rows.add(Row.tip("IOUs (the treasury's notes to its market for goods taken with no coin) " + p(d.getLong("ious"))
+            + (load > d.getLong("ious") ? ", and " + p(load - d.getLong("ious")) + " of bonds past a week's revenue" : "")
+            + "; it can carry " + p(d.getLong("limit")) + " (half a week's revenue of " + p(d.getLong("week")) + ").",
+            load > d.getLong("limit") ? Ui.BAD : Ui.GOOD, MarketPage.iouTip()));
         if (!d.getString("why").isEmpty()) rows.add(Row.text(d.getString("why"), Ui.FAINT));
         List<String> hs = new ArrayList<>();
         for (Tag e : d.getList("holders", Tag.TAG_COMPOUND)) hs.add(((CompoundTag) e).getString("name") + " " + p(((CompoundTag) e).getLong("p")));

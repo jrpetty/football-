@@ -737,7 +737,7 @@ public final class TaxBook {
         if (war && rate(id, Lever.LEVY) < 2) return new Motion(Lever.LEVY, 1, rate(id, Lever.LEVY) + 1, "the war must be paid for");
         if (!thin && !plans && !owing) return null;
         if (unrest >= TaxUnrest.GRUMBLE + 10) return null;                    // not with the town grumbling already
-        String why = share >= 0 && share < 100 ? "the wages were paid short" : owing ? "the town owes its market more than it can carry"
+        String why = share >= 0 && share < 100 ? "the wages were paid short" : owing ? "the town owes more than it can carry, its IOUs and its bonds"
             : days < 3 ? "the treasury is all but empty"
             : wonderPlanned(id) ? "the town has a wonder of the world to raise" : "the town is saving for what it means to buy";
         // [econ-1b] Where the market is open the businesses' profits are taxed first: they are where the town's money is made now.

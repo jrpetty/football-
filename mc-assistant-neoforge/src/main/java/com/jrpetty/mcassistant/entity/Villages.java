@@ -2868,7 +2868,7 @@ public final class Villages {
     public static final int FIELD_STEP = 2 * VillageFolkEntity.FIELD_MOST + 3;
 
     /** How far out the farmland's squares are laid (they go on past the town's plan). */
-    private static final int FIELD_ROWS = 6;
+    private static final int FIELD_ROWS = 9;                                  // [econ51] (six, before: the farmland moves out as the town grows: LandUse)
 
     /**
      * Which side of the town is its farmland (TownPlan.NORTH..WEST), or -1 before the village
@@ -2969,6 +2969,7 @@ public final class Villages {
         int reachOut = Math.max(hx, hz);
         if (al + reachOut < FIRST_BLOCK || ac - reachOut > al + reachOut + most) return false;
         for (int[] f : fieldSquares(side)) {
+            if (LandUse.released(villageId, along(side, f[0], f[1]))) continue;   // [econ51] given over to the town as it grew
             if (boxesMeet(dx, dz, hx, hz, f[0], f[1], most, most, 0)) return true;
         }
         return false;
@@ -3004,6 +3005,14 @@ public final class Villages {
             if (boxesMeet(lot.x(), lot.z(), hx, hz, z.center().getX() - heart.getX(), z.center().getZ() - heart.getZ(),
                     z.radius(), z.radius(), 1)) return true;
         }
+        return false;
+    }
+
+    /** [econ51] Is this lot of the plan built on or spoken for? */
+    public static boolean lotTaken(UUID villageId, com.jrpetty.mcassistant.village.TownPlan.Lot lot) {
+        java.util.Set<Long> taken = LOT_TAKEN.get(villageId);
+        if (taken == null) return false;
+        for (long cell : lot.cells()) if (taken.contains(cell)) return true;
         return false;
     }
 
@@ -3177,7 +3186,7 @@ public final class Villages {
                 boolean walked = CityPlan.reaches(level, v, lot);
                 BlockPos ground = TerraceRows.isRow(project) ? TerraceRows.ground(level, villageId, project, x, z, back)   // [house34] each house at its street's height
                     : groundFor(level, x, z, hx, hz, true, walked ? Integer.MIN_VALUE : heartGround, laps,
-                    great ? 4 : 2, whyNot(villageId));
+                    great || homesClimb(villageId, project) ? 4 : 2, whyNot(villageId));
                 if (ground == null) { SiteWhy.count("ground (wet, cliff, height, built)"); continue; }
                 if (Floods.lowGround(villageId, ground)) { SiteWhy.count("flood ground"); continue; }     // [disasters] not on the low ground the river came over
                 if (PlayerGap.crowds(level, villageId, ground, hx, hz)) { SiteWhy.count("a player's building"); continue; }   // [join21] never on or against a player's building
@@ -3225,6 +3234,16 @@ public final class Villages {
         if (site != null) TerraceRows.chosen(villageId, project, site);   // [house34] a row's steps kept with its lot
         if (site != null) AgeSites.keep(villageId, project, site);   // [econ32c] kept over a restart
         return site;
+    }
+
+    /**
+     * [econ51] A home in a town that has spread its plan out past its fifth ring: once looks for a lot have gone hungry it
+     * takes ground as steep as the great buildings do (two blocks more of fall across the lot, terraced up under its floor),
+     * not only the level lots, which on a hillside are long taken (a hill town's plan was three in ten cliff).
+     */
+    static boolean homesClimb(UUID villageId, String project) {
+        if (project == null || CityGrowth.rings(villageId) < com.jrpetty.mcassistant.village.TownPlan.RINGS + 2) return false;
+        return project.startsWith("house") || project.equals("flats") || TerraceRows.isRow(project);
     }
 
     /**
@@ -3365,6 +3384,17 @@ public final class Villages {
             defer(villageId, project, gameTime + 2400L, "the builders could not get to its ground just now");
             return;
         }
+        // [econ51] A building with no lot of its own to change for (the wall round the heart, the courtyard, a manor on its
+        // granted land, a shed or an office on its bank) gets the same ground again on the next look: it was taken up again
+        // and again, its lead loading four hundred blocks of the stores' stone each time and handing them back, while the
+        // houses behind it on the list read "cannot afford the house" against the stone in the lead's pack (grow-54's
+        // thirty-five-folk town stood at four buildings from its third day). Set aside half a day, the list goes on.
+        if (!usesALot(project)) {
+            crewDone(villageId, project);
+            defer(villageId, project, gameTime + 12000L, "the builders could not get to its ground; the next thing on the list first");
+            LAST_PROJECT.put(villageId, gameTime - gapFor(villageId));
+            return;
+        }
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);
         AgeSites.forget(villageId, project);                          // [econ32c] its ground given up
@@ -3377,6 +3407,12 @@ public final class Villages {
         crewDone(villageId, project);
         long gap = gapFor(villageId);
         LAST_PROJECT.put(villageId, gameTime - gap + Math.min(600L, gap / 8));
+    }
+
+    /** [econ51] Does this building go on a lot of the plan (another can be picked when one is given up)? */
+    static boolean usesALot(String project) {
+        return !(project.equals("fortify") || project.equals("court") || KnightManors.STRUCTURE.equals(project) || KnightManors.GRAND.equals(project)
+            || project.equals(Divers.SHED) || project.equals(Harbours.OFFICE) || project.equals(Harbours.LIGHT));
     }
 
     private static final int WET = 0, CLIFF = 1, HEIGHT = 2, TRUNK = 3, BLOCKED = 4, TAKEN = 5;
