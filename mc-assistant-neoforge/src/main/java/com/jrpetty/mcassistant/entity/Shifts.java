@@ -130,6 +130,11 @@ public final class Shifts {
         int lastPrint;
         long lastSent;
         int round;
+        /** [wpb] Output this shift in the job card's units (plots, ingots, fish, blocks...), the ticks there was no work to
+         *  be had (the boss excuses it), and the trade it is worked for (a workshop's recipe). */
+        double units;
+        long noWork;
+        String trade = "";
 
         Shift(UUID player, UUID village, ShiftRole role, boolean standing, boolean senior, @Nullable ServiceRole served, BlockPos post,
               long started, long ends, int xp0) {
@@ -328,7 +333,9 @@ public final class Shifts {
         s.howTo = !root.getBoolean("seen/" + r.id);
         root.putBoolean("seen/" + r.id, true);
         if (standing) root.putLong("standingDay", level.getDayTime() / 24000L);
+        s.trade = PlayerJobs.tradeOf(p, r);                                 // [wpb] the workshop's recipe follows the job's trade
         ON.put(p.getUUID(), s);
+        WorkLife.shiftStarted(level, p, s);                                 // [wpb] the toast, the arrow, the day's target
         p.sendSystemMessage(Component.literal("Shift started: " + s.title() + " at " + Villages.name(v.id()) + " (" + r.place + "), till "
             + ServiceHours.clock((int) ((time + (s.ends - now)) % 24000L)) + ". About " + String.format(Locale.ROOT, "%.1f", o.perTask())
             + " coin a task.").withStyle(ChatFormatting.GREEN));
@@ -379,6 +386,8 @@ public final class Shifts {
         s.pay += paid;
         s.tasks++;
         s.starTotal += stars;
+        s.units += Math.max(0, units);                                      // [wpb] toward the job card's target
+        WorkLife.taskDone(level, p, s, t, stars, units, what);              // [wpb] the boss's tally and commission
         int gain = EarnMath.xpFor(stars);
         skills(p).putInt(s.role.id, xp(p, s.role) + gain);
         s.xp += gain;
@@ -446,6 +455,7 @@ public final class Shifts {
     /** The shift over: summed up (tasks, stars, pay, tips, the skill gained), a standing job's record kept. */
     static void end(ServerLevel level, ServerPlayer p, Shift s, String why) {
         ON.remove(p.getUUID());
+        WorkLife.shiftEnded(level, p, s, why);                              // [wpb] the day's output against the card, for the boss
         if (s.task != null) ShiftTasks.release(level, p, s, s.task);
         s.task = null;
         double avg = s.tasks == 0 ? 0 : s.starTotal / (double) s.tasks;
@@ -457,7 +467,7 @@ public final class Shifts {
         String verdict = "";
         String[] job = standing(p);
         boolean standingHere = job != null && job[0].equals(s.village.toString()) && job[1].equals(s.role.id);
-        if (poor && standingHere) {
+        if (poor && standingHere && !PlayerJobs.employed(p)) {             // [wpb] a job's boss judges the week, not the shift (WorkLife)
             if (streak >= EarnMath.LET_GO_AFTER) {
                 setStanding(p, null, null);
                 root.putLong("letgo/" + s.role.id, level.getDayTime() / 24000L);
@@ -528,8 +538,10 @@ public final class Shifts {
         if (Raids.underAlarm(s.village) && s.role != ShiftRole.WATCH) { end(level, p, s, "The bell rang: everybody to safety."); return; }
         boolean roams = s.role == ShiftRole.HAUL || s.role == ShiftRole.SMELT || s.role == ShiftRole.FARM || s.role == ShiftRole.WATCH
             || s.role == ShiftRole.HEALER                                    // [roles-a] the laid-up at home as well as the ward
-            || s.role == ShiftRole.WOOD || s.role == ShiftRole.SHEAR;        // [roles-d] the woods and the pen, out at the edge
+            || s.role == ShiftRole.WOOD || s.role == ShiftRole.SHEAR         // [roles-d] the woods and the pen, out at the edge
+            || s.role == ShiftRole.MINE || s.role == ShiftRole.FISH || s.role == ShiftRole.CRAFT;   // [wpb] the mine, the water, a table
         double reach = roams ? Villages.townReach(s.village) + ROAM : NEAR_POST;
+        if (s.role == ShiftRole.MINE) reach = Math.max(reach, WorkShifts.mineReach(level, s));      // [wpb] the mine lies out past the town
         BlockPos from = roams ? v.centre() : s.post;
         boolean away = p.level() != level || Math.sqrt(p.blockPosition().distSqr(from)) > reach && !(s.role == ShiftRole.SMELT && s.task != null);
         if (away) {

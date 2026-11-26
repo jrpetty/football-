@@ -123,6 +123,8 @@ public final class StartBusiness implements PlayerLife.Page {
         String chosen = c.args.getString("kind");
         page.buttons().button("Next: premises", "step", LifePage.args("s", 2)).primary();   // [biz25] a label that fits
         BizShop.kindRow(level, p, v, chosen, page);                          // [biz25] a shop of your own, the easiest
+        page.row(new ItemStack(Items.WHEAT), "A farm of your own", "Register a field you hoed, or an orchard, ranch, woodlot, mine or fishery: "   // [wpb]
+            + "a business with books, land rates, outlets and hands", "").button("Register a farm", "farm", null);
         String standing = mayCharter(level, v, p);
         if (!standing.isEmpty()) {
             page.text("For a chartered business: " + standing, 2);
@@ -339,6 +341,7 @@ public final class StartBusiness implements PlayerLife.Page {
     static String mayCharter(ServerLevel level, Villages.Village v, ServerPlayer p) {
         // [biz25] The town charters anybody it knows and has nothing against: a visitor who has passed the time of day with
         // its folk will do. A stranger nobody has spoken to says hello first; an unwelcome one mends fences.
+        if (!Government.allowsPrivateFirms(v.id())) return "The state owns the firms in " + Villages.name(v.id()) + ": no private charter is granted here.";   // [wpb] feat-civic's planned state
         if (Citizens.is(v.id(), p.getUUID())) return "";
         Standing.Title t = Standing.of(v.id(), p.getUUID(), level.getGameTime()).title();
         if (t.atLeast(Standing.Title.VISITOR)) return "";
@@ -369,6 +372,7 @@ public final class StartBusiness implements PlayerLife.Page {
         Villages.Village v = PlayerLife.here(p);
         if (v == null) return "!No town here.";
         switch (action) {
+            case "farm" -> { PlayerLife.open(p, "farm", null); return "#open:"; }   // [wpb] a farm of your own
             case "tab" -> { c.args.putInt("step", Integer.parseInt(c.tab)); return ""; }
             case "step" -> { c.args.putInt("step", args.getInt("s")); return ""; }
             case "hello" -> {                                               // [biz25] passing the time of day: the town knows you now

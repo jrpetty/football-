@@ -1177,6 +1177,7 @@ public final class Enterprise {
         Accounts.add(d, "founded", 1);
         if (founder != null) FolkAction.mark(founder, FolkAction.Mark.IDEA);   // [anim] the bright idea over its head
         signs(level, v, b, r);
+        Premises.linkFirm(level, id, b, true);                              // [wpb] WP-C's register of premises (a stub till then)
         return b;
     }
 
@@ -1187,6 +1188,7 @@ public final class Enterprise {
     public static String charter(ServerLevel level, Villages.Village v, net.minecraft.server.level.ServerPlayer p, String kind) {
         BusinessType t = BusinessTypes.of(kind);
         if (t == null) return "No such kind of business. The kinds: " + String.join(", ", BusinessTypes.keys()) + ".";
+        if (!Government.allowsPrivateFirms(v.id())) return "The state owns the firms in " + Villages.name(v.id()) + ": no private charter is granted here.";   // [wpb]
         UUID id = v.id();
         BlockPos hall = Villages.builtAt(id, "hall");
         BlockPos at = hall != null ? hall : v.centre();
@@ -1201,9 +1203,8 @@ public final class Enterprise {
         TownBudget.in(id, "fees", CHARTER_FEE * 100L);
         Business b = found(level, v, t, null, p, Businesses.today(level), null);
         if (b == null) return "The charter could not be drawn up.";
-        return "Your charter is granted: " + b.name + " (" + b.id + "), a " + t.noun() + ". Fund it with /village business invest " + b.id
-            + " <coins>, take on a hand with /village firms hire " + b.id + ", order its makings with /village business order " + b.id
-            + " <item> <qty>, and set its prices with /village firms markup " + b.id + " <percent>.";
+        return "Your charter is granted: " + b.name + ", a " + t.noun() + ". Run it from Your businesses (press U, then Your businesses): "   // [wpb] no commands
+            + "put coin in its till (Money), take on a hand (Hands), order its makings (Stock) and set its prices (Prices).";
     }
 
     static String firstName(String n) {
@@ -1505,6 +1506,7 @@ public final class Enterprise {
         if (r == null || r.getBoolean("closed")) return;
         String why = whyItFailed(level, village, b, cause);
         r.remove("petition");
+        Premises.onBankrupt(level, village, b);                             // [wpb] WP-C: its firm-held premises to its creditors first
         // The stock, to the market at its bid (or the stores at cost where the market is not open).
         long fromStock = liquidate(level, village, b, day);
         long fromKit = FirmKit.sell(level, village, b, day);              // [econ-1d] its kit sold to the market, not written off
@@ -1905,6 +1907,7 @@ public final class Enterprise {
 
     /** Closed: its hands laid off, its premises back, its sign taken down, its books kept. */
     static void close(ServerLevel level, UUID village, Business b, CompoundTag r, long day, String status) {
+        Premises.linkFirm(level, village, b, false);                        // [wpb] WP-C's register: its premises released
         for (UUID u : staffOf(r)) {
             VillageFolkEntity f = Homes.loaded(village, u);
             if (f != null && !b.ownedBy(u)) {

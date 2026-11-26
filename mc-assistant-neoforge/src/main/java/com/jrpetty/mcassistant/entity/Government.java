@@ -704,4 +704,12 @@ public final class Government {
         for (CompoundTag q : Referendums.open(v.id())) if ("DEPOSE".equals(q.getString("subject"))) return q.getInt("id");
         return -1;
     }
+
+    /**
+     * [wpb] May a private firm be opened here? A stub returning true: feat-civic's PLANNED state (the state owns the firms)
+     * answers false in its own version of this method. StartBusiness, PlayerFarms and FirmSale ask it.
+     */
+    public static boolean allowsPrivateFirms(@Nullable UUID village) {
+        return true;
+    }
 }
