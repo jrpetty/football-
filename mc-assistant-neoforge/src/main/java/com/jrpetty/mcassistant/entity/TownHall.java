@@ -348,6 +348,8 @@ public final class TownHall implements PlayerLife.Page {
         page.heading("Premises and property");
         page.text("Shops, workshops and houses: rent, buy, sell and let.", 4);
         page.buttons().button("Premises", "premises", null).button("The property office", "property", null);
+        page.buttons().button("Land", "wpc", LifePage.args("p", "land")).button("Your debts", "wpc", LifePage.args("p", "debts"))   // [wpc]
+            .button("Your will", "wpc", LifePage.args("p", "will")).button("Home", "wpc", LifePage.args("p", "home"));
     }
 
     static String[] coinsWords() {
@@ -579,6 +581,7 @@ public final class TownHall implements PlayerLife.Page {
                 return PropertyDesk.open(p, "orders", "hall");
             }
             case "property" -> { return PropertyDesk.open(p, "orders", "hall"); }
+            case "wpc" -> { PlayerLife.open(p, args.getString("p"), null); return "#open:"; }   // [wpc] land, debts, the will, home
             // ---------------------------------------------------------------- office
             case "referendum" -> {
                 String q = f.getString("qtext").trim();

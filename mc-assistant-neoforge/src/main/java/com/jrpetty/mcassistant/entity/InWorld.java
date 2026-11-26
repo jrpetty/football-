@@ -116,8 +116,15 @@ public final class InWorld implements PlayerLife.Page {
         r("districts", "civic", "Districts: the Town page", "page:Town"),
         r("wonder", "civic", "Wonders: the Culture page", "page:Culture"),
         // ---------------------------------------------------------------- home and belonging
-        r("house", "home", "Your home: Your life in town (buy the house you stand in, collect rent); the bank's mortgage", "life:life"),
+        r("house", "home", "Your home: the Home page (your houses, tenants, renting, buying); the Mortgages page", "life:home"),   // [wpc]
         r("house market", "home", "The housing market: the Homes page", "page:Homes"),
+        r("land", "home", "Buy land in the plan's own sizes: the Land page (Your life in town, Land)", "life:land"),   // [wpc]
+        r("builder", "home", "Have a house or premises built: the builder (a lot on the map, the building shown standing)", "life:build"),
+        r("mortgage", "money", "A mortgage: deposit, rate, term: the Mortgages page (or the bank's desk)", "life:mortgage"),
+        r("premises", "business", "Premises to let or buy, stalls and market pitches: the Premises page", "life:premises"),
+        r("debts", "money", "Your debts, credit score, plans and bankruptcy: the Debts page", "life:debts"),
+        r("will", "home", "Your will: the Will page (the Town Hall's Money tab, or Your life in town)", "life:will"),
+        r("rent a home", "home", "Rent a house or flat: the Home page's Rent a home tab", "life:home"),
         r("flats", "home", "Flats: the Homes page", "page:Homes"),
         r("favourite", "home", "Favourite folk: the star on a folk's profile, the favourites key, the city books' star button", ""),
         r("emote", "home", "Emotes: the emote wheel key", ""),

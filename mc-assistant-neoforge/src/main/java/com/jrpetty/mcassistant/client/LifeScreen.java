@@ -49,6 +49,7 @@ public class LifeScreen extends Screen {
         if (mc.player == null) return;
         if (data.contains("marker")) EarnClient.mark(data.getCompound("marker").getIntArray("at"), data.getCompound("marker").getString("l"));
         if (data.contains("ghost")) LifeGhost.set(data.getCompound("ghost"));
+        if (data.contains("bghost")) BuildGhost.set(data.getCompound("bghost"));   // [wpc] the building itself, translucent
         if (data.getBoolean("close")) {
             if (mc.screen instanceof LifeScreen) mc.setScreen(null);
             return;
@@ -221,6 +222,7 @@ public class LifeScreen extends Screen {
                 }
                 return y + 19;
             }
+            case "lotmap" -> { return lotMap(g, b, x, y, iw, mx, my, y0, y1); }   // [wpc] the town's lots
             case "choice" -> {
                 UiStyle.text(g, font, b.getString("l"), x, y + 5, 110, UiStyle.TEXT);
                 ListTag opts = b.getList("opts", Tag.TAG_COMPOUND);
@@ -455,6 +457,94 @@ public class LifeScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    /** [wpc] The lots' colours, by state: free, chosen, the town's, fields or mine, yours, another's, kept for the town. */
+    private static final int[] LOT_FILL = { 0xFF8FCB72, 0xFFFFD34D, 0xFFB9B2A6, 0xFFC9A66B, 0xFF5B8FE0, 0xFFA97BD1, 0xFFD98C8C };
+    private static final String[] LOT_WORD = { "Free", "Chosen", "Built on", "Fields, mine", "Yours", "Another's", "Kept for the town" };
+
+    /**
+     * [wpc] The town's plan as lots: each a rectangle to scale, coloured by what it is; streets are the gaps between. A free
+     * lot or one of yours is clicked to choose it. A legend underneath says what each colour is.
+     */
+    private int lotMap(GuiGraphics g, CompoundTag b, int x, int y, int iw, int mx, int my, int y0, int y1) {
+        UiStyle.text(g, font, b.getString("l"), x, y, iw, UiStyle.TEXT_MUTED);
+        y += 11;
+        ListTag lots = b.getList("lots", Tag.TAG_COMPOUND);
+        ListTag marks = b.getList("marks", Tag.TAG_COMPOUND);
+        int hx = b.getInt("hx"), hz = b.getInt("hz");
+        int span = 24;
+        for (int i = 0; i < lots.size(); i++) {
+            int[] bx = lots.getCompound(i).getIntArray("b");
+            if (bx.length < 4) continue;
+            span = Math.max(span, Math.max(Math.max(Math.abs(bx[0] - hx), Math.abs(bx[2] - hx)), Math.max(Math.abs(bx[1] - hz), Math.abs(bx[3] - hz))) + 2);
+        }
+        int mh = Math.min(200, Math.max(140, iw / 2)), mw = Math.min(iw, mh + 60);
+        double scale = Math.min((mw - 8) / (2.0 * span), (mh - 8) / (2.0 * span));
+        int cx = x + mw / 2, cy = y + mh / 2;
+        boolean seen = y + mh >= y0 && y <= y1;
+        if (seen) {
+            UiStyle.well(g, x, y, mw, mh, 0xFFDCD6C4);                       // the streets: the ground between the lots
+            for (int i = 0; i < lots.size(); i++) {
+                CompoundTag l = lots.getCompound(i);
+                int[] bx = l.getIntArray("b");
+                if (bx.length < 4) continue;
+                int px0 = cx + (int) Math.floor((bx[0] - hx) * scale), pz0 = cy + (int) Math.floor((bx[1] - hz) * scale);
+                int px1 = cx + (int) Math.ceil((bx[2] + 1 - hx) * scale), pz1 = cy + (int) Math.ceil((bx[3] + 1 - hz) * scale);
+                int st = Math.max(0, Math.min(LOT_FILL.length - 1, l.getInt("s")));
+                boolean sel = l.getBoolean("sel");
+                boolean over = in(mx, my, px0, pz0, px1 - px0, pz1 - pz0) && my >= y0 && my < y1;
+                int fill = sel ? LOT_FILL[1] : LOT_FILL[st];
+                if (over && l.contains("a")) fill = UiStyle.ACCENT;
+                g.fill(px0, pz0, px1, pz1, fill);
+                int edge = sel ? 0xFF202020 : 0x66000000;
+                g.fill(px0, pz0, px1, pz0 + 1, edge);
+                g.fill(px0, pz1 - 1, px1, pz1, edge);
+                g.fill(px0, pz0, px0 + 1, pz1, edge);
+                g.fill(px1 - 1, pz0, px1, pz1, edge);
+                if (sel) {                                                   // ringed, so the choice is plain at a glance
+                    g.fill(px0 - 2, pz0 - 2, px1 + 2, pz0 - 1, 0xFFFFFFFF);
+                    g.fill(px0 - 2, pz1 + 1, px1 + 2, pz1 + 2, 0xFFFFFFFF);
+                    g.fill(px0 - 2, pz0 - 2, px0 - 1, pz1 + 2, 0xFFFFFFFF);
+                    g.fill(px1 + 1, pz0 - 2, px1 + 2, pz1 + 2, 0xFFFFFFFF);
+                }
+                if (over) tips.add(l.getString("l"));
+                if (l.contains("a")) {
+                    String a = l.getString("a");
+                    CompoundTag args = l.getCompound("args");
+                    zone(px0, pz0, px1 - px0, pz1 - pz0, () -> send(a, args, true));
+                }
+            }
+            for (int i = 0; i < marks.size(); i++) {
+                CompoundTag m = marks.getCompound(i);
+                int px = cx + (int) Math.round((m.getInt("x") - hx) * scale), pz = cy + (int) Math.round((m.getInt("z") - hz) * scale);
+                int k = m.getInt("k");
+                int r = k == 1 ? 5 : 3;
+                int colour = k == 1 ? 0xFF8A7F70 : 0xFF2050C0;
+                g.fill(px - r - 1, pz - r - 1, px + r + 1, pz + r + 1, 0xFFFFFFFF);
+                g.fill(px - r, pz - r, px + r, pz + r, colour);
+                if (in(mx, my, px - r, pz - r, 2 * r, 2 * r)) tips.add(m.getString("l"));
+            }
+        }
+        // the legend, to the right if there is room, else under it
+        int lx = x + mw + 8, ly = y + 2;
+        boolean under = lx > x + iw - 90;
+        if (under) { lx = x; ly = y + mh + 3; }
+        java.util.Set<Integer> used = new java.util.TreeSet<>();
+        for (int i = 0; i < lots.size(); i++) used.add(lots.getCompound(i).getBoolean("sel") ? 1 : lots.getCompound(i).getInt("s"));
+        int col = 0;
+        for (int st : used) {
+            if (st < 0 || st >= LOT_FILL.length) continue;
+            int ex = under ? lx + (col % 3) * Math.max(80, iw / 3) : lx, ey = under ? ly + (col / 3) * 11 : ly + col * 11;
+            if (ey >= y0 && ey + 8 <= y1) {
+                g.fill(ex, ey, ex + 8, ey + 8, LOT_FILL[st]);
+                g.fill(ex, ey, ex + 8, ey + 1, 0x66000000);
+                UiStyle.text(g, font, LOT_WORD[st], ex + 11, ey, under ? Math.max(70, iw / 3 - 14) : x + iw - ex - 12, UiStyle.TEXT_MUTED);
+            }
+            col++;
+        }
+        int legendH = under ? ((used.size() + 2) / 3) * 11 + 4 : 0;
+        return y + mh + 4 + legendH;
     }
 
     /** A tiny helper so the tabs can make their arguments without the server's classes. */

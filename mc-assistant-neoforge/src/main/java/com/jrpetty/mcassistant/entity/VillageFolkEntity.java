@@ -607,6 +607,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // The job market between towns (JobSeekers): reading the notices at the board, saying its
         // goodbyes, or on the road to a new place; the rest of its day waits.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel market && JobSeekers.step(this, market)) return;
+        // [wpc] A bailiff on its way to a debtor's home, and at it (Bailiff): that first.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel bailiffLevel && Bailiff.hold(this, bailiffLevel)) return;
         // [player15] A player's shop: its keeper at the counter in its hours; a customer on its way in, at the shelves, in the queue.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel shopLevel
                 && (ShopKeepers.hold(this, shopLevel) || ShopCustomers.hold(this, shopLevel))) return;

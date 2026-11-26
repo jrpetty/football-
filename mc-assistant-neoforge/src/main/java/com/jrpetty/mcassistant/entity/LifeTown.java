@@ -111,6 +111,12 @@ public final class LifeTown implements PlayerLife.Page {
                 new String[]{ "2 coins a day", "3 coins a day", "4 coins a day", "5 coins a day", "6 coins a day", "8 coins a day" }, "3");
             page.buttons().button("Let my house to a household", "let", null);
         }
+        // [wpc] The property pages: home, land, the builder, premises, mortgages, debts, the will.
+        page.buttons().button("Home", "wpc", LifePage.args("p", "home")).button("Land", "wpc", LifePage.args("p", "land"))
+            .button("The builder", "wpc", LifePage.args("p", "build")).button("Premises", "wpc", LifePage.args("p", "premises"));
+        String owing = Debts.status(id, p.getUUID(), day);
+        page.row(new ItemStack(Items.PAPER), "Money you owe", owing, "").button("Debts", "wpc", LifePage.args("p", "debts")).button("Mortgage", "wpc", LifePage.args("p", "mortgage"))
+            .button("Your will", "wpc", LifePage.args("p", "will"));
         // [wpa] The Town Hall: the town's book, your papers, and your first week.
         page.heading("The Town Hall");
         boolean onBook = Belonging.registered(id, p.getUUID());
@@ -165,6 +171,7 @@ public final class LifeTown implements PlayerLife.Page {
             }
             case "council" -> { return sayToNearest(p, "Who's on the council?"); }
             case "hall" -> { TownHall.open(p, "join"); return "#open:"; }                // [wpa]
+            case "wpc" -> { PlayerLife.open(p, args.getString("p"), null); return "#open:"; }   // [wpc] the property pages
             case "hallweek" -> { TownHall.open(p, "week"); return "#open:"; }
             case "papers" -> { IdCard.openOwn(p); return "#open:"; }
             case "say" -> { return sayToNearest(p, args.getString("t")); }

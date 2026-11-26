@@ -438,6 +438,7 @@ public final class McAssistantMod {
         com.jrpetty.mcassistant.item.CivicItems.register(modBus);
         com.jrpetty.mcassistant.item.TownHallItems.register(modBus);   // [wpa] the citizen papers      // [player-civic] the masters' goods, and their recipes
         com.jrpetty.mcassistant.entity.RealmLinks.wire();             // [realm] outlawed knights, taxes and the road's dangers for migrants
+        com.jrpetty.mcassistant.item.PropertyDeeds.register(modBus);   // [wpc] the deed
         com.jrpetty.mcassistant.item.WorkItems.register(modBus);       // [workitems] the mine's, the woods' and the roads' tools, thatch
         com.jrpetty.mcassistant.item.FieldItems.register(modBus);      // [fields] the tools of the fields and the pens, the bees and the water
         com.jrpetty.mcassistant.item.InterviewItems.register(modBus);  // [interviews] the letter of application
