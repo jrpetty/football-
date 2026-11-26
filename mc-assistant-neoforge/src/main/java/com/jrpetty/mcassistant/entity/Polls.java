@@ -148,21 +148,57 @@ public final class Polls {
     /** Before the hall's door, else three steps out from the board to its side, else by the town's heart. */
     @Nullable
     static BlockPos boxSpot(ServerLevel level, Villages.Village v) {
+        // Before the hall's door, a step to the side, out of doors; else out from the board; else by the town's heart.
+        List<BlockPos[]> bases = new ArrayList<>();
+        try {
+            CivicLand.Spot hall = CivicLand.beforeTheHall(level, v);
+            if (hall != null) bases.add(new BlockPos[]{ hall.focus(), new BlockPos(hall.audience().getNormal()) });
+        } catch (RuntimeException ignored) { }
         BlockPos board = VillageBoards.lectern(v.id());
-        Direction face = board != null && VillageBoards.facingOf(v.id()) != null ? VillageBoards.facingOf(v.id()) : Direction.SOUTH;
-        BlockPos base = board != null ? board : v.centre();
-        Direction side = face.getCounterClockWise();
-        for (int[] o : new int[][]{ { 3, 4 }, { 3, -4 }, { 4, 5 }, { 4, -5 }, { 2, 6 }, { 5, 3 }, { 5, -3 }, { 6, 0 } }) {
-            BlockPos p = groundAt(level, base.relative(face, o[0]).relative(side, o[1]));
-            if (p != null && roomForQueue(level, p, face)) return p;
+        Direction bf = VillageBoards.facingOf(v.id()) != null ? VillageBoards.facingOf(v.id()) : Direction.SOUTH;
+        if (board != null) bases.add(new BlockPos[]{ board, new BlockPos(bf.getNormal()) });
+        bases.add(new BlockPos[]{ v.centre(), new BlockPos(Direction.SOUTH.getNormal()) });
+        for (BlockPos[] b : bases) {
+            Direction face = Direction.getNearest(b[1].getX(), 0, b[1].getZ());
+            if (face.getAxis() == Direction.Axis.Y) face = Direction.SOUTH;
+            Direction side = face.getCounterClockWise();
+            for (int[] o : new int[][]{ { 2, 3 }, { 2, -3 }, { 3, 4 }, { 3, -4 }, { 4, 5 }, { 4, -5 }, { 2, 6 }, { 5, 3 }, { 5, -3 }, { 6, 0 } }) {
+                BlockPos p = outdoors(level, b[0].relative(face, o[0]).relative(side, o[1]), b[0].getY());
+                if (p != null && roomForQueue(level, p, face)) return p;
+            }
         }
-        return groundAt(level, base.relative(face, 3));
+        return outdoors(level, v.centre().relative(Direction.SOUTH, 3), v.centre().getY());
     }
 
+    /**
+     * Open ground out of doors at a column near this height: the surface (the top of what stands there), if it is within
+     * six of {@code near} (so not on a roof, nor down a well), with room to stand; else the old look round its own height.
+     */
+    @Nullable
+    public static BlockPos outdoors(ServerLevel level, BlockPos col, int near) {
+        if (!level.isLoaded(col)) return null;
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, col.getX(), col.getZ());
+        if (Math.abs(y - near) <= 6) {
+            BlockPos p = new BlockPos(col.getX(), y, col.getZ());
+            if (standable(level, p)) return p;
+        }
+        return groundAt(level, new BlockPos(col.getX(), near, col.getZ()));
+    }
+
+    static boolean standable(ServerLevel level, BlockPos p) {
+        BlockState here = level.getBlockState(p), up = level.getBlockState(p.above()), below = level.getBlockState(p.below());
+        if (!here.isAir() || !up.isAir()) return false;
+        if (!below.isFaceSturdy(level, p.below(), Direction.UP) || !below.getFluidState().isEmpty()) return false;
+        return !(below.getBlock() instanceof net.minecraft.world.level.block.DirtPathBlock) && !(below.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock);
+    }
+
+    /** A clear line out from the box's front: the first four places in the queue open ground, level with the box (a step at most). */
     static boolean roomForQueue(ServerLevel level, BlockPos box, Direction face) {
-        int ok = 0;
-        for (int i = 2; i < 6; i++) if (groundAt(level, box.relative(face, i)) != null) ok++;
-        return ok >= 3;
+        for (int i = 1; i <= 4; i++) {
+            BlockPos p = outdoors(level, box.relative(face, i), box.getY());
+            if (p == null || Math.abs(p.getY() - box.getY()) > 1) return false;
+        }
+        return true;
     }
 
     /** The way the queue runs out from the box: the box's own facing, else toward the board's front. */
@@ -180,14 +216,43 @@ public final class Polls {
     static BlockPos queueSpot(ServerLevel level, BlockPos box, Direction dir, int i) {
         BlockPos col = box.relative(dir, 1 + Math.min(i, 10));
         if (i > 10) col = col.relative(dir.getClockWise(), (i - 10) % 3);
-        BlockPos g = groundAt(level, col);
-        return g != null ? g : col;
+        BlockPos g = outdoors(level, col, box.getY());
+        if (g != null) return g;
+        for (int side : new int[]{ 1, -1, 2, -2 }) {                         // a step to the side of what is in the way
+            g = outdoors(level, col.relative(dir.getClockWise(), side), box.getY());
+            if (g != null) return g;
+        }
+        return col;
     }
 
     /** Where the candidates speak: before the board (the gatherings' own place), else the town's heart. */
     public static BlockPos speechSpot(ServerLevel level, Villages.Village v) {
+        try {
+            CivicLand.Spot hall = CivicLand.beforeTheHall(level, v);         // before the hall's door, as the town's protests gather
+            if (hall != null && hall.focus() != null && roomForCrowd(level, hall.focus())) return hall.focus();
+        } catch (RuntimeException ignored) { }
         BlockPos board = VillageBoards.lectern(v.id());
-        return board != null ? board : v.centre();
+        if (board != null) {
+            // Before the board, on open ground a crowd can stand on, if there is any; else the board itself.
+            for (int r = 2; r <= 5; r++) for (Direction d : Direction.Plane.HORIZONTAL) {
+                BlockPos front = outdoors(level, board.relative(d, r), board.getY());
+                if (front != null && Math.abs(front.getY() - board.getY()) <= 3 && roomForCrowd(level, front)) return front;
+            }
+            return board;
+        }
+        return v.centre();
+    }
+
+    /** Can a crowd gather here: a dozen or more open cells within four blocks, at about the same height? (Not a ledge on a hillside.) */
+    static boolean roomForCrowd(ServerLevel level, BlockPos at) {
+        if (!level.isLoaded(at)) return true;
+        int n = 0;
+        for (int dx = -4; dx <= 4; dx++) for (int dz = -4; dz <= 4; dz++) {
+            if (dx * dx + dz * dz > 16) continue;
+            BlockPos p = outdoors(level, at.offset(dx, 0, dz), at.getY());
+            if (p != null && Math.abs(p.getY() - at.getY()) <= 1 && ++n >= 12) return true;
+        }
+        return false;
     }
 
     /** Open ground at a column: a sturdy floor, the block and the one above it free. Null if none within four up or down. */
@@ -238,7 +303,9 @@ public final class Polls {
     /** Two or three posters for one candidate: a sign and a banner, in a ring round the board and out along the streets. */
     static int placePosters(ServerLevel level, Villages.Village v, Elections.Candidate k, DyeColor colour, int of) {
         UUID id = v.id();
-        BlockPos board = speechSpot(level, v);
+        BlockPos box = station(level, v, false);
+        BlockPos board = box != null ? box : speechSpot(level, v);
+        int ref = board.getY();
         Random r = new Random(Objects.hash(id, k.id(), "posters"));
         int want = of <= 2 ? 3 : 2, placed = 0;
         List<String> saved = posterList(id);
@@ -246,11 +313,11 @@ public final class Polls {
             double ang = r.nextDouble() * Math.PI * 2;
             int rad = 5 + r.nextInt(placed == 0 ? 5 : 22);
             BlockPos col = board.offset((int) Math.round(Math.cos(ang) * rad), 0, (int) Math.round(Math.sin(ang) * rad));
-            BlockPos signAt = groundAt(level, col);
-            if (signAt == null || Math.abs(signAt.getY() - board.getY()) > 6 || nearPoster(saved, signAt)) continue;
+            BlockPos signAt = outdoors(level, col, ref);
+            if (signAt == null || Math.abs(signAt.getY() - ref) > 6 || nearPoster(saved, signAt)) continue;
             Direction toBoard = Direction.getNearest(board.getX() - signAt.getX(), 0, board.getZ() - signAt.getZ());
             if (toBoard.getAxis() == Direction.Axis.Y) toBoard = Direction.NORTH;
-            BlockPos bannerAt = groundAt(level, signAt.relative(toBoard.getClockWise()));
+            BlockPos bannerAt = outdoors(level, signAt.relative(toBoard.getClockWise()), signAt.getY());
             if (bannerAt == null || Math.abs(bannerAt.getY() - signAt.getY()) > 1) continue;
             level.setBlock(signAt, Blocks.OAK_SIGN.defaultBlockState().setValue(StandingSignBlock.ROTATION, RotationSegment.convertToSegment(toBoard)), Block.UPDATE_ALL);
             if (level.getBlockEntity(signAt) instanceof SignBlockEntity s) {
@@ -354,15 +421,16 @@ public final class Polls {
      */
     static int placeNotices(ServerLevel level, Villages.Village v, String[] lines, DyeColor colour, int want) {
         UUID id = v.id();
-        BlockPos board = speechSpot(level, v);
+        BlockPos box = station(level, v, false);
+        BlockPos board = box != null ? box : speechSpot(level, v);
         Random r = new Random(Objects.hash(id, "notices", lines[1]));
         List<String> saved = posterList(id);
         int placed = 0;
         for (int tries = 0; tries < 30 && placed < want; tries++) {
             double ang = r.nextDouble() * Math.PI * 2;
             int rad = 4 + r.nextInt(9);
-            BlockPos at = groundAt(level, board.offset((int) Math.round(Math.cos(ang) * rad), 0, (int) Math.round(Math.sin(ang) * rad)));
-            if (at == null || Math.abs(at.getY() - board.getY()) > 5 || nearPoster(saved, at)) continue;
+            BlockPos at = outdoors(level, board.offset((int) Math.round(Math.cos(ang) * rad), 0, (int) Math.round(Math.sin(ang) * rad)), board.getY());
+            if (at == null || Math.abs(at.getY() - board.getY()) > 6 || nearPoster(saved, at)) continue;
             Direction toBoard = Direction.getNearest(board.getX() - at.getX(), 0, board.getZ() - at.getZ());
             if (toBoard.getAxis() == Direction.Axis.Y) toBoard = Direction.NORTH;
             level.setBlock(at, Blocks.SPRUCE_SIGN.defaultBlockState().setValue(StandingSignBlock.ROTATION, RotationSegment.convertToSegment(toBoard)), Block.UPDATE_ALL);
@@ -456,7 +524,7 @@ public final class Polls {
         notice(level, v, box, turnoutText(id, c));
         f.hobbyNow = "voted";
         // Step aside, off the queue's line, so the next comes up.
-        BlockPos aside = groundAt(level, box.relative(dir.getClockWise(), 3).relative(dir, 1));
+        BlockPos aside = outdoors(level, box.relative(dir.getClockWise(), 3).relative(dir, 1), box.getY());
         if (aside != null) f.walkTo(aside, 0.8D);
         return true;
     }
@@ -515,7 +583,7 @@ public final class Polls {
             CompoundTag init = td.saveWithoutId(new CompoundTag());
             init.putString("billboard", "center");
             init.putInt("background", 0xB0141820);
-            init.putInt("line_width", 220);
+            init.putInt("line_width", 360);
             td.load(init);
             level.addFreshEntity(td);
             NOTICE.put(id, td.getUUID());
@@ -549,7 +617,7 @@ public final class Polls {
         MutableComponent t = Component.literal("POLLING STATION").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
         t.append(Component.literal("\nElection for " + Government.title(village) + " · day " + c.voteDay).withStyle(ChatFormatting.WHITE));
         t.append(Component.literal("\n"));
-        t.append(bar(voted, Math.max(1, voters), 16, ChatFormatting.GREEN));
+        t.append(bar(voted, Math.max(1, voters), 12, ChatFormatting.GREEN));
         t.append(Component.literal(" " + voted + " of " + voters + " have voted").withStyle(ChatFormatting.GRAY));
         int q = queued(village);
         if (q > 1) t.append(Component.literal("\nIn the queue: " + q).withStyle(ChatFormatting.GRAY));

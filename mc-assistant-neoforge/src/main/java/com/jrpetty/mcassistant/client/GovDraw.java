@@ -77,7 +77,7 @@ public final class GovDraw {
 
         /** "Label  value", the label muted, the value wrapped beside it. */
         void pair(String label, String value) {
-            int lw = Math.min(78, w / 3);
+            int lw = Math.min(Math.max(78, font.width(label) + 8), w / 3);
             if (visible(10)) g.drawString(font, UiStyle.clip(font, label, lw - 4), x, y, UiStyle.TEXT_FAINT, false);
             int before = y;
             wrap(value, UiStyle.TEXT, x + lw, w - lw);
@@ -159,14 +159,16 @@ public final class GovDraw {
             UiStyle.title(c.g, c.font, UiStyle.clip(c.font, d.getString("formWords"), c.w - 120), c.x + 8, c.y);
             String b = d.getBoolean("elected") ? "Elected" : "Not elected";
             UiStyle.badge(c.g, c.font, b, c.x + c.w - c.font.width(b) - 8, c.y, d.getBoolean("elected") ? UiStyle.SUCCESS_FILL : UiStyle.WARNING_FILL);
-            String sub = d.getString("phrase") + (d.getLong("since") >= 0 ? " · since day " + (d.getLong("since") + 1) : "");
+            String who = (d.getString("title") + " " + d.getString("leader")).trim();
+            String sub = (who.isEmpty() ? d.getString("phrase") : who) + (d.getLong("since") >= 0 ? " · governed this way since day " + (d.getLong("since") + 1) : "");
             UiStyle.text(c.g, c.font, sub, c.x + 8, c.y + 11, c.w - 12, UiStyle.TEXT_MUTED);
         }
         c.y += 24;
-        c.wrap(d.getString("how"), UiStyle.TEXT);
+        String how = capital(d.getString("how"));
+        c.wrap(how.endsWith(".") ? how : how + ".", UiStyle.TEXT);
         if (d.contains("lastChange")) {
             String[] p = d.getString("lastChange").split("\\|", -1);
-            if (p.length >= 4) c.wrap("Day " + (Long.parseLong(p[0]) + 1) + ": " + (p[1].equals("coup") ? "a coup made it " : "a revolution made it ")
+            if (p.length >= 4) c.wrap("Day " + (Long.parseLong(p[0]) + 1) + ": " + (p[1].equals("coup") ? "A coup made it " : "A revolution made it ")
                 + p[3].toLowerCase(java.util.Locale.ROOT).replace('_', ' ') + (p.length > 4 && !p[4].isEmpty() ? "; " + p[4] + " left office" : "") + ".", UiStyle.DANGER);
         }
         c.heading("How it works here");
@@ -478,9 +480,9 @@ public final class GovDraw {
 
     /** The council's seats as dots in a half circle, each in its party's colour. */
     static void hemicycle(Ctx c, ListTag seats, int total) {
-        int h = 46;
+        int h = 58;
         if (c.visible(h) && total > 0) {
-            int cx = c.x + c.w / 2, cy = c.y + h - 4;
+            int cx = c.x + c.w / 2, cy = c.y + h - 16;
             int r = Math.min(40, c.w / 4);
             int idx = 0;
             for (int i = 0; i < seats.size(); i++) {
@@ -493,7 +495,7 @@ public final class GovDraw {
                 }
             }
             String mid = total / 2 + 1 + " for a majority";
-            c.g.drawString(c.font, mid, cx - c.font.width(mid) / 2, cy - 6, UiStyle.TEXT_FAINT, false);
+            c.g.drawString(c.font, mid, cx - c.font.width(mid) / 2, cy + 7, UiStyle.TEXT_FAINT, false);
         }
         c.y += h + 2;
     }
@@ -531,12 +533,14 @@ public final class GovDraw {
         CompoundTag u = c.d.getCompound("unrest");
         meter(c, u.getInt("level"), u.getString("stage"));
         c.wrap(u.getString("next"), UiStyle.TEXT);
-        c.wrap("Under " + c.d.getString("short").toLowerCase(java.util.Locale.ROOT) + ", grievances turn into unrest at " + u.getInt("amp") + " in a hundred"
+        int amp = u.getInt("amp");
+        String pace = amp == 100 ? "the usual pace" : "×" + (amp % 10 == 0 ? String.format(java.util.Locale.ROOT, "%.1f", amp / 100.0) : String.format(java.util.Locale.ROOT, "%.2f", amp / 100.0)) + " the usual pace";
+        c.wrap("Under " + c.d.getString("formWords").toLowerCase(java.util.Locale.ROOT) + ", grievances build into unrest at " + pace
             + (u.getBoolean("capped") ? "; the vote lets it out, so it never comes to a strike or a rising here." : "; with no vote to let it out, it can end in a rising."),
             UiStyle.TEXT_FAINT);
-        if (!u.getString("why").isEmpty()) c.pair("What's behind it", u.getString("why"));
-        if (u.getInt("tax") > 0) c.pair("The taxes' share", "tax unrest " + u.getInt("tax") + " (the Taxes page)");
-        c.pair("They would rather", capital(u.getString("wanted")));
+        if (!u.getString("why").isEmpty()) c.pair("Behind it", u.getString("why"));
+        if (u.getInt("tax") > 0) c.pair("From taxes", "tax unrest " + u.getInt("tax") + " (the Taxes page)");
+        c.pair("Would rather", capital(u.getString("wanted")));
         if (u.contains("petition")) {
             CompoundTag p = u.getCompound("petition");
             c.heading("The petition");

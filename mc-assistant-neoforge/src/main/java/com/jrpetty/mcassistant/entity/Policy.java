@@ -161,7 +161,7 @@ public final class Policy {
         String hist = Ledger.note(id, "policy.history");
         List<String> h = new ArrayList<>();
         if (hist != null && !hist.isEmpty()) for (String x : hist.split(";;")) h.add(x);
-        h.add("Day " + (day + 1) + ": " + line.replace(";;", ";"));
+        h.add("Day " + (day + 1) + ": " + Regimes.capital(line).replace(";;", ";"));
         while (h.size() > 6) h.remove(0);
         Ledger.note(id, "policy.history", String.join(";;", h));
         Villages.tell(id, day, Regimes.capital(line));

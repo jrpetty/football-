@@ -340,14 +340,14 @@ public final class Regimes {
     /** Beside the board (or the town's heart): open ground with air above, a block or two to the side. */
     @Nullable
     static BlockPos flagSpot(ServerLevel level, Villages.Village v) {
-        BlockPos board = VillageBoards.lectern(v.id());
+        BlockPos board = Polls.speechSpot(level, v);
         BlockPos base = board != null ? board : v.centre();
-        Direction face = board != null ? VillageBoards.facingOf(v.id()) : Direction.SOUTH;
+        Direction face = VillageBoards.facingOf(v.id());
         if (face == null) face = Direction.SOUTH;
         Direction side = face.getClockWise();
         for (int d : new int[]{ 2, -2, 3, -3, 4, -4 }) {
             BlockPos col = base.relative(side, d);
-            BlockPos p = Polls.groundAt(level, col);
+            BlockPos p = Polls.outdoors(level, col, base.getY());
             if (p != null) return p;
         }
         return null;
