@@ -155,6 +155,9 @@ public class FolkLinesGameTests {
         VillageFolkEntity father = another(helper, heart.east(2), id);
         helper.runAtTickTime(10, () -> {
             freeOfEachOther(mother, father);
+            // Natures that get on (a clash of natures never walks out).
+            mother.life().setTraitsForTests(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE, com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
+            father.life().setTraitsForTests(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE, com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
             mother.life().feel(father.getUUID(), father.displayNameCap(), 50 - mother.life().affinity(father.getUUID()));
             father.life().feel(mother.getUUID(), mother.displayNameCap(), 50 - father.life().affinity(mother.getUUID()));
             helper.assertTrue(Courtship.notice(mother, father, id), "two fond of each other start walking out");
