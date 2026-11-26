@@ -42,9 +42,13 @@ public final class JusticeStage {
             })))));
     }
 
+    /** The town the scenes are staged in (set by "build"), so the later scenes keep to it wherever the player has walked. */
+    @Nullable private static java.util.UUID STAGED;
+
     static String stage(ServerPlayer p, String scene) {
         ServerLevel level = p.serverLevel();
-        Villages.Village v = Villages.nearest(level, p.blockPosition(), 400);
+        Villages.Village v = scene.equals("build") || STAGED == null ? Villages.nearest(level, p.blockPosition(), 400) : Villages.get(STAGED);
+        if (v != null && scene.equals("build")) STAGED = v.id();
         if (v == null) return "no town near";
         Justice.hurryForTests(!scene.equals("slow"));
         switch (scene) {
@@ -70,7 +74,7 @@ public final class JusticeStage {
                     Ledger.built(v.id(), Assize.COURTHOUSE, site, f);
                     Villages.builtAtForTests(v.id(), Assize.COURTHOUSE, site);
                 }
-                return "built";
+                return "built for " + Villages.name(v.id());
             }
             case "arrest" -> {
                 VillageFolkEntity g = guard(level, v, p);

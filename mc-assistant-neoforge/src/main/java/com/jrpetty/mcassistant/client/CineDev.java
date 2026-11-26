@@ -103,6 +103,8 @@ public final class CineDev {
                                 id = a.getId();
                             }
                         }
+                    } else if (w[1].equals("me") && mc.player != null) {             // [wpe] the player itself (in irons, in the dock)
+                        id = mc.player.getId();
                     } else if (w[1].equals("nearest") && mc.level != null && mc.player != null) {
                         double best = Double.MAX_VALUE;
                         for (Entity e : mc.level.entitiesForRendering()) {
