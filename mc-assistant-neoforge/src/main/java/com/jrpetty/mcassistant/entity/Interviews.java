@@ -905,7 +905,10 @@ public final class Interviews {
             vis.walkTick = f.tickCount;
         }
         // No nearer for half a minute (a river with no bridge, a cliff): set down at the next step, as a traveller is.
-        if (f.tickCount - vis.gainedTick > (hurry ? 200 : 600)) {
+        int lapse = hurry ? 200 : 600;
+        if (f.tickCount - vis.gainedTick > lapse && !Blink.mayJumpTo(f, onGround.getX() + 0.5, onGround.getZ() + 0.5, "interview: set down at the next step")) {
+            vis.gainedTick = f.tickCount - lapse / 2;                         // [tp49] in sight: it walks on, and is looked at again
+        } else if (f.tickCount - vis.gainedTick > lapse) {
             f.moveTo(onGround.getX() + 0.5, onGround.getY(), onGround.getZ() + 0.5, f.getYRot(), 0.0F);
             f.getNavigation().stop();
             vis.gainedTick = f.tickCount;

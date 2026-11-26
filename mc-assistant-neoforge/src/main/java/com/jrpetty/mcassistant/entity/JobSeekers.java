@@ -963,7 +963,11 @@ public final class JobSeekers {
             j.walkTick = f.tickCount;
         }
         // No nearer for half a minute (a river with no bridge, a cliff): set down at the next step, as a caravan is.
-        if (f.tickCount - j.gainedTick > 600) {
+        // [tp49] Never in a player's sight (a migrant thirty-five blocks along its way in one tick, at the edge of a town):
+        // there it walks on, and is looked at again, as a caravan is.
+        if (f.tickCount - j.gainedTick > 600 && !Blink.mayJumpTo(f, onGround.getX() + 0.5, onGround.getZ() + 0.5, "migrant: set down at the next step")) {
+            j.gainedTick = f.tickCount - 300;
+        } else if (f.tickCount - j.gainedTick > 600) {
             f.moveTo(onGround.getX() + 0.5, onGround.getY(), onGround.getZ() + 0.5, f.getYRot(), 0.0F);
             f.getNavigation().stop();
             j.gainedTick = f.tickCount;

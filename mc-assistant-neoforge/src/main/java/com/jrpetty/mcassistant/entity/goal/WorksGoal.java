@@ -490,7 +490,8 @@ public class WorksGoal extends Goal {
         }
         if (stuck > 160) {                                       // [fixes14] the last resort, after eight seconds
             stuck = 0;
-            if (open(dest) && !com.jrpetty.mcassistant.entity.Blink.mayJump(a, "works: stuck on the way, put on the waypoint")) {
+            // [tp49] Neither end in sight (from just beyond a player's sight, a miner was put six blocks along, into it).
+            if (open(dest) && !com.jrpetty.mcassistant.entity.Blink.mayJumpTo(a, dest.getX() + 0.5, dest.getZ() + 0.5, "works: stuck on the way, put on the waypoint")) {
                 // [tp43] In a player's sight: led along the open way to it, a step a tick (past a knot of folk at the stair
                 // head, over the lip of a step), or, lost off the way, a fresh way from where it stands. Never put there.
                 hopNote(dest);
