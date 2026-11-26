@@ -30,8 +30,12 @@ import java.util.Set;
  * world seed, so the same world always grows the same settlements and no two
  * end up on top of each other. When the chunk holding a candidate spot loads
  * for the first time and the ground there is worth living on, a village is
- * founded — a handful of folk, a chest of the things you cannot start without,
- * and nothing else. From that moment nobody helps them again.
+ * founded — thirty to forty folk (villageMinFolk to villageMaxFolk), a chest of
+ * the things you cannot start without, and nothing else. From that moment nobody
+ * helps them again, but for the settlers a village under villageSettlerBase sends
+ * for (entity/Settlers). [grow54] It was eight to twelve: too few hands to build,
+ * farm and staff the trades at once, and such a village sat at its founding size
+ * for a week and more.
  *
  * <p>They are given exactly enough to begin: food to live on while the first
  * field is dug, an axe and a pick so the first tree and the first stone are
@@ -284,6 +288,12 @@ public final class VillageSpawner {
     private static boolean folkNearby(ServerLevel level, BlockPos anchor) {
         return !level.getEntitiesOfClass(VillageFolkEntity.class,
             new AABB(anchor).inflate(Villages.VILLAGE_RANGE), e -> true).isEmpty();
+    }
+
+    /** [grow54] Tests: found a village here exactly as the world founds one it comes upon (its size drawn from
+     *  villageMinFolk to villageMaxFolk by the seed and the spot). */
+    public static void foundForTests(ServerLevel level, BlockPos ground) {
+        found(level, ground);
     }
 
     /** Put a settlement here: a supply chest, some folk, and nothing else. */

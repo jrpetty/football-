@@ -67,9 +67,14 @@ public final class Colonies {
         });
     }
 
+    /** [grow54] The most a mother village sends out, whatever villageMinFolk says: a town of forty that sent thirty of
+     *  its own out (the new founding size) would gut itself. The colony is brought up to villageSettlerBase by
+     *  settlers who come to it on the road (Settlers), as any small village is. */
+    public static final int PARTY_MOST = 10;
+
     /** How many founders a colony is sent out with. */
     public static int party() {
-        return Math.max(2, AssistantConfig.villageMinFolk());
+        return Math.max(2, Math.min(PARTY_MOST, AssistantConfig.villageMinFolk()));   // [grow54] at most ten
     }
 
     static void tick(ServerLevel level) {
