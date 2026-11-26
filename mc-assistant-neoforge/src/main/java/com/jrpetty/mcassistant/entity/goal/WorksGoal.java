@@ -145,12 +145,29 @@ public class WorksGoal extends Goal {
             com.jrpetty.mcassistant.entity.MineWhy.note(a, "climb cut short (" + (a.getTarget() != null ? "a target" : nj == null ? "no job"
                 : nj == job ? "gen " + a.taskGen() + "/" + myGen : nj.type() + ":" + nj.arg()) + ")");
         }
-        if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
+        letGo();
         task = null;
         job = null;
         digging = null;
         // (where it was walking kept: a restart does not forget a walk that is stuck)
         a.getNavigation().stop();
+    }
+
+    /**
+     * [tp52] The task given up part-way (the goal called off, a walk to it that got nowhere): the cells already cut are booked to
+     * the works (a face's to its drift's way), not let go with the claim. Let go, the next face was planned from the drift's old
+     * tip, met its own open cells, took them for a cave and turned, and turned again (a miner called off its face mid-cut by a
+     * fright or another job turned its drift sixteen times and closed it).
+     */
+    private void letGo() {
+        MineWorks.Task t = task;
+        if (t == null || !(a instanceof VillageFolkEntity f)) return;
+        if (!(a.level() instanceof ServerLevel level)) { MineWorks.release(f.ownerId(), t, a.getUUID()); return; }
+        boolean onIt = phase == Phase.CUT && ci >= t.cut && ci < t.cells.size() && cellOpen(level, t, ci);
+        if (onIt) t.cut = ci + 1;                                // the one it was cutting, open now
+        if (t.cut <= 0) { MineWorks.release(f.ownerId(), t, a.getUUID()); return; }
+        t.why = MineWorks.STOPPED;
+        MineWorks.done(level, f, t);
     }
 
     @Override
@@ -264,7 +281,7 @@ public class WorksGoal extends Goal {
         List<BlockPos> to = new ArrayList<>();
         if (up != null) for (BlockPos p : up) { to.add(p); if (p.equals(s.board())) break; }
         if (to.isEmpty() || !to.get(to.size() - 1).equals(s.board())) to = new ArrayList<>(List.of(a.blockPosition(), s.board()));
-        if (task != null) { report("stopped"); task = null; }
+        if (task != null) { report(MineWorks.STOPPED); task = null; }
         rides.clear();
         stairs = to;
         route = to;
@@ -321,7 +338,7 @@ public class WorksGoal extends Goal {
         long now = a.level().getGameTime();
         Long since = CLIMBING.get(a.getUUID());
         if (since == null || now - since > 6000 || now < since) CLIMBING.put(a.getUUID(), now);   // [econ32b]
-        if (task != null) { report(why.isEmpty() ? "" : "stopped"); }
+        if (task != null) { report(why.isEmpty() ? "" : MineWorks.STOPPED); }
         List<BlockPos> up = a.level() instanceof ServerLevel sl ? MineWorks.wayUp(sl, a) : null;
         if (a.level() instanceof ServerLevel sl2) setRoute(sl2, up == null ? List.of() : up);   // [econ32c] up in the cage
         else { route = List.of(); ri = 0; }
@@ -477,7 +494,7 @@ public class WorksGoal extends Goal {
             if (stuck > 600) {
                 stuck = 0;
                 walking = null;
-                if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
+                letGo();                                         // [tp52] what it cut booked
                 task = null;
                 com.jrpetty.mcassistant.entity.MineWhy.note(a, "no way to " + dest.toShortString() + " (" + (int) Math.sqrt(d) + " off)");   // [econ32b]
                 // [econ32b] On its way out, a long walk that got nowhere ends at the top, not where it stood below.
@@ -703,6 +720,16 @@ public class WorksGoal extends Goal {
     private static final int REPLAN = 10;
     private int lastGo = -REPLAN;
 
+    /** [tp52] Is this cell of the task open its full height already (cut, its floor aside)? */
+    private static boolean cellOpen(ServerLevel level, MineWorks.Task t, int i) {
+        BlockPos c = t.cells.get(i);
+        for (int h = 0; h < t.height; h++) {
+            BlockState s = level.getBlockState(c.above(h));
+            if (!(s.isAir() || s.canBeReplaced() && s.getFluidState().isEmpty())) return false;
+        }
+        return true;
+    }
+
     private boolean open(BlockPos p) {
         return a.level().getBlockState(p).getCollisionShape(a.level(), p).isEmpty()
             && a.level().getBlockState(p.above()).getCollisionShape(a.level(), p.above()).isEmpty();
@@ -824,6 +851,7 @@ public class WorksGoal extends Goal {
         broke++;
         BROKEN++;
         if (task != null) task.broke++;
+        MineWorks.dug(village().id, pos);                       // [tp52] the works' own opening, not a cave (MineWorks.ahead)
         a.note(AssistantEntity.Deed.BLOCKS_MINED, 1);
         if (ore) {
             oreTaken++;
