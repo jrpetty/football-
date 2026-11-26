@@ -93,6 +93,13 @@ public final class FolkFaces {
         return got != null ? got : FolkLooks.skinTexture(folk);
     }
 
+    /** [rota] The picture for a look and marks the server sent (a folk not in sight); null while it waits its turn. */
+    @Nullable
+    public static ResourceLocation pictureOf(long look, int marks) {
+        if (!Looks.known(look) || broken) return null;
+        return picture(new Key(look, marks & PICTURE_MARKS));
+    }
+
     /**
      * [anim] Its picture with its clothes painted in: its trade's outfit, the outfit's dyed parts in their colour (-1: none)
      * and its finery (-1: none), laid over its face and skin as the renderer's passes would lay them (each pixel the

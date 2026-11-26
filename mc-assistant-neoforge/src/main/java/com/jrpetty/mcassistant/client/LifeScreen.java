@@ -575,6 +575,15 @@ public class LifeScreen extends Screen {
         }
         net.minecraft.world.entity.LivingEntity e = FolkPortrait.find(f.getInt("id"), who);
         int rgb = who == null ? 0 : 0xFF000000 | (int) (who.getLeastSignificantBits() & 0xFFFFFF);
+        net.minecraft.resources.ResourceLocation pic = e == null && f.contains("look") ? FolkFaces.pictureOf(f.getLong("look"), f.getInt("marks")) : null;
+        if (pic != null) {
+            // Not in sight: its own face painted from its picture (the head's front, 8 by 10, and its hair over it).
+            UiStyle.well(g, x, y, 18, 18, rgb == 0 ? 0xFF8FA3B5 : UiStyle.accentWash(rgb));
+            g.blit(pic, x + 3, y + 1, 13, 16, 8F, 8F, 8, 10, 128, 128);
+            g.blit(pic, x + 3, y + 1, 13, 16, 40F, 8F, 8, 10, 128, 128);
+            g.renderOutline(x, y, 18, 18, UiStyle.EDGE);
+            return;
+        }
         FolkPortrait.draw(g, font, e, name, rgb, 0xFF8FA3B5, x, y, 18, 18, true, mx, my);
     }
 

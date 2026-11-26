@@ -104,7 +104,8 @@ final class DeputyPage {
         card.add("Rating: " + (rating < 0 ? "not yet tried" : rating + "/100, " + Deputy.ratingWord(rating)) + ".");
         for (String s : Deputy.reasons(r)) card.add(s + ".");
         VillageFolkEntity depF = Deputy.deputy(v.id(), b, r);                // [rota] its face
-        page.row(null, dn, Deputy.title(r) + " at " + b.name, "").face(did, depF == null ? -1 : depF.getId(), false, dn);
+        LifePage.Row depRow = page.row(null, dn, Deputy.title(r) + " at " + b.name, "");
+        if (depF != null) depRow.face(depF); else depRow.face(did, -1, false, dn);
         page.box(dn + (Deputy.on(r) ? "" : " (authority off)"), card, rating < 0 ? 4 : rating >= 70 ? 1 : rating >= 50 ? 4 : 3);
         page.buttons().button("Show me " + dn, "showme", LifePage.args("h", did.toString())).button("Remove as deputy", "undeputy", LifePage.args("h", did.toString()), decide, no);
         // A raise asked for.

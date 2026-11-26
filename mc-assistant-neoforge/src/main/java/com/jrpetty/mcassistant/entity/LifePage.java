@@ -287,9 +287,13 @@ public final class LifePage {
             return this;
         }
 
-        /** [rota] A folk's face on the row. */
+        /** [rota] A folk's face on the row: its look and marks too, so the client paints its face when it isn't in sight. */
         public Row face(VillageFolkEntity f) {
-            return face(f.getUUID(), f.getId(), false, f.displayNameCap());
+            face(f.getUUID(), f.getId(), false, f.displayNameCap());
+            CompoundTag t = x.getCompound("face");
+            t.putLong("look", f.clientLook());
+            t.putInt("marks", f.clientMarks());
+            return this;
         }
 
         /** [rota] A player's face on the row. */

@@ -194,7 +194,7 @@ final class RotaPage {
             return row.face(l.who, sp == null ? -1 : sp.getId(), true, l.name);
         }
         VillageFolkEntity f = Homes.loaded(village, l.who);
-        return row.face(l.who, f == null ? -1 : f.getId(), false, l.name);
+        return f != null ? row.face(f) : row.face(l.who, -1, false, l.name);
     }
 
     static CompoundTag adjArgs(CompoundTag a, String k, int d) {
