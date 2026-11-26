@@ -1217,6 +1217,7 @@ public final class Justice extends SavedData {
     /** The talk menu's justice phrases. Null for anything else. */
     @Nullable
     public static String heard(VillageFolkEntity f, ServerPlayer p, String t) {
+        if ((t.equals("i'm sorry") || t.equals("sorry")) && hurtOwed(p.getUUID(), f.getUUID()) != null) return apologise(f, p, false);
         if (t.contains("sorry i hurt you") || t.equals("i apologise") || t.contains("apologise for hurting")) {
             String a = apologise(f, p, false);
             return a != null ? a : FolkTalk.pick(f.getRandom(), "Sorry for what?", "No harm done that I know of.", "You've nothing to be sorry for.");
