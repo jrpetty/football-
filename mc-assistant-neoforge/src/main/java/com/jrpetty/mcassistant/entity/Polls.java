@@ -132,7 +132,7 @@ public final class Polls {
         if (!place) return null;
         BlockPos spot = boxSpot(level, v);
         if (spot == null) return null;
-        Direction face = queueDirection(level, v);
+        Direction face = BOX_FACE.getOrDefault(id, queueDirection(level, v));   // the side boxSpot found room for the queue on
         level.setBlock(spot, McAssistantMod.BALLOT_BOX.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, face), Block.UPDATE_ALL);
         Ledger.note(id, "polls.box", spot.getX() + "," + spot.getY() + "," + spot.getZ());
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, spot.getX() + 0.5, spot.getY() + 1.0, spot.getZ() + 0.5, 8, 0.3, 0.3, 0.3, 0.0);
@@ -147,6 +147,9 @@ public final class Polls {
 
     /** Before the hall's door, else three steps out from the board to its side, else by the town's heart. */
     @Nullable
+    /** The side of the box its queue forms on, as boxSpot found room for it (station sets the box facing that way). */
+    private static final Map<UUID, Direction> BOX_FACE = new ConcurrentHashMap<>();
+
     static BlockPos boxSpot(ServerLevel level, Villages.Village v) {
         // Before the hall's door, a step to the side, out of doors; else out from the board; else by the town's heart.
         List<BlockPos[]> bases = new ArrayList<>();
@@ -164,9 +167,13 @@ public final class Polls {
             Direction side = face.getCounterClockWise();
             for (int[] o : new int[][]{ { 2, 3 }, { 2, -3 }, { 3, 4 }, { 3, -4 }, { 4, 5 }, { 4, -5 }, { 2, 6 }, { 5, 3 }, { 5, -3 }, { 6, 0 } }) {
                 BlockPos p = outdoors(level, b[0].relative(face, o[0]).relative(side, o[1]), b[0].getY());
-                if (p != null && roomForQueue(level, p, face)) return p;
+                if (p != null && roomForQueue(level, p, face)) {
+                    BOX_FACE.put(v.id(), face);
+                    return p;
+                }
             }
         }
+        BOX_FACE.put(v.id(), Direction.SOUTH);
         return outdoors(level, v.centre().relative(Direction.SOUTH, 3), v.centre().getY());
     }
 
@@ -227,20 +234,21 @@ public final class Polls {
 
     /** Where the candidates speak: before the board (the gatherings' own place), else the town's heart. */
     public static BlockPos speechSpot(ServerLevel level, Villages.Village v) {
-        try {
-            CivicLand.Spot hall = CivicLand.beforeTheHall(level, v);         // before the hall's door, as the town's protests gather
-            if (hall != null && hall.focus() != null && roomForCrowd(level, hall.focus())) return hall.focus();
-        } catch (RuntimeException ignored) { }
+        // Before the board, where the town reads its news, on open ground a crowd can stand on; else before the hall's
+        // door, as the town's protests gather; else the board itself, or the town's heart.
         BlockPos board = VillageBoards.lectern(v.id());
-        if (board != null) {
-            // Before the board, on open ground a crowd can stand on, if there is any; else the board itself.
-            for (int r = 2; r <= 5; r++) for (Direction d : Direction.Plane.HORIZONTAL) {
-                BlockPos front = outdoors(level, board.relative(d, r), board.getY());
+        Direction bf = VillageBoards.facingOf(v.id());
+        if (board != null && bf != null && bf.getAxis() != Direction.Axis.Y) {
+            for (int r : new int[]{ 3, 4, 2, 5 }) {
+                BlockPos front = outdoors(level, board.relative(bf, r), board.getY());
                 if (front != null && Math.abs(front.getY() - board.getY()) <= 3 && roomForCrowd(level, front)) return front;
             }
-            return board;
         }
-        return v.centre();
+        try {
+            CivicLand.Spot hall = CivicLand.beforeTheHall(level, v);
+            if (hall != null && hall.focus() != null && roomForCrowd(level, hall.focus())) return hall.focus();
+        } catch (RuntimeException ignored) { }
+        return board != null ? board : v.centre();
     }
 
     /** Can a crowd gather here: a dozen or more open cells within four blocks, at about the same height? (Not a ledge on a hillside.) */
@@ -474,7 +482,16 @@ public final class Polls {
             q.add(me);
             JOINED.put(me, now);
         }
-        int i = q.indexOf(me);
+        // Its place in the line: behind those nearer the box than it (so one held up on the far side of town does not hold the
+        // whole queue at an empty front); level with another, the one who came first.
+        double mine = f.distanceToSqr(box.getX() + 0.5, box.getY(), box.getZ() + 0.5);
+        int i = 0, joinedAt = q.indexOf(me);
+        for (int k = 0; k < q.size(); k++) {
+            UUID u = q.get(k);
+            if (u.equals(me) || !(level.getEntity(u) instanceof VillageFolkEntity o)) continue;
+            double theirs = o.distanceToSqr(box.getX() + 0.5, box.getY(), box.getZ() + 0.5);
+            if (theirs < mine - 0.75 || Math.abs(theirs - mine) <= 0.75 && k < joinedAt) i++;
+        }
         Direction dir = queueDirection(level, v);
         BlockPos spot = queueSpot(level, box, dir, i);
         f.hobbyNow = i == 0 ? "voting" : "queuing to vote";
@@ -486,6 +503,7 @@ public final class Polls {
         boolean there = (i == 0 ? bx * bx + bz * bz <= 2.1 * 2.1 : dx * dx + dz * dz <= 1.8 * 1.8) && Math.abs(f.getY() - spot.getY()) < 2.5;
         // At the front and close, but the last step will not come (the queue's line crowded, a block in the way): it reaches
         // across after a few seconds, as anyone would.
+        if (i != 0) FRONT.remove(me);
         if (i == 0 && !there) {
             Long front = FRONT.get(me);
             if (front == null) FRONT.put(me, now);
@@ -496,6 +514,7 @@ public final class Polls {
             if (now - JOINED.get(me) > 3600L) {                                // could not reach the box: its vote goes by a neighbour
                 Elections.cast(level, c, f, false);
                 leaveQueue(id, me);
+                notice(level, v, box, turnoutText(id, c));
                 return false;
             }
             return true;
