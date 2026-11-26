@@ -475,6 +475,9 @@ public final class VillageSpawner {
                 goods.addAll(List.of(new ItemStack(Items.BREAD, 32), new ItemStack(Items.WHEAT_SEEDS, 32),
                     new ItemStack(Items.CARROT, 16), new ItemStack(Items.POTATO, 16), new ItemStack(Items.OAK_SAPLING, 16),
                     new ItemStack(Items.TORCH, 32), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.COBBLESTONE, 64),
+                    // [grow54] And a house's worth more: thirty-five founders on real ground had their stone and logs out at
+                    // the mine and the woods, and stood "cannot afford the house" through the first day, every bed taken.
+                    new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.COBBLESTONE, 64),
                     new ItemStack(Items.STRING, 2)));
             } else {
                 for (int i = 0; i < chest.getContainerSize() && beds < unbedded; i++, beds++) {

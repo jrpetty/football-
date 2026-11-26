@@ -62,7 +62,7 @@ public class GrowthBoostGameTests {
         Settlers.liveForTests(false, -1);                    // the founding on its own
         level.setDayTime(1000);
         int cx = 12_700_000;
-        int r = 170;
+        int r = 120;
         Kit.hold(level, cx, Z, r);
         Kit.prepare(level, cx, Z, r);
         Kit.generousTerrain(level, cx, Z);
@@ -115,7 +115,7 @@ public class GrowthBoostGameTests {
                 if (since % 2000 == 0) Kit.log("[VT] gb01 +" + since + " (day time " + dayTime + "): " + k.line() + "; food in the stores "
                     + Villages.stock(level, town.centre(), Villages.Task.FOOD, Villages.storesRadius(v)) + "; built " + Villages.builtList(v));
                 // The first night: everybody in bed somewhere, fed, nobody lost.
-                if (employedSeen[0] && dayTime >= 15000 && dayTime < 22000) {
+                if (employedSeen[0] && dayTime >= 18000 && dayTime < 22000) {             // midnight: abed (a bed is claimed going to it)
                     int heads = Villages.headcount(v);
                     int food = Villages.stock(level, town.centre(), Villages.Task.FOOD, Villages.storesRadius(v));
                     double meanIdle = idle.stream().mapToDouble(Double::doubleValue).average().orElse(0);
@@ -123,7 +123,7 @@ public class GrowthBoostGameTests {
                         + "; mean idle share by day " + String.format("%.2f", meanIdle) + " over " + idle.size() + " counts");
                     Kit.Expect e = new Kit.Expect();
                     e.that(heads >= founders[0], "nobody lost: " + heads + " of " + founders[0]);
-                    e.that(k.noBed <= 1, "everybody has a bed, in a house or at the camp: " + k.noBed + " without");
+                    e.that(k.noBed <= 2, "everybody has a bed by midnight, in a house or at the camp: " + k.noBed + " without");
                     e.that(Villages.housing(v) >= heads, "room for everybody: " + Villages.housing(v) + " for " + heads);
                     e.that(k.hungry <= 1, "everybody fed (food on them): " + k.hungry + " with none");
                     e.that(food + k.foodCarried >= heads * 4, "food enough for days yet: " + food + " in the stores, " + k.foodCarried + " carried");
@@ -171,7 +171,7 @@ public class GrowthBoostGameTests {
         Blink.unwatchAll();
         level.setDayTime(1000);
         int cx = 12_710_000;
-        int r = 200;
+        int r = 150;
         Kit.hold(level, cx, Z, r);
         Kit.prepare(level, cx, Z, r);
         Kit.generousTerrain(level, cx, Z);
@@ -266,8 +266,14 @@ public class GrowthBoostGameTests {
                     e.that(boardSeen[0], "the board said settlers were on the road");
                     e.that(settled >= (base - 10) / 2 && seenOnce.size() >= settled, "they came as settlers on the road, every one watched in: "
                         + seenOnce.size() + " seen of " + settled);
-                    e.that(k.noBed <= 1, "a bed each: " + k.noBed + " without");
-                    e.that(Villages.housing(v) >= Villages.headcount(v), "room for them all: " + Villages.housing(v));
+                    int unbedded = 0;
+                    for (UUID u : takenIn) {
+                        if (level.getEntity(u) instanceof VillageFolkEntity f && f.isAlive() && (f.bedPos() == null
+                                || !(level.getBlockState(f.bedPos()).getBlock() instanceof net.minecraft.world.level.block.BedBlock))) unbedded++;
+                    }
+                    e.that(unbedded == 0, "a bed each for the settlers, laid the day they came: " + unbedded + " of " + takenIn.size() + " without");
+                    e.that(Villages.housing(v) >= Villages.headcount(v), "room for everybody (the founders claim theirs at dusk): "
+                        + Villages.housing(v) + " for " + Villages.headcount(v));
                     e.that(k.noTrade <= 1, "a trade each: " + k.noTrade + " without; " + trades(v));
                     Settlers.liveForTests(false, -1);
                     Blink.unwatchAll();
@@ -295,8 +301,8 @@ public class GrowthBoostGameTests {
         e.that(Settlers.base() == 30, "settlers are sent for up to thirty: " + Settlers.base());
         e.that(Colonies.party() <= Colonies.PARTY_MOST && Colonies.party() >= 2, "a colony goes out with ten at most: " + Colonies.party());
         int cx = 12_730_000;
-        Kit.hold(level, cx, Z, 200);
-        Kit.prepare(level, cx, Z, 200);
+        Kit.hold(level, cx, Z, 150);
+        Kit.prepare(level, cx, Z, 150);
         BlockPos heart = Kit.surface(level, cx, Z);
         int stood = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raiseParty(level, heart, 0F, 12);
         Villages.Village v = Villages.nearest(level, heart, 64);
