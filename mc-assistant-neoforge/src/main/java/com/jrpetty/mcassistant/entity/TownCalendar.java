@@ -149,6 +149,7 @@ public final class TownCalendar extends SavedData {
         List<String> out = new ArrayList<>();
         String bells = TownBell.line(level, village);
         if (bells != null) out.add("RN|" + bells);
+        out.addAll(Calendar.board(level, village));                  // [featlife] the day of the week, the market, the fair, the hours
         long day = level.getDayTime() / 24000L;
         StringBuilder days = new StringBuilder();
         String founding = FoundingDay.line(village, day);
@@ -168,6 +169,7 @@ public final class TownCalendar extends SavedData {
     /** The town's books (the News page): the day's bells, its coming days, and whose birthday it is. */
     public static List<String> book(ServerLevel level, UUID village) {
         List<String> out = new ArrayList<>(TownBell.book(level, village));
+        out.addAll(Calendar.book(level, village));                   // [featlife] the week and the businesses' hours
         long day = level.getDayTime() / 24000L;
         String founding = FoundingDay.line(village, day);
         if (founding != null) out.add(founding + ".");

@@ -51,6 +51,8 @@ public final class FolkProfile {
         Map.entry("Loves", "about"), Map.entry("Feeling", "about"), Map.entry("Style", "about"), Map.entry("Birthday", "about"),
         Map.entry("Culture", "about"), Map.entry("Town ways", "about"), Map.entry("Its town", "about"),
         Map.entry("Pastimes", "about"),
+        Map.entry("Character", "about"), Map.entry("Clubs", "about"), Map.entry("Lately", "day"), Map.entry("Its week", "day"),   // [featlife]
+        Map.entry("Friendships", "life"),
         Map.entry("Courting", "life"), Map.entry("Handed down", "life"), Map.entry("Its trade's line", "work"),   // [featfolk]
         Map.entry("Home", "life"), Map.entry("Own house", "life"), Map.entry("Family", "life"), Map.entry("Household", "life"),
         Map.entry("Pet", "life"), Map.entry("Friends", "life"), Map.entry("Neighbours", "life"), Map.entry("Quarter", "life"),

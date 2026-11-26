@@ -142,7 +142,7 @@ public class PremisesGameTests {
             long d = day + 1;
             while (Market.marketDay(t.id(), d)) d++;
             ok.that(!Market.marketDay(t.id(), d), "an ordinary day");
-            MarketDays.open(t.id(), d, MarketDays.Kind.WEEKEND);
+            MarketDays.declare(t.id(), d, MarketDays.Kind.WEEKEND);
             ok.that(Market.marketDay(t.id(), d) && MarketDays.kind(t.id(), d).equals("WEEKEND"), "declared a weekend market: " + MarketDays.kind(t.id(), d));
             int wk = PlayerStalls.licenceFee(t.id(), PlayerStalls.Licence.WEEKLY), mk = PlayerStalls.licenceFee(t.id(), PlayerStalls.Licence.MARKET_DAY);
             ok.that(mk > 0 && mk < wk, "a pitch for the day costs less than a week: " + mk + " < " + wk);

@@ -14,7 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The village's day of rest, once a week (never its market day), once it is past its first
+ * The village's day of rest, once a week on Sunday (Calendar; never its market day), once it is past its first
  * week and out of the Wood Age. Nobody but the watch works. The day goes:
  * <ul>
  * <li><b>the morning service</b> (from first light): the bell rings and everybody goes to
@@ -47,7 +47,7 @@ public final class RestDay {
 
     /** Is today this village's day of rest? */
     public static boolean today(@Nullable UUID village, long day) {
-        if (village == null || Math.floorMod(day + village.hashCode() + 3, 7) != 0) return false;
+        if (village == null || !Calendar.isRestDay(day)) return false;   // [featlife] Sunday (Calendar)
         if (Villages.ageOf(village).ordinal() < Villages.Age.STONE.ordinal()) return false;
         if (!LawBook.restKept(village, day)) return false;             // [identity] kept loosely: every other week
         long founded = com.jrpetty.mcassistant.village.Chronicle.foundedOn(village);
@@ -120,11 +120,14 @@ public final class RestDay {
             spot = heart.offset((int) Math.round(Math.cos(a) * 4), 0, (int) Math.round(Math.sin(a) * 4));
             altar = heart;
         }
+        if (!Church.atService(f, level, village, day, altar, b != null ? b.facing() : null)) return Church.stayAway(f);   // [featlife] the devout go; not all
+        BlockPos front = b != null ? altar.relative(b.facing().getOpposite()) : heart.relative(Direction.NORTH);
+        if (Church.preach(f, level, village, day, front, b != null ? b.anchor() : heart.offset(0, 0, 4))) return true;   // [featlife] the chaplain at the front
         if (!arrive(f, spot)) return true;
         f.hobbyNow = b != null ? "at the morning service in the chapel" : "at the morning service by the well";
         f.getLookControl().setLookAt(altar.getX() + 0.5, altar.getY() + 1.5, altar.getZ() + 0.5);
         // The elder gives thanks for the week: what happened in it.
-        if (f.isElder() && level.getGameTime() - SERMON.getOrDefault(village, -100000L) >= 160L) {
+        if (f.isElder() && Church.chaplain(village) == null && level.getGameTime() - SERMON.getOrDefault(village, -100000L) >= 160L) {
             SERMON.put(village, level.getGameTime());
             FolkTalk.speak(f, sermon(village, day, f.getRandom()));
         }

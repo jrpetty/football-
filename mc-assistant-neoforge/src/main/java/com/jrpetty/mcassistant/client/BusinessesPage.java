@@ -47,6 +47,7 @@ public final class BusinessesPage {
                 g.fill(x, cy - 1, x + w, cy + 8, UiStyle.TILE_HOVER);
                 List<Component> lines = new java.util.ArrayList<>(List.of(Component.literal(r.getString("name") + ": " + r.getString("type")),
                     Component.literal("Since it opened: took " + p(r.getLong("revAll")) + ", net " + p(r.getLong("netAll")))));
+                if (!r.getString("hours").isEmpty()) lines.add(Component.literal("Open " + r.getString("hours")));   // [featlife]
                 // [econ-1b] A firm its own folk opened: how it stands, its share of its market, why it closed.
                 if (r.contains("status")) lines.add(Component.literal(cap(r.getString("status")) + String.format(java.util.Locale.ROOT, ", %.0f%% of its market", r.getDouble("share") * 100)));
                 if (!r.getString("why").isEmpty()) lines.add(Component.literal("Closed: " + r.getString("why")));

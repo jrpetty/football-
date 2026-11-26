@@ -653,5 +653,17 @@
   "talk.mc_assistant.ref_nay.tip": "A citizen's vote against what is put to the town",
   "talk.mc_assistant.jury_duty": "Jury duty",
   "talk.mc_assistant.jury_duty.tip": "You're called to a jury: hear the case and give your verdict at the Town Hall",
-  "item.mc_assistant.citizen_papers": "Citizen Papers"
+  "item.mc_assistant.citizen_papers": "Citizen Papers",
+  "talk.mc_assistant.week_group": "The week",
+  "talk.mc_assistant.week_group.tip": "What's on this week, the clubs, who your friends are, and a dinner invitation's answer",
+  "talk.mc_assistant.whats_on": "What's on this week?",
+  "talk.mc_assistant.whats_on.tip": "Opens the week page: market day, the fair, the service, the clubs, the businesses' hours",
+  "talk.mc_assistant.join_club": "Join their club",
+  "talk.mc_assistant.join_club.tip": "Join the club this folk belongs to; the week page lists every club and when it meets",
+  "talk.mc_assistant.my_friends": "My friends here",
+  "talk.mc_assistant.my_friends.tip": "Who in this town counts you a friend, and how close",
+  "talk.mc_assistant.dinner_yes": "Accept dinner",
+  "talk.mc_assistant.dinner_yes.tip": "Say yes to their dinner invitation; be at their house at noon on the day (it's on your planner)",
+  "talk.mc_assistant.dinner_no": "Decline dinner",
+  "talk.mc_assistant.dinner_no.tip": "Say no to their dinner invitation. They take it well enough, and may ask another week"
 }

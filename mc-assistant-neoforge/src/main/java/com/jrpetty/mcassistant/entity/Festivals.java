@@ -357,7 +357,7 @@ public final class Festivals extends SavedData {
                 long first = Seasons.dayOf(village, day, 0);
                 int d = 0;
                 for (int i = 0; i < Seasons.DAYS; i++) {
-                    if (Math.floorMod(first + i + village.hashCode() + 3, 7) == 0) { d = i; break; }
+                    if (Calendar.isRestDay(first + i)) { d = i; break; }   // [featlife]
                 }
                 yield d;
             }

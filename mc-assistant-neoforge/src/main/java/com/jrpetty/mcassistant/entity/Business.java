@@ -326,6 +326,90 @@ public final class Business {
     /** A player who has run it into the ground may not be the one to buy it straight back: the day it closed. */
     public long closedDay = -1;
 
+    // ------------------------------------------------------------------ [featlife] its hours
+
+    /**
+     * [featlife] When it is open: the days of the week (a bit each, Monday the lowest: Calendar.dow), the hour it opens and
+     * the hour it shuts (the clock's, six in the morning being the day's start), and who set them and why, in a few words.
+     * Its hands work these hours and no others (WorkHours.shift); its counter serves in them. Set by its owner's character
+     * when a folk owns it (WorkHours.choose), by the player who owns it on the hours screen, or the type's own (forType).
+     */
+    public record Hours(int days, int open, int close, String why) {
+        public static final int WEEKDAYS = 0b0011111, SIX_DAYS = 0b0111111, ALL_WEEK = 0b1111111, MON_THU = 0b0001111;
+
+        public boolean openOn(int dow) {
+            return (days >> Math.floorMod(dow, 7) & 1) != 0;
+        }
+
+        public boolean openAt(int dow, int hour) {
+            return openOn(dow) && hour >= open && hour < close;
+        }
+
+        public int dayCount() {
+            return Integer.bitCount(days & ALL_WEEK);
+        }
+
+        public Hours withWhy(String w) {
+            return new Hours(days, open, close, w);
+        }
+
+        /** "Mon–Sat, 7:00–18:00", "Every day, 10:00–23:00". */
+        public String words() {
+            return daysWords() + ", " + open + ":00–" + close + ":00";
+        }
+
+        public String daysWords() {
+            int d = days & ALL_WEEK;
+            if (d == ALL_WEEK) return "Every day";
+            if (d == 0) return "Shut";
+            // a run of days from Monday: "Mon–Fri"
+            int first = Integer.numberOfTrailingZeros(d), last = 31 - Integer.numberOfLeadingZeros(d);
+            if (Integer.bitCount(d) == last - first + 1) {
+                return first == last ? Calendar.Day.values()[first].shortWord
+                    : Calendar.Day.values()[first].shortWord + "–" + Calendar.Day.values()[last].shortWord;
+            }
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 7; i++) if (openOn(i)) sb.append(sb.length() == 0 ? "" : ", ").append(Calendar.Day.values()[i].shortWord);
+            return sb.toString();
+        }
+
+        /** The hours a business of this type keeps unless somebody chooses others. */
+        public static Hours forType(Type t) {
+            return switch (t) {
+                case TAVERN, INN, RESTAURANT, THEATRE -> new Hours(ALL_WEEK, 10, 23, "a tavern's hours: every day");
+                case CAFE -> new Hours(ALL_WEEK, 7, 17, "a café's hours: every day");
+                case SHOP, BAKERY, MARKET, FISHMARKET, STALL, TRADING_POST, AUCTION, STOREHOUSE, HARBOUR, STABLES ->
+                    new Hours(SIX_DAYS, 6, 18, "a shop's hours: open on market day, shut on the day of rest");
+                case BANK -> new Hours(WEEKDAYS, 7, 17, "the bank's hours");
+                default -> new Hours(WEEKDAYS, 6, 18, "the working week: Monday to Friday");
+            };
+        }
+
+        int[] save() {
+            return new int[]{ days, open, close };
+        }
+    }
+
+    /** [featlife] Its own hours, if any were chosen; else the type's. */
+    @Nullable Hours hours;
+
+    /** [featlife] When it is open (the Business Core hub reads and edits these: setHours). */
+    public Hours hours() {
+        return hours != null ? hours : Hours.forType(type);
+    }
+
+    /** [featlife] Were its hours chosen (by its owner or a player), rather than the type's? */
+    public boolean hoursChosen() {
+        return hours != null;
+    }
+
+    /** [featlife] New hours, from its owner or the hub. Days are kept to the week; the hours to 5:00–24:00, open before shut. */
+    public void setHours(Hours h) {
+        if (h == null) { hours = null; return; }
+        int open = Math.max(5, Math.min(22, h.open())), close = Math.max(open + 1, Math.min(24, h.close()));
+        hours = new Hours(h.days() & Hours.ALL_WEEK, open, close, h.why() == null ? "" : h.why());
+    }
+
     public Business(String id, Type type, String name) {
         this.id = id;
         this.type = type;
@@ -477,6 +561,10 @@ public final class Business {
         CompoundTag cs = new CompoundTag();
         for (Map.Entry<String, String> e : cards.entrySet()) cs.putString(e.getKey(), e.getValue());
         t.put("cards", cs);
+        if (hours != null) {                                           // [featlife] its hours
+            t.putIntArray("hrs", hours.save());
+            t.putString("hrw", hours.why());
+        }
         return t;
     }
 
@@ -519,6 +607,8 @@ public final class Business {
         b.closedDay = t.contains("closed") ? t.getLong("closed") : -1;
         CompoundTag cs = t.getCompound("cards");
         for (String k : cs.getAllKeys()) b.cards.put(k, cs.getString(k));
+        int[] hrs = t.getIntArray("hrs");                              // [featlife] its hours
+        if (hrs.length == 3) b.setHours(new Hours(hrs[0], hrs[1], hrs[2], t.getString("hrw")));
         return b;
     }
 

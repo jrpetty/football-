@@ -19,8 +19,18 @@ public final class MarketDays {
         return PropertyBook.town(village, "marketdays");
     }
 
+    /** [featlife] Is this kind of market open in this town on this day (the Calendar's days, or one declared)? */
+    public static boolean open(UUID village, long day, Kind kind) {
+        if (village != null && declared(village, day) && kind.name().equals(book(village).getString(Long.toString(day)))) return true;
+        return switch (kind) {
+            case WEEKLY -> Calendar.isMarketDay(day);
+            case EXTRA -> village != null && (Ethos.extraMarket(village, day) || AdminTools.marketDecreed(village, day));
+            case WEEKEND -> Calendar.isWeekend(day);
+        };
+    }
+
     /** A market declared on this day (WEEKLY needs no declaring: it is the town's own day, and is accepted as a no-op). */
-    public static void open(UUID village, long day, Kind kind) {
+    public static void declare(UUID village, long day, Kind kind) {
         if (kind == Kind.WEEKLY) return;
         book(village).putString(Long.toString(day), kind.name());
         CompoundTag b = book(village);

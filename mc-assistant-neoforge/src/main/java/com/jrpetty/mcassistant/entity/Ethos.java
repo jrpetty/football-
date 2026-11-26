@@ -688,7 +688,7 @@ public final class Ethos {
 
     /** A second market day in the week for a mercantile town (Market.marketDay): its fourth day after its first. */
     public static boolean extraMarket(@Nullable UUID village, long day) {
-        return village != null && is(village, Axis.TRADE, true) && Math.floorMod(day + village.hashCode(), 7L) == 3;
+        return village != null && is(village, Axis.TRADE, true) && Calendar.isMidweek(day);   // [featlife] Wednesday
     }
 
     /**

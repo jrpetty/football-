@@ -303,9 +303,9 @@ public final class Market {
 
     // ------------------------------------------------------------------ days
 
-    /** Is this the village's market day? Once a week, a day of its own. */
+    /** Is this the village's market day? Once a week: Saturday (Calendar). */
     public static boolean marketDay(UUID village, long day) {
-        return Math.floorMod(day + village.hashCode(), 7L) == 0
+        return Calendar.isMarketDay(day)                                 // [featlife] Saturday, by the week (Calendar)
             || Ethos.extraMarket(village, day)                           // [identity] a mercantile town's second market day
             || AdminTools.marketDecreed(village, day)                    // [admin] a market day by decree
             || MarketDays.declared(village, day);                         // [wpc] an extra or weekend market (MarketDays.open)

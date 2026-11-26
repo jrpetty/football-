@@ -220,6 +220,10 @@ public final class TalkMenu {
     static final Entry DELIVER = ask("deliver", Items.HOPPER, TalkTopic.DELIVER, Context::errand);
     static final Entry FINE = ask("fine", Items.GOLD_NUGGET, TalkTopic.FINE, flag("fine"));
     static final Entry INTERVIEWS = say("interviews", Items.ENCHANTED_BOOK, "Any interviews coming up?");
+    // [featlife] The week page, and the answer to a dinner invitation (the folk who asked has the flag "invite").
+    static final Entry WHATS_ON = say("whats_on", Items.CLOCK, "What's on this week?");
+    static final Entry DINNER_YES = say("dinner_yes", Items.CAKE, "I'd love to come to dinner", flag("invite"));
+    static final Entry DINNER_NO = say("dinner_no", Items.BARRIER, "Sorry, I can't make dinner", flag("invite"));
     static final Entry LEADER = say("leader", Items.GOLDEN_HELMET, "Show me the leader's page");
     static final Entry GODPARENT = ask("godparent", Items.TOTEM_OF_UNDYING, TalkTopic.GODPARENT, flag("child"));
     static final Entry MAPS = ask("maps", Items.RECOVERY_COMPASS, TalkTopic.MAPS);
@@ -397,6 +401,12 @@ public final class TalkMenu {
         // Town: its ways, its people, its government, its law, its records.
         List.of(
             say("ways", Items.WHITE_BANNER, "What's this town like?"),
+            group("week_group", Items.CLOCK,                                  // [featlife] the week page: what's on, clubs, friends, a dinner
+                WHATS_ON,
+                say("join_club", Items.FISHING_ROD, "Can I join your club?", flag("club")),
+                say("my_friends", Items.POPPY, "Who are my friends here?"),
+                DINNER_YES,
+                DINNER_NO),
             ask("census", Items.ARMOR_STAND, TalkTopic.CENSUS),
             ask("repute", Items.PLAYER_HEAD, TalkTopic.REPUTE),
             group("council_group", Items.LECTERN,
@@ -565,6 +575,7 @@ public final class TalkMenu {
             if (c.has("outlaw")) out.add(c.has("elder") ? PARDON : GIVE_UP);   // [war-after] an outlaw here: the way back
             if (c.shunned()) out.add(GIFT);                     // shunned, only a gift or a fine paid is heard (FolkTalk.answer)
             else if (c.inDisgrace()) out.add(SORRY);
+            if (c.has("invite")) { out.add(DINNER_YES); out.add(DINNER_NO); }   // [featlife] asked to dinner: say yes or no
             if (c.has("birthday")) out.add(BIRTHDAY);
             if (c.has("interview")) out.add(INTERVIEWS);
             if (c.has("apprentice")) out.add(LESSON);

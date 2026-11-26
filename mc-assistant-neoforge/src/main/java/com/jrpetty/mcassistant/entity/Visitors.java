@@ -68,7 +68,9 @@ public final class Visitors {
     public enum Kind {
         BARD("a travelling bard", " the bard"), TOURIST("a visitor from afar", " (visiting)"), MERCHANT("a merchant from afar", " the merchant"),
         // [trade-world] A merchant ship's people ashore (Seafarers), and the keeper of a roadside inn (Roadside).
-        SEAFARER("a seafarer from over the sea", ""), INNKEEPER("the keeper of a roadside inn", "");
+        SEAFARER("a seafarer from over the sea", ""), INNKEEPER("the keeper of a roadside inn", ""),
+        // [featlife] A trader from a neighbouring town, in for the fair with a stall's worth of its town's goods (Fairground).
+        TRADER("a trader from a neighbouring town", " the trader");
 
         public final String words;
         /** What its name carries over its head, so a player can tell a visitor from a resident. */
@@ -319,6 +321,13 @@ public final class Visitors {
                                     List<ItemStack> kit, String origin) {
         BlockPos edge = edge(level, v, level.getRandom());
         if (edge == null) return null;
+        return arriveFrom(level, v, edge, kind, day, nights, purse, kit, origin);
+    }
+
+    /** [featlife] The same, in from an edge already chosen (Fairground: out of anybody's sight). */
+    @Nullable
+    static VillageFolkEntity arriveFrom(ServerLevel level, Villages.Village v, BlockPos edge, Kind kind, long day, int nights, int purse,
+                                        List<ItemStack> kit, String origin) {
         VillageFolkEntity f = McAssistantMod.VILLAGE_FOLK.get().create(level);
         if (f == null) return null;
         RandomSource r = level.getRandom();
@@ -439,6 +448,7 @@ public final class Visitors {
                     case MERCHANT -> Merchants.stay(level, town, f, v, day, t);
                     case SEAFARER -> Seafarers.stay(level, town, f, v, day, t);          // [trade-world]
                     case INNKEEPER -> Roadside.stay(level, town, f, v, day, t);         // [trade-world]
+                    case TRADER -> Fairground.stay(level, town, f, v, day, t);         // [featlife]
                 };
                 if (go) setOff(level, town, f, v, day);
             }
@@ -455,6 +465,7 @@ public final class Visitors {
             case BARD -> Tavern.of(town.id());
             case MERCHANT -> building(town.id(), "market");
             case TOURIST, SEAFARER, INNKEEPER -> null;                        // [trade-world] they never walk in
+            case TRADER -> null;                                              // [featlife] the square, where the fair is
         };
         return b != null ? b.anchor() : town.centre();
     }
@@ -469,6 +480,7 @@ public final class Visitors {
             case BARD -> Bard.arrived(level, town, f, v, day);
             case TOURIST -> Tourists.arrived(level, town, f, v, day);
             case MERCHANT -> Merchants.arrived(level, town, f, v, day);
+            case TRADER -> Fairground.arrived(level, town, f, v, day);         // [featlife]
         }
         LOG.info("[MCA-VISIT] {} ({}) is in {} now", v.name, v.kind.words, name);
     }
@@ -487,6 +499,7 @@ public final class Visitors {
             case TOURIST -> v.name + ", a visitor from afar, went home" + (v.purse0 - f.purse() > 0
                 ? " having spent " + coins(v.purse0 - f.purse()) + " in town" : "");
             case MERCHANT -> v.name + ", the merchant from afar, packed up its stall and left";
+            case TRADER -> v.name + ", a trader in for the fair, packed up and went home";   // [featlife]
             case SEAFARER, INNKEEPER -> null;                                    // [trade-world] the ship's going is told once (ShipCalls)
         };
         if (how != null) Villages.tell(town.id(), day, how);
@@ -497,6 +510,7 @@ public final class Visitors {
             case MERCHANT -> FolkTalk.pick(f.getRandom(), "That's me packed. Till next market day!", "Off before dark. Good trading, all!");
             case SEAFARER -> FolkTalk.pick(f.getRandom(), "All aboard! Fair winds, " + Villages.name(town.id()) + "!", "The tide won't wait. Farewell!");
             case INNKEEPER -> FolkTalk.pick(f.getRandom(), "I'll lock up, then. The road's no place for an inn just now.", "Farewell, travellers.");
+            case TRADER -> Fairground.goodbye(f);                                // [featlife]
         });
     }
 
@@ -543,6 +557,7 @@ public final class Visitors {
             case MERCHANT -> Merchants.stay(level, town, f, v, day, t);
             case SEAFARER -> Seafarers.stay(level, town, f, v, day, t);                  // [trade-world]
             case INNKEEPER -> Roadside.stay(level, town, f, v, day, t);                 // [trade-world]
+            case TRADER -> Fairground.stay(level, town, f, v, day, t);                 // [featlife]
         };
         if (go) setOff(level, town, f, v, day);
         return go;
@@ -859,6 +874,7 @@ public final class Visitors {
                 case MERCHANT -> FolkTalk.pick(r, "Goods from far away, friend! Ask me what I've got.",
                     "Things you'll not find in " + town + "'s own land. Have a look!");
                 case SEAFARER, INNKEEPER -> "";                                    // [trade-world] answered above
+                case TRADER -> Fairground.hello(f, v.wares);                       // [featlife]
             };
             case HOW -> FolkTalk.pick(r, "Footsore, but glad to be here.", "Never better. There's nothing like a new town.");
             case DOING -> capFirst(doing(f));
@@ -868,11 +884,13 @@ public final class Visitors {
                     + town + ".";
                 case MERCHANT -> "I trade between the far lands: what grows in one, I carry to the next. Market day here, then on.";
                 case SEAFARER, INNKEEPER -> "";                                    // [trade-world] answered above
+                case TRADER -> "I keep a stall at home and bring it to the fairs round about. " + v.wares + ", mostly.";   // [featlife]
             };
             case VILLAGE, GOSSIP, MEMORY -> v.kind == Kind.BARD && f.level() instanceof ServerLevel level
                 ? Bard.newsLine(level, Villages.get(v.town), r)
                 : "I only came " + (v.arrived == f.level().getDayTime() / 24000L ? "today" : "lately") + ". Ask somebody who lives here.";
-            case TRADE -> v.kind == Kind.MERCHANT ? Merchants.offer(f, v, p)
+            case TRADE -> v.kind == Kind.TRADER ? "It's all on the stall, priced. Folk here pay in coin; so can you: hand me the price and point."   // [featlife]
+                : v.kind == Kind.MERCHANT ? Merchants.offer(f, v, p)
                 : "I've nothing to sell — I'm only visiting.";
             case DELIVER -> v.kind == Kind.MERCHANT ? Merchants.close(f, v, p) : "You don't owe me anything!";
             default -> FolkTalk.pick(r, "I'm only passing through — ask somebody who lives here.",
@@ -901,6 +919,7 @@ public final class Visitors {
                 case MERCHANT -> "At the market with goods from afar";
                 case SEAFARER -> Seafarers.doing(f, v);                           // [trade-world]
                 case INNKEEPER -> Roadside.doing(f, v);                            // [trade-world]
+                case TRADER -> "At its stall at the fair";                        // [featlife]
             };
         };
     }

@@ -520,6 +520,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Auctions.tick(quay, ownerId());
         }
         Leisure.tick(this);
+        if (tickCount % 20 == 11) LifeTick.tick(this);          // [featlife] its week counted; a service, a funeral, a club, a dinner
         Busywork.tick(this);                                   // [life28] stood about with nothing to do: something to do (Busywork)
         Individual.tick(this);                                 // [individual] its looks, its manner, its keepsake, its dream
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
@@ -699,6 +700,9 @@ public class VillageFolkEntity extends AssistantEntity {
                 && School.hold(this, schooling)) return;
         // [batchC] Sport and play (Sport): a match to play or watch on the rest day, an away day at a neighbour's
         // pitch, the fishing contest or the children's race, the watch at the butts of a morning.
+        // [featlife] The week's events: a service, a christening, a funeral and its wake, a dinner, its club's meeting (LifeTick).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel lifeLevel
+                && (tickCount % 4 == 3 ? LifeTick.hold(this, lifeLevel) : LifeTick.busy(this))) return;
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel sport && Sport.hold(this, sport)) return;
         // [transport] To the station or the ferry landing to cross, and waiting there; the ferryman at its ferry (Transport).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel transit && Transport.hold(this, transit)) return;
@@ -1895,6 +1899,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 ? displayNameCap() + " died peacefully in their sleep, aged " + age
                 : displayNameCap() + " died, aged " + age + ", " + how);
             Gatherings.mourn(village, displayNameCap(), day);
+            Church.died(this, day);                                                     // [featlife] the funeral in the morning, and the wake
             Homes.left(village, getUUID());
             Bank.left(village, this, true);              // its savings at the bank to its partner, a child, or the village
             Businesses.left(village, this, true);        // [business-books] its purse and its stake in a business to its heir
@@ -3208,6 +3213,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (OutdoorWeather.keepsIn(this)) return false;     // [roles-d] the woodcutter and the hunter in out of the rain
         Boolean serving = Hospitality.shift(this);            // [dining] the bar's, the floor's and the baker's own hours
         if (serving != null) return serving;
+        Boolean hours = WorkHours.shift(this);              // [featlife] its employer's opening days and working hours
+        if (hours != null) return hours;
         // The day of rest: nobody works but the watch.
         if (alarmed != null && stationTask() != StationTask.GUARD && RestDay.now(alarmed, level().getDayTime()) != null) return false;
         // The town bell (TownBell): the day's work from the dawn bell to the dusk bell, and the bell's own business first.
@@ -5853,9 +5860,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Raids.underAlarm(ownerId()) && (bedPos() == null && !isBaby() || WatchClears.bedFar(this))) return Raids.shelter(this);
         // The day of rest, by day: the service, the games, walking out — not bed at noon.
         if (!Raids.underAlarm(ownerId()) && RestDay.now(ownerId(), level().getDayTime()) != null) {
-            if (!RestDay.spend(this)) socialise();
+            if (!RestDay.spend(this) && !WeekendLife.spend(this)) socialise();   // [featlife] a Sunday afternoon's outing
             return true;
         }
+        if (!Raids.underAlarm(ownerId()) && WeekendLife.spend(this)) return true;   // [featlife] a day off: the town, the market, friends
         return super.bedtime();
     }
 
@@ -7210,6 +7218,7 @@ public class VillageFolkEntity extends AssistantEntity {
         Villages.recordBirth(village);
         Annals.born(village);
         child.bornDay = bornOn;
+        Church.born(child);                                   // [featlife] christened the Sunday after
         child.setChild(true);
         persona.remember(bornOn, "my child " + child.displayNameCap() + " was born", 9);
         partner.persona.remember(bornOn, "my child " + child.displayNameCap() + " was born", 9);

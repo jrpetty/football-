@@ -44,8 +44,8 @@ public final class TownMeeting {
     /** Is the town's meeting due this evening: the eve of its day of rest or the day itself, and none held these five days? */
     static boolean due(UUID village, long day) {
         if (Villages.headcount(village) < 4) return false;
-        boolean eve = Math.floorMod(day + 1 + village.hashCode() + 3, 7) == 0;
-        boolean rest = Math.floorMod(day + village.hashCode() + 3, 7) == 0;
+        boolean eve = Calendar.isRestDay(day + 1);                    // [featlife] Saturday evening
+        boolean rest = Calendar.isRestDay(day);
         if (!eve && !rest) return false;
         long last = Civics.town(village).getLong("meetingDay") - 1;      // (kept one ahead: nought is never)
         return last < 0 || day - last >= 5;
@@ -53,7 +53,7 @@ public final class TownMeeting {
 
     /** The day of the next meeting (the eve of the next day of rest), from today. */
     static long next(UUID village, long day) {
-        for (long d = day; d < day + 8; d++) if (Math.floorMod(d + 1 + village.hashCode() + 3, 7) == 0) return d;
+        for (long d = day; d < day + 8; d++) if (Calendar.isRestDay(d + 1)) return d;
         return day + 7;
     }
 
