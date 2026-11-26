@@ -463,3 +463,8 @@ how do i let my assistant talk again => pa_quiet
 why does my assistant swear back at me => pa_energy
 how do i stop my assistant swearing => pa_energy
 can my assistant roast other players => pa_energy
+# [featcivic] how towns are governed
+what is a planned state => gov_forms
+where is the ballot box => gov_vote
+why are folk protesting => gov_unrest
+can i vote early => gov_vote

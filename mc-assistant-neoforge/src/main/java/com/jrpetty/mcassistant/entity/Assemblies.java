@@ -54,7 +54,11 @@ public final class Assemblies {
         FESTIVAL("a festival"),                                 // [batchB] the May dance, the bonfire, the fair, the harvest (Festivals)
         MEETING("the town meeting"),                         // [batchF] once a week (TownMeeting)
         PROTEST("a protest"),                                // [civic-land] the angry at the hall about the taxes (TaxUnrest)
-        KNIGHTING("a knighting");                            // [civic-land] a player dubbed before the hall (Knights)
+        KNIGHTING("a knighting"),                            // [civic-land] a player dubbed before the hall (Knights)
+        RALLY("a campaign speech"),                          // [featcivic] a candidate speaks in the square (Polls)
+        DISSENT("a protest"),                                // [featcivic] the town's grievances against its government (Dissent)
+        REVOLUTION("a rising"),                              // [featcivic] the town rises, or the watch seizes the hall (Dissent)
+        CEREMONY("a ceremony");                              // [featcivic] a coronation, a congress, a change of command (Ceremonies)
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -301,6 +305,7 @@ public final class Assemblies {
                     a.phase = a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING
                         || a.kind == Kind.KNIGHTING                               // [civic-land] the cheers and the rockets
                         || a.kind == Kind.WEDDING                                 // [featfolk] the reception
+                        || a.kind == Kind.CEREMONY                                // [featcivic] the new leader cheered
                         || a.kind == Kind.FESTIVAL && Festivals.mingles(a)        // [batchB] the dance, the song, the meal
                         ? Phase.MINGLE : Phase.CLOSE;
                     a.phaseAt = now;
@@ -437,6 +442,9 @@ public final class Assemblies {
         if (a.kind == Kind.MEETING) TownMeeting.held(level, a);      // [batchF] into the chronicle, and the books
         if (a.kind == Kind.PROTEST) TaxUnrest.closed(level, a);      // [civic-land] the signs back, into the chronicle
         if (a.kind == Kind.KNIGHTING) Knights.closed(level, a);      // [civic-land] remembered by all who saw it
+        if (a.kind == Kind.RALLY) Polls.rallyClosed(level, a);       // [featcivic]
+        if (a.kind == Kind.DISSENT || a.kind == Kind.REVOLUTION) Dissent.closed(level, a);   // [featcivic] the banners back, the chronicle
+        if (a.kind == Kind.CEREMONY) Ceremonies.closed(level, a);    // [featcivic]
     }
 
     // ------------------------------------------------------------------ being there
@@ -470,7 +478,8 @@ public final class Assemblies {
             case SPEECH -> host ? FolkAction.Act.PREACH
                 : a.kind == Kind.VIGIL ? FolkAction.Act.MOURN
                 : a.kind == Kind.WEDDING || a.kind == Kind.COMING_OF_AGE || a.kind == Kind.KNIGHTING ? FolkAction.Act.LISTEN
-                : a.kind == Kind.PROTEST ? FolkAction.Act.PROTEST : FolkAction.Act.LISTEN;
+                : a.kind == Kind.PROTEST || a.kind == Kind.DISSENT || a.kind == Kind.REVOLUTION ? FolkAction.Act.PROTEST   // [featcivic]
+                : a.kind == Kind.CEREMONY && Ceremonies.kneels(a) ? FolkAction.Act.KNEEL : FolkAction.Act.LISTEN;
             case MINGLE -> a.kind == Kind.FEAST || a.kind == Kind.FESTIVAL || a.kind == Kind.FOUNDING
                 ? (pick == 0 ? FolkAction.Act.CLAP : FolkAction.Act.DANCE)
                 : pick == 0 ? FolkAction.Act.CHEER : pick == 1 ? FolkAction.Act.DANCE : FolkAction.Act.CLAP;
@@ -716,6 +725,9 @@ public final class Assemblies {
         }
         if (a.kind == Kind.FOUNDING && a.host == null) a.host = FoundingDay.eldest(a.village);   // nobody leads: the eldest reads
         if (a.kind == Kind.PROTEST) TaxUnrest.prepare(level, a);     // [civic-land] the ringleader speaks; the leader called out
+        if (a.kind == Kind.RALLY) Polls.prepareRally(level, a);      // [featcivic] the candidate speaks
+        if (a.kind == Kind.DISSENT || a.kind == Kind.REVOLUTION) Dissent.prepare(level, a);   // [featcivic] the ringleader, the banners
+        if (a.kind == Kind.CEREMONY) Ceremonies.prepare(level, a);   // [featcivic] the officiant, the one installed
         if (a.kind == Kind.COMING_OF_AGE || a.kind == Kind.OPENING || a.host == null) {
             if (a.host == null) a.host = oldest(level, a.village);
         }
@@ -1082,6 +1094,9 @@ public final class Assemblies {
             case MEETING -> TownMeeting.script(level, a, s, r);       // [batchF] the week, and the folk's say
             case PROTEST -> TaxUnrest.script(level, a, s, r);         // [civic-land] the chants, the case, the council's answer
             case KNIGHTING -> Knights.script(level, a, s, r);         // [civic-land] the deeds read, the dubbing
+            case RALLY -> Polls.rallyScript(level, a, s, r);          // [featcivic] the candidate's case, the crowd's answer
+            case DISSENT, REVOLUTION -> Dissent.script(level, a, s, r);   // [featcivic] the chants, the case, the answer; the rising
+            case CEREMONY -> Ceremonies.script(level, a, s, r);       // [featcivic] the coronation, the congress, the command
             case COMING_OF_AGE -> {
                 String[] parts = a.subject.split("\\|", -1);
                 String who = parts[0];
@@ -1128,6 +1143,10 @@ public final class Assemblies {
             case COUNCIL -> a.subject.startsWith("war|") ? "the council of war" : a.kind.label;   // [war-peace]
             case KNIGHTING -> "the knighting of " + (a.subject.contains("|") ? a.subject.split("\\|", 2)[1] : "a friend of the town");   // [civic-land]
             case PROTEST -> "the protest at the taxes";                                          // [civic-land]
+            case RALLY -> a.subject.split("\\|", 3).length > 1 ? a.subject.split("\\|", 3)[1] + "'s speech in the square" : "a campaign speech";   // [featcivic]
+            case DISSENT -> "the protest in the square";                                         // [featcivic]
+            case REVOLUTION -> "the rising at the hall";                                          // [featcivic]
+            case CEREMONY -> Ceremonies.describe(a);                                              // [featcivic]
             default -> a.kind.label;
         };
     }

@@ -99,7 +99,9 @@ public final class Regalia {
         Kind lead = switch (form) {
             case LORD -> Kind.MONARCH;
             case COUNCIL, CHAPLAIN -> Kind.ELDER;
-            case GUILD, COMMUNE -> Kind.ELECTED;
+            case GUILD, COMMUNE, DEMOCRACY -> Kind.ELECTED;
+            case PLANNED -> Kind.ELDER;                                       // [featcivic] the chair's sober robe
+            case JUNTA -> Kind.CHIEF;                                         // [featcivic] the general's mantle
             case REEVE -> "chief".equals(land) || "headman".equals(land) ? Kind.CHIEF : "elder".equals(land) ? Kind.ELDER : Kind.ELECTED;
         };
         worn.put(leader, lead);
@@ -108,8 +110,10 @@ public final class Regalia {
             if (partner != null) worn.putIfAbsent(partner.getUUID(), Kind.ROYAL);
             UUID heir = Government.heirId(village);
             if (heir != null) worn.putIfAbsent(heir, Kind.ROYAL);
-        } else if (form == Government.Form.COUNCIL) {
+        } else if (form == Government.Form.COUNCIL || form == Government.Form.PLANNED) {
             for (VillageFolkEntity e : Elections.voters(village)) worn.putIfAbsent(e.getUUID(), Kind.COUNCILLOR);
+        } else if (form == Government.Form.DEMOCRACY) {                   // [featcivic] the elected members of the town council
+            for (UUID m : Factions.members(village)) worn.putIfAbsent(m, Kind.COUNCILLOR);
         }
         return new Court(now, leader, title(village, form, land), worn, colours[0], colours[1], town);
     }
@@ -120,6 +124,9 @@ public final class Regalia {
             case LORD -> kingdom(village) ? "king" : "lord";
             case COUNCIL -> "speaker";
             case REEVE -> land;
+            case DEMOCRACY -> "mayor";                                        // [featcivic]
+            case PLANNED -> "chair";
+            case JUNTA -> "general";
             default -> Government.title(village);
         };
         return t.isEmpty() ? "" : Character.toUpperCase(t.charAt(0)) + t.substring(1);
@@ -213,7 +220,11 @@ public final class Regalia {
         return switch (k) {
             case NONE -> "";
             case ROYAL -> f.getUUID().equals(Government.heirId(village)) ? "heir" : "consort";
-            case COUNCILLOR -> "Elder";
+            case COUNCILLOR -> switch (Government.of(village)) {               // [featcivic] the elected council's members, the committee
+                case DEMOCRACY -> "Councillor";
+                case PLANNED -> "Committee";
+                default -> "Elder";
+            };
             default -> c.title();
         };
     }

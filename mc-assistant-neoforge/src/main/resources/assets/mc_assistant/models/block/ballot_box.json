@@ -1,0 +1,46 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "minecraft:block/dark_oak_planks",
+    "wood": "minecraft:block/dark_oak_planks",
+    "trim": "minecraft:block/stripped_dark_oak_log",
+    "leg": "minecraft:block/dark_oak_log",
+    "slot": "minecraft:block/black_concrete",
+    "card": "minecraft:block/white_concrete",
+    "lock": "minecraft:block/gold_block"
+  },
+  "elements": [
+    { "from": [2.5, 0, 2.5], "to": [4.5, 3, 4.5], "faces": {
+      "north": { "uv": [0, 0, 2, 3], "texture": "#leg" }, "south": { "uv": [0, 0, 2, 3], "texture": "#leg" },
+      "east": { "uv": [0, 0, 2, 3], "texture": "#leg" }, "west": { "uv": [0, 0, 2, 3], "texture": "#leg" },
+      "down": { "uv": [0, 0, 2, 2], "texture": "#leg", "cullface": "down" } } },
+    { "from": [11.5, 0, 2.5], "to": [13.5, 3, 4.5], "faces": {
+      "north": { "uv": [0, 0, 2, 3], "texture": "#leg" }, "south": { "uv": [0, 0, 2, 3], "texture": "#leg" },
+      "east": { "uv": [0, 0, 2, 3], "texture": "#leg" }, "west": { "uv": [0, 0, 2, 3], "texture": "#leg" },
+      "down": { "uv": [0, 0, 2, 2], "texture": "#leg", "cullface": "down" } } },
+    { "from": [2.5, 0, 11.5], "to": [4.5, 3, 13.5], "faces": {
+      "north": { "uv": [0, 0, 2, 3], "texture": "#leg" }, "south": { "uv": [0, 0, 2, 3], "texture": "#leg" },
+      "east": { "uv": [0, 0, 2, 3], "texture": "#leg" }, "west": { "uv": [0, 0, 2, 3], "texture": "#leg" },
+      "down": { "uv": [0, 0, 2, 2], "texture": "#leg", "cullface": "down" } } },
+    { "from": [11.5, 0, 11.5], "to": [13.5, 3, 13.5], "faces": {
+      "north": { "uv": [0, 0, 2, 3], "texture": "#leg" }, "south": { "uv": [0, 0, 2, 3], "texture": "#leg" },
+      "east": { "uv": [0, 0, 2, 3], "texture": "#leg" }, "west": { "uv": [0, 0, 2, 3], "texture": "#leg" },
+      "down": { "uv": [0, 0, 2, 2], "texture": "#leg", "cullface": "down" } } },
+    { "from": [2, 3, 2], "to": [14, 12, 14], "faces": {
+      "north": { "uv": [2, 4, 14, 13], "texture": "#wood" }, "south": { "uv": [2, 4, 14, 13], "texture": "#wood" },
+      "east": { "uv": [2, 4, 14, 13], "texture": "#wood" }, "west": { "uv": [2, 4, 14, 13], "texture": "#wood" },
+      "down": { "uv": [2, 2, 14, 14], "texture": "#wood" } } },
+    { "from": [1.5, 12, 1.5], "to": [14.5, 14, 14.5], "faces": {
+      "north": { "uv": [1, 0, 15, 2], "texture": "#trim" }, "south": { "uv": [1, 0, 15, 2], "texture": "#trim" },
+      "east": { "uv": [1, 0, 15, 2], "texture": "#trim" }, "west": { "uv": [1, 0, 15, 2], "texture": "#trim" },
+      "up": { "uv": [1, 1, 15, 15], "texture": "#trim" }, "down": { "uv": [1, 1, 15, 15], "texture": "#trim" } } },
+    { "from": [4.5, 14, 7.25], "to": [11.5, 14.05, 8.75], "faces": {
+      "up": { "uv": [0, 0, 7, 1.5], "texture": "#slot" } } },
+    { "from": [4.5, 5.5, 1.95], "to": [11.5, 10.5, 2], "faces": {
+      "north": { "uv": [0, 0, 7, 5], "texture": "#card" } } },
+    { "from": [7.25, 10.75, 1.4], "to": [8.75, 12.25, 1.6], "faces": {
+      "north": { "uv": [0, 0, 1.5, 1.5], "texture": "#lock" }, "east": { "uv": [0, 0, 0.2, 1.5], "texture": "#lock" },
+      "west": { "uv": [0, 0, 0.2, 1.5], "texture": "#lock" } } }
+  ]
+}

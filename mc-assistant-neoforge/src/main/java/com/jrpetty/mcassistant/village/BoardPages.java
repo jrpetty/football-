@@ -80,7 +80,10 @@ public final class BoardPages {
         "Property",
         // [featfolk] The family trees, the masters and their apprentices, and the town's respect for you (FamiliesPage,
         // ApprenticesPage, RespectPage), after them.
-        "Families", "Apprentices", "Respect" };
+        "Families", "Apprentices", "Respect",
+        // [featcivic] How the town is governed: the form and its rules, the election, the parties, the unrest, every form
+        // compared, the neighbours' governments (GovernmentPage).
+        "Government" };
 
     /** One of the board's sections: its name, its icon, what it holds, and its pages by name. */
     public record Section(String name, Item icon, String tip, String... pages) {}
@@ -96,7 +99,7 @@ public final class BoardPages {
         new Section("Town", Items.BRICKS, "Its buildings, the roads and rails, the maps, the caves and the watch",
             "Buildings", "Transport", "Roads", "Maps", "Caves", "Nether", "Watch", "Cases"),
         new Section("Civic", Items.BELL, "Who leads, what the town studies, what it stands for, and its wars",
-            "Leader", "Respect", "Research", "Inventions", "Identity", "War", "War map", "Lands", "Region", "Taxes", "Knights"),   // [featfolk] Respect   // [tech-tree] [borders-map] [civic-land] [links12]
+            "Government", "Leader", "Respect", "Research", "Inventions", "Identity", "War", "War map", "Lands", "Region", "Taxes", "Knights"),   // [featfolk] Respect   // [tech-tree] [borders-map] [civic-land] [links12]   // [featcivic] Government
         new Section("Culture", Items.PAINTING, "Its banner and customs, what it wears, its library, museum and wonders",
             "Culture", "Fashion", "Library", "Museum", "Perks"),
         new Section("Records", Items.WRITABLE_BOOK, "Its bests and totals, and how it is trending",

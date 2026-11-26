@@ -115,6 +115,7 @@ public final class Council {
         }
         Hustings.seatVotes(village, proposals, tally);          // [player-civic] a player given a seat votes as a councillor too
         Knights.councilVotes(village, proposals, tally);         // [civic-land] and a knight of the town
+        Policy.councilVotes(village, options, tally);            // [featcivic] the leader's wish for what goes up first
         String chosen = null;
         int most = -1, second = 0;
         for (Map.Entry<String, Integer> e : tally.entrySet()) {

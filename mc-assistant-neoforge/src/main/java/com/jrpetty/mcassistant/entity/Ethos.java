@@ -123,7 +123,11 @@ public final class Ethos {
 
     /** What a folk's values make of a town, on each axis (its cares against its average care). */
     static double[] folkLean(VillageFolkEntity f) {
-        int[] w = Values.of(f);
+        return folkLean(Values.of(f));
+    }
+
+    /** [featcivic] The same from the weights alone (a unit test's founders). */
+    static double[] folkLean(int[] w) {
         double mean = 0;
         for (int x : w) mean += x;
         mean /= w.length;
@@ -145,7 +149,12 @@ public final class Ethos {
 
     /** What a folk's nature makes of a town. */
     static void natureLean(VillageFolkEntity f, double[] a, double by) {
-        for (Social.Trait t : f.life().traits()) {
+        natureLean(f.life().traits(), a, by);
+    }
+
+    /** [featcivic] The same from the traits alone. */
+    static void natureLean(java.util.Collection<Social.Trait> traits, double[] a, double by) {
+        for (Social.Trait t : traits) {
             switch (t) {
                 case GRUMPY -> { a[Axis.WAR.ordinal()] += 4 * by; a[Axis.DOORS.ordinal()] -= 4 * by; }
                 case GENEROUS -> { a[Axis.RANK.ordinal()] += 5 * by; a[Axis.DOORS.ordinal()] += 3 * by; }
@@ -186,17 +195,28 @@ public final class Ethos {
      * gets the same). Never more than seventy either way: a town has to earn the far ends.
      */
     static int[] seed(UUID village, List<VillageFolkEntity> founders) {
+        List<int[]> weights = new ArrayList<>();
+        List<java.util.Collection<Social.Trait>> natures = new ArrayList<>();
+        for (VillageFolkEntity f : founders) {
+            weights.add(Values.of(f));
+            natures.add(f.life().traits());
+        }
+        return seed(village, Homeland.of(village), weights, natures);
+    }
+
+    /** [featcivic] The founding's ethos from the land and the founders' weights and natures alone (a unit test founds towns so). */
+    static int[] seed(UUID village, Homeland.Land land, List<int[]> weights, List<java.util.Collection<Social.Trait>> natures) {
         double[] a = new double[Axis.values().length];
-        landLean(Homeland.of(village), a);
-        if (!founders.isEmpty()) {
+        landLean(land, a);
+        if (!weights.isEmpty()) {
             double[] sum = new double[a.length];
             double[] nature = new double[a.length];
-            for (VillageFolkEntity f : founders) {
-                double[] l = folkLean(f);
+            for (int k = 0; k < weights.size(); k++) {
+                double[] l = folkLean(weights.get(k));
                 for (int i = 0; i < a.length; i++) sum[i] += l[i];
-                natureLean(f, nature, 1.0);
+                natureLean(natures.get(k), nature, 1.0);
             }
-            for (int i = 0; i < a.length; i++) a[i] += 1.5 * sum[i] / founders.size() + 3.0 * nature[i] / founders.size();
+            for (int i = 0; i < a.length; i++) a[i] += 1.5 * sum[i] / weights.size() + 3.0 * nature[i] / weights.size();
         }
         long h = village.getMostSignificantBits() ^ (village.getLeastSignificantBits() * 31L);
         int[] out = new int[a.length];
@@ -476,6 +496,7 @@ public final class Ethos {
         }
         x *= LawBook.shareLean(village, t);
         x *= TownTraits.shareLean(village, t);
+        x *= Regimes.shareLean(village, t);                       // [featcivic] the general's strong watch, the plan's fields
         return x;
     }
 
@@ -549,10 +570,11 @@ public final class Ethos {
     }
 
     static int spread(UUID village, int w, double avg) {
-        if (Government.of(village) == Government.Form.COMMUNE) return Math.max(1, (int) Math.round(avg));
+        Government.Form g = Government.of(village);
+        if (g == Government.Form.COMMUNE || g == Government.Form.PLANNED) return Math.max(1, (int) Math.round(avg * Policy.wageFactor(village)));   // [featcivic] the state's one wage
         double e = s(village, Axis.RANK);
         double factor = e >= 0 ? 1.0 - 0.5 * e : 1.0 + 0.4 * -e;
-        return Math.max(1, (int) Math.round(avg + (w - avg) * factor));
+        return Math.max(1, (int) Math.round((avg + (w - avg) * factor) * Policy.wageFactor(village)));   // [featcivic] the leader's wage policy
     }
 
     /** What a well-off folk puts in the poor box a week (PoorBox.share): a coin more in an egalitarian town. */
