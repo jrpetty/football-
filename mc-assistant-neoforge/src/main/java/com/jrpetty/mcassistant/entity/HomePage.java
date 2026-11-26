@@ -51,11 +51,11 @@ public final class HomePage implements PlayerLife.Page {
         for (Homes.Home h : Homes.homes(id).values()) {
             if (h.tenure != Homes.Tenure.PLAYER || h.landlord == null) continue;
             String k = Long.toString(h.anchor.asLong());
+            onMarket(level, id, h);
             if (!r.contains(k)) { r.putLong(k, day + 7); continue; }
             if (r.getLong(k) > day) continue;
             r.putLong(k, r.getLong(k) + 7);
             StandingOrders.bill(level, id, h.landlord, h.landlordName, ratesOn(id, h), PlayerFinance.Cat.TAXES, "rates on " + Homes.address(id, v, h), "rates", "the town", "home:" + k);
-            onMarket(level, id, h);
         }
         PropertyBook.dirty();
     }

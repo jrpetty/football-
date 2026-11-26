@@ -40,7 +40,8 @@ public class LandPlotGameTests {
     public static void lp01_sizes(GameTestHelper helper) {
         Kit.Expect ok = new Kit.Expect();
         TownPlan.Lot first = null;
-        for (TownPlan.Lot l : TownPlan.lots()) if (l.kind() == TownPlan.Kind.LOT && TownPlan.ringOf(l) == 1 && l.use().equals("home")) { first = l; break; }
+        for (TownPlan.Lot l : TownPlan.lots()) if (l.kind() == TownPlan.Kind.LOT && TownPlan.ringOf(l) == 1 && l.use().equals("home")
+                && Math.abs(l.x()) >= TownPlan.RING + TownPlan.STREET && Math.abs(l.z()) >= TownPlan.RING + TownPlan.STREET) { first = l; break; }
         ok.that(first != null, "a house lot in the second ring");
         if (first != null) {
             int[] lot = LandPlots.parcelForTests("LOT", first.x(), first.z());

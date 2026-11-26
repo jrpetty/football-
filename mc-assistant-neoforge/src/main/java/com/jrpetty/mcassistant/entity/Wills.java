@@ -72,7 +72,8 @@ public final class Wills implements PlayerLife.Page {
         if (u == null) return "the town";
         if (heir.startsWith("f:") && level.getEntity(u) instanceof VillageFolkEntity f) return f.displayNameCap();
         Belonging.Rp rp = Belonging.rp(u);
-        return rp != null ? rp.full() : nameOf(level, u);
+        String n = rp != null ? rp.full() : nameOf(level, u);
+        return n.isEmpty() ? "their heir" : n;
     }
 
     @Nullable
