@@ -81,6 +81,7 @@ public final class PlayerLife {
         PAGES.put("farm", new FarmPage());                                  // [wpb] a player's own farm as a business
         PAGES.put("contracts", new ContractsPage());                        // [wpb] contracts between players, with escrow
         PAGES.put("offer", new OfferPage());                                // [wpb] an offer for a business, answered by its owners
+        PAGES.put("core", new CorePage());                                  // [wpb] a Business Core's public face
     }
 
     /** The page this player last had open (tests). */

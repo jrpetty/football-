@@ -905,6 +905,7 @@ public final class Enterprise {
             share(level, id, b, r, day);
             sellOver(level, id, b, day);
             if (fortunes(level, v, b, r, day)) continue;
+            BusinessCore.daily(level, id, b, r, day);                     // [wpb] a record day, its quality and advert on its name
             if (Deputy.morning(level, v, b, r, day, charge, wants)) {      // [wpb] its owner's routine; else the deputy's day, or the staff's
                 targets(level, id, b, r, wants);          // [econ-1c] what its shelf should hold of each ware
                 Deputy.ownerTargets(r);                   // [wpb] an owner's own stock targets, kept to exactly

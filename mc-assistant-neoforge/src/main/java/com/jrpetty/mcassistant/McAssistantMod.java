@@ -442,6 +442,7 @@ public final class McAssistantMod {
         com.jrpetty.mcassistant.item.BorderItems.register(modBus);     // [borders-map] the war room's map table
         com.jrpetty.mcassistant.item.InventionItems.register(modBus);  // [tech-tree] steel, the polearms, the longbow, the arbalest, the models
         com.jrpetty.mcassistant.item.AfterWarItems.register(modBus);   // [war-after] the Wanted Poster
+        com.jrpetty.mcassistant.item.CoreItems.register(modBus);       // [wpb] the Business Core
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);

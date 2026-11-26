@@ -95,12 +95,13 @@ public final class MyBusinesses implements PlayerLife.Page {
         if (c.tab.isEmpty()) c.tab = "summary";
         page.tab("summary", "Summary", c.tab.equals("summary")).tab("hands", "Staff", c.tab.equals("hands")).tab("stock", "Stock", c.tab.equals("stock"))
             .tab("prices", "Prices", c.tab.equals("prices")).tab("away", "Deputy", c.tab.equals("away")).tab("money", "Money", c.tab.equals("money"))
-            .tab("offers", "Offers", c.tab.equals("offers")).tab("more", "Owners & sale", c.tab.equals("more"));
+            .tab("offers", "Offers", c.tab.equals("offers")).tab("history", "History", c.tab.equals("history")).tab("more", "Owners", c.tab.equals("more"));
         BusinessTypes.BusinessType t = Enterprise.kindOf(v.id(), b);
         switch (c.tab) {
             case "hands" -> hands(level, v, b, t, page, c);
             case "away" -> DeputyPage.build(level, p, v, b, page, c);       // [wpb] the deputy's authority, its standing orders, its record
             case "offers" -> OfferPage.incoming(level, p, v, b, page);      // [wpb] offers for it: accept, refuse, counter
+            case "history" -> CoreHub.history(level, p, v, b, page);        // [wpb] its charts, best sellers, customers, staff, timeline
             case "stock" -> stock(level, v, b, t, page);
             case "prices" -> prices(level, v, b, t, page);
             case "money" -> money(p, v, b, page);
@@ -112,6 +113,7 @@ public final class MyBusinesses implements PlayerLife.Page {
 
     private void summary(ServerLevel level, ServerPlayer p, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page) {
         page.heading(b.name);
+        CoreHub.top(level, p, v, b, page, PlayerLife.ctx(p));              // [wpb] the status line, the first-time tour
         DeputyPage.summaryTop(level, p, v, b, page);                        // [wpb] who is in charge, and the report waiting since you were away
         rescueBanner(level, p, v, b, page);                                 // [wpb] before the court: what saves it
         plCard(level, v, b, page);                                          // [wpb] the profit and loss at a glance
@@ -198,6 +200,7 @@ public final class MyBusinesses implements PlayerLife.Page {
     }
 
     private void stock(ServerLevel level, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page) {
+        CoreHub.suppliers(level, v, b, page);                               // [wpb] low stock, its orders and suppliers, where its stock is kept
         page.heading("Its stock, and its makings from the market");
         page.choice("qty", "Order", strings(QTY), strings(QTY), "16");
         if (t == null) return;
@@ -217,6 +220,7 @@ public final class MyBusinesses implements PlayerLife.Page {
     }
 
     private void prices(ServerLevel level, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page) {
+        CoreHub.decisions(level, v, b, page);                               // [wpb] hours and days, a discount day, quality, an advert, premises, credit
         page.heading("Its markup: its costs and " + Businesses.pct(b.markup));
         page.buttons().button("-5%", "markup", LifePage.args("d", -5)).button("+5%", "markup", LifePage.args("d", 5));
         page.text("Never over three fifths above the going price, nor under two fifths of it.", 4);
@@ -359,6 +363,7 @@ public final class MyBusinesses implements PlayerLife.Page {
             case "books" -> { BusinessBooks.show(p, v.id(), b); return "#open:"; }
             case "hire" -> {
                 VillageFolkEntity h = Enterprise.hireForTests(level, v, b);
+                if (h != null) BusinessCore.event(Enterprise.rec(v.id(), b.id), Businesses.today(level), h.displayNameCap() + " taken on");   // [wpb] its timeline
                 return h == null ? "!Nobody the town can spare will take the work just now: post an opening." : h.displayNameCap() + " is taken on at " + b.name
                     + ", paid " + Wealth.wage(h) + " a day out of its till.";
             }
@@ -372,6 +377,7 @@ public final class MyBusinesses implements PlayerLife.Page {
             case "raise", "cut", "letgo", "manager" -> { return handAction(level, p, v, b, action, args, c); }
             case "deputy", "undeputy", "appoint", "showme", "depon", "depmode", "deptask", "depnotify", "orders", "letprice", "raiseyes", "raiseno",
                  "sack", "report", "readreport", "target" -> { return DeputyPage.act(level, p, v, b, action, args, c); }
+            case "hours", "allhours", "discount", "quality", "advert", "premises", "tour", "showstock" -> { return CoreHub.act(level, p, v, b, action, args, c); }
             case "waremk" -> {
                 if (!Partners.canDecide(v.id(), b, p.getUUID())) return "!" + Partners.whyNot(v.id(), b);
                 return setWareMarkup(level, v.id(), b, args.getString("k"), args.getInt("d"));
@@ -558,6 +564,7 @@ public final class MyBusinesses implements PlayerLife.Page {
                 return Deputy.appoint(level, v.id(), b, f, Deputy.TITLES[0], 10);
             }
             default -> {
+                if (r != null && r.contains("keepStaffUntil") && r.getLong("keepStaffUntil") > day) return "!You agreed to keep the staff on when you bought it: not before day " + (r.getLong("keepStaffUntil") + 1) + ".";
                 if (!args.getBoolean("sure")) { if (r != null) { r.putString("wpbLetGo", hid.toString()); Accounts.dirty(); } return "!Letting " + f.displayNameCap() + " go pays " + severance(f) + "c severance: press Confirm."; }
                 if (r != null) r.remove("wpbLetGo");
                 int sev = severance(f);
@@ -566,6 +573,7 @@ public final class MyBusinesses implements PlayerLife.Page {
                 b.today(day).wages += paid;
                 b.allTime.wages += paid;
                 LabourMarket.layOff(level, v, LabourBook.town(v.id()), f, "firm:" + b.id, "let go by its owner, with " + (paid / 100) + "c severance", level.getDayTime() / 24000L);
+                BusinessCore.event(r, day, f.displayNameCap() + " let go");          // [wpb] its timeline
                 if (r != null && r.hasUUID("manager") && r.getUUID("manager").equals(hid)) Deputy.demote(v.id(), b, r);
                 Accounts.dirty();
                 return f.displayNameCap() + " is let go with " + (paid / 100) + "c severance" + (paid / 100 < sev ? " (all the till had)" : "") + ". Post an opening when you want another.";

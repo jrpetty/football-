@@ -218,6 +218,13 @@ public final class PlayerFarms extends SavedData {
         return null;
     }
 
+    /** [wpb] Every farm of a town's (its Cores). */
+    public static List<Farm> ofTown(UUID town) {
+        List<Farm> out = new ArrayList<>();
+        for (Farm f : of().farms.values()) if (f.town.equals(town)) out.add(f);
+        return out;
+    }
+
     public static List<Farm> ofOwner(UUID town, UUID owner) {
         List<Farm> out = new ArrayList<>();
         for (Farm f : of().farms.values()) {

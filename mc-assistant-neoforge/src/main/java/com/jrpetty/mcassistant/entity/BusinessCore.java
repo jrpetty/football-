@@ -24,9 +24,71 @@ public final class BusinessCore {
 
     /** Where the business is: its Core, else its premises, else the town's middle. */
     static BlockPos siteOf(ServerLevel level, Villages.Village v, Business b) {
-        CompoundTag r = Enterprise.rec(v.id(), b.id);
-        if (r != null && r.contains("core")) return BlockPos.of(r.getLong("core"));
+        CoreSites.Site s = CoreSites.site(v.id(), "firm:" + b.id);
+        if (s != null && !s.held) return s.at();
         return b.at != null ? b.at : v.centre();
+    }
+
+    // ------------------------------------------------------------------ the block's calls (CoreSites does the work)
+
+    public static void placed(ServerLevel level, net.minecraft.server.level.ServerPlayer p, BlockPos pos, net.minecraft.world.item.ItemStack stack) {
+        CoreSites.placed(level, p, pos, stack);
+    }
+
+    public static boolean mayMove(net.minecraft.world.entity.player.Player p, com.jrpetty.mcassistant.block.BusinessCoreBlockEntity be) {
+        return CoreSites.mayMove(p, be);
+    }
+
+    public static void open(net.minecraft.server.level.ServerPlayer p, BlockPos pos) {
+        CoreSites.open(p, pos);
+    }
+
+    // ------------------------------------------------------------------ at a glance
+
+    /** "Open · 3 staff on · stock low on bread · 42c in the till" (the till for its owners only). */
+    static String statusLine(ServerLevel level, UUID village, Business b, boolean owner) {
+        CompoundTag r = Enterprise.rec(village, b.id);
+        List<String> out = new ArrayList<>();
+        boolean open = CoreSites.isOpen(level, village, b, r);
+        out.add(r != null && r.contains("petition") ? "Before the court" : open ? "Open" : keepsHours(r == null ? new CompoundTag() : r) && r != null && !openAt(r, level.getDayTime()) ? "Closed (outside its hours)" : "Closed");
+        int staff = Enterprise.hands(village, b).size() + PlayerHiring.hands(level, "firm:" + b.id).size();
+        out.add(staff == 0 ? "no staff on" : staff + (staff == 1 ? " on staff" : " staff on"));
+        List<String> low = low(village, b, r);
+        if (!low.isEmpty()) out.add("stock low on " + String.join(" and ", low.subList(0, Math.min(2, low.size()))));
+        if (owner) out.add(Businesses.pence(b.till) + " in the till");
+        if (r != null && r.hasUUID("manager") && Deputy.on(r) && Deputy.charge(level, village, b, r, Businesses.today(level)).mode() == Deputy.Mode.DEPUTY) out.add("deputy in charge");
+        return String.join(" · ", out);
+    }
+
+    /** Its wares under half their shelf target, by name. */
+    static List<String> low(UUID village, Business b, @javax.annotation.Nullable CompoundTag r) {
+        List<String> out = new ArrayList<>();
+        if (r == null) return out;
+        CompoundTag tg = r.getCompound("targets"), own = r.getCompound("stockTarget");
+        java.util.Set<String> keys = new java.util.LinkedHashSet<>(tg.getAllKeys());
+        keys.addAll(own.getAllKeys());
+        for (String k : keys) {
+            int target = own.contains(k) ? own.getInt(k) : tg.getInt(k);
+            Business.Lot lot = b.stock.get(k);
+            if (target > 1 && (lot == null ? 0 : lot.qty) * 2 < target) out.add(Stockroom.plural(k).toLowerCase(java.util.Locale.ROOT));
+        }
+        return out;
+    }
+
+    /** Each morning: a record day noted; its quality and its advert telling on its name. */
+    static void daily(ServerLevel level, UUID village, Business b, CompoundTag r, long day) {
+        long y = b.last(day - 1, 1).revenue;
+        if (y > 0 && y > r.getLong("bestDay") && day - b.opened > 3) {
+            if (r.getLong("bestDay") > 0) event(r, day, "a record day: " + Businesses.pence(y) + " taken");
+            r.putLong("bestDay", y);
+        }
+        double rep = r.getDouble("rep");
+        String q = r.getString("quality");
+        if (q.equals("fine")) rep = Math.min(0.95, rep + 0.004);
+        else if (q.equals("cheap")) rep = Math.max(0.05, rep - 0.004);
+        if (r.getLong("advertUntil") >= day) rep = Math.min(0.95, rep + 0.006);
+        if (rep != r.getDouble("rep")) r.putDouble("rep", rep);
+        Accounts.dirty();
     }
 
     /** What it is, in a word: "bakery", "greengrocer's", "farm". */

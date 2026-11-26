@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IKS",
+    "PCP",
+    "P P"
+  ],
+  "key": {
+    "I": { "item": "minecraft:ink_sac" },
+    "K": { "item": "minecraft:book" },
+    "S": { "tag": "minecraft:signs" },
+    "P": { "tag": "minecraft:planks" },
+    "C": { "item": "minecraft:chest" }
+  },
+  "result": { "id": "mc_assistant:business_core", "count": 1 }
+}
