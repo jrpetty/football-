@@ -231,7 +231,8 @@ public final class Makers {
             + "anybody could fire for themselves would be worth nothing");
         // The player's own tools: the shop's workshop makes them to a player's order, out of the stores.
         for (String t : List.of("job_board", "village_charter", "founding_kit", "assistant_spawner", "village_folk_spawner", "place_marker", "zone_marker",   // [found23] the kit
-                "shop_counter", "shop_sign")) {   // [player15] a player's own shop
+                "shop_counter", "shop_sign",   // [player15] a player's own shop
+                "assistant_whistle", "ballot_box", "business_core")) {   // [recipes] the whistle, a polling place's box, a business's core
             declare(t, "the shop's workshop", PLAYERS, "Workshop.order");
         }
         declare("spectacles", "the smith (else the shop)", "for an old folk who reads and has none: the scholar, the librarian, "

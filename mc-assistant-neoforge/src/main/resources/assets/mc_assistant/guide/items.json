@@ -16,6 +16,72 @@
       "covers": []
     },
     {
+      "id": "items_not_crafted",
+      "title": "Things you can't craft, and how to get them",
+      "icon": "mc_assistant:deed",
+      "kind": "what",
+      "q": [
+        "what can't i craft",
+        "which items have no recipe",
+        "why is there no recipe for the deed",
+        "how do i get a deed",
+        "items with no recipe",
+        "can i craft citizen papers",
+        "how do i get a working model",
+        "can i craft a memory core",
+        "uncraftable items"
+      ],
+      "kw": [
+        "no recipe",
+        "uncraftable",
+        "issued",
+        "forgery",
+        "deed",
+        "papers",
+        "memory core",
+        "working model"
+      ],
+      "answer": "Every block and item the mod adds is in your recipe book except five that are issued, not made: citizen papers, deeds, coins, memory cores and working models. A made one would be a forgery.",
+      "more": [
+        "Citizen Papers: written at a Town Hall desk when you join a town (Town Hall → Join); a lost set is 2 coins to replace at the desk.",
+        "Deed: the register writes one for every title it holds, and hands it to you when you buy land or a house (Land, or Mortgages at the bank).",
+        "Village Coin: struck at the town's mint; bring gold ingots to a market stall's counter for eight coins each, or earn them by work and trade.",
+        "Memory Core: forms when a companion falls, holding all it was; nothing else makes one.",
+        "Working Model: the town's scholars build one each time they finish an invention; it goes to the stores and the museum.",
+        "Letters of demand from the bank or a court are notices in your planner and chat, not items.",
+        "Everything else, from the ballot box, business core, job board and whistle to the stocks, counters, troughs and crates, has a recipe that shows in the book from your first moment in the world. Three masters' recipes open when you finish an apprenticeship's second lesson."
+      ],
+      "steps": [
+        "Open your recipe book: everything craftable is there.",
+        "For papers, join a town at its Town Hall.",
+        "For a deed, buy land or a house.",
+        "For coins, take gold ingots to a market stall's counter."
+      ],
+      "items": [
+        "mc_assistant:citizen_papers",
+        "mc_assistant:deed",
+        "mc_assistant:village_coin",
+        "mc_assistant:memory_core",
+        "mc_assistant:working_model"
+      ],
+      "tips": [
+        "The shop's workshop also makes any craftable thing to your order, out of the town's stores."
+      ],
+      "related": [
+        "items_all",
+        "civic_town_name",
+        "money_coin",
+        "jobs_apprentice"
+      ],
+      "covers": [
+        "item:citizen_papers",
+        "item:deed",
+        "item:village_coin",
+        "item:memory_core",
+        "item:working_model"
+      ]
+    },
+    {
       "id": "items_garments",
       "title": "Garments: coats, hats, scarves and brooches",
       "icon": "mc_assistant:long_coat",

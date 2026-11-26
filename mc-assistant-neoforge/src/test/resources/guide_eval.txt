@@ -468,3 +468,5 @@ what is a planned state => gov_forms
 where is the ballot box => gov_vote
 why are folk protesting => gov_unrest
 can i vote early => gov_vote
+which items have no recipe => items_not_crafted
+how do i get a deed => items_not_crafted
