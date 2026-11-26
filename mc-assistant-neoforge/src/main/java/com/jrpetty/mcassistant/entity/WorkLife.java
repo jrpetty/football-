@@ -466,8 +466,8 @@ public final class WorkLife {
                 workedDays++;
                 starSum += r.getInt("st");
                 if (r.contains("t") && r.getInt("t") > 0 && r.getInt("st") <= 1) poor++;
-            } else if ((r.getBoolean("o") || Rota.missedRostered(r)) && !leave && !r.getBoolean("ci") && !r.getBoolean("roff")) {
-                missedInTown++;                                             // [rota] a rostered shift missed while online counts too
+            } else if ((r.getBoolean("o") || !commission && Rota.missedRostered(r)) && !leave && !r.getBoolean("ci") && !r.getBoolean("roff")) {
+                missedInTown++;                                             // [rota] salaried: a rostered shift missed while online counts too
                 poor++;
             }
         }
