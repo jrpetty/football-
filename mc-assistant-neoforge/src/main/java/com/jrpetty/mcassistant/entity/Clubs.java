@@ -369,12 +369,12 @@ public final class Clubs {
         if (v == null) return false;
         for (Club c : Club.values()) {
             if (!meetingNow(village, c, day, t)) continue;
-            boolean in = member(f, c);
+            boolean in = member(f, c) || c == Club.SPORTS && inMatch(village, f);
             if (c == Club.SPORTS && !in) {
                 if (spectate(level, v, f, day)) return true;
                 continue;
             }
-            if (!in || f.onShift() && !f.offWorkNow() || whyNot(level, village, c) != null) continue;
+            if (!in || f.onShift() && !f.offWorkNow() || !(c == Club.SPORTS && MATCHES.containsKey(village)) && whyNot(level, village, c) != null) continue;
             BlockPos at = place(level, v, c);
             if (at == null) continue;
             if (present(village, c, day).add(f.getUUID())) {
@@ -552,7 +552,7 @@ public final class Clubs {
         if (p != null) return new Field(p.anchor(), p.facing(), true);
         Object[] pg = Pastimes.playground(v.id(), v);
         BlockPos base = (BlockPos) pg[0];
-        for (int r = 0; r <= 40; r += 6) {
+        for (int r = 0; r <= 64; r += 6) {
             for (int k = 0; k < (r == 0 ? 1 : 8); k++) {
                 double a = Math.toRadians(k * 45.0);
                 int x = base.getX() + (int) Math.round(Math.sin(a) * (r + 14)), z = base.getZ() + (int) Math.round(Math.cos(a) * (r + 14));
@@ -569,7 +569,7 @@ public final class Clubs {
         for (int u = -HALF_WIDE - 1; u <= HALF_WIDE + 1; u += 2) {
             for (int w = -HALF_LONG - 1; w <= HALF_LONG + 1; w += 2) {
                 BlockPos p = f.at(u, w);
-                if (level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()) != c.getY()) return false;
+                if (Math.abs(level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()) - c.getY()) > 1) return false;
                 if (!level.getFluidState(p.below()).isEmpty()) return false;
             }
         }
@@ -608,6 +608,12 @@ public final class Clubs {
         return m == null ? null : "Greens " + m.greenGoals + ", Golds " + m.goldGoals;
     }
 
+    /** Is it playing in today's match (a member, or one making up the numbers)? */
+    static boolean inMatch(UUID village, VillageFolkEntity f) {
+        Match m = MATCHES.get(village);
+        return m != null && (m.greens.contains(f.getUUID()) || m.golds.contains(f.getUUID()));
+    }
+
     public static boolean matchOn(UUID village) {
         return MATCHES.containsKey(village);
     }
@@ -619,7 +625,19 @@ public final class Clubs {
         if (have != null) return have.day == day ? have : null;
         List<VillageFolkEntity> squad = members(v.id(), Club.SPORTS);
         squad.removeIf(f -> f.onShift() && !f.offWorkNow() || f.isSleeping());
-        if (squad.size() < Club.SPORTS.least) return null;
+        if (squad.size() < Club.SPORTS.least) {
+            // Short: a couple from the town with the afternoon off make up the numbers, the keenest first.
+            List<VillageFolkEntity> spare = new ArrayList<>();
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                if (a instanceof VillageFolkEntity f && !squad.contains(f) && !f.isBaby() && !Visitors.is(f) && WeekendLife.free(f) && f.ageYears() < 60) spare.add(f);
+            }
+            spare.sort((x, y) -> Double.compare(Club.SPORTS.pull(y), Club.SPORTS.pull(x)));
+            for (VillageFolkEntity f : spare) {
+                if (squad.size() >= 6) break;
+                squad.add(f);
+            }
+            if (squad.size() < Club.SPORTS.least) return null;
+        }
         Field field = green(level, v);
         ItemStack ball = Crafts.takeOne(level, v, Kickabout::isFootball);
         boolean stores = !ball.isEmpty();

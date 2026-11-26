@@ -125,7 +125,8 @@ public final class LifeTick {
                     f.earn(10);
                     shoppers++;
                 }
-                return n + " stalls up in the square; " + shoppers + " folk out shopping.";
+                net.minecraft.core.BlockPos first = Stalls.at(v.id(), firstSeller(v.id()));
+                return n + " stalls up in the square; " + shoppers + " folk out shopping." + (first == null ? "" : " stall " + first.getX() + " " + first.getY() + " " + first.getZ());
             }
             case "fair" -> {
                 WorkHours.forceForTests = true;
@@ -137,12 +138,19 @@ public final class LifeTick {
                 WorkHours.forceForTests = true;
                 Clubs.forceMeetingForTests(v.id(), Clubs.Club.SPORTS, true);
                 String m = Clubs.matchForTests(level, v);
-                return m == null ? "No match: " + Clubs.whyNot(level, v.id(), Clubs.Club.SPORTS) : "Kick-off: " + m;
+                net.minecraft.core.BlockPos g = Clubs.green(level, v).centre();
+                return m == null ? "No match: " + Clubs.whyNot(level, v.id(), Clubs.Club.SPORTS) + " (too few free to play)" : "Kick-off: " + m + " green " + g.getX() + " " + g.getY() + " " + g.getZ();
             }
             case "choir" -> { Clubs.forceMeetingForTests(v.id(), Clubs.Club.CHOIR, true); return "Choir practice now."; }
             case "service" -> { Church.forceAll = true; return "Everybody to the Sunday service (set the time to a Sunday morning)."; }
             default -> { return "weekend, stalls, fair, match, choir, service or off."; }
         }
+    }
+
+    @javax.annotation.Nullable
+    static UUID firstSeller(UUID village) {
+        java.util.List<Stalls.Stall> l = Stalls.of(village);
+        return l.isEmpty() ? new UUID(0, 0) : l.get(0).seller;
     }
 
     /** A town's round. */
