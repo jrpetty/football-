@@ -119,6 +119,17 @@ public final class Court {
         return Assize.claim(level, village, claimant, claimantName, defendant, defendantName, coins, about, evidence, ruled);
     }
 
+    /**
+     * [wpe] The same, where the money is already held in escrow (a disputed contract): nothing is taken from anybody's
+     * purse; {@code ruled} releases the escrow by the ruling.
+     */
+    public static int smallClaimEscrow(ServerLevel level, UUID village, UUID claimant, String claimantName, UUID defendant, String defendantName,
+                                       int coins, String about, int evidence, @Nullable java.util.function.Consumer<net.minecraft.nbt.CompoundTag> ruled) {
+        int id = Assize.claim(level, village, claimant, claimantName, defendant, defendantName, coins, about, evidence, ruled);
+        Assize.escrow(id);
+        return id;
+    }
+
     /** [wpe] A small claim as it stands ("state" "listed" till it is heard), or null. */
     @Nullable
     public static net.minecraft.nbt.CompoundTag claim(int id) {

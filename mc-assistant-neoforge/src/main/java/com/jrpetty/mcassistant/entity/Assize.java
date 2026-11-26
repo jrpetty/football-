@@ -882,6 +882,13 @@ public final class Assize {
 
     private static final Map<Integer, java.util.function.Consumer<CompoundTag>> RULED = new ConcurrentHashMap<>();
 
+    /** The claim's money is in escrow: the ruling releases it (the caller's), nobody's purse is touched. */
+    static void escrow(int id) {
+        CompoundTag t = Justice.of().claims.getCompound(String.valueOf(id));
+        t.putBoolean("escrow", true);
+        Justice.changed();
+    }
+
     static void claims(ServerLevel level, Villages.Village v) {
         long now = level.getGameTime();
         CompoundTag all = Justice.of().claims;
@@ -900,7 +907,8 @@ public final class Assize {
         BlockPos court = courtPlace(level, v);
         gavel(level, court);
         int paid = 0;
-        if (forClaimant) {
+        boolean escrow = t.getBoolean("escrow");
+        if (forClaimant && !escrow) {
             ServerPlayer d = level.getServer().getPlayerList().getPlayer(t.getUUID("d"));
             if (d != null) {
                 paid = Math.min(Market.coinsHeld(d), coins);
@@ -915,9 +923,10 @@ public final class Assize {
         }
         t.putString("state", forClaimant ? "for claimant" : "for defendant");
         t.putInt("paid", paid);
-        t.putInt("owed", forClaimant ? coins - paid : 0);
+        t.putInt("owed", forClaimant && !escrow ? coins - paid : 0);
         String line = judge + ": In " + t.getString("cn") + " against " + t.getString("dn") + ", over " + t.getString("about") + ", the court finds for the "
-            + (forClaimant ? "claimant: " + coins + " coins are owed" + (paid > 0 ? ", " + paid + " paid now." : ".") : "defendant: the claim is dismissed.");
+            + (escrow ? (forClaimant ? "claimant" : "defendant") + ": the escrow held at the hall goes to " + (forClaimant ? t.getString("cn") : t.getString("dn")) + "."
+            : forClaimant ? "claimant: " + coins + " coins are owed" + (paid > 0 ? ", " + paid + " paid now." : ".") : "defendant: the claim is dismissed.");
         for (UUID u : new UUID[]{ t.getUUID("c"), t.getUUID("d") }) {
             ServerPlayer sp = level.getServer().getPlayerList().getPlayer(u);
             if (sp != null) sp.sendSystemMessage(Component.literal("[Small claims] " + line).withStyle(ChatFormatting.GOLD));

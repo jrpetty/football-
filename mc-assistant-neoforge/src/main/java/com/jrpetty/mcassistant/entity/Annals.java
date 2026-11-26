@@ -644,6 +644,9 @@ public final class Annals {
         out.put("fashion", Fashion.report(level, v));            // [fashion] the season's look, who wears it, the tailor's book
         out.put("crime", Crime.report(level, v));                // [crime] the casebook and the crime rate: the Cases page
         out.put("police", Police.report(level, v));              // [police] the roster, the beats, the cells, the incidents: the Watch page
+        out.put("defences", FeatReports.defences(level, v));     // [featbuild] the danger, the wall, the night watch: the Defences page
+        out.put("greens", FeatReports.greens(level, v));         // [featbuild] the parks and statue gardens: the Parks page
+        out.put("stone", FeatReports.stone(level, v));           // [featbuild] the quarry and the stone yard: the Stone page
         out.put("auction", Auctions.report(level, v));           // [fleet] the auction and the fleet: the Auction page
         out.getCompound("prices").putString("fleet", FishMarket.pricesLine(level, id));   // [fleet] the fish market, on the Prices page
         out.put("library", Library.report(level, v));            // [library] the catalogue, the authors, the loans: the Library page
@@ -658,6 +661,7 @@ public final class Annals {
         out.put("emerald", EmeraldTrader.report(level, v));      // [emerald] the Trading Post page: the account, the villagers' villages
         out.put("lands", Borders.report(level, v));              // [borders-map] the Lands page: area, neighbours, disputes, markers
         out.put("realm", CivicLand.report(level, v));
+        out.put("government", GovReport.report(level, v, null));   // [featcivic] the Government page
         out.put("business", BusinessBooks.list(level, id));
         out.put("market", MarketMaker.page(level, id));                 // [econ-1a] the Market page: the storehouse's bid and ask, its trades            // [business-books] the Businesses page            // [civic-land] the Taxes and the Knights pages
         List<String> queue = new ArrayList<>();

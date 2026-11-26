@@ -64,6 +64,12 @@ public class JobBoardBlock extends Block {
         // the whole crew at a glance, and it says who is stuck and why.
         // Sneak-right-click still cycles the (colony) preset.
         if (!player.isShiftKeyDown()) {
+            // [wpb] In a town the board is its notice board: the job adverts (the crew roster is a button on it).
+            if (player instanceof net.minecraft.server.level.ServerPlayer sp && level instanceof net.minecraft.server.level.ServerLevel sl
+                    && com.jrpetty.mcassistant.entity.Villages.nearest(sl, pos, com.jrpetty.mcassistant.entity.Villages.VILLAGE_RANGE) != null) {
+                com.jrpetty.mcassistant.entity.PlayerLife.open(sp, "jobs", com.jrpetty.mcassistant.entity.LifePage.args("tab", "adverts"));
+                return InteractionResult.CONSUME;
+            }
             showRoster(player);
             return InteractionResult.CONSUME;
         }
@@ -80,7 +86,7 @@ public class JobBoardBlock extends Block {
 
     /** Print every one of this player's assistants: who, what job, where, how
      *  they're doing, and what they've produced today. */
-    private static void showRoster(Player player) {
+    public static void showRoster(Player player) {
         List<AssistantEntity> crew = AssistantEntity.allFor(player.getUUID());
         if (crew.isEmpty()) {
             player.sendSystemMessage(Component.literal(

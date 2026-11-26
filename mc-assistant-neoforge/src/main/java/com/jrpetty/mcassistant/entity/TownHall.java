@@ -45,7 +45,7 @@ public final class TownHall implements PlayerLife.Page {
      * The elections' screen: feat-civic's visual elections and ballot, set by that package (player, town): true if it
      * opened its screen. Unset, the hustings page opens.
      */
-    public static volatile BiFunction<ServerPlayer, UUID, Boolean> ELECTIONS = null;
+    public static volatile BiFunction<ServerPlayer, UUID, Boolean> ELECTIONS = (p, v) -> { GovActions.openHall(p, "election"); return true; };   // [featcivic] the election screens
 
     /** The tabs: id and label. Kept short so they fit across the page at GUI scale 3 (ScreenFitTest). */
     public static final String[][] TABS = com.jrpetty.mcassistant.client.HallLayout.TABS;

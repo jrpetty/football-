@@ -50,7 +50,15 @@ public final class Government {
         LORD("a hereditary lord", "the lord rules for life, and the eldest child succeeds"),
         GUILD("a guild republic", "the masters of the trades elect the guildmaster, and each trade votes on its own matters"),
         COMMUNE("a commune", "the whole town votes on everything big; the steward is elected every seven days"),
-        CHAPLAIN("the chaplain's rule", "the town's most devout leads it as its chaplain, chosen by the chapel");
+        CHAPLAIN("the chaplain's rule", "the town's most devout leads it as its chaplain, chosen by the chapel"),
+        // [featcivic] A full representative democracy: parties, a council of members voting the laws, a mayor, regular elections.
+        DEMOCRACY("a representative democracy", "every grown folk votes every ten days for a mayor and for the members of the town council, "
+            + "who vote the laws; the parties stand on what their members care for, and the loser hands over in peace"),
+        // [featcivic] A planned state: the town owns every workshop, sets the quotas, assigns the jobs and the houses, pays all alike.
+        PLANNED("a planned state", "the town's committee owns every workshop, sets the week's quotas, assigns the jobs and the houses and pays "
+            + "every hand the same; the party congress appoints the chair, and nobody votes for it"),
+        // [featcivic] Military rule: the general commands, a curfew, a strong watch, no vote.
+        JUNTA("military rule", "the general commands the town with its officers: a curfew, a strong watch, and no vote; the senior officer succeeds");
 
         public final String words, how;
 
@@ -77,8 +85,13 @@ public final class Government {
         return r == null ? Form.REEVE : r.gov;
     }
 
-    /** How well a form suits a town of this character. */
+    /** How well a form suits a town of this character ([featcivic] FormChoice, where the founding odds are). */
     static double fit(Form f, int[] a) {
+        return FormChoice.fit(f, a);
+    }
+
+    /** [featcivic] The old fit, kept for nothing but the record of how the six were weighed before the democracies. */
+    static double fitOld(Form f, int[] a) {
         double t = a[Ethos.Axis.TRADE.ordinal()], w = a[Ethos.Axis.WAR.ordinal()], fa = a[Ethos.Axis.FAITH.ordinal()],
             l = a[Ethos.Axis.LEARNING.ordinal()], d = a[Ethos.Axis.DOORS.ordinal()], y = a[Ethos.Axis.WAYS.ordinal()],
             k = a[Ethos.Axis.RANK.ordinal()];
@@ -89,24 +102,23 @@ public final class Government {
             case GUILD -> -4 + 0.35 * t + 0.2 * -l + 0.1 * -k;
             case COMMUNE -> -4 + 0.45 * k + 0.1 * -w + 0.1 * -t;
             case CHAPLAIN -> -4 + 0.45 * fa + 0.15 * y;
+            default -> FormChoice.fit(f, a);
         };
     }
 
-    /** The form that suits a town of this character best. */
+    /** The form that suits a town of this character best (no odds: a reform's question). */
     static Form choose(int[] a) {
-        Form best = Form.REEVE;
-        double top = Double.NEGATIVE_INFINITY;
-        for (Form f : Form.values()) {
-            double x = fit(f, a);
-            if (x > top) { top = x; best = f; }
-        }
-        return best;
+        return FormChoice.best(a);
+    }
+
+    /** [featcivic] Rules without a vote: a lord, the chaplain, the planned state's committee, the general. */
+    public static boolean appointed(Form f) {
+        return f == Form.LORD || f == Form.CHAPLAIN || f == Form.PLANNED || f == Form.JUNTA;
     }
 
     /** Does this form hold elections? */
     public static boolean holdsElections(@Nullable UUID village) {
-        Form f = of(village);
-        return f != Form.LORD && f != Form.CHAPLAIN;
+        return !appointed(of(village));
     }
 
     /** What the leader is called: the land's title for an elected one, else the form's. */
@@ -118,6 +130,9 @@ public final class Government {
             case GUILD -> "guildmaster";
             case COMMUNE -> "steward";
             case CHAPLAIN -> "chaplain";
+            case DEMOCRACY -> "mayor";
+            case PLANNED -> "chair of the committee";
+            case JUNTA -> "general";
         };
     }
 
@@ -125,6 +140,8 @@ public final class Government {
     static String phrase(UUID village, Identity.Rec r) {
         return switch (r.gov) {
             case REEVE -> "an elected " + Homeland.leaderTitle(village);
+            case DEMOCRACY -> "a representative democracy" + (Villages.elderName(village).isEmpty() ? "" : ", Mayor " + Villages.elderName(village));
+            case JUNTA -> Villages.elderName(village).isEmpty() ? "military rule" : "military rule under General " + Villages.elderName(village);
             case LORD -> {
                 String lord = Villages.elderName(village);
                 yield lord.isEmpty() ? "a hereditary lord" + (r.house.isEmpty() ? "" : " of " + r.house) : "Lord " + lord
@@ -138,7 +155,7 @@ public final class Government {
 
     /** At its founding: the form its character suits, and for a lordship or the chaplain's rule its first leader. */
     static void found(ServerLevel level, Villages.Village v, Identity.Rec r, long day) {
-        r.gov = choose(r.axes);
+        r.gov = FormChoice.choose(r.axes, v.id());                      // [featcivic] most towns elected democracies
         r.govSince = day;
         if (r.gov == Form.LORD) {
             VillageFolkEntity first = Identity.leader(v.id());
@@ -150,6 +167,12 @@ public final class Government {
         } else if (r.gov == Form.CHAPLAIN) {
             VillageFolkEntity c = devout(v.id(), null);
             if (c != null) install(level, v.id(), r, c, day, "the most devout of the founders");
+        } else if (r.gov == Form.PLANNED) {
+            VillageFolkEntity c = Regimes.chairChoice(v.id(), null);
+            if (c != null) install(level, v.id(), r, c, day, "appointed by the founders' first congress");
+        } else if (r.gov == Form.JUNTA) {
+            VillageFolkEntity c = Regimes.generalChoice(v.id(), null);
+            if (c != null) install(level, v.id(), r, c, day, "the founders' captain, who took command");
         }
     }
 
@@ -162,6 +185,8 @@ public final class Government {
         UUID id = v.id();
         if (!holdsElections(id) && Villages.elder(id) == null && PlayerLeader.leaderId(id) == null) {
             if (r.gov == Form.LORD) succeed(level, id, r, "", null, day);
+            else if (r.gov == Form.PLANNED) congress(level, id, r, "", null, day);
+            else if (r.gov == Form.JUNTA) command(level, id, r, "", null, day);
             else chaplain(level, id, r, "", null, day);
         }
         if (r.gov == Form.LORD) {
@@ -171,9 +196,16 @@ public final class Government {
                 return;
             }
         }
-        if (day - r.lastReform < 14 || day - r.seededOn < 7 || r.gov == Form.LORD || asked(id)) return;
-        Form best = choose(r.axes);
-        if (best == r.gov || fit(best, r.axes) - fit(r.gov, r.axes) < 15) return;
+        if (day - r.lastReform < 14 || day - r.seededOn < 7 || appointed(r.gov) || asked(id)) return;
+        // [featcivic] A town that votes asks itself only about another way of voting: nobody puts its own vote to the vote.
+        // (An unelected form changes by a petition carried, a revolution or a coup: Dissent.)
+        Form best = null;
+        double top = Double.NEGATIVE_INFINITY;
+        for (Form f : new Form[]{ Form.DEMOCRACY, Form.REEVE, Form.COUNCIL, Form.GUILD, Form.COMMUNE }) {
+            double x = fit(f, r.axes) + (FormChoice.democratic(f) ? 6 : 0);
+            if (x > top) { top = x; best = f; }
+        }
+        if (best == null || best == r.gov || fit(best, r.axes) - fit(r.gov, r.axes) < (FormChoice.democratic(r.gov) ? 25 : 15)) return;
         callReform(level, v, r, best, day);
     }
 
@@ -205,6 +237,8 @@ public final class Government {
                 for (VillageFolkEntity x : out) if (x.veteranLevel() >= 10 || masters.size() < 4) masters.add(x);
                 return masters;
             }
+            case PLANNED -> { return Regimes.committee(village, out); }            // [featcivic] the committee's members
+            case JUNTA -> { return Regimes.officers(village, out); }               // [featcivic] the general's officers
             case REEVE -> {
                 if (Ethos.lean(village, Ethos.Axis.RANK) > -50) return all;
                 List<VillageFolkEntity> owners = new ArrayList<>();
@@ -229,6 +263,8 @@ public final class Government {
         return switch (of(village)) {
             case COUNCIL -> 5;
             case CHAPLAIN -> 4;
+            case JUNTA -> 3;
+            case PLANNED -> 5;
             default -> usual;
         };
     }
@@ -246,6 +282,8 @@ public final class Government {
             case CHAPLAIN -> score.merge(Orders.Order.STEADY, 1, Integer::sum);
             case COMMUNE -> score.merge(Orders.Order.LARDER, 1, Integer::sum);
             case LORD -> score.merge(Orders.Order.WATCH, 1, Integer::sum);
+            case JUNTA -> score.merge(Orders.Order.WATCH, 3, Integer::sum);       // [featcivic]
+            case PLANNED -> { score.merge(Orders.Order.LARDER, 2, Integer::sum); score.merge(Orders.Order.DIG, 1, Integer::sum); }
             default -> { }
         }
     }
@@ -262,7 +300,7 @@ public final class Government {
         if (f == Form.CHAPLAIN && d >= Ethos.POLE) { good.add("the chapel at the heart of things"); return 2; }
         if (f == Form.COMMUNE && e >= Ethos.POLE) { good.add("all equal in the commune"); return 2; }
         if (f == Form.LORD && e >= Ethos.POLE) { bad.add("a lord over us"); return -3; }
-        return 0;
+        return Regimes.contentment(village, f, good, bad);                    // [featcivic] the new forms
     }
 
     // ------------------------------------------------------------------ a player who would lead
@@ -277,6 +315,9 @@ public final class Government {
             case LORD -> "There are no elections in " + name + ": it is " + (r.house.isEmpty() ? "its lord's" : r.house + "'s")
                 + ". The only ways to the seat are to marry into the house, or for the town to vote its lord out.";
             case CHAPLAIN -> name + " is led by its chaplain, chosen by the chapel, never by a vote.";
+            case PLANNED -> "There are no elections in " + name + ": it is a planned state, and the party congress appoints the chair of its committee. "
+                + "You can work for the state; only a reform or a revolution would open the seat to a vote.";
+            case JUNTA -> name + " is under military rule: the general commands, and the senior officer succeeds. Nobody stands, and nobody votes.";
             case COUNCIL, GUILD -> Standing.of(village, p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.HONOURED) ? null
                 : r.gov == Form.COUNCIL ? "Only the elders sit on " + name + "'s council; an honoured guest may be asked to sit with them. Be one first."
                 : "In " + name + " the masters of the trades choose the guildmaster: be an honoured guest here first.";
@@ -293,6 +334,9 @@ public final class Government {
             case LORD -> "Only by marrying into " + (r.house.isEmpty() ? "the ruling house" : r.house)
                 + " (the lord's consort takes the seat at its death), or by a vote of no confidence and then standing.";
             case CHAPLAIN -> "No player leads the chaplain's town; a vote to change its government would open it.";
+            case DEMOCRACY -> "Any citizen the town counts a friend may stand for mayor at its elections; every citizen votes, at the ballot box.";
+            case PLANNED -> "No player leads a planned state: the committee appoints its chair. You can work for the state; a reform or a revolution would open the seat.";
+            case JUNTA -> "No player leads under military rule: only a change of government opens the seat.";
         };
     }
 
@@ -336,7 +380,25 @@ public final class Government {
         UUID was = Villages.elder(village);
         if (r.gov == Form.LORD) return succeed(level, village, r, who, was, day);
         if (r.gov == Form.CHAPLAIN) return chaplain(level, village, r, who, was, day);
+        if (r.gov == Form.PLANNED) return congress(level, village, r, who, was, day);       // [featcivic]
+        if (r.gov == Form.JUNTA) return command(level, village, r, who, was, day);          // [featcivic]
         return false;
+    }
+
+    /** [featcivic] The chair is gone: the committee meets in congress and appoints the next. */
+    static boolean congress(ServerLevel level, UUID village, Identity.Rec r, String who, @Nullable UUID was, long day) {
+        VillageFolkEntity c = Regimes.chairChoice(village, was);
+        if (c == null) return false;
+        install(level, village, r, c, day, who.isEmpty() ? "appointed by the party congress" : "appointed by the party congress after " + who);
+        return true;
+    }
+
+    /** [featcivic] The general is gone: the senior officer takes command. */
+    static boolean command(ServerLevel level, UUID village, Identity.Rec r, String who, @Nullable UUID was, long day) {
+        VillageFolkEntity c = Regimes.generalChoice(village, was);
+        if (c == null) return false;
+        install(level, village, r, c, day, who.isEmpty() ? "the senior officer, who took command" : "the senior officer, after " + who);
+        return true;
     }
 
     /**
@@ -395,8 +457,14 @@ public final class Government {
         Ledger.note(village, "election.now", "");
         if (r.gov == Form.LORD) r.line.add(day + "|" + f.displayNameCap() + "|" + how);
         while (r.line.size() > 24) r.line.remove(0);
-        r.change(day, f.displayNameCap() + " " + (r.gov == Form.LORD ? "became lord, " : "became chaplain, ") + how);
+        r.change(day, f.displayNameCap() + " " + switch (r.gov) {
+            case LORD -> "became lord, ";
+            case PLANNED -> "became chair of the committee, ";
+            case JUNTA -> "took command as general, ";
+            default -> "became chaplain, ";
+        } + how);
         Identity.dirty();
+        Ceremonies.installed(level, village, r.gov, f, how, day);            // [featcivic] the coronation, the congress, the command, in the square
     }
 
     /**
@@ -410,6 +478,8 @@ public final class Government {
         return switch (r.gov) {
             case LORD -> name + " took the seat as lord" + (r.house.isEmpty() ? "" : " of " + r.house) + (how == null ? "" : ", " + how);
             case CHAPLAIN -> name + " was made chaplain, to lead the town" + (how == null ? "" : ", " + how);
+            case PLANNED -> name + " was appointed chair of the committee" + (how == null ? "" : ", " + how);
+            case JUNTA -> name + " took command as general" + (how == null ? "" : ", " + how);
             default -> name + " was elected " + title(village);
         };
     }
@@ -537,10 +607,10 @@ public final class Government {
         UUID id = v.id();
         String lord = Villages.elderName(id);
         UUID was = Villages.elder(id);
-        Form next = Form.REEVE;
+        Form next = Form.DEMOCRACY;
         double top = Double.NEGATIVE_INFINITY;
-        for (Form f : new Form[]{ Form.REEVE, Form.COUNCIL, Form.GUILD, Form.COMMUNE }) {
-            double x = fit(f, r.axes);
+        for (Form f : new Form[]{ Form.DEMOCRACY, Form.REEVE, Form.COUNCIL, Form.GUILD, Form.COMMUNE }) {
+            double x = fit(f, r.axes) + (FormChoice.democratic(f) ? 6 : 0);   // [featcivic] a deposed lord's town mostly votes
             if (x > top) { top = x; next = f; }
         }
         r.line.add(day + "|" + lord + "|deposed by the town's vote");
@@ -558,13 +628,14 @@ public final class Government {
         r.change(day, line);
         Villages.tell(id, day, line);
         Identity.dirty();
+        Regimes.changed(level, v, Form.LORD, next, day);                          // [featcivic]
     }
 
     /** The town takes up another form of government: its leader installed (or an election called) to suit it. */
     static void set(ServerLevel level, Villages.Village v, Identity.Rec r, Form to, long day, String why) {
         UUID id = v.id();
         Form was = r.gov;
-        boolean electedBefore = was != Form.LORD && was != Form.CHAPLAIN;
+        boolean electedBefore = !appointed(was);
         r.gov = to;
         r.govSince = day;
         r.lastReform = day;
@@ -581,11 +652,16 @@ public final class Government {
             }
         } else if (to == Form.CHAPLAIN) {
             chaplain(level, id, r, "", null, day);
+        } else if (to == Form.PLANNED) {
+            congress(level, id, r, "", null, day);                                // [featcivic]
+        } else if (to == Form.JUNTA) {
+            command(level, id, r, "", null, day);                                 // [featcivic]
         } else if (!electedBefore) {
             Ledger.note(id, "elder", "");
             Ledger.note(id, "election.next", Long.toString(day + 2));
         }
         Identity.dirty();
+        Regimes.changed(level, v, was, to, day);                                  // [featcivic] its rules, its banners, its businesses
     }
 
     // ------------------------------------------------------------------ the page, the card, the board
@@ -612,6 +688,21 @@ public final class Government {
             }
             case GUILD -> { return leads ? "guildmaster" : f.veteranLevel() >= 10 ? "a master, with a vote in the guild" : null; }
             case COMMUNE -> { return leads ? "the commune's steward" : null; }
+            case PLANNED -> {                                                       // [featcivic]
+                if (leads) return "chair of the committee";
+                for (VillageFolkEntity e : Elections.voters(village)) if (e == f) return "a member of the committee";
+                return null;
+            }
+            case JUNTA -> {                                                         // [featcivic]
+                if (leads) return "the general, who commands " + name;
+                return f.stationTask() == AssistantEntity.StationTask.GUARD ? "an officer of the general's" : null;
+            }
+            case DEMOCRACY -> {                                                     // [featcivic] the mayor, a member, a party
+                String party = Factions.partyName(village, f);
+                if (leads) return "the elected mayor" + (party.isEmpty() ? "" : ", of " + party);
+                if (Factions.member(village, f.getUUID())) return "a member of the town council" + (party.isEmpty() ? "" : ", for " + party);
+                return party.isEmpty() ? null : "votes with " + party;
+            }
             default -> { return leads ? "the elected " + title(village) : null; }
         }
     }
@@ -633,6 +724,10 @@ public final class Government {
             out.add("RM|No elections: " + (leader.isEmpty() ? "the seat stands empty" : "Lord " + leader) + (r.house.isEmpty() ? "" : " of " + r.house) + ".");
             VillageFolkEntity h = heir(village, Villages.elder(village), leader);
             if (h != null) out.add("RM|The heir: " + h.displayNameCap() + ".");
+        } else if (r.gov == Form.PLANNED) {
+            out.add("RM|No elections: a planned state. " + (leader.isEmpty() ? "The congress has still to appoint its chair" : leader + " chairs the committee") + ".");
+        } else if (r.gov == Form.JUNTA) {
+            out.add("RM|No elections: military rule. " + (leader.isEmpty() ? "The officers have still to choose a general" : "General " + leader + " commands") + ".");
         } else {
             out.add("RM|No elections: " + (leader.isEmpty() ? "the chapel has still to choose its chaplain" : leader + " leads as chaplain") + ".");
         }
@@ -703,5 +798,13 @@ public final class Government {
         callDepose(level, v, r, level.getDayTime() / 24000L);
         for (CompoundTag q : Referendums.open(v.id())) if ("DEPOSE".equals(q.getString("subject"))) return q.getInt("id");
         return -1;
+    }
+
+    /**
+     * [wpb] May a private firm be opened here? A stub returning true: feat-civic's PLANNED state (the state owns the firms)
+     * answers false in its own version of this method. StartBusiness, PlayerFarms and FirmSale ask it.
+     */
+    public static boolean allowsPrivateFirms(@Nullable UUID village) {
+        return Regimes.businessBarred(village) == null;            // [featcivic] a planned state bars new private firms
     }
 }

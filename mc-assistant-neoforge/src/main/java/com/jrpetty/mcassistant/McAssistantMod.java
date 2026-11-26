@@ -227,6 +227,18 @@ public final class McAssistantMod {
 
     public static final DeferredItem<BlockItem> FERRY_BELL_ITEM =
         ITEMS.registerSimpleBlockItem(FERRY_BELL);
+    /** [featcivic] The ballot box: a town's polling station (entity/Polls); used, the ballot screen (entity/GovActions). */
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.BallotBoxBlock> BALLOT_BOX =
+        BLOCKS.registerBlock("ballot_box",
+            com.jrpetty.mcassistant.block.BallotBoxBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.COLOR_BROWN)
+                .strength(1.5F, 3.0F)
+                .sound(SoundType.WOOD)
+                .noOcclusion());
+
+    public static final DeferredItem<BlockItem> BALLOT_BOX_ITEM =
+        ITEMS.registerSimpleBlockItem(BALLOT_BOX);
     // [arms] The town's arms (entity/Arms): the festival tabard, eight wool cut like a tunic, given a banner's arms at
     // the crafting table as a shield is (TabardDecorationRecipe); and the loom's patterns for the three charges a town
     // is granted for what it lives by, each a sheet of paper and a fish, a pickaxe or wheat.
@@ -396,6 +408,7 @@ public final class McAssistantMod {
                     out.accept(q.get());
                 }
                 out.accept(FERRY_BELL_ITEM.get());                       // [transport]
+                out.accept(BALLOT_BOX_ITEM.get());                       // [featcivic]
             })
             .build());
 
@@ -511,6 +524,7 @@ public final class McAssistantMod {
             event.accept(STOREHOUSE_ITEM);
             event.accept(VILLAGE_BOARD_ITEM);
             event.accept(FERRY_BELL_ITEM);                               // [transport]
+            event.accept(BALLOT_BOX_ITEM);                               // [featcivic]
         }
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(VILLAGE_COIN);

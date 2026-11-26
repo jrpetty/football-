@@ -46,6 +46,13 @@ public final class PlayerCivic {
     public static String talk(VillageFolkEntity f, Player p, TalkTopic topic, String text) {
         if (text == null || text.isBlank()) return null;
         String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9' ]", " ").replaceAll("\\s+", " ") + " ";
+        // [featcivic] How the town is governed (the Town Hall screen), and the ballot.
+        if (has(t, "how is this town governed", "how is the town governed", "how is the town run", "town hall", "who governs", "the government here",
+                "i'd like to vote", "id like to vote", "my ballot", "the ballot") && p instanceof ServerPlayer sp) {
+            boolean ballot = has(t, "vote", "ballot");
+            GovActions.openHall(sp, ballot ? "Ballot" : "Overview");
+            return GovTalk.answer(f, ballot);
+        }
         // Standing for leader, and the campaign.
         if (has(t, " coin", " coins", " pay you", "bribe", " buy your vote") && has(t, " vote")) return Hustings.bribe(f, p, t);
         if (has(t, "stand for election", "stand for leader", "stand in the election", "stand for elder", "stand for mayor", "stand for thane",

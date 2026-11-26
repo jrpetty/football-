@@ -95,11 +95,13 @@
       "title": "The town wall and gates",
       "icon": "minecraft:cobblestone_wall",
       "kind": "what",
-      "q": ["does the town build a wall", "when does the village get walls", "town gates", "why are the gates shut", "how do i get through the wall", "fortify the town"],
-      "kw": ["wall", "walls", "gate", "gates", "fortify"],
-      "answer": "From the Stone Age a town builds a wall with four gates, shut at dusk; open them like any door.",
-      "tips": ["After a raid or in a war the town may vote to build a bigger stretch of wall as a great work."],
-      "related": ["defence_watch", "defence_raids", "civic_referendum"],
+      "q": ["does the town build a wall", "when does the village get walls", "town gates", "why are the gates shut", "how do i get through the wall", "fortify the town", "why has my town got no wall", "what makes the wall stone", "when does the wall get towers", "how dangerous is my town", "does the wall move out"],
+      "kw": ["wall", "walls", "gate", "gates", "fortify", "palisade", "portcullis", "danger", "towers"],
+      "answer": "A town walls itself as its danger grows: a log palisade with its gates, then a stone wall, then towers and gatehouses with a portcullis. The gates open by day and shut at night.",
+      "more": ["The council reckons the town's danger out of a hundred from what it has been through: raids in the last thirty days, monsters killed at night in the last week, how near war it stands, and how much coin it has to tempt raiders.", "At danger 12 it raises a log palisade with gatehouses; at 30 the wall is refaced in the age's stone; at 52 towers go up along the sides and a portcullis over each gate (it drops when the bell rings). A stage once reached is kept.", "The wall encloses the town's core with a gate on each radial road. When the town takes a lot past a side, that side is rebuilt a ring further out and the old line comes down, its ground given back to the lots: the wall never boxes the town in.", "Every block comes out of the stores; the stone yard keeps the stores in stone."],
+      "steps": ["Open the village board: Town → Defences.", "The top shows the danger, why, and the wall's stage; the next stage's threshold is beside it.", "Use Show me on a side or a gate for an arrow and sparks over it."],
+      "tips": ["After a raid or in a war the town may vote to build a bigger stretch of wall as a great work.", "A town that has never seen a raid or a monster stays an open town: no wall at all."],
+      "related": ["defence_night_watch", "defence_watch", "defence_raids", "build_quarry", "civic_referendum"],
       "covers": []
     },
     {
@@ -113,6 +115,34 @@
       "more": ["The pavement is a stone-brick border with a chequer of stone bricks and polished andesite and chiselled stone at the heart.", "Loose things left on it (a crafting table, a furnace, a stray block) go back into the stores; turf and flowers are cleared, the stalls, lamps, benches and well stay.", "Once the town has its wall, the square's wall is laid again whole in stone brick: three courses and a coping, a squat tower at each corner, and a pillar and lantern each side of the four gates. The notice board goes back up on its posts."],
       "tips": ["Nothing you or anybody built on the square is touched: a column holding somebody's work is left as it is.", "Folk no longer set a crafting table down on the square: they craft at the stores' bench on the town's open ground."],
       "related": ["build_wall", "found_board", "build_what_town_builds"],
+      "covers": []
+    },
+    {
+      "id": "build_parks",
+      "title": "Parks, statue gardens and monuments",
+      "icon": "minecraft:armor_stand",
+      "kind": "what",
+      "q": ["does the town build parks", "how do i get a statue of a villager", "who gets a statue", "what do statues do", "why are folk sitting in the garden", "do fountains flood", "more parks"],
+      "kw": ["park", "parks", "garden", "gardens", "statue", "statues", "monument", "monuments", "fountain", "pond", "plinth", "plaque", "bench"],
+      "answer": "Towns build a park, then statue gardens by the square to their most notable folk: benches, flower beds, ponds and a statue on a plinth that cheers up everyone near it.",
+      "more": ["A park comes at twenty folk, among the homes: a fountain, benches, lamp posts, flowers, trees at its corners and paths, kept by the town's hands.", "From the Stone Age, a town of sixteen with somebody notable puts a statue garden on the builders' list, on a lot facing the square (never a home's lot): a plinth in the middle, flower beds, benches facing it, lamp posts and two little ponds.", "Who is notable: what the rest of the town thinks of them, their years at their trade, their deeds and their offices. The most notable without a statue is honoured next; the board shows the standings.", "The statue is an armour stand in stone-grey with the tools of its trade, facing the street, with a plaque of its name, trade and what it is known for.", "Folk within sixteen blocks of a statue, or living within twenty-four, are happier; the honoured folk and its kin prouder still. A home by a park or garden lets for more.", "The ponds and the park's fountain are filled only where the water will stay; knock out a rim stone and the water is taken up before a drop runs, and the keepers mend it.", "More gardens as the town grows: one more for every sixteen folk, one more for three hundred coins in the treasury, four at most."],
+      "steps": ["Open the village board: Town → Parks.", "Each park and garden is listed with its statue and plaque; Show me marks it.", "Next to be honoured shows the standings, notable at 40."],
+      "tips": ["Folk visit in their free time: a sit on a bench, a stroll, a chat. Evenings are the best time to film it."],
+      "related": ["build_town_look", "build_square", "life_marriage"],
+      "covers": []
+    },
+    {
+      "id": "build_quarry",
+      "title": "The quarry and the stone yard",
+      "icon": "minecraft:stonecutter",
+      "kind": "what",
+      "q": ["where does the town get its stone", "why is my build waiting on stone", "what is the stone yard", "does the quarry eat the town", "who works the quarry", "how deep is the quarry", "is the quarry safe"],
+      "kw": ["quarry", "quarries", "stone", "yard", "stone yard", "quarryman", "quarrymen", "mason", "cobblestone", "stone bricks", "bricks", "shortage"],
+      "answer": "At ten folk a town opens a terraced quarry out past the land it will grow into, and a stone yard beside it. Quarrymen cut stone, cart it to the yard, and city buildings draw their stone from there.",
+      "more": ["The site is out past the town's growth line (a ring beyond the town as it stands), off the radial roads, the farmland and the mine's ground: a rock outcrop if there is one, else dug down.", "It is cut in terraces, every cell a block deeper than the one outside it, so no step is more than a block; it is fenced all round with a gate toward town and lanterns at the corners and every six posts. Nothing is cut next to water or lava.", "Quarrymen (one, plus one for every twenty folk, three at most) come from the miners first. Each walks out with its pick, cuts a block at a time, and carts every sixteen to the yard. Ore it hits goes to the stores.", "The yard's piles stand a block high for every sixteen in stock. Its mason dresses cobblestone into stone bricks (a coal for eight) and fires clay into bricks.", "Commissioned city buildings take their stone from the yard first, then the stores; short of both, they wait, and their status reads 'waiting on stone from the yard'. A quarryman also carts loads to the stores when they run low.", "Worked out, the pit opens two wider each way (twenty-one across at most), never into land the town needs. If the town grows out to it, it closes (fence and lanterns back to the stores, the terraces left as safe steps) and a new one opens further out."],
+      "steps": ["Open the village board: Town → Stone.", "The quarry and the yard each have a Show me button.", "Waiting on stone lists every build held up, and what it needs."],
+      "tips": ["Want builds to go faster? Bring the yard stone: drop cobblestone or stone bricks into the town's stores and the builders use it as well."],
+      "related": ["build_commission", "build_property_office", "build_wall"],
       "covers": []
     }
   ]

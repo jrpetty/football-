@@ -1255,6 +1255,7 @@ public final class Businesses {
         for (Business b : all(id)) {
             if (b.town() || b.mirror()) continue;
             if (!b.open) continue;
+            if (Enterprise.isFirm(b) && MyBusinesses.pausedToday(id, b, day)) { b.today(day).cashEnd = b.till; continue; }   // [wpb] closed while its owner is away
             overheads(level, id, b, day);
             Capital.wear(id, b, day);                                       // [econ-1c] its tools' wear, a share of its kit
             interest(level, id, b, day);

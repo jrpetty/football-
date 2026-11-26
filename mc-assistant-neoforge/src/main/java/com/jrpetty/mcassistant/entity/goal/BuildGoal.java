@@ -63,6 +63,8 @@ public class BuildGoal extends Goal {
         "bank",
         // the park among the homes, with its fountain and benches (entity/Park)
         "park",
+        // [featbuild] a statue garden by the square, to the town's most notable folk (entity/Monuments)
+        "garden",
         // [flats] the Iron Age's blocks of flats (entity/Flats)
         "flats",
         // [house34] the terraces: a workers' row, a bay-fronted row, a grand row of town houses (entity/TerraceRows)
@@ -712,15 +714,15 @@ public class BuildGoal extends Goal {
         }
         // [build5] And the hillside cut back from its walls, a step out for a step up (SiteWork.cutBack): the bank stood
         // against the uphill wall of every building set into a slope. Not a park's (its own ground work, below).
-        if (!com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(structure)) {
+        if (!com.jrpetty.mcassistant.entity.Park.isGreen(structure)) {                     // [featbuild] nor a statue garden's
             for (BlockPos c : com.jrpetty.mcassistant.entity.SiteWork.cutBack(assistant.level(), base, ground)) {
                 if (taken.add(c)) plan.add(new Placement(c, Part.CLEAR, Blueprints.Style.SOIL, Blueprints.Way.UP));
             }
         }
         // [districts] A park's lot is cut and filled to one level, its edges eased, before a stone of it is laid
         // (entity/ParkGround): a lawn on a hillside is no lawn, and its fountain's water ran out under it.
-        if (com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(structure)) {
-            com.jrpetty.mcassistant.entity.ParkGround.addTo(assistant.level(), base, facing, plan);
+        if (com.jrpetty.mcassistant.entity.Park.isGreen(structure)) {
+            com.jrpetty.mcassistant.entity.ParkGround.addTo(assistant.level(), base, facing, plan, structure);
         }
     }
 

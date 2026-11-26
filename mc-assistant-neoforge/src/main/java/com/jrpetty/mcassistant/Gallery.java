@@ -284,7 +284,7 @@ public final class Gallery {
 
     /** Ages.AS_BUILT, as Ages has it: what a town leaves as it was built (a well, a gateway, a field). */
     static final Set<String> AS_BUILT = Set.of("well", "gateway", "monument", "graveyard", "fortify", "pen", "platform",
-        "wall", "column", "room", "fountain", "court", "park", "pitch", "range");
+        "wall", "column", "room", "fountain", "court", "park", "garden", "pitch", "range");
 
     /** Architecture.HOMES, as Architecture has it: the buildings a town dresses in its style. */
     static final Set<String> HOMES = Set.of("house", "manor", "villa");
