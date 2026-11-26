@@ -841,6 +841,7 @@ public class PlayerWorkGameTests {
                 ServerPlayer p = player(helper, t, t.heart(), 40);
                 Business b = firm(level, t, p);
                 VillageFolkEntity hand = t.folk().get(1);
+                hand.setJob(com.jrpetty.mcassistant.entity.Enterprise.kindOf(t.id(), b).work());   // at the firm's trade
                 com.jrpetty.mcassistant.entity.Enterprise.staffForTests(t.id(), b, hand);
                 b.till += 3000;
                 String mgr = com.jrpetty.mcassistant.entity.MyBusinesses.handActionForTests(level, p, b, "manager", hand.getUUID(), false);
