@@ -80,6 +80,7 @@ final class PaBuildGoal extends Goal {
         chest = null;
         cool = 0;
         digLeft = 0;
+        digTotal = 0;
     }
 
     @Override
@@ -152,6 +153,7 @@ final class PaBuildGoal extends Goal {
             pathAt = -100;
             best = Double.MAX_VALUE;
             digLeft = 0;
+            digTotal = 0;
             stepAway = 0;
             return true;
         }
