@@ -604,6 +604,12 @@ public final class MarketMaker {
             if (k <= 0) return;
         }
         double each = ask(level, village, st);
+        // [econ51] A firm of the folk's own buys as well as its owner's character lets it (Temperament: a thrifty or shrewd
+        // owner a few in the hundred under the ask, a spendthrift or careless one over it).
+        if (r.account().kind() == Kind.FIRM) {
+            Business buyer = Businesses.of(village, r.account().key());
+            if (buyer != null && Enterprise.isFirm(buyer)) each *= Temperament.costFactor(village, buyer);
+        }
         long price = Math.max(1, Math.round(each * 100 * k));
         String what = k + " " + Businesses.nameOf(key).toLowerCase(Locale.ROOT);
         long got = Accounts.debit(level, village, r.account(), price, r.purpose(), what);
