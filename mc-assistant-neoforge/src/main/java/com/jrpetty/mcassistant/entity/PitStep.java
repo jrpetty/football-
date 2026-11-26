@@ -43,7 +43,7 @@ public final class PitStep {
 
     /** A walkable patch bigger than this is no pit. */
     static final int MOST_CELLS = 400;
-    /** Ticks a folk stands within a couple of blocks of one spot before it is looked at. */
+    /** Ticks a folk stays within ten blocks of one spot before it is looked at. */
     static final int STILL_FOR = 300;
     /** And looked at again no sooner than this. */
     static final int LOOK_AGAIN = 600;
@@ -120,7 +120,9 @@ public final class PitStep {
         }
         BlockPos feet = f.blockPosition();
         Still s = STILL.get(f.getUUID());
-        if (s == null || s.at.distManhattan(feet) > 6 || now < s.since) {             // (jostled to and fro along a slot it is still in it)
+        // (Jostled to and fro along a slot or across a yard, walking at one edge and then another, it is still in it.)
+        if (s == null || Math.max(Math.abs(s.at.getX() - feet.getX()), Math.abs(s.at.getZ() - feet.getZ())) > 10
+                || Math.abs(s.at.getY() - feet.getY()) > 3 || now < s.since) {
             STILL.put(f.getUUID(), new Still(feet, now));
             return;
         }
@@ -128,6 +130,10 @@ public final class PitStep {
         // Only one going somewhere it cannot get to (its walk ending short): a builder down its cellar is at its work.
         net.minecraft.world.level.pathfinder.Path way = f.getNavigation().getPath();
         if (way == null || way.canReach() || f.running(com.jrpetty.mcassistant.entity.goal.BuildGoal.class)) return;
+        // Nor a hand down its own dig (a quarry, a pit for earth, the works): its trade has its own way up (Footholds).
+        Job job = f.peekJob();
+        if (job != null && job.type() == Job.Type.MINE || f.running(com.jrpetty.mcassistant.entity.goal.MineGoal.class)
+                || f.running(com.jrpetty.mcassistant.entity.goal.GatherGoal.class) || Footholds.climbing(f)) return;
         s.looked = now;
         if (MineWorks.below(f)) return;                                  // down the works: the mine's own climb (MineSafety)
         List<BlockPos> pit = pit(level, feet);

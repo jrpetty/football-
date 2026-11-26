@@ -118,6 +118,7 @@ public final class Bedside {
         boolean level0 = Math.abs(f.getY() - at.getY()) < 1.2;
         if (d2 <= 0.8 * 0.8 && level0) {
             lie(f, at);
+            if (level.canSeeSky(at)) { OUTDOORS.add(f.getUUID()); OUTDOOR_NIGHTS++; }
             return true;
         }
         if (d2 < s.best - 1.0) { s.best = d2; s.gained = f.tickCount; }
@@ -158,19 +159,40 @@ public final class Bedside {
      * out at home).
      */
     private static boolean lastResort(VillageFolkEntity f, Spot s) {
+        if (!(f.level() instanceof ServerLevel level)) return false;
         BlockPos here = f.blockPosition();
-        if (!(f.level() instanceof ServerLevel level) || !standable(level, here) || taken(f, here)) return false;
-        if (!level.canSeeSky(here)) {
+        long t = level.getDayTime() % 24000L;
+        boolean late = t >= TOO_LATE && t < 23000L;
+        if (layable(level, f, here, late) && f.onGround() && !f.isInWaterOrBubble()) {
             lie(f, here);
+            if (level.canSeeSky(here)) {
+                OUTDOORS.add(f.getUUID());
+                OUTDOOR_NIGHTS++;
+            }
             return true;
         }
-        long t = level.getDayTime() % 24000L;
-        if (t < TOO_LATE || t >= 23000L || !f.onGround() || f.isInWaterOrBubble()) return false;
-        for (Direction d : Direction.values()) if (!level.getFluidState(here.relative(d)).isEmpty()) return false;
-        lie(f, here);
-        OUTDOORS.add(f.getUUID());
-        OUTDOOR_NIGHTS++;
-        f.brain("its bed out of reach tonight: asleep out of doors where it was");
+        // [tp50] Where it stands no place to lie (another lies beside it, a step's edge, the water at its feet): the nearest that
+        // is, a few steps off, walked to (a knot of the stranded on a shore stood all night shoulder to shoulder).
+        BlockPos best = null;
+        for (int dx = -4; dx <= 4; dx++) for (int dz = -4; dz <= 4; dz++) for (int dy = -1; dy <= 1; dy++) {
+            BlockPos p = here.offset(dx, dy, dz);
+            if (s.tried.contains(p) || !layable(level, f, p, late)) continue;
+            if (best == null || p.distSqr(here) < best.distSqr(here)) best = p;
+        }
+        if (best == null) return false;
+        s.at = best.immutable();
+        s.since = f.tickCount;
+        s.gained = f.tickCount;
+        s.best = Double.MAX_VALUE;
+        return true;
+    }
+
+    /** [tp50] A place to lie down for the night: a floor indoors; out of doors only {@code late}, on dry ground. */
+    private static boolean layable(ServerLevel level, VillageFolkEntity f, BlockPos p, boolean late) {
+        if (!level.isLoaded(p) || !standable(level, p) || taken(f, p)) return false;
+        if (!level.canSeeSky(p)) return true;
+        if (!late) return false;
+        for (Direction d : Direction.values()) if (!level.getFluidState(p.relative(d)).isEmpty()) return false;
         return true;
     }
 
@@ -201,7 +223,7 @@ public final class Bedside {
         f.setPose(Pose.SLEEPING);
         f.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         FLOOR_NIGHTS++;
-        f.brain("no bed to be had tonight: asleep on the floor indoors");
+        f.brain(f.level().canSeeSky(at) ? "its bed out of reach tonight: asleep out of doors" : "no bed to be had tonight: asleep on the floor indoors");
     }
 
     /** Up in the morning (or woken): its floor given back. */
@@ -219,6 +241,7 @@ public final class Bedside {
         if (a instanceof VillageFolkEntity f) {
             if (f.stationTask() == AssistantEntity.StationTask.GUARD && f.onShift()) return "on watch";
             if (TownJobs.busy(f)) return "on the town's work: " + TownJobs.doing(f);
+            if (f.onShift() && Boolean.TRUE.equals(Hospitality.shift(f))) return "at work: serving (" + Hospitality.badge(f) + ") " + f.brainNoteForBooks();
             if (f.onShift()) return "at work: " + f.offWorkWhy() + (f.shift() == AssistantEntity.Shift.DAY ? "" : " (" + f.shift().name().toLowerCase(java.util.Locale.ROOT) + " shift)")
                 + " " + f.brainNoteForBooks();
         }
@@ -226,7 +249,22 @@ public final class Bedside {
         if (!n.isEmpty()) return n;
         Job j = a.peekJob();
         if (j != null) return "an errand first: " + j.type();
-        return "kept from bed: " + a.brainNoteForBooks();
+        return "kept from bed: " + (a instanceof VillageFolkEntity f ? holding(f) : "") + a.brainNoteForBooks();
+    }
+
+    /** [tp50] The census: which of a folk's own affairs has its legs ahead of bed, if one does ("" if none says so). */
+    private static String holding(VillageFolkEntity f) {
+        if (Families.busy(f)) return "[the family's own] ";
+        if (Neighbourly.busy(f)) return "[a neighbour's errand] ";
+        if (Civics.busy(f)) return "[the town's affairs] ";
+        if (Individual.busy(f)) return "[its own life] ";
+        if (Library.busy(f)) return "[the library] ";
+        if (Scholars.busy(f)) return "[its studies] ";
+        if (Crier.busy(f)) return "[crying the news] ";
+        if (Culture.busy(f)) return "[the town's culture] ";
+        if (ShoppingTrips.underWay(f)) return "[a shopping trip] ";
+        if (PitStep.digging(f)) return "[digging out of a pit] ";
+        return "";
     }
 
     /** The kind of a census reason (what comes before its colon). */
