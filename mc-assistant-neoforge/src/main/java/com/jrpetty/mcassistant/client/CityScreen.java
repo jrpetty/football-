@@ -119,6 +119,11 @@ public class CityScreen extends Screen {
     public static void show(CompoundTag data) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
+        if (data.getBoolean(com.jrpetty.mcassistant.net.CityStatsPayload.UNREADABLE)) {   // [ui53] said, not a dropped connection
+            mc.gui.getChat().addMessage(Component.literal("<Village> The town's books came but could not be read ("
+                + data.getString("why") + "). The game's log has the details."));
+            return;
+        }
         // The server's word to shut the books (/village stats close).
         if (data.getBoolean("close")) {
             if (mc.screen instanceof CityScreen open) open.onClose();
@@ -147,6 +152,11 @@ public class CityScreen extends Screen {
     void devPage(String name) {
         int n = pageNumber(name);
         if (n >= 0) { tab = n; scroll = 0; }
+    }
+
+    /** [ui53] The developer client's board test: a click on the Folk page's heading {@code col}, where it was drawn. */
+    void devFolkHead(int col) {
+        if (col >= 0 && col < FOLK_COLS.length) mouseClicked(pageX() + FOLK_COLS[col] + 3, pageTop() + 11 + 3, 0);
     }
 
     /** Ask the server for the books of the village you stand in (the journal's button). */
@@ -296,8 +306,27 @@ public class CityScreen extends Screen {
 
     // ------------------------------------------------------------------ drawing
 
+    /**
+     * [ui53] The board drawn; if any of it fails, the game goes on: logged once, the drawing state put back, and the panel
+     * with a word on what failed in its place (Esc still closes it). The pages and the Folk rows have guards of their own.
+     */
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        com.mojang.blaze3d.vertex.PoseStack.Pose mark = BoardGuard.mark(g);
+        try {
+            renderBoard(g, mouseX, mouseY, partialTick);
+            BoardGuard.done(g, mark);
+        } catch (Throwable e) {
+            if (!BoardGuard.catchable(e)) throw e;
+            BoardGuard.log("the board, at " + page(), e);
+            BoardGuard.recover(g, mark, null);
+            hover = null;
+            UiStyle.panel(g, left, top, w, h);
+            BoardGuard.pageFailed(g, font, page() + "; Esc closes the board", left + UiStyle.S2, top + UiStyle.S2, w - 2 * UiStyle.S2);
+        }
+    }
+
+    private void renderBoard(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         hover = null;
         zones.clear();
@@ -313,7 +342,8 @@ public class CityScreen extends Screen {
         } else {
             // [folk-ui] Nothing a page draws can spill past the panel, whatever the window's size.
             g.enableScissor(left + sideW() + 2, y - 2, left + w - 2, top + h - 2);
-            switch (page()) {
+            com.mojang.blaze3d.vertex.PoseStack.Pose pageMark = BoardGuard.mark(g);   // [ui53] a page that fails costs the page
+            try { switch (page()) {
                 case "Overview" -> overview(g, x, y, cw, ch, mouseX, mouseY);
                 case "Growth" -> growth(g, x, y, cw, ch, mouseX, mouseY);
                 case "Money" -> money(g, x, y, cw, ch, mouseX, mouseY);
@@ -451,6 +481,13 @@ public class CityScreen extends Screen {
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 default -> board(g, x, y, cw, ch);
+            } BoardGuard.done(g, pageMark); } catch (Throwable e) {
+                if (!BoardGuard.catchable(e)) throw e;
+                BoardGuard.log("the " + page() + " page", e);
+                BoardGuard.recover(g, pageMark, new int[]{ left + sideW() + 2, y - 2, left + w - 2, top + h - 2 });
+                hover = null;
+                g.fill(left + sideW() + 2, y - 2, left + w - 2, top + h - 2, UiStyle.PANEL);
+                BoardGuard.pageFailed(g, font, page(), x, y + 4, cw);
             }
             g.disableScissor();
         }
@@ -1807,7 +1844,7 @@ public class CityScreen extends Screen {
         if (chartH < 40) return;
         int half = (cw - 6) / 2;
         if (selectedTrade != null && data.getCompound("trade_out").contains(selectedTrade)) {
-            String title = selectedTrade.charAt(0) + selectedTrade.substring(1).toLowerCase(Locale.ROOT);
+            String title = tradeWord(selectedTrade);   // [ui53] an empty id was a crash
             for (CompoundTag j : jobs) if (j.getString("id").equals(selectedTrade)) title = j.getString("title");
             chart(g, x, cy, half, chartH, title + ": made a day", mx, my,
                 new Series("Made", data.getCompound("trade_out").getIntArray(selectedTrade), GREEN));
@@ -1871,7 +1908,7 @@ public class CityScreen extends Screen {
         for (Series s : top) shown.add(s.name());
         boolean any = false;
         for (String id : t.getAllKeys()) {
-            String name = id.charAt(0) + id.substring(1).toLowerCase(Locale.ROOT);
+            String name = tradeWord(id);   // [ui53] an empty id was a crash
             for (CompoundTag j : compounds("jobs")) if (j.getString("id").equals(id)) { name = j.getString("title"); break; }
             if (shown.contains(name)) continue;
             int[] v = t.getIntArray(id);
@@ -1892,7 +1929,7 @@ public class CityScreen extends Screen {
         for (int i = 0; i < Math.min(most, ids.size()); i++) {
             String id = ids.get(i);
             int colour = PALETTE[i % PALETTE.length];
-            String name = id.charAt(0) + id.substring(1).toLowerCase(Locale.ROOT);
+            String name = tradeWord(id);   // [ui53] an empty id was a crash
             for (CompoundTag j : compounds("jobs")) {
                 if (j.getString("id").equals(id)) { name = j.getString("title"); colour = Ui.job(j.getInt("ordinal")); break; }
             }
@@ -1973,7 +2010,7 @@ public class CityScreen extends Screen {
         int ry = y + 10;
         int rows = (ch - 22) / 10;
         int start = Math.max(0, Math.min(scroll, Math.max(0, people.size() - rows)));
-        for (int i = start; i < Math.min(people.size(), start + rows); i++) {
+        for (int i = start; i < Math.min(people.size(), start + rows); i++) { com.mojang.blaze3d.vertex.PoseStack.Pose rowMark = BoardGuard.mark(g); try {   // [ui53] a row that fails is a "—"
             CompoundTag p = people.get(i);
             g.fill(x - 2, ry - 1, x + cw, ry + 9, p.getBoolean("leader") ? Ui.ROW_PICK : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
             Ui.chip(g, x, ry, Ui.job(p.getInt("ordinal")));
@@ -2016,6 +2053,14 @@ public class CityScreen extends Screen {
             }
             if (p.hasUUID("uuid")) links.add(g, p.getUUID("uuid"), p.getString("name"), x + FOLK_COLS[0] + 9, ry,     // [teleport]
                 Math.min((int) (font.width(p.getString("name")) * 0.75F), FOLK_COLS[1] - FOLK_COLS[0] - 12), 7, Ui.INK);
+            BoardGuard.done(g, rowMark);
+            } catch (Throwable e) {
+                if (!BoardGuard.catchable(e)) throw e;
+                BoardGuard.log("the Folk page's row " + i, e);
+                BoardGuard.done(g, rowMark);
+                g.fill(x - 2, ry - 1, x + cw, ry + 9, Ui.ROW_ALT);
+                small(g, "\u2014", x + 9, ry + 1, Ui.FAINT);
+            }
             ry += 10;
         }
         java.util.Map<String, Integer> bands = new java.util.TreeMap<>();
@@ -3547,7 +3592,8 @@ public class CityScreen extends Screen {
             if (age[i] == was) continue;
             was = age[i];
             if (sb.length() > 0) sb.append(" · ");
-            sb.append(was < names.length ? names[was] : "Age " + was).append(" Age from day ").append(days[i]);
+            sb.append(was >= 0 && was < names.length ? names[was] : "Age " + was)   // [ui53] a negative age was a crash
+                .append(" Age from day ").append(days[i]);
         }
         return sb.toString();
     }
@@ -4062,14 +4108,34 @@ public class CityScreen extends Screen {
         return n + " " + (n == 1 ? one : many);
     }
 
+    /** [ui53] A trade's id as a word ("FARM" as "Farm"), safe for an empty id. */
+    private static String tradeWord(String id) {
+        return id.isEmpty() ? "\u2014" : id.charAt(0) + id.substring(1).toLowerCase(Locale.ROOT);
+    }
+
     private static String capital(String s) {
         return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     // ------------------------------------------------------------------ the mouse
 
+    /** [ui53] A click, a key, the wheel: what fails is logged once and the board stays open (the game with it). */
+    private boolean guarded(String what, java.util.function.BooleanSupplier act) {
+        try {
+            return act.getAsBoolean();
+        } catch (Throwable e) {
+            if (!BoardGuard.catchable(e)) throw e;
+            BoardGuard.log(what + " on the " + page() + " page", e);
+            return true;
+        }
+    }
+
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        return guarded("a click", () -> clickBoard(mx, my, button));
+    }
+
+    private boolean clickBoard(double mx, double my, int button) {
         if (links.click(mx, my, button)) return true;                    // [teleport] a folk's name, or its buttons
         if (AdminClient.boardClick(mx, my)) return true;                  // [admin]
         if (FavouritesClient.boardClick(mx, my, this)) return true;       // [ui]
@@ -4135,6 +4201,10 @@ public class CityScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        return guarded("a drag", () -> dragBoard(mx, my, button, dx, dy));
+    }
+
+    private boolean dragBoard(double mx, double my, int button, double dx, double dy) {
         if (page().equals("Inventions") && InventionsPage.mouseDragged(mx, my)) return true;          // [screens13] the tree panned
         return super.mouseDragged(mx, my, button, dx, dy);
     }
@@ -4147,6 +4217,10 @@ public class CityScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
+        return guarded("the wheel", () -> scrollBoard(mx, my, dx, dy));
+    }
+
+    private boolean scrollBoard(double mx, double my, double dx, double dy) {
         if (page().equals("Inventions") && InventionsPage.mouseScrolled(mx, my, dy, hasShiftDown(), hasControlDown())) return true;   // [screens13]
         scroll = Math.max(0, scroll - (int) Math.signum(dy) * 3);
         return true;
@@ -4154,6 +4228,10 @@ public class CityScreen extends Screen {
 
     @Override
     public boolean charTyped(char c, int mods) {
+        return guarded("a letter typed", () -> typedBoard(c, mods));
+    }
+
+    private boolean typedBoard(char c, int mods) {
         // On a page that finds things, what is typed finds them (a digit starts a search only after a letter: alone, it
         // picks a section).
         String find = findText();
@@ -4167,6 +4245,11 @@ public class CityScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
+        if (key == 256 && shouldCloseOnEsc() && (findText() == null || findText().isEmpty())) { onClose(); return true; }   // [ui53] Esc closes, whatever else fails
+        return guarded("a key", () -> keyBoard(key, scan, mods));
+    }
+
+    private boolean keyBoard(int key, int scan, int mods) {
         // Backspace takes back a letter of what is typed; Esc clears it before it closes the books.
         String find = findText();
         if (find != null && !find.isEmpty() && (key == 259 || key == 256)) {

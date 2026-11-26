@@ -184,6 +184,11 @@ public final class CineDev {
                 case "open" -> open(mc, w[1]);
                 case "waiting" -> { mc.setScreen(null); Waiting.start(line.trim().substring(8)); }   // the "opening..." line, as on a slow server
                 case "city" -> { if (mc.screen instanceof CityScreen c) c.devPage(line.trim().substring(5).replace('_', ' ')); }
+                // [ui53] the board test: a click on the Folk page's heading N, where it is drawn; the wheel N notches down
+                // (up if negative); a click at GUI X Y
+                case "cityhead" -> { if (mc.screen instanceof CityScreen c) c.devFolkHead(Integer.parseInt(w[1])); }
+                case "cityscroll" -> { if (mc.screen instanceof CityScreen c) c.mouseScrolled(c.width / 2.0, c.height / 2.0, 0, -Integer.parseInt(w[1])); }
+                case "cityclick" -> { if (mc.screen != null) mc.screen.mouseClicked(d(w[1]), d(w[2]), 0); }
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
         }
