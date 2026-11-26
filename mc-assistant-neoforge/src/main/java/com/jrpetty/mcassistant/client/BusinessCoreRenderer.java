@@ -45,9 +45,9 @@ public final class BusinessCoreRenderer implements BlockEntityRenderer<BusinessC
         Vec3 at = Vec3.atCenterOf(be.getBlockPos());
         if (mc.player.position().distanceToSqr(at) > SEEN * SEEN) return;
         pose.pushPose();
-        pose.translate(0.5, 1.75, 0.5);
+        pose.translate(0.5, 1.7, 0.5);
         pose.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
-        float s = 0.022F;
+        float s = 0.018F;
         pose.scale(s, -s, s);
         Matrix4f m = pose.last().pose();
         int back = (int) (mc.options.getBackgroundOpacity(0.25F) * 255.0F) << 24;
@@ -61,7 +61,8 @@ public final class BusinessCoreRenderer implements BlockEntityRenderer<BusinessC
     private void line(String text, int colour, int y, Matrix4f m, MultiBufferSource buffers, int back) {
         if (text.isEmpty()) return;
         float x = -font.width(text) / 2.0F;
-        font.drawInBatch(text, x, y, colour, false, m, buffers, Font.DisplayMode.NORMAL, back, LightTexture.FULL_BRIGHT);
+        font.drawInBatch(text, x, y, 0x30FFFFFF & colour | 0x30000000, false, m, buffers, Font.DisplayMode.SEE_THROUGH, back, LightTexture.FULL_BRIGHT);   // as a name over a head: seen through a wall, faintly
+        font.drawInBatch(text, x, y, colour, false, m, buffers, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
     }
 
     @Override

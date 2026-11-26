@@ -101,7 +101,8 @@ public final class OfferPage implements PlayerLife.Page {
                 votes = vs.isEmpty() ? " · no answers yet" : " · " + String.join(", ", vs);
             }
             LifePage.Row row = page.row(null, o.buyerName + (o.folkBuyer ? "" : " (a player)") + ": " + o.price + "c for " + (o.parts >= Business.WHOLE ? "the whole" : o.parts * 100 / Business.WHOLE + "%"),
-                BusinessOffers.terms(o).replace("(", "").replace(")", "") + " · stands till day " + (o.expires + 1) + votes, o.escrow + "c in escrow");
+                "till day " + (o.expires + 1) + votes, "");
+            page.text("  Terms: " + BusinessOffers.terms(o).replace(" (", "").replace(")", "") + ". " + o.escrow + "c held in escrow.", 4);
             if (o.state == BusinessOffers.State.COUNTERED) { page.text("  You countered at " + o.counter + "c: it's with them.", 4); continue; }
             row.button("Accept", "oaccept", LifePage.args("id", o.id)).button("Refuse", "orefuse", LifePage.args("id", o.id))
                 .button("Counter +25%", "ocounter", LifePage.args("id", o.id, "k", 125), decide, no).button("+50%", "ocounter", LifePage.args("id", o.id, "k", 150), decide, no);
