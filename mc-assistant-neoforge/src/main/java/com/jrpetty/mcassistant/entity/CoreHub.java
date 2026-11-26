@@ -41,7 +41,7 @@ final class CoreHub {
         if (step <= 0) return;
         String[][] tour = {
             { "Your Business Core", "This desk is " + b.name + "'s hub: everything about the business, and every decision, from here. Anyone else who opens it sees its public face." },
-            { "Staff and Deputy", "Take on hands and set their pay on Staff. Make one your deputy manager, and on Deputy choose exactly what they may do while you're away." },
+            { "Staff, Rota and Deputy", "Take on hands and set their pay on Staff; set who works when on Rota. Make one your deputy manager, and on Deputy choose exactly what they may do while you're away." },
             { "Stock and Prices", "Stock shows what runs low and lets you set its targets; Prices has your markup, opening hours, a discount day, quality and an advert." },
             { "Offers, History, Owners", "Offers for the business come to you to accept, refuse or counter. History has its takings, best sellers and its timeline. Owners: partners, a branch, selling." } };
         int i = Math.min(step, tour.length) - 1;
@@ -144,7 +144,7 @@ final class CoreHub {
         int morale = 0;
         for (VillageFolkEntity f : hs) {
             LabourBook.Contract k = LabourMarket.contract(f);
-            int mo = morale(r, k);
+            int mo = Math.max(0, Math.min(100, morale(r, k) + Rota.moraleShift(v.id(), b, f)));   // [rota] its hours against its liking
             morale += mo;
             page.text(f.displayNameCap() + ": " + (mo >= 70 ? "content" : mo >= 50 ? "getting by" : "unhappy") + (k == null ? "" : k.m >= 1.08 ? " (well paid)" : k.m < 0.97 ? " (feels underpaid)" : ""), mo >= 50 ? 4 : 2);
         }

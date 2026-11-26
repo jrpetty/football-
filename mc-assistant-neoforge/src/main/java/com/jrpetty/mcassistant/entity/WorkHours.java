@@ -144,7 +144,10 @@ public final class WorkHours {
         if (!kept(village, day) || Raids.underAlarm(village)) return null;
         if (f.stationTask() == AssistantEntity.StationTask.NONE) return Calendar.isWeekend(day) ? Boolean.FALSE : null;   // no trade: the weekend off too
         if (Hospitality.role(f) != Hospitality.Role.NONE) return null;   // the bar's and the kitchen's own shifts
-        Business.Hours h = of(village, f);
+        Business emp = Businesses.employer(village, f);
+        int[] rs = emp == null ? null : Rota.slotsToday(village, emp, f.getUUID(), day);   // [rota] its employer's rota first
+        if (rs != null) return rotaShift(f, village, emp, rs, dt, day);
+        Business.Hours h = emp != null ? hoursOf(village, emp) : town(village);
         int dow = Calendar.dow(day), hr = hour(dt);
         if (!h.openOn(dow)) {
             // Extra work on a Saturday morning: the ambitious, and the hardworking short of money, take it.
@@ -172,6 +175,64 @@ public final class WorkHours {
         return null;
     }
 
+    /**
+     * [rota] A hand on its employer's rota: in from its shift's start (an easygoing one an hour late), out at its end (an
+     * ambitious or a hard-up hardworking one stays the hour after while the business is open); a day off its own, but
+     * the Saturday morning's extra work taken as before. True inside its shift, so an evening shift is kept past the bell.
+     */
+    @Nullable
+    static Boolean rotaShift(VillageFolkEntity f, UUID village, Business emp, int[] rs, long dt, long day) {
+        int dow = Calendar.dow(day), hr = hour(dt);
+        Business.Hours h = hoursOf(village, emp);
+        if (!Rota.works(rs)) {
+            if (Calendar.day(day) == Calendar.Day.SATURDAY && h.openOn(dow) && hr >= h.open() && hr < LifeWeights.OVERTIME_UNTIL_HOUR && LifeWeights.takesOvertime(f)) {
+                if (!Long.valueOf(day).equals(LifeLog.lastOvertime(f))) {
+                    LifeLog.overtime(f, day, LifeWeights.why(f, LifeWeights.Mark.AMBITIOUS, LifeWeights.Mark.HARDWORKING));
+                }
+                return null;
+            }
+            return false;
+        }
+        if (Calendar.isRestDay(day) && RestDay.today(village, day)) {
+            return Rota.at(rs, hr) && dt % 24000L >= RestDay.GAMES_FROM ? Boolean.TRUE : null;
+        }
+        int late = LifeWeights.lateHours(f);
+        if (late > 0 && hr >= rs[0] && hr < rs[0] + late) {
+            if (!Long.valueOf(day).equals(LATE.get(f.getUUID()))) {
+                LATE.put(f.getUUID(), day);
+                LifeLog.late(f, day, LifeWeights.why(f, LifeWeights.Mark.EASYGOING));
+            }
+            return false;
+        }
+        if (Rota.at(rs, hr)) {
+            Rota.seenAtWork(f, emp, dt, rs);
+            return Boolean.TRUE;
+        }
+        int end = rs[2] > 0 ? rs[3] : rs[1];
+        if (hr == end && h.openAt(dow, hr) && LifeWeights.takesOvertime(f)) {
+            if (!Long.valueOf(day).equals(LifeLog.lastOvertime(f))) LifeLog.overtime(f, day, LifeWeights.why(f, LifeWeights.Mark.AMBITIOUS, LifeWeights.Mark.HARDWORKING));
+            Rota.seenAtWork(f, emp, dt, rs);
+            return Boolean.TRUE;
+        }
+        return false;
+    }
+
+    /** [rota] Its rota's hours today, if its employer keeps one with a line for it (else null: its employer's hours). */
+    @Nullable
+    public static int[] rotaToday(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null) return null;
+        Business emp = Businesses.employer(village, f);
+        return emp == null ? null : Rota.slotsToday(village, emp, f.getUUID(), f.level().getDayTime() / 24000L);
+    }
+
+    /** [rota] The hour its work ends today: its rota's last shift's end, else its employer's closing. */
+    public static int endsAt(UUID village, VillageFolkEntity f) {
+        int[] rs = rotaToday(f);
+        if (rs != null && Rota.works(rs)) return rs[2] > 0 ? rs[3] : rs[1];
+        return of(village, f).close();
+    }
+
     /** Off today by its employer's days (not by the hour): the weekend's own. */
     public static boolean dayOff(VillageFolkEntity f) {
         UUID village = f.ownerId();
@@ -180,6 +241,8 @@ public final class WorkHours {
         if (!kept(village, day)) return false;
         if (f.stationTask() == AssistantEntity.StationTask.NONE) return Calendar.isWeekend(day);
         if (Hospitality.role(f) != Hospitality.Role.NONE) return false;
+        int[] rs = rotaToday(f);                                           // [rota] a day off on its rota
+        if (rs != null) return !Rota.works(rs);
         return !of(village, f).openOn(Calendar.dow(day));
     }
 

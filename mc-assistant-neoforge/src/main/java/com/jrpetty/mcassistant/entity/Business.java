@@ -390,6 +390,9 @@ public final class Business {
         }
     }
 
+    /** [rota] Its staff rota (Rota): set by its owner or manager, or built by a folk owner's character; null for none. */
+    @Nullable public Rota rota;
+
     /** [featlife] Its own hours, if any were chosen; else the type's. */
     @Nullable Hours hours;
 
@@ -565,6 +568,7 @@ public final class Business {
             t.putIntArray("hrs", hours.save());
             t.putString("hrw", hours.why());
         }
+        if (rota != null && (rota.active() || !rota.templates.isEmpty())) t.put("rota", rota.save());   // [rota]
         return t;
     }
 
@@ -609,6 +613,7 @@ public final class Business {
         for (String k : cs.getAllKeys()) b.cards.put(k, cs.getString(k));
         int[] hrs = t.getIntArray("hrs");                              // [featlife] its hours
         if (hrs.length == 3) b.setHours(new Hours(hrs[0], hrs[1], hrs[2], t.getString("hrw")));
+        if (t.contains("rota")) b.rota = Rota.load(t.getCompound("rota"));   // [rota]
         return b;
     }
 

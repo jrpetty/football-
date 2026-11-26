@@ -70,16 +70,69 @@ public final class CorePage implements PlayerLife.Page {
         for (VillageFolkEntity f : Enterprise.hands(village, b)) on.add(f.displayNameCap());
         for (ServerPlayer h : PlayerHiring.hands(level, "firm:" + b.id)) on.add(h.getGameProfile().getName());
         page.text(on.isEmpty() ? "Nobody at work here just now." : String.join(", ", on) + ".", 4);
+        rota(level, p, village, b, page);                                   // [rota] who's on today, the week's rota, and a hand's own
         // A player hand of it: their own work here.
         if (WorkLife.employerKey(p).equals("firm:" + b.id)) {
             page.box("Your work here", List.of(PlayerJobs.line(p)), 1);
             page.buttons().button("My job", "myjob", null);
+            handRota(level, p, village, b, page);
         }
         page.heading("Ways on");
         String no = BusinessOffers.whyNot(level, village, b, p.getUUID(), Business.WHOLE);
         boolean hiring = !PlayerHiring.postsOf(village, "firm:" + b.id).isEmpty();
         page.buttons().button("Make an offer", "offer", LifePage.args("firm", b.id), no.isEmpty(), no.isEmpty() ? "" : "Not possible: " + no)
             .button("Ask about work", "work", null, hiring, "It isn't hiring players just now");
+    }
+
+    /** [rota] The staff noticeboard: who's on today and this week's rota, for anyone who opens the Core. */
+    static void rota(ServerLevel level, ServerPlayer p, UUID village, Business b, LifePage page) {
+        long day = level.getDayTime() / 24000L;
+        Rota r = Rota.of(village, b);
+        if (r == null) return;
+        page.heading("Who's on today");
+        List<String> today = Rota.onToday(village, b, day);
+        page.text(today.isEmpty() ? "Nobody is rostered today." : String.join(" · ", today), today.isEmpty() ? 2 : 4);
+        List<String> week = new ArrayList<>();
+        for (Rota.Line l : r.lines.values()) week.add(l.name + ": " + RotaPage.gridLine(l));
+        week.add("Set by " + (r.setBy.isEmpty() ? "the owner" : r.setBy) + ".");
+        page.box("The rota this week", week, 4);
+    }
+
+    /** [rota] A player hand's own: its shifts, clocking in and out, a day off or a swap asked for. */
+    static void handRota(ServerLevel level, ServerPlayer p, UUID village, Business b, LifePage page) {
+        Rota r = b.rota != null && b.rota.active() && !b.rota.auto ? b.rota : null;
+        if (r == null || !r.lines.containsKey(p.getUUID())) {
+            page.text(r == null ? "It keeps no rota: you work its opening hours." : "You're not on its rota yet: you work its opening hours till the manager adds you.", 4);
+            return;
+        }
+        long day = level.getDayTime() / 24000L;
+        List<String> mine = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            int[] s = r.slotsOn(p.getUUID(), day + i);
+            mine.add(Calendar.name(day + i) + (i == 0 ? " (today)" : "") + ": " + (s == null ? "Off" : Rota.words(s)));
+        }
+        page.box("Your shifts", mine, 1);
+        int[] s = r.slotsOn(p.getUUID(), day);
+        long[] t = null;
+        for (long[] x : r.clock.getOrDefault(p.getUUID(), List.of())) if (x[0] == day) t = x;
+        page.buttons().button("Clock in", "clockin", null, t == null, "Clocked in already at " + (t == null ? "" : Rota.time(t[1]))).primary()
+            .button("Clock out", "clockout", null, t != null, "Clock in first");
+        page.text(s != null && Rota.works(s) ? "Today: " + Rota.words(s) + ". Clock in when you start: a late start shows on your timesheet." : "Today is your day off.", 4);
+        List<String> ts = Rota.timesheet(r, p.getUUID(), 3);
+        if (!ts.isEmpty()) page.box("Your timesheet", ts, 4);
+        List<String> dv = new ArrayList<>(), dl = new ArrayList<>();
+        for (int i = 1; i <= 7; i++) {
+            int[] x = r.slotsOn(p.getUUID(), day + i);
+            if (x != null && Rota.works(x)) { dv.add(Long.toString(day + i)); dl.add(Calendar.name(day + i) + " " + Rota.words(x)); }
+        }
+        if (dv.isEmpty()) { page.text("No shifts in the coming week to ask about.", 4); return; }
+        page.choice("rday", "Which shift", dv.toArray(new String[0]), dl.toArray(new String[0]), dv.get(0));
+        List<String> wv = new ArrayList<>(), wl = new ArrayList<>();
+        for (Rota.Line l : r.lines.values()) if (!l.who.equals(p.getUUID()) && !l.owner) { wv.add(l.who.toString()); wl.add(l.name); }
+        if (!wv.isEmpty()) page.choice("rwith", "Swap with", wv.toArray(new String[0]), wl.toArray(new String[0]), wv.get(0));
+        page.buttons().button("Ask for the day off", "askoff", null)
+            .button("Ask for a swap", "askswap", null, !wv.isEmpty(), "Nobody else on the rota to swap with");
+        page.text("The owner or manager decides; you'll get word. Till then, the shift stands.", 4);
     }
 
     static String dayName(int i) {
@@ -117,6 +170,22 @@ public final class CorePage implements PlayerLife.Page {
             case "offer" -> { PlayerLife.open(p, "offer", LifePage.args("firm", args.getString("firm"))); return "#open:"; }
             case "work" -> { PlayerLife.open(p, "jobs", LifePage.args("tab", "adverts")); return "#open:"; }
             case "myjob" -> { PlayerLife.open(p, "jobs", LifePage.args("tab", "job")); return "#open:"; }
+            case "clockin", "clockout", "askoff", "askswap" -> {                // [rota] a hand's own
+                UUID village;
+                try { village = UUID.fromString(c.args.getString("v")); } catch (IllegalArgumentException e) { return "!This business has shut."; }
+                String key = c.args.getString("k");
+                Business b = key.startsWith("firm:") ? Businesses.of(village, key.substring(5)) : null;
+                if (b == null || !WorkLife.employerKey(p).equals("firm:" + b.id)) return "!You don't work here.";
+                if (action.startsWith("clock")) return Rota.clock(p, village, b, action.equals("clockin"));
+                CompoundTag f = args.getCompound("f");
+                long d;
+                try { d = Long.parseLong(f.getString("rday")); } catch (NumberFormatException e) { return "!Pick a shift first."; }
+                if (action.equals("askoff")) return Rota.ask(village, b, p.getUUID(), p.getGameProfile().getName(), true, d, "off", null, "", "asked at the Core");
+                UUID with;
+                try { with = UUID.fromString(f.getString("rwith")); } catch (IllegalArgumentException e) { return "!Pick somebody to swap with."; }
+                Rota.Line wl = b.rota == null ? null : b.rota.lines.get(with);
+                return Rota.ask(village, b, p.getUUID(), p.getGameProfile().getName(), true, d, "swap", with, wl == null ? "a colleague" : wl.name, "a swap");
+            }
             default -> { return null; }
         }
     }

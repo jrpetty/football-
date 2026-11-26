@@ -138,12 +138,20 @@ public class LifeScreen extends Screen {
             "Your Player AI Assistant: get one, talk to it, give it orders (or press Y).", com.jrpetty.mcassistant.client.pa.PaScreenOpen::open);
         // the tabs
         int tx = left + PAD;
-        for (Tag e : data.getList("tabs", Tag.TAG_COMPOUND)) {
+        // [rota] Many tabs (a business has ten): the padding drawn in, then the labels cut, to keep them inside the panel.
+        net.minecraft.nbt.ListTag tabList = data.getList("tabs", Tag.TAG_COMPOUND);
+        int tabAvail = w - PAD * 2, tabText = 0, tabPad = 14, tabN = tabList.size();
+        for (Tag e : tabList) tabText += font.width(((CompoundTag) e).getString("l"));
+        while (tabN > 0 && tabPad > 6 && tabText + tabN * tabPad + (tabN - 1) * 2 > tabAvail) tabPad -= 2;
+        int tabMax = tabN > 0 && tabText + tabN * tabPad + (tabN - 1) * 2 > tabAvail ? Math.max(12, (tabAvail - tabN * tabPad - (tabN - 1) * 2) / tabN) : Integer.MAX_VALUE;
+        for (Tag e : tabList) {
             CompoundTag t = (CompoundTag) e;
-            int tw = font.width(t.getString("l")) + 14;
+            String label = t.getString("l");
+            if (font.width(label) > tabMax) label = font.plainSubstrByWidth(label, tabMax);
+            int tw = font.width(label) + tabPad;
             boolean over = in(mx, my, tx, top + HEAD + 3, tw, TAB_H);
             UiStyle.topTab(g, tx, top + HEAD + 3, tw, TAB_H, UiStyle.State.of(true, t.getBoolean("on"), over));
-            g.drawString(font, t.getString("l"), tx + 7, top + HEAD + 7, UiStyle.TEXT, false);
+            g.drawString(font, label, tx + tabPad / 2, top + HEAD + 7, UiStyle.TEXT, false);
             String id = t.getString("id");
             zone(tx, top + HEAD + 3, tw, TAB_H, () -> send("tab", LifePageArgs.of("tab", id), false));
             tx += tw + 2;
