@@ -296,7 +296,7 @@ public final class Assize {
                 if (p != null && Restraint.restrained(p)) Restraint.pullTo(p, s.dock);
                 if (now < s.nextAt) return;
                 if (s.next >= s.lines.size()) {
-                    s.phase = c.player && c.defence.isEmpty() && !c.plea.equals("guilty") ? Phase.DEFENCE : Phase.JURY;
+                    s.phase = Phase.DEFENCE;
                     s.waitFrom = now;
                     return;
                 }
@@ -312,7 +312,7 @@ public final class Assize {
                 s.nextAt = now + Justice.pause(LINE);
             }
             case DEFENCE -> {
-                if (!s.asked && p != null) {
+                if (!s.asked && p != null && c.player && c.defence.isEmpty() && !c.plea.equals("guilty")) {
                     s.asked = true;
                     say(level, s, c, s.judge, s.judgeName, c.accusedName + ", what do you say to the charge?");
                     Justice.notice(p, "The court asks for your defence", "The judge asks what you say to the charge of " + c.chargeWords() + ".",

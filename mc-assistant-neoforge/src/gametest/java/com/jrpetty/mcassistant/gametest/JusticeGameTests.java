@@ -222,8 +222,7 @@ public class JusticeGameTests {
             burgle(level, t, p);
             Justice.JCase c = latest(p.getUUID(), Justice.Charge.BURGLARY);
             helper.assertTrue(c != null && c.witnesses.isEmpty(), "a case, with no witness");
-            Justice.reportNowForTests(t.id());
-            for (int i = 0; i < 4; i++) Justice.roundForTests(level, t.v());
+            for (int i = 0; i < 4; i++) { Justice.reportNowForTests(t.id()); Justice.roundForTests(level, t.v()); }
             log("ju02", p.getUUID());
             Kit.noLeftoverPlayers(level);
             helper.assertTrue(c.stage == Justice.Stage.UNSOLVED, "unsolved: " + c.stage);
@@ -550,8 +549,7 @@ public class JusticeGameTests {
             burgle(level, t, p);
             Justice.holdTonguesForTests(t.id());
             kill(w, p);
-            Justice.reportNowForTests(t.id());
-            for (int i = 0; i < 4; i++) Justice.roundForTests(level, t.v());
+            for (int i = 0; i < 4; i++) { Justice.reportNowForTests(t.id()); Justice.roundForTests(level, t.v()); }
             Justice.JCase b = latest(p.getUUID(), Justice.Charge.BURGLARY);
             Justice.JCase k = null;
             for (Justice.JCase c : Justice.against(p.getUUID())) if (c.charge.killing()) k = c;
@@ -610,6 +608,7 @@ public class JusticeGameTests {
         Jail.jailhouseForTests(level, t.v(), t.heart().offset(22, 0, 0));
         VillageFolkEntity w = t.folk().get(0), h = t.folk().get(1);
         h.moveTo(t.heart().getX() + 30, t.heart().getY(), t.heart().getZ() + 3);   // away at first: it does not see the burglary
+        t.guard().moveTo(t.heart().getX() - 40, t.heart().getY(), t.heart().getZ() + 25);   // nor the guard
         Kit.noLeftoverPlayers(level);
         ServerPlayer p = player(helper, w.blockPosition().offset(0, 0, -2), 0);
         int[] phase = { 0 };

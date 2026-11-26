@@ -367,8 +367,8 @@ final class Arrests {
         if (d > 1.6) {
             walk(g, to, 0.55);
             g.getLookControl().setLookAt(p, 20.0F, 20.0F);
-            if (now - t.since > Justice.pause(7200)) {                      // the way blocked: held where it stands
-                Jail.lockUp(level, v, p.getUUID(), c, null, g);
+            if (now - t.since > Math.max(3600, Justice.pause(7200))) {      // the way blocked: held where it stands
+                Jail.lockUp(level, v, p.getUUID(), c, Jail.here(p), g);
                 end(g, p);
             }
             return;

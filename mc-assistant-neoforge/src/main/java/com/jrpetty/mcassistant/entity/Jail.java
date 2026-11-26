@@ -212,6 +212,11 @@ public final class Jail {
         return new Spot(Kind.SQUARE, ground(level, sq), null, ground(level, sq), 0, stocks != null ? "the stocks on the square" : "the square, under the watch's eye");
     }
 
+    /** Held where it stands (the way to the cells blocked): under the watch's eye, there. */
+    static Spot here(ServerPlayer p) {
+        return new Spot(Kind.SQUARE, p.blockPosition(), null, p.blockPosition(), 0, "the watch's custody, where you stand");
+    }
+
     private static BlockPos ground(ServerLevel level, BlockPos p) {
         BlockPos at = p;
         for (int i = 0; i < 6 && !level.getBlockState(at).isAir(); i++) at = at.above();
@@ -666,7 +671,10 @@ public final class Jail {
 
     public static void lockUpForTests(ServerLevel level, Villages.Village v, ServerPlayer p, int caseId) {
         JCase c = Justice.get(caseId);
-        if (c != null) lockUp(level, v, p.getUUID(), c, null, null);
+        if (c == null) return;
+        Spot s = spot(level, v, p.getUUID());
+        if (s != null) p.teleportTo(s.inside.getX() + 0.5, s.inside.getY(), s.inside.getZ() + 0.5);   // as the guard would have walked it in
+        lockUp(level, v, p.getUUID(), c, s, null);
     }
 
     public static void sentenceForTests(ServerLevel level, Villages.Village v, ServerPlayer p, int caseId, double seconds) {
