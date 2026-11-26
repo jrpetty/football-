@@ -54,6 +54,9 @@ public final class Witness {
         HELPED(5, "bring {v} {d}", "brought {v} {d}"),
         CLEARED(5, "clear the monsters off for {v}", "cleared the monsters off for {v}"),
         HIRED(3, "hire {v} for {d}", "hired {v} for {d}"),
+        WED(6, "marry {v} {d}", "married {v} {d}"),
+        PAID_TAXES(3, "pay your taxes in full", "paid your taxes in full"),
+        SERVED_WATCH(5, "take the watch's oath before {v}", "took the watch's oath before {v}"),
         PRAISED(2, "tell {v} they were doing a fine job", "told {v} they were doing a fine job"),
         /** A word passed: contact, and nothing worth repeating. */
         TALKED(0, "stop for a word with {v}", "stopped for a word with {v}");

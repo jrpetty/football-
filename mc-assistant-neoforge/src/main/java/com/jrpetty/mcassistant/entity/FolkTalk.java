@@ -110,6 +110,9 @@ public final class FolkTalk {
             return bye(f, p);
         }
         f.startTalking(p);
+        // [featfolk] The courting buttons, the proposal, a baby, its name: said in words (PlayerFamily).
+        String family = typed || topic == TalkTopic.SAY ? PlayerFamily.talk(f, p, text) : null;
+        if (family != null) return manner(f, family);
         // [war-after] A prisoner of war; the watch on its prisoners and bounties; an outlaw's dealings, and the folk afraid of it.
         String afterWar = AfterWar.talk(f, p, topic, text);
         if (afterWar != null) return manner(f, afterWar);
@@ -383,6 +386,7 @@ public final class FolkTalk {
         if (!f.isBaby()) sb.append(TradeWorld.contextFlags(f));               // [trade-world] leaving, harbourmaster, harbour
         sb.append(" colour=").append(Integer.toHexString(FolkIdentity.rgb(f)));   // [ui] its colour, for the talk screen's band
         if (Favourites.has(p.getUUID(), f.getUUID())) sb.append(" fav");     // [ui] on the player's favourites
+        sb.append(PlayerFamily.contextFlags(f, p));                           // [featfolk] courtable, courting, proposable, spouse, naming
         return sb.toString();
     }
 
@@ -734,6 +738,7 @@ public final class FolkTalk {
             if (r.nextInt(3) == 0) break;
             return pick(r, "Hello again, " + you + "! ", you + "! ") + "Thank you again — you " + did + ".";
         }
+        if (PlayerFamily.isSpouse(f, p)) return PlayerFamily.spouseLine(f, p);   // [featfolk] its spouse, home
         // [featfolk] What it saw of you itself, or (said as theirs) what a witness told it: one greeting in three.
         if (r.nextInt(3) == 0) {
             String seen = Witness.aboutYou(f, p);
@@ -1362,6 +1367,7 @@ public final class FolkTalk {
         op.giftsToday++;
         me.feelFor(p.getUUID(), you, delta);
         me.gotAGift(day, you);
+        PlayerFamily.gifted(f, p);                            // [featfolk] courting: a gift counted
         if (delta >= 5) {                                     // [featfolk] a gift worth the name: it remembers, and so do onlookers
             String given = article(what.toLowerCase(Locale.ROOT));
             Witness.dealt(f, p, Witness.Kind.GIFT, given);

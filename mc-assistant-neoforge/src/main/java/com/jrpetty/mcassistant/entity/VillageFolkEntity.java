@@ -2664,6 +2664,9 @@ public class VillageFolkEntity extends AssistantEntity {
         childhood();
     }
 
+    /** [featfolk] This bed its own from now (a spouse moving into a player's home: PlayerFamily). */
+    public void moveIntoBed(BlockPos pos) { takeBed(pos); }
+
     /** [tidy] Tests only: this bed its own, as though it had lain down in it. */
     public void takeBedForTests(BlockPos pos) { takeBed(pos); }
 
@@ -3536,6 +3539,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (Militia.muster(this)) return;               // [war-prep] a morning of the war: the militia musters and drills
+        if (WeddingDecor.dressing(this)) return;        // [featfolk] dressing the wedding's place (or taking it down): the day waits
         if (lines.retired()) {                          // [featfolk] retired: its trade handed down, its days its own (Lineage)
             if (!(level() instanceof net.minecraft.server.level.ServerLevel old) || level().isNight() || isSleeping()) {
                 if (!isSleeping() && peekJob() == null) bedtime();

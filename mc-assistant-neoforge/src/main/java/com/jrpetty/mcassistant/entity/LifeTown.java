@@ -43,6 +43,12 @@ public final class LifeTown implements PlayerLife.Page {
             page.text("A friend of the town may live here. Talk with folk each day and give them gifts: how warm they are to you is"
                 + " what it reads (" + view.score() + " now; a friend at 12).", 4);
         }
+        // [featfolk] The town's respect, named, from its witnesses, and why; and the player's own family here.
+        String rating = TownOpinion.ratingOf(id, p.getUUID(), level.getGameTime());
+        page.bar("Respect: " + rating, Math.max(0, Math.min(1, (view.score() + 100) / 200.0)), (view.score() > 0 ? "+" : "") + view.score());
+        TownOpinion.View seen = TownOpinion.of(id, p.getUUID());
+        for (int i = 0; i < Math.min(3, seen.reasons().size()); i++) page.text("• " + TownOpinion.line(seen.reasons().get(i)), 4);
+        PlayerFamily.lifeRows(p, page, id);
         int[] earned = Earnings.earned(p, id, day, 7);
         page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get()), "You carry " + PlayerLife.coins(Market.coinsHeld(p)),
                 "Earned here today " + PlayerLife.coins(earned.length > 0 ? earned[0] : 0) + ", this week " + PlayerLife.coins(Earnings.sum(earned))

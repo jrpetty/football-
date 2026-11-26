@@ -70,6 +70,7 @@ public final class FolkEvents {
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.tickCount % 40 != 0) return;
+        com.jrpetty.mcassistant.entity.PlayerFamily.tick((ServerLevel) player.level(), player);   // [featfolk] the night, the news, the crib, the birth
         Villages.Village v = Villages.nearest(player.level(), player.blockPosition(), 64);
         UUID now = v == null ? null : v.id();
         UUID was = IN.get(player.getUUID());

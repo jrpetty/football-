@@ -646,6 +646,7 @@ public final class TaxBook {
             me.putInt("fee", Math.max(0, me.getInt("fee") - paid));
         }
         CivicLand.changed();
+        if (owed - paid <= 0) Witness.seen(level, p, Witness.Kind.PAID_TAXES, "", null, 2);   // [featfolk] those who saw it paid
         Standing.stir(village, p.getUUID());
         return owed - paid <= 0 ? "That's your taxes paid, " + coins(paid) + ". " + town + " thanks you."
             : coins(paid) + " paid. You still owe " + coins(owed - paid) + ".";

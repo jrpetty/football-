@@ -193,6 +193,7 @@ public final class Assemblies {
     public static void tick(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         long now = level.getGameTime();
+        WeddingDecor.tick(level, v);                     // [featfolk] a wedding's place dressed the afternoon before, and taken down after
         Assembly a = NOW.get(id);
         if (a != null) {
             step(level, a, now);
@@ -264,6 +265,7 @@ public final class Assemblies {
     static void step(ServerLevel level, Assembly a, long now) {
         if (a.lastStep == now) return;
         a.lastStep = now;
+        if (a.kind == Kind.WEDDING) WeddingDecor.step(level, a, now);   // [featfolk] the dressing finished, the music, the walk out
         RandomSource r = level.getRandom();
         switch (a.phase) {
             case CALL -> {
@@ -298,6 +300,7 @@ public final class Assemblies {
                     FireworkShows.afterSpeech(level, a);          // [fireworks] the vows said, the year read: the display, if it has one
                     a.phase = a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING
                         || a.kind == Kind.KNIGHTING                               // [civic-land] the cheers and the rockets
+                        || a.kind == Kind.WEDDING                                 // [featfolk] the reception
                         || a.kind == Kind.FESTIVAL && Festivals.mingles(a)        // [batchB] the dance, the song, the meal
                         ? Phase.MINGLE : Phase.CLOSE;
                     a.phaseAt = now;
@@ -419,6 +422,9 @@ public final class Assemblies {
         if (a.kind == Kind.WEDDING) {
             Gatherings.Wedding w = Gatherings.wedding(a.village);
             if (w != null) Villages.tell(a.village, day, w.names() + " were wed");
+            if (w != null && level.getPlayerByUUID(w.b()) != null) PlayerFamily.wed(level, a.village, w.a(), w.b());   // [featfolk] a player's wedding
+            else if (w != null && !(level.getEntity(w.b()) instanceof VillageFolkEntity)
+                    && !PlayerFamily.get(a.village, w.b(), "engaged").isEmpty()) PlayerFamily.wed(level, a.village, w.a(), w.b());
             Gatherings.wed(a.village);
         }
         if (a.kind == Kind.OPENING) {
@@ -809,6 +815,33 @@ public final class Assemblies {
         return a;
     }
 
+    /**
+     * [featfolk] Where a wedding is held, and which way its aisle runs: {focus, facing}. The chapel (its door) first, now a
+     * town with one marries in it; else in the courtyard before the board, once it is laid (the couple at the board, the
+     * village down the aisle between the benches); else on the square. A faith that marries elsewhere (Beliefs) has it there.
+     */
+    static Object[] weddingSite(ServerLevel level, Villages.Village v, Gatherings.Wedding w) {
+        UUID id = v.id();
+        BlockPos chapel = Villages.builtAt(id, "chapel");
+        Direction face = Direction.SOUTH;
+        BlockPos at = v.centre().relative(Direction.NORTH, 3);
+        BlockPos lectern = VillageBoards.lectern(id);
+        Direction boardFacing = VillageBoards.facingOf(id);
+        boolean inChapel = false;
+        if (chapel != null) {
+            for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
+                if (b.structure().equals("chapel")) { face = b.facing(); at = b.anchor().relative(face, 6); inChapel = true; break; }
+            }
+        }
+        if (!inChapel && Villages.builtAt(id, "court") != null && lectern != null && boardFacing != null) {
+            at = lectern;
+            face = boardFacing;
+        }
+        BlockPos rite = Beliefs.weddingAt(level, v, w);                     // [culture2] where its faith marries
+        if (rite != null) at = rite;
+        return new Object[]{ at, face };
+    }
+
     @Nullable
     private static Assembly evening(ServerLevel level, Villages.Village v, Gatherings.Kind tonight, long day) {
         UUID id = v.id();
@@ -816,24 +849,9 @@ public final class Assemblies {
             case WEDDING -> {
                 Gatherings.Wedding w = Gatherings.wedding(id);
                 if (w == null || held(id, Kind.WEDDING, day)) yield null;
-                BlockPos chapel = Villages.builtAt(id, "chapel");
-                Direction face = Direction.SOUTH;
-                BlockPos at = v.centre().relative(Direction.NORTH, 3);
-                // In the courtyard before the board, once it is laid: the couple at the board, the
-                // village down the aisle between the benches. Else at the chapel, else on the square.
-                BlockPos lectern = VillageBoards.lectern(id);
-                Direction boardFacing = VillageBoards.facingOf(id);
-                if (Villages.builtAt(id, "court") != null && lectern != null && boardFacing != null) {
-                    at = lectern;
-                    face = boardFacing;
-                } else if (chapel != null) {
-                    for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
-                        if (b.structure().equals("chapel")) { face = b.facing(); at = b.anchor().relative(face, 6); break; }
-                    }
-                }
-                BlockPos rite = Beliefs.weddingAt(level, v, w);                     // [culture2] where its faith marries
-                if (rite != null) at = rite;
-                Assembly a = new Assembly(id, Kind.WEDDING, w.names(), day, at, face, Layout.AISLE);
+                Object[] site = weddingSite(level, v, w);
+                WeddingDecor.plan(level, v, w);                                     // [featfolk] dressed for what the town has
+                Assembly a = new Assembly(id, Kind.WEDDING, w.names(), day, (BlockPos) site[0], (Direction) site[1], Layout.AISLE);
                 a.principals.add(w.a());
                 a.principals.add(w.b());
                 yield a;
@@ -1010,7 +1028,12 @@ public final class Assemblies {
                     s.add(new Line(a.principals.get(0), FolkTalk.pick(r, "I will.", "With all my heart."), ' ', null));
                     s.add(new Line(a.principals.get(1), FolkTalk.pick(r, "I will!", "I do."), ' ', null));
                 }
+                // [featfolk] The rings, then the kiss, the petals and the bell (WeddingDecor).
+                s.add(new Line(null, FolkTalk.pick(r, "The rings, if you please.", "Rings. Don't drop them.", "The rings. Mind the step.",
+                    "Now the rings. Somebody has the rings.", "The rings. Slowly.", "Rings, then."), '~', () -> WeddingDecor.rings(level, a)));
                 s.add(new Line(null, "Then before all of " + name + " — you are wed!", '!', null));
+                s.add(new Line(null, FolkTalk.pick(r, "You may kiss. Go on.", "Kiss, then. We're all waiting.", "You may kiss. Briefly. There are children.",
+                    "Seal it, then.", "Go on. Everyone's looking anyway.", "A kiss, and we can eat."), '!', () -> WeddingDecor.kiss(level, a)));
                 Quilts.weddingGift(level, a, s, r);                    // [leisure] the town's gift: a patchwork quilt for their bed
             }
             case VIGIL -> {
@@ -1173,6 +1196,7 @@ public final class Assemblies {
             case COUNCIL -> council(level, v, day);
             case ELECTION -> election(level, v, day);
             case FEAST -> new Assembly(v.id(), Kind.FEAST, "", day, v.centre(), Direction.SOUTH, Layout.RING);
+            case WEDDING -> evening(level, v, Gatherings.Kind.WEDDING, day);              // [featfolk] the tests
             case FOUNDING -> FoundingDay.assembly(level, v, day);
             case FESTIVAL -> Festivals.calledNow(level, v, day);                           // [batchB] Festivals.callNow
             case REFERENDUM -> Referendums.assembly(level, v, day);   // [civic]
