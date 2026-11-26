@@ -171,6 +171,29 @@ public final class Tills {
         }
     }
 
+    /** A firm of the town's folk gets a kiosk beside its Core when the Core is first set (once: its owner may move it). Its
+     *  hands serve at it when they're by; with nobody by, customers serve themselves. A player's firm sets its own till. */
+    static void fitFirm(ServerLevel level, UUID village, String key, BlockPos core) {
+        if ("1".equals(Ledger.note(village, "till/" + key))) return;
+        TillShops.Source src = TillShops.of(level, village, key);
+        if (!(src instanceof TillShops.Firm f) || f.b.owners.stream().anyMatch(s -> s.holder() == Business.Holder.PLAYER)) return;
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockPos at = core.relative(d);
+            if (!level.isLoaded(at) || !level.getBlockState(at).isAir() || !level.getBlockState(at.above()).isAir()) continue;
+            if (!level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) continue;
+            Villages.Village v = Villages.get(village);
+            if (v == null || !TownBlocks.mayPlace(level, v, at, TownBlocks.Why.RENOVATE)) continue;
+            level.setBlock(at, TillItems.KIOSK.get().defaultBlockState().setValue(TillBlock.FACING, d), 3);
+            if (level.getBlockEntity(at) instanceof TillBlockEntity be) {
+                be.bind(village, key, null);
+                be.setSelfServe(true);
+                known(be);
+                Ledger.note(village, "till/" + key, "1");
+            }
+            return;
+        }
+    }
+
     // ------------------------------------------------------------------ a player's screen
 
     static final class Session {

@@ -224,6 +224,7 @@ public final class CoreSites extends SavedData {
         s.brokenDay = -1;
         changed();
         refresh(level, s);
+        if (z.key().startsWith("firm:")) com.jrpetty.mcassistant.Guard.run("firm kiosk", () -> Tills.fitFirm(level, z.village(), z.key(), spot));   // [till]
         return s;
     }
 
