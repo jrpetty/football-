@@ -4068,6 +4068,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      */
     public static boolean shallowWater(Level level, BlockPos p) {
         if (!level.getFluidState(p).is(net.minecraft.tags.FluidTags.WATER) || !level.getFluidState(p.above()).isEmpty()) return false;
+        if (MineLift.sumpAt(level, p)) return false;                   // [tp48] the pool at the foot of a mine's cage well: no puddle
         BlockPos b = p.below();
         return level.getFluidState(b).isEmpty() && level.getBlockState(b).isFaceSturdy(level, b, net.minecraft.core.Direction.UP);
     }
