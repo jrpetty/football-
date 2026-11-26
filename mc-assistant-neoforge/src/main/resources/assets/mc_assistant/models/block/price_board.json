@@ -1,0 +1,247 @@
+{
+ "parent": "minecraft:block/block",
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "minecraft:block/dark_oak_planks",
+  "wood": "minecraft:block/dark_oak_planks",
+  "board": "minecraft:block/black_concrete",
+  "chalk": "minecraft:block/white_concrete",
+  "brass": "minecraft:block/gold_block"
+ },
+ "elements": [
+  {
+   "name": "leg_l",
+   "from": [
+    1.5,
+    0,
+    7.5
+   ],
+   "to": [
+    3,
+    15,
+    8.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wood"
+    },
+    "south": {
+     "texture": "#wood"
+    },
+    "east": {
+     "texture": "#wood"
+    },
+    "west": {
+     "texture": "#wood"
+    },
+    "up": {
+     "texture": "#wood"
+    },
+    "down": {
+     "texture": "#wood"
+    }
+   }
+  },
+  {
+   "name": "leg_r",
+   "from": [
+    13,
+    0,
+    7.5
+   ],
+   "to": [
+    14.5,
+    15,
+    8.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wood"
+    },
+    "south": {
+     "texture": "#wood"
+    },
+    "east": {
+     "texture": "#wood"
+    },
+    "west": {
+     "texture": "#wood"
+    },
+    "up": {
+     "texture": "#wood"
+    },
+    "down": {
+     "texture": "#wood"
+    }
+   }
+  },
+  {
+   "name": "frame",
+   "from": [
+    1,
+    4,
+    7.25
+   ],
+   "to": [
+    15,
+    16,
+    8.75
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wood"
+    },
+    "south": {
+     "texture": "#wood"
+    },
+    "east": {
+     "texture": "#wood"
+    },
+    "west": {
+     "texture": "#wood"
+    },
+    "up": {
+     "texture": "#wood"
+    },
+    "down": {
+     "texture": "#wood"
+    }
+   }
+  },
+  {
+   "name": "board_n",
+   "from": [
+    2,
+    5,
+    7.15
+   ],
+   "to": [
+    14,
+    15,
+    7.25
+   ],
+   "faces": {
+    "north": {
+     "texture": "#board"
+    }
+   }
+  },
+  {
+   "name": "board_s",
+   "from": [
+    2,
+    5,
+    8.75
+   ],
+   "to": [
+    14,
+    15,
+    8.85
+   ],
+   "faces": {
+    "south": {
+     "texture": "#board"
+    }
+   }
+  },
+  {
+   "name": "ledge",
+   "from": [
+    2,
+    4,
+    6.5
+   ],
+   "to": [
+    14,
+    4.6,
+    7.25
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wood"
+    },
+    "south": {
+     "texture": "#wood"
+    },
+    "east": {
+     "texture": "#wood"
+    },
+    "west": {
+     "texture": "#wood"
+    },
+    "up": {
+     "texture": "#wood"
+    },
+    "down": {
+     "texture": "#wood"
+    }
+   }
+  },
+  {
+   "name": "chalk",
+   "from": [
+    10,
+    4.6,
+    6.6
+   ],
+   "to": [
+    12,
+    5.1,
+    7.1
+   ],
+   "faces": {
+    "north": {
+     "texture": "#chalk"
+    },
+    "south": {
+     "texture": "#chalk"
+    },
+    "east": {
+     "texture": "#chalk"
+    },
+    "west": {
+     "texture": "#chalk"
+    },
+    "up": {
+     "texture": "#chalk"
+    },
+    "down": {
+     "texture": "#chalk"
+    }
+   }
+  },
+  {
+   "name": "cap",
+   "from": [
+    0.5,
+    15.5,
+    7
+   ],
+   "to": [
+    15.5,
+    16,
+    9
+   ],
+   "faces": {
+    "north": {
+     "texture": "#brass"
+    },
+    "south": {
+     "texture": "#brass"
+    },
+    "east": {
+     "texture": "#brass"
+    },
+    "west": {
+     "texture": "#brass"
+    },
+    "up": {
+     "texture": "#brass"
+    },
+    "down": {
+     "texture": "#brass"
+    }
+   }
+  }
+ ]
+}

@@ -178,5 +178,10 @@ public final class BaseWorth {
         "mc_assistant:working_model 3.0 C",                          // [tech-tree] the scholars' model: a few makings, and the work
         "mc_assistant:citizen_papers 0.3 C",                         // [wpa] its paper and ink; issued by the Town Hall, never sold
         "mc_assistant:deed 0.3 C",                                   // [recipes] its paper and ink; written by the register with a purchase, never sold
+        // [till] The till: two iron bars, a chest, redstone and a nugget for its bell, and the joiner's afternoon; the kiosk a
+        // till in a glazed stand; the fittings their planks and slabs, the case its glass, the crate its hay, the larder its bars.
+        "mc_assistant:till 6.0 C", "mc_assistant:self_service_kiosk 8.0 C", "mc_assistant:display_shelf 1.2 C",
+        "mc_assistant:display_case 2.5 C", "mc_assistant:produce_crate 1.5 C", "mc_assistant:price_board 0.8 C",
+        "mc_assistant:basket_stand 0.6 C", "mc_assistant:larder 2.6 C", "mc_assistant:clothes_rack 1.0 C",
     };
 }

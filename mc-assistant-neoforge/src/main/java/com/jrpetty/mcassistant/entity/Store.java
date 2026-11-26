@@ -159,6 +159,7 @@ public final class Store {
             if (counters) for (BlockPos p : l.counters()) add(level, p, out);
             for (BlockPos p : l.stockroom()) add(level, p, out);
         }
+        if (counters) for (BlockPos p : Fittings.townShelves(village)) add(level, p, out);   // [till] the shop floor's shelves and cases
         return out;
     }
 

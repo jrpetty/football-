@@ -665,5 +665,14 @@
   "talk.mc_assistant.dinner_yes": "Accept dinner",
   "talk.mc_assistant.dinner_yes.tip": "Say yes to their dinner invitation; be at their house at noon on the day (it's on your planner)",
   "talk.mc_assistant.dinner_no": "Decline dinner",
-  "talk.mc_assistant.dinner_no.tip": "Say no to their dinner invitation. They take it well enough, and may ask another week"
+  "talk.mc_assistant.dinner_no.tip": "Say no to their dinner invitation. They take it well enough, and may ask another week",
+  "block.mc_assistant.till": "Till",
+  "block.mc_assistant.self_service_kiosk": "Self-Service Kiosk",
+  "block.mc_assistant.display_shelf": "Display Shelf",
+  "block.mc_assistant.display_case": "Glass Display Case",
+  "block.mc_assistant.produce_crate": "Produce Crate",
+  "block.mc_assistant.price_board": "Price Board",
+  "block.mc_assistant.basket_stand": "Basket Stand",
+  "block.mc_assistant.larder": "Larder",
+  "block.mc_assistant.clothes_rack": "Clothes Rack"
 }

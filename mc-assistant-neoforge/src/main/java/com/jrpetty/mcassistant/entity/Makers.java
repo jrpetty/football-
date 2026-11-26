@@ -235,6 +235,17 @@ public final class Makers {
                 "assistant_whistle", "ballot_box", "business_core")) {   // [recipes] the whistle, a polling place's box, a business's core
             declare(t, "the shop's workshop", PLAYERS, "Workshop.order");
         }
+        // [till] The till, the kiosk and the shop fittings: the joiners at the shop's workshop make them to a player's order
+        // (and for the furniture on the shop's own shelf); the town sets a till on each shop's and café's counter, and a
+        // business of the town's folk with coin to spare buys a fitting for its floor now and then.
+        for (String t : List.of("till", "self_service_kiosk", "display_shelf", "display_case", "produce_crate", "price_board", "basket_stand",
+                "larder", "clothes_rack")) {
+            declare(t, "the shop's workshop (the joiner at the bench)", PLAYERS, "Workshop.order");
+        }
+        declare("till", "the town's hands", "on each shop's and café's service counter, when the building is fitted out", "Tills.fitTill");
+        for (String t : List.of("display_shelf", "display_case", "produce_crate", "price_board", "larder")) {
+            declare(t, "the joiners, for a folk-run business", "when a business of the town's folk has coin to spare for its floor", "Fittings.furnish");
+        }
         declare("spectacles", "the smith (else the shop)", "for an old folk who reads and has none: the scholar, the librarian, "
             + "the storekeeper first", "Keepsakes.spectacles");                                                     // [individual]
         // [nether] The Nether runners' kit (NetherRunners.smith / tailor, from Crafts; the shop's book through Workshop.demand).

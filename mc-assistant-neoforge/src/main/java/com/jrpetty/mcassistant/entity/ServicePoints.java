@@ -282,6 +282,21 @@ public final class ServicePoints {
         return openAt(p, pos, "");
     }
 
+    /** [till] A player's own right-click on a service counter: the shop's and the café's till, if it has one (the old screen
+     *  for the rest of the counter's business: selling, shifts, orders), else the counter's screen as before. */
+    public static boolean openByHand(ServerPlayer p, BlockPos pos) {
+        if (p.level() instanceof ServerLevel level) {
+            Point point = at(level, pos);
+            BlockPos till = point != null && (point.role() == ServiceRole.SHOP || point.role() == ServiceRole.CAFE)
+                ? Tills.townTill(point.village(), point.role(), pos) : null;
+            if (till != null) {
+                Tills.openAt(p, till);
+                return true;
+            }
+        }
+        return openAt(p, pos);
+    }
+
     /** As openAt, on this tab ("" for the trade's first). */
     public static boolean openAt(ServerPlayer p, BlockPos pos, String tab) {
         if (!(p.level() instanceof ServerLevel level)) return false;
@@ -581,6 +596,14 @@ public final class ServicePoints {
             if (opened && s != null) act(p, role.id, "haggle", new CompoundTag(), s.lastNonce + 1);
             return opened;
         }
+        if (topic == TalkTopic.FOR_SALE && (role == ServiceRole.SHOP || role == ServiceRole.CAFE) && folk.level() instanceof ServerLevel level) {
+            Point point = nearest(level, village, role, folk.blockPosition());   // [till] "What's for sale?": the checkout
+            BlockPos till = point != null && point.pos().distSqr(folk.blockPosition()) <= 6 * 6 ? Tills.townTill(village, role, point.pos()) : null;
+            if (till != null) {
+                Tills.openAt(p, till);
+                return true;
+            }
+        }
         return openFor(p, folk, role, topic == TalkTopic.REPAIR ? "mend" : "");
     }
 
@@ -593,6 +616,11 @@ public final class ServicePoints {
         if (role == null || role == ServiceRole.TAVERN || role == ServiceRole.HALL) return false;
         Point point = nearest(level, village, role, keeper.blockPosition());
         if (point == null || point.pos().distSqr(keeper.blockPosition()) > 4 * 4) return false;
+        BlockPos till = role == ServiceRole.SHOP || role == ServiceRole.CAFE ? Tills.townTill(village, role, point.pos()) : null;
+        if (till != null) {
+            Tills.openAt(p, till);                                         // [till] the checkout
+            return true;
+        }
         return openFor(p, keeper, role, "");
     }
 
@@ -611,13 +639,15 @@ public final class ServicePoints {
         if (FITTED.getOrDefault(v.id(), -1L) == day) return;
         FITTED.put(v.id(), day);
         TownHallDesk.fitOut(level, v);                                      // [wpa] the Town Hall's desk, its own way
+        com.jrpetty.mcassistant.Guard.run("shop fittings bought", () -> Fittings.furnish(level, v));   // [till] folk firms furnish their floors
         for (ServiceRole role : ServiceRole.values()) {
             if (role.point != ServiceRole.Point.COUNTER || role == ServiceRole.HALL) continue;
             for (String structure : role.structures) {
                 for (Ledger.Building b : Ledger.buildings(v.id())) {
                     if (!b.structure().equals(structure) || !level.isLoaded(b.anchor())) continue;
-                    if (hasCounter(level, b)) continue;
-                    fit(level, v, b);
+                    if (hasCounter(level, b) || fit(level, v, b)) {
+                        com.jrpetty.mcassistant.Guard.run("till fitted", () -> Tills.fitTill(level, v, b, role));   // [till] a till on its counter
+                    }
                 }
             }
         }

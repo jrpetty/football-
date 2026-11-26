@@ -56,6 +56,8 @@ public final class BusinessCore {
         List<String> low = low(village, b, r);
         if (!low.isEmpty()) out.add("stock low on " + String.join(" and ", low.subList(0, Math.min(2, low.size()))));
         if (owner) out.add(Businesses.pence(b.till) + " in the till");
+        String fit = Fittings.words(village, "firm:" + b.id);                // [till] its shop fittings and the custom they bring
+        if (!fit.isEmpty()) out.add(fit);
         if (r != null && r.hasUUID("manager") && Deputy.on(r) && Deputy.charge(level, village, b, r, Businesses.today(level)).mode() == Deputy.Mode.DEPUTY) out.add("deputy in charge");
         return String.join(" · ", out);
     }

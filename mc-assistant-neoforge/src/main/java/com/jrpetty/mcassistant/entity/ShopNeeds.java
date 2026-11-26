@@ -214,7 +214,8 @@ public final class ShopNeeds {
         }
         BlockEntity be = level.getBlockEntity(n);
         if (be instanceof Container && (be instanceof ChestBlockEntity || be instanceof BarrelBlockEntity
-                || be instanceof ChiseledBookShelfBlockEntity || be instanceof DecoratedPotBlockEntity)) {
+                || be instanceof ChiseledBookShelfBlockEntity || be instanceof DecoratedPotBlockEntity
+                || be instanceof com.jrpetty.mcassistant.block.FittingBlockEntity fb && fb.holdsStock())) {   // [till] a shelf, a case, a crate
             s.stock.add(n.immutable());
             return;
         }

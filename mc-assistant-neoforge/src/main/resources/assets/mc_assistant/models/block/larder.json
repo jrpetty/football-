@@ -1,0 +1,243 @@
+{
+ "parent": "minecraft:block/block",
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "minecraft:block/spruce_planks",
+  "wood": "minecraft:block/spruce_planks",
+  "door": "minecraft:block/stripped_spruce_log",
+  "brass": "minecraft:block/gold_block",
+  "vent": "minecraft:block/iron_bars",
+  "top": "minecraft:block/dark_oak_planks"
+ },
+ "elements": [
+  {
+   "name": "body",
+   "from": [
+    1,
+    0,
+    1.5
+   ],
+   "to": [
+    15,
+    15,
+    15
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wood"
+    },
+    "south": {
+     "texture": "#wood"
+    },
+    "east": {
+     "texture": "#wood"
+    },
+    "west": {
+     "texture": "#wood"
+    },
+    "up": {
+     "texture": "#wood"
+    },
+    "down": {
+     "texture": "#wood"
+    }
+   }
+  },
+  {
+   "name": "top",
+   "from": [
+    0.5,
+    15,
+    1
+   ],
+   "to": [
+    15.5,
+    16,
+    15.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#top"
+    },
+    "south": {
+     "texture": "#top"
+    },
+    "east": {
+     "texture": "#top"
+    },
+    "west": {
+     "texture": "#top"
+    },
+    "up": {
+     "texture": "#top"
+    },
+    "down": {
+     "texture": "#top"
+    }
+   }
+  },
+  {
+   "name": "door_l",
+   "from": [
+    1.5,
+    1,
+    1
+   ],
+   "to": [
+    7.8,
+    14,
+    1.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#door"
+    },
+    "east": {
+     "texture": "#door"
+    },
+    "west": {
+     "texture": "#door"
+    },
+    "up": {
+     "texture": "#door"
+    },
+    "down": {
+     "texture": "#door"
+    }
+   }
+  },
+  {
+   "name": "door_r",
+   "from": [
+    8.2,
+    1,
+    1
+   ],
+   "to": [
+    14.5,
+    14,
+    1.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#door"
+    },
+    "east": {
+     "texture": "#door"
+    },
+    "west": {
+     "texture": "#door"
+    },
+    "up": {
+     "texture": "#door"
+    },
+    "down": {
+     "texture": "#door"
+    }
+   }
+  },
+  {
+   "name": "vent",
+   "from": [
+    3,
+    10,
+    0.95
+   ],
+   "to": [
+    6.5,
+    13,
+    1
+   ],
+   "faces": {
+    "north": {
+     "texture": "#vent"
+    }
+   }
+  },
+  {
+   "name": "vent_r",
+   "from": [
+    9.5,
+    10,
+    0.95
+   ],
+   "to": [
+    13,
+    13,
+    1
+   ],
+   "faces": {
+    "north": {
+     "texture": "#vent"
+    }
+   }
+  },
+  {
+   "name": "knob_l",
+   "from": [
+    6.6,
+    6.5,
+    0.5
+   ],
+   "to": [
+    7.4,
+    7.5,
+    1
+   ],
+   "faces": {
+    "north": {
+     "texture": "#brass"
+    },
+    "south": {
+     "texture": "#brass"
+    },
+    "east": {
+     "texture": "#brass"
+    },
+    "west": {
+     "texture": "#brass"
+    },
+    "up": {
+     "texture": "#brass"
+    },
+    "down": {
+     "texture": "#brass"
+    }
+   }
+  },
+  {
+   "name": "knob_r",
+   "from": [
+    8.6,
+    6.5,
+    0.5
+   ],
+   "to": [
+    9.4,
+    7.5,
+    1
+   ],
+   "faces": {
+    "north": {
+     "texture": "#brass"
+    },
+    "south": {
+     "texture": "#brass"
+    },
+    "east": {
+     "texture": "#brass"
+    },
+    "west": {
+     "texture": "#brass"
+    },
+    "up": {
+     "texture": "#brass"
+    },
+    "down": {
+     "texture": "#brass"
+    }
+   }
+  }
+ ],
+ "render_type": "minecraft:cutout"
+}

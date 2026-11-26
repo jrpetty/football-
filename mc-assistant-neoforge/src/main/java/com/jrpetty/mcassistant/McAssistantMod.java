@@ -459,6 +459,7 @@ public final class McAssistantMod {
         com.jrpetty.mcassistant.item.InventionItems.register(modBus);  // [tech-tree] steel, the polearms, the longbow, the arbalest, the models
         com.jrpetty.mcassistant.item.AfterWarItems.register(modBus);   // [war-after] the Wanted Poster
         com.jrpetty.mcassistant.item.CoreItems.register(modBus);       // [wpb] the Business Core
+        com.jrpetty.mcassistant.item.TillItems.register(modBus);       // [till] the till, the kiosk, the shop fittings
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);

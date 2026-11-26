@@ -2153,6 +2153,12 @@ public final class Bank {
     }
 
     /** Tests: a player's balance at the bank. */
+    /** [till] A player's balance at this town's bank (the checkout shows it beside the coin they carry). */
+    public static int balanceOf(UUID village, UUID who) {
+        Account a = state(village).accounts.get(who);
+        return a == null ? 0 : a.balance;
+    }
+
     public static int balanceForTests(UUID village, UUID who) {
         Account a = state(village).accounts.get(who);
         return a == null ? 0 : a.balance;

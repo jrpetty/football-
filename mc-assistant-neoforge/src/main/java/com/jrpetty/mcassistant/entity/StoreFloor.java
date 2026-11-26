@@ -147,6 +147,7 @@ public final class StoreFloor {
             Store.Layout l = Store.layout(b);
             for (BlockPos at : l.counters()) {
                 if (!ServicePoints.isCounter(level.getBlockState(at))) continue;   // [shops-homes] a cask, or the service counter
+                if (Tills.tillOn(level, at)) continue;                           // [till] the till's counter shows no ware
                 ItemStack want = k < goods.size() ? goods.get(k) : ItemStack.EMPTY;
                 k++;
                 if (frameOn(level, at.above(), want)) changed++;
@@ -398,6 +399,7 @@ public final class StoreFloor {
             if (!left.isEmpty()) Crafts.store(level, v, left);
         }
         VillageFolkEntity server = lastServer(id);
+        Tills.rang(level, id, "town:shop", post.counter(), buyer.displayNameCap(), server);   // [till] "Serving: Hazel"
         buyer.brain("bought " + Bench.words(got.get(0).getItem(), n) + " at " + (Store.stands(id) ? "the store" : "the shop")
             + (server != null ? ", served by " + server.displayNameCap() : ""));
         return new Sale(true, server, post.counter(), price, got.get(0).copyWithCount(n), "");
