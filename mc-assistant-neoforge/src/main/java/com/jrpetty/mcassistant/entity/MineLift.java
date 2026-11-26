@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.state.properties.Half;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
@@ -54,6 +55,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li><b>The well</b>: its top capped with a trapdoor under the headframe, a chain hung from the headframe's beam to it,
  *     the rock of the pillar round it made good where a cave broke into it, and a pool of water at its foot (anybody who
  *     came down it the hard way lands in water, not on rock).</li>
+ * <li>[tp48] <b>Its foot</b>: the pool one water block in the well a block under the deepest stop's floor (a sump), stone
+ *     bricks on its four sides and under it, so it never runs out; and a doorway in the pillar over it, on the side toward
+ *     the stair coming down to that stop (one of the stop's window cells, left open three high on a brick floor level with
+ *     the pool's top): anybody who comes down the well climbs out of the pool through it onto the stair as out of any
+ *     pond, and can walk in from the stop the same way. Kept open at every round, whatever was put in it. (The pool used to
+ *     stand at the stop's floor behind the bars, shut in on every side, and ran out over the landing whenever the window
+ *     opened for the cage's riders.) Folk never go through it (the doorway and the well are no way for their walks, and the
+ *     pool is water to keep out of); the cage coming down to the bottom steps anybody in the pool up into the doorway.</li>
  * <li><b>The stops</b>: one at the pithead and one at the corner landing of every level opened, each with a window of iron
  *     bars in the pillar onto the well and a lever on the landing's floor by it.</li>
  * <li><b>The cage</b>: drawn by block displays (a trapdoor floor and roof, iron bars round), carrying up to four at a time
@@ -61,7 +70,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *     and a bell rings when it stops. Folk queue for it at the stop (WorksGoal); a player pulls the lever for the next
  *     stop down, or presses the button by it for the pithead (at the pithead, for the deepest stop).</li>
  * <li><b>Safety</b>: nobody is let into the well but a rider in the cage; anybody found in it outside the cage (a server
- *     stopped mid-ride, a chunk unloaded under it) is put out at the nearest stop's landing; a folk that waits too long for
+ *     stopped mid-ride, a chunk unloaded under it) is put out at the nearest stop's landing (a player down at its foot, in
+ *     the pool or over it, is left to walk out by the doorway); a folk that waits too long for
  *     the cage takes the stair (WorksGoal), which is kept for when the cage is busy or the well blocked.</li>
  * </ul>
  * Built and kept up at the works' half-minute round (MineWorks.tick), so a mine dug before it is fitted with one when its
@@ -112,6 +122,7 @@ public final class MineLift {
         int step;                                                    // [film39] ticks into the riders' walk in or out (LiftGlide)
         final Map<UUID, Vec3> glideFrom = new HashMap<>();           // [film39]
         int gate = -1;                                               // [tp43] the stop whose window stands open for riders (LiftGlide)
+        long steppedLog = Long.MIN_VALUE / 2;                        // [tp48] when a player stepped out of the cage's way was last logged
         Lift(UUID village) { this.village = village; }
 
         @Nullable Stop stop(int index) {
@@ -127,12 +138,14 @@ public final class MineLift {
     public static void resetForTests() {
         LIFTS.clear();
         STATE.clear();
+        BARRED = new int[0];
     }
 
     /** Tests: the lift forgotten, as a server stopped and started again forgets it (its displays and riders left where they are). */
     public static void forgetForTests(UUID village) {
         Lift l = LIFTS.remove(village);
         if (l != null) for (Ask a : l.riding) STATE.remove(a.who);
+        bar();
     }
 
     // ------------------------------------------------------------------ the build
@@ -199,6 +212,34 @@ public final class MineLift {
         }
         BlockPos under = new BlockPos(w.sx, sump - 1, w.sz);                  // a floor under the pool
         if (!level.getBlockState(under).isFaceSturdy(level, under, Direction.UP)) { level.setBlock(under, Blocks.STONE_BRICKS.defaultBlockState(), 2); put++; }
+        // [tp48] The pool kept in (whatever water could run into or through on its four sides made stone bricks), and the
+        // doorway over it kept open three high on a brick floor, whatever stopped it up (an older well's rock, rubble or bricks,
+        // a timber set's post, a torch): a way out of the pool for anybody who comes down the well, and a way in from the stop.
+        BlockPos pool = new BlockPos(w.sx, sump, w.sz);
+        for (Direction d : Direction.Plane.HORIZONTAL) put += solid(level, pool.relative(d));
+        BlockPos door = doorway(stops, w.sx, w.sz);
+        // An older pool's spill (it stood at the stop's floor and ran out whenever the window opened): what stands in the
+        // window let out with its neighbours told, so the water it fed over the landing and down the stair drains away (the
+        // bars put back without a word to them left it standing there for good).
+        int[] od = MineWorks.diag((stops.get(stops.size() - 1).index() / 4) % 4);
+        for (int h = 0; h < DOOR_HIGH; h++) {
+            for (BlockPos c : new BlockPos[]{ new BlockPos(w.sx + od[0], bottom + h, w.sz + od[1]), new BlockPos(w.sx + od[0], bottom + h, w.sz),
+                    new BlockPos(w.sx, bottom + h, w.sz + od[1]) }) {
+                if (level.getFluidState(c).isEmpty()) continue;                 // (waterlogged bars too: dry ones put back)
+                level.setBlock(c, Blocks.AIR.defaultBlockState(), 3);
+                put++;
+            }
+        }
+        put += solid(level, door.below());
+        for (int h = 0; h < DOOR_HIGH; h++) {
+            BlockPos c = door.above(h);
+            BlockState cs = level.getBlockState(c);
+            if (cs.isAir() || cs.is(Blocks.BEDROCK)) continue;
+            if (cs.hasBlockEntity()) level.destroyBlock(c, true);              // (a chest or a furnace: what was in it dropped)
+            level.setBlock(c, Blocks.AIR.defaultBlockState(), 3);
+            put++;
+            opened++;
+        }
         // The stops: a window of bars onto the well, a lever on the landing's floor.
         for (Stop s0 : new ArrayList<>(stops)) {
             Stop s = s0;
@@ -207,6 +248,7 @@ public final class MineLift {
                 for (int h = 0; h < 2; h++) {
                     for (BlockPos c : new BlockPos[]{ new BlockPos(w.sx + o[0], s.y() + h, w.sz + o[1]), new BlockPos(w.sx + o[0], s.y() + h, w.sz),
                             new BlockPos(w.sx, s.y() + h, w.sz + o[1]) }) {
+                        if (inDoor(door, c)) continue;                         // [tp48] the deepest stop's doorway: open for good
                         if (!level.getBlockState(c).is(Blocks.IRON_BARS)) {
                             level.setBlock(c, Blocks.IRON_BARS.defaultBlockState(), 2);
                             level.setBlock(c, net.minecraft.world.level.block.Block.updateFromNeighbourShapes(level.getBlockState(c), level, c), 2);
@@ -269,6 +311,7 @@ public final class MineLift {
             if (level.getBlockState(p).isAir()) { level.setBlock(p, Blocks.CHAIN.defaultBlockState(), 3); put++; }
         }
         l.stops = stops;
+        bar();                                                       // [tp48]
         MineCache.restock(level, w, stops, false);                   // the landings' food and torches, once a day
         if (first) {
             l.cageY = w.top;
@@ -286,8 +329,9 @@ public final class MineLift {
         return l != null && window(l.stops, w, c);
     }
 
-    /** Is this cell of the pillar a window of a stop (left to the bars)? */
+    /** Is this cell of the pillar a window of a stop (left to the bars), or the deepest stop's doorway (left open)? */
     private static boolean window(List<Stop> stops, MineWorks.Works w, BlockPos c) {
+        if (stops.size() >= 2 && inDoor(doorway(stops, w.sx, w.sz), c)) return true;   // [tp48]
         for (Stop s : stops) {
             if (c.getY() != s.y() && c.getY() != s.y() + 1) continue;
             int[] o = MineWorks.diag((s.index() / 4) % 4);
@@ -295,6 +339,92 @@ public final class MineLift {
             if ((dx == o[0] && dz == o[1]) || (dx == o[0] && dz == 0) || (dx == 0 && dz == o[1])) return true;
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------ [tp48] the foot of the well
+
+    /** How high the doorway over the pool is: a body steps up onto the stair beside it, half a block and a block, without
+     *  putting its head into the doorway's top (two high, it could neither step up out of it nor down into it). */
+    static final int DOOR_HIGH = 3;
+    /** Doorway blocks cleared of what stopped them up (the tests). */
+    static int opened;
+
+    /**
+     * [tp48] The foot of the doorway over the pool, at the deepest stop's floor height: of the stop's two window cells beside
+     * the well, the one that looks out onto the side of the stair coming down to the stop (its middle step a step over the
+     * stop's floor; the other looks out over the stair going on down, two and more under it, or onto rock). That side is the
+     * one the landing's flat cells lie toward, its risers toward the other. Null without a lift.
+     */
+    @Nullable
+    static BlockPos doorway(List<Stop> stops, int sx, int sz) {
+        if (stops.size() < 2) return null;
+        Stop s = stops.get(stops.size() - 1);
+        int side = (s.index() / 4) % 4;
+        int[] o = MineWorks.diag(side);
+        // The side before this one runs north-south when this one runs east-west (sides 0 and 2), and the other way round.
+        return side % 2 == 0 ? new BlockPos(sx + o[0], s.y(), sz) : new BlockPos(sx, s.y(), sz + o[1]);
+    }
+
+    /** Is this block in the doorway (its foot given, or null)? */
+    static boolean inDoor(@Nullable BlockPos door, BlockPos c) {
+        return door != null && c.getX() == door.getX() && c.getZ() == door.getZ() && c.getY() >= door.getY() && c.getY() < door.getY() + DOOR_HIGH;
+    }
+
+    /** A block that keeps the pool in: left if it is whole and dry (or bedrock), else stone bricks (what was in it dropped). */
+    private static int solid(ServerLevel level, BlockPos p) {
+        BlockState s = level.getBlockState(p);
+        if (s.is(Blocks.BEDROCK) || s.getFluidState().isEmpty() && s.isCollisionShapeFullBlock(level, p)) return 0;
+        if (s.hasBlockEntity()) level.destroyBlock(p, true);
+        level.setBlock(p, Blocks.STONE_BRICKS.defaultBlockState(), 2);
+        return 1;
+    }
+
+    /**
+     * [tp48] For each lift, where folk never walk (FolkNodeEvaluator) and the pool that is no puddle to wade
+     * (AssistantEntity.shallowWater): the well from its pool to its cap, and the doorway. Seven numbers a lift: the well's
+     * x, z, the pool's height, the cap's; the doorway's x, z, foot. Made afresh whenever a lift is looked at.
+     */
+    private static volatile int[] BARRED = new int[0];
+
+    private static void bar() {
+        List<int[]> rows = new ArrayList<>();
+        for (Lift l : LIFTS.values()) {
+            BlockPos d = doorway(l.stops, l.sx, l.sz);
+            if (d != null) rows.add(new int[]{ l.sx, l.sz, l.bottom() - 1, l.top - 1, d.getX(), d.getZ(), d.getY() });
+        }
+        int[] out = new int[rows.size() * 7];
+        for (int i = 0; i < rows.size(); i++) System.arraycopy(rows.get(i), 0, out, i * 7, 7);
+        BARRED = out;
+    }
+
+    /** [tp48] Is this place (a folk's feet) in a lift's well or its doorway? No way for a folk's walk (FolkNodeEvaluator). */
+    public static boolean barred(int x, int y, int z) {
+        int[] b = BARRED;
+        for (int i = 0; i + 6 < b.length; i += 7) {
+            if (x == b[i] && z == b[i + 1] && y >= b[i + 2] && y <= b[i + 3]) return true;
+            if (x == b[i + 4] && z == b[i + 5] && y >= b[i + 6] && y < b[i + 6] + DOOR_HIGH) return true;
+        }
+        return false;
+    }
+
+    /** [tp48] Is this the pool at the foot of a lift's well (water a folk keeps out of, never a puddle to wade)? */
+    public static boolean sumpAt(net.minecraft.world.level.Level level, BlockPos p) {
+        int[] b = BARRED;
+        if (b.length == 0 || level.dimension() != net.minecraft.world.level.Level.OVERWORLD) return false;
+        for (int i = 0; i + 6 < b.length; i += 7) if (p.getX() == b[i] && p.getZ() == b[i + 1] && p.getY() == b[i + 2]) return true;
+        return false;
+    }
+
+    /** Tests: the doorway's foot at this town's deepest stop (null without a lift). */
+    @Nullable
+    public static BlockPos doorwayForTests(UUID village) {
+        Lift l = LIFTS.get(village);
+        return l == null ? null : doorway(l.stops, l.sx, l.sz);
+    }
+
+    /** Tests: doorway blocks cleared so far. */
+    public static int openedForTests() {
+        return opened;
     }
 
     // ------------------------------------------------------------------ asking for it
@@ -421,6 +551,7 @@ public final class MineLift {
     }
 
     private static void run(ServerLevel level, Lift l) {
+        if (l.cageY <= l.bottom() + 3) clearFoot(level, l);           // [tp48]
         if (l.phase == 0) {
             if (l.gate >= 0) LiftGlide.shut(level, l);                // [tp43]
             l.queue.removeIf(a -> STATE.get(a.who) != State.WAITING);
@@ -650,19 +781,59 @@ public final class MineLift {
         AABB well = new AABB(l.sx, l.bottom() - 1, l.sz, l.sx + 1, l.top - 1, l.sz + 1);   // [tp47] the sump too
         for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, well)) {
             if (state(e.getUUID()) == State.RIDING) continue;
-            Stop best = null;
-            for (Stop s : l.stops) if (best == null || Math.abs(s.y() - e.getY()) < Math.abs(best.y() - e.getY())) best = s;
-            if (best == null) continue;
-            BlockPos out = exit(level, l, best);
-            Blink.safety(e, "lift: found in the well, put out at a stop");   // [tp43] the well is no place to be left
-            place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
-            // A player left in the well by a stop mid-ride may have been saved with the cage's leave to fly: taken back.
-            if (e instanceof ServerPlayer pl && pl.gameMode.getGameModeForPlayer().isSurvival() && pl.getAbilities().mayfly) {
-                pl.getAbilities().mayfly = false; pl.getAbilities().flying = false; pl.onUpdateAbilities(); AFLOAT.remove(pl.getUUID());
+            // [tp48] A player at the well's foot (in the pool, or over it): left to climb out by the doorway, as out of a pond.
+            if (e instanceof ServerPlayer && e.getY() < l.bottom() + 2) continue;
+            putOut(level, l, e, "found in the well");
+        }
+    }
+
+    /** Somebody in the well and not riding: out at the nearest stop's landing. */
+    private static void putOut(ServerLevel level, Lift l, LivingEntity e, String why) {
+        Stop best = null;
+        for (Stop s : l.stops) if (best == null || Math.abs(s.y() - e.getY()) < Math.abs(best.y() - e.getY())) best = s;
+        if (best == null) return;
+        BlockPos out = exit(level, l, best);
+        Blink.safety(e, "lift: " + why + ", put out at a stop");   // [tp43] the well is no place to be left
+        place(e, out.getX() + 0.5, out.getY(), out.getZ() + 0.5);
+        // A player left in the well by a stop mid-ride may have been saved with the cage's leave to fly: taken back.
+        if (e instanceof ServerPlayer pl && pl.gameMode.getGameModeForPlayer().isSurvival() && pl.getAbilities().mayfly) {
+            pl.getAbilities().mayfly = false; pl.getAbilities().flying = false; pl.onUpdateAbilities(); AFLOAT.remove(pl.getUUID());
+        }
+        STATE.remove(e.getUUID());
+        com.mojang.logging.LogUtils.getLogger().info("[MCA-LIFT] {}: {} {} at Y{}, put out at {}", Villages.name(l.village),
+            e.getName().getString(), why, (int) e.getY(), best.name());
+    }
+
+    /** [tp48] Players stepped up out of the pool into the doorway as the cage came down onto them (the tests). */
+    public static int STEPPED;
+
+    /**
+     * [tp48] The cage at the foot of the well, or coming down the last few blocks to it: anybody in the pool under it or over
+     * the pool, not riding, is out of its way first: a player stepped up into the doorway beside it (a block's step, out of
+     * the water, told to mind the cage), anybody else put out at the stop as the watch does. The cage is drawn, not built,
+     * and would have stood over them in the water.
+     */
+    private static void clearFoot(ServerLevel level, Lift l) {
+        int bottom = l.bottom();
+        AABB foot = new AABB(l.sx, bottom - 1, l.sz, l.sx + 1, bottom + 2, l.sz + 1);
+        List<LivingEntity> in = level.getEntitiesOfClass(LivingEntity.class, foot, e -> e.isAlive() && state(e.getUUID()) != State.RIDING
+            && Mth.floor(e.getX()) == l.sx && Mth.floor(e.getZ()) == l.sz);            // (one in the doorway leaning over the edge is out)
+        if (in.isEmpty()) return;
+        BlockPos door = doorway(l.stops, l.sx, l.sz);
+        for (LivingEntity e : in) {
+            if (e instanceof ServerPlayer p && door != null && level.getBlockState(door).isAir() && level.getBlockState(door.above()).isAir()) {
+                Blink.safety(e, "lift: the cage coming down, stepped up out of the pool");
+                place(e, door.getX() + 0.5, door.getY(), door.getZ() + 0.5);
+                p.displayClientMessage(Component.literal("Mind the cage!"), true);
+                STEPPED++;
+                if (level.getGameTime() - l.steppedLog > 200) {
+                    l.steppedLog = level.getGameTime();
+                    com.mojang.logging.LogUtils.getLogger().info("[MCA-LIFT] {}: {} in the pool as the cage came down, stepped up into the doorway",
+                        Villages.name(l.village), p.getName().getString());
+                }
+            } else {
+                putOut(level, l, e, "in the pool as the cage came down");
             }
-            STATE.remove(e.getUUID());
-            com.mojang.logging.LogUtils.getLogger().info("[MCA-LIFT] {}: {} found in the well at Y{}, put out at {}", Villages.name(l.village),
-                e.getName().getString(), (int) e.getY(), best.name());
         }
     }
 

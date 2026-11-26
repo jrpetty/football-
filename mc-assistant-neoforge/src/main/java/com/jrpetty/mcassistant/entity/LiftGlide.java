@@ -97,14 +97,17 @@ final class LiftGlide {
         return new Vec3(l.sx + o[0] + 0.5, s.y(), l.sz + o[1] + 0.5);
     }
 
-    /** [tp43] The cells of a stop's window: the pillar's corner toward the landing and the two beside it, two high. */
+    /** [tp43] The cells of a stop's window: the pillar's corner toward the landing and the two beside it, two high. [tp48] Not
+     *  the deepest stop's doorway over the pool, open for good (never barred when the window shuts). */
     static List<BlockPos> window(MineLift.Lift l, MineLift.Stop s) {
         int[] o = MineWorks.diag((s.index() / 4) % 4);
+        BlockPos door = MineLift.doorway(l.stops, l.sx, l.sz);
         List<BlockPos> out = new ArrayList<>(6);
         for (int h = 0; h < 2; h++) {
-            out.add(new BlockPos(l.sx + o[0], s.y() + h, l.sz + o[1]));
-            out.add(new BlockPos(l.sx + o[0], s.y() + h, l.sz));
-            out.add(new BlockPos(l.sx, s.y() + h, l.sz + o[1]));
+            for (BlockPos c : new BlockPos[]{ new BlockPos(l.sx + o[0], s.y() + h, l.sz + o[1]), new BlockPos(l.sx + o[0], s.y() + h, l.sz),
+                    new BlockPos(l.sx, s.y() + h, l.sz + o[1]) }) {
+                if (!MineLift.inDoor(door, c)) out.add(c);
+            }
         }
         return out;
     }
