@@ -38,7 +38,8 @@ public class TillBlock extends Block implements EntityBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
     private static final VoxelShape TILL = Shapes.or(box(2, 0, 3, 14, 5, 13), box(3, 5, 5, 13, 10, 12), box(4, 10, 9, 12, 14, 11));
-    private static final VoxelShape KIOSK = Shapes.or(box(4, 0, 4, 12, 2, 12), box(6, 2, 6, 10, 10, 10), box(2, 10, 3, 14, 16, 13));
+    private static final VoxelShape KIOSK = Shapes.or(box(0.5, 0, 2.5, 15.5, 12, 14.5), box(7, 12, 13, 9, 16, 14.5));
+    private final java.util.Map<Direction, VoxelShape> shapes = new java.util.EnumMap<>(Direction.class);
 
     public final boolean kiosk;
 
@@ -46,6 +47,7 @@ public class TillBlock extends Block implements EntityBlock {
         super(properties);
         this.kiosk = kiosk;
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        for (Direction d : Direction.Plane.HORIZONTAL) shapes.put(d, FittingBlock.turn(kiosk ? KIOSK : TILL, d));
     }
 
     @Override
@@ -61,7 +63,7 @@ public class TillBlock extends Block implements EntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
-        return kiosk ? KIOSK : TILL;
+        return shapes.getOrDefault(state.getValue(FACING), kiosk ? KIOSK : TILL);
     }
 
     @Override

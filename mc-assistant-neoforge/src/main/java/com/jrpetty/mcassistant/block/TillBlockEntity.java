@@ -30,6 +30,8 @@ public class TillBlockEntity extends BlockEntity {
     private long servingUntil;
     private boolean selfServe = true, open;
     private final Set<String> kioskWares = new LinkedHashSet<>();
+    /** A kiosk's cubbies: the wares it shows (three at most), sent to the client to draw. */
+    private final java.util.List<net.minecraft.world.item.ItemStack> shown = new java.util.ArrayList<>();
 
     public TillBlockEntity(BlockPos pos, BlockState state) {
         super(com.jrpetty.mcassistant.item.TillItems.TILL_BE.get(), pos, state);
@@ -45,6 +47,17 @@ public class TillBlockEntity extends BlockEntity {
     public boolean open() { return open; }
     public boolean selfServe() { return selfServe; }
     public Set<String> kioskWares() { return kioskWares; }
+    public java.util.List<net.minecraft.world.item.ItemStack> shown() { return shown; }
+
+    /** The wares in a kiosk's cubbies (the first few it sells that are in stock). */
+    public void showWares(java.util.List<net.minecraft.world.item.ItemStack> wares) {
+        boolean same = wares.size() == shown.size();
+        for (int i = 0; same && i < wares.size(); i++) same = net.minecraft.world.item.ItemStack.isSameItemSameComponents(wares.get(i), shown.get(i));
+        if (same) return;
+        shown.clear();
+        for (net.minecraft.world.item.ItemStack s : wares) shown.add(s.copyWithCount(1));
+        changed();
+    }
 
     public boolean bound() {
         return village != null && !key.isEmpty();
@@ -95,7 +108,7 @@ public class TillBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        write(tag);
+        write(tag, registries);
     }
 
     @Override
@@ -113,9 +126,15 @@ public class TillBlockEntity extends BlockEntity {
         kioskWares.clear();
         ListTag l = tag.getList("KioskWares", Tag.TAG_STRING);
         for (int i = 0; i < l.size(); i++) kioskWares.add(l.getString(i));
+        shown.clear();
+        ListTag sl = tag.getList("Shown", Tag.TAG_COMPOUND);
+        for (int i = 0; i < sl.size(); i++) {
+            net.minecraft.world.item.ItemStack s = net.minecraft.world.item.ItemStack.parseOptional(registries, sl.getCompound(i));
+            if (!s.isEmpty()) shown.add(s);
+        }
     }
 
-    private void write(CompoundTag tag) {
+    private void write(CompoundTag tag, HolderLookup.Provider registries) {
         if (village != null) tag.putUUID("Village", village);
         if (owner != null) tag.putUUID("Owner", owner);
         tag.putString("Key", key);
@@ -128,12 +147,15 @@ public class TillBlockEntity extends BlockEntity {
         ListTag l = new ListTag();
         for (String s : kioskWares) l.add(StringTag.valueOf(s));
         tag.put("KioskWares", l);
+        ListTag sl = new ListTag();
+        for (net.minecraft.world.item.ItemStack s : shown) if (!s.isEmpty()) sl.add(s.save(registries));
+        tag.put("Shown", sl);
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
-        write(tag);
+        write(tag, registries);
         return tag;
     }
 
