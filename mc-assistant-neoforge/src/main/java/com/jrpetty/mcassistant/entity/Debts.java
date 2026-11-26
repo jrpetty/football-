@@ -47,6 +47,7 @@ public final class Debts implements PlayerLife.Page {
     static final int LATE_PCT = 5, PLAN_WEEKS = 6, ATTACH_PART = 3;
     /** The score a person starts with, and its bounds. */
     static final int START_SCORE = 60;
+    public static final int START_SCORE_FOR_TESTS = START_SCORE;
 
     /** The rungs, in the words the page uses. */
     static final String[] STAGES = { "current", "reminder sent", "late fee added", "letter of demand", "creditor acting", "with the bailiff", "in court" };
@@ -346,7 +347,7 @@ public final class Debts implements PlayerLife.Page {
         UUID id = v.id();
         int owed = t.getInt("owed");
         if (owed <= 0) return;
-        int wages = wagesYesterday(id, debtor, day);
+        int wages = wagesYesterday(id, debtor, PropertyBook.day(level) - 1);   // the day before's wages, as the books have them
         if (wages > 0) {
             int take = Math.max(1, wages / ATTACH_PART);
             int got = takeFrom(level, id, debtor, Math.min(take, owed), "a third of your wages, attached for " + t.getString("kind"));

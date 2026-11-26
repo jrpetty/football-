@@ -93,6 +93,15 @@ public final class PropertyBook {
         return paid;
     }
 
+    /** Tests: coin into a player's account (bank or club), and what it holds. */
+    public static void putAccountForTests(UUID village, UUID player, int n) {
+        putAccount(village, player, "a test player", n);
+    }
+
+    public static int accountForTests(UUID village, UUID player) {
+        return account(village, player);
+    }
+
     /** A bill paid for a player who is away: out of its account only, as far as it goes; into the treasury. */
     static int payOffline(UUID village, UUID player, int n, PlayerFinance.Cat cat, String why) {
         int k = takeAccount(village, player, n);

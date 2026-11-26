@@ -152,6 +152,11 @@ public final class Tenancy {
         }
     }
 
+    /** Tests: the town's houses onto its homes' books. */
+    public static void enrolForTests(UUID village) {
+        Homes.enrol(village);
+    }
+
     public static void resetForTests() {
         HELD.clear();
         LOADED.clear();
