@@ -43,8 +43,8 @@ public final class FeatStage {
         }
         StoneYard.Site y = StoneYard.site(id);
         if (y != null) StoneYard.layOut(level, v, y, true);
-        Quarry.fenceForTests(level, v);
         int n = cut > 0 ? Quarry.cutForTests(level, v, cut) : 0;
+        Quarry.fenceForTests(level, v);                                   // round the pit as it stands once it is cut
         if (y != null) {
             StoneYard.dress(level, v, y, true);
             StoneYard.piles(level, id, y);
@@ -119,6 +119,17 @@ public final class FeatStage {
         Ledger.note(v.id(), TownDanger.STAGE, Integer.toString(stage));
         TownDanger.forget(v.id());
         out.add("DANGER stage " + stage + " (" + com.jrpetty.mcassistant.village.DangerLevel.stageName(stage) + ")");
+        return out;
+    }
+
+    /** So many more grown folk put on the watch (the photographs of a night watch need a watch to photograph). */
+    public static List<String> enlist(ServerLevel level, Villages.Village v, int n) {
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            VillageFolkEntity f = AdminTools.enlist(v);
+            if (f == null) break;
+            out.add("ENLISTED " + f.displayNameCap());
+        }
         return out;
     }
 

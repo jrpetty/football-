@@ -25,7 +25,7 @@ import java.util.List;
  *                                     many blocks cut into the yard (a negative count: a new site first); prints QUARRY and YARD
  *   /village featbuild garden         a statue garden put up on its lot and the statue of the town's most notable raised
  *   /village featbuild danger N       the wall's stage set (0 open .. 3 towers and a portcullis), and the wall built
- *   /village featbuild watch          where the night watch is now: WATCH name x y z post
+ *   /village featbuild watch [N]      where the night watch is now: WATCH name x y z post (N: so many more folk enlisted first)
  * </pre>
  */
 @EventBusSubscriber(modid = McAssistantMod.MODID)
@@ -41,7 +41,8 @@ public final class FeatStageCommands {
                     .then(Commands.argument("cut", IntegerArgumentType.integer(-5000, 5000)).executes(ctx -> quarry(ctx, IntegerArgumentType.getInteger(ctx, "cut")))))
                 .then(Commands.literal("garden").executes(FeatStageCommands::garden))
                 .then(Commands.literal("danger").then(Commands.argument("stage", IntegerArgumentType.integer(0, 3)).executes(FeatStageCommands::danger)))
-                .then(Commands.literal("watch").executes(FeatStageCommands::watch))));
+                .then(Commands.literal("watch").executes(FeatStageCommands::watch)
+                    .then(Commands.argument("enlist", IntegerArgumentType.integer(1, 12)).executes(FeatStageCommands::enlist)))));
     }
 
     @Nullable
@@ -74,6 +75,11 @@ public final class FeatStageCommands {
         CastleWall.buildNow(ctx.getSource().getLevel(), v, true);
         out.addAll(CastleWall.lines(ctx.getSource().getLevel(), v));
         return say(ctx, out);
+    }
+
+    private static int enlist(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = near(ctx);
+        return v == null ? 0 : say(ctx, FeatStage.enlist(ctx.getSource().getLevel(), v, IntegerArgumentType.getInteger(ctx, "enlist")));
     }
 
     private static int watch(CommandContext<CommandSourceStack> ctx) {

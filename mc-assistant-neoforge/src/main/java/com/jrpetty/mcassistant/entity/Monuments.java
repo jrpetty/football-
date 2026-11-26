@@ -110,16 +110,24 @@ public final class Monuments {
     static String knownFor(VillageFolkEntity f) {
         AssistantEntity.Deed best = null;
         int most = 0;
+        // The trade's own deeds first: a statue is not raised for tidying the stores.
         for (AssistantEntity.Deed d : AssistantEntity.Deed.values()) {
+            if (d == AssistantEntity.Deed.ITEMS_STASHED || d == AssistantEntity.Deed.CHESTS_SORTED) continue;
             int c = f.deedCount(d);
             if (c > most) { most = c; best = d; }
+        }
+        if (most < 10) {
+            for (AssistantEntity.Deed d : AssistantEntity.Deed.values()) {
+                int c = f.deedCount(d);
+                if (c > most) { most = c; best = d; }
+            }
         }
         if (best == null || most < 10) return f.isElder() ? "the town's elder" : "a life of good work";
         return String.format(java.util.Locale.ROOT, "%,d %s", most, best.label);
     }
 
     static String trade(VillageFolkEntity f) {
-        String t = f.stationTask() == AssistantEntity.StationTask.NONE ? "townsfolk" : f.stationTask().name().toLowerCase(java.util.Locale.ROOT);
+        String t = f.stationTask() == AssistantEntity.StationTask.NONE ? "townsfolk" : JobMarket.noun(f.stationTask());
         String rank = f.veteranLevel() >= 25 ? "master " : f.veteranLevel() >= 10 ? "" : "young ";
         return rank + t;
     }

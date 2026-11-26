@@ -909,7 +909,7 @@ public final class Quarry {
             for (VillageFolkEntity f : men(level, v)) {
                 CompoundTag m = new CompoundTag();
                 m.putString("name", f.displayNameCap());
-                m.putString("trade", f.stationTask().name().toLowerCase(java.util.Locale.ROOT));
+                m.putString("trade", JobMarket.noun(f.stationTask()));
                 String d = doing(f);
                 long t = Math.floorMod(level.getDayTime(), 24000L);
                 m.putString("doing", d != null ? d : t < 1000L || t > 11500L ? "home for the night" : "at something else just now");
