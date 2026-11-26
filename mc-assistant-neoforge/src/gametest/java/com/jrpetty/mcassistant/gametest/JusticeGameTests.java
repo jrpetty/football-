@@ -187,6 +187,12 @@ public class JusticeGameTests {
                 helper.assertTrue(p.getInventory().items.stream().noneMatch(s -> s.is(Items.BREAD)), "the stolen bread taken in the search");
                 helper.assertTrue(p.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).getValue() < 0.07, "slowed in irons");
             }
+            if (phase[0] == 2 && tick % 100 == 0) {
+                var nav = t.guard().getNavigation().getPath();
+                Kit.log("ju01 t" + tick + " guard " + t.guard().blockPosition().toShortString() + " " + Justice.officerTaskForTests(t.guard())
+                    + " nav " + (nav == null ? "none" : nav.getTarget().toShortString() + " done " + nav.isDone())
+                    + " hobby " + t.guard().hobbyNow() + " goals " + BlinkGameTests.running(t.guard()) + " brain " + t.guard().brainNoteForBooks() + "; player " + p.blockPosition().toShortString() + " d " + String.format("%.1f", t.guard().distanceTo(p)));
+            }
             if (phase[0] == 2 && Jail.held(p.getUUID())) {
                 Justice.JCase c = latest(p.getUUID(), Justice.Charge.BURGLARY);
                 CompoundTag cu = Jail.custodyForTests(p.getUUID());
