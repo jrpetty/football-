@@ -79,11 +79,14 @@ public class PitStepGameTests {
                 + "/21, seen jumps " + Blink.seenJumps());
             for (String l : Blink.seenLines()) Kit.log("[VT] pt01 seen: " + l);
             BlinkGameTests.letGo(level, you);
-            if (in > 0) helper.fail("still in the slot after " + tick[0] + " ticks: " + in);
-            else if (PitStep.STAIRS < 1) helper.fail("out of the slot with no stair dug");
-            else if (bricks != 21) helper.fail("the brick wall cut: " + bricks + " of 21 left");
-            else if (Blink.seenJumps() - Blink.excusedSeenJumps() > 0) helper.fail("seen to jump: " + Blink.seenJumps());
-            else helper.succeed();
+            // (Passed or failed in the test's own tick: a verdict from a server tick listener is never reported.)
+            Kit.Expect ok = new Kit.Expect();
+            ok.that(in == 0, "out of the slot within " + tick[0] + " ticks: " + in + " still in it");
+            ok.that(PitStep.STAIRS >= 1, "a stair dug: " + PitStep.STAIRS);
+            ok.that(bricks == 21, "the brick wall whole: " + bricks + " of 21");
+            ok.that(Blink.seenJumps() - Blink.excusedSeenJumps() == 0, "nobody seen to jump: " + Blink.seenJumps());
+            helper.assertTrue(ok.clean(), ok.summary());
+            MineWorksGameTests.done(helper);
             return true;
         });
     }
