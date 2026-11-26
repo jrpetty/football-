@@ -466,8 +466,8 @@ public final class WorkLife {
                 workedDays++;
                 starSum += r.getInt("st");
                 if (r.contains("t") && r.getInt("t") > 0 && r.getInt("st") <= 1) poor++;
-            } else if (r.getBoolean("o") && !leave) {
-                missedInTown++;
+            } else if ((r.getBoolean("o") || Rota.missedRostered(r)) && !leave && !r.getBoolean("ci") && !r.getBoolean("roff")) {
+                missedInTown++;                                             // [rota] a rostered shift missed while online counts too
                 poor++;
             }
         }
@@ -695,6 +695,7 @@ public final class WorkLife {
     /** In town during the job's hours: the day counts as one the worker was here for (offline days never do). */
     static void present(ServerLevel level, ServerPlayer p, CompoundTag j, long day, long time) {
         if (onLeave(j, day)) return;
+        if (Rota.tickHand(level, p, j, day, time)) return;                 // [rota] its employer's rota decides the day
         ShiftRole r = ShiftRole.of(j.getString("role"));
         if (r == null) return;
         ServiceHours h = r.hours(null);

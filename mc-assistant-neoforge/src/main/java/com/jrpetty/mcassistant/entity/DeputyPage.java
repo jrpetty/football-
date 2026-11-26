@@ -136,6 +136,8 @@ final class DeputyPage {
         for (int i = 0; i < 3; i++) row.button(Deputy.TASK_WORDS[i] + ": " + (Deputy.may(r, Deputy.TASKS[i]) ? "yes" : "no"), "deptask", LifePage.args("k", Deputy.TASKS[i]), decide && on, on ? no : "Their authority is off");
         row = page.buttons();
         for (int i = 3; i < 6; i++) row.button(Deputy.TASK_WORDS[i] + ": " + (Deputy.may(r, Deputy.TASKS[i]) ? "yes" : "no"), "deptask", LifePage.args("k", Deputy.TASKS[i]), decide && on, on ? no : "Their authority is off");
+        row = page.buttons();                                               // [rota] the rota, while you're away
+        for (int i = 6; i < Deputy.TASKS.length; i++) row.button(Deputy.TASK_WORDS[i] + ": " + (Deputy.may(r, Deputy.TASKS[i]) ? "yes" : "no"), "deptask", LifePage.args("k", Deputy.TASKS[i]), decide && on, on ? no : "Their authority is off");
         if (r.contains("ownerPrice")) {
             page.text("You set the markup yourself (day " + (r.getLong("ownerPrice") + 1) + "): " + dn + " leaves your prices alone. A ware's own markup is always yours.", 4);
             page.buttons().button("Let " + dn + " set prices", "letprice", null, decide, no);

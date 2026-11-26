@@ -478,6 +478,8 @@ public final class Businesses {
         Business b = employer(v.id(), f);
         if (b == null || b.town() || b.mirror() || !b.open || wage <= 0) return -1;
         long day = today(level);
+        wage = Rota.scaleWage(v.id(), b, f, wage);                          // [rota] paid by the hours rostered, overtime at time and a half
+        if (wage <= 0) return 0;
         int due = b.shortTime.contains(f.getUUID()) ? (wage + 1) / 2 : wage;
         int tax = Market.taxOn(f, due);
         long needP = due * 100L;

@@ -865,6 +865,9 @@ public final class FolkTalk {
             case "faith", "remembrance", "alms", "larders", "reign", "cathedral",
                  "homesick", "athome", "wander", "fearless", "tune" -> Perks.moodWords(f, why);   // [perks]
             case "windowbox" -> WindowBoxes.moodWords(f);                            // [workitems]
+            case "rotaheavy" -> FolkTalk.pick(r, "They've got me on every hour there is this week.", "Look at my hours. Just look at them.",
+                "I'm not made for this many shifts.");                                   // [rota]
+            case "rotashort" -> FolkTalk.pick(r, "I could do with more hours. Tell the boss.", "Hardly any shifts this week. I need the coin.");   // [rota]
             case "ownhands", "barehome", "chillyhome", "nowater", "stocked" -> HomeLife.moodWords(f, why, r);   // [home-making]
             case "interviewed", "passedover" -> Interviews.moodWords(f, why);          // [interviews]
             case "laidoff", "newjob", "journeyman", "termsrise", "outofwork" -> LabourMarket.moodWords(f, why);   // [labour]

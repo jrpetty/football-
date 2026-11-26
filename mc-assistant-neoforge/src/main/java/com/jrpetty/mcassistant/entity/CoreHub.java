@@ -144,7 +144,7 @@ final class CoreHub {
         int morale = 0;
         for (VillageFolkEntity f : hs) {
             LabourBook.Contract k = LabourMarket.contract(f);
-            int mo = morale(r, k);
+            int mo = Math.max(0, Math.min(100, morale(r, k) + Rota.moraleShift(v.id(), b, f)));   // [rota] its hours against its liking
             morale += mo;
             page.text(f.displayNameCap() + ": " + (mo >= 70 ? "content" : mo >= 50 ? "getting by" : "unhappy") + (k == null ? "" : k.m >= 1.08 ? " (well paid)" : k.m < 0.97 ? " (feels underpaid)" : ""), mo >= 50 ? 4 : 2);
         }

@@ -700,6 +700,18 @@ public class JobAdverts implements PlayerLife.Page {
         if (!j.getString("switchTo").isEmpty()) lines.add("You've asked to go on " + j.getString("switchTo") + ": it starts at tomorrow's review.");
         if (j.getLong("leaving") > 0) lines.add("You've given notice: your last day is day " + (j.getLong("leaving") - 1) + ".");
         page.box("Your job card: " + WorkLife.rankTitle(j) + " at " + j.getString("employerName"), lines, comm ? 4 : 1);
+        Rota rota = Rota.forHand(p);                                         // [rota] the shifts the manager set
+        if (rota != null) {
+            List<String> sh = new ArrayList<>();
+            for (int i = 0; i < 7; i++) {
+                int[] s = rota.slotsOn(p.getUUID(), today + i);
+                sh.add(Calendar.name(today + i) + (i == 0 ? " (today)" : "") + ": " + (s == null || !Rota.works(s) ? "off" : Rota.words(s)));
+            }
+            sh.add("Set by " + (rota.setBy.isEmpty() ? "the owner" : rota.setBy) + ". A toast comes ten minutes before each shift; it's on your planner too."
+                + (comm ? "" : " Missing a rostered shift while you're online counts as absence; offline never does."));
+            page.box("Your rota", sh, 1);
+            page.text("Ask for a day off or a swap, and clock in and out, at " + j.getString("employerName") + "'s Business Core.", 4);
+        }
         double u = d.getDouble("u");
         page.bar("Today", aim <= 0 ? 1 : u / aim, (int) u + " of " + aim + " · " + EarnMath.starWord(WorkMath.dayStars(u, aim)));
         BlockPos at = null;
@@ -794,14 +806,20 @@ public class JobAdverts implements PlayerLife.Page {
             else if (d < today) {
                 CompoundTag r = null;
                 for (CompoundTag x : WorkLife.days(j)) if (x.getLong("d") == d) r = x;
-                if (r == null || !WorkLife.worked(r) && !r.getBoolean("o")) sub = "Not in town: offline days never count.";
+                if (r != null && !WorkLife.worked(r) && r.getBoolean("roff")) sub = "Day off on the rota.";                         // [rota]
+                else if (r != null && !WorkLife.worked(r) && Rota.missedRostered(r)) sub = "Rostered and online, but missed: it counts as absence.";
+                else if (r == null || !WorkLife.worked(r) && !r.getBoolean("o")) sub = "Not in town: offline days never count.";
                 else if (!WorkLife.worked(r)) sub = "In town but didn't work.";
                 else sub = (int) r.getDouble("u") + " of " + r.getInt("t") + (card == null ? "" : " " + card.measure().many()) + " · " + EarnMath.starWord(r.getInt("st"))
                     + " · paid " + r.getInt("c") + "c" + (r.getBoolean("p") ? "" : " (due in the morning)");
             } else if (d == today) {
                 CompoundTag r = WorkLife.day(j, d);
-                sub = "Shift: " + j.getString("hours") + " at " + j.getString("employerName") + ". Done so far: " + (int) r.getDouble("u") + " of " + WorkLife.baseTarget(p, j) + ".";
-            } else sub = j.getLong("leaving") > 0 && d >= j.getLong("leaving") ? "You'll have left." : "Shift: " + j.getString("hours") + " at " + j.getString("employerName") + ".";
+                String rw = Rota.shiftWords(p, d);                          // [rota] its rostered shift
+                sub = (rw != null ? rw : "Shift: " + j.getString("hours")) + " at " + j.getString("employerName") + ". Done so far: " + (int) r.getDouble("u") + " of " + WorkLife.baseTarget(p, j) + ".";
+            } else {
+                String rw = Rota.shiftWords(p, d);
+                sub = j.getLong("leaving") > 0 && d >= j.getLong("leaving") ? "You'll have left." : (rw != null ? rw : "Shift: " + j.getString("hours")) + " at " + j.getString("employerName") + ".";
+            }
             page.row(null, label, sub, "");
         }
         ListTag l = apps(p);

@@ -1533,6 +1533,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Individual.mood(this, day, m, why);         // [individual] a dream come true, a habit kept, its season, a fright
         m = WindowBoxes.mood(this, day, m, why);        // [workitems] its household's window boxes in flower
         m = HomeLife.mood(this, day, m, why);           // [home-making] a home set up by its own hands, a cold house, no water
+        m = Rota.mood(this, day, m, why);               // [rota] rostered far more (or fewer) hours than it likes
         m = Interviews.mood(this, day, m, why);          // [interviews] a post won at interview, or missed
         m = LabourMarket.mood(this, day, m, why);        // [labour] a new place, a rise, an apprenticeship done; laid off, out of work
         m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern

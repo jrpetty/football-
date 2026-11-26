@@ -558,6 +558,18 @@ public final class Church {
     }
 
     /** The week page and the books: what the chapel has coming. */
+    /** [rota] A family day for this folk on this day (a christening it is parent or guest at, a funeral it mourns at): words, or null. */
+    @Nullable
+    public static String familyEvent(UUID village, UUID folk, long day) {
+        for (Christening c : CHRISTENINGS.values()) {
+            if (c.village.equals(village) && c.day == day && !c.done && (c.parents.contains(folk) || c.guests.contains(folk))) return "the christening of " + c.name;
+        }
+        for (Funeral f : FUNERALS.values()) {
+            if (f.village.equals(village) && f.day == day && f.mourners.contains(folk)) return f.name + "'s funeral";
+        }
+        return null;
+    }
+
     public static List<String> coming(UUID village, long today) {
         List<String> out = new ArrayList<>();
         for (Christening c : CHRISTENINGS.values()) if (c.village.equals(village) && !c.done && c.day >= today)
