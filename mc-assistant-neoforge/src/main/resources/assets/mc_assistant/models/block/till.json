@@ -7,8 +7,8 @@
   "brass": "minecraft:block/gold_block",
   "trim": "minecraft:block/stripped_dark_oak_log",
   "key": "minecraft:block/quartz_block_top",
-  "glass": "minecraft:block/black_concrete",
-  "lit": "minecraft:block/lime_concrete",
+  "glass": "minecraft:block/dark_oak_planks",
+  "lit": "minecraft:block/white_terracotta",
   "red": "minecraft:block/red_concrete",
   "copper": "minecraft:block/cut_copper"
  },
@@ -123,22 +123,22 @@
    ],
    "faces": {
     "north": {
-     "texture": "#copper"
+     "texture": "#wood"
     },
     "south": {
-     "texture": "#copper"
+     "texture": "#wood"
     },
     "east": {
-     "texture": "#copper"
+     "texture": "#wood"
     },
     "west": {
-     "texture": "#copper"
+     "texture": "#wood"
     },
     "up": {
-     "texture": "#copper"
+     "texture": "#wood"
     },
     "down": {
-     "texture": "#copper"
+     "texture": "#wood"
     }
    }
   },

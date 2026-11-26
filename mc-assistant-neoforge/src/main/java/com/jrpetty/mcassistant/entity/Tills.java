@@ -687,6 +687,15 @@ public final class Tills {
         String status = !st.open() ? st.words() : st.staffed() ? (st.keeper() != null ? st.keeper().displayNameCap() + " at the till" : "Open")
             : be.kiosk() ? "Self-service" : be.selfServe() ? "Self-service: nobody in" : st.words();
         be.show(src.name(level), status, st.open() && (st.staffed() || be.kiosk() || be.selfServe()));
+        if (be.kiosk()) {
+            List<ItemStack> wares = new ArrayList<>();
+            for (TillShops.Ware w : src.wares(level, null)) {
+                if (w.stock() <= 0 || !be.kioskWares().isEmpty() && !be.kioskWares().contains(w.id())) continue;
+                wares.add(w.sample());
+                if (wares.size() >= 3) break;
+            }
+            be.showWares(wares);
+        }
     }
 
     @SubscribeEvent

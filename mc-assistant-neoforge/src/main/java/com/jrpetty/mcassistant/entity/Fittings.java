@@ -422,10 +422,8 @@ public final class Fittings {
         out.add(src.name(level));
         for (TillShops.Ware w : src.wares(level, null)) {
             if (w.stock() <= 0) continue;
-            String n = Goods.name(w.sample());
-            if (n.length() > 14) n = n.substring(0, 13) + ".";
-            out.add(n + "|" + w.priceWords());
-            if (out.size() >= 6) break;
+            out.add(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(w.sample().getItem()) + "\t" + Goods.name(w.sample()) + "\t" + w.priceWords());
+            if (out.size() >= 19) break;                                     // three boards' worth: it turns its pages
         }
         return out;
     }

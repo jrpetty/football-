@@ -81,7 +81,7 @@ public class FittingBlock extends Block implements EntityBlock {
     }
 
     /** A north-facing outline turned to face {@code d}. */
-    private static VoxelShape turn(VoxelShape north, Direction d) {
+    static VoxelShape turn(VoxelShape north, Direction d) {
         VoxelShape[] out = { Shapes.empty() };
         north.forAllBoxes((x0, y0, z0, x1, y1, z1) -> {
             double ax0 = x0, az0 = z0, ax1 = x1, az1 = z1;
