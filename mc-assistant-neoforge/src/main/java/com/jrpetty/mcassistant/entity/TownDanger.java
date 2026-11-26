@@ -63,6 +63,11 @@ public final class TownDanger {
         CACHE.clear();
     }
 
+    /** The reckoning forgotten (made again at the next look). */
+    static void forget(UUID town) {
+        CACHE.remove(town);
+    }
+
     static boolean staged(UUID town) {
         return FORCED.containsKey(town) || !bypass;
     }

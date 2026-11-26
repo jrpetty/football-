@@ -90,6 +90,8 @@ public final class Quarry {
     public static void resetForTests() {
         MEN_STATE.clear();
         LOOKED.clear();
+        CURSOR.clear();
+        FENCES.clear();
         UNREACHABLE.clear();
         readyForTests = false;
         StoneYard.resetForTests();
@@ -252,25 +254,37 @@ public final class Quarry {
 
     // ------------------------------------------------------------------ the cutting
 
-    /** The next block to cut, top down: the outcrop over the rim, then each terrace's course; null when the pit is cut. */
+    /** Where each town's look for the next cut got to, in the pit's order (course by course, row by row). */
+    private static final Map<UUID, Integer> CURSOR = new ConcurrentHashMap<>();
+
+    /**
+     * The next block to cut, top down: the outcrop over the rim, then each terrace's course; null when the pit is cut. The
+     * look goes on from where it last found one, and round once more from the top before the pit is called cut (a block
+     * held back for a terrace beside it comes free when that is cut).
+     */
     @Nullable
     static BlockPos nextCut(ServerLevel level, UUID town, Site s) {
-        int h = s.half();
+        int h = s.half(), n = s.size();
         BlockPos c = s.centre();
         int rim = c.getY();
         int deepest = Math.min(DEEPEST, h);
-        // Over the rim first (an outcrop cut down), then course by course.
-        for (int y = rim + 6; y >= rim - deepest + 1; y--) {
-            for (int dx = -h; dx <= h; dx++) {
-                for (int dz = -h; dz <= h; dz++) {
-                    int depth = s.depth(dx, dz);
-                    if (depth <= 0 || y < rim - depth + 1) continue;
-                    BlockPos p = new BlockPos(c.getX() + dx, y, c.getZ() + dz);
-                    if (UNREACHABLE.getOrDefault(town, Map.of()).containsKey(p.asLong())) continue;
-                    if (cuttable(level, p, y == rim - depth + 1) && terraced(level, p, rim)) return p;
-                }
+        int top = rim + 6, layers = top - (rim - deepest + 1) + 1, all = layers * n * n;
+        int from = Math.floorMod(CURSOR.getOrDefault(town, 0), Math.max(1, all));
+        Map<Long, Long> skipped = UNREACHABLE.getOrDefault(town, Map.of());
+        for (int k = 0; k < all; k++) {
+            int i = (from + k) % all;
+            int y = top - i / (n * n), rem = i % (n * n);
+            int dx = rem / n - h, dz = rem % n - h;
+            int depth = s.depth(dx, dz);
+            if (depth <= 0 || y < rim - depth + 1) continue;
+            BlockPos p = new BlockPos(c.getX() + dx, y, c.getZ() + dz);
+            if (skipped.containsKey(p.asLong())) continue;
+            if (cuttable(level, p, y == rim - depth + 1) && terraced(level, p, rim)) {
+                CURSOR.put(town, i);
+                return p;
             }
         }
+        CURSOR.put(town, 0);
         return null;
     }
 
@@ -343,7 +357,19 @@ public final class Quarry {
     // ------------------------------------------------------------------ the fence and the lights
 
     /** The fence's posts round the rim: a ring a block outside the pit, the gate toward the town, a lantern every six. */
+    private static final Map<String, List<BlockPos[]>> FENCES = new ConcurrentHashMap<>();
+
     static List<BlockPos[]> fence(ServerLevel level, Villages.Village v, Site s) {
+        String key = v.id() + "/" + s.centre().asLong() + "/" + s.size();
+        List<BlockPos[]> kept = FENCES.get(key);
+        if (kept != null) return kept;
+        List<BlockPos[]> made = fenceNow(level, v, s);
+        if (FENCES.size() > 64) FENCES.clear();
+        FENCES.put(key, made);
+        return made;
+    }
+
+    private static List<BlockPos[]> fenceNow(ServerLevel level, Villages.Village v, Site s) {
         List<BlockPos[]> out = new ArrayList<>();
         int r = s.half() + 1;
         BlockPos c = s.centre();
