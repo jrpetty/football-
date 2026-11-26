@@ -115,10 +115,13 @@ public class TillGameTests {
         helper.assertTrue(!points.isEmpty(), "the shop's counter is fitted");
         ServicePoints.Point point = points.get(0);
         if (point.stand() != null) keeper.teleportTo(point.stand().getX() + 0.5, point.stand().getY(), point.stand().getZ() + 0.5);
-        BlockPos till = point.pos().above();
-        if (!(level.getBlockEntity(till) instanceof TillBlockEntity)) {
-            Kit.log("tl: the town set no till on its counter (its gate refused the cell): set here");
+        BlockPos till = Tills.townTill(id, ServiceRole.SHOP, point.pos());
+        if (till == null) {
+            till = point.pos().above();
+            Kit.log("tl: the town set no till by its counter (its gate refused the cell): set here");
             level.setBlock(till, TillItems.TILL.get().defaultBlockState().setValue(TillBlock.FACING, point.front()), 3);
+        } else {
+            Kit.log("tl: the town's till at " + till.subtract(point.pos()) + " from its service counter");
         }
         Tills.bindForTests(level, till, id, "town:shop", null, false);
         return new Town(id, v, heart, store, keeper, folk, point, till);

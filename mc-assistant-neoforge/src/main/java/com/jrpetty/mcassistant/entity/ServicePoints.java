@@ -287,9 +287,10 @@ public final class ServicePoints {
     public static boolean openByHand(ServerPlayer p, BlockPos pos) {
         if (p.level() instanceof ServerLevel level) {
             Point point = at(level, pos);
-            if (point != null && (point.role() == ServiceRole.SHOP || point.role() == ServiceRole.CAFE)
-                    && level.getBlockEntity(pos.above()) instanceof com.jrpetty.mcassistant.block.TillBlockEntity) {
-                Tills.openAt(p, pos.above());
+            BlockPos till = point != null && (point.role() == ServiceRole.SHOP || point.role() == ServiceRole.CAFE)
+                ? Tills.townTill(point.village(), point.role(), pos) : null;
+            if (till != null) {
+                Tills.openAt(p, till);
                 return true;
             }
         }
@@ -597,9 +598,9 @@ public final class ServicePoints {
         }
         if (topic == TalkTopic.FOR_SALE && (role == ServiceRole.SHOP || role == ServiceRole.CAFE) && folk.level() instanceof ServerLevel level) {
             Point point = nearest(level, village, role, folk.blockPosition());   // [till] "What's for sale?": the checkout
-            if (point != null && point.pos().distSqr(folk.blockPosition()) <= 6 * 6
-                    && level.getBlockEntity(point.pos().above()) instanceof com.jrpetty.mcassistant.block.TillBlockEntity) {
-                Tills.openAt(p, point.pos().above());
+            BlockPos till = point != null && point.pos().distSqr(folk.blockPosition()) <= 6 * 6 ? Tills.townTill(village, role, point.pos()) : null;
+            if (till != null) {
+                Tills.openAt(p, till);
                 return true;
             }
         }
@@ -615,8 +616,9 @@ public final class ServicePoints {
         if (role == null || role == ServiceRole.TAVERN || role == ServiceRole.HALL) return false;
         Point point = nearest(level, village, role, keeper.blockPosition());
         if (point == null || point.pos().distSqr(keeper.blockPosition()) > 4 * 4) return false;
-        if ((role == ServiceRole.SHOP || role == ServiceRole.CAFE) && level.getBlockEntity(point.pos().above()) instanceof com.jrpetty.mcassistant.block.TillBlockEntity) {
-            Tills.openAt(p, point.pos().above());                          // [till] the checkout
+        BlockPos till = role == ServiceRole.SHOP || role == ServiceRole.CAFE ? Tills.townTill(village, role, point.pos()) : null;
+        if (till != null) {
+            Tills.openAt(p, till);                                         // [till] the checkout
             return true;
         }
         return openFor(p, keeper, role, "");

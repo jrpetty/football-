@@ -121,32 +121,59 @@ public final class Tills {
     }
 
     /**
-     * The town's shop and café each get a till on their service counter, out of the town's own brass and planks (nothing
-     * from nothing: a building with no counter yet waits). Once a day, with the counters (ServicePoints.fitOut).
+     * The town's shop and café each get a till on the counter beside their service counter (the service counter keeps its
+     * ware on show), out of the town's own stock of brass and planks; nothing from nothing: a building with no counter
+     * yet waits. Once a day, with the counters (ServicePoints.fitOut). The counter it stands on shows no ware (StoreFloor).
      */
     static void fitTill(ServerLevel level, Villages.Village v, Ledger.Building b, ServiceRole role) {
         if (role != ServiceRole.SHOP && role != ServiceRole.CAFE) return;
-        for (BuildGoal.Placement pl : BuildGoal.plan(b.structure(), b.anchor(), b.facing(), 13)) {
-            BlockState s = level.getBlockState(pl.pos());
-            if (!ServiceRole.Point.COUNTER.is(s)) continue;
-            BlockPos at = pl.pos().above();
-            if (level.getBlockEntity(at) instanceof TillBlockEntity be) {
-                if (!be.bound()) { be.bind(v.id(), "town:" + role.id, null); be.setSelfServe(false); known(be); }
+        String key = "town:" + role.id;
+        ServicePoints.Point point = null;
+        for (ServicePoints.Point q : ServicePoints.of(level, v.id(), role)) if (q.building().equals(b)) { point = q; break; }
+        if (point == null) return;
+        BlockPos sc = point.pos();
+        for (int dx = -2; dx <= 2; dx++) for (int dy = 0; dy <= 1; dy++) for (int dz = -2; dz <= 2; dz++) {
+            if (level.getBlockEntity(sc.offset(dx, dy, dz)) instanceof TillBlockEntity be) {   // one already: bound to this trade
+                if (!be.bound()) { be.bind(v.id(), key, null); be.setSelfServe(false); }
+                known(be);
                 return;
             }
-            if (!level.getBlockState(at).isAir()) return;
-            if (!level.getEntitiesOfClass(ItemFrame.class, new AABB(at)).isEmpty()) return;
-            if (!TownBlocks.mayBuild(level, v, at, b.anchor(), TownBlocks.Why.RENOVATE)) return;
-            Direction front = s.hasProperty(com.jrpetty.mcassistant.block.ServiceCounterBlock.FACING)
-                ? s.getValue(com.jrpetty.mcassistant.block.ServiceCounterBlock.FACING) : Direction.NORTH;
-            level.setBlock(at, TillItems.TILL.get().defaultBlockState().setValue(TillBlock.FACING, front), 3);
+        }
+        List<BlockPos> counters = b.structure().equals(Store.STRUCTURE) ? Store.layout(b).counters() : Cafe.counters(b);
+        List<BlockPos> spots = new ArrayList<>();
+        for (Direction d : new Direction[]{ point.front().getClockWise(), point.front().getCounterClockWise() }) {
+            BlockPos c = sc.relative(d);
+            if (counters.contains(c) && ServicePoints.isCounter(level.getBlockState(c))) spots.add(c);
+        }
+        spots.add(sc);                                                       // no counter beside it: on the service counter
+        for (BlockPos c : spots) {
+            BlockPos at = c.above();
+            if (!level.isLoaded(at)) continue;
+            for (ItemFrame fr : level.getEntitiesOfClass(ItemFrame.class, new AABB(at))) {
+                if (fr.getTags().contains("mca_stall") && !c.equals(sc)) fr.discard();   // the counter's ware makes room for the till
+            }
+            if (!level.getBlockState(at).isAir() || !level.getEntitiesOfClass(ItemFrame.class, new AABB(at)).isEmpty()) continue;
+            if (!TownBlocks.mayBuild(level, v, at, b.anchor(), TownBlocks.Why.RENOVATE)) continue;
+            level.setBlock(at, TillItems.TILL.get().defaultBlockState().setValue(TillBlock.FACING, point.front()), 3);
             if (level.getBlockEntity(at) instanceof TillBlockEntity be) {
-                be.bind(v.id(), "town:" + role.id, null);
+                be.bind(v.id(), key, null);
                 be.setSelfServe(false);
                 known(be);
             }
             return;
         }
+    }
+
+    /** The town's till for this trade by its service counter, or null. */
+    @Nullable
+    public static BlockPos townTill(UUID village, ServiceRole role, BlockPos near) {
+        List<BlockPos> t = tillsOf(village, "town:" + role.id, near);
+        return !t.isEmpty() && t.get(0).distSqr(near) <= 3 * 3 ? t.get(0) : null;
+    }
+
+    /** Is there a till on this counter (it shows no ware: StoreFloor.dress)? */
+    public static boolean tillOn(ServerLevel level, BlockPos counter) {
+        return level.getBlockEntity(counter.above()) instanceof TillBlockEntity;
     }
 
     /** A player's shop gets its till on its counter, once (its owner may pick it up and set it elsewhere after). */
