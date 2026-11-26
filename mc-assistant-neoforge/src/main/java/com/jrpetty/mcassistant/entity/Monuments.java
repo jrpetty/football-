@@ -554,7 +554,27 @@ public final class Monuments {
         return s.length() <= n ? s : s.substring(0, n - 1) + ".";
     }
 
-    // ------------------------------------------------------------------ the tests
+    // ------------------------------------------------------------------ the tests, the showcase and the film
+
+    /** A statue garden put up at once on its lot, for nothing (the tests, the film): its ground made level, the drawing,
+     *  its trees grown and paths laid, its ponds filled. */
+    public static Ledger.Building putUp(ServerLevel level, UUID village, BlockPos anchor, Direction facing) {
+        ParkGround.levelNow(level, anchor);
+        com.jrpetty.mcassistant.entity.goal.BuildGoal.stamp(level, Park.GARDEN, anchor, facing, 0,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        Villages.noteProject(village, Park.GARDEN, level.getGameTime());
+        Ledger.Building b = null;
+        for (Ledger.Building g : gardens(village)) if (g.anchor().equals(anchor)) b = g;
+        if (b == null) {
+            Ledger.built(village, Park.GARDEN, anchor, facing);
+            for (Ledger.Building g : gardens(village)) if (g.anchor().equals(anchor)) b = g;
+        }
+        if (b == null) return null;
+        Park.grow(level, b);
+        Villages.Village v = Villages.get(village);
+        if (v != null) ponds(level, v, b, true);
+        return b;
+    }
 
     public static boolean raiseForTests(ServerLevel level, Villages.Village v, Ledger.Building g, VillageFolkEntity f) {
         return raise(level, v, g, f, true);

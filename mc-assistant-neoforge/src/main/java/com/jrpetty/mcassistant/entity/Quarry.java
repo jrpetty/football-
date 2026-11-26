@@ -262,7 +262,7 @@ public final class Quarry {
                     if (depth <= 0 || y < rim - depth + 1) continue;
                     BlockPos p = new BlockPos(c.getX() + dx, y, c.getZ() + dz);
                     if (UNREACHABLE.getOrDefault(town, Map.of()).containsKey(p.asLong())) continue;
-                    if (cuttable(level, p, y == rim - depth + 1)) return p;
+                    if (cuttable(level, p, y == rim - depth + 1) && terraced(level, p, rim)) return p;
                 }
             }
         }
@@ -285,6 +285,33 @@ public final class Quarry {
             if (under.isAir() || !under.getFluidState().isEmpty()) return false;
         }
         return true;
+    }
+
+    /**
+     * Would cutting this block leave every step into its cell a block at most: the block over it already open (cut top
+     * down), and no column beside it standing more than a block over the floor it leaves? (A cell left standing, by water
+     * or by somebody's work, keeps the cells round it a step higher, and so on in: terraces, never a drop.)
+     */
+    static boolean terraced(ServerLevel level, BlockPos p, int rim) {
+        BlockState over = level.getBlockState(p.above());
+        if (!over.isAir() && !CastleWall.wild(level, p.above(), over)) return false;
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockPos n = p.relative(d);
+            if (top(level, n.getX(), n.getZ(), rim + 8, rim - DEEPEST - 2) > p.getY()) return false;
+        }
+        return true;
+    }
+
+    /** The highest block of ground (not air, not a plant) in a column, between these heights. */
+    static int top(ServerLevel level, int x, int z, int from, int to) {
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos(x, from, z);
+        for (int y = from; y >= to; y--) {
+            BlockState st = level.getBlockState(m.setY(y));
+            if (st.isAir() || CastleWall.wild(level, m, st) && !st.is(BlockTags.LOGS)) continue;
+            if (st.is(BlockTags.FENCES) || st.is(BlockTags.FENCE_GATES) || st.is(Blocks.LANTERN) || st.is(Blocks.TORCH)) continue;
+            return y;
+        }
+        return to;
     }
 
     /** Cut one block: what it gives (the stone by what a pick gets of it; ore, earth and the rest). */
@@ -447,7 +474,7 @@ public final class Quarry {
         }
         // The town grown out to it: closed, and a new one further out.
         int dx = s.centre().getX() - v.centre().getX(), dz = s.centre().getZ() - v.centre().getZ();
-        if (Math.max(Math.abs(dx), Math.abs(dz)) - s.half() - 1 <= growthReach(id)) {
+        if (!readyForTests && Math.max(Math.abs(dx), Math.abs(dz)) - s.half() - 1 <= growthReach(id)) {
             close(level, v, s, "the town has grown out to it");
             return;
         }
