@@ -97,8 +97,8 @@ public final class FittingRenderer implements BlockEntityRenderer<FittingBlockEn
         pose.pushPose();
         pose.translate(0.5, 14.6 / 16, 7.1 / 16);
         float s = 0.0085F;
-        pose.scale(-s, -s, s);
-        pose.mulPose(Axis.YP.rotationDegrees(180));
+        pose.mulPose(Axis.YP.rotationDegrees(180));                        // the board's face is the model's north
+        pose.scale(s, -s, s);
         Matrix4f m = pose.last().pose();
         int width = 140;                                                     // the board, 12 pixels of 16, in these units
         String head = lines.get(0);

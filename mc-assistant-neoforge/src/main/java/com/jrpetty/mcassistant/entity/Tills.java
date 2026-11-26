@@ -489,7 +489,7 @@ public final class Tills {
     static String whyNot(ServerPlayer p, Session s, Can can, TillShops.Quote q, TillShops.Source src) {
         if (q.lines().isEmpty()) return "Add something with +.";
         if (src.ownedBy(p.getUUID())) return "It's your own stock.";
-        if (!can.serve()) return can.offerSelf() ? "Nobody at the till. Serve yourself?" : can.why();
+        if (!can.serve()) return can.offerSelf() ? "Nobody in: serve yourself?" : can.why();
         int held = Market.coinsHeld(p);
         if (held < q.total()) {
             int bank = Bank.balanceOf(s.village, p.getUUID());

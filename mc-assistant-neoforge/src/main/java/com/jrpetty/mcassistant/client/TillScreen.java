@@ -388,10 +388,13 @@ public class TillScreen extends Screen {
             }
         }
         for (String n : notes) {
-            if (y > payTop - 2) break;
-            boolean clipped = text(g, font, n, x, y, w, INFO);
-            if (clipped && in(mx, my, x, y, w, 9)) tip = n;
-            y += 10;
+            List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(n), w);
+            for (int i = 0; i < lines.size() && i < 2; i++) {
+                if (y > payTop - 2) break;
+                g.drawString(font, lines.get(i), x, y, INFO, false);
+                if (in(mx, my, x, y, w, 9) && lines.size() > 2) tip = n;
+                y += 10;
+            }
         }
         // the total, big
         int total = data.getCompound("quote").getInt("total");
