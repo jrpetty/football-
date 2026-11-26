@@ -295,7 +295,10 @@ public final class Bedside {
     /** A floor to stand on: solid under, two clear over, no water, not a doorway. */
     static boolean standable(net.minecraft.world.level.Level level, BlockPos p) {
         BlockState feet = level.getBlockState(p), head = level.getBlockState(p.above());
-        if (!feet.getCollisionShape(level, p).isEmpty() || !head.getCollisionShape(level, p.above()).isEmpty()) return false;
+        // [tp50] A carpet is floor to lie on (the upper rooms are carpeted between the beds: no floor up there at all, and a folk
+        // wedged upstairs with its bed across the town found none to lie on).
+        net.minecraft.world.phys.shapes.VoxelShape under = feet.getCollisionShape(level, p);
+        if (!under.isEmpty() && under.max(Direction.Axis.Y) > 0.1 || !head.getCollisionShape(level, p.above()).isEmpty()) return false;
         if (!feet.getFluidState().isEmpty() || feet.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) return false;
         if (feet.getBlock() instanceof net.minecraft.world.level.block.BedBlock) return false;
         return level.getBlockState(p.below()).isFaceSturdy(level, p.below(), Direction.UP);
