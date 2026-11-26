@@ -407,6 +407,9 @@ public final class McAssistantMod {
     public McAssistantMod(IEventBus modBus, net.neoforged.fml.ModContainer container) {
         // Every tunable number lives in config/mc_assistant-common.toml.
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, AssistantConfig.SPEC);
+        modBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Loading e) -> {   // [grow54] the old village sizes, moved once
+            if (e.getConfig().getSpec() == AssistantConfig.SPEC) AssistantConfig.migrateVillageSizes();
+        });
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.jrpetty.mcassistant.admin.AdminConfig.SPEC);   // [admin] the admin toolkit's switches
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, AnimConfig.SPEC);   // [anim] how much of the folk's life is drawn
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, UiConfig.SPEC, "mc_assistant-ui-client.toml");

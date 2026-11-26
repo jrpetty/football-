@@ -143,6 +143,10 @@ public final class Newcomers {
         int n = size(p);
         String from = p.getString("fromName");
         String why = p.getString("causeWords");
+        if (p.getBoolean(Settlers.FLAG)) {                                   // [grow54] "a party of three settlers from the east"
+            return n <= 1 ? names(p, false).stream().findFirst().orElse("a settler") + ", a settler from " + from
+                : "a party of " + JobMarket.words(n) + " settlers from " + from;
+        }
         if (n <= 1) {
             ListTag ms = CivicRecord.list(p, "members");
             CompoundTag m = ms.isEmpty() ? new CompoundTag() : ms.getCompound(0);
@@ -169,6 +173,7 @@ public final class Newcomers {
             });
             com.jrpetty.mcassistant.Guard.run("newcomers settling", () -> settling(level, v, day));
         }
+        com.jrpetty.mcassistant.Guard.run("settlers sent for", () -> Settlers.tick(level, v));      // [grow54]
         // A party camped here too long with nothing put to the town (a question lost to a reset, a vote never held): on it goes.
         // And the books let go of parties long settled, gone home or gone on (the town's own log keeps how each went).
         for (String pid : new ArrayList<>(CivicRecord.parties().getAllKeys())) {
@@ -428,6 +433,7 @@ public final class Newcomers {
     static String fromOutside(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
         if (Villages.headcount(id) < 15 || Wars.footing(id) != Wars.Footing.PEACE || Raids.underAlarm(id)) return null;
+        if (Settlers.boosting(id)) return null;                             // [grow54] settlers are on their way instead
         CompoundTag town = CivicRecord.town(id);
         if (town.contains("ncOutside") && day - town.getLong("ncOutside") < OUTSIDE_EVERY) return null;
         for (String pid : CivicRecord.parties().getAllKeys()) {
@@ -440,9 +446,23 @@ public final class Newcomers {
 
     /** The party from outside, made: {@code n} of them (or by the odds, given -1). Returns the party's number, or null. */
     static String outside(ServerLevel level, Villages.Village v, long day, int n) {
+        // [grow54] Out of anybody's sight, out past the town on the way in (Settlers.start), never set down at its edge
+        // in front of a player: they walk the rest. Nowhere unseen and loaded: they come another day.
+        BlockPos start = Settlers.start(level, v);
+        if (start == null) {                                                // nothing loaded out there: the town's edge, if nobody sees it
+            BlockPos edge = Visitors.edge(level, v, level.getRandom());
+            if (edge != null && !Blink.seenAt(level, edge.getX() + 0.5, edge.getZ() + 0.5, Settlers.MARGIN)) start = edge;
+        }
+        return start == null ? null : outside(level, v, day, n, start, false);
+    }
+
+    /**
+     * [grow54] The party from outside, set down at {@code start} (a spot nobody can see, Settlers.start): {@code n} of
+     * them, or by the odds given -1. Settlers (sent for by a small village) are all grown, carry a settler's kit (their
+     * food, tools, seed and bedding) and are taken in the moment they reach the town, with no vote.
+     */
+    static String outside(ServerLevel level, Villages.Village v, long day, int n, BlockPos start, boolean settlers) {
         RandomSource r = level.getRandom();
-        BlockPos edge = Visitors.edge(level, v, r);
-        if (edge == null) return null;
         if (n < 1) {
             int roll = r.nextInt(20);
             n = roll < 8 ? 1 : roll < 15 ? 2 : 3;
@@ -454,22 +474,23 @@ public final class Newcomers {
         p.putString("from", "");
         p.putString("fromName", afar[0]);
         p.putString("cause", Cause.OUTSIDE.name());
-        p.putString("causeWords", afar[1]);
+        p.putString("causeWords", settlers ? "come to settle, sent for" : afar[1]);
         p.putString("target", v.id().toString());
         p.putString("stage", "road");
         p.putLong("since", day);
         p.putBoolean("outside", true);
-        p.putLong("camp", edge.asLong());
+        if (settlers) p.putBoolean(Settlers.FLAG, true);
+        p.putLong("start", start.asLong());
+        p.putLong("camp", camp(level, v, start).asLong());                  // at the edge of town, the way they come in
         ListTag members = CivicRecord.list(p, "members");
         List<VillageFolkEntity> made = new ArrayList<>();
-        BlockPos start = edge.offset((edge.getX() - v.centre().getX()) > 0 ? 12 : -12, 0, (edge.getZ() - v.centre().getZ()) > 0 ? 12 : -12);
-        if (!level.hasChunk(start.getX() >> 4, start.getZ() >> 4)) start = edge;
-        start = new BlockPos(start.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, start.getX(), start.getZ()), start.getZ());
         for (int i = 0; i < n; i++) {
-            boolean child = i == 2;
+            boolean child = !settlers && i == 2;
             VillageFolkEntity f = McAssistantMod.VILLAGE_FOLK.get().create(level);
             if (f == null) break;
-            f.moveTo(start.getX() + 0.5 + i, start.getY(), start.getZ() + 0.5, r.nextFloat() * 360F, 0.0F);
+            BlockPos at = i == 0 ? null : Settlers.ground(level, start.getX() + i, start.getZ());   // [grow54] a step apart, on its own ground
+            if (at == null) at = start;
+            f.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, r.nextFloat() * 360F, 0.0F);
             f.rename(Names.freshFor(v.id(), r));
             if (child) {
                 f.setChild(true);
@@ -485,10 +506,11 @@ public final class Newcomers {
             } else {
                 f.life().roll(r, null, null);
             }
-            StationTask t = child ? null : i < trades.size() ? trades.get(i) : StationTask.FARM;
+            StationTask t = child ? null : i < trades.size() ? trades.get(i) : settlers ? null : StationTask.FARM;
             f.persona().roll(r, f.life(), t == null ? StationTask.NONE : t, day, afar[0]);
-            if (t != null) f.schoolXp(t, AssistantEntity.xpForLevel(8 + r.nextInt(9)));
-            f.insertGiven(new ItemStack(Items.BREAD, 3 + r.nextInt(4)));
+            if (t != null) f.schoolXp(t, AssistantEntity.xpForLevel((settlers ? 3 : 8) + r.nextInt(settlers ? 6 : 9)));
+            if (settlers) com.jrpetty.mcassistant.VillageSpawner.starterKit(f);   // [grow54] a settler's kit: food, tools, seed
+            else f.insertGiven(new ItemStack(Items.BREAD, 3 + r.nextInt(4)));
             f.setPersistenceRequired();
             f.addTag(TAG);
             CompoundTag d = new CompoundTag();
@@ -505,7 +527,7 @@ public final class Newcomers {
             mt.putBoolean("head", i == 0);
             members.add(mt);
         }
-        if (made.size() >= 2 && !made.get(0).isBaby() && !made.get(1).isBaby()) {
+        if (made.size() >= 2 && !made.get(0).isBaby() && !made.get(1).isBaby() && (!settlers || r.nextBoolean())) {
             made.get(0).life().partnerWith(made.get(1).getUUID(), made.get(1).displayNameCap());
             made.get(1).life().partnerWith(made.get(0).getUUID(), made.get(0).displayNameCap());
         }
@@ -513,9 +535,10 @@ public final class Newcomers {
             CivicRecord.parties().remove(pid);
             return null;
         }
-        CivicRecord.town(v.id()).putLong("ncOutside", day);
+        if (!settlers) CivicRecord.town(v.id()).putLong("ncOutside", day);
         CivicRecord.changed();
-        LOG.info("[MCA-CIVIC] {} newcomers from {} ({}) make for {}: party {}", made.size(), afar[0], afar[1], Villages.name(v.id()), pid);
+        LOG.info("[MCA-CIVIC] {} {} from {} ({}) make for {} from {}: party {}", made.size(), settlers ? "settlers" : "newcomers", afar[0],
+            p.getString("causeWords"), Villages.name(v.id()), start.toShortString(), pid);
         return pid;
     }
 
@@ -704,6 +727,10 @@ public final class Newcomers {
     static void arrived(ServerLevel level, Villages.Village town, String pid, long day) {
         CompoundTag p = party(pid);
         if (!"road".equals(p.getString("stage")) && !"away".equals(p.getString("stage"))) return;
+        if (p.getBoolean(Settlers.FLAG)) {                                    // [grow54] sent for: no vote, taken in as they come
+            Settlers.arrived(level, town, pid, day);
+            return;
+        }
         p.putString("stage", "camp");
         p.putLong("arrived", day);
         long t = level.getDayTime() % 24000L;
@@ -848,7 +875,7 @@ public final class Newcomers {
     }
 
     /** One line for the books: the party, the day, what the town decided and by how much. */
-    private static void record(UUID village, CompoundTag p, long day, String verdict, int ayes, int nays) {
+    static void record(UUID village, CompoundTag p, long day, String verdict, int ayes, int nays) {
         ListTag log = CivicRecord.list(CivicRecord.town(village), "newcomers");
         CompoundTag e = new CompoundTag();
         e.putLong("day", day);
@@ -1158,12 +1185,16 @@ public final class Newcomers {
         for (String pid : CivicRecord.parties().getAllKeys()) {
             CompoundTag p = party(pid);
             String st = p.getString("stage");
+            if (p.getBoolean(Settlers.FLAG)) continue;                       // [grow54] counted together below
             if (village.toString().equals(p.getString("target")) && (st.equals("road") || st.equals("away"))) {
                 out.add("RN|On the road here: " + title(p) + ".");
             }
         }
+        String settlers = Settlers.boardLine(level, village);                       // [grow54] "Settlers arriving: 3 on the road."
+        if (settlers != null) out.add("RN|" + settlers);
         for (Tag t : CivicRecord.list(CivicRecord.town(village), "newcomers")) {
             if (!(t instanceof CompoundTag e) || day - e.getLong("day") > 6) continue;
+            if (e.getInt("ayes") + e.getInt("nays") == 0 && e.getString("verdict").startsWith("settled")) continue;   // [grow54] not a vote
             out.add("RM|Newcomers: " + e.getString("title") + " — " + e.getString("verdict") + " (aye " + e.getInt("ayes") + ", nay " + e.getInt("nays") + ").");
         }
         return out;
@@ -1173,22 +1204,26 @@ public final class Newcomers {
     static List<String> book(ServerLevel level, UUID village) {
         List<String> out = new ArrayList<>();
         ListTag log = CivicRecord.list(CivicRecord.town(village), "newcomers");
-        int in = 0, away = 0, folk = 0;
+        int in = 0, away = 0, folk = 0, sent = 0;
         for (Tag t : log) {
             if (!(t instanceof CompoundTag e)) continue;
-            if (e.getString("verdict").equals("taken in")) in++; else away++;
+            if (e.getString("verdict").equals("taken in")) in++;
+            else if (e.getString("verdict").startsWith("settled")) sent++;          // [grow54] settlers sent for
+            else away++;
         }
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (a instanceof VillageFolkEntity f && CivicRecord.known(f.getUUID()) && CivicRecord.folk(f.getUUID()).contains("cameOn")) folk++;
         }
         if (in + away > 0 || folk > 0) {
-            out.add("Newcomers: " + in + (in == 1 ? " party" : " parties") + " taken in, " + away + " turned away; " + folk
+            out.add("Newcomers: " + in + (in == 1 ? " party" : " parties") + " taken in, " + away + " turned away"
+                + (sent > 0 ? ", " + sent + (sent == 1 ? " party" : " parties") + " of settlers sent for" : "") + "; " + folk
                 + " of our folk came to us that way.");
         }
         for (int i = log.size() - 1, k = 0; i >= 0 && k < 6; i--, k++) {
             if (!(log.get(i) instanceof CompoundTag e)) continue;
-            out.add("Day " + (e.getLong("day") + 1) + ": " + e.getString("title") + " — " + e.getString("verdict") + " (aye " + e.getInt("ayes")
-                + ", nay " + e.getInt("nays") + ")" + (e.getString("trades").isEmpty() ? "" : "; trades: " + e.getString("trades")) + ".");
+            boolean voted = e.getInt("ayes") + e.getInt("nays") > 0 || !e.getString("verdict").startsWith("settled");
+            out.add("Day " + (e.getLong("day") + 1) + ": " + e.getString("title") + " — " + e.getString("verdict") + (voted ? " (aye " + e.getInt("ayes")
+                + ", nay " + e.getInt("nays") + ")" : "") + (e.getString("trades").isEmpty() ? "" : "; trades: " + e.getString("trades")) + ".");
         }
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || !CivicRecord.known(f.getUUID())) continue;
