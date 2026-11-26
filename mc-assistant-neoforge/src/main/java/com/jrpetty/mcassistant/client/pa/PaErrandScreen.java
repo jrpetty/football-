@@ -61,12 +61,12 @@ public final class PaErrandScreen extends PaKitBase {
         CompoundTag e = PaKitClient.errand;
         int x = left + 8, y = top + 28, iw = w - 16;
         int footH = 34, foot = top + h - footH - 6;
-        feedback(g, x, foot, iw, footH);
         if (hint(g, x, y, iw, "Sending it to market", new String[]{
-                "Click things in your inventory (left) to hand them over to sell. Click them under To sell to have them back.",
-                "Use + and - on the shopping list (right). Prices are a lot's price in the town today.",
-                "Give it coins with +8 or +32 if it's buying. It never spends past its limit (Settings, Behaviour).",
-                "Press Send. It walks there and back on foot, then hands you the goods and the change and tells you how it went."}, mx, my)) return;
+                "Click your things (left) to hand them over to sell; click them under To sell to have them back.",
+                "Use + and - on the shopping list (right): a lot's price in the town today.",
+                "Give it coins with +8 or +32. It never spends past its limit (Settings, Behaviour).",
+                "Press Send. It walks there and back, hands you the goods and the change, and says how it went."}, mx, my)) return;
+        feedback(g, x, foot, iw, footH);
         if (e == null) { g.drawString(font, "Asking it...", x, y + 2, UiStyle.TEXT_MUTED, false); return; }
         if (e.getString("town").isEmpty()) {
             para(g, "There's no town near enough to run an errand to. Errands go to the nearest town's market, up to about 1200 blocks away.", x, y + 2, iw, UiStyle.DANGER);
@@ -111,7 +111,7 @@ public final class PaErrandScreen extends PaKitBase {
         int rx = x + colW + 8;
         UiStyle.heading(g, font, "Shopping list (a lot's price today)", rx, y, colW);
         ListTag goods = e.getList("goods", Tag.TAG_COMPOUND);
-        int rows = 7, ry = y + 12;
+        int rows = Math.max(2, Math.min(7, (foot - (y + 12) - 15 - 78 - (run != null ? 46 : 0)) / 18)), ry = y + 12;
         goodsScroll = Math.max(0, Math.min(goodsScroll, Math.max(0, goods.size() - rows)));
         for (int i = goodsScroll; i < goodsScroll + rows && i < goods.size(); i++) {
             CompoundTag gd = goods.getCompound(i);

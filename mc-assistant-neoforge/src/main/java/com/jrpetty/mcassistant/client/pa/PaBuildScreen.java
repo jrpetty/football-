@@ -81,14 +81,19 @@ public final class PaBuildScreen extends PaKitBase {
     protected void body(GuiGraphics g, int mx, int my) {
         CompoundTag l = PaKitClient.list, st = PaKitClient.status, pv = PaKitClient.preview;
         int x = left + 8, iw = w - 16, y = top + 28;
-        int footH = 44, foot = top + h - footH - 6;
-        feedback(g, x, foot, iw, footH);
-        name.visible = hintSeen();
+        int footH = h < 300 ? 34 : 44, foot = top + h - footH - 6;
+        boolean placingNow = pv != null && st != null && st.getBoolean("previewing");
+        name.visible = hintSeen() && !placingNow;
         if (hint(g, x, y, iw, "Copying a building", new String[]{
-                "Look at a building (or stand in it) and click Copy what I look at. Or ping two corners and pick Copy this building.",
-                "Pick it in the list, look where the copy should go, click Place where I look.",
-                "Turn, mirror or nudge the ghost. Red outlines are your own blocks: it builds round them.",
-                "Click Build it. It walks over and builds by hand, layer by layer, taking what it needs from its pack and your chests."}, mx, my)) return;
+                "Look at a building and click Copy what I look at.",
+                "Pick it, look where the copy goes, click Place where I look.",
+                "Turn or mirror the ghost. Red marks your own blocks: it builds round them.",
+                "Click Build it: it builds by hand from its pack and your chests."}, mx, my)) return;
+        feedback(g, x, foot, iw, footH);
+        if (placingNow) {
+            placing(g, pv, x, y, iw, foot - 4, mx, my);
+            return;
+        }
         g.drawString(font, "Show it a building", x, y, UiStyle.TEXT, false);
         y += 30;
         int half = (iw - 4) / 2;
@@ -102,10 +107,6 @@ public final class PaBuildScreen extends PaKitBase {
         // a build under way
         CompoundTag run = st != null && st.contains("run") ? st.getCompound("run") : null;
         if (run != null && (run.getBoolean("active") || !run.getBoolean("done"))) y = runBox(g, run, x, y, iw, mx, my);
-        if (pv != null && st != null && st.getBoolean("previewing")) {
-            placing(g, pv, x, y, iw, foot - 4, mx, my);
-            return;
-        }
         // the list
         UiStyle.heading(g, font, "Kept", x, y, iw);
         y += 12;
@@ -114,7 +115,8 @@ public final class PaBuildScreen extends PaKitBase {
         if (list.isEmpty()) {
             y = para(g, "None yet. Copy a building above and it shows here.", x + 2, y + 2, iw - 4, UiStyle.TEXT_MUTED);
         }
-        int rows = Math.min(list.size(), 5);
+        int below = sel.isEmpty() ? 0 : 19 + 18 + 12 + 20;               // the buttons and one row of what it takes
+        int rows = Math.max(1, Math.min(Math.min(list.size(), 5), (foot - 4 - y - below - (list.size() > 5 ? 14 : 0)) / 16));
         listScroll = Math.max(0, Math.min(listScroll, Math.max(0, list.size() - rows)));
         for (int i = listScroll; i < listScroll + rows && i < list.size(); i++) {
             CompoundTag b = list.getCompound(i);
@@ -193,11 +195,12 @@ public final class PaBuildScreen extends PaKitBase {
 
     /** Placing: the ghost's buttons. */
     private void placing(GuiGraphics g, CompoundTag pv, int x, int y, int iw, int bottom, int mx, int my) {
-        UiStyle.heading(g, font, "Placing " + pv.getString("name"), x, y, iw);
-        y += 12;
-        g.drawString(font, UiStyle.clip(font, pv.getString("size") + (pv.getBoolean("mirror") ? " · mirrored" : "") + " · turned " + pv.getInt("rot") * 90 + "°", iw - 54), x, y + 2, UiStyle.TEXT_MUTED, false);
-        button(g, "Show me", x + iw - 50, y, 50, 12, mx, my, true, false, "Mark the ghost on your screen, with how far it is", () -> PaKitClient.send("bp_show"));
-        y += 16;
+        String about = pv.getString("size") + (pv.getBoolean("mirror") ? ", mirrored" : "") + ", turned " + pv.getInt("rot") * 90 + "°";
+        UiStyle.title(g, font, UiStyle.clip(font, "Placing " + pv.getString("name"), iw - 54), x, y + 2);
+        button(g, "Show me", x + iw - 50, y, 50, 13, mx, my, true, false, "Mark the ghost on your screen, with how far it is", () -> PaKitClient.send("bp_show"));
+        y += 15;
+        g.drawString(font, UiStyle.clip(font, about, iw), x, y, UiStyle.TEXT_MUTED, false);
+        y += 11;
         int half = (iw - 4) / 2;
         button(g, "↻ Turn", x, y, half, 16, mx, my, true, false, "A quarter turn clockwise, about its middle", () -> PaKitClient.send("bp_rot"));
         button(g, pv.getBoolean("mirror") ? "Unmirror" : "Mirror", x + half + 4, y, half, 16, mx, my, true, false, "Flip it left for right", () -> PaKitClient.send("bp_mirror"));
@@ -224,7 +227,9 @@ public final class PaBuildScreen extends PaKitBase {
         int clashes = pv.getInt("clashes");
         boolean clear = pv.getBoolean("clear");
         if (clashes > 0) {
-            y = para(g, clashes + " of your own blocks are in the way (red). It won't knock anything of yours down unless you say so.", x, y, iw, UiStyle.DANGER);
+            g.drawString(font, UiStyle.clip(font, clashes + " of your blocks in the way (red): kept unless you say", iw), x, y, UiStyle.DANGER, false);
+            if (in(mx, my, x, y, iw, 10)) tipNow = clashes + " of your own blocks are in the way (red outlines). It won't knock anything of yours down unless you choose Clear them.";
+            y += 11;
             button(g, "Build round them", x, y, half, 14, mx, my, clear, false, clear ? "Leave your blocks where they are; it builds the rest" : "already building round them", () -> {
                 CompoundTag t = new CompoundTag(); t.putBoolean("on", false); PaKitClient.send("bp_clear", t); });
             confirmButton(g, "clear", "Clear them", "Sure? Clear", x + half + 4, y, half, 14, mx, my, !clear, false,
@@ -237,7 +242,9 @@ public final class PaBuildScreen extends PaKitBase {
         }
         String shortOf = pv.getString("short");
         if (!shortOf.isEmpty()) {
-            y = para(g, "Short of " + shortOf + ". It uses what it has, fetches from your chests, and says what's missing.", x, y, iw, UiStyle.WARNING);
+            g.drawString(font, UiStyle.clip(font, "Short of " + shortOf, iw), x, y, UiStyle.WARNING, false);
+            if (in(mx, my, x, y, iw, 10)) tipNow = "Short of " + shortOf + ". It uses what it has, fetches from your chests near the spot, and says what's still missing.";
+            y += 11;
             button(g, "Get what's short", x, y, half, 14, mx, my, true, false, "It crafts what it can from your things, and goes for the rest", () -> PaKitClient.send("bp_fetch"));
             button(g, "Buy at the market", x + half + 4, y, half, 14, mx, my, true, false, "What's short goes on an errand's shopping list (you send it)", () -> PaKitClient.send("bp_buy"));
             y += 18;

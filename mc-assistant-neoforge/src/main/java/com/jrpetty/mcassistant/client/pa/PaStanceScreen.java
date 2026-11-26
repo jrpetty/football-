@@ -47,12 +47,12 @@ public final class PaStanceScreen extends PaKitBase {
         CompoundTag s = PaKitClient.stance;
         int x = left + 8, y = top + 28, iw = w - 16;
         int footH = 30, foot = top + h - footH - 6;
-        feedback(g, x, foot, iw, footH);
         if (hint(g, x, y, iw, "Combat stances", new String[]{
                 "Shield draws monsters onto itself and blocks; Archer keeps its distance and shoots; Medic stays back and heals.",
                 "Each card says if it's missing the kit for that stance: hand it over in its Pack tab.",
                 "Pick who it guards: you, or a villager near by.",
                 "With Help a town's guards on, it joins a town's defence in a raid, in its stance."}, mx, my)) return;
+        feedback(g, x, foot, iw, footH);
         if (s == null) { g.drawString(font, "Asking it...", x, y + 2, UiStyle.TEXT_MUTED, false); return; }
         int cw = (iw - 6) / 2, ch = 52;
         int k = s.getInt("k");
@@ -85,7 +85,8 @@ public final class PaStanceScreen extends PaKitBase {
         y += 2 * (ch + 4) + 4;
         // who it guards
         String ward = s.getString("ward");
-        UiStyle.heading(g, font, "Guards: " + ward, x, y, iw - 56);
+        String def0 = s.getString("defending");
+        UiStyle.heading(g, font, "Guards: " + ward + (def0.isEmpty() ? "" : ", defending " + def0), x, y, iw - 56);
         button(g, "Show me", x + iw - 52, y - 2, 52, 12, mx, my, true, false, "Mark who it guards (or the town it's defending)", () -> PaKitClient.send("st_show"));
         y += 13;
         int bx = x;
@@ -112,8 +113,6 @@ public final class PaStanceScreen extends PaKitBase {
                 : "Off: it stays with you in a raid. Click to turn it on",
             () -> { CompoundTag t = new CompoundTag(); t.putBoolean("on", !town); PaKitClient.send("st_town", t); });
         y += 18;
-        String def = s.getString("defending");
-        if (!def.isEmpty()) UiStyle.title(g, font, "Defending " + def + " now.", x, y);
     }
 
     private void ward(int id) {
