@@ -232,7 +232,7 @@ public final class ServicePoints {
             return new Status(false, keeper, "Closed. " + role.hours.nextOpening(t) + " (hours " + role.hours.words() + ").");
         }
         if (keeper == null) {
-            if (role == ServiceRole.HALL) return new Status(true, null, "Open. The clerk's out: the town's book lies on the desk.");   // [wpa]
+            if (role == ServiceRole.HALL) return new Status(true, null, "Open; the book is on the desk.");   // [wpa]
             if (role.selfServe()) return new Status(true, null, "Open. Nobody behind the bar: the coin goes in the jar.");
             return new Status(false, null, "Closed: the town has no " + role.keeperNoun + " just now.");
         }

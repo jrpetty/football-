@@ -281,7 +281,7 @@ public final class FirstWeek {
         Villages.Village v = Villages.get(town);
         String name = Villages.name(town);
         int n = count(me), all = firstEight();
-        page.bar("Your first week in " + name, n / (double) all, n + " of " + all);
+        page.bar("Your first week", n / (double) all, n + " of " + all + ", " + name);
         boolean chapterTwo = n >= all;
         for (Step s : Step.values()) {
             if (s.later && !chapterTwo) continue;

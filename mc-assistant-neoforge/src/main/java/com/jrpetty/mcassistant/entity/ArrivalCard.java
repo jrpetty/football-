@@ -75,12 +75,12 @@ public final class ArrivalCard implements PlayerLife.Page {
         UUID id = v.id();
         String name = Villages.name(id);
         Standing.View view = Standing.of(id, p.getUUID(), level.getGameTime());
-        LifePage page = new LifePage("arrival", "Welcome to " + name, Villages.ageOf(id).label + " · " + Villages.headcount(id) + " people · you are "
-            + view.title().words, p.registryAccess());
+        LifePage page = new LifePage("arrival", "Welcome to " + name, cap(Villages.ageOf(id).label) + " · " + Villages.headcount(id) + " people", p.registryAccess());
         String character = Identity.summary(id);
         if (character != null && !character.isEmpty()) page.text(character, 4);
         boolean reg = Belonging.registered(id, p.getUUID());
         boolean citizen = Citizens.is(id, p.getUUID());
+        page.text("The town counts you " + view.title().words + ".", 4);
         page.heading(reg ? "You live here" : "New in town?");
         if (!reg) {
             page.row(new ItemStack(Items.WRITABLE_BOOK), "Join the village", "Sign the town's book at the Town Hall: a resident, a bed if you fall, "
@@ -124,6 +124,10 @@ public final class ArrivalCard implements PlayerLife.Page {
             }
             default -> { return null; }
         }
+    }
+
+    static String cap(String s) {
+        return s == null || s.isEmpty() ? "" : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     public static void resetForTests() {

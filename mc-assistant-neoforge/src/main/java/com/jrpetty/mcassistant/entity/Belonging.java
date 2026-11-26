@@ -150,6 +150,7 @@ public final class Belonging {
         if (Laws.banished(id, p.getUUID(), day)) return "!" + town + " has banished you. Its book stays shut to you till that's over.";
         CompoundTag t = town(p.getUUID(), id);
         t.putLong("reg", day);
+        me(p.getUUID()).putString("user", p.getGameProfile().getName());
         dirty();
         BlockPos home = TownHallDesk.spawnFor(level, v);
         if (home != null) p.setRespawnPosition(level.dimension(), home, p.getYRot(), true, false);
@@ -241,13 +242,14 @@ public final class Belonging {
                 if (u.equals(first.toLowerCase(Locale.ROOT)) || u.equals(last.toLowerCase(Locale.ROOT)) || u.equals(full.replace(" ", "")))
                     return "That's " + o.getGameProfile().getName() + "'s name. Pick one of your own.";
             }
-            var cache = server.getProfileCache();
-            if (cache != null) {
-                for (String n : new String[]{ first, last, first + last }) {
-                    var found = cache.get(n);
-                    if (found.isPresent() && !found.get().getId().equals(self)) return "\"" + n + "\" is another player's name. Pick one of your own.";
-                }
-            }
+        }
+        // Every player the register has seen, online or not (the profile cache would make one up for any name offline).
+        for (String k : players.getAllKeys()) {
+            if (k.equals(self.toString())) continue;
+            String u = players.getCompound(k).getString("user").toLowerCase(Locale.ROOT);
+            if (u.isEmpty()) continue;
+            if (u.equals(first.toLowerCase(Locale.ROOT)) || u.equals(last.toLowerCase(Locale.ROOT)) || u.equals(full.replace(" ", "")))
+                return "That's another player's username. Pick a name of your own.";
         }
         return null;
     }
@@ -273,6 +275,7 @@ public final class Belonging {
             i.put("was", was);
         }
         boolean fresh = !i.contains("first");
+        me(p.getUUID()).putString("user", p.getGameProfile().getName());
         i.putString("first", first);
         i.putString("last", last);
         i.putString("bio", bio);
