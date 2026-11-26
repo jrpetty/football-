@@ -470,7 +470,7 @@ public final class Newcomers {
         p.putString("from", "");
         p.putString("fromName", afar[0]);
         p.putString("cause", Cause.OUTSIDE.name());
-        p.putString("causeWords", settlers ? "come to settle, " + Villages.name(v.id()) + " having sent for settlers" : afar[1]);
+        p.putString("causeWords", settlers ? "come to settle, sent for" : afar[1]);
         p.putString("target", v.id().toString());
         p.putString("stage", "road");
         p.putLong("since", day);
@@ -484,7 +484,9 @@ public final class Newcomers {
             boolean child = !settlers && i == 2;
             VillageFolkEntity f = McAssistantMod.VILLAGE_FOLK.get().create(level);
             if (f == null) break;
-            f.moveTo(start.getX() + 0.5 + i, start.getY(), start.getZ() + 0.5, r.nextFloat() * 360F, 0.0F);
+            BlockPos at = i == 0 ? null : Settlers.ground(level, start.getX() + i, start.getZ());   // [grow54] a step apart, on its own ground
+            if (at == null) at = start;
+            f.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, r.nextFloat() * 360F, 0.0F);
             f.rename(Names.freshFor(v.id(), r));
             if (child) {
                 f.setChild(true);

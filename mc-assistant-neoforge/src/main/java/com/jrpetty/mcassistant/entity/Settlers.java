@@ -218,12 +218,19 @@ public final class Settlers {
     static void arrived(ServerLevel level, Villages.Village town, String pid, long day) {
         CompoundTag p = Newcomers.party(pid);
         int n = Newcomers.size(p);
+        // The room the town has, counted from the world now: the reckoning it falls back on between counts is by its
+        // buildings, and said a town of eighteen beds had room for thirty (twelve settlers slept on their feet).
+        Villages.recountBeds(town.id());
+        Villages.bedsMadeUp(level, town.id());
         int spare = Villages.housing(town.id()) - Villages.headcount(town.id());
         int laid = 0;
         for (int i = 0; i < n - Math.max(0, spare); i++) {
             if (VillageSpawner.campBed(level, town.centre(), BEDDING[(int) Math.floorMod(pid.hashCode() + i, BEDDING.length)])) laid++;
         }
-        if (laid > 0) Villages.recountBeds(town.id());
+        if (laid > 0) {
+            Villages.recountBeds(town.id());
+            Villages.bedsMadeUp(level, town.id());
+        }
         Newcomers.takeIn(level, town, pid, day);
         Newcomers.record(town.id(), p, day, "settled, sent for", 0, 0);
         ChunkLoad.setLoaded(level, town.id(), town.centre(), VillageSpawner.loadedRadiusFor(Villages.headcount(town.id())), true);
