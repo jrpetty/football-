@@ -4852,8 +4852,9 @@ ripen, days pass, folk work and houses go up at that pace.
   on the road and is taken in at the edge of town with no vote, each with a founder's kit and a bed laid at the camp.
   The board says "Settlers arriving: 3 on the road". At the base size it stops and the village grows by its own
   children and the odd newcomer. Villages of eight or twelve from older builds, and colonies, are brought up the same
-  way whenever their heart is loaded. 0 turns it off. (An existing config file keeps the 8 and 12 it was written
-  with: change them there for bigger new villages; the settlers bring the small ones up to the base either way.)
+  way whenever their heart is loaded. 0 turns it off.
+* `villageSizeMigrated` is set by the mod. A config file from an older build still holding the old defaults exactly
+  (8 and 12) has them moved to 30 and 40 once, when it loads, and the log says so; sizes an admin chose are kept.
 * `villageFoundingMost` (500) is the most a village may be founded with, at the board or by charter.
 * `villageGrowthCap` (100) is the largest a village grows by raising children.
 * `villageBuildSpeed` (100) is how fast village builders lay blocks, as a percentage:
