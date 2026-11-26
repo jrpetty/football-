@@ -2,19 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "GBG",
+    " N ",
     "IRI",
     "PCP"
   ],
   "key": {
-    "G": {
-      "item": "minecraft:gold_ingot"
-    },
-    "B": {
-      "item": "minecraft:bell"
+    "N": {
+      "item": "minecraft:gold_nugget"
     },
     "I": {
-      "item": "minecraft:iron_nugget"
+      "item": "minecraft:iron_ingot"
     },
     "R": {
       "item": "minecraft:redstone"

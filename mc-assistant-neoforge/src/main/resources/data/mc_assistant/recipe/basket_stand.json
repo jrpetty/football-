@@ -2,13 +2,13 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "B B",
-    " T ",
-    "BBB"
+    "T T",
+    "STS",
+    "TTT"
   ],
   "key": {
-    "B": {
-      "item": "minecraft:bamboo"
+    "S": {
+      "item": "minecraft:string"
     },
     "T": {
       "item": "minecraft:stick"

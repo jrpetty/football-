@@ -98,4 +98,30 @@ class ScreenFitTest {
             assertTrue(ScreenFit.side(360, size[1], 12) <= size[1] - 12);
         }
     }
+
+    /** [till] The checkout at every GUI size (GUI 2 and 3 on 1280x720, and the rest): the window on the screen, the list of
+     *  wares and the basket inside it side by side, room for five rows and a name beside the − and +, the Pay button and its
+     *  reason inside the basket, and the stepper's buttons inside the row. */
+    @Test
+    void theCheckoutFitsAtEveryScale() {
+        for (int[] size : ScreenFit.GUI_SIZES) {
+            for (boolean tabs : new boolean[]{ false, true }) {
+                TillLayout.Layout l = TillLayout.of(size[0], size[1], tabs);
+                String at = size[0] + "x" + size[1] + (tabs ? " with tabs" : "");
+                TillLayout.Box screen = new TillLayout.Box(0, 0, size[0], size[1]);
+                assertTrue(l.panel().inside(screen), "the checkout off the screen at " + at);
+                for (TillLayout.Box b : new TillLayout.Box[]{ l.header(), l.list(), l.basket(), l.pay(), l.footer() }) {
+                    assertTrue(b.inside(l.panel()), b + " outside the window at " + at);
+                }
+                assertTrue(l.list().right() <= l.basket().x(), "the list runs under the basket at " + at);
+                assertTrue(l.rows() >= 5, "only " + l.rows() + " rows of wares at " + at);
+                assertTrue(l.basket().w() >= 128, "a cramped basket at " + at);
+                int[] st = TillLayout.stepper(l.list().right());
+                assertTrue(st[0] - (l.list().x() + 24) >= 90, "no room for a name beside the buttons at " + at);
+                assertTrue(st[2] + TillLayout.BTN <= l.list().right(), "the + off the row at " + at);
+                assertTrue(l.pay().bottom() + 12 <= l.basket().bottom(), "no room for Pay's reason at " + at);
+                assertTrue(l.pay().y() - 3 * 17 - 40 >= l.basket().y() + 14, "the total and its buttons crowd the basket at " + at);
+            }
+        }
+    }
 }
