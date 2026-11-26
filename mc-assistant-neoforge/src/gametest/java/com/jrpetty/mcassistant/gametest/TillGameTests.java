@@ -487,4 +487,62 @@ public class TillGameTests {
         helper.assertTrue(wanting.isEmpty(), "every new block crafts at the table: " + wanting);
         helper.succeed();
     }
+
+    // ============================================================ a player's own shop: its till, self-service, its till's coin
+
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "tl12_player_shop_till")
+    public static void tl12_player_shop_till(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 7702100, 0);
+        helper.runAtTickTime(5, () -> {
+            BlockPos heart = t.heart();
+            int x0 = heart.getX() + 5, x1 = heart.getX() + 11, z0 = heart.getZ() - 3, z1 = heart.getZ() + 3, y = heart.getY();
+            for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
+                level.setBlock(new BlockPos(x, y - 1, z), Blocks.OAK_PLANKS.defaultBlockState(), 2);
+                level.setBlock(new BlockPos(x, y + 3, z), Blocks.OAK_PLANKS.defaultBlockState(), 2);
+                boolean wall = x == x0 || x == x1 || z == z0 || z == z1;
+                for (int h = 0; h < 3; h++) level.setBlock(new BlockPos(x, y + h, z), wall ? Blocks.OAK_PLANKS.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
+            }
+            BlockPos door = new BlockPos(x0, y, heart.getZ());
+            level.setBlock(door, Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.EAST)
+                .setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER), 2);
+            level.setBlock(door.above(), Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.EAST)
+                .setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 2);
+            BlockPos counter = heart.offset(8, 0, 0);
+            level.setBlockAndUpdate(counter, McAssistantMod.SHOP_COUNTER.get().defaultBlockState().setValue(com.jrpetty.mcassistant.block.ShopCounterBlock.FACING, Direction.WEST));
+            BlockPos chestAt = heart.offset(10, 0, 2);
+            level.setBlockAndUpdate(chestAt, Blocks.CHEST.defaultBlockState());
+            net.minecraft.world.Container chest = (net.minecraft.world.Container) level.getBlockEntity(chestAt);
+            chest.setItem(0, new ItemStack(Items.BREAD, 12));
+            ServerPlayer owner = player(helper, heart.offset(8, 0, -1), 40);
+            com.jrpetty.mcassistant.entity.PlayerShops.Shop shop = com.jrpetty.mcassistant.entity.PlayerShops.registerForTests(level, counter, owner, "general");
+            helper.assertTrue(shop != null, "the shop is registered");
+            com.jrpetty.mcassistant.entity.PlayerShops.priceForTests(shop, new ItemStack(Items.BREAD), 2);
+            boolean fitted = level.getBlockEntity(counter.above()) instanceof TillBlockEntity;
+            if (!fitted) {
+                level.setBlock(counter.above(), TillItems.TILL.get().defaultBlockState().setValue(TillBlock.FACING, Direction.WEST), 3);
+                Tills.bindForTests(level, counter.above(), t.id(), Tills.keyOfShopForTests(shop), owner.getUUID(), true);
+            }
+            owner.teleportTo(heart.getX() - 30.5, heart.getY(), heart.getZ() + 0.5);   // off out: nobody at the till
+            ServerPlayer buyer = player(helper, counter.west(), 30);
+            Tills.openAt(buyer, counter.above());
+            CompoundTag before = Tills.screenForTests(buyer);
+            Tills.pressForTests(buyer, "self", new CompoundTag());
+            String id = com.jrpetty.mcassistant.entity.PlayerStalls.key(new ItemStack(Items.BREAD));
+            Tills.pressForTests(buyer, "set", set(id, 3));
+            CompoundTag ready = Tills.screenForTests(buyer);
+            int till0 = shop.till, coins0 = Market.coinsHeld(buyer), shelf0 = chest.getItem(0).getCount();
+            Tills.pressForTests(buyer, "pay", new CompoundTag());
+            int till1 = shop.till, coins1 = Market.coinsHeld(buyer), shelf1 = chest.getItem(0).getCount(), had = carried(buyer, BREAD);
+            Kit.log("tl12 " + shop.name + ": a till on its counter " + fitted + "; nobody in: " + before.getString("status") + " (self-service offered "
+                + before.getBoolean("offerSelf") + "); 3 bread for " + ready.getCompound("quote").getInt("total") + ": coins " + coins0 + " -> " + coins1
+                + ", shelf " + shelf0 + " -> " + shelf1 + ", its till " + till0 + " -> " + till1 + ", pack " + had + "; said " + Tills.messageForTests(buyer));
+            Kit.noLeftoverPlayers(level);
+            helper.assertTrue(fitted, "the shop's till set on its counter when it was registered");
+            helper.assertTrue(before.getBoolean("offerSelf") && !before.getBoolean("staffed"), "nobody in, self-service offered");
+            helper.assertTrue(shelf0 - shelf1 == 3 && had == 3, "three loaves off its shelf into the buyer's pack");
+            helper.assertTrue(coins0 - coins1 == ready.getCompound("quote").getInt("total") && till1 > till0, "the coin into the shop's till: " + till0 + " -> " + till1);
+            helper.succeed();
+        });
+    }
 }
