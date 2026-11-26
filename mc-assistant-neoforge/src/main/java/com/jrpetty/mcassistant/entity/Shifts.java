@@ -673,6 +673,8 @@ public final class Shifts {
             t.putInt("lastStars", s.lastStars);
             t.putLong("lastAt", s.lastAt);
         }
+        String aim = WorkLife.aimLine(p, s);                                // [wpb] the job card's aim, on the HUD
+        if (!aim.isEmpty()) t.putString("aim", aim);
         if (s.howTo && level.getGameTime() - s.started < 600) {
             ListTag how = new ListTag();
             for (String line : s.role.howTo) how.add(StringTag.valueOf(line));

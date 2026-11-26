@@ -79,6 +79,7 @@ public final class PlayerLife {
         PAGES.put("jobs", new PlayerJobs.Board());
         PAGES.put("all", new InWorld());
         PAGES.put("farm", new FarmPage());                                  // [wpb] a player's own farm as a business
+        PAGES.put("contracts", new ContractsPage());                        // [wpb] contracts between players, with escrow
     }
 
     /** The page this player last had open (tests). */

@@ -899,6 +899,7 @@ public final class Enterprise {
                 if (r.getLong("petitionDay") < day) hear(level, id, b, r, day, "by the council on the square");
                 continue;
             }
+            if (MyBusinesses.paused(level, id, b, r)) continue;               // [wpb] its owner away and no manager: paused safely
             tidyStaff(level, v, b, r);
             share(level, id, b, r, day);
             sellOver(level, id, b, day);

@@ -730,4 +730,147 @@ public class PlayerWorkGameTests {
             helper.succeed();
         });
     }
+
+    // ============================================================ the owner's tools
+
+    /** A baker's firm owned whole by this player. */
+    private static Business firm(ServerLevel level, Town t, ServerPlayer owner) {
+        Business b = com.jrpetty.mcassistant.entity.Enterprise.foundForTests(level, t.v(), "baker", null);
+        b.owners.clear();
+        b.owners.add(new Business.Stake(Business.Holder.PLAYER, owner.getUUID(), owner.getGameProfile().getName(), Business.WHOLE));
+        return b;
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pw17_partners")
+    public static void pw17_partners(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 8786000, 4);
+        helper.runAtTickTime(5, () -> {
+            com.jrpetty.mcassistant.entity.Enterprise.autoForTests(false);
+            try {
+                ServerPlayer a = player(helper, t, t.heart(), 0);
+                ServerPlayer b2 = player(helper, t, t.heart().east(2), 30);
+                Business b = firm(level, t, a);
+                helper.assertTrue(b != null, "a firm");
+                String off = com.jrpetty.mcassistant.entity.Partners.offerForTests(a, t.id(), b, b2, 4000, 10);
+                String acc = com.jrpetty.mcassistant.entity.Partners.acceptForTests(level, b2, t.id(), b);
+                b.till = 10300;
+                long paid = com.jrpetty.mcassistant.entity.Partners.payoutForTests(level, t.id(), b);
+                long dueA = b.ownersDue.getOrDefault(a.getUUID(), 0L), dueB = b.ownersDue.getOrDefault(b2.getUUID(), 0L);
+                boolean decA = com.jrpetty.mcassistant.entity.Partners.canDecideForTests(t.id(), b, a.getUUID()), decB = com.jrpetty.mcassistant.entity.Partners.canDecideForTests(t.id(), b, b2.getUUID());
+                Kit.log("[VT] pw17 " + off + " | " + acc + " | owners " + b.ownersWords() + " | paid " + paid + " due " + dueA + "/" + dueB + " decide " + decA + "/" + decB + " coins a " + coins(a) + " b " + coins(b2));
+                Kit.noLeftoverPlayers(level);
+                helper.assertTrue(b.ownersWords().contains("60%") && b.ownersWords().contains("40%"), "a 60/40 partnership");
+                helper.assertTrue(dueA == 6000 && dueB == 4000, "profit split by share");
+                helper.assertTrue(decA && !decB, "the majority decides");
+                helper.assertTrue(coins(a) == 10 && coins(b2) == 20, "the share paid for, owner to owner");
+            } finally {
+                com.jrpetty.mcassistant.entity.Enterprise.autoForTests(true);
+            }
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pw18_contract")
+    public static void pw18_contract(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 8790000, 3);
+        helper.runAtTickTime(5, () -> {
+            com.jrpetty.mcassistant.entity.Contracts.resetForTests();
+            ServerPlayer seller = player(helper, t, t.heart(), 10);
+            ServerPlayer buyer = player(helper, t, t.heart().east(2), 30);
+            seller.getInventory().selected = 8;                                 // the coin stays in its own slot
+            seller.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.WHEAT, 16));
+            int id = com.jrpetty.mcassistant.entity.Contracts.proposeForTests(level, seller, t.id(), buyer, 16, 10, 3, 2);
+            int s1 = coins(seller);
+            String sign = com.jrpetty.mcassistant.entity.Contracts.signForTests(level, buyer, id);
+            long held = com.jrpetty.mcassistant.entity.Contracts.escrowed(t.id());
+            int b1 = coins(buyer);
+            String del = com.jrpetty.mcassistant.entity.Contracts.deliverForTests(level, seller, id);
+            String st = com.jrpetty.mcassistant.entity.Contracts.stateForTests(id);
+            int wheat = carried(buyer, x -> x.is(Items.WHEAT));
+            // a second, lapsed: the buyer has the price back and the seller's bond
+            seller.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.WHEAT, 1));
+            int id2 = com.jrpetty.mcassistant.entity.Contracts.proposeForTests(level, seller, t.id(), buyer, 16, 5, 1, 2);
+            com.jrpetty.mcassistant.entity.Contracts.signForTests(level, buyer, id2);
+            int b2 = coins(buyer);
+            com.jrpetty.mcassistant.entity.Contracts.lapseForTests(level, id2);
+            Kit.log("[VT] pw18 seller after proposing " + s1 + "; " + sign + " held " + held + " buyer " + b1 + "; " + del + " -> " + st + " seller " + coins(seller)
+                + " buyer " + coins(buyer) + " wheat " + wheat + "; lapsed: buyer " + b2 + " -> " + coins(buyer) + " escrow " + com.jrpetty.mcassistant.entity.Contracts.escrowed(t.id()));
+            Kit.noLeftoverPlayers(level);
+            helper.assertTrue(id > 0 && s1 == 8 && held == 14 && b1 == 18, "the bond and the price held in escrow at signing");
+            helper.assertTrue(st.equals("DONE") && wheat == 16, "the goods checked and handed over");
+            helper.assertTrue(coins(buyer) == b2 + 5 + 2 + 2, "lapsed: the buyer has the price back, its bond, and the seller's penalty");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Contracts.escrowed(t.id()) == 0, "escrow empty when done");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pw21_firm_sale")
+    public static void pw21_firm_sale(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 8794000, 4);
+        helper.runAtTickTime(5, () -> {
+            com.jrpetty.mcassistant.entity.Enterprise.autoForTests(false);
+            try {
+                ServerPlayer p = player(helper, t, t.heart(), 0);
+                Business b = firm(level, t, p);
+                String listed = com.jrpetty.mcassistant.entity.FirmSale.listForTests(level, p, t.id(), b, 1500);
+                VillageFolkEntity buyer = t.folk().get(2);
+                buyer.earn(40);
+                com.jrpetty.mcassistant.entity.FirmSale.offerForTests(t.id(), b, buyer, 1500, day(level));
+                String sold = com.jrpetty.mcassistant.entity.FirmSale.acceptForTests(level, p, t.id(), b, 0);
+                Kit.log("[VT] pw21 " + listed + " | " + sold + " | owners " + b.ownersWords() + " coins " + coins(p));
+                Kit.noLeftoverPlayers(level);
+                helper.assertTrue(!b.ownedBy(p.getUUID()) && b.ownedBy(buyer.getUUID()), "the firm passes to the buyer");
+                helper.assertTrue(coins(p) == 15, "the seller paid the price");
+            } finally {
+                com.jrpetty.mcassistant.entity.Enterprise.autoForTests(true);
+            }
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "pw22_hands_prices_rescue_pause")
+    public static void pw22_hands_prices_rescue_pause(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 8798000, 4);
+        helper.runAtTickTime(5, () -> {
+            com.jrpetty.mcassistant.entity.Enterprise.autoForTests(false);
+            try {
+                ServerPlayer p = player(helper, t, t.heart(), 40);
+                Business b = firm(level, t, p);
+                VillageFolkEntity hand = t.folk().get(1);
+                com.jrpetty.mcassistant.entity.Enterprise.staffForTests(t.id(), b, hand);
+                b.till += 3000;
+                String mgr = com.jrpetty.mcassistant.entity.MyBusinesses.handActionForTests(level, p, b, "manager", hand.getUUID(), false);
+                boolean pausedWithManager = com.jrpetty.mcassistant.entity.MyBusinesses.pausedTodayForTests(t.id(), b, day(level));
+                com.jrpetty.mcassistant.entity.MyBusinesses.handActionForTests(level, p, b, "manager", hand.getUUID(), false);
+                com.jrpetty.mcassistant.entity.MyBusinesses.awayForTests(t.id(), b, p.getUUID(), day(level) - 1);
+                boolean paused = com.jrpetty.mcassistant.entity.MyBusinesses.pausedTodayForTests(t.id(), b, day(level));
+                int purse = hand.purse();
+                long till = b.till;
+                String first = com.jrpetty.mcassistant.entity.MyBusinesses.handActionForTests(level, p, b, "letgo", hand.getUUID(), false);
+                String go = com.jrpetty.mcassistant.entity.MyBusinesses.handActionForTests(level, p, b, "letgo", hand.getUUID(), true);
+                boolean gone = com.jrpetty.mcassistant.entity.Enterprise.hands(t.id(), b).stream().noneMatch(f -> f.getUUID().equals(hand.getUUID()));
+                String key = com.jrpetty.mcassistant.entity.Stockroom.key(new ItemStack(Items.BREAD));
+                String mk = com.jrpetty.mcassistant.entity.MyBusinesses.setWareMarkupForTests(level, t.id(), b, key, 20);
+                boolean has = com.jrpetty.mcassistant.entity.Enterprise.recordForTests(t.id(), b).getCompound("wareMarkup").contains(key);
+                com.jrpetty.mcassistant.entity.Enterprise.petitionForTests(level, t.id(), b, "it owed more than it was worth");
+                boolean court = com.jrpetty.mcassistant.entity.Enterprise.recordForTests(t.id(), b).contains("petition");
+                String saved = com.jrpetty.mcassistant.entity.MyBusinesses.rescueForTests(level, p, b);
+                boolean free = !com.jrpetty.mcassistant.entity.Enterprise.recordForTests(t.id(), b).contains("petition");
+                Kit.log("[VT] pw22 " + mgr + " paused with manager " + pausedWithManager + ", without (owner away) " + paused + " | " + first + " | " + go + " gone " + gone
+                    + " purse " + purse + " -> " + hand.purse() + " till " + till + " -> " + b.till + " | " + mk + " " + has + " | court " + court + " -> " + saved + " " + free);
+                Kit.noLeftoverPlayers(level);
+                helper.assertTrue(!pausedWithManager && paused, "with a manager it runs; with its owner away and none, it pauses");
+                helper.assertTrue(first.startsWith("!") && gone && hand.purse() > purse && b.till < till, "let go after a confirm, with severance from the till");
+                helper.assertTrue(has, "a ware's own markup");
+                helper.assertTrue(court && free, "rescued from the court");
+            } finally {
+                com.jrpetty.mcassistant.entity.Enterprise.autoForTests(true);
+            }
+            helper.succeed();
+        });
+    }
 }

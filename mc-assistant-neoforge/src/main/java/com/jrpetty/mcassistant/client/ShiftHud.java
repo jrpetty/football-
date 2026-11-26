@@ -40,6 +40,7 @@ public final class ShiftHud {
     private static boolean dirty = true;
     private static List<FormattedCharSequence> taskLines = List.of(), howLines = List.of();
     private static String header = "", stats = "", skill = "", last = "";
+    private static List<FormattedCharSequence> aimLines = List.of();   // [wpb] the job card's aim
 
     static void dirty() {
         dirty = true;
@@ -54,6 +55,7 @@ public final class ShiftHud {
             + (h.getInt("tasks") > 0 ? "   ★ " + tenths / 10 + "." + tenths % 10 : "");
         skill = "Skill: " + h.getString("level");
         last = h.getString("last");
+        aimLines = h.getString("aim").isEmpty() ? List.of() : TextCache.splitPlain(font, h.getString("aim"), W - 2 * PAD);
         List<FormattedCharSequence> how = new ArrayList<>();
         ListTag hl = h.getList("howTo", Tag.TAG_STRING);
         for (int i = 0; i < hl.size(); i++) how.addAll(TextCache.splitPlain(font, "• " + hl.getString(i), W - 2 * PAD));
@@ -84,7 +86,7 @@ public final class ShiftHud {
         boolean cooking = h.contains("readyAt");
         int lines = taskLines.size();
         // The rows as drawn below: the header, the task, the bar, the state, the stats, the skill, the last task.
-        int height = PAD + 14 + lines * 10 + 2 + 8 + 12 + 10 + 12 + (last.isEmpty() ? 0 : 10) + PAD - 2;
+        int height = PAD + 14 + lines * 10 + 2 + 8 + 12 + 10 + 12 + (last.isEmpty() ? 0 : 10) + aimLines.size() * 10 + PAD - 2;
         g.fill(x, y, x + W, y + height, GROUND);
         g.fill(x, y, x + 2, y + height, ACCENT_FILL);
         int cy = y + PAD;
@@ -129,6 +131,10 @@ public final class ShiftHud {
         cy += 12;
         g.drawString(font, stats, x + PAD, cy, TEXT_ON_DARK, false);
         cy += 10;
+        for (FormattedCharSequence a : aimLines) {                          // [wpb] the aim, under the tally
+            g.drawString(font, a, x + PAD, cy, GOLD, false);
+            cy += 10;
+        }
         g.drawString(font, skill, x + PAD, cy, SOFT, false);
         int sw = font.width(skill);
         bar(g, x + PAD + sw + 6, cy + 2, W - 2 * PAD - sw - 6, 4, h.getFloat("progress"), INFO_FILL);

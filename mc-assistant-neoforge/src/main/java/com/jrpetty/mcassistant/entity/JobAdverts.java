@@ -556,6 +556,19 @@ public class JobAdverts implements PlayerLife.Page {
                 .button("Show me", "showme", LifePage.args("ad", a.key()), a.where() != null, "No place to show yet")
                 .button("Apply", "details", LifePage.args("ad", a.key()), no.isEmpty(), no);
         }
+        LabourBook.Town tw = LabourBook.peek(v.id());                       // lately filled, and by whom
+        if (tw != null) {
+            long today = level.getDayTime() / 24000L;
+            List<String> filled = new ArrayList<>();
+            for (LabourBook.Vacancy vac : tw.vacancies) {
+                if (vac.state != LabourBook.State.FILLED || vac.closed < today - 1 || JobCards.of(vac.trade) == null) continue;
+                filled.add(JobCards.of(vac.trade).title() + " at " + PlayerJobs.employerName(vac) + ": " + (vac.by.isEmpty() ? "filled" : vac.by.replaceFirst("^taken: ", "taken by ")));
+            }
+            if (!filled.isEmpty()) {
+                page.heading("Lately filled");
+                for (int i = 0; i < Math.min(4, filled.size()); i++) page.text(filled.get(i), 4);
+            }
+        }
         page.heading("Day work (paid by the task, no interview)");
         List<Shifts.Offer> offers = Shifts.offers(level, v, p);
         if (offers.isEmpty()) page.text("The town has no day shifts going.", 4);

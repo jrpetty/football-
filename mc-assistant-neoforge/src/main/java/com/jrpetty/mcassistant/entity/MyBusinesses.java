@@ -53,6 +53,9 @@ public final class MyBusinesses implements PlayerLife.Page {
             if (due >= 100) page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get()), x.name + " (closed)",
                 Businesses.pence(due) + " of it is yours", "").button("Take it", "drawclosed", LifePage.args("firm", x.id));
         }
+        forSaleAndOffers(level, p, v, page);                                 // [wpb] firms for sale, shares offered to you
+        for (PlayerFarms.Farm fm : PlayerFarms.ofOwner(v.id(), p.getUUID())) page.row(new ItemStack(Items.WHEAT), fm.name + " (your " + fm.kind + ")",
+            fm.area() + " blocks · " + fm.hands.size() + " hands" + (fm.paused ? " · paused" : ""), "").button("Run it", "farmpage", LifePage.args("farm", fm.id));
         if (b == null) {
             page.text("You hold no chartered business in " + Villages.name(v.id()) + " yet.", 4);
             for (PlayerShops.Shop sh : PlayerShops.ofAll(v.id(), p.getUUID())) {   // [biz30] its shops, though
@@ -106,6 +109,8 @@ public final class MyBusinesses implements PlayerLife.Page {
 
     private void summary(ServerLevel level, ServerPlayer p, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page) {
         page.heading(b.name);
+        rescueBanner(level, p, v, b, page);                                 // [wpb] before the court: what saves it
+        plCard(level, v, b, page);                                          // [wpb] the profit and loss at a glance
         page.text(Enterprise.line(level, v.id(), b));
         String warn = BizGuide.firmWarning(v.id(), b);                      // [biz25] what is wrong, and how long it has
         if (!warn.isEmpty()) page.text(warn, 3);
@@ -130,15 +135,58 @@ public final class MyBusinesses implements PlayerLife.Page {
     }
 
     private void hands(ServerLevel level, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page) {
+        ServerPlayer p = null;
+        for (ServerPlayer x : level.getServer().getPlayerList().getPlayers()) if (b.ownedBy(x.getUUID()) && PlayerLife.ctx(x).page.equals("firm")) p = x;
+        boolean decide = p == null || Partners.canDecide(v.id(), b, p.getUUID());
+        String no = decide ? "" : Partners.whyNot(v.id(), b);
         page.heading("Its hands");
         List<VillageFolkEntity> hs = Enterprise.hands(v.id(), b);
         if (hs.isEmpty()) page.text("Nobody works there yet.", 2);
-        for (VillageFolkEntity f : hs) page.row(null, f.displayNameCap(), "paid " + Wealth.wage(f) + " a day", "");
+        CompoundTag r = Enterprise.rec(v.id(), b.id);
+        String pending = r == null ? "" : r.getString("wpbLetGo");
+        for (VillageFolkEntity f : hs) {                                    // [wpb] each hand: its pay, raise, cut, let go
+            LabourBook.Contract c = LabourMarket.contract(f);
+            boolean mgr = r != null && r.hasUUID("manager") && r.getUUID("manager").equals(f.getUUID());
+            boolean sure = pending.equals(f.getUUID().toString());
+            int sev = severance(f);
+            page.row(null, f.displayNameCap() + (mgr ? " (manager)" : ""), "paid " + Wealth.wage(f) + "c a day" + (c == null ? "" : String.format(Locale.ROOT, " (%.0f%% of the going rate)", c.m * 100))
+                    + " · " + f.tradeLevel(t == null ? f.stationTask() : t.work()) + " at the trade", "")
+                .button("Raise", "raise", LifePage.args("h", f.getUUID().toString()), decide && c != null, c == null ? "Not on the town's books" : no)
+                .button("Cut", "cut", LifePage.args("h", f.getUUID().toString()), decide && c != null, c == null ? "Not on the town's books" : no)
+                .button(mgr ? "Not manager" : "Manager", "manager", LifePage.args("h", f.getUUID().toString()), decide, no)
+                .button(sure ? "Confirm: let go (" + sev + "c)" : "Let go", "letgo", LifePage.args("h", f.getUUID().toString(), "sure", sure), decide, no);
+        }
+        page.text("A raise or a cut is a tenth of its pay; a cut stings, and a hand that feels it may look elsewhere. Letting a hand go pays three days' wages as severance, out of the till."
+            + " A manager runs the business while every owner is away; with none, it closes its doors safely till one of you is back.", 4);
         page.heading("Take one on");
-        page.buttons().button("The best the town can spare, now", "hire", null).primary();
+        page.buttons().button("The best the town can spare, now", "hire", null, decide, no).primary();
         page.choice("wage", "An opening at", new String[]{ "0", "10", "25" }, new String[]{ "Its going offer", "A tenth over", "A quarter over" }, "0");
-        page.buttons().button("Post an opening", "post", null, LabourMarket.live(v.id()), "The town has no labour market yet (its market isn't open)")
-            .button("Take the best who applied", "hirebest", null, LabourMarket.live(v.id()), "The town has no labour market yet");
+        page.buttons().button("Post an opening", "post", null, LabourMarket.live(v.id()) && decide, decide ? "The town has no labour market yet (its market isn't open)" : no)
+            .button("Take the best who applied", "hirebest", null, LabourMarket.live(v.id()) && decide, decide ? "The town has no labour market yet" : no);
+        page.heading("Hire a player");                                     // [wpb] on the same jobs board
+        for (PlayerHiring.Post x : PlayerHiring.postsOf(v.id(), "firm:" + b.id)) {
+            page.row(null, "Advert: " + JobCards.of(x.card).title() + ", " + x.wage + "c a day", x.apps.size() + " applied", "").button("Take it down", "unpost", LifePage.args("id", x.id));
+            for (java.util.Map.Entry<java.util.UUID, String[]> a : x.apps.entrySet()) {
+                if (!a.getValue()[2].equals("APPLIED")) continue;
+                page.row(null, "  " + a.getValue()[0], "applied " + (a.getValue()[1].equals("c") ? "on commission" : "on salary"), "")
+                    .button("Offer the job", "offerjob", LifePage.args("id", x.id, "u", a.getKey().toString())).button("Turn down", "turndown", LifePage.args("id", x.id, "u", a.getKey().toString()));
+            }
+        }
+        if (t != null) {
+            JobCards.Card card = JobCards.of(t.work().name());
+            page.choice("pw", "Pay", new String[]{ "0", "1", "2" }, new String[]{ "Either way", "Salary only", "Commission only" }, "0");
+            page.buttons().button("Post an advert for a " + (card == null ? "hand" : card.title().toLowerCase(Locale.ROOT)), "postplayer", null, card != null && decide,
+                card == null ? "No player job for this trade" : no);
+        }
+        for (ServerPlayer h : PlayerHiring.hands(level, "firm:" + b.id)) {
+            page.row(null, h.getGameProfile().getName() + " (a player hand)", PlayerJobs.line(h), "")
+                .button("Warn", "warn", LifePage.args("u", h.getUUID().toString()), decide, no).button("Let go", "dismiss", LifePage.args("u", h.getUUID().toString()), decide, no);
+        }
+    }
+
+    /** Three days' wages, the severance for a hand let go. */
+    static int severance(VillageFolkEntity f) {
+        return 3 * Math.max(1, Wealth.wage(f));
     }
 
     private void stock(ServerLevel level, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page) {
@@ -163,7 +211,11 @@ public final class MyBusinesses implements PlayerLife.Page {
             ItemStack one = Stockroom.sampleOf(k);
             if (one.isEmpty()) continue;
             double going = Market.askEach(level, v.id(), one), price = Sellers.priceOf(level, v.id(), b, one);
-            page.row(one, Stockroom.plural(k), String.format(Locale.ROOT, "yours %.2fc, the going price %.2fc", price, going), ShopPage.judge((int) Math.round(price * 100), (int) Math.round(Math.max(0.01, going) * 100)));
+            double mk = wareMarkup(v.id(), b, one);                         // [wpb] its own markup, or the firm's
+            page.row(one, Stockroom.plural(k), String.format(Locale.ROOT, "yours %.2fc, the going price %.2fc; markup %s%s", price, going, Businesses.pct(mk),
+                    hasWareMarkup(v.id(), b, k) ? " (its own)" : ""), ShopPage.judge((int) Math.round(price * 100), (int) Math.round(Math.max(0.01, going) * 100)))
+                .button("-5%", "waremk", LifePage.args("k", k, "d", -5)).button("+5%", "waremk", LifePage.args("k", k, "d", 5))
+                .button("Firm's", "waremk", LifePage.args("k", k, "d", 0), hasWareMarkup(v.id(), b, k), "It uses the firm's markup already");
         }
     }
 
@@ -175,6 +227,60 @@ public final class MyBusinesses implements PlayerLife.Page {
     }
 
     private void more(ServerLevel level, ServerPlayer p, Villages.Village v, Business b, LifePage page, PlayerLife.Ctx c) {
+        boolean decide = Partners.canDecide(v.id(), b, p.getUUID());
+        String no = decide ? "" : Partners.whyNot(v.id(), b);
+        // [wpb] Partners: who owns what, the split, who decides; a share offered to another player.
+        page.heading("Its owners");
+        for (Business.Stake s : b.owners) page.text(s.name() + ": " + s.parts() * 100 / Business.WHOLE + "%" + (s.holder() == Business.Holder.PLAYER ? "" : s.holder() == Business.Holder.FOLK ? " (folk)" : " (the town)"));
+        page.text(Partners.whoDecides(v.id(), b) + ". Profit is split by share.", 4);
+        List<ServerPlayer> others = new ArrayList<>();
+        for (ServerPlayer o : level.getServer().getPlayerList().getPlayers()) if (o != p && PlayerLife.here(o) != null && PlayerLife.here(o).id().equals(v.id())) others.add(o);
+        if (!others.isEmpty()) {
+            String[] ids = new String[others.size()], names = new String[others.size()];
+            for (int i = 0; i < others.size(); i++) { ids[i] = others.get(i).getUUID().toString(); names[i] = others.get(i).getGameProfile().getName(); }
+            page.choice("partner", "Offer to", ids, names, ids[0]);
+            page.choice("share", "A share of", new String[]{ "1000", "2500", "5000" }, new String[]{ "10%", "25%", "50%" }, "2500");
+            page.choice("sprice", "For", new String[]{ "5", "10", "25", "50", "100", "250" }, new String[]{ "5c", "10c", "25c", "50c", "100c", "250c" }, "25");
+            page.buttons().button("Offer the share", "share", null);
+        } else page.text("No other player is in town to offer a share to.", 4);
+        boolean multi = b.owners.size() > 1;
+        page.buttons().button("Pay out the profit by share", "payout", null, decide && b.till >= Partners.RESERVE + 100, decide ? "The till holds no profit over its working reserve (3c)" : no)
+            .button("Take my drawings", "draw", null);
+        if (multi) {
+            List<String> ids = new ArrayList<>(), names = new ArrayList<>();
+            for (Business.Stake s : b.owners) if (s.holder() == Business.Holder.PLAYER && s.who() != null) { ids.add(s.who().toString()); names.add(s.name()); }
+            if (!ids.isEmpty()) {
+                page.choice("managing", "Managing partner", ids.toArray(new String[0]), names.toArray(new String[0]), ids.get(0));
+                page.buttons().button("Name the managing partner", "managing", null, Partners.partsOf(b, p.getUUID()) * 2 >= Business.WHOLE, "Only an owner of half or more names one");
+            }
+        }
+        // [wpb] Selling the whole firm.
+        page.heading("Sell the whole firm");
+        CompoundTag sale = FirmSale.sale(v.id(), b);
+        long worth = FirmSale.worth(v.id(), b);
+        if (sale == null) {
+            page.text("Worth about " + Businesses.pence(worth) + " (its stock, till and kit, less what it owes). List it, and offers come in over the next days.", 4);
+            page.choice("ask", "Asking", new String[]{ "100", "110", "125", "150" }, new String[]{ "Its worth", "A tenth over", "A quarter over", "Half over" }, "110");
+            page.buttons().button("List it for sale", "list", null, decide, no);
+        } else {
+            page.text("Listed at " + Businesses.pence(sale.getLong("ask")) + " since day " + (sale.getLong("listed") + 1) + " (worth " + Businesses.pence(worth) + ").", 1);
+            net.minecraft.nbt.ListTag offers = sale.getList("offers", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            if (offers.isEmpty()) page.text("No offers yet. Folk with the means look each morning; a player can offer the asking price.", 4);
+            String pend = c.args.getString("sureSale");
+            for (int i = 0; i < offers.size(); i++) {
+                CompoundTag o = offers.getCompound(i);
+                boolean sure = pend.equals(Integer.toString(i));
+                page.row(null, o.getString("name") + (o.getString("kind").equals("player") ? " (a player)" : ""), "offers " + Businesses.pence(o.getLong("price")) + ", made day " + (o.getLong("day") + 1)
+                    + "; stands " + FirmSale.OFFER_DAYS + " days", "")
+                    .button(sure ? "Confirm: sell for " + Businesses.pence(o.getLong("price")) : "Accept", "acceptsale", LifePage.args("i", i, "sure", sure), decide, no);
+            }
+            page.buttons().button("Take it off the market", "unlist", null, decide, no);
+        }
+        // [wpb] A branch of your own.
+        page.heading("Open a branch");
+        String branchNo = branchWhyNot(level, v, b, p);
+        page.text(branchNo.isEmpty() ? "It's done well enough to open another of the same trade: half its till (up to 30c) goes to start it." : "Not yet: " + branchNo + ".", branchNo.isEmpty() ? 1 : 4);
+        page.buttons().button("Open a branch", "branch", null, branchNo.isEmpty() && decide, branchNo.isEmpty() ? no : branchNo);
         page.heading("Its shares on the bourse");
         page.text(Bourse.line(level, v.id()), 4);
         page.choice("n", "Sell", new String[]{ "1", "5", "10", "25" }, new String[]{ "1 share", "5 shares", "10 shares", "25 shares" }, "5");
@@ -191,6 +297,22 @@ public final class MyBusinesses implements PlayerLife.Page {
         Villages.Village v = PlayerLife.here(p);
         if (v == null) return "!No town here.";
         if (action.equals("start")) { PlayerLife.open(p, "start", null); return "#open:"; }
+        if (action.equals("farmpage")) { PlayerLife.open(p, "farm", LifePage.args("farm", args.getString("farm"))); return "#open:"; }   // [wpb]
+        if (action.equals("contracts")) { PlayerLife.open(p, "contracts", null); return "#open:"; }
+        if (action.equals("buyoffer")) {                                    // [wpb] another's firm for sale: an offer at its ask
+            Business x = Businesses.of(v.id(), args.getString("firm"));
+            if (x == null) return "!No such business.";
+            if (!args.getBoolean("sure")) { c.args.putString("sureBuy", x.id); return "!Press again to offer the asking price. You pay only if the owner accepts."; }
+            c.args.remove("sureBuy");
+            return FirmSale.playerOffer(level, p, v.id(), x);
+        }
+        if (action.equals("acceptshare")) {
+            Business x = Businesses.of(v.id(), args.getString("firm"));
+            if (x == null) return "!No such business.";
+            if (args.getInt("coins") > 20 && !args.getBoolean("sure")) { c.args.putString("sureShare", x.id + "/" + args.getInt("i")); return "!Press again to pay " + args.getInt("coins") + "c for the share."; }
+            c.args.remove("sureShare");
+            return Partners.accept(level, p, v.id(), x, args.getInt("i"));
+        }
         if (action.equals("shop")) { PlayerLife.open(p, "shop", null); return "#open:"; }   // [ui29] the empty page's second way
         if (action.startsWith("tab:")) { c.tab = action.substring(4); return ""; }
         if (action.equals("pick")) { c.args.putString("firm", args.getString("firm")); return ""; }
@@ -240,6 +362,50 @@ public final class MyBusinesses implements PlayerLife.Page {
                 return clean(LabourMarket.post(level, v.id(), b, coins));
             }
             case "hirebest" -> { return clean(LabourMarket.hireBest(level, v.id(), b)); }
+            case "raise", "cut", "letgo", "manager" -> { return handAction(level, p, v, b, action, args, c); }
+            case "waremk" -> {
+                if (!Partners.canDecide(v.id(), b, p.getUUID())) return "!" + Partners.whyNot(v.id(), b);
+                return setWareMarkup(level, v.id(), b, args.getString("k"), args.getInt("d"));
+            }
+            case "postplayer" -> {
+                BusinessTypes.BusinessType t = Enterprise.kindOf(v.id(), b);
+                JobCards.Card card = t == null ? null : JobCards.of(t.work().name());
+                if (card == null) return "!No player job for this trade.";
+                return PlayerHiring.post(level, p, v.id(), "firm:" + b.id, b.name, card.key(), PayTerms.goingWage(level, v.id(), card, 0), ShopPage.parse(f.getString("pw"), 0));
+            }
+            case "unpost" -> { return PlayerHiring.withdraw(p, args.getInt("id")); }
+            case "offerjob" -> { return PlayerHiring.answer(p, args.getInt("id"), java.util.UUID.fromString(args.getString("u")), true); }
+            case "turndown" -> { return PlayerHiring.answer(p, args.getInt("id"), java.util.UUID.fromString(args.getString("u")), false); }
+            case "warn" -> { return PlayerHiring.review(level, p, java.util.UUID.fromString(args.getString("u")), false, "a word from the owner about the work"); }
+            case "dismiss" -> { return PlayerHiring.review(level, p, java.util.UUID.fromString(args.getString("u")), true, "the owner let you go"); }
+            case "share" -> {
+                ServerPlayer to;
+                try { to = level.getServer().getPlayerList().getPlayer(java.util.UUID.fromString(f.getString("partner"))); } catch (IllegalArgumentException e) { to = null; }
+                if (to == null) return "!They've gone.";
+                return Partners.offer(p, v.id(), b, to, ShopPage.parse(f.getString("share"), 2500), ShopPage.parse(f.getString("sprice"), 25));
+            }
+            case "payout" -> {
+                if (!Partners.canDecide(v.id(), b, p.getUUID())) return "!" + Partners.whyNot(v.id(), b);
+                long paid = Partners.payout(level, v.id(), b);
+                return paid <= 0 ? "!No profit over the working reserve to pay out." : "Paid out " + Businesses.pence(paid) + " by share: each owner's part is waiting as drawings.";
+            }
+            case "managing" -> { return Partners.setManaging(p, v.id(), b, java.util.UUID.fromString(f.getString("managing"))); }
+            case "list" -> {
+                int pct = ShopPage.parse(f.getString("ask"), 110);
+                return FirmSale.list(level, p, v.id(), b, Math.max(100, FirmSale.worth(v.id(), b) * pct / 100));
+            }
+            case "unlist" -> { return FirmSale.withdraw(p, v.id(), b); }
+            case "acceptsale" -> {
+                if (!args.getBoolean("sure")) { c.args.putString("sureSale", Integer.toString(args.getInt("i"))); return "!Selling is for good: press Confirm to sell."; }
+                c.args.remove("sureSale");
+                return FirmSale.accept(level, p, v.id(), b, args.getInt("i"));
+            }
+            case "branch" -> { return openBranch(level, p, v, b); }
+            case "rescue" -> {
+                if (!args.getBoolean("sure")) { c.args.putBoolean("sureRescue", true); return "!Press again to pay its debts and take it back from the court."; }
+                c.args.remove("sureRescue");
+                return rescue(level, p, v, b);
+            }
             case "order" -> {
                 ItemStack one = Stockroom.sampleOf(args.getString("k"));
                 if (one.isEmpty()) return "!No such ware.";
@@ -267,6 +433,287 @@ public final class MyBusinesses implements PlayerLife.Page {
             }
             default -> { return null; }
         }
+    }
+
+    // ------------------------------------------------------------------ [wpb] the owner's tools
+
+    /** Before the court: the banner, what it owes, and the way to save it. */
+    static void rescueBanner(ServerLevel level, ServerPlayer p, Villages.Village v, Business b, LifePage page) {
+        CompoundTag r = Enterprise.rec(v.id(), b.id);
+        if (r == null || !r.contains("petition")) return;
+        long owed = rescueCost(b);
+        page.box("Before the court: " + r.getString("petition"), List.of("Its creditors have taken it to court. It trades no more, and the case is heard at the next sitting "
+            + "(the hall's court this morning, else the council tomorrow). Declared bankrupt, its stock and kit are sold and its creditors paid.",
+            "To save it, pay what it owes and a little working coin: " + Businesses.pence(owed) + ". You carry " + Market.coinsHeld(p) + "c."), 3);
+        boolean sure = PlayerLife.ctx(p).args.getBoolean("sureRescue");
+        page.buttons().button(sure ? "Confirm: pay " + Businesses.pence(owed) + " and save it" : "Rescue it (" + Businesses.pence(owed) + ")", "rescue", LifePage.args("sure", sure),
+            Market.coinsHeld(p) * 100L >= owed, "You need " + Businesses.pence(owed)).primary();
+    }
+
+    static long rescueCost(Business b) {
+        return Math.max(0, -b.account) + Math.max(0, -b.till) + 300;
+    }
+
+    static String rescue(ServerLevel level, ServerPlayer p, Villages.Village v, Business b) {
+        CompoundTag r = Enterprise.rec(v.id(), b.id);
+        if (r == null || !r.contains("petition")) return "!It isn't before the court.";
+        long cost = rescueCost(b);
+        int coins = (int) ((cost + 99) / 100);
+        if (Market.coinsHeld(p) < coins) return "!Saving it takes " + coins + "c; you carry " + Market.coinsHeld(p) + "c.";
+        Market.payOut(p, coins);
+        CoinCensus.playerIn(v.id(), coins, p, PlayerFinance.Cat.FEES, "saved " + b.name + " from the court");
+        long toDebt = Math.max(0, -b.account);
+        Businesses.toTreasury(v.id(), toDebt);
+        b.account += toDebt;
+        b.till = Math.max(0, b.till) + coins * 100L - toDebt;
+        long day = Businesses.today(level);
+        b.today(day).capital += coins * 100L;
+        b.allTime.capital += coins * 100L;
+        b.lossDays = 0;
+        r.remove("petition");
+        r.remove("petitionDay");
+        r.putString("status", "trading");
+        r.putInt("broke", 0);
+        b.note(day, "saved from the court by " + p.getGameProfile().getName() + ": its debts paid");
+        Villages.tell(v.id(), level.getDayTime() / 24000L, p.getGameProfile().getName() + " paid " + b.name + "'s debts and took it back from the court");
+        Accounts.dirty();
+        Businesses.dirty();
+        return b.name + " is saved: its debts paid (" + Businesses.pence(toDebt) + ") and " + Businesses.pence(coins * 100L - toDebt) + " in its till. It trades again tomorrow.";
+    }
+
+    /** The profit and loss card: this week against last. */
+    static void plCard(ServerLevel level, Villages.Village v, Business b, LifePage page) {
+        long day = Businesses.today(level);
+        Business.Day w = b.last(day, 7), last = b.last(day - 7, 7);
+        long net = w.net(), was = last.net();
+        String trend = net > was ? "up from " + Businesses.pence(was) : net < was ? "down from " + Businesses.pence(was) : "the same as last week";
+        int margin = w.revenue <= 0 ? 0 : (int) Math.round((w.revenue - w.cogs) * 100.0 / w.revenue);
+        page.box("This week: " + (net >= 0 ? "a profit of " : "a loss of ") + Businesses.pence(Math.abs(net)) + " (" + trend + ")", List.of(
+            "Sales " + Businesses.pence(w.revenue) + " (" + w.trans + " sold), their cost " + Businesses.pence(w.cogs) + ": a gross margin of " + margin + "%.",
+            "Wages " + Businesses.pence(w.wages) + " · rent " + Businesses.pence(w.rent) + " · other " + Businesses.pence(w.other) + " · tax " + Businesses.pence(w.taxes)
+                + " · interest " + Businesses.pence(w.interest) + ".",
+            "Till " + Businesses.pence(b.till) + (b.account < 0 ? ", owing the town " + Businesses.pence(-b.account) : "") + ". Worth about " + Businesses.pence(FirmSale.worth(v.id(), b)) + "."),
+            net >= 0 ? 1 : 3);
+    }
+
+    /** Firms other players or folk have up for sale, and share offers made to this player. */
+    void forSaleAndOffers(ServerLevel level, ServerPlayer p, Villages.Village v, LifePage page) {
+        boolean head = false;
+        String sure = PlayerLife.ctx(p).args.getString("sureBuy");
+        for (Business x : Enterprise.open(v.id())) {
+            CompoundTag s = FirmSale.sale(v.id(), x);
+            if (s == null || x.ownedBy(p.getUUID())) continue;
+            if (!head) { page.heading("Businesses for sale"); head = true; }
+            boolean on = sure.equals(x.id);
+            page.row(null, x.name, "asking " + Businesses.pence(s.getLong("ask")) + " · worth about " + Businesses.pence(FirmSale.worth(v.id(), x)) + " · owned by " + x.ownersWords(), "")
+                .button(on ? "Confirm: offer " + Businesses.pence(s.getLong("ask")) : "Offer the asking price", "buyoffer", LifePage.args("firm", x.id, "sure", on),
+                    Market.coinsHeld(p) * 100L >= s.getLong("ask"), "You need " + Businesses.pence(s.getLong("ask")));
+        }
+        List<Object[]> offers = Partners.offersFor(v.id(), p.getUUID());
+        if (!offers.isEmpty()) page.heading("Shares offered to you");
+        for (Object[] o : offers) {
+            Business x = (Business) o[0];
+            CompoundTag t = (CompoundTag) o[2];
+            boolean on = PlayerLife.ctx(p).args.getString("sureShare").equals(x.id + "/" + o[1]);
+            page.row(null, t.getInt("parts") * 100 / Business.WHOLE + "% of " + x.name, "from " + t.getString("fromName") + " for " + t.getInt("coins") + "c; profit split by share", "")
+                .button(on ? "Confirm: pay " + t.getInt("coins") + "c" : "Accept (" + t.getInt("coins") + "c)", "acceptshare", LifePage.args("firm", x.id, "i", (int) o[1], "coins", t.getInt("coins"), "sure", on),
+                    Market.coinsHeld(p) >= t.getInt("coins"), "You need " + t.getInt("coins") + "c");
+        }
+        page.buttons().button("Contracts with players", "contracts", null);
+    }
+
+    /** A hand raised, cut, made manager, or let go (with severance, after a confirm). */
+    String handAction(ServerLevel level, ServerPlayer p, Villages.Village v, Business b, String action, CompoundTag args, PlayerLife.Ctx c) {
+        if (!Partners.canDecide(v.id(), b, p.getUUID())) return "!" + Partners.whyNot(v.id(), b);
+        java.util.UUID hid = java.util.UUID.fromString(args.getString("h"));
+        VillageFolkEntity f = null;
+        for (VillageFolkEntity x : Enterprise.hands(v.id(), b)) if (x.getUUID().equals(hid)) f = x;
+        if (f == null) return "!They don't work there any more.";
+        CompoundTag r = Enterprise.rec(v.id(), b.id);
+        long day = Businesses.today(level);
+        switch (action) {
+            case "raise", "cut" -> {
+                LabourBook.Contract k = LabourMarket.contract(f);
+                if (k == null) return "!" + f.displayNameCap() + " isn't on the town's books.";
+                int was = Wealth.wage(f);
+                k.m = Math.max(0.5, Math.min(2.5, k.m * (action.equals("raise") ? 1.1 : 0.9)));
+                LabourBook.changed();
+                if (action.equals("cut")) {
+                    f.persona().remember(level.getDayTime() / 24000L, "my pay was cut at " + b.name, -3);
+                    FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "A cut? Right.", "I'll remember that.", "Times are hard, I suppose.", "Less for the same work. Fine.",
+                        "I'll be looking about, then.", "Noted."));
+                } else FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Thank you. I'll earn it.", "That's kind.", "Much obliged.", "I won't forget it.",
+                    "Good. I'll keep it up.", "That makes a difference."));
+                b.note(day, f.displayNameCap() + "'s pay " + (action.equals("raise") ? "raised" : "cut") + " a tenth by its owner");
+                return f.displayNameCap() + "'s pay is " + (action.equals("raise") ? "raised" : "cut") + " a tenth: from about " + was + "c to " + Wealth.wage(f) + "c a day."
+                    + (action.equals("cut") ? " They took it badly; a hand who feels underpaid may leave." : "");
+            }
+            case "manager" -> {
+                if (r == null) return "!Its record is missing.";
+                if (r.hasUUID("manager") && r.getUUID("manager").equals(hid)) { r.remove("manager"); Accounts.dirty(); return "No manager now: with every owner away, " + b.name + " closes safely."; }
+                r.putUUID("manager", hid);
+                Accounts.dirty();
+                return f.displayNameCap() + " manages " + b.name + " while its owners are away: it keeps trading, restocks and pays its wages.";
+            }
+            default -> {
+                if (!args.getBoolean("sure")) { if (r != null) { r.putString("wpbLetGo", hid.toString()); Accounts.dirty(); } return "!Letting " + f.displayNameCap() + " go pays " + severance(f) + "c severance: press Confirm."; }
+                if (r != null) r.remove("wpbLetGo");
+                int sev = severance(f);
+                long paid = Businesses.payOut(level, v.id(), b, sev * 100L, day);
+                f.earn((int) (paid / 100));
+                b.today(day).wages += paid;
+                b.allTime.wages += paid;
+                LabourMarket.layOff(level, v, LabourBook.town(v.id()), f, "firm:" + b.id, "let go by its owner, with " + (paid / 100) + "c severance", level.getDayTime() / 24000L);
+                if (r != null && r.hasUUID("manager") && r.getUUID("manager").equals(hid)) r.remove("manager");
+                Accounts.dirty();
+                return f.displayNameCap() + " is let go with " + (paid / 100) + "c severance" + (paid / 100 < sev ? " (all the till had)" : "") + ". Post an opening when you want another.";
+            }
+        }
+    }
+
+    /** Its owner's markup on this ware, else the firm's own. */
+    static double wareMarkup(java.util.UUID village, Business b, ItemStack one) {
+        CompoundTag r = Enterprise.rec(village, b.id);
+        if (r == null || !r.contains("wareMarkup")) return b.markup;
+        String k = Stockroom.key(one.copyWithCount(1));
+        CompoundTag m = r.getCompound("wareMarkup");
+        return m.contains(k) ? m.getDouble(k) : b.markup;
+    }
+
+    static boolean hasWareMarkup(java.util.UUID village, Business b, String key) {
+        CompoundTag r = Enterprise.rec(village, b.id);
+        return r != null && r.getCompound("wareMarkup").contains(key);
+    }
+
+    static String setWareMarkup(ServerLevel level, java.util.UUID village, Business b, String key, int d) {
+        CompoundTag r = Enterprise.rec(village, b.id);
+        if (r == null) return "!Its record is missing.";
+        CompoundTag m = r.getCompound("wareMarkup");
+        if (d == 0) {
+            m.remove(key);
+            r.put("wareMarkup", m);
+            Accounts.dirty();
+            return Stockroom.plural(key) + " go back to the firm's markup (" + Businesses.pct(b.markup) + ").";
+        }
+        double was = m.contains(key) ? m.getDouble(key) : b.markup;
+        double now = Math.max(0.05, Math.min(2.0, Math.round(was * 100 + d) / 100.0));
+        m.putDouble(key, now);
+        r.put("wareMarkup", m);
+        Accounts.dirty();
+        b.note(Businesses.today(level), Stockroom.plural(key).toLowerCase(Locale.ROOT) + " marked up " + Businesses.pct(now) + " by its owner");
+        return Stockroom.plural(key) + " now carry a markup of " + Businesses.pct(now) + " (the rest of its wares " + Businesses.pct(b.markup) + "). The price is never over three fifths above the going price.";
+    }
+
+    /** Why the player can't open a branch of this firm ("" if they can): FirmBranches' own gates. */
+    static String branchWhyNot(ServerLevel level, Villages.Village v, Business b, ServerPlayer p) {
+        if (!Government.allowsPrivateFirms(v.id())) return "the state owns the firms here";
+        long day = Businesses.today(level);
+        if (day - b.opened < 21) return "it must trade three weeks first (" + (21 - (day - b.opened)) + " days to go)";
+        List<Business> mine = FirmBranches.owned(v.id(), p.getUUID());
+        if (mine.size() >= FirmBranches.cap(level, v.id(), p.getUUID())) return "your firms need more good weeks behind them (" + FirmBranches.profitableWeeks(level, v.id(), p.getUUID())
+            + " so far; one more firm for every four)";
+        if (!FirmBranches.fairShare(v.id(), p.getUUID())) return "you hold your fair share of the town's firms already";
+        for (Business x : mine) if (x.last(day, 14).net() < 0) return x.name + " lost money over the fortnight";
+        if (b.till < 1000) return "its till needs 10c or more to start one";
+        return "";
+    }
+
+    static String openBranch(ServerLevel level, ServerPlayer p, Villages.Village v, Business b) {
+        String no = branchWhyNot(level, v, b, p);
+        if (!no.isEmpty()) return "!Not yet: " + no + ".";
+        BusinessTypes.BusinessType t = Enterprise.kindOf(v.id(), b);
+        if (t == null) return "!Its trade isn't known.";
+        long day = Businesses.today(level);
+        Business nb = Enterprise.found(level, v, t, null, p, day, null);
+        if (nb == null) return "!The branch couldn't be opened.";
+        long capital = Math.min(b.till / 2, 3000);
+        b.till -= capital;
+        nb.till += capital;
+        nb.today(day).capital += capital;
+        nb.allTime.capital += capital;
+        nb.markup = b.markup;
+        b.note(day, "opened a branch, " + nb.name + ", with " + Businesses.pence(capital));
+        Businesses.dirty();
+        return "Opened " + nb.name + ", a branch, with " + Businesses.pence(capital) + " from " + b.name + "'s till. Take on its hands and stock it from here.";
+    }
+
+    // ------------------------------------------------------------------ [wpb] owners away
+
+    /** Paused today (its owners all away since before this morning, no manager): marked once a day, read by Enterprise. */
+    static boolean pausedToday(java.util.UUID village, Business b, long day) {
+        CompoundTag r = Enterprise.rec(village, b.id);
+        if (r == null || r.hasUUID("founder") || r.hasUUID("manager")) return false;
+        boolean anyPlayer = false;
+        for (Business.Stake s : b.owners) {
+            if (s.holder() != Business.Holder.PLAYER || s.who() == null) continue;
+            anyPlayer = true;
+            if (!r.contains("away/" + s.who()) || r.getLong("away/" + s.who()) >= day) { r.remove("pausedDay"); return false; }
+        }
+        if (!anyPlayer) return false;
+        if (r.getLong("pausedDay") != day) {
+            r.putLong("pausedDay", day);
+            b.note(day, "closed for the day: its owners away, and no manager");
+            Accounts.dirty();
+        }
+        return true;
+    }
+
+    static boolean paused(ServerLevel level, java.util.UUID village, Business b, CompoundTag r) {
+        return r.contains("pausedDay") && r.getLong("pausedDay") == Businesses.today(level);
+    }
+
+    @net.neoforged.fml.common.EventBusSubscriber(modid = com.jrpetty.mcassistant.McAssistantMod.MODID)
+    public static final class Away {
+        private Away() {}
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void onLogout(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) {
+            mark(e.getEntity(), true);
+        }
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void onLogin(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent e) {
+            mark(e.getEntity(), false);
+        }
+
+        static void mark(net.minecraft.world.entity.player.Player p, boolean away) {
+            if (!(p.level() instanceof ServerLevel level)) return;
+            long day = Businesses.today(level);
+            for (Villages.Village v : Villages.every()) {
+                for (Business b : Enterprise.open(v.id())) {
+                    if (!b.ownedBy(p.getUUID())) continue;
+                    CompoundTag r = Enterprise.rec(v.id(), b.id);
+                    if (r == null) continue;
+                    if (away) r.putLong("away/" + p.getUUID(), day);
+                    else { r.remove("away/" + p.getUUID()); r.remove("pausedDay"); }
+                    Accounts.dirty();
+                }
+            }
+        }
+    }
+
+    /** Tests: an owner marked away since this day. */
+    public static void awayForTests(java.util.UUID village, Business b, java.util.UUID owner, long since) {
+        CompoundTag r = Enterprise.rec(village, b.id);
+        if (r != null) r.putLong("away/" + owner, since);
+    }
+
+    public static boolean pausedTodayForTests(java.util.UUID village, Business b, long day) {
+        return pausedToday(village, b, day);
+    }
+
+    public static String handActionForTests(ServerLevel level, ServerPlayer p, Business b, String action, java.util.UUID hand, boolean sure) {
+        Villages.Village v = PlayerLife.here(p);
+        return v == null ? "!no town" : new MyBusinesses().handAction(level, p, v, b, action, LifePage.args("h", hand.toString(), "sure", sure), PlayerLife.ctx(p));
+    }
+
+    public static String setWareMarkupForTests(ServerLevel level, java.util.UUID village, Business b, String key, int d) {
+        return setWareMarkup(level, village, b, key, d);
+    }
+
+    public static String rescueForTests(ServerLevel level, ServerPlayer p, Business b) {
+        Villages.Village v = PlayerLife.here(p);
+        return v == null ? "!no town" : rescue(level, p, v, b);
     }
 
     /** The commands' words, without the commands in them. */

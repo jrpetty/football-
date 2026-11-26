@@ -254,6 +254,20 @@ public final class WorkLife {
         WorkWay.refresh(p);
     }
 
+    /** The HUD's line for a job's shift: "Aim 3 of 7 plots harvested and replanted · on salary", or "" off a job. */
+    static String aimLine(ServerPlayer p, Shifts.Shift s) {
+        CompoundTag j = job(p);
+        if (!j.contains("role") || !j.getString("role").equals(s.role.id)) {
+            JobCards.Card c = JobCards.forRole(s.role);
+            return "Day shift: paid by the task · a good shift is about " + c.targetLine(c.target());
+        }
+        JobCards.Card c = card(j);
+        if (c == null) return "";
+        CompoundTag d = day(j, today(p));
+        int aim = baseTarget(p, j);
+        return "Aim " + (int) d.getDouble("u") + " of " + c.targetLine(aim) + " · " + ("commission".equals(j.getString("pay")) ? "commission " + j.getString("rateWords") : "on salary");
+    }
+
     static boolean produce(ShiftRole r) {
         JobCards.Measure m = JobCards.MEASURES.get(r);
         return m != null && m.produce();
