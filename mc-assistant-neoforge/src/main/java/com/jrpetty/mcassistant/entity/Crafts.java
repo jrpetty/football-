@@ -1014,6 +1014,7 @@ public final class Crafts {
             for (int i = 0; i < c.getContainerSize(); i++) {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty() || !what.test(s)) continue;
+                if (TownBudget.mayTake(level, v.id(), s, 1) < 1) continue;   // [econ51] a town in debt: the works' day's allowance
                 Economy.storesOut(v.id(), s, 1);
                 ItemStack one = s.split(1);
                 MarketMaker.taken(level, v.id(), one, 1);                   // [econ-1a] bought of the market ([supply] once off the shelf)

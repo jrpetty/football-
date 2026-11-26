@@ -8444,6 +8444,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 ItemStack st = c.getItem(i);
                 if (st.isEmpty() || !what.test(st)) continue;
                 int take = Math.min(st.getCount(), max - moved);
+                // [econ51] A town in debt lets its works have only what the day's allowance buys (TownBudget.mayTake).
+                if (isSettler() && level() instanceof net.minecraft.server.level.ServerLevel budget) take = TownBudget.mayTake(budget, ownerId(), st, take);
+                if (take <= 0) continue;
                 ItemStack leftover = insertItem(st.copyWithCount(take));
                 int taken = take - leftover.getCount();
                 if (taken <= 0) { full = true; break; }              // pack is full
