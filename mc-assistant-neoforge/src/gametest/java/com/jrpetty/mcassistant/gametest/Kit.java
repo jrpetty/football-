@@ -57,7 +57,7 @@ final class Kit {
     /** A clean slate. Tests share one JVM, so they share every static. */
     static void reset(ServerLevel level) {
         VillagerTakeover.resetForTests();
-        com.jrpetty.mcassistant.entity.Quarry.SHAFTS = false;              // [featbuild] the shaft held back but in fb08
+        com.jrpetty.mcassistant.entity.Quarry.SHAFTS = true;               // [quarry2] the shaft and its stair, as the game ships
         List<Entity> doomed = new ArrayList<>();
         for (Entity e : level.getAllEntities()) {
             if (e instanceof AssistantEntity || e instanceof Villager) doomed.add(e);

@@ -22,7 +22,9 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Fallable;
 import net.minecraft.world.level.block.FenceGateBlock;
-import net.minecraft.world.level.block.LadderBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.state.properties.Half;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.WallTorchBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -52,9 +54,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * the one outside it, so a body can always walk in and out. Its outline is never a ruled square: corners rounded off, the
  * edges notched, the terraces following them. Worked out (and wanted: a full yard lets it rest), it grows a stage at a
  * time: six wider (to thirty-three across) while the land allows, then deeper: a shaft five across sunk from the bottom
- * terrace, twelve blocks a stage, down to the bedrock (the bedrock floor left as it is), with a ladder down one wall from
- * the bottom terrace (the folk's way-finding climbs ladders: FolkWays), a two-high fence round its mouth, and a torch every
- * six blocks down. At the bedrock it keeps on growing, but only away from the town: the pit lengthened six blocks a stage on
+ * terrace, twelve blocks a stage, down to the bedrock (the bedrock floor left as it is). [quarry2] The shaft is a stair: a
+ * one-wide way cut round its ring, a block lower each step, round a pillar of the rock, four clear blocks over every step,
+ * its floors laid as stairs (the folk walk it as they walk any stair, up with a load as well as down), its walls and roof
+ * made sound as it is cut, a torch on its outer wall every six steps; its mouth on the bottom terrace kept level, its top
+ * steps open to the sky with a two-high fence round them but at the stairhead. At the bedrock it keeps on growing, but only away from the town: the pit lengthened six blocks a stage on
  * the side facing away from the heart, terraced as before, never toward the town or its growth line.
  *
  * <p><b>Safe.</b> Water and lava the cutting meets are plugged with stone, never left to run (the mine's way); caves the shaft
@@ -77,7 +81,7 @@ public final class Quarry {
     public static final int NEAR = 150, FAR = 250;
     /** Folk a town has before it opens a quarry. */
     static final int FOLK = 10;
-    /** A quarryman's load (twice it from the shaft: a barrow up the ladder is worth the climb). */
+    /** A quarryman's load (three times it from the shaft: a barrow up the stair is worth the climb). */
     static final int LOAD = 16;
     /** Ticks between blocks cut (with a stone pick; quicker with better). */
     static final int CUT_EVERY = 24;
@@ -118,6 +122,7 @@ public final class Quarry {
         UNREACHABLE.clear();
         SEARCH.clear();
         AWAKE.clear();
+        QuarryCart.resetForTests();
         readyForTests = false;
         widestForTests = WIDEST;
         StoneYard.resetForTests();
@@ -607,8 +612,10 @@ public final class Quarry {
     /** How deep this cell is to be cut, below the rim (the shaft's cells to the shaft's depth). */
     static int depthAt(Site s, int x, int z) {
         int d = shape(s).at(x, z);
-        if (s.deep() > 0 && s.core(x, z)) d = Math.max(d, s.deep());
-        return d;
+        if (s.deep() <= 0 || d <= 0) return d;
+        // With a shaft: the terraces round its mouth kept level with the stairhead, and no steeper than a block a step out.
+        int cheb = Math.max(Math.abs(x - s.centre().getX()), Math.abs(z - s.centre().getZ()));
+        return Math.min(d, headDepth(s) + Math.max(0, cheb - CORE - 1));
     }
 
     /** The deepest the terraces themselves go. */
@@ -639,7 +646,7 @@ public final class Quarry {
         for (int k = 0; k < all; k++) {
             int i = (from + k) % all;
             int y = top - i / cells, rem = i % cells;
-            int depth = sh.depth[rem];
+            int depth = s.deep() > 0 ? depthAt(s, sh.x0 + rem / sh.d, sh.z0 + rem % sh.d) : sh.depth[rem];
             if (depth <= 0 || y < rim - depth + 1 || y < bottom(level, s)) continue;
             BlockPos p = new BlockPos(sh.x0 + rem / sh.d, y, sh.z0 + rem % sh.d);
             if (skipped.containsKey(p.asLong())) continue;
@@ -650,25 +657,24 @@ public final class Quarry {
         }
         CURSOR.put(town, 0);
         if (s.deep() <= 0) return null;
-        // The shaft: a course at a time, all five by five, down to its stage's depth.
-        int floor = Math.max(bottom(level, s), rim - s.deep() + 1);
-        int fromY = Math.min(rim, CORE_Y.getOrDefault(town, rim));
+        // The shaft's stair: a step at a time down the ring, each step's room cut top down, down to its stage's depth.
+        int last = lastStep(level, s);
+        int[][] r = ring(s);
+        int f = head(s);
+        int fromN = Math.max(0, Math.min(last, CORE_Y.getOrDefault(town, 0)));
         for (int pass = 0; pass < 2; pass++) {
-            for (int y = pass == 0 ? fromY : rim; y >= floor; y--) {
-                for (int dx = -CORE; dx <= CORE; dx++) {
-                    for (int dz = -CORE; dz <= CORE; dz++) {
-                        BlockPos p = new BlockPos(s.centre().getX() + dx, y, s.centre().getZ() + dz);
-                        if (skipped.containsKey(p.asLong())) continue;
-                        if (!cuttable(level, p, false)) continue;
-                        BlockState over = level.getBlockState(p.above());
-                        if (!over.isAir() && !over.is(Blocks.LADDER) && !over.is(Blocks.TORCH) && !CastleWall.wild(level, p.above(), over)) continue;
-                        CORE_Y.put(town, y);
-                        return p;
-                    }
+            for (int n = pass == 0 ? fromN : 0; n <= last; n++) {
+                BlockPos feet = stepFeet(s, r, n);
+                for (int y = Math.min(f, feet.getY() + HEAD - 1); y >= feet.getY(); y--) {
+                    BlockPos p = new BlockPos(feet.getX(), y, feet.getZ());
+                    if (skipped.containsKey(p.asLong())) continue;
+                    if (!cuttable(level, p, false)) continue;
+                    CORE_Y.put(town, n);
+                    return p;
                 }
             }
         }
-        CORE_Y.put(town, floor);
+        CORE_Y.put(town, Math.max(0, last));
         return null;
     }
 
@@ -721,7 +727,7 @@ public final class Quarry {
     /** Cut one block: what it gives (the stone by what a pick gets of it; ore, earth and the rest). Water and lava round it
      *  plugged first; in the shaft, its walls and floor made sound (a cave walled off, sand and gravel made firm). */
     static List<ItemStack> cut(ServerLevel level, BlockPos p, @Nullable VillageFolkEntity by, @Nullable Site s) {
-        boolean core = s != null && s.deep() > 0 && s.core(p.getX(), p.getZ()) && p.getY() < s.centre().getY() - terraceDepthAt(s, p);
+        boolean core = s != null && stairStep(level, s, p) >= 0;
         seal(level, p, core, s);
         BlockState st = level.getBlockState(p);
         ItemStack pick = by != null && by.getMainHandItem().getItem() instanceof PickaxeItem ? by.getMainHandItem() : new ItemStack(Items.STONE_PICKAXE);
@@ -733,12 +739,8 @@ public final class Quarry {
         if (over.is(Blocks.TORCH) || !over.isAir() && CastleWall.wild(level, p.above(), over) && !over.is(BlockTags.LOGS)) {
             level.setBlock(p.above(), Blocks.AIR.defaultBlockState(), 3);
         }
-        if (s != null && core) ladder(level, s);
+        if (s != null && core) stair(level, s);
         return drops;
-    }
-
-    private static int terraceDepthAt(Site s, BlockPos p) {
-        return shape(s).at(p.getX(), p.getZ());
     }
 
     /** Water and lava next to a cut stopped with stone before it is opened; in the shaft, its walls and floor made sound. */
@@ -751,8 +753,17 @@ public final class Quarry {
                 level.setBlock(n, Blocks.COBBLESTONE.defaultBlockState(), 3);
                 continue;
             }
+            if (core && s != null) {
+                // The stair's room: whatever round it is not the stair (under the stairhead's floor) made sound, its roof too.
+                if (n.getY() > head(s) || stairStep(level, s, n) >= 0) continue;
+                if (st.is(Blocks.WALL_TORCH) || st.is(Blocks.TORCH) || st.getBlock() instanceof StairBlock) continue;
+                if (st.isAir() || st.canBeReplaced() || ShaftStair.falls(st)) {
+                    level.setBlock(n, st.is(BlockTags.SAND) ? Blocks.SANDSTONE.defaultBlockState() : Blocks.COBBLESTONE.defaultBlockState(), 3);
+                }
+                continue;
+            }
             if (d == Direction.UP) continue;
-            boolean wall = d == Direction.DOWN ? (core || n.getY() >= bottom(level, s)) : core && s != null && !s.core(n.getX(), n.getZ());
+            boolean wall = d == Direction.DOWN && n.getY() >= bottom(level, s);
             if (!wall) continue;
             if (d == Direction.DOWN && n.getY() < bottom(level, s) - 1) continue;
             if (st.is(Blocks.LADDER) || st.is(Blocks.WALL_TORCH) || st.is(Blocks.TORCH)) continue;
@@ -765,34 +776,214 @@ public final class Quarry {
         }
     }
 
-    /** The shaft's ladder: down the town-side wall from the bottom terrace's gap in the fence to the shaft's floor. Every
-     *  rung from the gap's floor down to the deepest open cell of its column (a cell not cut yet is passed over: the cutting
-     *  calls this again when it is), the wall behind each made sound. */
-    static void ladder(ServerLevel level, Site s) {
+    // ------------------------------------------------------------------ the shaft's stair
+
+    /** Clear blocks over the feet of every step of the shaft's stair (the mine's stair has as many: ShaftStair.HEAD). */
+    public static final int HEAD = 4;
+    /** A torch on the stair's outer wall every so many steps down (a block down a step). */
+    public static final int TORCH_EVERY = 6;
+    /** The way-finder asked for so many steps of the stair at a time, at most. */
+    static final int STAIR_LEG = 12;
+    /** The shaft's ring, in order round from the middle of its town side: the stair's cells, a block lower each. */
+    private static final int[][] RING = { { 2, -2 }, { 2, -1 }, { 2, 0 }, { 2, 1 }, { 2, 2 }, { 1, 2 }, { 0, 2 }, { -1, 2 },
+        { -2, 2 }, { -2, 1 }, { -2, 0 }, { -2, -1 }, { -2, -2 }, { -1, -2 }, { 0, -2 }, { 1, -2 } };
+
+    /** The ring's cells from the stair's head (the middle of the town side) on round, as offsets from the middle. */
+    static int[][] ring(Site s) {
+        Direction t = s.away().getOpposite();
+        int ex = t.getStepX() * CORE, ez = t.getStepZ() * CORE, k0 = 0;
+        for (int k = 0; k < RING.length; k++) if (RING[k][0] == ex && RING[k][1] == ez) k0 = k;
+        int[][] out = new int[RING.length][];
+        for (int i = 0; i < RING.length; i++) out[i] = RING[(k0 + i) % RING.length];
+        return out;
+    }
+
+    /** The stairhead: the spot on the bottom terrace, outside the shaft on its town side, the stair goes down from. */
+    static BlockPos gap(Site s) {
+        return s.centre().relative(s.away().getOpposite(), CORE + 1);
+    }
+
+    /** How deep the stairhead's floor is below the rim (the terraces' depth there: steady as the pit is lengthened, which
+     *  is only ever away from the town). */
+    static int headDepth(Site s) {
+        BlockPos g = gap(s);
+        return Math.max(1, shape(s).at(g.getX(), g.getZ()));
+    }
+
+    /** The stairhead's floor: the course the shaft's mouth is kept level at. */
+    static int head(Site s) {
+        return s.centre().getY() - headDepth(s);
+    }
+
+    /** The stair's last step (its lowest, at the shaft's stage depth or the bedrock), or -1 with no shaft. */
+    static int lastStep(ServerLevel level, Site s) {
+        if (s.deep() <= 0) return -1;
+        int floorY = Math.max(bottom(level, s), s.centre().getY() - s.deep() + 1);
+        return Math.max(-1, head(s) - floorY);
+    }
+
+    /** Where a body stands on step n: on the ring, a block lower each step from the head. */
+    static BlockPos stepFeet(Site s, int[][] ring, int n) {
+        int[] o = ring[Math.floorMod(n, ring.length)];
+        return new BlockPos(s.centre().getX() + o[0], head(s) - n, s.centre().getZ() + o[1]);
+    }
+
+    /** The ring's index of this column, or -1 if it is not on the ring. */
+    static int ringIndex(Site s, int[][] ring, int x, int z) {
+        int dx = x - s.centre().getX(), dz = z - s.centre().getZ();
+        if (Math.max(Math.abs(dx), Math.abs(dz)) != CORE) return -1;
+        for (int i = 0; i < ring.length; i++) if (ring[i][0] == dx && ring[i][1] == dz) return i;
+        return -1;
+    }
+
+    /** The step whose room this block is (its feet up to the HEAD over them, never over the stairhead's floor), or -1. */
+    static int stairStep(ServerLevel level, Site s, BlockPos p) {
+        if (s.deep() <= 0) return -1;
+        int[][] r = ring(s);
+        int j = ringIndex(s, r, p.getX(), p.getZ());
+        if (j < 0) return -1;
+        int f = head(s), last = lastStep(level, s);
+        if (p.getY() > f) return -1;
+        for (int n = f - p.getY(); n <= f - p.getY() + HEAD - 1; n++) {
+            if (n >= 0 && n <= last && Math.floorMod(n, r.length) == j) return n;
+        }
+        return -1;
+    }
+
+    /** The step a body standing here is on (its feet anywhere over the step's floor, a stair's half included), or -1. */
+    static int stepOf(ServerLevel level, Site s, double x, double y, double z) {
+        if (s.deep() <= 0) return -1;
+        int[][] r = ring(s);
+        int j = ringIndex(s, r, Mth.floor(x), Mth.floor(z));
+        if (j < 0) return -1;
+        double approx = head(s) - y;
+        int n = j + r.length * (int) Math.round((approx - j) / r.length);
+        if (n < 0 || n > lastStep(level, s) || Math.abs(n - approx) > 1.6) return -1;
+        return n;
+    }
+
+    /** The way up the stair from step n: toward the step before it (the stairhead from the first). */
+    static Direction upFrom(Site s, int[][] ring, int n) {
+        int[] here = ring[Math.floorMod(n, ring.length)];
+        int[] prev = n == 0 ? new int[]{ s.away().getOpposite().getStepX() * (CORE + 1), s.away().getOpposite().getStepZ() * (CORE + 1) }
+            : ring[Math.floorMod(n - 1, ring.length)];
+        return Direction.getNearest(prev[0] - here[0], 0, prev[1] - here[1]);
+    }
+
+    /** The ring cell's outer wall: the side away from the middle (for a corner, across the way the stair runs on it). */
+    static Direction outward(int[] o) {
+        return Math.abs(o[0]) == CORE ? (o[0] > 0 ? Direction.EAST : Direction.WEST) : (o[1] > 0 ? Direction.SOUTH : Direction.NORTH);
+    }
+
+    /** Where a quarryman stands to cut a block of the stair: on the step above it (the stairhead for the first). */
+    @Nullable
+    static BlockPos stairStand(ServerLevel level, Site s, BlockPos p) {
+        int n = stairStep(level, s, p);
+        if (n < 0) return null;
+        if (n == 0) { BlockPos g = gap(s); return new BlockPos(g.getX(), head(s) + 1, g.getZ()); }
+        return stepFeet(s, ring(s), n - 1);
+    }
+
+    /**
+     * The shaft's stair kept: the shaft's mouth level at the stairhead's floor (the bottom terrace's point under it filled
+     * back where it was cut deeper, never under anybody), and every step cut so far given its floor, a stair of cobblestone
+     * facing up the way (a half block's rise at a time going up). Called as the stair is cut, and on the quarry's round.
+     */
+    static void stair(ServerLevel level, Site s) {
         if (s.deep() <= 0) return;
-        Direction toTown = s.away().getOpposite();
-        BlockPos l = s.centre().relative(toTown, CORE), g = s.centre().relative(toTown, CORE + 1);
-        int rim = s.centre().getY();
-        int gTop = top(level, g.getX(), g.getZ(), rim + 6, bottom(level, s) - 2);
-        int floor = Math.max(bottom(level, s), rim - s.deep() + 1);
-        BlockState rung = Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, toTown.getOpposite());
-        // The cell over the top rung, and the top rung's own, open (a body steps from the gap onto the ladder there).
-        for (int y = gTop; y <= gTop + 2; y++) {
-            BlockPos at = new BlockPos(l.getX(), y, l.getZ());
-            BlockState here = level.getBlockState(at);
-            if (!here.isAir() && !here.is(Blocks.LADDER) && quarryStone(level, at, here)) level.setBlock(at, Blocks.AIR.defaultBlockState(), 3);
-        }
-        for (int y = gTop; y >= floor; y--) {
-            BlockPos at = new BlockPos(l.getX(), y, l.getZ());
-            BlockState here = level.getBlockState(at);
-            if (!(here.isAir() || here.is(Blocks.LADDER) || here.is(Blocks.TORCH))) continue;   // not cut yet: its turn comes
-            BlockPos wall = new BlockPos(g.getX(), y, g.getZ());
-            BlockState ws = level.getBlockState(wall);
-            if (ws.isAir() || ws.canBeReplaced() || !ws.getFluidState().isEmpty() || ws.getBlock() instanceof Fallable) {
-                level.setBlock(wall, Blocks.COBBLESTONE.defaultBlockState(), 3);
+        int[][] r = ring(s);
+        int f = head(s), last = lastStep(level, s);
+        BlockPos c = s.centre();
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int dx = -CORE - 1; dx <= CORE + 1; dx++) {
+            for (int dz = -CORE - 1; dz <= CORE + 1; dz++) {
+                int x = c.getX() + dx, z = c.getZ() + dz;
+                int want = Math.max(Math.abs(dx), Math.abs(dz)) <= CORE ? f : f - 1;
+                int t = top(level, x, z, f + 1, f - 8);
+                if (t >= want) continue;
+                if (!level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                        new net.minecraft.world.phys.AABB(x, t + 1, z, x + 1, want + 3, z + 1)).isEmpty()) continue;   // never under a body
+                for (int y = t + 1; y <= want; y++) {
+                    m.set(x, y, z);
+                    if (stairStep(level, s, m) >= 0) continue;
+                    BlockState st = level.getBlockState(m);
+                    if (st.isAir() || st.canBeReplaced() || !st.getFluidState().isEmpty() || st.is(BlockTags.FENCES) || st.is(Blocks.LANTERN)
+                        || st.is(Blocks.TORCH)) level.setBlock(m, Blocks.COBBLESTONE.defaultBlockState(), 3);
+                }
             }
-            if (!here.is(Blocks.LADDER)) level.setBlock(at, rung, 3);
         }
+        for (int n = 0; n <= last; n++) {
+            BlockPos feet = stepFeet(s, r, n);
+            if (!level.getBlockState(feet).isAir()) continue;             // not cut yet: its turn comes
+            BlockPos floor = feet.below();
+            BlockState st = level.getBlockState(floor);
+            if (st.is(Blocks.BEDROCK) || st.getBlock() instanceof StairBlock) continue;
+            level.setBlock(floor, Blocks.COBBLESTONE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, upFrom(s, r, n))
+                .setValue(StairBlock.HALF, Half.BOTTOM), 3);
+        }
+    }
+
+    /** Is the shaft's mouth level at the stairhead's floor (the bottom terrace's point under it filled back)? */
+    static boolean headLevel(ServerLevel level, Site s) {
+        int f = head(s);
+        BlockPos c = s.centre();
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int dx = -CORE; dx <= CORE; dx++) {
+            for (int dz = -CORE; dz <= CORE; dz++) {
+                if (stairStep(level, s, m.set(c.getX() + dx, f, c.getZ() + dz)) >= 0) continue;
+                if (top(level, c.getX() + dx, c.getZ() + dz, f + 1, f - 8) < f) return false;
+            }
+        }
+        return true;
+    }
+
+    /** The stair's torches: one on its outer wall every TORCH_EVERY steps down, and at the step it is cut to. Returns how
+     *  many were put up (at most {@code budget}). */
+    static int stairLights(ServerLevel level, Villages.Village v, Site s, int budget, boolean free) {
+        if (s.deep() <= 0) return 0;
+        int[][] r = ring(s);
+        int last = lastStep(level, s), done = 0;
+        int deepest = -1;
+        for (int n = last; n >= 0; n--) if (level.getBlockState(stepFeet(s, r, n)).isAir()) { deepest = n; break; }
+        for (int n = 0; n <= deepest && done < budget; n++) {
+            if (n % TORCH_EVERY != HEAD - 1 && n != deepest) continue;
+            BlockPos at = stepFeet(s, r, n).above();
+            Direction out = outward(r[n % r.length]);
+            BlockPos w = at.relative(out);
+            if (!level.getBlockState(at).isAir() || !level.getBlockState(w).isFaceSturdy(level, w, out.getOpposite())) continue;
+            if (v != null && !free) TownWork.take(level, v, it -> it.is(Items.TORCH), 1);
+            level.setBlock(at, Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, out.getOpposite()), 3);
+            done++;
+        }
+        return done;
+    }
+
+    /**
+     * The way between the stair and the terraces, and along the stair, is asked of the way-finder a dozen steps at a time:
+     * into the shaft by its stairhead, out of it up to the stairhead, along it a leg at a time. True if it walked the folk
+     * this tick (the walk to {@code to} itself waits).
+     */
+    private static boolean stairWay(ServerLevel level, Site s, VillageFolkEntity f, BlockPos to) {
+        if (s.deep() <= 0) return false;
+        int[][] r = ring(s);
+        int at = stepOf(level, s, f.getX(), f.getY(), f.getZ());
+        int want = stepOf(level, s, to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
+        if (at < 0 && want < 0) return false;
+        BlockPos g = gap(s);
+        BlockPos head = new BlockPos(g.getX(), head(s) + 1, g.getZ());
+        BlockPos next;
+        if (at < 0) {
+            if (want <= STAIR_LEG) return false;                          // the first steps: the walk itself
+            next = f.distanceToSqr(head.getX() + 0.5, head.getY(), head.getZ() + 0.5) > 2.25 ? head : stepFeet(s, r, STAIR_LEG);
+        } else if (want < 0) {
+            next = at <= STAIR_LEG ? head : stepFeet(s, r, at - STAIR_LEG);
+            if (at <= 1 && f.distanceToSqr(head.getX() + 0.5, head.getY(), head.getZ() + 0.5) <= 4.0) return false;
+        } else {
+            if (Math.abs(want - at) <= STAIR_LEG) return false;
+            next = stepFeet(s, r, want > at ? at + STAIR_LEG : at - STAIR_LEG);
+        }
+        Incidents.walk(f, next, 0.8D);
+        return true;
     }
 
     /** Is it earth (spoil, left on the heap), not stone? */
@@ -808,7 +999,7 @@ public final class Quarry {
     /**
      * The fence: posts round the pit's ragged rim (each ground cell beside a cut one), a gate toward the town, a lantern
      * every so often; and once there is a shaft, a fence two high round its mouth on the bottom terrace, lanterns at its
-     * corners, a gap where the ladder goes down. Each entry {post, gate (or null), light (or null), upper post (or null)}.
+     * corners, a gap where the stair goes down. Each entry {post, gate (or null), light (or null), upper post (or null)}.
      */
     private static final Map<String, List<BlockPos[]>> FENCES = new ConcurrentHashMap<>();
 
@@ -821,6 +1012,7 @@ public final class Quarry {
         List<BlockPos[]> kept = FENCES.get(key);
         if (kept != null) return kept;
         List<BlockPos[]> made = fenceNow(level, s);
+        if (s.deep() > 0 && !headLevel(level, s)) return made;          // the stairhead not level yet: looked at again
         if (FENCES.size() > 64) FENCES.clear();
         FENCES.put(key, made);
         return made;
@@ -860,18 +1052,29 @@ public final class Quarry {
             boolean light = !isGate && noise(r[0], r[1], c) % 5 == 0;
             out.add(new BlockPos[]{ post, isGate ? post : null, light ? post.above() : null, null });
         }
-        if (s.deep() > 0) {
-            int rim = c.getY();
-            for (int dx = -CORE - 1; dx <= CORE + 1; dx++) {
-                for (int dz = -CORE - 1; dz <= CORE + 1; dz++) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) != CORE + 1) continue;
-                    if (dx == toTown.getStepX() * (CORE + 1) && dz == toTown.getStepZ() * (CORE + 1)) continue;   // the ladder's gap
-                    int x = c.getX() + dx, z = c.getZ() + dz;
-                    int y = top(level, x, z, rim + 6, rim - terraceDepth(s) - 4);
-                    BlockPos post = new BlockPos(x, y + 1, z);
-                    boolean corner = Math.abs(dx) == CORE + 1 && Math.abs(dz) == CORE + 1;
-                    out.add(new BlockPos[]{ post, null, corner ? post.above(2) : null, post.above() });
+        if (s.deep() > 0 && headLevel(level, s)) {
+            // The stairhead: the stair's top steps open to the sky, a fence two high round them but at the stairhead itself.
+            int[][] r = ring(s);
+            int f = head(s);
+            BlockPos g = gap(s);
+            Set<Long> open = new HashSet<>();
+            for (int j = 0; j < HEAD; j++) open.add(BlockPos.asLong(c.getX() + r[j][0], 0, c.getZ() + r[j][1]));
+            open.add(BlockPos.asLong(g.getX(), 0, g.getZ()));
+            Set<Long> done = new HashSet<>();
+            List<BlockPos[]> head = new ArrayList<>();
+            for (int j = 0; j < HEAD; j++) {
+                for (Direction d : Direction.Plane.HORIZONTAL) {
+                    int x = c.getX() + r[j][0] + d.getStepX(), z = c.getZ() + r[j][1] + d.getStepZ();
+                    long k = BlockPos.asLong(x, 0, z);
+                    if (open.contains(k) || !done.add(k)) continue;
+                    BlockPos post = new BlockPos(x, top(level, x, z, f + 2, f - 4) + 1, z);
+                    head.add(new BlockPos[]{ post, null, null, post.above() });
                 }
+            }
+            // A lantern over the first post and the last (the stairhead's two sides).
+            for (int i = 0; i < head.size(); i++) {
+                BlockPos[] e = head.get(i);
+                out.add(i == 0 || i == head.size() - 1 ? new BlockPos[]{ e[0], null, e[0].above(2), e[3] } : e);
             }
         }
         return out;
@@ -982,7 +1185,7 @@ public final class Quarry {
             for (int j = 0; j < sh.d && done < budget; j++) {
                 int x = sh.x0 + i, z = sh.z0 + j;
                 if (Math.floorMod(x - c.getX(), 7) != 3 || Math.floorMod(z - c.getZ(), 7) != 3) continue;
-                int depth = sh.depth[i * sh.d + j];
+                int depth = depthAt(s, x, z);
                 if (depth <= 0) continue;
                 int cheb = Math.max(Math.abs(x - c.getX()), Math.abs(z - c.getZ()));
                 if (s.deep() > 0 && cheb <= CORE + 2) continue;               // the shaft, its fence and the walk round it
@@ -995,20 +1198,7 @@ public final class Quarry {
                 done++;
             }
         }
-        if (s.deep() > 0) {
-            Direction toTown = s.away().getOpposite();
-            BlockPos o = c.relative(toTown.getOpposite(), CORE), wall = c.relative(toTown.getOpposite(), CORE + 1);
-            int floor = top(level, o.getX(), o.getZ(), rim - 1, bottom(level, s) - 2);
-            int roof = rim - shape(s).at(o.getX(), o.getZ());
-            for (int y = floor + 2; y < roof && done < budget; y++) {
-                if (Math.floorMod(y - floor - 2, 6) != 0) continue;
-                BlockPos at = new BlockPos(o.getX(), y, o.getZ());
-                BlockPos w = new BlockPos(wall.getX(), y, wall.getZ());
-                if (!level.getBlockState(at).isAir() || !level.getBlockState(w).isFaceSturdy(level, w, toTown)) continue;
-                level.setBlock(at, Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, toTown), 3);
-                done++;
-            }
-        }
+        done += stairLights(level, v, s, budget - done, free);
         return done;
     }
 
@@ -1082,9 +1272,9 @@ public final class Quarry {
      * shaft sunk (or sunk a stage deeper) down to the bedrock; there, lengthened away from the town. Closed when none of
      * these can be done. {@code free}: the new fence up at once (the staging and the tests).
      */
-    /** The shaft to the bedrock: held back until its quarrymen are sure to climb out of it with a load (fb08); till then a
-     *  worked-out pit at its widest is lengthened away from the town on its terraces. */
-    public static boolean SHAFTS = false;
+    /** The shaft to the bedrock (its stair walked down and up again with a load: fb08). Off: a worked-out pit at its widest
+     *  is lengthened away from the town on its terraces. */
+    public static boolean SHAFTS = true;
 
     static void workedOut(ServerLevel level, Villages.Village v, Site s) {
         workedOut(level, v, s, false);
@@ -1110,7 +1300,7 @@ public final class Quarry {
         if (next == null && SHAFTS && !atBedrock(level, s) && rim - bottom(level, s) + 1 > terraceDepth(s) + 1) {
             int deep = Math.min(rim - bottom(level, s) + 1, (s.deep() == 0 ? terraceDepth(s) : s.deep()) + DEEP_STEP);
             next = s.with(s.size(), s.stage() + 1, deep, s.ext());
-            news = s.deep() == 0 ? "the quarry's shaft was begun, a ladder down it: " + next.words() + ", to " + deep + " deep"
+            news = s.deep() == 0 ? "the quarry's shaft was begun, a stair cut round its walls: " + next.words() + ", to " + deep + " deep"
                 : "the quarry's shaft was sunk deeper: " + next.words() + ", to " + deep + " deep" + (atBedrock(level, next) ? " (the bedrock)" : "");
         }
         if (next == null) {
@@ -1131,6 +1321,7 @@ public final class Quarry {
         save(id, next);
         CURSOR.remove(id);
         CORE_Y.remove(id);
+        stair(level, next);
         Villages.tell(id, day, news);
         if (free) {
             for (int i = 0; i < 2000; i++) {
@@ -1239,9 +1430,10 @@ public final class Quarry {
         long t = Math.floorMod(level.getDayTime(), 24000L);
         boolean working = !men.isEmpty() && t >= 900L && t < 12500L && !TownLod.away(id);
         keepAwake(level, v, s, working);
+        if (level.isLoaded(s.centre())) QuarryCart.ensure(level, v);
         if (level.isLoaded(s.centre())) {
             oldFence(level, v, s);
-            ladder(level, s);
+            stair(level, s);
             lights(level, v, s, 3, false);
             if (t < 12000L) weather(level, s, 2);
         }
@@ -1334,7 +1526,7 @@ public final class Quarry {
         return was != null && was.contains(f.getStringUUID());
     }
 
-    enum Job { FENCE, CUT, TO_YARD, TO_STORES }
+    enum Job { FENCE, CUT, TO_YARD, TO_STORES, DRIVE }
 
     private static final class Man {
         Job job = Job.CUT;
@@ -1381,7 +1573,7 @@ public final class Quarry {
 
     /**
      * [featbuild] Asked to be put somewhere (a rescue, a walk home it could not plan): a quarryman down in the pit climbs out
-     * instead, by the terraces and the ladder (VillageFolkEntity.rescueToPlot, putBeside). True when it is seen to.
+     * instead, by the terraces and the stair (VillageFolkEntity.rescueToPlot, putBeside). True when it is seen to.
      */
     public static boolean climbInstead(VillageFolkEntity f) {
         if (f.ownerId() == null || f.isPassenger() || !isMan(f)) return false;
@@ -1418,6 +1610,21 @@ public final class Quarry {
     public static boolean hold(VillageFolkEntity f, ServerLevel level) {
         if (standDown || f.isBaby() || f.isSleeping() || f.ownerId() == null || f.isHired()) return release(f);
         if (!isMan(f)) return release(f);
+        // [quarry2] Pushing the quarry's handcart: the cart walks it (QuarryCart), whatever the hour, till the trip is done.
+        Man dm = MEN_STATE.get(f.getUUID());
+        if (dm != null && dm.job == Job.DRIVE) {
+            if (QuarryCart.driving(level, f)) {
+                dm.held = level.getGameTime();
+                String w = QuarryCart.words(f.ownerId());
+                dm.doing = "pushing the quarry's handcart" + (w == null ? "" : " (" + w.substring(w.indexOf(':') + 2) + ")");
+                f.hobbyNow = dm.doing;
+                f.lastLeisureTick = f.tickCount;
+                f.brain(dm.doing);
+                return true;
+            }
+            dm.job = Job.CUT;
+            dm.at = null;
+        }
         UUID id = f.ownerId();
         Villages.Village v = Villages.get(id);
         Site s = v == null ? null : site(id);
@@ -1437,7 +1644,7 @@ public final class Quarry {
             m.held = now;
             BlockPos to = outside(level, s);
             m.doing = "climbing out of the quarry";
-            if (!shaftWay(level, s, f, to)) walkTo(level, f, m, to, 1.5, now, "climbing out of the quarry");
+            if (!stairWay(level, s, f, to)) walkTo(level, f, m, to, 1.5, now, "climbing out of the quarry");
             return true;
         }
         m.held = now;
@@ -1453,6 +1660,14 @@ public final class Quarry {
         }
         switch (m.job) {
             case FENCE, CUT -> {
+                // [quarry2] The cart standing out with nobody at its handles: taken on by the first free hand out of the pit.
+                TradeWagon lone = down ? null : QuarryCart.wantsDriver(level, id);
+                if (lone != null) {
+                    QuarryCart.takeUp(lone, f);
+                    m.job = Job.DRIVE;
+                    FolkTalk.speak(f, "Somebody has to push that cart. I'll take it.");
+                    return true;
+                }
                 ensurePick(level, v, f);
                 // The fence and its lanterns before the cutting.
                 BlockPos[] fw = fenceWanted(level, v, s, f.blockPosition());
@@ -1460,9 +1675,8 @@ public final class Quarry {
                 if (fw != null) {
                     BlockPos stand;
                     if (fw[3] != null) {
-                        // The shaft's fence: worked from the terrace outside it, never from over the drop.
-                        Direction out = Direction.getNearest(fw[0].getX() - s.centre().getX(), 0, fw[0].getZ() - s.centre().getZ());
-                        stand = fw[0].relative(out);
+                        // The stairhead's fence: worked from the floor beside it, never from over the drop.
+                        stand = headStand(level, s, fw[0]);
                     } else {
                         // The rim's: from the pit's side of it, a step in, never standing on the line itself.
                         Direction in = Direction.getNearest(s.centre().getX() - fw[0].getX(), 0, s.centre().getZ() - fw[0].getZ());
@@ -1505,9 +1719,10 @@ public final class Quarry {
                 if (!cutAt.equals(m.at)) { m.at = cutAt; m.sent = now; m.bestDist = Double.MAX_VALUE; }
                 double dist = Math.sqrt(f.distanceToSqr(cutAt.getX() + 0.5, cutAt.getY() + 0.5, cutAt.getZ() + 0.5));
                 if (dist > 4.2 || Math.abs(f.getY() - cutAt.getY()) > 3.5 || f.onClimbable() && !f.onGround()) {
-                    if (shaftWay(level, s, f, cutAt.above())) { m.doing = "climbing down into the quarry's shaft"; m.sent = now; return true; }
-                    if (!walkToward(level, f, m, cutAt.above(), now, s.core(cutAt.getX(), cutAt.getZ()) && cutAt.getY() < s.centre().getY() - terraceDepth(s)
-                            ? "climbing down into the quarry's shaft" : "walking out to the quarry face")) {
+                    BlockPos stand = stairStand(level, s, cutAt);
+                    BlockPos goal = stand != null ? stand : cutAt.above();
+                    if (stairWay(level, s, f, goal)) { m.doing = "going down the quarry's stair"; m.sent = now; return true; }
+                    if (!walkToward(level, f, m, goal, now, stand != null ? "going down the quarry's stair" : "walking out to the quarry face")) {
                         skip(id, cutAt, now);
                         m.at = null;
                     }
@@ -1532,15 +1747,29 @@ public final class Quarry {
                 return true;
             }
             case TO_YARD -> {
-                BlockPos spot = StoneYard.ground(StoneYard.at(yard, 0, -1), yard);
-                if (down && shaftWay(level, s, f, spot)) { m.doing = "climbing out of the quarry with a load"; return true; }
-                if (!walkTo(level, f, m, spot, 2.5, now, down ? "climbing out of the quarry with a load" : "carting stone to the yard")) {
+                // [quarry2] The quarry's handcart at its station: the load tipped into it (the yard takes it while the cart is out).
+                TradeWagon cart = QuarryCart.home(level, id);
+                BlockPos spot = cart != null ? QuarryCart.loadSpot(level, cart) : StoneYard.ground(StoneYard.at(yard, 0, -1), yard);
+                if (down && stairWay(level, s, f, spot)) { m.doing = "climbing the quarry's stair with a load"; return true; }
+                if (!walkTo(level, f, m, spot, 2.5, now, down ? "climbing out of the quarry with a load"
+                        : cart != null ? "carrying stone to the quarry's handcart" : "carting stone to the yard")) {
                     if (now - m.sent > TRY * 4 && !down) {
                         // Never got there: left at the quarry's pile, for the yard to fetch.
                         StoneYard.receive(level, id, m.load);
                         m.load.clear();
                         m.job = Job.CUT;
                     }
+                    return true;
+                }
+                if (cart != null) {
+                    f.swing(InteractionHand.MAIN_HAND);
+                    QuarryCart.tipIn(level, cart, m.load);
+                    if (!m.load.isEmpty()) StoneYard.receive(level, id, m.load);   // what the cart had no room for
+                    m.load.clear();
+                    for (ItemStack e : m.extra) Crafts.store(level, v, e);
+                    m.extra.clear();
+                    if (QuarryCart.ready(level, v, cart) && QuarryCart.setOff(level, v, cart, f)) { m.job = Job.DRIVE; return true; }
+                    m.job = Job.CUT;
                     return true;
                 }
                 level.playSound(null, f.blockPosition(), SoundEvents.STONE_PLACE, SoundSource.NEUTRAL, 0.8F, 0.9F);
@@ -1551,7 +1780,8 @@ public final class Quarry {
                 m.extra.clear();
                 // The stores' stone by the handcart: the further the town, the bigger the load (a trip a day is worth it).
                 int far = (int) Math.sqrt(yard.centre().distSqr(v.centre()));
-                ItemStack due = StoneYard.deliveryDue(level, v, cartFor(far));
+                ItemStack due = QuarryCart.on() && Ledger.note(id, QuarryCart.CART) != null ? null    // [quarry2] the cart keeps the stores
+                    : StoneYard.deliveryDue(level, v, cartFor(far));
                 if (due != null && StoneYard.load(id, due)) {
                     m.cart = due;
                     m.job = Job.TO_STORES;
@@ -1584,24 +1814,22 @@ public final class Quarry {
         return true;
     }
 
-    /**
-     * The way between the shaft and the terraces goes by the ladder's top (the gap in the shaft's fence): a walk into or out
-     * of the shaft is a walk to there first, the way-finder asked for one short climb at a time. True if it walked the folk
-     * this tick (the walk to {@code to} itself waits).
-     */
-    private static boolean shaftWay(ServerLevel level, Site s, VillageFolkEntity f, BlockPos to) {
-        if (s.deep() <= 0) return false;
-        Direction toTown = s.away().getOpposite();
-        BlockPos g = s.centre().relative(toTown, CORE + 1);
-        int gTop = top(level, g.getX(), g.getZ(), s.centre().getY() + 6, bottom(level, s) - 2);
-        BlockPos gap = new BlockPos(g.getX(), gTop + 1, g.getZ());
-        boolean down = s.core(f.getBlockX(), f.getBlockZ()) && f.getY() < gTop - 0.5;
-        boolean there = s.core(to.getX(), to.getZ()) && to.getY() < gTop;
-        if (down == there) return false;
-        double d = f.distanceToSqr(gap.getX() + 0.5, gap.getY(), gap.getZ() + 0.5);
-        if (!down && d <= 1.2) return false;                           // at the gap: on down the ladder
-        Incidents.walk(f, gap, 0.8D);
-        return true;
+    /** Where to stand to put up a post of the stairhead's fence: the floor beside it furthest from the stair, clear. */
+    static BlockPos headStand(ServerLevel level, Site s, BlockPos post) {
+        int f = head(s);
+        BlockPos best = gap(s).atY(f + 1);
+        double bestD = -1;
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            int x = post.getX() + d.getStepX(), z = post.getZ() + d.getStepZ();
+            int t = top(level, x, z, f + 3, f - 3);
+            if (t < f - 1 || t > f + 1) continue;
+            BlockPos at = new BlockPos(x, t + 1, z);
+            if (!level.getBlockState(at).isAir() || !level.getBlockState(at.above()).isAir()) continue;
+            if (stairStep(level, s, at.below()) >= 0) continue;
+            double dd = at.distSqr(s.centre().atY(at.getY()));
+            if (dd > bestD) { bestD = dd; best = at; }
+        }
+        return best;
     }
 
     /** The handcart's load for a quarry this far from the heart: thirty-two near, up to a hundred and twenty-eight. */
@@ -1611,7 +1839,7 @@ public final class Quarry {
 
     /** A load: sixteen at the face, a barrow of forty-eight from down the shaft (a long climb for a small load is waste). */
     private static int loadFor(Site s, VillageFolkEntity f) {
-        return s.deep() > 0 && f.getY() < s.centre().getY() - terraceDepth(s) ? LOAD * 3 : LOAD;
+        return s.deep() > 0 && f.getY() < head(s) - 0.5 ? LOAD * 3 : LOAD;
     }
 
     /** The worn track: grass under a quarryman's feet out past the growth line worn to a path, a little at a time. */
@@ -1738,8 +1966,12 @@ public final class Quarry {
     /** How deep the pit is now: its shaft's depth if it has one, else its terraces'. */
     static int depthNow(ServerLevel level, Site s) {
         if (s.deep() <= 0) return terraceDepth(s);
-        int floor = top(level, s.centre().getX() + 1, s.centre().getZ() + 1, s.centre().getY(), bottom(level, s) - 2);
-        return Math.max(terraceDepth(s), s.centre().getY() - floor);
+        int[][] r = ring(s);
+        for (int n = lastStep(level, s); n >= 0; n--) {
+            BlockPos feet = stepFeet(s, r, n);
+            if (level.getBlockState(feet).isAir()) return Math.max(terraceDepth(s), s.centre().getY() - feet.getY() + 1);
+        }
+        return terraceDepth(s);
     }
 
     /** "Quarry stage 6: 33×33, 70 deep". */
@@ -1782,6 +2014,15 @@ public final class Quarry {
                 men.add(m);
             }
             c.put("men", men);
+            String cart = QuarryCart.words(id);
+            if (cart != null) {
+                long[] tally = QuarryCart.tally(id);
+                c.putString("cart", cart);
+                c.putLong("cartTrips", tally[0]);
+                c.putLong("cartCarried", tally[1]);
+                String last = QuarryCart.lastTrip(id);
+                if (last != null) c.putString("cartLast", last);
+            }
         }
         String old = Ledger.note(id, "quarry.old");
         if (old != null) c.putString("old", old);
@@ -1823,8 +2064,8 @@ public final class Quarry {
         Ledger.note(v.id(), CUT, Long.toString(cutTotal(v.id()) + done));
         s = site(v.id());
         if (s != null) {
+            stair(level, s);
             fenceForTests(level, v);
-            ladder(level, s);
             lights(level, v, s, 10000, true);
         }
         return done;
@@ -1855,8 +2096,8 @@ public final class Quarry {
             done++;
         }
         StoneYard.receive(level, v.id(), load);
+        stair(level, s);
         fenceForTests(level, v);
-        ladder(level, s);
         lights(level, v, s, 10000, true);
         return done;
     }
@@ -1937,6 +2178,33 @@ public final class Quarry {
 
     public static BlockPos outsideForTests(ServerLevel level, Site s) {
         return outside(level, s);
+    }
+
+    /** Tests: where a body stands on the stair's lowest step cut so far (null with no stair). */
+    @Nullable
+    public static BlockPos stairFootForTests(ServerLevel level, Site s) {
+        int[][] r = ring(s);
+        for (int n = lastStep(level, s); n >= 0; n--) if (level.getBlockState(stepFeet(s, r, n)).isAir()) return stepFeet(s, r, n);
+        return null;
+    }
+
+    /** Tests: the stair's steps, top to bottom, each as {feet y, 1 if a torch is in its room, 1 if its floor is a stair}. */
+    public static List<int[]> stairForTests(ServerLevel level, Site s) {
+        List<int[]> out = new ArrayList<>();
+        int[][] r = ring(s);
+        for (int n = 0; n <= lastStep(level, s); n++) {
+            BlockPos feet = stepFeet(s, r, n);
+            if (!level.getBlockState(feet).isAir()) break;
+            boolean lit = false;
+            for (int dy = 0; dy < HEAD; dy++) lit |= level.getBlockState(feet.above(dy)).is(Blocks.WALL_TORCH);
+            out.add(new int[]{ feet.getY(), lit ? 1 : 0, level.getBlockState(feet.below()).getBlock() instanceof StairBlock ? 1 : 0 });
+        }
+        return out;
+    }
+
+    /** Tests: the stairhead (where the stair is entered from the bottom terrace), at its floor's level plus one. */
+    public static BlockPos stairHeadForTests(Site s) {
+        return gap(s).atY(head(s) + 1);
     }
 
     public static List<VillageFolkEntity> menForTests(ServerLevel level, Villages.Village v) {
