@@ -345,7 +345,7 @@ public final class VillageBoards {
         out.add("TH|" + Villages.name(id));
         String elder = Villages.elderName(id);
         out.add("SM|" + capital(age.label) + "  ·  " + capital(Villages.rank(id).label) + "  ·  " + folk
-            + (folk == 1 ? " soul" : " folk") + (elder.isEmpty() ? "" : "  ·  Elder " + elder) + "  ·  Day " + (day + 1));
+            + (folk == 1 ? " soul" : " folk") + (elder.isEmpty() ? "" : "  ·  Elder " + elder) + "  ·  " + Calendar.name(day) + ", day " + (day + 1));   // [featlife] the day of the week
 
         // ---- what we're doing
         out.add("LH|What we're doing");

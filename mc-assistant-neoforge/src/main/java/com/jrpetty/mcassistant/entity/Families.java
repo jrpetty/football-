@@ -1968,6 +1968,7 @@ public final class Families {
         f.refreshMood();
         p.refreshMood();
         LOG.info("[MCA-FAMILY] {} and {} marked their {} wedding anniversary{}", f.displayNameCap(), p.displayNameCap(), nth, together ? "" : " (apart)");
+        Church.anniversary(level, f, p, years, day);                                   // [featlife] a meal out together
     }
 
     /** On its wedding anniversary a folk is the happier for the day (VillageFolkEntity.refreshMood). */

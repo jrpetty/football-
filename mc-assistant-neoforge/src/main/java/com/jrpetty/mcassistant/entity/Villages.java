@@ -458,6 +458,7 @@ public final class Villages {
         Raids.resetForTests();
         Contentment.resetForTests();
         RestDay.resetForTests();
+        LifeTick.resetForTests();                  // [featlife] the week's life
         Sport.resetForTests();              // [batchC] the pitch, the matches, the league, the contests, the range
         Tavern.resetForTests();
         Council.resetForTests();

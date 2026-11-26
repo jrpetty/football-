@@ -169,6 +169,8 @@ public final class FolkTalk {
         if (visitor != null) return manner(f, visitor);
         String civic = PlayerCivic.talk(f, p, topic, text);          // [player-civic] standing for leader; an apprenticeship
         if (civic != null) return manner(f, civic);
+        String dinner = Friends.talk(f, p, text);                    // [featlife] yes or no to its dinner invitation
+        if (dinner != null) return manner(f, dinner);
         String realm = typed ? CivicLand.talk(f, p, text) : null;    // [civic-land] the taxes; a knight's title, retinue, vote, manor
         if (realm != null) return manner(f, realm);
         String office = typed ? PropertyOffice.talk(f, p, text) : null;   // [orders17] the property office: building orders, the register, the market
@@ -388,6 +390,8 @@ public final class FolkTalk {
         sb.append(" colour=").append(Integer.toHexString(FolkIdentity.rgb(f)));   // [ui] its colour, for the talk screen's band
         if (Favourites.has(p.getUUID(), f.getUUID())) sb.append(" fav");     // [ui] on the player's favourites
         sb.append(PlayerFamily.contextFlags(f, p));                           // [featfolk] courtable, courting, proposable, spouse, naming
+        if (Friends.asked(f.getUUID(), p.getUUID())) sb.append(" invite");   // [featlife] it has asked you to dinner: yes or no
+        if (!f.isBaby() && !Clubs.clubsOf(f).isEmpty()) sb.append(" club");   // [featlife] it is in a club you could join
         return sb.toString();
     }
 
@@ -593,6 +597,11 @@ public final class FolkTalk {
         line(sb, "Fire and flood", Disasters.cardLine(f));  // [disasters] a bucket chain, the flood, a night away, the fire watch
         line(sb, "Votes and works", Referendums.cardLine(f));   // [civic] its vote, the works it built, where it came from
         line(sb, "Pastimes", Pastimes.cardLine(f));         // [leisure] its quilt, its draughts, its kite, its lute, its slate
+        line(sb, "Its week", LifeCard.week(f));             // [featlife] its employer's hours, its week in figures
+        line(sb, "Lately", LifeLog.cardLine(f));            // [featlife] what it did and why: "Spent the afternoon at the tavern (easygoing)."
+        line(sb, "Character", LifeWeights.words(f));        // [featlife] what tells in its daily life
+        line(sb, "Friendships", Friends.cardLine(f));       // [featlife] best friend, close friends, friends, acquaintances
+        line(sb, "Clubs", Clubs.cardLine(f));               // [featlife] its clubs, and why it joined
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);

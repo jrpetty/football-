@@ -476,6 +476,7 @@ public final class PlayerFamily {
         Villages.recordBirth(village);
         Annals.born(village);
         Individual.born(child, f, f);
+        Church.born(child);                                                   // [featlife] christened the Sunday after
         put(village, p.getUUID(), "naming", child.getUUID().toString());
         String kids = get(village, p.getUUID(), "children");
         put(village, p.getUUID(), "children", kids.isEmpty() ? child.getUUID().toString() : kids + "," + child.getUUID());

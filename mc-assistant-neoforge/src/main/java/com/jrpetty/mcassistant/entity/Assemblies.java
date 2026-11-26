@@ -866,6 +866,7 @@ public final class Assemblies {
                 Assembly a = new Assembly(id, Kind.WEDDING, w.names(), day, (BlockPos) site[0], (Direction) site[1], Layout.AISLE);
                 a.principals.add(w.a());
                 a.principals.add(w.b());
+                Friends.weddingGuests(level, v, w.a(), w.b(), day);              // [featlife] the couple's best friends, and their toast
                 yield a;
             }
             case VIGIL -> {

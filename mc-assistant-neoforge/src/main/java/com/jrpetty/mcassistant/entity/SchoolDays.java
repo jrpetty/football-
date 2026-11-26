@@ -52,7 +52,7 @@ public final class SchoolDays {
 
     /** No school today: the town's day of rest (the weekend, when the calendar has one). */
     public static boolean noSchool(UUID village, long day) {
-        return RestDay.today(village, day);
+        return Calendar.isWeekend(day) || RestDay.today(village, day);   // [featlife] no school at weekends
     }
 
     // ------------------------------------------------------------------ in class
