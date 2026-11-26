@@ -236,13 +236,21 @@ public final class TownBudget {
 
     private static final java.util.Map<UUID, long[]> ALLOWANCE = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** [econ51] What the works may still spend today, pennies (Long.MAX_VALUE: no bound). */
+    /** [econ51] What the works may still spend today, pennies (Long.MAX_VALUE: no bound, its market not open). Over the
+     *  line, the day's allowance less what the works spent today; under it, the room to the line and a day's share more. */
     public static long worksRoom(@javax.annotation.Nullable UUID village) {
         if (village == null) return Long.MAX_VALUE;
         Integer forced = PRESSURE_FOR_TESTS.get(village);
         if (forced != null && forced < 2) return Long.MAX_VALUE;
         long a = allowanceToday(village);
-        if (a == Long.MAX_VALUE) return Long.MAX_VALUE;
+        if (a == Long.MAX_VALUE) {
+            if (!MarketMaker.live(village)) return Long.MAX_VALUE;
+            // Under the line: as much as keeps it no further over the line than a day's share of its revenue (one builder's
+            // load of lanterns and stairs took a ten-day town from 55c to 150c on its Market Opening Day, under its line when
+            // the load was drawn).
+            long head = limit(village) - load(village);
+            return Math.max(0, head + Math.round(com.jrpetty.mcassistant.village.DebtBrake.TOP_SHARE * dayRevenue(village)));
+        }
         return Math.max(0, a - Accounts.deptBook(village, Accounts.Dept.WORKS)[0]);
     }
 
