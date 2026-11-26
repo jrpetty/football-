@@ -80,6 +80,16 @@ public final class FeatStage {
 
     public static List<String> watch(ServerLevel level, Villages.Village v) {
         List<String> out = new ArrayList<>();
+        out.add("HEART " + v.centre().getX() + " " + v.centre().getY() + " " + v.centre().getZ() + " stage " + TownDanger.stage(level, v.id())
+            + " danger " + TownDanger.reading(level, v.id()).score());
+        for (CastleWall.Gate g : CastleWall.gates(level, v.id())) {
+            out.add("GATE " + g.out().getName() + " " + g.gateway().getX() + " " + g.gateway().getY() + " " + g.gateway().getZ() + (g.stands() ? " hung" : ""));
+        }
+        for (NightWatch.Post p : NightWatch.posts(level, v.id())) {
+            List<BlockPos> r = NightWatch.route(level, v, p, false);
+            if (!r.isEmpty()) out.add("POST " + p.name().replace(' ', '_') + " " + r.get(r.size() / 2).getX() + " " + r.get(r.size() / 2).getY() + " " + r.get(r.size() / 2).getZ()
+                + " stops " + r.size());
+        }
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!(a instanceof VillageFolkEntity g) || g.stationTask() != AssistantEntity.StationTask.GUARD) continue;
             boolean lit = NightLight.isLight(g.getItemBySlot(EquipmentSlot.OFFHAND));
