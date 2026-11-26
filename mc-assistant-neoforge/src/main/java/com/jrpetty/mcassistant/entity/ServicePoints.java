@@ -595,6 +595,14 @@ public final class ServicePoints {
             if (opened && s != null) act(p, role.id, "haggle", new CompoundTag(), s.lastNonce + 1);
             return opened;
         }
+        if (topic == TalkTopic.FOR_SALE && (role == ServiceRole.SHOP || role == ServiceRole.CAFE) && folk.level() instanceof ServerLevel level) {
+            Point point = nearest(level, village, role, folk.blockPosition());   // [till] "What's for sale?": the checkout
+            if (point != null && point.pos().distSqr(folk.blockPosition()) <= 6 * 6
+                    && level.getBlockEntity(point.pos().above()) instanceof com.jrpetty.mcassistant.block.TillBlockEntity) {
+                Tills.openAt(p, point.pos().above());
+                return true;
+            }
+        }
         return openFor(p, folk, role, topic == TalkTopic.REPAIR ? "mend" : "");
     }
 

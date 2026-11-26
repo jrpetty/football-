@@ -389,6 +389,7 @@ public final class Tills {
         for (String o : src.offers(level, p)) offers.add(net.minecraft.nbt.StringTag.valueOf(o));
         t.put("offers", offers);
         t.putBoolean("haggles", src instanceof TillShops.Town && k != null && st.staffed());
+        t.putBoolean("counter", src instanceof TillShops.Town town0 && town0.role == ServiceRole.SHOP && !s.kiosk);   // work, orders, wanted
         // What's for sale.
         List<TillShops.Ware> wares = visible(src.wares(level, p), s, be, owner);
         ListTag items = new ListTag();
@@ -514,6 +515,16 @@ public final class Tills {
                     s.voice = st.keeper().displayNameCap() + ": \"" + said + "\"";
                     s.ok = said.contains(" off");
                     s.message = "";
+                }
+            }
+            case "counter" -> {                                             // the rest of the counter's business: the old screen
+                if (src instanceof TillShops.Town town) {
+                    ServicePoints.Point point = town.point(level, s.till);
+                    if (point != null) {
+                        closed(p);
+                        ServicePoints.openAt(p, point.pos(), "sell");
+                        return;
+                    }
                 }
             }
             case "talk" -> {

@@ -252,7 +252,19 @@ public class TillScreen extends Screen {
             x += w + 2;
         }
         g.fill(t.x(), t.bottom() - 1, t.right(), t.bottom(), EDGE_SOFT);
+        counterBox = null;
+        if (data.getBoolean("counter")) {
+            String s = "Work & orders ›";
+            int w = font.width(s) + 8, cx = t.right() - w;
+            boolean over = in(mx, my, cx, t.y() + 1, w, t.h() - 3);
+            if (over) g.fill(cx, t.y() + 1, cx + w, t.bottom() - 2, TILE_HOVER);
+            g.drawString(font, s, cx + 4, t.y() + 4, over ? INFO : TEXT_FAINT, false);
+            if (over) tip = "The rest of the counter's business: shifts, the wanted board, orders.";
+            counterBox = new int[]{ cx, t.y(), w, t.h() };
+        }
     }
+
+    @Nullable private int[] counterBox;
 
     // ------------------------------------------------------------------ the wares
 
@@ -441,12 +453,14 @@ public class TillScreen extends Screen {
             String label = confirming ? "Sure? Pay " + total + "c" : "Pay " + total + "c";
             g.drawString(font, label, p.x() + (p.w() - font.width(label)) / 2, p.y() + 6, TEXT_ON_DARK, true);
         } else {
-            button(g, font, waitingOn >= 0 ? "At the till…" : "Pay", p.x(), p.y(), p.w(), p.h(), State.DISABLED);
+            String label = waitingOn >= 0 ? "At the till…" : why.isEmpty() || font.width(why) > p.w() - 8 || why.startsWith("Add") ? "Pay" : why;
+            button(g, font, label, p.x(), p.y(), p.w(), p.h(), State.DISABLED);
+            if (label.equals(why)) why = "";                                // said on the button itself
         }
         if (!why.isEmpty()) {
             boolean clipped = text(g, font, why, p.x(), p.bottom() + 3, p.w(), why.startsWith("Add") ? TEXT_FAINT : DANGER);
             if (clipped && in(mx, my, p.x(), p.bottom() + 2, p.w(), 10)) tip = why;
-        } else if (total > data.getInt("confirmOver")) {
+        } else if (on && total > data.getInt("confirmOver")) {
             text(g, font, "Over " + data.getInt("confirmOver") + "c: asks once more.", p.x(), p.bottom() + 3, p.w(), TEXT_FAINT);
         }
     }
@@ -571,6 +585,7 @@ public class TillScreen extends Screen {
         TillLayout.Box h = lay.header();
         if (in(mx, my, h.right() - 16, h.y() + 4, 12, 12)) { click(); onClose(); return true; }
         if (talkBox != null && in(mx, my, talkBox[0], talkBox[1], talkBox[2], talkBox[3])) { click(); send("talk", new CompoundTag()); return true; }
+        if (counterBox != null && in(mx, my, counterBox[0], counterBox[1], counterBox[2], counterBox[3])) { click(); send("counter", new CompoundTag()); return true; }
         if (buys()) {
             TillLayout.Box t = lay.tabs();
             int x = t.x();
