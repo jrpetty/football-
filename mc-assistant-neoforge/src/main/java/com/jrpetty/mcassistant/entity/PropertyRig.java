@@ -115,6 +115,16 @@ public final class PropertyRig {
             }
             case "mortgage" -> {
                 Long h = Mortgages.firstForSaleForTests(id);
+                if (h == null) {                                             // the rig's copy of a world: a house emptied to show the terms on
+                    for (Homes.Home x : Homes.homes(id).values()) {
+                        if (x.tenure != Homes.Tenure.RENTED || Homes.seat(x) || Flats.isFlat(x)) continue;
+                        for (UUID m : new java.util.ArrayList<>(x.members)) { VillageFolkEntity f = Homes.loaded(id, m); if (f != null) f.forgetBed(); }
+                        x.members.clear();
+                        Homes.save(id, x);
+                        h = x.anchor.asLong();
+                        break;
+                    }
+                }
                 PlayerLife.open(p, "mortgage", h == null ? LifePage.args("tab", "get") : LifePage.args("tab", "get", "house", Long.toString(h), "ltv", "80", "term", "12"));
                 return "mortgage " + h;
             }

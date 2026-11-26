@@ -380,7 +380,7 @@ public final class Mortgages implements PlayerLife.Page {
         UUID id = v.id(), me = p.getUUID();
         PropertyBook.hint(p, page, "mortgage.get", "Choose a house, then how much to put down: the more you put down, the cheaper the rate. The bank checks the payment "
             + "is no more than a third of what you earn.");
-        if (!Bank.open(id)) { page.text("The town has no bank yet: it builds one at thirty folk in the Iron Age. Till then a house is bought outright on the Home page.", 2); return; }
+        if (!Bank.open(id)) page.text("The town has no bank yet (it builds one at thirty folk in the Iron Age): these are the terms it would give. Till then a house is bought outright on the Home page.", 2);
         if (l != null) { page.text("You have a mortgage already. Port it to another house on the Your mortgage tab.", 2); }
         List<Homes.Home> sale = forSale(id);
         if (sale.isEmpty()) { page.text("No house of the town's is empty and for sale just now. The builders put them up as the town grows; or have one built (the builder).", 4); return; }
@@ -416,8 +416,9 @@ public final class Mortgages implements PlayerLife.Page {
         page.row(null, "Rate", "A week: the " + ltv + "% band, the bank's vault, your credit score (" + s.score() + ", " + s.band() + ")", TownBonds.pct(t.bp()));
         page.row(null, "Each week, " + term + " weeks", "Out of your account on the bank's round", PropertyBook.coins(t.weekly()));
         page.row(null, "Interest, all told", "", PropertyBook.coins(t.interest()));
-        page.bar("Affordability: the payment against a third of what you earn", t.earns() <= 0 ? 1 : Math.min(1, t.weekly() * 3.0 / t.earns()),
-            t.weekly() + " of " + t.earns() / 3 + " a week");
+        page.bar("Affordability", t.earns() <= 0 ? 1 : Math.min(1, t.weekly() * 3.0 / t.earns()),
+            t.earns() <= 0 ? "no earnings here in a fortnight" : t.weekly() + " of the " + t.earns() / 3 + " allowed");
+        page.text("The payment may be a third of what you earned a week over the last fortnight (" + t.earns() + " a week).", 4);
         page.text(t.why().isEmpty() ? "✔ The bank would lend on these terms." : "✘ " + capital(t.why()) + ".", t.why().isEmpty() ? 1 : 3);
         page.buttons().button("Take this mortgage", "take", LifePage.args("house", chosen, "ltv", ltv, "term", term), t.why().isEmpty() && l == null,
             l != null ? "One mortgage at a time" : capital(t.why())).primary();

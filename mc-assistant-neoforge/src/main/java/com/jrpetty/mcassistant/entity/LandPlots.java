@@ -399,7 +399,7 @@ public final class LandPlots implements PlayerLife.Page {
     /** The price and how it was reached: {total, base, premium, pressure}, coins. */
     static int[] price(UUID village, BlockPos heart, Kind kind, int[] box) {
         BlockPos mid = heart.offset((box[0] + box[2]) / 2, 0, (box[1] + box[3]) / 2);
-        double lotFee = HousingMarket.plotFee(village, mid) * (MarketMaker.live(village) ? LandTitles.index(village) : 1.0);
+        double lotFee = HousingMarket.plotFee(village, mid) * (MarketMaker.live(village) ? Math.min(1.5, Math.sqrt(Math.max(0.25, LandTitles.index(village)))) : 1.0);
         double area = (box[2] - box[0] + 1.0) * (box[3] - box[1] + 1.0) / (TownPlan.LOT * TownPlan.LOT);
         double base = lotFee * area * (kind == Kind.FIELD ? 0.4 : 1.0);
         double premium = kind.lots > 1 ? base * 0.1 * (kind.lots - 1) : 0;

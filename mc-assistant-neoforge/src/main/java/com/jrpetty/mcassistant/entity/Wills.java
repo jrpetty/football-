@@ -200,7 +200,7 @@ public final class Wills implements PlayerLife.Page {
         }
         UUID id = v.id(), me = p.getUUID();
         CompoundTag w = of(id, me);
-        LifePage page = new LifePage("will", "Your will", has(id, me) ? "Witnessed on day " + w.getLong("witnessed") + " by the town's clerk" : "Not made yet: without one, the town takes what is left",
+        LifePage page = new LifePage("will", "Your will", has(id, me) ? "Witnessed on day " + w.getLong("witnessed") : "Not made yet",
             p.registryAccess());
         PropertyBook.confirmBox(page, c);
         PropertyBook.hint(p, page, "will.make", "Say who gets what you own here if you retire or are gone a long time. Your debts are paid first; heirs never inherit debts.");

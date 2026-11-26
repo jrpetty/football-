@@ -87,7 +87,7 @@ public final class Premises implements PlayerLife.Page {
     static Price price(UUID village, BlockPos heart, BlockPos at, String kind) {
         Zone z = zone(village, heart, at);
         double wage = Math.max(0.5, Wealth.standing(village) / 10.0);
-        double index = MarketMaker.live(village) ? LandTitles.index(village) : 1.0;
+        double index = MarketMaker.live(village) ? Math.min(2.0, Math.sqrt(Math.max(0.25, LandTitles.index(village)))) : 1.0;   // the land index, damped
         int value = (int) Math.max(10, Math.round(base(kind) * wage * z.price() * index));
         int rent = (int) Math.max(1, Math.round(value * RENT_PERMILLE / 1000.0 * z.footfall()));
         String words = capital(kind) + " " + base(kind) + "c × wages " + fmt(wage) + (index != 1.0 ? " × land " + fmt(index) : "") + " × " + z.name() + " " + fmt(z.price())
