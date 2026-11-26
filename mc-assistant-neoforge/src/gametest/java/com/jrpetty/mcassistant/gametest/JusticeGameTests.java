@@ -202,7 +202,8 @@ public class JusticeGameTests {
                 helper.assertTrue(c.stage == Justice.Stage.REMAND && cu.getBoolean("remand"), "held for trial");
                 helper.succeed();
             }
-            if (tick > 2900) { Kit.noLeftoverPlayers(level); log("ju01 stuck:", p.getUUID()); helper.fail("ju01 never held: phase " + phase[0] + ", guard " + Justice.officerTaskForTests(t.guard())); }
+            if (tick > 2900) { Kit.noLeftoverPlayers(level); log("ju01 stuck:", p.getUUID()); helper.fail("ju01 never held: phase " + phase[0] + ", guard " + Justice.officerTaskForTests(t.guard())
+                + " at " + t.guard().blockPosition().toShortString() + ", the player at " + p.blockPosition().toShortString()); }
         });
     }
 
