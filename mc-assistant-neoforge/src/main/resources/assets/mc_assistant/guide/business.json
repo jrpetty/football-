@@ -213,7 +213,7 @@
       "answer": "A business's books show its takings, costs, profit and what it sold. Open the town's books, then Economy, then Businesses, and click a row.",
       "more": ["A business's books show its owner and hands and their pay; today, this week and all time (takings, costs, wages, rent, taxes, net profit, drawings); a fourteen-day chart; what it sold item by item and how each is made; its stock; what it bought; and why its prices moved.", "The Businesses page lists every firm in town, a click to its books."],
       "controls": ["Town's books → Economy → Businesses", "[Right-click] an owner → Trade → Money → The books", "[U] → The town's businesses"],
-      "tips": ["A business's books have a Buy button to make an offer for it.", "Click any row of the Businesses page to open that business's books; Buy, Invest, Draw and Order work from there. Close (top right) or Esc leaves."],
+      "tips": ["A business's books have Make an offer: name a price for the whole or a share; the coin waits in escrow till its owners answer.", "Click any row of the Businesses page to open that business's books; Make an offer, Draw and Order work from there. Close (top right) or Esc leaves."],
       "related": ["biz_run", "property_land_shares", "biz_data"],
       "covers": ["screen:BusinessScreen"]
     },

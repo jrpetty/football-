@@ -1255,7 +1255,7 @@ public final class Businesses {
         for (Business b : all(id)) {
             if (b.town() || b.mirror()) continue;
             if (!b.open) continue;
-            if (Enterprise.isFirm(b) && MyBusinesses.pausedToday(id, b, day)) { b.today(day).cashEnd = b.till; continue; }   // [wpb] closed while its owner is away
+            if (Enterprise.isFirm(b) && MyBusinesses.pausedToday(level, id, b, day)) { b.today(day).cashEnd = b.till; continue; }   // [wpb] closed while its owner is away
             overheads(level, id, b, day);
             Capital.wear(id, b, day);                                       // [econ-1c] its tools' wear, a share of its kit
             interest(level, id, b, day);
@@ -1871,6 +1871,9 @@ public final class Businesses {
 
     /** A player buys a business: the town's at its worth, a folk's at a quarter over (its owners must be tempted). */
     public static String buy(ServerLevel level, UUID village, Business b, net.minecraft.server.level.ServerPlayer p) {
+        if (b.type.keeping == Business.Keeping.OWN && !(b.ownedBy(p.getUUID()) && b.owners.size() == 1)) {
+            return BusinessOffers.instead(level, village, b, p, Business.WHOLE);   // [wpb] by offer, answered by its owners: never one click
+        }
         long day = today(level);
         if (b.type.keeping != Business.Keeping.OWN) return "The " + b.name.toLowerCase(Locale.ROOT) + " is the town's: it's not for sale.";
         if (b.ownedBy(p.getUUID()) && b.owners.size() == 1) return "It's yours already.";
@@ -1918,6 +1921,7 @@ public final class Businesses {
     public static String invest(ServerLevel level, UUID village, Business b, net.minecraft.server.level.ServerPlayer p, int coins) {
         long day = today(level);
         if (b.type.keeping != Business.Keeping.OWN) return "That's the town's; it takes no partners.";
+        for (Stake s : b.owners) if (!p.getUUID().equals(s.who())) return BusinessOffers.instead(level, village, b, p, 1000);   // [wpb] a stake in another's: by offer
         if (coins < 5) return "Five coins at the least, to buy into it.";
         if (Market.coinsHeld(p) < coins) return "You have " + Market.coinsHeld(p) + " coins.";
         long worth = worth(level, village, b);

@@ -66,6 +66,7 @@ public final class Sellers {
         }
         p = Math.max(p, going * LEAST_OF_GOING);
         p = Math.min(p, going * Businesses.MOST_OVER_GOING);
+        p *= BusinessCore.priceFactor(level, village, b);                  // [wpb] its discount day, its quality
         return Math.max(0.01, p);
     }
 
@@ -163,6 +164,10 @@ public final class Sellers {
         for (Business b : Enterprise.open(id)) {
             BusinessTypes.BusinessType t = Enterprise.kindOf(id, b);
             if (t == null || !t.wares().contains(key)) continue;
+            if (Deputy.closedNow(level, id, b)) {                           // [wpb] not open yet (a late deputy), or outside its hours
+                if (!looking && b.stock.containsKey(key)) Businesses.missed(level, b, key, n);
+                continue;
+            }
             Business.Lot lot = b.stock.get(key);
             if (lot == null || lot.qty < n) {
                 if (!looking && (lot != null || b.allTime.lines.containsKey(key))) {

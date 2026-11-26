@@ -232,11 +232,10 @@ public class BusinessScreen extends Screen {
             String l = "Take drawings " + p(data.getLong("due"));
             button(g, l, x, by, font.width(l) + 12, mx, my, () -> command("village business draw " + quoted(data.getString("id"))));
         } else if (!data.getBoolean("public") && !data.getBoolean("mine")) {
-            String l = "Buy it (" + p(data.getLong("worth")) + "+)";
+            String l = "Make an offer";                                    // [wpb] by offer, answered by its owners: never one click
             int bw = font.width(l) + 12;
-            button(g, l, x, by, bw, mx, my, () -> command("village business buy " + quoted(data.getString("id"))));
-            button(g, "Invest 20 coins", x + bw + 4, by, font.width("Invest 20 coins") + 12, mx, my,
-                () -> command("village business invest " + quoted(data.getString("id")) + " 20"));
+            button(g, l, x, by, bw, mx, my, () -> offer(data.getString("id"), 10000));
+            button(g, "Offer for a share", x + bw + 4, by, font.width("Offer for a share") + 12, mx, my, () -> offer(data.getString("id"), 1000));
         }
     }
 
@@ -413,6 +412,15 @@ public class BusinessScreen extends Screen {
     /** [ui29] A business's id as one quoted argument (a producer's has a colon in it). */
     static String quoted(String id) {
         return "\"" + id.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    }
+
+    /** [wpb] The offer page for this business, the whole or a share. */
+    private void offer(String id, int parts) {
+        net.minecraft.nbt.CompoundTag a = new net.minecraft.nbt.CompoundTag();
+        a.putString("firm", id);
+        a.putInt("parts", parts);
+        com.jrpetty.mcassistant.net.LifeNetwork.act("offer", "open", a);
+        UiStyle.click();
     }
 
     private void command(String c) {

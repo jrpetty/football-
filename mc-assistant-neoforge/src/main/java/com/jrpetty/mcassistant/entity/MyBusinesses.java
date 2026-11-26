@@ -93,11 +93,14 @@ public final class MyBusinesses implements PlayerLife.Page {
         }
         page.buttons().button("Start another business", "start", null).button("Contracts with players", "contracts", null);   // [wpb]
         if (c.tab.isEmpty()) c.tab = "summary";
-        page.tab("summary", "Summary", c.tab.equals("summary")).tab("hands", "Hands", c.tab.equals("hands")).tab("stock", "Stock", c.tab.equals("stock"))
-            .tab("prices", "Prices", c.tab.equals("prices")).tab("money", "Money", c.tab.equals("money")).tab("more", "Shares & closing", c.tab.equals("more"));
+        page.tab("summary", "Summary", c.tab.equals("summary")).tab("hands", "Staff", c.tab.equals("hands")).tab("stock", "Stock", c.tab.equals("stock"))
+            .tab("prices", "Prices", c.tab.equals("prices")).tab("away", "Deputy", c.tab.equals("away")).tab("money", "Money", c.tab.equals("money"))
+            .tab("offers", "Offers", c.tab.equals("offers")).tab("more", "Owners & sale", c.tab.equals("more"));
         BusinessTypes.BusinessType t = Enterprise.kindOf(v.id(), b);
         switch (c.tab) {
-            case "hands" -> hands(level, v, b, t, page);
+            case "hands" -> hands(level, v, b, t, page, c);
+            case "away" -> DeputyPage.build(level, p, v, b, page, c);       // [wpb] the deputy's authority, its standing orders, its record
+            case "offers" -> OfferPage.incoming(level, p, v, b, page);      // [wpb] offers for it: accept, refuse, counter
             case "stock" -> stock(level, v, b, t, page);
             case "prices" -> prices(level, v, b, t, page);
             case "money" -> money(p, v, b, page);
@@ -109,6 +112,7 @@ public final class MyBusinesses implements PlayerLife.Page {
 
     private void summary(ServerLevel level, ServerPlayer p, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page) {
         page.heading(b.name);
+        DeputyPage.summaryTop(level, p, v, b, page);                        // [wpb] who is in charge, and the report waiting since you were away
         rescueBanner(level, p, v, b, page);                                 // [wpb] before the court: what saves it
         plCard(level, v, b, page);                                          // [wpb] the profit and loss at a glance
         page.text(Enterprise.line(level, v.id(), b));
@@ -134,7 +138,7 @@ public final class MyBusinesses implements PlayerLife.Page {
         page.buttons().button("Hands", "tab:hands", null).button("Stock", "tab:stock", null).button("Prices", "tab:prices", null).button("Money", "tab:money", null);
     }
 
-    private void hands(ServerLevel level, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page) {
+    private void hands(ServerLevel level, Villages.Village v, Business b, @Nullable BusinessTypes.BusinessType t, LifePage page, PlayerLife.Ctx ctx) {
         ServerPlayer p = null;
         for (ServerPlayer x : level.getServer().getPlayerList().getPlayers()) if (b.ownedBy(x.getUUID()) && PlayerLife.ctx(x).page.equals("firm")) p = x;
         boolean decide = p == null || Partners.canDecide(v.id(), b, p.getUUID());
@@ -144,20 +148,24 @@ public final class MyBusinesses implements PlayerLife.Page {
         if (hs.isEmpty()) page.text("Nobody works there yet.", 2);
         CompoundTag r = Enterprise.rec(v.id(), b.id);
         String pending = r == null ? "" : r.getString("wpbLetGo");
-        for (VillageFolkEntity f : hs) {                                    // [wpb] each hand: its pay, raise, cut, let go
+        String appointing = ctx.args.getString("appoint");
+        for (VillageFolkEntity f : hs) {                                    // [wpb] each hand: its pay, raise, cut, deputy, let go
             LabourBook.Contract c = LabourMarket.contract(f);
             boolean mgr = r != null && r.hasUUID("manager") && r.getUUID("manager").equals(f.getUUID());
             boolean sure = pending.equals(f.getUUID().toString());
             int sev = severance(f);
-            page.row(null, f.displayNameCap() + (mgr ? " (manager)" : ""), "paid " + Wealth.wage(f) + "c a day · level " + f.tradeLevel(t == null ? f.stationTask() : t.work())
-                    + " at the trade" + (c == null ? "" : " · since day " + c.since), "")
+            page.row(null, f.displayNameCap() + (mgr ? " (" + Deputy.title(r).toLowerCase(Locale.ROOT) + (Deputy.on(r) ? "" : ", authority off") + ")" : ""),
+                    "paid " + Wealth.wage(f) + "c a day · level " + f.tradeLevel(t == null ? f.stationTask() : t.work())
+                    + " at the trade" + (c == null ? "" : " · since day " + c.since) + " · " + String.join(", ", DeputyPage.traits(f)), "")
                 .button("Raise", "raise", LifePage.args("h", f.getUUID().toString()), decide && c != null, c == null ? "Not on the town's books" : no)
                 .button("Cut", "cut", LifePage.args("h", f.getUUID().toString()), decide && c != null, c == null ? "Not on the town's books" : no)
-                .button(mgr ? "Not manager" : "Manager", "manager", LifePage.args("h", f.getUUID().toString()), decide, no)
+                .button(mgr ? "Remove as deputy" : "Set as deputy manager", mgr ? "undeputy" : "deputy", LifePage.args("h", f.getUUID().toString()), decide, no)
+                .button("Show me", "showme", LifePage.args("h", f.getUUID().toString()))
                 .button(sure ? "Confirm: let go (" + sev + "c)" : "Let go", "letgo", LifePage.args("h", f.getUUID().toString(), "sure", sure), decide, no);
+            if (appointing.equals(f.getUUID().toString()) && !mgr) DeputyPage.appointBox(f, r, page);
         }
         page.text("A raise or a cut is a tenth of its pay; a cut stings, and a hand that feels it may look elsewhere. Letting a hand go pays three days' wages as severance, out of the till."
-            + " A manager runs the business while every owner is away; with none, it closes its doors safely till one of you is back.", 4);
+            + " A deputy manager covers for you while you're away, within your standing orders and as their character allows (Deputy tab). With none, the staff carry on with what's in stock.", 4);
         page.heading("Take one on");
         page.buttons().button("The best the town can spare, now", "hire", null, decide, no).primary();
         page.choice("wage", "An opening at", new String[]{ "0", "10", "25" }, new String[]{ "Its going offer", "A tenth over", "A quarter over" }, "0");
@@ -198,7 +206,13 @@ public final class MyBusinesses implements PlayerLife.Page {
             ItemStack one = Stockroom.sampleOf(k);
             if (one.isEmpty()) continue;
             Business.Lot lot = b.stock.get(k);
-            page.row(one, Stockroom.plural(k), "in stock: " + (lot == null ? 0 : lot.qty), "").button("Order", "order", LifePage.args("k", k));
+            CompoundTag r = Enterprise.rec(v.id(), b.id);                    // [wpb] its shelf target, the firm's or the owner's own
+            int target = r == null ? 0 : r.getCompound("stockTarget").contains(k) ? r.getCompound("stockTarget").getInt(k) : r.getCompound("targets").getInt(k);
+            boolean own = r != null && r.getCompound("stockTarget").contains(k);
+            long have = lot == null ? 0 : lot.qty;
+            page.row(one, Stockroom.plural(k) + (target > 0 && have < target / 2 ? "  (low)" : ""), "in stock: " + have + " · keeps " + target + (own ? " (your target)" : " (its own reckoning)"), "")
+                .button("Order", "order", LifePage.args("k", k)).button("-8", "target", LifePage.args("k", k, "d", -8)).button("+8", "target", LifePage.args("k", k, "d", 8))
+                .button("Auto", "target", LifePage.args("k", k, "d", 0), own, "It keeps its own reckoning already");
         }
     }
 
@@ -259,21 +273,14 @@ public final class MyBusinesses implements PlayerLife.Page {
         CompoundTag sale = FirmSale.sale(v.id(), b);
         long worth = FirmSale.worth(v.id(), b);
         if (sale == null) {
-            page.text("Worth about " + Businesses.pence(worth) + " (its stock, till and kit, less what it owes). List it, and offers come in over the next days.", 4);
+            page.text("Worth about " + Businesses.pence(worth) + " (its stock, till and kit, less what it owes). List it, and offers come in over the next days; you accept, refuse or counter each.", 4);
             page.choice("ask", "Asking", new String[]{ "100", "110", "125", "150" }, new String[]{ "Worth", "+10%", "+25%", "+50%" }, "110");
             page.buttons().button("List it for sale", "list", null, decide, no);
         } else {
             page.text("Listed at " + Businesses.pence(sale.getLong("ask")) + " since day " + (sale.getLong("listed") + 1) + " (worth " + Businesses.pence(worth) + ").", 1);
-            net.minecraft.nbt.ListTag offers = sale.getList("offers", net.minecraft.nbt.Tag.TAG_COMPOUND);
-            if (offers.isEmpty()) page.text("No offers yet. Folk with the means look each morning; a player can offer the asking price.", 4);
-            String pend = c.args.getString("sureSale");
-            for (int i = 0; i < offers.size(); i++) {
-                CompoundTag o = offers.getCompound(i);
-                boolean sure = pend.equals(Integer.toString(i));
-                page.row(null, o.getString("name") + (o.getString("kind").equals("player") ? " (a player)" : ""), "offers " + Businesses.pence(o.getLong("price")) + ", made day " + (o.getLong("day") + 1)
-                    + "; stands " + FirmSale.OFFER_DAYS + " days", "")
-                    .button(sure ? "Confirm: sell for " + Businesses.pence(o.getLong("price")) : "Accept", "acceptsale", LifePage.args("i", i, "sure", sure), decide, no);
-            }
+            int n = BusinessOffers.forFirm(v.id(), b.id).size();
+            page.text(n == 0 ? "No offers yet. Buyers, player and folk, make theirs over the next days; each shows on the Offers tab." : n + (n == 1 ? " offer" : " offers") + " waiting on the Offers tab.", 4);
+            page.buttons().button("The offers", "tab:offers", null);
             page.buttons().button("Take it off the market", "unlist", null, decide, no);
         }
         // [wpb] A branch of your own.
@@ -299,13 +306,13 @@ public final class MyBusinesses implements PlayerLife.Page {
         if (action.equals("start")) { PlayerLife.open(p, "start", null); return "#open:"; }
         if (action.equals("farmpage")) { PlayerLife.open(p, "farm", LifePage.args("farm", args.getString("farm"))); return "#open:"; }   // [wpb]
         if (action.equals("contracts")) { PlayerLife.open(p, "contracts", null); return "#open:"; }
-        if (action.equals("buyoffer")) {                                    // [wpb] another's firm for sale: an offer at its ask
+        if (action.equals("buyoffer")) {                                    // [wpb] another's firm for sale: the offer page
             Business x = Businesses.of(v.id(), args.getString("firm"));
             if (x == null) return "!No such business.";
-            if (!args.getBoolean("sure")) { c.args.putString("sureBuy", x.id); return "!Press again to offer the asking price. You pay only if the owner accepts."; }
-            c.args.remove("sureBuy");
-            return FirmSale.playerOffer(level, p, v.id(), x);
+            PlayerLife.open(p, "offer", LifePage.args("firm", x.id));
+            return "#open:";
         }
+        if (action.equals("oaccept") || action.equals("orefuse") || action.equals("ocounter")) return OfferPage.answer(level, p, action, args);
         if (action.equals("acceptshare")) {
             Business x = Businesses.of(v.id(), args.getString("firm"));
             if (x == null) return "!No such business.";
@@ -363,6 +370,8 @@ public final class MyBusinesses implements PlayerLife.Page {
             }
             case "hirebest" -> { return clean(LabourMarket.hireBest(level, v.id(), b)); }
             case "raise", "cut", "letgo", "manager" -> { return handAction(level, p, v, b, action, args, c); }
+            case "deputy", "undeputy", "appoint", "showme", "depon", "depmode", "deptask", "depnotify", "orders", "letprice", "raiseyes", "raiseno",
+                 "sack", "report", "readreport", "target" -> { return DeputyPage.act(level, p, v, b, action, args, c); }
             case "waremk" -> {
                 if (!Partners.canDecide(v.id(), b, p.getUUID())) return "!" + Partners.whyNot(v.id(), b);
                 return setWareMarkup(level, v.id(), b, args.getString("k"), args.getInt("d"));
@@ -395,11 +404,6 @@ public final class MyBusinesses implements PlayerLife.Page {
                 return FirmSale.list(level, p, v.id(), b, Math.max(100, FirmSale.worth(v.id(), b) * pct / 100));
             }
             case "unlist" -> { return FirmSale.withdraw(p, v.id(), b); }
-            case "acceptsale" -> {
-                if (!args.getBoolean("sure")) { c.args.putString("sureSale", Integer.toString(args.getInt("i"))); return "!Selling is for good: press Confirm to sell."; }
-                c.args.remove("sureSale");
-                return FirmSale.accept(level, p, v.id(), b, args.getInt("i"));
-            }
             case "branch" -> { return openBranch(level, p, v, b); }
             case "rescue" -> {
                 if (!args.getBoolean("sure")) { c.args.putBoolean("sureRescue", true); return "!Press again to pay its debts and take it back from the court."; }
@@ -412,6 +416,9 @@ public final class MyBusinesses implements PlayerLife.Page {
                 return Businesses.playerOrder(level, v.id(), p, b, one, ShopPage.parse(f.getString("qty"), 16));
             }
             case "markup" -> {
+                if (!Partners.canDecide(v.id(), b, p.getUUID())) return "!" + Partners.whyNot(v.id(), b);
+                CompoundTag rr = Enterprise.rec(v.id(), b.id);
+                if (rr != null) rr.putLong("ownerPrice", Businesses.today(level));   // [wpb] the owner's price: the deputy leaves it
                 double was = b.markup;
                 b.markup = Math.max(0.05, Math.min(2.0, Math.round(b.markup * 100 + args.getInt("d")) / 100.0));
                 b.note(Businesses.today(level), "markup " + Businesses.pct(was) + " -> " + Businesses.pct(b.markup) + ", set by its owner");
@@ -504,10 +511,8 @@ public final class MyBusinesses implements PlayerLife.Page {
             CompoundTag s = FirmSale.sale(v.id(), x);
             if (s == null || x.ownedBy(p.getUUID())) continue;
             if (!head) { page.heading("Businesses for sale"); head = true; }
-            boolean on = sure.equals(x.id);
             page.row(null, x.name, "asking " + Businesses.pence(s.getLong("ask")) + " · worth about " + Businesses.pence(FirmSale.worth(v.id(), x)) + " · owned by " + x.ownersWords(), "")
-                .button(on ? "Confirm: offer " + Businesses.pence(s.getLong("ask")) : "Offer the asking price", "buyoffer", LifePage.args("firm", x.id, "sure", on),
-                    Market.coinsHeld(p) * 100L >= s.getLong("ask"), "You need " + Businesses.pence(s.getLong("ask")));
+                .button("Make an offer", "buyoffer", LifePage.args("firm", x.id));
         }
         List<Object[]> offers = Partners.offersFor(v.id(), p.getUUID());
         if (!offers.isEmpty()) page.heading("Shares offered to you");
@@ -547,12 +552,10 @@ public final class MyBusinesses implements PlayerLife.Page {
                 return f.displayNameCap() + "'s pay is " + (action.equals("raise") ? "raised" : "cut") + " a tenth: from about " + was + "c to " + Wealth.wage(f) + "c a day."
                     + (action.equals("cut") ? " They took it badly; a hand who feels underpaid may leave." : "");
             }
-            case "manager" -> {
+            case "manager" -> {                                             // [wpb] the deputy, by the old button's name
                 if (r == null) return "!Its record is missing.";
-                if (r.hasUUID("manager") && r.getUUID("manager").equals(hid)) { r.remove("manager"); Accounts.dirty(); return "No manager now: with every owner away, " + b.name + " closes safely."; }
-                r.putUUID("manager", hid);
-                Accounts.dirty();
-                return f.displayNameCap() + " manages " + b.name + " while its owners are away: it keeps trading, restocks and pays its wages.";
+                if (r.hasUUID("manager") && r.getUUID("manager").equals(hid)) { Deputy.demote(v.id(), b, r); return "No deputy now: while you're away the staff carry on with what's in stock."; }
+                return Deputy.appoint(level, v.id(), b, f, Deputy.TITLES[0], 10);
             }
             default -> {
                 if (!args.getBoolean("sure")) { if (r != null) { r.putString("wpbLetGo", hid.toString()); Accounts.dirty(); } return "!Letting " + f.displayNameCap() + " go pays " + severance(f) + "c severance: press Confirm."; }
@@ -563,7 +566,7 @@ public final class MyBusinesses implements PlayerLife.Page {
                 b.today(day).wages += paid;
                 b.allTime.wages += paid;
                 LabourMarket.layOff(level, v, LabourBook.town(v.id()), f, "firm:" + b.id, "let go by its owner, with " + (paid / 100) + "c severance", level.getDayTime() / 24000L);
-                if (r != null && r.hasUUID("manager") && r.getUUID("manager").equals(hid)) r.remove("manager");
+                if (r != null && r.hasUUID("manager") && r.getUUID("manager").equals(hid)) Deputy.demote(v.id(), b, r);
                 Accounts.dirty();
                 return f.displayNameCap() + " is let go with " + (paid / 100) + "c severance" + (paid / 100 < sev ? " (all the till had)" : "") + ". Post an opening when you want another.";
             }
@@ -638,27 +641,40 @@ public final class MyBusinesses implements PlayerLife.Page {
 
     // ------------------------------------------------------------------ [wpb] owners away
 
-    /** Paused today (its owners all away since before this morning, no manager): marked once a day, read by Enterprise. */
-    static boolean pausedToday(java.util.UUID village, Business b, long day) {
+    /**
+     * Shut today? Only when nobody is able to work it: no folk on its staff, and every member of staff (its player owners
+     * and player hands) away; or its deputy called a halt yesterday with the till dry. Marked once a day, with its closed sign.
+     * A folk-founded firm never: its owner is its staff.
+     */
+    static boolean pausedToday(@Nullable ServerLevel level, java.util.UUID village, Business b, long day) {
         CompoundTag r = Enterprise.rec(village, b.id);
-        if (r == null || r.hasUUID("founder") || r.hasUUID("manager")) return false;
-        boolean anyPlayer = false;
-        for (Business.Stake s : b.owners) {
-            if (s.holder() != Business.Holder.PLAYER || s.who() == null) continue;
-            anyPlayer = true;
-            if (!r.contains("away/" + s.who()) || r.getLong("away/" + s.who()) >= day) { r.remove("pausedDay"); return false; }
+        if (r == null || r.hasUUID("founder")) return false;
+        String why = null;
+        if (r.contains("haltDay") && r.getLong("haltDay") == day) why = "shut for the day: its deputy called a halt, the till dry";
+        else {
+            if (!Enterprise.staffOf(r).isEmpty()) { r.remove("pausedDay"); return false; }   // its folk staff turn up regardless
+            boolean anyPlayer = false;
+            for (Business.Stake s : b.owners) {
+                if (s.holder() != Business.Holder.PLAYER || s.who() == null) continue;
+                anyPlayer = true;
+                boolean on = level != null ? level.getServer().getPlayerList().getPlayer(s.who()) != null
+                    : !r.contains("away/" + s.who()) || r.getLong("away/" + s.who()) >= day;
+                if (on) { r.remove("pausedDay"); return false; }
+            }
+            if (level != null && !PlayerHiring.hands(level, "firm:" + b.id).isEmpty()) { r.remove("pausedDay"); return false; }
+            if (!anyPlayer) return false;
+            why = "shut for the day: all its staff are players, and none of them about";
         }
-        if (!anyPlayer) return false;
         if (r.getLong("pausedDay") != day) {
             r.putLong("pausedDay", day);
-            b.note(day, "closed for the day: its owners away, and no manager");
+            b.note(day, why);
             Accounts.dirty();
         }
         return true;
     }
 
-    static boolean paused(ServerLevel level, java.util.UUID village, Business b, CompoundTag r) {
-        return r.contains("pausedDay") && r.getLong("pausedDay") == Businesses.today(level);
+    static boolean pausedToday(java.util.UUID village, Business b, long day) {
+        return pausedToday(null, village, b, day);
     }
 
     @net.neoforged.fml.common.EventBusSubscriber(modid = com.jrpetty.mcassistant.McAssistantMod.MODID)
