@@ -2089,6 +2089,10 @@ public final class CastleWall {
         BlockPos p = want.pos();
         BlockState old = level.getBlockState(p);
         if (!may(level, w, p)) return false;
+        // [tp49] Never set into a folk standing in the cell (the hand at the north gatehouse stood in the course it was laying,
+        // and was walled in, hurt by it and stepped out of it, at the start of every soak): it steps aside and the block
+        // goes down at the next round.
+        if (how != CLEAR && ClearOfWalls.standingIn(level, p, want.role() == Role.DOOR ? 2 : 1)) return false;
         if (how == CLEAR) {
             if (!old.isAir() && !old.canBeReplaced()) give(level, v, p, old, free);
             level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);

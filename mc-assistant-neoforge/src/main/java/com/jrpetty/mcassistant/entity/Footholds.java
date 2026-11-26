@@ -211,6 +211,9 @@ public final class Footholds extends SavedData {
         if (risen(a, feet) >= MOST_HIGH) return false;
         if (!roomAbove(level, feet)) return false;
         if (!clearUnderfoot(a, level, feet)) return false;
+        // [tp49] Never laid where somebody else stands as well (two hands at the same tree, one stood in the other): the block
+        // went down inside the other one, and it was hurt by the wall and stepped out of it.
+        if (!level.getEntitiesOfClass(LivingEntity.class, new AABB(feet).deflate(0.01), o -> o != a && o.isAlive() && !o.isSpectator()).isEmpty()) return false;
         BlockState block = takeBlock(a);
         if (block == null) return false;
         a.getNavigation().stop();

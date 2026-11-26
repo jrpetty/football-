@@ -318,6 +318,9 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** [tp43] The tick of the last instant move the hooks counted; where it stood at the last tick; riding then. */
     int blinkTick = -100;
+    /** [tp49] The last shift under a hop by a call with a cause (Blink.moved), and its tick. */
+    @javax.annotation.Nullable String blinkShift;
+    int blinkShiftTick = -100;
     @javax.annotation.Nullable double[] blinkLast;
     boolean blinkRode;
     private int blinkDepth;
@@ -388,7 +391,26 @@ public class VillageFolkEntity extends AssistantEntity {
                 blinkDepth--;
             }
         }
+        // [tp49] Up off a floor in a narrow place (a passage a block wide, lain down a third of a block off its middle): the
+        // body standing is wider than the body lying, and the game's own shuffle to fit it looks no further than the difference
+        // between them, so it stood with a shoulder in the wall, was hurt by it at once and stepped out of it (over and over,
+        // a floor in the same passage taken again each night). It stands up in the middle of the spot it lay on instead.
+        if (lay.isPresent() && !level().noCollision(this, getBoundingBox().deflate(1.0E-3))) {
+            BlockPos b = lay.get();
+            net.minecraft.world.phys.AABB mid = getDimensions(getPose()).makeBoundingBox(b.getX() + 0.5, getY(), b.getZ() + 0.5);
+            if (level().noCollision(this, mid.deflate(1.0E-3))) {
+                blinkDepth++;
+                try {
+                    super.setPos(b.getX() + 0.5, getY(), b.getZ() + 0.5);
+                } finally {
+                    blinkDepth--;
+                }
+            }
+        }
         if (Blink.on()) Blink.moved(this, fx, fy, fz, "out of bed (the game's own stand-up)");
+        // [tp49] Up on its feet standing still: no shove left over from the night carries it off (FolkLod.rests).
+        net.minecraft.world.phys.Vec3 v = getDeltaMovement();
+        if (v.x != 0.0 || v.z != 0.0) setDeltaMovement(0.0, Math.min(0.0, v.y), 0.0);
     }
 
     /** [tp43] Getting down off a cart, a boat or a horse is the game's own step down (riding, not a jump). */
@@ -443,6 +465,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!level().isClientSide && lyingInStep()) return;              // [tp46] drawing itself up into its bed from the foot
         if (!level().isClientSide && Stroll.step(this)) return;          // [tp43] led along a way, a step a tick
         if (!level().isClientSide && FolkLod.rests(this, input)) return;
+        // [tp49] Never a step begun from a body a hair into a block: it would walk on into it (ClearOfWalls). Not a rider in
+        // the cage, whose glide is its own.
+        if (!level().isClientSide && !isPassenger() && !isSleeping() && !noPhysics && MineLift.state(getUUID()) != MineLift.State.RIDING) ClearOfWalls.clear(this);
         super.travel(input);
     }
 

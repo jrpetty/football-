@@ -1055,7 +1055,11 @@ public final class Divers {
                 Vec3 step = at.subtract(f.position());
                 double len = Math.sqrt(step.x * step.x + step.z * step.z);
                 if (len > 0.05) f.setDeltaMovement(step.x / len * 0.16, f.getDeltaMovement().y, step.z / len * 0.16);
-                if (now - d.stageSince > 60) f.moveTo(at.x, water.getY() + 0.2, at.z, f.getYRot(), 0.0F);   // a high bank: in it goes
+                if (now - d.stageSince > 60) {                                // a high bank: in it goes
+                    // [tp49] In a player's sight it hops in off the bank: put in from a block and a half off, it was seen to jump.
+                    if (Blink.mayJumpTo(f, at.x, at.z, "diver: into the water off a high bank")) f.moveTo(at.x, water.getY() + 0.2, at.z, f.getYRot(), 0.0F);
+                    else if (f.onGround() && len > 0.05) f.setDeltaMovement(step.x / len * 0.3, 0.42, step.z / len * 0.3);
+                }
                 return true;
             }
             case SWIM -> {

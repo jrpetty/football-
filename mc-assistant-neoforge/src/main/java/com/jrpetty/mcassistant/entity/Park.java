@@ -442,6 +442,8 @@ public final class Park {
         @Nullable Vec3 spot;
         @Nullable BlockPos target;
         int sitUntil, moveTick, lastTick, walkStarted;
+        /** [tp49] When it came within a step of its bench (-1: not yet). */
+        int nearSince = -1;
         String doing = "on the way to the park";
 
         Visit(long day, int kind, long park, int until, int now) {
@@ -554,8 +556,18 @@ public final class Park {
             Seat s = l.seats().get(vis.seat);
             Vec3 spot = seatSpot(s);
             if (f.distanceToSqr(spot) <= 1.8 * 1.8) {
-                sit(f, level, vis, s, spot);
-                return true;
+                // [tp49] Lowered onto the bench only from beside it in a player's sight (Seats.settled), never put on it from
+                // a block and a half off.
+                if (Seats.settled(f, spot)) {
+                    sit(f, level, vis, s, spot);
+                    return true;
+                }
+                if (vis.nearSince < 0) vis.nearSince = f.tickCount;
+                if (f.tickCount - vis.nearSince <= Seats.SETTLE_TICKS) {
+                    Seats.stepTo(f, spot);
+                    return true;
+                }
+                vis.walkStarted = f.tickCount - 601;                              // it cannot get up to it: as below
             }
             if (f.tickCount - vis.walkStarted > 600) {                         // no way to it: walk about instead
                 release(f, vis);
@@ -788,6 +800,7 @@ public final class Park {
         Map<Integer, UUID> taken = SEATED.get(vis.park);
         if (taken != null && vis.seat >= 0) taken.remove(vis.seat, f.getUUID());
         vis.seat = -1;
+        vis.nearSince = -1;
     }
 
     private static void finish(VillageFolkEntity f, Visit vis) {
