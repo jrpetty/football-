@@ -93,6 +93,12 @@ public final class PlayerFamily {
     @Nullable
     public static UUID courting(UUID village, UUID player) { return id(village, player, "court"); }
 
+    /** The home this player shares with its spouse here (by its bed), or null. */
+    @Nullable
+    public static BlockPos homeOf(UUID village, UUID player) {
+        try { return BlockPos.of(Long.parseLong(get(village, player, "home"))); } catch (NumberFormatException e) { return null; }
+    }
+
     /** This player's spouse in this town, or null. */
     @Nullable
     public static UUID spouse(UUID village, UUID player) { return id(village, player, "spouse"); }
