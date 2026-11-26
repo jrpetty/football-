@@ -24,6 +24,13 @@ public final class FeatStage {
         List<String> out = new ArrayList<>();
         UUID id = v.id();
         Quarry.Site s = Quarry.site(id);
+        if (s != null && cut < 0) {                                       // a new site: the old one closed
+            Quarry.close(level, v, s, "moved for the film");
+            Ledger.forget(id, StoneYard.SITE);
+            Ledger.forget(id, "yard.laid");
+            s = null;
+            cut = -cut;
+        }
         if (s == null) {
             // The ground out past the growth line loaded, for the site to be looked for.
             int reach = Quarry.growthReach(id) + 60;
@@ -58,8 +65,16 @@ public final class FeatStage {
         for (Ledger.Building b : Monuments.gardens(id)) if (Monuments.statueAt(id, b.anchor()) == null) g = b;
         if (g == null) {
             Villages.Site site = Villages.siteFor(level, id, Park.GARDEN);
-            if (site == null) { out.add("GARDEN none: no lot for one yet"); return out; }
-            g = Monuments.putUp(level, id, site.anchor(), site.facing());
+            BlockPos at = site == null ? null : site.anchor();
+            Direction facing = site == null ? Direction.NORTH : site.facing();
+            if (at == null) {
+                // The plan's lots all spoken for (a grown town): the nearest open, level ground to the heart, for the picture.
+                at = openGround(level, v);
+                if (at == null) { out.add("GARDEN none: no lot and no open ground near"); return out; }
+                int dx = at.getX() - v.centre().getX(), dz = at.getZ() - v.centre().getZ();
+                facing = Math.abs(dx) >= Math.abs(dz) ? (dx > 0 ? Direction.EAST : Direction.WEST) : (dz > 0 ? Direction.SOUTH : Direction.NORTH);
+            }
+            g = Monuments.putUp(level, id, at, facing);
         }
         if (g == null) { out.add("GARDEN none"); return out; }
         List<Object[]> c = Monuments.candidates(id);
@@ -68,6 +83,35 @@ public final class FeatStage {
         out.add("GARDEN " + g.anchor().getX() + " " + g.anchor().getY() + " " + g.anchor().getZ() + " facing " + g.facing().getName()
             + " statue " + (st == null ? "none" : st[2] + " (" + st[4] + ")"));
         return out;
+    }
+
+    /** Level, open ground thirteen square near the heart (nothing built on it, no water): the first found going out. */
+    static BlockPos openGround(ServerLevel level, Villages.Village v) {
+        BlockPos c = v.centre();
+        for (int r = 24; r <= 150; r += 6) {
+            for (int k = 0; k < Math.max(8, r / 3); k++) {
+                double a = Math.PI * 2 * k / Math.max(8, r / 3);
+                int x = c.getX() + (int) Math.round(Math.cos(a) * r), z = c.getZ() + (int) Math.round(Math.sin(a) * r);
+                if (!level.hasChunk((x - 7) >> 4, (z - 7) >> 4) || !level.hasChunk((x + 7) >> 4, (z + 7) >> 4)) continue;
+                int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+                boolean ok = true;
+                for (int dx = -6; dx <= 6 && ok; dx++) {
+                    for (int dz = -6; dz <= 6 && ok; dz++) {
+                        int y = Quarry.surface(level, x + dx, z + dz);
+                        if (y == Integer.MIN_VALUE) { ok = false; break; }
+                        int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + dx, z + dz);
+                        for (int up = y + 1; up < top && ok; up++) {
+                            BlockPos p = new BlockPos(x + dx, up, z + dz);
+                            if (!CastleWall.wild(level, p, level.getBlockState(p))) ok = false;
+                        }
+                        lo = Math.min(lo, y);
+                        hi = Math.max(hi, y);
+                    }
+                }
+                if (ok && hi - lo <= 1) return new BlockPos(x, hi + 1, z);
+            }
+        }
+        return null;
     }
 
     public static List<String> danger(ServerLevel level, Villages.Village v, int stage) {

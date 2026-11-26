@@ -183,8 +183,8 @@ public final class Quarry {
         BlockPos heart = v.centre();
         int reach = growthReach(id);
         int half = START / 2;
-        Site best = null;
-        double bestScore = -1e9;
+        Site best = null, earth = null;
+        double bestScore = -1e9, earthScore = -1e9;
         for (int ring : new int[]{ 22, 34, 48 }) {
             int d = reach + ring;
             for (int k = 0; k < 16; k++) {
@@ -192,7 +192,7 @@ public final class Quarry {
                 int cx = heart.getX() + (int) Math.round(Math.cos(a) * d), cz = heart.getZ() + (int) Math.round(Math.sin(a) * d);
                 if (!level.hasChunk(cx >> 4, cz >> 4) || !level.hasChunk((cx + 12) >> 4, (cz + 12) >> 4) || !level.hasChunk((cx - 12) >> 4, (cz - 12) >> 4)) continue;
                 if (!clearOfTown(id, heart, cx, cz, half, null)) continue;
-                int rocky = 0, cells = 0, lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+                int rocky = 0, deep = 0, cells = 0, lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
                 List<Integer> heights = new ArrayList<>();
                 boolean wet = false, built = false;
                 for (int x = cx - half - 1; x <= cx + half + 1 && !wet && !built; x++) {
@@ -210,6 +210,8 @@ public final class Quarry {
                         lo = Math.min(lo, y);
                         hi = Math.max(hi, y);
                         if (rock(level.getBlockState(new BlockPos(x, y, z)))) rocky++;
+                        // And the rock under it within the pit's depth (a dig down that only ever meets sand gives no stone).
+                        if (((x + z) & 1) == 0) for (int dd = 1; dd <= DEEPEST - 1; dd++) if (rock(level.getBlockState(new BlockPos(x, y - dd, z)))) deep++;
                     }
                 }
                 if (wet || built || cells == 0 || hi - lo > 6) continue;
@@ -217,7 +219,12 @@ public final class Quarry {
                 int rim = heights.get(heights.size() / 2);
                 // Water anywhere near the pit's deepest cut: no.
                 if (waterNear(level, cx, rim, cz, half + 2, DEEPEST + 1)) continue;
-                double score = rocky * 3.0 - (hi - lo) * 2.0 - ring * 0.3;
+                double score = rocky * 3.0 + deep * 0.5 - (hi - lo) * 2.0 - ring * 0.3;
+                // Too little stone within reach (sand, clay or earth all the way down) is only a last resort.
+                if (deep * 2 < cells) {
+                    if (score > earthScore) { earthScore = score; earth = new Site(new BlockPos(cx, rim, cz), START, false); }
+                    continue;
+                }
                 if (score > bestScore) {
                     bestScore = score;
                     best = new Site(new BlockPos(cx, rim, cz), START, rocky * 4 >= cells);
@@ -225,7 +232,7 @@ public final class Quarry {
             }
             if (best != null && best.outcrop()) break;
         }
-        return best;
+        return best != null ? best : earth;
     }
 
     static boolean waterNear(ServerLevel level, int cx, int y0, int cz, int half, int deep) {

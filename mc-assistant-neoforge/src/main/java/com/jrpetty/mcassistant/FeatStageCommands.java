@@ -22,7 +22,7 @@ import java.util.List;
  *
  * <pre>
  *   /village featbuild quarry [cut]   the quarry opened now (out past the growth line), its yard laid out, its fence up, so
- *                                     many blocks cut into the yard; prints QUARRY and YARD with their places
+ *                                     many blocks cut into the yard (a negative count: a new site first); prints QUARRY and YARD
  *   /village featbuild garden         a statue garden put up on its lot and the statue of the town's most notable raised
  *   /village featbuild danger N       the wall's stage set (0 open .. 3 towers and a portcullis), and the wall built
  *   /village featbuild watch          where the night watch is now: WATCH name x y z post
@@ -38,7 +38,7 @@ public final class FeatStageCommands {
         event.getDispatcher().register(Commands.literal("village")
             .then(Commands.literal("featbuild").requires(src -> src.hasPermission(2))
                 .then(Commands.literal("quarry").executes(ctx -> quarry(ctx, 300))
-                    .then(Commands.argument("cut", IntegerArgumentType.integer(0, 5000)).executes(ctx -> quarry(ctx, IntegerArgumentType.getInteger(ctx, "cut")))))
+                    .then(Commands.argument("cut", IntegerArgumentType.integer(-5000, 5000)).executes(ctx -> quarry(ctx, IntegerArgumentType.getInteger(ctx, "cut")))))
                 .then(Commands.literal("garden").executes(FeatStageCommands::garden))
                 .then(Commands.literal("danger").then(Commands.argument("stage", IntegerArgumentType.integer(0, 3)).executes(FeatStageCommands::danger)))
                 .then(Commands.literal("watch").executes(FeatStageCommands::watch))));
