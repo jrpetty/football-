@@ -50,6 +50,34 @@ public final class ClearOfWalls {
         if (!e.getLevel().getEntitiesOfClass(VillageFolkEntity.class, trunk, VillageFolkEntity::isAlive).isEmpty()) e.setCanceled(true);
     }
 
+    /**
+     * [tp49] Is a folk standing in this cell (or the {@code high} cells from it up)? If so it is asked to step aside out of
+     * it, to open ground beside it, and the block that was to go there waits: a block is never set down inside a folk.
+     */
+    public static boolean standingIn(net.minecraft.server.level.ServerLevel level, BlockPos p, int high) {
+        AABB cell = new AABB(p.getX(), p.getY(), p.getZ(), p.getX() + 1, p.getY() + high, p.getZ() + 1);
+        java.util.List<VillageFolkEntity> in = level.getEntitiesOfClass(VillageFolkEntity.class, cell, VillageFolkEntity::isAlive);
+        for (VillageFolkEntity f : in) stepAside(level, f, cell);
+        return !in.isEmpty();
+    }
+
+    /** Off to the nearest open ground beside it, out of this box (walked: a step or two). */
+    static void stepAside(net.minecraft.server.level.ServerLevel level, VillageFolkEntity f, AABB out) {
+        if (f.isPassenger() || f.isSleeping() || !f.getNavigation().isDone() && f.getNavigation().getTargetPos() != null
+                && !out.contains(net.minecraft.world.phys.Vec3.atBottomCenterOf(f.getNavigation().getTargetPos()))) return;   // already going
+        BlockPos at = f.blockPosition(), best = null;
+        double bestD = Double.MAX_VALUE;
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int dy = -1; dy <= 1; dy++) {
+            BlockPos q = at.offset(dx, dy, dz);
+            AABB body = f.getDimensions(f.getPose()).makeBoundingBox(q.getX() + 0.5, q.getY(), q.getZ() + 0.5);
+            if (body.intersects(out) || !level.noCollision(f, body) || !level.getFluidState(q).isEmpty()) continue;
+            if (!level.getBlockState(q.below()).isFaceSturdy(level, q.below(), net.minecraft.core.Direction.UP)) continue;
+            double d = dx * dx + dz * dz + dy * dy * 2;
+            if (d < bestD) { bestD = d; best = q; }
+        }
+        if (best != null) f.getNavigation().moveTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5, 1.0D);
+    }
+
     /** Bodies set clear so far (the tests, the soak). */
     public static volatile long CLEARED;
 
