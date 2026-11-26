@@ -712,6 +712,7 @@ class BlueprintSoundnessTest {
         "observatory 5 5 5 5 front",
         "orchard 4 4 4 4 none",
         "park 5 5 5 5 none",
+        "garden 5 5 5 5 none",                       // [featbuild] the statue garden (Monuments)
         "pitch 5 10 5 10 none",
         "postoffice 3 4 4 4 front",
         "powderhut 3 4 3 4 front",
