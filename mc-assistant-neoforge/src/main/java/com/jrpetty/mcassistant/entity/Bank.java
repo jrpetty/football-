@@ -957,7 +957,7 @@ public final class Bank {
     /** A mortgage's week: its interest run up, its payment taken, and what comes of it (paid off, behind, the house taken back). */
     static void collect(ServerLevel level, Villages.Village v, State s, Loan l, long day) {
         UUID id = v.id();
-        long x = (long) l.principal * LOAN_BP + l.carry;
+        long x = (long) l.principal * (l.player ? Mortgages.rateFor(id, l.anchor, LOAN_BP) : LOAN_BP) + l.carry;   // [wpc] a player's rate by its terms
         l.interest += (int) (x / 10000L);
         l.carry = (int) (x % 10000L);
         int due = Math.min(l.owed(), l.weekly + l.arrears);
@@ -1054,6 +1054,7 @@ public final class Bank {
                 "A last warning has gone to " + l.names + ". I take no pleasure in it.")
             : FolkTalk.pick(level.getRandom(), "A payment missed on " + where + ". A word in the right ear, I think.",
                 l.names + " are behind. I've written to them."));
+        if (l.player) Mortgages.arrearsLetter(level, v, l, last);          // [wpc] the letter, in the pack and the planner
         tellPlayer(level, l, (last ? "Last warning: " : "") + "you are " + l.missed + (l.missed == 1 ? " payment" : " payments") + " behind on your mortgage on "
             + where + " (" + l.arrears + " coins). Put coin in your account at the bank's desk before its next round.");
     }
@@ -1066,6 +1067,7 @@ public final class Bank {
     static void foreclose(ServerLevel level, Villages.Village v, State s, Loan l, @Nullable Homes.Home h, long day) {
         UUID id = v.id();
         int owed = l.owed();
+        if (l.player) Mortgages.repossessed(level, v, l, h);                 // [wpc] the surplus over what is owed, back to the player
         int back = Ledger.takeCoins(id, Math.min(owed, spare(id)));      // never the day's wages
         if (back > 0) Economy.spent(id, back);
         s.cash += back;
@@ -1444,6 +1446,63 @@ public final class Bank {
         Villages.Village v = Villages.get(id);
         Homes.Home h = Homes.homes(id).get(l.anchor);
         return h == null || v == null ? "the house" : Homes.address(id, v, h);
+    }
+
+    /** [wpc] A player's mortgage opened (Mortgages): on the bank's books, saved. */
+    static void keepLoan(UUID village, Loan l) {
+        State s = state(village);
+        s.loans.put(l.anchor, l);
+        save(village, l);
+        saveHead(village, s);
+    }
+
+    /** [wpc] A payment toward a loan (an overpayment, a sale's proceeds), the coin into the vault; closed if nothing is left. */
+    static void payLoan(UUID village, Loan l, int n) {
+        State s = state(village);
+        s.cash += n;
+        book(s, l, n);
+        l.arrears = Math.max(0, l.arrears - n);
+        l.missed = l.arrears <= 0 || l.weekly <= 0 ? 0 : (l.arrears + l.weekly - 1) / l.weekly;
+        if (l.owed() <= 0) close(village, s, l);
+        else save(village, l);
+        saveHead(village, s);
+    }
+
+    /** [wpc] A loan's terms changed (a remortgage, a port): saved under its anchor, the old anchor's record gone if it moved. */
+    static void rekey(UUID village, Loan old, Loan now) {
+        State s = state(village);
+        s.loans.remove(old.anchor);
+        Ledger.forget(village, LOAN + old.anchor);
+        s.loans.put(now.anchor, now);
+        save(village, now);
+        saveHead(village, s);
+    }
+
+    /** [wpc] So much out of a player's account, as far as it and the vault go (a bill paid by standing order); what was taken. */
+    static int takeFromAccount(UUID village, UUID who, int n) {
+        State s = state(village);
+        Account a = s.accounts.get(who);
+        if (a == null || n <= 0) return 0;
+        int k = Math.max(0, Math.min(Math.min(n, a.balance), s.cash));
+        if (k <= 0) return 0;
+        a.balance -= k;
+        s.cash -= k;
+        s.week.withdrawn += k;
+        save(village, a);
+        saveHead(village, s);
+        return k;
+    }
+
+    /** [wpc] So much into a player's account from outside the vault (a sale's surplus, an estate); the coin comes with it. */
+    static void putInAccount(UUID village, UUID who, String name, int n) {
+        if (n <= 0) return;
+        State s = state(village);
+        Account a = s.accounts.computeIfAbsent(who, k -> new Account(k, true, name, Accounts.dayNow()));
+        a.balance += n;
+        s.cash += n;
+        s.week.deposited += n;
+        save(village, a);
+        saveHead(village, s);
     }
 
     @Nullable

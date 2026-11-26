@@ -150,6 +150,75 @@ public final class LifePage {
         return this;
     }
 
+    /**
+     * [wpc] The town's plan as a map of its real lots (TownPlan): each lot a rectangle in world blocks from the map's middle,
+     * coloured by what it is (see {@link LotMap#lot}), the chosen one ringed, clicked to choose; the square and you marked.
+     */
+    public LotMap lotMap(String label, int heartX, int heartZ) {
+        CompoundTag x = new CompoundTag();
+        x.putString("t", "lotmap");
+        x.putString("l", label);
+        x.putInt("hx", heartX);
+        x.putInt("hz", heartZ);
+        ListTag p = new ListTag();
+        x.put("lots", p);
+        ListTag m = new ListTag();
+        x.put("marks", m);
+        blocks.add(x);
+        return new LotMap(x, p, m);
+    }
+
+    /** [wpc] The building itself, its blocks translucent where it would stand (client/BuildGhost); null takes it away. */
+    public LifePage blockGhost(@Nullable CompoundTag g) {
+        if (g == null) {
+            g = new CompoundTag();
+            g.putBoolean("off", true);
+        }
+        t.put("bghost", g);
+        return this;
+    }
+
+    /** [wpc] A map of lots. */
+    public static final class LotMap {
+        final CompoundTag x;
+        final ListTag lots, marks;
+
+        LotMap(CompoundTag x, ListTag lots, ListTag marks) {
+            this.x = x;
+            this.lots = lots;
+            this.marks = marks;
+        }
+
+        /**
+         * A lot: its corners (world x and z), its state (0 free to choose, 2 the town's, 3 fields or the mine, 4 yours,
+         * 5 another player's, 6 kept for the town), chosen or not, its tooltip, and its action when clicked (null: none).
+         */
+        public LotMap lot(int x0, int z0, int x1, int z1, int state, boolean chosen, String label, @Nullable String action, @Nullable CompoundTag args) {
+            CompoundTag c = new CompoundTag();
+            c.putIntArray("b", new int[]{ x0, z0, x1, z1 });
+            c.putInt("s", state);
+            c.putBoolean("sel", chosen);
+            c.putString("l", label);
+            if (action != null) {
+                c.putString("a", action);
+                c.put("args", args == null ? new CompoundTag() : args);
+            }
+            lots.add(c);
+            return this;
+        }
+
+        /** A mark at a world spot: kind 1 the square, 2 you. */
+        public LotMap mark(int wx, int wz, int kind, String label) {
+            CompoundTag c = new CompoundTag();
+            c.putInt("x", wx);
+            c.putInt("z", wz);
+            c.putInt("k", kind);
+            c.putString("l", label);
+            marks.add(c);
+            return this;
+        }
+    }
+
     public LifePage message(String text, boolean ok) {
         if (text == null || text.isEmpty()) return this;
         t.putString("msg", text);

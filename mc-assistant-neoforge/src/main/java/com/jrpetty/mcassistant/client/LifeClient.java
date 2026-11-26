@@ -45,7 +45,7 @@ public final class LifeClient {
         public static void onClientTick(ClientTickEvent.Post event) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.getConnection() == null) return;
-            while (OPEN.consumeClick()) if (mc.screen == null && !FoundingClient.resume()) open("life");   // [found23] back to the founding screen
+            while (OPEN.consumeClick()) if (mc.screen == null && !FoundingClient.resume()) open(BuildGhost.walking() ? "build" : "life");   // [found23] back to the founding screen [wpc] or to the builder
         }
     }
 

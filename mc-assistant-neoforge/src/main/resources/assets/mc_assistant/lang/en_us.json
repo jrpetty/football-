@@ -1,4 +1,5 @@
 {
+  "item.mc_assistant.deed": "Deed",
   "block.mc_assistant.assistant_spawner": "Assistant Spawner",
   "item.mc_assistant.assistant_whistle": "Assistant Whistle",
   "entity.mc_assistant.player_assistant": "Player AI Assistant",

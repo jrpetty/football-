@@ -307,7 +307,8 @@ public final class Market {
     public static boolean marketDay(UUID village, long day) {
         return Math.floorMod(day + village.hashCode(), 7L) == 0
             || Ethos.extraMarket(village, day)                           // [identity] a mercantile town's second market day
-            || AdminTools.marketDecreed(village, day);                   // [admin] a market day by decree
+            || AdminTools.marketDecreed(village, day)                    // [admin] a market day by decree
+            || MarketDays.declared(village, day);                         // [wpc] an extra or weekend market (MarketDays.open)
     }
 
     /** How many days until the next market day (0: today). */
@@ -570,6 +571,7 @@ public final class Market {
         Homes.payday(level, v, day);                     // the rent in, and what the households put by to buy their houses
         HousingMarket.payday(level, v, day);             // [econ-housing] the housing market weighed; a house of its own commissioned
         PropertyMarket.morning(level, v, day);           // [orders17] offers on the property market, ground rents, premises' rents
+        PropertyDay.morning(level, v, day);              // [wpc] land and house rates, rents, premises, debts, the long absence
         if (RestDay.today(id, day)) tithe(level, v, day);
         Bank.morning(level, v, day);                     // the bank: the day's savings in, and on its seventh day its round (Bank)
         CapitalBook.morning(level, v, day);              // [capital] the savings club and the loans, the bourse, the land, the bonds' coupons

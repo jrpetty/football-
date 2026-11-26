@@ -81,6 +81,14 @@ public final class PlayerLife {
         PAGES.put("hall", new TownHall());           // [wpa] the Town Hall
         PAGES.put("arrival", new ArrivalCard());     // [wpa] the card on a first arrival
         PAGES.put("id", new IdCard());               // [wpa] a player's ID card
+        PAGES.put("build", new BuildPicker());       // [wpc] the builder: a lot, a design, the building seen standing
+        PAGES.put("land", new LandPlots());          // [wpc] land to buy, in the plan's own sizes
+        PAGES.put("home", new HomePage());           // [wpc] your houses, your tenancy, renting and buying
+        PAGES.put("mortgage", new Mortgages());      // [wpc] a mortgage: deposit, rate, term, affordability
+        PAGES.put("premises", new Premises());       // [wpc] premises to let and for sale, stalls, uses
+        PAGES.put("debts", new Debts());             // [wpc] the debts ledger, credit score, bankruptcy
+        PAGES.put("will", new Wills());              // [wpc] your will
+        PAGES.put("away", new StandingOrders());     // [wpc] while you were away
     }
 
     /** [wpa] Is there a page called this (another package's, not yet merged)? */

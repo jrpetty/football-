@@ -184,6 +184,8 @@ public final class StartBusiness implements PlayerLife.Page {
             .button(prem.equals("town") ? "Chosen" : "Choose", "prem", LifePage.args("p", "town"), !prem.equals("town"), "Chosen");
         page.row(new ItemStack(Items.BRICKS), (prem.equals("build") ? "✔ " : "") + "Have the town build it", "Choose from the town's drawings, with a picture of each", "")
             .button(prem.equals("build") ? "Chosen" : "Choose", "prem", LifePage.args("p", "build"), true, "");
+        if (prem.equals("build")) page.row(new ItemStack(Items.FILLED_MAP), "The builder: pick a lot on the town's plan, see it standing", "A map of the real lots, "   // [wpc]
+            + "the design that fits, every block shown where it would stand; then back here", "").button("Open the builder", "builder", null).primary();
         if (prem.equals("build")) gallery(level, p, v, c, page, t == null ? "shop" : BuildDesk.forBusiness(t.key()));
         page.buttons().button("Back", "step", LifePage.args("s", 1)).button("Next: confirm", "step", LifePage.args("s", 3),
             !prem.equals("build") || c.args.contains("px"), "Choose a building and its plot first").primary();
@@ -401,6 +403,7 @@ public final class StartBusiness implements PlayerLife.Page {
                 c.args.putString("style", args.getCompound("f").getString("style"));
                 return "";
             }
+            case "builder" -> { BuildPicker.openForStart(p, c.args); return "#open:"; }   // [wpc] the builder, its plot and drawing back here
             case "plot" -> {
                 setPlot(c, new BlockPos(args.getInt("x"), args.getInt("y"), args.getInt("z")), Direction.from2DDataValue(args.getInt("f")));
                 return "";

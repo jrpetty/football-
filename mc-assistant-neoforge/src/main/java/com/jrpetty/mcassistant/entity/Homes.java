@@ -117,7 +117,7 @@ public final class Homes {
         }
 
         boolean vacant() {
-            return members.isEmpty() && (tenure != Tenure.PLAYER || toLet);
+            return members.isEmpty() && (tenure != Tenure.PLAYER || toLet) && !Tenancy.held(anchor);   // [wpc] not a house a player rents
         }
     }
 

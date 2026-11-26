@@ -723,6 +723,7 @@ public final class PlayerShops {
         if (last != null && now - last < 40 && now >= last) return;
         LAST_TICK.put(v.id(), now);
         com.jrpetty.mcassistant.Guard.run("player builds", () -> BuildDesk.tick(level, v));   // the buildings going up for players
+        com.jrpetty.mcassistant.Guard.run("wpc property", () -> PropertyDay.tick(level, v));   // [wpc] players' lots and tenancies held again
         if (town(v.id()).isEmpty()) return;
         long day = today(level);
         if (MORNING.getOrDefault(v.id(), -1L) != day) {

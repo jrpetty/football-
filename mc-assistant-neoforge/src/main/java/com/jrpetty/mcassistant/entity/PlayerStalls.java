@@ -1022,6 +1022,41 @@ public final class PlayerStalls {
             + " and whenever they want what you've got, with their own coin, into your till.";
     }
 
+    /** [wpc] A stall's licence: a week on the square (as {@link #rent}), or only the next market day, at a third of the week's rent. */
+    public enum Licence { WEEKLY, MARKET_DAY }
+
+    /** [wpc] What a licence costs here. */
+    public static int licenceFee(UUID village, Licence l) {
+        return l == Licence.WEEKLY ? rent(village) : Math.max(2, (rent(village) + 2) / 3);
+    }
+
+    /** [wpc] A licence taken (the premises browser): a week's rent, or a pitch for the next market day (its eve or the day). */
+    public static String license(ServerLevel level, Villages.Village v, Player p, Licence l) {
+        if (l == Licence.WEEKLY) return rent(level, v, p, null);
+        UUID id = v.id();
+        long day = today(level);
+        int md = Market.daysToMarket(id, day);
+        if (md > 1) return "A market-day pitch is taken on market day or the day before: the next is in " + md + " days. Take a week's stall instead, or come back then.";
+        Stall st = load(id, p.getUUID());
+        if (st != null && st.at != null && st.paidTill >= day + md) return "You have a stall on the square till day " + st.paidTill + " already.";
+        int fee = licenceFee(id, l);
+        if (Market.coinsHeld(p) < fee) return "A market-day pitch is " + fee + coinWord(fee) + ". You've " + Market.coinsHeld(p) + ".";
+        Market.payOut(p, fee);
+        Ledger.addCoins(id, fee);
+        CoinCensus.playerIn(id, fee, p, PlayerFinance.Cat.RENT_OUT, "a market-day pitch");
+        Economy.rent(id, fee);
+        if (st == null) st = new Stall(p.getUUID());
+        st.name = p.getName().getString();
+        st.at = null;
+        st.paidTill = day + md;                                             // paid: rent() sets the booth up for nothing
+        save(id, st);
+        String said = rent(level, v, p, null);
+        Stall now = load(id, p.getUUID());
+        if (now == null || now.at == null) return said;
+        return "Your market-day pitch is paid (" + fee + coinWord(fee) + "): a booth on the square for " + (md == 0 ? "today, market day" : "tomorrow's market")
+            + ", till day " + now.paidTill + ". Fill its barrel and set your prices; it shuts after the market.";
+    }
+
     /** Another week's rent (up to four weeks ahead); a stall shut or given back opens again. */
     static String renew(ServerLevel level, Villages.Village v, Player p, Stall st) {
         long day = today(level);

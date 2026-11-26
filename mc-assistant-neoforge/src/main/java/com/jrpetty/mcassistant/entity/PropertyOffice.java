@@ -148,6 +148,7 @@ public final class PropertyOffice {
                     }
                     f.quote = null;
                 }
+                case "picker" -> { PlayerLife.open(p, "build", LifePage.args("for", arg.isEmpty() ? "home" : arg)); return; }   // [wpc] the builder: a lot on the map, the house standing
                 case "quote" -> f.quote = commission(level, p, v, f, false).lines();
                 case "place" -> {
                     BuildOrders.Quote q = commission(level, p, v, f, f.quote != null);
@@ -402,6 +403,8 @@ public final class PropertyOffice {
                 "The plot is the ground in front of you; stand where you want it and ask again."),
             "< Building", "drawing", "-1", "Building >", "drawing", "1", "< Style", "style", "-1", "Style >", "style", "1", "Turn", "turn", "",
             "Priority", "toggle", "priority", "Lease", "toggle", "lease", "Bring materials", "toggle", "bring", "Get quote", "quote", ""));
+        rows.add(row(List.of("Or pick a lot on the town's plan and see the building standing there, every block, before you order (the builder)."),   // [wpc]
+            "Open the builder: a home", "picker", "home", "Open the builder: premises", "picker", "premises"));
         if (f.quote != null) {
             rows.add(row(f.quote, "Place order", "place", ""));
         }
