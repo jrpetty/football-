@@ -102,13 +102,13 @@
       "q": ["how do i become an apprentice", "learn a trade from a villager", "apprentice me", "how do i become a master smith", "apprentice journal", "how do i learn the reinforced pickaxe recipe", "my lesson", "trade lessons", "how do i unlock the farmhouse pie recipe"],
       "kw": ["apprentice", "apprenticeship", "lesson", "master", "journeyman", "learn"],
       "answer": "Learn a trade from a master (a folk of level 25+): ask it 'Apprentice me' (About, then Work & pay) and do its three lessons.",
-      "more": ["Ask a master (a folk of level 25+ at the smith's, farmer's, miner's, cave dweller's, enchanter's, tailor's, brewer's or cook's trade) 'Apprentice me'.", "Its fee is six coins plus one for every five of its levels.", "You get an Apprentice's Journal, then three real lessons; each opens a perk, and the last makes you a Master."],
+      "more": ["Ask a master (a folk of level 25+ at the smith's, farmer's, miner's, cave dweller's, enchanter's, tailor's, brewer's or cook's trade) 'Apprentice me'.", "Its fee is six coins plus one for every five of its levels.", "You get an Apprentice's Journal, then three real lessons; each opens a perk, and the last makes you a Master.", "The town's children are apprenticed too: of a morning a child works beside a master (a parent first), its skill rising faster under a higher-level master. Grown, it is a journeyman if it came far enough, and its master passes on one of its trade knacks; later it becomes a master itself. The board's People → Apprentices page shows every line."],
       "steps": ["Ask 'My lesson' for each lesson and do it with your master nearby (or ask it out with you).", "Titles: Apprentice, Journeyman, Master. Use the journal to see what's next."],
       "controls": ["[Right-click] a master → About → Work & pay → Apprentice me · My lesson", "[Right-click] Apprentice's Journal"],
       "items": ["mc_assistant:apprentice_journal", "mc_assistant:reinforced_pickaxe", "mc_assistant:brewers_stout", "mc_assistant:farmhouse_pie"],
       "tips": ["Smith, brewer and cook lessons teach the reinforced pickaxe, brewer's stout and farmhouse pie recipes: only taught players can craft them.", "Perks include extra ore, faster crops, a lapis back when enchanting and longer potions."],
       "warn": ["Away from your master, lesson work doesn't count."],
-      "related": ["talk_teach", "items_masters", "jobs_trades"],
+      "related": ["talk_teach", "items_masters", "jobs_trades", "life_generations"],
       "covers": ["item:apprentice_journal"]
     },
     {

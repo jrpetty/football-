@@ -326,7 +326,7 @@ public final class TalkMenu {
                 say("court_walk_out", Items.DANDELION, "Will you walk out with me?", flag("courtable")),
                 say("court_stroll", Items.OAK_SAPLING, "Take a walk with me", c -> c.has("pcourting") || c.has("spouse")),
                 say("court_supper", Items.MUSHROOM_STEW, "Supper with me tonight?", c -> c.has("pcourting") || c.has("spouse")),
-                say("court_propose", Items.DIAMOND, "Will you marry me?", flag("proposable")),
+                say("court_propose", Items.DIAMOND, "Will you marry me?", flag("pcourting")),   // not ready: it says what is still to do
                 say("spouse_day", Items.CAMPFIRE, "How was your day, love?", flag("spouse")),
                 say("spouse_baby", Items.WHITE_WOOL, "Shall we try for a baby?", flag("spouse")),
                 prompt("spouse_name_baby", Items.NAME_TAG, TalkTopic.SAY, "Let's call the baby ", flag("naming"))),

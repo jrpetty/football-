@@ -93,20 +93,20 @@ public final class FolkLinesPages {
                 // The rating, named, with its bar.
                 int score = c.getInt("respect");
                 String name = c.getString("rating");
-                g.drawString(font, name + " in " + c.getString("town"), x + 2, y, score >= 10 ? Ui.GOOD : score <= -15 ? Ui.BAD : Ui.INK, false);
+                g.drawString(font, name + " in " + c.getString("town"), x + 2, y, score >= 10 ? UiStyle.SUCCESS : score <= -15 ? UiStyle.DANGER : UiStyle.TEXT, false);
                 String num = (score > 0 ? "+" : "") + score;
-                g.drawString(font, num, x + w - font.width(num) - 2, y, Ui.MUTED, false);
+                g.drawString(font, num, x + w - font.width(num) - 2, y, UiStyle.TEXT_MUTED, false);
                 y += 11;
                 int bw = w - 4, mid = x + 2 + bw / 2;
-                g.fill(x + 2, y, x + 2 + bw, y + 5, Ui.PANEL_SOFT);
+                g.fill(x + 2, y, x + 2 + bw, y + 5, UiStyle.WELL);
                 int len = (int) Math.round(Math.abs(score) / 100.0 * (bw / 2.0));
-                if (score > 0) g.fill(mid, y, mid + len, y + 5, Ui.GOOD);
-                else if (score < 0) g.fill(mid - len, y, mid, y + 5, Ui.BAD);
-                g.fill(mid, y - 2, mid + 1, y + 7, Ui.EDGE);
+                if (score > 0) g.fill(mid, y, mid + len, y + 5, UiStyle.SUCCESS_FILL);
+                else if (score < 0) g.fill(mid - len, y, mid, y + 5, UiStyle.DANGER_FILL);
+                g.fill(mid, y - 2, mid + 1, y + 7, UiStyle.EDGE);
                 y += 9;
                 String sub = c.getInt("witnesses") + (c.getInt("witnesses") == 1 ? " has" : " have") + " seen you or dealt with you; "
                     + c.getInt("heard") + " only heard of you from them. You are " + c.getString("title") + ".";
-                for (FormattedCharSequence s : TextCache.split(font, sub, w - 4)) { g.drawString(font, s, x + 2, y, Ui.FAINT, false); y += 10; }
+                for (FormattedCharSequence s : TextCache.split(font, sub, w - 4)) { g.drawString(font, s, x + 2, y, UiStyle.TEXT_FAINT, false); y += 10; }
                 y += 2;
                 if (!c.getString("reasons").isEmpty()) add(lines, font, 'N', 0, c.getString("reasons"), width);
                 list(lines, font, c, "good", "In your favour", 'G', width);
@@ -125,33 +125,33 @@ public final class FolkLinesPages {
             int lx = x + 4 + l.indent() * 10;
             switch (l.kind()) {
                 case 'H' -> {
-                    g.fill(x, cy + 2, x + 2, cy + 9, Ui.ACCENT);
-                    g.drawString(font, l.text(), x + 5, cy + 1, Ui.FAINT, false);
+                    g.fill(x, cy + 2, x + 2, cy + 9, UiStyle.ACCENT);
+                    g.drawString(font, l.text(), x + 5, cy + 1, UiStyle.TEXT_FAINT, false);
                 }
-                case 'G' -> g.drawString(font, l.text(), lx, cy + 1, Ui.GOOD, false);
-                case 'W' -> g.drawString(font, l.text(), lx, cy + 1, Ui.BAD, false);
-                case 'C' -> g.drawString(font, l.text(), lx, cy + 1, 0xFF2E5C8A, false);
-                case 'M' -> g.drawString(font, l.text(), lx, cy + 1, Ui.FAINT, false);
-                default -> g.drawString(font, l.text(), lx, cy + 1, Ui.INK, false);
+                case 'G' -> g.drawString(font, l.text(), lx, cy + 1, UiStyle.SUCCESS, false);
+                case 'W' -> g.drawString(font, l.text(), lx, cy + 1, UiStyle.DANGER, false);
+                case 'C' -> g.drawString(font, l.text(), lx, cy + 1, UiStyle.INFO, false);
+                case 'M' -> g.drawString(font, l.text(), lx, cy + 1, UiStyle.TEXT_FAINT, false);
+                default -> g.drawString(font, l.text(), lx, cy + 1, UiStyle.TEXT, false);
             }
             cy += ROW;
         }
         if (lines.size() > rows) {
             String more = "(scroll for more)";
-            g.drawString(font, more, x + w - font.width(more) - 2, y + ch - 9, Ui.FAINT, false);
+            g.drawString(font, more, x + w - font.width(more) - 2, y + ch - 9, UiStyle.TEXT_FAINT, false);
         }
         return null;
     }
 
     private static List<Component> empty(GuiGraphics g, Font font, int x, int y, int w) {
-        g.drawString(font, "Not in this town's books yet.", x + 2, y, Ui.FAINT, false);
+        UiStyle.empty(g, font, "Not in this town's books yet", "Open the board again in a moment: the town writes this page as it goes.", x, y, w, 60);
         return null;
     }
 
     private static int header(GuiGraphics g, Font font, String a, String b, int x, int y, int w) {
-        for (FormattedCharSequence s : TextCache.split(font, a, w - 4)) { g.drawString(font, s, x + 2, y, Ui.ACCENT, false); y += 10; }
+        for (FormattedCharSequence s : TextCache.split(font, a, w - 4)) { g.drawString(font, s, x + 2, y, UiStyle.ACCENT, false); y += 10; }
         List<FormattedCharSequence> sub = TextCache.split(font, b, w - 4);
-        for (int i = 0; i < Math.min(3, sub.size()); i++) { g.drawString(font, sub.get(i), x + 2, y, Ui.FAINT, false); y += 10; }
+        for (int i = 0; i < Math.min(3, sub.size()); i++) { g.drawString(font, sub.get(i), x + 2, y, UiStyle.TEXT_FAINT, false); y += 10; }
         return y + 3;
     }
 

@@ -179,7 +179,8 @@ public final class PlayerFamily {
         heart(f);
         return FolkTalk.pick(f.getRandom(), "Walk out? With you? ...Go on, then.", "I'd like that. Don't make me regret it.",
             "Yes. I'd wondered if you'd ask.", "All right. But you're buying supper.", "I suppose I could be persuaded. I'm persuaded.",
-            "Yes. Tell nobody. Everybody will know by noon.") + fondness(f, p);
+            "Yes. Tell nobody. Everybody will know by noon.") + fondness(f, p)
+            + " (Walking out. Next: two walks, a supper and a gift; then it may say yes to 'Will you marry me?'.)";
     }
 
     static String stroll(VillageFolkEntity f, Player p) {
@@ -198,7 +199,7 @@ public final class PlayerFamily {
         heart(f);
         return FolkTalk.pick(f.getRandom(), "Lead on. Not too fast.", "Where are we going? Never mind. Anywhere.", "I know a good path. You don't.",
             "A walk. Yes. I could do with one.", "If we pass the baker's, we're stopping.", "Fine. You set the pace, I'll complain about it.")
-            + fondness(f, p);
+            + fondness(f, p) + (isCourting(f, p) ? " (" + progress(village, p.getUUID(), f) + ")" : "");
     }
 
     static String supper(VillageFolkEntity f, Player p) {
@@ -217,7 +218,8 @@ public final class PlayerFamily {
         heart(f);
         return FolkTalk.pick(f.getRandom(), "Supper. You're paying, so I'll have the pie.", "That's kind. The stew's good on a weekday.",
             "Supper with you. People will talk. Let them.", "I'll meet you there. Don't be late; I'll eat yours.",
-            "Thank you. I'll pretend I didn't see the price.", "Supper it is. I'll wear the good coat.") + fondness(f, p);
+            "Thank you. I'll pretend I didn't see the price.", "Supper it is. I'll wear the good coat.") + fondness(f, p)
+            + (isCourting(f, p) ? " (" + progress(village, p.getUUID(), f) + ")" : "");
     }
 
     /** A gift given while courting (FolkTalk.gift): counted. */
@@ -250,6 +252,15 @@ public final class PlayerFamily {
         if (!proposable(f, p)) return FolkTalk.pick(r, "Not yet. Ask me again when I'm sure.", "It's too soon. Walk with me a while longer.",
             "I'm fond of you. Not that fond. Yet.", "Give it time.", "Ask me after a few more walks.", "Not yet. Nearly.")
             + " (" + progress(village, p.getUUID(), f) + ")";
+        // It cannot be taken back: asked once, it is asked to be sure; said again within the minute, it is asked.
+        long now = f.level().getGameTime();
+        long asked = day(village, p.getUUID(), "confirmPropose");
+        if (asked < 0 || now - asked > 1200L) {
+            put(village, p.getUUID(), "confirmPropose", Long.toString(now));
+            return "(Ready: " + progress(village, p.getUUID(), f) + ". A proposal cannot be taken back: the wedding is planned for the next"
+                + " evening. Press 'Will you marry me?' again to ask.)";
+        }
+        put(village, p.getUUID(), "confirmPropose", "");
         long day = f.level().getDayTime() / 24000L;
         put(village, p.getUUID(), "court", "");
         put(village, p.getUUID(), "engaged", f.getUUID().toString());
@@ -261,7 +272,9 @@ public final class PlayerFamily {
         if (f.level() instanceof ServerLevel sl) sl.sendParticles(ParticleTypes.HEART, f.getX(), f.getY() + 2.2, f.getZ(), 8, 0.4, 0.3, 0.4, 0.0);
         return FolkTalk.pick(r, "Yes. Yes. Don't make me say it a third time.", "I will. Tomorrow evening, then. The whole town will come.",
             "Yes. I'll tell my mother. You tell nobody, I want to see their faces.", "Of course. Took you long enough.",
-            "Yes. I'll want a proper wedding, mind.", "I will. And you'll wear something clean.");
+            "Yes. I'll want a proper wedding, mind.", "I will. And you'll wear something clean.")
+            + " (Engaged. The wedding is tomorrow evening in " + (Villages.builtAt(village, "chapel") != null ? "the chapel" : "the square")
+            + ", dressed for what the town can afford; be there.)";
     }
 
     // ------------------------------------------------------------------ the wedding, and a home together
@@ -497,6 +510,14 @@ public final class PlayerFamily {
         if (clean.isEmpty() || clean.length() > 20) return "That's not a name. Try again.";
         clean = Character.toUpperCase(clean.charAt(0)) + clean.substring(1);
         if (!(((ServerLevel) f.level()).getEntity(cid) instanceof VillageFolkEntity child)) return "Where's the baby got to?";
+        // A name is for life: said once, it is asked to be sure; the same name again settles it.
+        if (!clean.equals(get(village, p.getUUID(), "confirmName"))) {
+            put(village, p.getUUID(), "confirmName", clean);
+            return clean + "? " + FolkTalk.pick(f.getRandom(), "Say it again and it's settled.", "Are you sure? Say it again.",
+                "Hm. Say it once more if you mean it.", "Once more, so I know you mean it.", "It's a name for life. Say it again.",
+                "Say it again, and that's its name.") + " (A name cannot be changed: choose 'Name the baby' with the same name to confirm.)";
+        }
+        put(village, p.getUUID(), "confirmName", "");
         child.rename(clean);
         put(village, p.getUUID(), "naming", "");
         long day = f.level().getDayTime() / 24000L;
@@ -539,6 +560,12 @@ public final class PlayerFamily {
             if (proposable(f, p)) sb.append(" proposable");
         } else if (f.life().partner() == null && f.lines().courting() == null && f.persona().affinity(p.getUUID()) >= FOND - 10) {
             sb.append(" courtable");
+            // The first time: a hint of what the new button is for.
+            if (get(village, p.getUUID(), "hinted").isEmpty()) {
+                put(village, p.getUUID(), "hinted", "1");
+                p.displayClientMessage(net.minecraft.network.chat.Component.literal("New: " + f.displayNameCap()
+                    + " likes you. You can court folk who are free: About, Home, 'Walk out with me?'."), true);
+            }
         }
         return sb.toString();
     }

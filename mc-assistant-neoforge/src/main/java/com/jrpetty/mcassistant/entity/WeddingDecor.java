@@ -291,7 +291,11 @@ public final class WeddingDecor {
         p.todo.remove(0);
         if (next.from() != null) {
             ItemStack got = Crafts.takeOne(level, v, next.from());
-            if (got.isEmpty()) return;                                    // the stores have none: it goes without
+            if (got.isEmpty()) {
+                // The stores have none: a plain wedding has wildflowers instead (picked, free); a finer one goes without.
+                if (p.tier != Tier.PLAIN) return;
+                next = new Piece(next.at(), wildflower(level.random), null, false, "wildflowers");
+            }
         }
         level.setBlock(next.at(), next.state(), 3);
         p.placed.add(next);

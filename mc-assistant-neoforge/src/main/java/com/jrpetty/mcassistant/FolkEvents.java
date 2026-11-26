@@ -90,7 +90,8 @@ public final class FolkEvents {
         Standing.View view = Standing.of(now, player.getUUID(), player.level().getGameTime());
         Component banner = Component.literal(Villages.name(now)).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
             .append(Component.literal(" · " + Villages.ageOf(now).label + " · " + Villages.headcount(now) + " people · you are "
-                + view.title().words).withStyle(ChatFormatting.WHITE));
+                + view.title().words + " · respect: " + com.jrpetty.mcassistant.entity.TownOpinion.ratingOf(now, player.getUUID(),
+                player.level().getGameTime())).withStyle(ChatFormatting.WHITE));   // [featfolk] the town's respect, from its witnesses
         player.displayClientMessage(banner, true);
         welcomeBack((ServerLevel) player.level(), player, now);
         com.jrpetty.mcassistant.entity.Identity.entered((ServerLevel) player.level(), player, now);   // [identity] its character, its laws, its welcome
@@ -113,6 +114,7 @@ public final class FolkEvents {
         double nearest = 24.0 * 24.0;
         for (VillageFolkEntity f : level.getEntitiesOfClass(VillageFolkEntity.class, player.getBoundingBox().inflate(24.0),
                 f -> f.isAlive() && !f.isSleeping() && !f.isBaby() && f.persona().rolled() && f.persona().knows(player.getUUID())
+                    && com.jrpetty.mcassistant.entity.Witness.contact(f, player.getUUID())   // [featfolk] one who has met them
                     && f.persona().affinity(player.getUUID()) >= 0)) {
             double d = f.distanceToSqr(player);
             if (d < nearest) { nearest = d; greeter = f; }

@@ -43,6 +43,13 @@ public final class SchoolDays {
         TUTOR.clear();
     }
 
+    /**
+     * The jobs work's hook (WP-B): a player who has taken the post of teacher in a town (village, player). Nothing sets it
+     * yet; when the jobs work does, School can let the player teach in place of a folk (the post is held open meanwhile by
+     * Interviews' vacancy, as for a folk).
+     */
+    public static java.util.function.BiPredicate<UUID, UUID> playerTeacher = (village, player) -> false;
+
     /** No school today: the town's day of rest (the weekend, when the calendar has one). */
     public static boolean noSchool(UUID village, long day) {
         return RestDay.today(village, day);
