@@ -35,7 +35,9 @@ public final class OfferPage implements PlayerLife.Page {
         if (parts <= 0) parts = Business.WHOLE;
         BusinessOffers.Valuation val = BusinessOffers.value(level, v.id(), b);
         page.heading("An offer for " + b.name);
-        page.text("Owned by " + b.ownersWords() + ". " + Enterprise.line(level, v.id(), b), 4);
+        Business.Day wk = b.last(Businesses.today(level), 7);
+        page.text("Owned by " + b.ownersWords() + "; trading since day " + (b.opened + 1) + ". This week: sales " + Businesses.pence(wk.revenue) + ", "
+            + (wk.net() >= 0 ? "a profit of " : "a loss of ") + Businesses.pence(Math.abs(wk.net())) + ".", 4);
         page.box("What it's worth", List.of(
             "Book value " + Businesses.pence(val.book()) + ": its stock, till and kit, less what it owes.",
             "Its last four weeks: " + (val.profit28() >= 0 ? "a profit of " : "a loss of ") + Businesses.pence(Math.abs(val.profit28())) + ".",
@@ -52,7 +54,7 @@ public final class OfferPage implements PlayerLife.Page {
             pl[i] = coins + "c (" + PRICE_W[i] + ")";
         }
         page.choice("price", "Offer", pv, pl, pv[3]);
-        page.field("own", "Or your own price (coins)", "", 6);
+        page.field("own", "Your own price", "", 6);
         page.choice("staff", "The staff", new String[]{ "1", "0" }, new String[]{ "Kept on", "Mine to change" }, "1");
         page.choice("name", "The name", new String[]{ "1", "0" }, new String[]{ "Kept", "Mine to change" }, "1");
         if (parts >= Business.WHOLE) page.choice("stays", "The owner", new String[]{ "0", "1" }, new String[]{ "Leaves", "Stays as manager" }, "0");
