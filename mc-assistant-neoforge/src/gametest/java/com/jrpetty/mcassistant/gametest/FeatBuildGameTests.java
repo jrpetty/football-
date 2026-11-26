@@ -659,7 +659,8 @@ public class FeatBuildGameTests {
             long stock = StoneYard.count(id, Items.COBBLESTONE);
             if (stock >= 8 && tick[0] > 40) {
                 Kit.Expect ok = new Kit.Expect();
-                ok.that(worst[0] < 2.0, "walked there and back, never put anywhere: longest step " + String.format("%.2f", worst[0]));
+                ok.that(worst[0] < 2.0, "walked there and back, never put anywhere: longest step " + String.format("%.2f", worst[0])
+                    + " (jumps by cause " + com.jrpetty.mcassistant.entity.Blink.byCause().keySet() + ")");
                 ok.that(Ledger.note(id, "yard.laid") != null, "the yard laid out by the quarry's hand");
                 ok.that(Long.parseLong(Ledger.note(id, "quarry.cut")) >= 8, "it cut the stone itself: " + Ledger.note(id, "quarry.cut"));
                 Kit.log("[VT] fb07 the yard holds " + StoneYard.stock(id) + " after " + tick[0] + " ticks");
@@ -668,7 +669,8 @@ public class FeatBuildGameTests {
                 helper.succeed();
             }
         });
+        com.jrpetty.mcassistant.entity.Blink.setOn(true);
         helper.runAtTickTime(5900, () -> helper.fail("no load reached the yard: " + Quarry.doingForTests(m) + " at " + m.blockPosition().toShortString()
-            + ", cut " + Ledger.note(id, "quarry.cut") + ", yard " + StoneYard.stock(id) + ", did " + did));
+            + ", cut " + Ledger.note(id, "quarry.cut") + ", yard " + StoneYard.stock(id) + ", did " + did + ", jumps " + com.jrpetty.mcassistant.entity.Blink.byCause().keySet()));
     }
 }

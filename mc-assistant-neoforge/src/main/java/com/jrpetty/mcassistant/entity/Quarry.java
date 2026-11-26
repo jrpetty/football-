@@ -407,8 +407,10 @@ public final class Quarry {
     static BlockPos[] fenceWanted(ServerLevel level, Villages.Village v, Site s, @Nullable BlockPos near) {
         BlockPos[] best = null;
         double bestD = Double.MAX_VALUE;
+        Map<Long, Long> skipped = UNREACHABLE.getOrDefault(v.id(), Map.of());
         for (BlockPos[] f : fence(level, v, s)) {
             if (!wantsWork(level, f)) continue;
+            if (near != null && skipped.containsKey(f[0].asLong())) continue;
             if (near == null) return f;
             double d = f[0].distSqr(near);
             if (d < bestD) { bestD = d; best = f; }
@@ -435,7 +437,7 @@ public final class Quarry {
         boolean postUp = st.is(BlockTags.FENCES) || st.is(BlockTags.FENCE_GATES);
         if (!postUp) {
             // Never a post under somebody's feet (they would be left standing on top of it).
-            if (!level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(f[0]).inflate(0.3, 0.0, 0.3)).isEmpty()) return false;
+            if (!level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(f[0]).deflate(0.3, 0.0, 0.3)).isEmpty()) return false;
             boolean gate = f[1] != null;
             if (!free && !TownWork.take(level, v, x -> x.is(gate ? ItemTags.FENCE_GATES : ItemTags.WOODEN_FENCES), 1)
                     && !TownWork.take(level, v, x -> x.is(ItemTags.PLANKS), gate ? 4 : 2)) return false;
@@ -699,8 +701,7 @@ public final class Quarry {
                     if (now - m.lastCut >= CUT_EVERY / 2) {
                         m.lastCut = now;
                         f.swing(InteractionHand.MAIN_HAND);
-                        if (!putFence(level, v, s, fw, false) && level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
-                                new net.minecraft.world.phys.AABB(fw[0]).inflate(0.3, 0.0, 0.3)).isEmpty()) skip(id, fw[0], now);
+                        if (!putFence(level, v, s, fw, false)) skip(id, fw[0], now);   // short of it, or somebody in the way: another post first
                     }
                     return true;
                 }
