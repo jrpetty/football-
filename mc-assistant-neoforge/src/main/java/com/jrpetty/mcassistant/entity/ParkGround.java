@@ -132,7 +132,7 @@ public final class ParkGround {
      * Any other building keeps the height it was given.
      */
     public static BlockPos floorFor(Level level, @Nullable String project, BlockPos ground) {
-        if (!isPark(project)) return ground;
+        if (!Park.isGreen(project)) return ground;                   // [featbuild] a statue garden's lawn as well
         int[] tops = new int[(2 * HALF + 1) * (2 * HALF + 1)];
         int i = 0;
         for (int dx = -HALF; dx <= HALF; dx++) {
@@ -153,7 +153,7 @@ public final class ParkGround {
      * nothing. Nothing for any other building.
      */
     public static int roughness(Level level, @Nullable String project, BlockPos floor) {
-        if (!isPark(project)) return 0;
+        if (!Park.isGreen(project)) return 0;
         int cut = 0, drop = 0;
         for (int dx = -HALF - 1; dx <= HALF + 1; dx++) {
             for (int dz = -HALF - 1; dz <= HALF + 1; dz++) {
@@ -179,7 +179,12 @@ public final class ParkGround {
      * (under the fountain, stone). The digging is a clearing marked as earth ({@link #digging}).
      */
     public static void addTo(Level level, BlockPos base, Direction facing, List<BuildGoal.Placement> plan) {
-        Park.layout(base, facing);                                     // known from now, for its water (mayPour)
+        addTo(level, base, facing, plan, Park.STRUCTURE);
+    }
+
+    /** [featbuild] As above, for a park or a statue garden. */
+    public static void addTo(Level level, BlockPos base, Direction facing, List<BuildGoal.Placement> plan, String structure) {
+        Park.layout(base, facing, structure);                          // known from now, for its water (mayPour)
         for (int i = 0; i < plan.size(); i++) {
             BuildGoal.Placement p = plan.get(i);
             if (p.part() == BuildGoal.Part.BLOCK && p.style() == Blueprints.Style.FOUNDATION && p.pos().getY() == base.getY() - 1

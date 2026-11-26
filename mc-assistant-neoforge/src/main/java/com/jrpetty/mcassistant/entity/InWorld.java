@@ -160,7 +160,7 @@ public final class InWorld implements PlayerLife.Page {
         r("decor", "info", "The town's look: the Buildings page", "page:Buildings"),
         r("townlook", "info", "The town's look: the Buildings page", "page:Buildings"),
         r("theme", "info", "The town's theme: the Buildings page", "page:Buildings"),
-        r("wall", "info", "The town's wall: the Buildings page", "page:Buildings"),
+        r("wall", "info", "The town's wall, its danger and the night watch: the Defences page (Town)", "page:Defences"),   // [featbuild]
         r("roads", "info", "Roads: the Roads page", "page:Roads"),
         r("highways", "info", "Highways: the Roads page", "page:Roads"),
         r("paths", "info", "Paths: the Roads page", "page:Roads"),

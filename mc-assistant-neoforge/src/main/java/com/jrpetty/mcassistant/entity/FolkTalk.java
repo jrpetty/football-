@@ -846,6 +846,7 @@ public final class FolkTalk {
             case "bard", "visit" -> Visitors.moodWords(f, why);        // [batchG] the bard's songs, a friend from away
             case "cold" -> Health.moodWords(f);                                     // [batchA]
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
+            case "statue", "kinstatue" -> Monuments.moodWords(f, why);                // [featbuild] a statue near, or its kin's
             case "proud" -> Museum.prideWords(f);
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "taxcut", "taxed", "arrears" -> TaxUnrest.moodWords(f, why);         // [civic-land]
