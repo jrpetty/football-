@@ -393,6 +393,67 @@ public class BlinkGameTests {
         return gone;
     }
 
+    // ============================================================ bk10: a sleeper shoved all night
+
+    /**
+     * [tp49] bk10: a folk asleep with others pressing on it all night (a crowd standing about a floor slept on in a passage,
+     * the game shoving bodies that touch) gets up at dawn and stands where it lay. The game's movement is skipped for a
+     * sleeper (FolkLod) and the night's shoves were saved up in it, a hundred and fifty blocks a tick by dawn, and spent in
+     * one tick the moment it stood: in the soak four and five folk at once shot eight blocks along the passage at daybreak,
+     * in the player's sight, "untraced".
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "bk10_sleepers_shoved")
+    public static void bk10_sleepers_shoved(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x = 6_784_000, z = 40_000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        level.setDayTime(18000L);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        BlockPos head = EmeraldGameTests.bed(level, heart.offset(4, 0, 4), net.minecraft.core.Direction.NORTH);
+        helper.assertTrue(f.claimBedNear(head), "a bed claimed");
+        f.moveTo(head.getX() + 0.5, head.getY(), head.getZ() + 1.5, 0.0F, 0.0F);
+        f.startSleeping(f.bedPos());
+        helper.assertTrue(f.isSleeping(), "asleep in its bed");
+        ServerPlayer you = watcher(helper, level, heart.getX() + 6.5, heart.getY(), heart.getZ() + 0.5);
+        com.jrpetty.mcassistant.entity.FolkLod.liveForTests(true);
+        Blink.reset();
+        Blink.setOn(true);
+        int[] ran = { 0 }, asleep = { 0 };
+        double[] most = { 0.0, 0.0 };                                         // the most it was carried in one tick: asleep, after
+        double[] was = { f.getX(), f.getY(), f.getZ() };
+        helper.onEachTick(() -> {
+            if (ran[0] < 0) return;
+            ran[0]++;
+            double moved = Math.sqrt(f.distanceToSqr(was[0], was[1], was[2]));
+            was[0] = f.getX(); was[1] = f.getY(); was[2] = f.getZ();
+            if (ran[0] <= 400) {
+                if (f.isSleeping()) {
+                    asleep[0]++;
+                    most[0] = Math.max(most[0], moved);
+                    f.push(0.03, 0.0, 0.02);                                  // a body standing in it, as the game shoves one
+                }
+                if (ran[0] == 400) f.stopSleeping();                         // dawn
+                return;
+            }
+            most[1] = Math.max(most[1], moved);
+            if (ran[0] < 420) return;
+            ran[0] = -1;
+            Kit.log("[VT] bk10 asleep " + asleep[0] + " of 400 ticks, shoved each; carried at most " + String.format("%.2f", most[0])
+                + " a tick asleep and " + String.format("%.2f", most[1]) + " the twenty ticks after it got up; seen jumps " + Blink.seenJumps()
+                + "\n" + Blink.report());
+            com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
+            letGo(level, you);
+            helper.assertTrue(asleep[0] >= 380, "asleep all night: " + asleep[0] + " of 400 ticks");
+            helper.assertTrue(most[0] < 0.1 && most[1] < 1.0, "never carried off by the night's shoves: " + most[0] + " asleep, " + most[1] + " after");
+            helper.assertTrue(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenLines());
+            helper.succeed();
+        });
+    }
+
     // ============================================================ bk11: a handcart by a wall
 
     /**
