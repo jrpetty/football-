@@ -495,13 +495,16 @@ public class TownHallGameTests {
             String wage = act(p, "minwage", form("wage", "8"));
             Kit.log("[VT] th09 wage: " + wage);
             helper.assertTrue(!wage.startsWith("!"), "the minimum wage set: " + wage);
-            com.jrpetty.mcassistant.entity.LawBook.resetLawsForTests(level, v);   // the town's first morning: its law-book
+            com.jrpetty.mcassistant.entity.Identity.seedForTests(level, v);       // the town's first morning: its law-book
+            com.jrpetty.mcassistant.entity.LawBook.resetLawsForTests(level, v);
             com.jrpetty.mcassistant.entity.LawBook.setForTests(id, com.jrpetty.mcassistant.entity.LawBook.Law.CURFEW, 0);
             act(p, "law", LifePage.args("law", "CURFEW", "n", 1));
             helper.assertTrue(PlayerLife.ctx(p).args.contains("ask"), "a law asked first");
             String law = act(p, "confirm", null);
             Kit.log("[VT] th09 law: " + law);
-            helper.assertTrue(com.jrpetty.mcassistant.entity.LawBook.curfew(id), "the curfew is law: " + law);
+            // (A test's town reads the plain laws, Identity.neutral(): the book itself holds the decree.)
+            helper.assertTrue(law.contains("now a curfew after dark") && com.jrpetty.mcassistant.entity.Identity.recForTests(id).laws[
+                com.jrpetty.mcassistant.entity.LawBook.Law.CURFEW.ordinal()] == 1, "the curfew is law: " + law);
             act(p, "referendum", form("q", "should we build a well", "qtext", ""));
             helper.assertTrue(PlayerLife.ctx(p).args.contains("ask"), "a question asked first");
             String put = act(p, "confirm", null);
