@@ -318,6 +318,9 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** [tp43] The tick of the last instant move the hooks counted; where it stood at the last tick; riding then. */
     int blinkTick = -100;
+    /** [tp49] The last shift under a hop by a call with a cause (Blink.moved), and its tick. */
+    @javax.annotation.Nullable String blinkShift;
+    int blinkShiftTick = -100;
     @javax.annotation.Nullable double[] blinkLast;
     boolean blinkRode;
     private int blinkDepth;
