@@ -222,6 +222,7 @@ public class PaKitGameTests {
         for (Map.Entry<Item, Integer> e : mat.entrySet()) {
             int n = e.getValue();
             if (e.getKey() == Items.COBBLESTONE) { a.insertItem(new ItemStack(Items.COBBLESTONE, 10)); n -= 10; }
+            if (e.getKey() == Items.TORCH) n += 3;                       // spares: it lights its own way in the dark of a roofed room
             while (n > 0 && slot < 27) { int k = Math.min(n, e.getKey().getDefaultMaxStackSize()); sc.setItem(slot++, new ItemStack(e.getKey(), k)); n -= k; }
         }
         PaStore.learn(p.getUUID(), level.dimension().location().toString(), store, "minecraft:chest", level.getGameTime());
@@ -296,11 +297,11 @@ public class PaKitGameTests {
             Villages.Village v = Villages.get(id);
             BlockPos heart = v.centre();
             f.setJob(AssistantEntity.StationTask.FARM);
-            for (int k = 0; k < 4; k++) {                                // stores: bread to sell, room for cobblestone
-                BlockPos at = Kit.surface(level, heart.getX() - 6 + 2 * k, heart.getZ() - 5);
+            for (int k = 0; k < 8; k++) {                                // stores: bread to sell (two chests), room for cobblestone
+                BlockPos at = Kit.surface(level, heart.getX() - 6 + 2 * (k % 4), heart.getZ() - 5 - 2 * (k / 4));
                 level.setBlock(at, Blocks.CHEST.defaultBlockState(), 3);
                 com.jrpetty.mcassistant.entity.ZoneChests.mark(level, at);
-                if (k == 0 && level.getBlockEntity(at) instanceof Container c) for (int i = 0; i < 27; i++) c.setItem(i, new ItemStack(Items.BREAD, 64));
+                if ((k == 0 || k == 5) && level.getBlockEntity(at) instanceof Container c) for (int i = 0; i < 27; i++) c.setItem(i, new ItemStack(Items.BREAD, 64));
             }
             Villages.forgetStores(id);
             com.jrpetty.mcassistant.entity.Budget.forget(id);
@@ -340,7 +341,8 @@ public class PaKitGameTests {
                 steps.watch(a);
                 t[0]++;
                 if (t[0] % 200 == 0) Kit.log("[VT] kit02 t" + t[0] + " stage " + run.stage + " at " + a.blockPosition() + " nearest " + run.nearestToMarket
-                    + " sold " + run.sold + " bought " + run.bought + " notes " + run.notes);
+                    + " sold " + run.sold + " bought " + run.bought + " notes " + run.notes + "; stores " + Villages.storeChests(level, id).size()
+                    + ", bread in stock " + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.BREAD)));
                 helper.assertTrue(run.stage == PaErrand.Stage.DONE && run.reported, "the errand done (" + run.stage + ")");
                 helper.assertTrue(run.nearestToMarket <= 5, "it walked to the stall: nearest " + run.nearestToMarket);
                 helper.assertTrue(run.sold.getOrDefault("minecraft:cobblestone", 0) > 0 && run.earned > 0, "it sold cobblestone: " + run.sold + " for " + run.earned + " (" + run.notes + ")");
