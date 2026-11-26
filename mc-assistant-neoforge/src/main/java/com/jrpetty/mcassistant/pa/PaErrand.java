@@ -114,6 +114,12 @@ public final class PaErrand {
         return best != null ? best : v.centre();
     }
 
+    /** Dusk to dawn. */
+    static boolean night(ServerLevel level) {
+        long t = level.getDayTime() % 24000L;
+        return t > 12500L && t < 23300L;
+    }
+
     static boolean open(ServerLevel level) {
         return hoursOffForTests || com.jrpetty.mcassistant.entity.ServiceRole.SHOP.hours.isOpen(level.getDayTime() % 24000L);
     }
@@ -134,15 +140,17 @@ public final class PaErrand {
                 if (slot < 0 || slot >= p.getInventory().getContainerSize()) return;
                 ItemStack s = p.getInventory().getItem(slot);
                 if (s.isEmpty() || Market.isCoin(s)) return;
-                if (Market.goodFor(s) == null) { PaNet.note(p, "The market doesn't buy " + s.getHoverName().getString().toLowerCase() + "."); break; }
+                if (Market.goodFor(s) == null) { PaKit.tell(p, "bad", "Not handed over: the market doesn't buy " + s.getHoverName().getString().toLowerCase() + ". Pick something a town trades in."); break; }
                 int room = PaContainers.packRoom(a, s);
-                if (room <= 0) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.er_pack_full")); break; }
+                if (room <= 0) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.er_pack_full")); PaKit.tell(p, "bad", "Not handed over: its pack is full. Take something back from To sell, or empty its pack in its Pack tab."); break; }
                 int n = Math.min(room, s.getCount());
                 ItemStack moved = s.split(n);
                 ItemStack left = a.insertItem(moved);
                 if (!left.isEmpty()) { p.getInventory().add(left); n -= left.getCount(); }
                 p.getInventory().setChanged();
                 d.sell.merge(id(moved.getItem()), n, Integer::sum);
+                PaKit.tell(p, "ok", "Handed over " + n + " " + name(moved.getItem()) + " to sell: it's in its pack now" + (left.isEmpty() ? "" : " (the rest wouldn't fit)")
+                    + ". Click it under To sell to have it back.");
             }
             case "er_back" -> {                                         // handed back
                 String id = args.getString("item");
@@ -156,12 +164,14 @@ public final class PaErrand {
                     if (!p.getInventory().add(part)) p.drop(part, false);
                 }
                 d.sell.remove(id);
+                PaKit.tell(p, "ok", "Gave you back " + took + " " + name(it) + ". It won't sell them.");
             }
             case "er_buy" -> {                                          // the shopping list
                 String id = args.getString("item");
                 if (item(id) == Items.AIR) return;
                 int n = Math.max(0, Math.min(640, d.buy.getOrDefault(id, 0) + args.getInt("by")));
                 if (n == 0) d.buy.remove(id); else d.buy.put(id, n);
+                PaKit.tell(p, "ok", n == 0 ? name(item(id)) + " is off the list." : "On the list: " + n + " " + name(item(id)) + ". It buys by the town's lot, so it may come back with a few over.");
             }
             case "er_coins" -> {                                        // coins to spend: yours into its pack, or back
                 int by = args.getInt("by");
@@ -181,17 +191,30 @@ public final class PaErrand {
                     }
                     p.getInventory().setChanged();
                     d.coins += moved;
+                    PaKit.tell(p, moved > 0 ? "ok" : "bad", moved > 0 ? "Handed it " + moved + " coins to spend. Whatever's left comes back to you with the goods." : "Not handed over: its pack had no room for coins.");
                 } else if (by < 0) {
                     int n = Math.min(-by, coinsIn(a));
                     int took = a.removeMatching(Market::isCoin, n);
                     ItemStack back = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), took);
                     while (!back.isEmpty()) { ItemStack part = back.split(Math.min(64, back.getCount())); if (!p.getInventory().add(part)) p.drop(part, false); }
                     d.coins = Math.max(0, d.coins - took);
+                    PaKit.tell(p, "ok", "Took back " + took + " coins.");
                 }
             }
             case "er_opt" -> {
                 if (args.contains("wait")) d.waitOpen = args.getBoolean("wait");
                 if (args.contains("dark")) d.homeByDark = args.getBoolean("dark");
+                PaKit.tell(p, "ok", (d.waitOpen ? "If the market's shut it waits for it to open" : "If the market's shut it comes home") + "; "
+                    + (d.homeByDark ? "night falling on the road, it turns back." : "it keeps going after dark."));
+            }
+            case "er_show" -> {
+                Run r = run(a);
+                if (r != null && r.stage != Stage.DONE) PaKit.show(p, a.blockPosition(), a.displayNameCap() + " (on its errand)");
+                else {
+                    Villages.Village v = town(p.serverLevel(), p.blockPosition());
+                    if (v == null) PaKit.tell(p, "bad", "There's no town near enough to show.");
+                    else PaKit.show(p, marketOf(p.serverLevel(), v, a.blockPosition()), "the market in " + Villages.name(v.id()));
+                }
             }
             case "er_go" -> go(p, a, d);
             case "er_call" -> callBack(a);
@@ -204,8 +227,8 @@ public final class PaErrand {
     public static boolean go(ServerPlayer p, PlayerAssistantEntity a, Draft d) {
         ServerLevel level = p.serverLevel();
         Villages.Village v = town(level, p.blockPosition());
-        if (v == null) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.er_no_town")); return false; }
-        if (d.sell.isEmpty() && d.buy.isEmpty()) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.er_nothing")); return false; }
+        if (v == null) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.er_no_town")); PaKit.tell(p, "bad", "Not sent: there's no town within about 1200 blocks."); return false; }
+        if (d.sell.isEmpty() && d.buy.isEmpty()) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.er_nothing")); PaKit.tell(p, "bad", "Not sent: nothing to sell and nothing on the list."); return false; }
         Run r = new Run();
         r.town = v.id();
         r.townName = Villages.name(v.id());
@@ -230,6 +253,7 @@ public final class PaErrand {
         String shop = list(r.buy, 3);
         String key = r.sell.isEmpty() ? "kit.er_go_buy" : r.buy.isEmpty() ? "kit.er_go_sell" : "kit.er_go";
         PaTalk.reply(a, PaLogiTalk.line(a, key, "item", r.townName, "what", what, "need", shop, "n", String.valueOf(dist)));
+        PaKit.tell(p, "ok", "Sent to " + r.townName + " (" + dist + " blocks) on foot. It sells, buys, walks back and tells you how it went. Call it back any time from here.");
         return true;
     }
 
@@ -240,6 +264,7 @@ public final class PaErrand {
         r.stage = Stage.BACK;
         r.notes.add("you called me back");
         PaTalk.reply(a, PaLogiTalk.line(a, "kit.er_called"));
+        if (a.getOwnerPlayer() instanceof ServerPlayer sp) PaKit.tell(sp, "ok", "Called back: it's walking to you with whatever it's sold and bought so far.");
     }
 
     // ------------------------------------------------------------------ words
@@ -478,7 +503,7 @@ public final class PaErrand {
 
         private void out(ServerLevel level, Run r) {
             r.nearestToMarket = Math.min(r.nearestToMarket, (int) Math.sqrt(a.blockPosition().distSqr(r.market)));
-            if (r.homeByDark && level.getDayTime() % 24000L > 12500L && level.getDayTime() % 24000L < 23000L && !r.waitOpen) {
+            if (r.homeByDark && night(level)) {
                 r.notes.add(PaLogiTalk.line(a, "kit.er_night"));
                 r.stage = Stage.BACK;
                 resetWalk();
@@ -493,7 +518,7 @@ public final class PaErrand {
             if (walk(Vec3.atBottomCenterOf(r.market), 3.5)) {
                 resetWalk();
                 if (!open(level)) {
-                    if (r.waitOpen) {
+                    if (r.waitOpen && !(r.homeByDark && night(level))) {
                         r.stage = Stage.WAIT;
                         PaTalk.comment(a, 1, PaLogiTalk.line(a, "kit.er_shut_wait", "item", r.townName), true);
                     } else {

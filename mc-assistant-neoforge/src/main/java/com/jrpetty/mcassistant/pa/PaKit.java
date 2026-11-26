@@ -27,6 +27,22 @@ public final class PaKit {
 
     public static final int KIND = 41;
 
+    /** The screen's foot strip: what happened, why, and what's next ("ok", "warn", "bad", or "" for plain). */
+    public static void tell(ServerPlayer p, String tone, String text) {
+        CompoundTag t = new CompoundTag();
+        t.putString("text", text);
+        t.putString("tone", tone);
+        send(p, "msg", t);
+    }
+
+    /** "Show me": a marker on the player's screen at a place, with how far it is. */
+    static void show(ServerPlayer p, @Nullable BlockPos at, String label) {
+        if (at == null) { tell(p, "warn", "Nothing to show just now."); return; }
+        PaNet.ping(p, at, label, "MOVE", "show");
+        int d = (int) Math.sqrt(at.distSqr(p.blockPosition()));
+        tell(p, "ok", "Marked " + label + " on your screen: " + d + " blocks away. The marker fades in under a minute.");
+    }
+
     public static void send(ServerPlayer p, String op, CompoundTag t) {
         t.putString("op", op);
         PaNet.send(p, KIND, t);
@@ -45,29 +61,70 @@ public final class PaKit {
             case "bp_copy_area" -> PaBuild.copyArea(p, a, args.getString("name"));
             case "bp_rename" -> {
                 String to = PaBuild.clean(args.getString("to"));
-                if (!to.isEmpty() && PaBlueprints.rename(p.getUUID(), args.getString("name"), to)) sendList(p, a, to);
-                else { PaNet.note(p, "That name's taken (or empty)."); sendList(p, a, args.getString("name")); }
+                if (!to.isEmpty() && PaBlueprints.rename(p.getUUID(), args.getString("name"), to)) {
+                    sendList(p, a, to);
+                    tell(p, "ok", "Renamed \"" + args.getString("name") + "\" to \"" + to + "\". Next: Place where I look to build a copy.");
+                } else {
+                    sendList(p, a, args.getString("name"));
+                    tell(p, "bad", "Not renamed: " + (to.isEmpty() ? "the name box is empty" : "you already have one called \"" + to + "\"") + ". Type another name and try again.");
+                }
             }
             case "bp_delete" -> {
                 PaBlueprints.remove(p.getUUID(), args.getString("name"));
                 PaBuild.Preview pv = PaBuild.preview(p.getUUID());
                 if (pv != null && pv.name.equalsIgnoreCase(args.getString("name"))) { PaBuild.PREVIEW.remove(p.getUUID()); ghostOff(p); }
                 sendList(p, a, "");
+                tell(p, "ok", "Deleted the blueprint \"" + args.getString("name") + "\". The building itself still stands; only the drawing's gone.");
             }
-            case "bp_select" -> sendList(p, a, args.getString("name"));
+            case "bp_select" -> {
+                sendList(p, a, args.getString("name"));
+                tell(p, "", "Picked \"" + args.getString("name") + "\": what it takes is listed, green if it has enough. Next: Place where I look.");
+            }
             case "bp_aim" -> PaBuild.aim(p, a, args.getString("name"));
             case "bp_rot", "bp_mirror", "bp_nudge", "bp_clear", "bp_cancel" -> PaBuild.adjust(p, a, op, args);
             case "bp_confirm" -> PaBuild.confirm(p, a);
             case "bp_fetch" -> PaBuild.fetchShort(p, a);
             case "bp_buy" -> PaBuild.buyShort(p, a);
-            case "bp_stop" -> { PaBuild.stop(a); PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_stopped")); }
+            case "bp_stop" -> {
+                PaBuild.stop(a);
+                PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_stopped"));
+                PaBuild.Run r0 = PaBuild.run(a);
+                tell(p, "ok", "Stopped building" + (r0 == null ? "" : " " + r0.name + " at " + (r0.placed + r0.dug) + " of " + r0.total) + ". Nothing's undone. Next: Carry on picks it up where it left off.");
+            }
+            case "bp_show" -> {
+                PaBuild.Run r0 = PaBuild.run(a);
+                PaBuild.Preview pv0 = PaBuild.preview(p.getUUID());
+                PaBlueprint bp0 = pv0 != null ? PaBlueprints.find(p.getUUID(), pv0.name) : null;
+                if (pv0 != null && bp0 != null) { int[] f = PaBlueprint.size(bp0.sx, bp0.sz, pv0.rot); show(p, pv0.anchor.offset(f[0] / 2, 0, f[1] / 2), "\"" + pv0.name + "\""); }
+                else if (r0 != null) { int[] f = PaBlueprint.size(r0.bp.sx, r0.bp.sz, r0.rot); show(p, r0.anchor.offset(f[0] / 2, 0, f[1] / 2), "the build of \"" + r0.name + "\""); }
+                else show(p, null, "");
+            }
             case "bp_resume" -> PaBuild.resume(p, a);
             case "bp_status" -> status(p, a);
             // Errand
             case "errand_open" -> sendErrand(p, a);
             // Stance
             case "st_open" -> sendStance(p, a);
-            case "st_set" -> { PaStance.set(a, PaStance.Kind.of(args.getInt("k"))); sendStance(p, a); }
+            case "st_set" -> {
+                PaStance.Kind k = PaStance.Kind.of(args.getInt("k"));
+                PaStance.set(a, k);
+                sendStance(p, a);
+                String kit = switch (k) {
+                    case SHIELD -> PaStance.hasShield(a) ? "" : " It has no shield, so it guards without blocking: hand it one in its Pack tab.";
+                    case ARCHER -> !PaStance.hasBow(a) ? " It has no bow, so it fights close: hand it a bow and arrows in its Pack tab."
+                        : a.countMatching(st -> st.is(net.minecraft.world.item.Items.ARROW)) == 0 ? " It has no arrows: hand it some in its Pack tab." : "";
+                    case MEDIC -> PaStance.remedies(a) == 0 ? " It has nothing to heal with: hand it golden apples, healing potions or food in its Pack tab." : "";
+                    default -> "";
+                };
+                tell(p, kit.isEmpty() ? "ok" : "warn", "Stance: " + k.label + ". " + k.blurb + kit + (kit.isEmpty() ? " Its nameplate shows the stance." : ""));
+            }
+            case "st_show" -> {
+                var def = PaStance.defending(a);
+                LivingEntity w0 = PaStance.ward(a);
+                if (def != null) show(p, def.centre(), com.jrpetty.mcassistant.entity.Villages.name(def.id()) + "'s square");
+                else if (w0 != null && w0 != p) show(p, w0.blockPosition(), w0.getName().getString());
+                else show(p, a.blockPosition(), a.displayNameCap());
+            }
             case "st_ward" -> {
                 int id = args.getInt("id");
                 var e = id < 0 ? null : p.level().getEntity(id);
@@ -76,46 +133,31 @@ public final class PaKit {
                 PaTalk.reply(a, r.guardWho == null ? PaLogiTalk.line(a, "kit.st_ward_you")
                     : PaLogiTalk.line(a, "kit.st_ward", "item", e.getName().getString()));
                 sendStance(p, a);
+                tell(p, "ok", r.guardWho == null ? "It guards you again." : "It guards " + e.getName().getString() + " now (while they're within 64 blocks; then you again). Show me marks them.");
             }
-            case "st_town" -> { r.helpTown = args.getBoolean("on"); PaData.touch(); sendStance(p, a); }
+            case "st_town" -> {
+                r.helpTown = args.getBoolean("on");
+                PaData.touch();
+                sendStance(p, a);
+                tell(p, "ok", r.helpTown ? "On: in a raid on a town near by it goes to the square and fights with the guards, then comes back at the all-clear."
+                    : "Off: in a raid it stays with you and fights only what comes at you.");
+            }
             default -> { }
         }
     }
 
     // ------------------------------------------------------------------ talk: a few plain words open the screens
 
-    private static final java.util.regex.Pattern COPY = java.util.regex.Pattern.compile(
-        "(?i)^(please )?(copy|blueprint|remember|save|record) (this|that|my|the) (building|house|hut|place|tower|barn|build|structure)(.*)$");
-    private static final java.util.regex.Pattern ERRAND = java.util.regex.Pattern.compile(
-        "(?i)^(please )?(run an errand|go to (the )?(market|town|shops?)|do (some|the) shopping|sell (my|this) (loot|stuff|things))(.*)$");
-    private static final java.util.regex.Pattern STANCE = java.util.regex.Pattern.compile(
-        "(?i)^(please )?(be (my|a|the) |go |switch to |take )?(shield|tank|archer|bowman|medic|healer)( stance| role)?( please)?[.!]?$");
-    private static final java.util.regex.Pattern BLUEPRINTS = java.util.regex.Pattern.compile("(?i)^(show |open )?(my )?(blueprints|stances?|combat roles?)( please)?[.!]?$");
-
     /** Words that are its own: true when heard (the order reader never sees them). */
     public static boolean heard(ServerPlayer p, PlayerAssistantEntity a, String text) {
-        String t = text.trim();
-        java.util.regex.Matcher m = COPY.matcher(t);
-        if (m.find()) {
-            String rest = m.group(5).trim();
-            String name = rest.toLowerCase(Locale.ROOT).startsWith("as ") ? rest.substring(3) : rest.toLowerCase(Locale.ROOT).startsWith("called ") ? rest.substring(7) : "";
-            PaBuild.copyLooked(p, a, name.replaceAll("[.!?]+$", ""));
-            return true;
-        }
-        if (ERRAND.matcher(t).find()) { openErrand(p, a); PaTalk.reply(a, PaLogiTalk.line(a, "kit.er_screen")); return true; }
-        m = STANCE.matcher(t);
-        if (m.find()) {
-            String w = m.group(4).toLowerCase(Locale.ROOT);
-            PaStance.set(a, w.startsWith("shield") || w.equals("tank") ? PaStance.Kind.SHIELD : w.startsWith("archer") || w.startsWith("bow") ? PaStance.Kind.ARCHER : PaStance.Kind.MEDIC);
-            return true;
-        }
-        m = BLUEPRINTS.matcher(t);
-        if (m.find()) {
-            if (m.group(3).toLowerCase(Locale.ROOT).startsWith("blueprint")) sendList(p, a, "");
-            else sendStance(p, a);
-            return true;
-        }
-        return false;
+        String r = PaKitWords.route(text);
+        if (r == null) return false;
+        if (r.startsWith("copy:")) PaBuild.copyLooked(p, a, r.substring(5));
+        else if (r.equals("errand")) { openErrand(p, a); PaTalk.reply(a, PaLogiTalk.line(a, "kit.er_screen")); }
+        else if (r.startsWith("stance:")) PaStance.set(a, PaStance.Kind.valueOf(r.substring(7)));
+        else if (r.equals("blueprints")) sendList(p, a, "");
+        else sendStance(p, a);
+        return true;
     }
 
     /** Its reply buttons: "#kit bp_fetch", "#kit bp_buy", "#kit bp_resume". */
@@ -214,7 +256,7 @@ public final class PaKit {
             t.put("run", rt);
         }
         PaBuild.Preview pv = PaBuild.preview(p.getUUID());
-        t.putBoolean("previewing", pv != null);
+        t.putBoolean("previewing", pv != null && !pv.building);
         if (pv != null) t.putString("pvname", pv.name);
     }
 

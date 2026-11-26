@@ -17,6 +17,13 @@ public final class PaKitClient {
 
     @Nullable static CompoundTag list, status, errand, stance, preview;
     static int stamp;
+    /** The foot strip's words (what happened, why, what's next) and their tone: "ok", "warn", "bad" or "". */
+    static String msg = "", tone = "";
+
+    static void note(String text, String t) {
+        msg = text == null ? "" : text;
+        tone = t == null ? "" : t;
+    }
 
     /** Send a button's op. */
     static void send(String op, CompoundTag t) {
@@ -30,16 +37,19 @@ public final class PaKitClient {
 
     /** From the Orders tab: open a screen, and ask for its state. */
     static void openBlueprints() {
+        note("", "");
         Minecraft.getInstance().setScreen(new PaBuildScreen());
         send("bp_open");
     }
 
     static void openErrand() {
+        note("", "");
         Minecraft.getInstance().setScreen(new PaErrandScreen());
         send("errand_open");
     }
 
     static void openStance() {
+        note("", "");
         Minecraft.getInstance().setScreen(new PaStanceScreen());
         send("st_open");
     }
@@ -55,6 +65,7 @@ public final class PaKitClient {
                 if (!(mc.screen instanceof PaBuildScreen)) mc.setScreen(new PaBuildScreen());
             }
             case "bp_status" -> status = d;
+            case "msg" -> note(d.getString("text"), d.getString("tone"));
             case "bp_preview" -> {
                 preview = d;
                 if (d.contains("bp") && mc.level != null) PaGhost.blueprint = PaBlueprint.loadClient(d.getCompound("bp"), mc.level);

@@ -98,4 +98,18 @@ class PaKitTest {
             assertArrayEquals(new int[]{x, z}, new int[]{cx, cz});
         }
     }
+
+    @Test
+    void itsOwnWordsAreItsOwnAndOrdersAreNot() {
+        for (String v : PaKitWords.VOICE) assertTrue(PaKitWords.route(v) != null, "its voice phrase is heard: " + v);
+        assertEquals("copy:", PaKitWords.route("copy this building"));
+        assertEquals("copy:Barn", PaKitWords.route("copy that barn as Barn"));
+        assertEquals("errand", PaKitWords.route("go to the market please"));
+        assertEquals("stance:SHIELD", PaKitWords.route("be my shield"));
+        assertEquals("stance:ARCHER", PaKitWords.route("be an archer"));
+        assertEquals("stance:MEDIC", PaKitWords.route("medic stance"));
+        assertEquals("blueprints", PaKitWords.route("show my blueprints"));
+        for (String order : List.of("build a small house here", "buy 8 bread", "sell 32 cobblestone", "guard me", "follow me", "chop 64 logs", "go home"))
+            assertEquals(null, PaKitWords.route(order), "an order stays an order: " + order);
+    }
 }

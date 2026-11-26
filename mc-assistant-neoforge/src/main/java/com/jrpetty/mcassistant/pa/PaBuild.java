@@ -72,6 +72,8 @@ public final class PaBuild {
         public BlockPos anchor = BlockPos.ZERO;
         public int rot;
         public boolean mirror, clearMine;
+        /** Confirmed: the ghost stays as the build's guide, the screen shows the build. */
+        public boolean building;
     }
 
     static final Map<UUID, Preview> PREVIEW = new ConcurrentHashMap<>();
@@ -85,6 +87,11 @@ public final class PaBuild {
     @Nullable
     public static Preview preview(UUID player) {
         return PREVIEW.get(player);
+    }
+
+    /** Tests: a ghost set as the screen's buttons would leave it. */
+    public static void rememberPreviewForTests(UUID player, Preview pv) {
+        PREVIEW.put(player, pv);
     }
 
     // ------------------------------------------------------------------ a build under way (per assistant)
@@ -185,7 +192,7 @@ public final class PaBuild {
     }
 
     /** The same block for a copy: the state itself, ignoring what only the neighbours decide (a fence's arms are the same fence). */
-    static boolean same(BlockState now, BlockState want) {
+    public static boolean same(BlockState now, BlockState want) {
         if (now == want) return true;
         if (now.getBlock() != want.getBlock()) return false;
         for (var prop : want.getProperties()) {
@@ -213,14 +220,22 @@ public final class PaBuild {
         BlockPos at = hit != null ? hit.getBlockPos() : p.blockPosition();
         var box = PaBlueprint.detect(p.serverLevel(), at);
         if (box == null && hit != null) box = PaBlueprint.detect(p.serverLevel(), p.blockPosition());
-        if (box == null) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_nothing")); return; }
+        if (box == null) {
+            PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_nothing"));
+            PaKit.tell(p, "bad", "No building found where you looked. It takes in the blocks joined to the one you look at, leaving out the ground. Next: look straight at a wall (or stand inside it) and click again.");
+            return;
+        }
         copyBox(p, a, new BlockPos(box.minX(), box.minY(), box.minZ()), new BlockPos(box.maxX(), box.maxY(), box.maxZ()), name);
     }
 
     /** "Copy this building" on the marked area (its two corners). */
     public static void copyArea(ServerPlayer p, PlayerAssistantEntity a, String name) {
         BlockPos[] c = AREA.get(p.getUUID());
-        if (c == null) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_no_area")); return; }
+        if (c == null) {
+            PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_no_area"));
+            PaKit.tell(p, "warn", "No area marked yet. Next: ping one corner on the ground, pick Mark an area on the wheel, then ping the opposite corner.");
+            return;
+        }
         // the corners are on the ground pinged: the box goes from the lower corner's level up to the building's top
         int top = Math.max(c[0].getY(), c[1].getY()) + PaBlueprint.MAX_H - 1;
         BlockPos lo = new BlockPos(Math.min(c[0].getX(), c[1].getX()), Math.min(c[0].getY(), c[1].getY()), Math.min(c[0].getZ(), c[1].getZ()));
@@ -232,13 +247,20 @@ public final class PaBuild {
         String n = clean(name);
         if (n.isEmpty()) n = PaBlueprints.freshName(p.getUUID(), "Building");
         PaBlueprint bp = PaBlueprint.capture(p.serverLevel(), lo, hi, n);
-        if (bp == null) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_nothing")); return; }
+        if (bp == null) {
+            PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_nothing"));
+            PaKit.tell(p, "bad", "Nothing built in that box: it was all ground and air. Next: mark the corners round the building itself.");
+            return;
+        }
         PaBlueprints.put(p.getUUID(), bp);
         a.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_saved", "item", bp.name, "n", String.valueOf(bp.solid()),
             "what", bp.sx + " by " + bp.sz + ", " + bp.sy + " high"));
         a.playAnim("point");
         PaKit.sendList(p, a, bp.name);
+        PaKit.tell(p, "ok", "Saved \"" + bp.name + "\": " + bp.sx + " by " + bp.sz + ", " + bp.sy + " high, " + bp.solid() + " blocks, every block's state as it stands"
+            + (bp.sx == PaBlueprint.MAX_W || bp.sz == PaBlueprint.MAX_D || bp.sy == PaBlueprint.MAX_H ? " (cut at the largest box it takes, 40 by 40 by 32)" : "")
+            + ". Chests copy empty. Next: pick it and click Place where I look.");
     }
 
     static String clean(String s) {
@@ -252,17 +274,21 @@ public final class PaBuild {
     /** "Place where I'm looking": its middle on the spot, its floor on the ground there. */
     public static void aim(ServerPlayer p, PlayerAssistantEntity a, String name) {
         PaBlueprint bp = PaBlueprints.find(p.getUUID(), name);
-        if (bp == null) { PaNet.note(p, "That blueprint has gone."); return; }
+        if (bp == null) { PaKit.tell(p, "bad", "That blueprint has gone (deleted?). Pick another in the list."); return; }
         BlockHitResult hit = looked(p);
         BlockPos at = hit == null ? p.blockPosition().relative(p.getDirection(), 4 + bp.sz / 2)
             : hit.getDirection() == Direction.UP ? hit.getBlockPos().above() : hit.getBlockPos().relative(hit.getDirection());
         Preview pv = PREVIEW.getOrDefault(p.getUUID(), new Preview());
         if (!pv.name.equalsIgnoreCase(bp.name)) { pv.rot = 0; pv.mirror = false; }
+        pv.building = false;
         pv.name = bp.name;
         int[] f = PaBlueprint.size(bp.sx, bp.sz, pv.rot);
         pv.anchor = new BlockPos(at.getX() - f[0] / 2, at.getY(), at.getZ() - f[1] / 2);
         PREVIEW.put(p.getUUID(), pv);
         PaKit.sendPreview(p, a, bp, pv, true);
+        int cl = clashes(p.serverLevel(), bp, pv).size();
+        PaKit.tell(p, cl > 0 ? "warn" : "ok", "A ghost of \"" + bp.name + "\" stands " + (hit == null ? "in front of you (you weren't looking at a block)" : "where you looked")
+            + (cl > 0 ? "; " + cl + " of your blocks are in its way (red) and it'll build round them" : "") + ". Next: Turn, Mirror or nudge it, then Build it.");
     }
 
     /** The preview's buttons: turn, mirror, nudge, clear-or-around, cancel. */
@@ -281,10 +307,24 @@ public final class PaBuild {
             case "bp_mirror" -> pv.mirror = !pv.mirror;
             case "bp_nudge" -> pv.anchor = pv.anchor.offset(clamp(args.getInt("dx")), clamp(args.getInt("dy")), clamp(args.getInt("dz")));
             case "bp_clear" -> pv.clearMine = args.getBoolean("on");
-            case "bp_cancel" -> { PREVIEW.remove(p.getUUID()); PaKit.ghostOff(p); return; }
+            case "bp_cancel" -> {
+                PREVIEW.remove(p.getUUID());
+                PaKit.ghostOff(p);
+                PaKit.tell(p, "ok", pv.building ? "Ghost hidden. The build carries on (Stop it from the build box)." : "Ghost taken away: nothing was built. Pick a blueprint to place it again.");
+                return;
+            }
             default -> { }
         }
         PaKit.sendPreview(p, a, bp, pv, false);
+        int cl = clashes(p.serverLevel(), bp, pv).size();
+        String did = switch (op) {
+            case "bp_rot" -> "Turned to " + pv.rot * 90 + " degrees.";
+            case "bp_mirror" -> pv.mirror ? "Mirrored: left and right swapped." : "Back the right way round.";
+            case "bp_nudge" -> "Moved one block.";
+            case "bp_clear" -> pv.clearMine ? "It will take down your " + cl + " blocks in the way first; they go in its pack." : "It will build round your blocks and leave them standing.";
+            default -> "";
+        };
+        PaKit.tell(p, op.equals("bp_clear") && pv.clearMine ? "warn" : "ok", did + (cl > 0 && !op.equals("bp_clear") ? " " + cl + " of your blocks in the way (red)." : "") + " Next: Build it when it looks right.");
     }
 
     private static int clamp(int v) {
@@ -384,10 +424,25 @@ public final class PaBuild {
         if (bp == null) return;
         if (!a.obeys(p)) return;
         for (PaBlueprint.Spot s : bp.spots(pv.anchor, pv.mirror, pv.rot)) {
-            if (!s.state().isAir() && PaSafety.offLimits(a, s.pos())) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_offlimits")); return; }
+            if (!s.state().isAir() && PaSafety.offLimits(a, s.pos())) {
+                PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_offlimits"));
+                PaKit.tell(p, "bad", "Not built: part of it falls on a town's ground or someone else's land. Next: nudge it or aim again somewhere that's yours.");
+                return;
+            }
         }
-        start(a, bp, pv.anchor, pv.rot, pv.mirror, pv.clearMine);
+        Run r = start(a, bp, pv.anchor, pv.rot, pv.mirror, pv.clearMine);
+        pv.building = true;
         PaKit.sendPreview(p, a, bp, pv, false);
+        PaKit.tell(p, "ok", "Building \"" + bp.name + "\": " + r.total + " blocks to see to, layer by layer from the ground up. The ghost fills in as it goes; Stop keeps its place.");
+    }
+
+    /** The build over: its ghost goes (if it is still this build's). */
+    static void endGhost(PlayerAssistantEntity a, Run r) {
+        if (a.getOwnerId() == null) return;
+        Preview pv = PREVIEW.get(a.getOwnerId());
+        if (pv == null || !pv.building || !pv.name.equalsIgnoreCase(r.name) || !pv.anchor.equals(r.anchor)) return;
+        PREVIEW.remove(a.getOwnerId());
+        if (a.getOwnerPlayer() instanceof ServerPlayer sp) PaKit.ghostOff(sp);
     }
 
     /** Start (or carry on) a build from a blueprint at a spot. Public for the tests. */
@@ -413,7 +468,7 @@ public final class PaBuild {
             a.task = null;
         }
         PaPlan.Step s = PaOrders.step("build " + bp.name + " from the blueprint", PaIntent.Kind.BUILD, Math.max(120, r.total * 2));
-        s.task = new PaTask(PaTask.Kind.BLUEPRINT, anchor, "bp:" + bp.name, r.total);
+        s.task = new PaTask(PaTask.Kind.BLUEPRINT, anchor, "bp:" + rot + ":" + (mirror ? 1 : 0) + ":" + (clearMine ? 1 : 0) + ":" + bp.name, r.total);
         s.centre = anchor;
         a.plan.steps.add(s);
         a.plan.paused = false;
@@ -421,6 +476,30 @@ public final class PaBuild {
         need.forEach((k, v) -> { int h = have.getOrDefault(k, 0); if (h < v) shortOf.put(k, v - h); });
         if (shortOf.isEmpty()) PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_start", "item", bp.name, "n", String.valueOf(r.total)));
         else PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_start_short", "item", bp.name, "what", words(shortOf, 4)), shortChoices());
+        return r;
+    }
+
+    /** After a restart (its plan kept, its run not): the run made again from the task's own note of it. */
+    @Nullable
+    static Run restore(PlayerAssistantEntity a, PaTask t) {
+        if (t.pos == null || !t.item.startsWith("bp:") || a.getOwnerId() == null) return null;
+        String[] w = t.item.substring(3).split(":", 4);
+        if (w.length < 4) return null;
+        PaBlueprint bp = PaBlueprints.find(a.getOwnerId(), w[3]);
+        if (bp == null) return null;
+        ServerLevel level = (ServerLevel) a.level();
+        Run r = new Run();
+        r.bp = bp;
+        r.name = bp.name;
+        r.anchor = t.pos;
+        r.rot = Integer.parseInt(w[0]) & 3;
+        r.mirror = w[1].equals("1");
+        r.clearMine = w[2].equals("1");
+        r.order.addAll(order(bp, r.anchor, r.mirror, r.rot));
+        r.layers = bp.sy;
+        for (Work wk : r.order) if (wanted(level, wk)) r.total++;
+        r.started = level.getGameTime();
+        RUNS.put(a.getUUID(), r);
         return r;
     }
 
@@ -448,7 +527,11 @@ public final class PaBuild {
             said.add(shortBy + " " + words);
             if (intents.size() >= 6) break;
         }
-        if (intents.isEmpty()) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_nothing_short")); return; }
+        if (intents.isEmpty()) {
+            PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_nothing_short"));
+            PaKit.tell(p, "ok", "Nothing's short: its pack and your chests near the spot have it all.");
+            return;
+        }
         // the gathering goes before the build, which waits behind it
         List<PaPlan.Step> keep = new ArrayList<>(a.plan.steps);
         a.plan.steps.clear();
@@ -457,6 +540,7 @@ public final class PaBuild {
         PaOrders.run(p, a, intents, PaOrders.Look.NONE, "get " + String.join(", ", said));
         a.plan.steps.addAll(keep);
         PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_fetching", "what", String.join(", ", said)));
+        PaKit.tell(p, "ok", "Getting " + String.join(", ", said) + " first: it crafts from your things and goes for what it can't make. The build waits behind it in Jobs.");
     }
 
     /** "Buy it at the market": what's short, on an errand's shopping list. */
@@ -469,11 +553,16 @@ public final class PaBuild {
         Map<Item, Integer> need = stillNeeded(p.serverLevel(), bp, anchor, r != null ? r.mirror : pv.mirror, r != null ? r.rot : pv.rot), have = have(a, anchor);
         Map<Item, Integer> list = new LinkedHashMap<>();
         need.forEach((k, v) -> { int s = v - have.getOrDefault(k, 0); if (s > 0) list.put(k, s); });
-        if (list.isEmpty()) { PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_nothing_short")); return; }
+        if (list.isEmpty()) {
+            PaTalk.reply(a, PaLogiTalk.line(a, "kit.bp_nothing_short"));
+            PaKit.tell(p, "ok", "Nothing's short, so nothing to buy.");
+            return;
+        }
         PaErrand.Draft d = PaErrand.draft(p.getUUID());
         d.buy.clear();
         list.forEach((k, v) -> d.buy.put(BuiltInRegistries.ITEM.getKey(k).toString(), v));
         PaKit.openErrand(p, a);
+        PaKit.tell(p, "ok", "What's short is on the shopping list: " + words(list, 4) + ". Next: give it coins and press Send.");
     }
 
     /** "Stop the build": the run kept, so "Carry on" picks it up where it was. */
@@ -487,8 +576,9 @@ public final class PaBuild {
     /** "Carry on with the build". */
     public static void resume(ServerPlayer p, PlayerAssistantEntity a) {
         Run r = run(a);
-        if (r == null) return;
-        start(a, r.bp, r.anchor, r.rot, r.mirror, r.clearMine);
+        if (r == null) { PaKit.tell(p, "warn", "There's no build to carry on with. Place a blueprint first."); return; }
+        Run n = start(a, r.bp, r.anchor, r.rot, r.mirror, r.clearMine);
+        PaKit.tell(p, "ok", "Carrying on with \"" + r.name + "\": " + n.total + " blocks still to see to.");
     }
 
     /** For the screen: the run in a tag. */

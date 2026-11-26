@@ -74,6 +74,7 @@ final class PaBuildGoal extends Goal {
     public void start() {
         t = a.task;
         run = PaBuild.run(a);
+        if (run == null && t != null) run = PaBuild.restore(a, t);          // a restart: picked up from the task's note
         cur = null;
         curIdx = -1;
         chest = null;
@@ -401,6 +402,7 @@ final class PaBuildGoal extends Goal {
         if (r.keptOfYours > 0) extra += " " + PaLogiTalk.line(a, "kit.bp_kept", "n", String.valueOf(r.keptOfYours));
         PaTalk.reply(a, (PaLogiTalk.line(a, "kit.bp_done", "item", r.name, "n", String.valueOf(r.placed), "what", mins + (mins == 1 ? " minute" : " minutes")) + extra).trim());
         a.playAnim("cheer");
+        PaBuild.endGhost(a, r);
         finish();
     }
 }

@@ -94,8 +94,8 @@ public final class PaStance {
         if (was != k) {
             PaTalk.reply(a, PaLogiTalk.line(a, "kit.st_" + k.name().toLowerCase(java.util.Locale.ROOT)));
             switch (k) {
-                case SHIELD -> { a.playAnim("block"); if (!hasShield(a)) PaTalk.comment(a, 0, PaLogiTalk.line(a, "kit.st_no_shield"), true); }
-                case ARCHER -> { a.playAnim("salute"); if (!hasBow(a)) PaTalk.comment(a, 0, PaLogiTalk.line(a, "kit.st_no_bow"), true); }
+                case SHIELD -> { a.playAnim("block"); if (!armShield(a)) PaTalk.comment(a, 0, PaLogiTalk.line(a, "kit.st_no_shield"), true); }
+                case ARCHER -> { a.playAnim("salute"); armBow(a); if (!hasBow(a)) PaTalk.comment(a, 0, PaLogiTalk.line(a, "kit.st_no_bow"), true); }
                 case MEDIC -> { a.playAnim("kneel"); if (remedies(a) == 0) PaTalk.comment(a, 0, PaLogiTalk.line(a, "kit.st_no_remedy"), true); }
                 default -> { }
             }
@@ -192,8 +192,8 @@ public final class PaStance {
             List<Mob> th = threats(a, at, town != null ? 40 : 20, w);
             if (!th.isEmpty() && (a.getTarget() == null || !a.getTarget().isAlive() || a.tickCount % 40 == 0)) {
                 Mob m = th.get(0);
-                if (k == Kind.ARCHER) armBow(a);
                 if (a.getTarget() != m) a.setTarget(m);
+                if (k == Kind.ARCHER) armBow(a);                              // after: a fresh target puts the sword in its hand
             }
         }
         // the medic keeps out of fights it didn't start: a target is let go unless it's right on top of it
