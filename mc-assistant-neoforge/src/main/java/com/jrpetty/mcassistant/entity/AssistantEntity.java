@@ -768,6 +768,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** How long this hand has been in the water, in seconds, and where it was when the count began. */
     private int wetFor;
+    /** [tp47] When it went into the water this time (-1: out of it). */
+    private long wetSince = -1;
+    /** [tp47] Looks in the water that found no bank in reach, running. */
+    private int wetNoBank;
+    /** [tp47] Looks for a bank in the water, to look further now and then. */
+    private int wetFar;
     /** [tp43] Swims for the bank in a player's sight that got it nowhere (three, and it is lifted out). */
     private int wetSwims;
     private net.minecraft.world.phys.Vec3 wetFrom = net.minecraft.world.phys.Vec3.ZERO;
@@ -782,15 +788,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * is getting somewhere, and is left to it.
      */
     private void climbOutOfTheWater() {
-        if (!isInWater() || isPassenger() || isSleeping()) { wetFor = 0; wetSwims = 0; return; }
+        if (!isInWater() || isPassenger() || isSleeping()) { wetFor = 0; wetSwims = 0; wetNoBank = 0; wetSince = -1; return; }
         if (underwaterWork()) { wetFor = 0; return; }        // [diver] down there on purpose, or being pulled out
         if (MineLift.state(getUUID()) == MineLift.State.RIDING) { wetFor = 0; wetSwims = 0; return; }   // [tp43] in the cage, at the well's foot
         if (wetFor++ == 0) wetFrom = position();
+        if (wetSince < 0) wetSince = level().getGameTime();
         // [tp43] Out of breath (a long swim, a current carrying it along the river): out at once, whatever way it was making.
         boolean drowning = getAirSupply() < getMaxAirSupply() / 3;
         // [tp46] A village's folk at its work is out within a couple of seconds (it swims only where there is no dry way, and
         // then it is left to its swim: FolkNavigation.mustSwim); others as before.
-        boolean keepDry = this instanceof VillageFolkEntity && !(getNavigation() instanceof FolkNavigation fn && fn.mustSwim());
+        boolean keepDry = this instanceof VillageFolkEntity && !(getNavigation() instanceof FolkNavigation fn && fn.mustSwim())
+            && !shallowWater(level(), blockPosition());                 // [tp47] wading a field's channel is no swim
         if (wetFor < (keepDry ? 2 : 10) && !drowning) return;
         if (!keepDry && position().distanceToSqr(wetFrom) > 36.0 && !drowning) { wetFor = 0; return; }   // making way
         if (drowning) wetSwims = 3;
@@ -799,28 +807,57 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         BlockPos here = blockPosition();
         BlockPos best = null;
         double bestScore = Double.MAX_VALUE;
-        for (int dx = -5; dx <= 5; dx++) {
-            for (int dz = -5; dz <= 5; dz++) {
-                for (int dy = 3; dy >= -1; dy--) {
-                    BlockPos feet = here.offset(dx, dy, dz);
-                    if (!level().getFluidState(feet).isEmpty() || !level().getFluidState(feet.below()).isEmpty()) continue;
-                    if (!level().getBlockState(feet).getCollisionShape(level(), feet).isEmpty()) continue;
-                    if (!level().getBlockState(feet.above()).getCollisionShape(level(), feet.above()).isEmpty()) continue;
-                    if (!level().getBlockState(feet.below()).isFaceSturdy(level(), feet.below(), net.minecraft.core.Direction.UP)) continue;
-                    // [tp46] Kept dry, the bank on its own side (where it went in), not the far one across.
-                    double score = feet.distSqr(here) + (keepDry ? Math.sqrt(feet.distToCenterSqr(wetFrom)) * 0.8
-                        : goal != null ? Math.sqrt(feet.distSqr(goal)) * 0.5 : 0)
-                        - (onWalkedGround(feet) ? 30 : 0);          // a bank that leads somewhere
-                    if (score < bestScore) { bestScore = score; best = feet; }
-                    break;
+        // [tp47] A folk kept dry with no bank within five blocks (out in a lake beside an old bridge's piers) looks further, to
+        // twelve: it swam on along the bridge after its walk for a minute, the bank never near enough to be seen.
+        int reach = keepDry && (wetFar++ % 10 == 0) ? 12 : 5;
+        for (int pass = 0; pass < 2 && best == null; pass++) {
+            int r = pass == 0 ? 5 : reach;
+            if (pass == 1 && r == 5) break;
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (pass == 1 && Math.max(Math.abs(dx), Math.abs(dz)) <= 5) continue;
+                    for (int dy = 3; dy >= -1; dy--) {
+                        BlockPos feet = here.offset(dx, dy, dz);
+                        if (!level().getFluidState(feet).isEmpty() || !level().getFluidState(feet.below()).isEmpty()) continue;
+                        if (!level().getBlockState(feet).getCollisionShape(level(), feet).isEmpty()) continue;
+                        if (!level().getBlockState(feet.above()).getCollisionShape(level(), feet.above()).isEmpty()) continue;
+                        if (!level().getBlockState(feet.below()).isFaceSturdy(level(), feet.below(), net.minecraft.core.Direction.UP)) continue;
+                        // [tp46] Kept dry, the bank on its own side (where it went in), not the far one across.
+                        double score = feet.distSqr(here) + (keepDry ? Math.sqrt(feet.distToCenterSqr(wetFrom)) * 0.8
+                            : goal != null ? Math.sqrt(feet.distSqr(goal)) * 0.5 : 0)
+                            - (onWalkedGround(feet) ? 30 : 0);          // a bank that leads somewhere
+                        if (score < bestScore) { bestScore = score; best = feet; }
+                        break;
+                    }
                 }
             }
         }
         wetFor = 0;
+        if (best == null && keepDry && ++wetNoBank >= 100) {
+            // [tp47] Kept dry, in the water ten seconds and more with no bank it could climb out on within twelve blocks (a lake
+            // under a bluff, a miner fallen in beside an old bridge's end swam half a minute and more along the cliff): out up
+            // the nearest bank there is, however high, as for its life's sake.
+            BlockPos up = StepOutOfWater.nearestBank(level(), here, 16, 24);
+            if (up != null) {
+                wetNoBank = 0;
+                wetSwims = 0;
+                Blink.safety(this, "out of the water up a bank it could not climb (no bank near)");
+                moveTo(up.getX() + 0.5, up.getY(), up.getZ() + 0.5, getYRot(), getXRot());
+                getNavigation().stop();
+                idleKick = true;
+                brain("climbed out of the water up the bank");
+                return;
+            }
+        }
+        if (best != null) wetNoBank = 0;
         if (best == null) return;
         // [tp43] In a player's sight it swims for the bank and climbs out (the game's own swim and step), never put there.
         // Thirty seconds of that and still in (a pool it cannot climb out of): lifted out for its life's sake.
-        if (this instanceof VillageFolkEntity vf && wetSwims < 3 && !Blink.mayJumpTo(this, best.getX() + 0.5, best.getZ() + 0.5, "out of the water onto the bank")) {
+        // [tp47] Reckoned in time: counted in tries, a climb up a bank too high for the lead started the count again each time
+        // (a miner swam and climbed at the foot of a bluff by an old bridge for half a day's quarter).
+        if (this instanceof VillageFolkEntity vf && Stroll.led(vf)) return;                 // (being led up the bank: let it)
+        boolean longIn = wetSince >= 0 && level().getGameTime() - wetSince > 600;
+        if (this instanceof VillageFolkEntity vf && wetSwims < 3 && !longIn && !Blink.mayJumpTo(this, best.getX() + 0.5, best.getZ() + 0.5, "out of the water onto the bank")) {
             wetSwims++;
             // The swim for it first; then, the bank a step or two over the water, it wades to it and climbs out (led, a step a
             // tick: up the bank, not lifted onto it).
@@ -839,7 +876,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             brain("swimming for the bank");
             return;
         }
-        if (wetSwims >= 3) Blink.safety(this, "out of the water after half a minute's swimming");
+        if (wetSwims >= 3 || longIn) Blink.safety(this, "out of the water after half a minute's swimming");
         wetSwims = 0;
         moveTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5, getYRot(), getXRot());
         getNavigation().stop();
@@ -3996,13 +4033,23 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      */
     @Override
     protected net.minecraft.world.phys.Vec3 maybeBackOffFromEdge(net.minecraft.world.phys.Vec3 vec, net.minecraft.world.entity.MoverType mover) {
-        if (!isSettler() || level().isClientSide || mover != net.minecraft.world.entity.MoverType.SELF || vec.y > 0.0 || !onGround()
+        if (!isSettler() || level().isClientSide || mover != net.minecraft.world.entity.MoverType.SELF
                 || onClimbable() || isInWater() || isInLava() || isPassenger() || isSleeping()) {
             return vec;
         }
+        // [tp47] In the air off a hop of its own (a jump at a step, at a block in its way) as well as on its feet: a miner at the
+        // edge of the bank under an old bridge's end hopped, and the hop carried it over the edge and down into the lake. Not
+        // one already over a drop (a step down it planned, a fall under way).
+        boolean hop = !onGround() && fallDistance < 1.0F;
+        if (!hop && (vec.y > 0.0 || !onGround())) return vec;
         double dx = vec.x, dz = vec.z;
         if (dx * dx + dz * dz < 1.0E-7) return vec;
         int limit = edgeLimit();
+        edgeMargin = 0.0;
+        if (hop && overDrop(0.0, 0.0, limit + 2)) return vec;
+        // [tp47] A tenth of a block of footing kept where it has it (where it has not, any step that keeps it on is let be).
+        edgeMargin = 0.1;
+        edgeMargin = overDrop(0.0, 0.0, limit) ? 0.0 : 0.1;
         if (!overDrop(dx, dz, limit)) return vec;
         final double step = 0.05;
         while (dx != 0.0 && overDrop(dx, 0.0, limit)) dx = Math.abs(dx) < step ? 0.0 : dx - Math.signum(dx) * step;
@@ -4021,18 +4068,36 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return !(getNavigation() instanceof FolkNavigation fn && fn.mustSwim());
     }
 
+    /**
+     * [tp47] Is this water a block deep with firm ground under it and open air over it (a field's irrigation channel, a
+     * puddle, a ford): waded, never swum, and no water to keep out of. A farmer kept from the channels across its field, or
+     * hurried out of the one at its middle, stood at its work a minute and more.
+     */
+    public static boolean shallowWater(Level level, BlockPos p) {
+        if (!level.getFluidState(p).is(net.minecraft.tags.FluidTags.WATER) || !level.getFluidState(p.above()).isEmpty()) return false;
+        BlockPos b = p.below();
+        return level.getFluidState(b).isEmpty() && level.getBlockState(b).isFaceSturdy(level, b, net.minecraft.core.Direction.UP);
+    }
+
     /** [sf] Would a step this far leave it over open air deeper than {@code limit}, with no water or ladder under it? */
+    /** [tp47] The footing the edge guard keeps under it this step (overDrop). */
+    private double edgeMargin;
+
     private boolean overDrop(double dx, double dz, int limit) {
         net.minecraft.world.phys.AABB moved = getBoundingBox().move(dx, 0.0, dz);
         // [tp46] A step straight into water (a river flush with its bank) is kept from as an edge, by a folk keeping dry.
         if (keepsDry()) {
             BlockPos under = BlockPos.containing((moved.minX + moved.maxX) / 2.0, moved.minY - 0.2, (moved.minZ + moved.maxZ) / 2.0);
             if (level().getFluidState(under).is(net.minecraft.tags.FluidTags.WATER) && level().getBlockState(under).getCollisionShape(level(), under).isEmpty()
+                        && !shallowWater(level(), under)              // [tp47] (a field's channel, a puddle: a step, not a swim)
                     || level().getFluidState(under.above()).is(net.minecraft.tags.FluidTags.WATER)
                         && level().getBlockState(under.above()).getCollisionShape(level(), under.above()).isEmpty()
                         && level().getBlockState(under).getCollisionShape(level(), under).isEmpty()) return true;
         }
-        net.minecraft.world.phys.AABB below = new net.minecraft.world.phys.AABB(moved.minX, moved.minY - limit - 0.5, moved.minZ, moved.maxX, moved.minY, moved.maxZ);
+        // [tp47] Ground under a tenth of a block of it at least, not a hair: held back to the very edge, a hop's landing left a
+        // miner on the last thousandth of the bank beside an old bridge's end, and the next tick it fell from there to the lake.
+        double m = edgeMargin;
+        net.minecraft.world.phys.AABB below = new net.minecraft.world.phys.AABB(moved.minX + m, moved.minY - limit - 0.5, moved.minZ + m, moved.maxX - m, moved.minY, moved.maxZ - m);
         if (!level().noCollision(this, below)) return false;          // ground within the drop it takes
         BlockPos.MutableBlockPos p = BlockPos.containing((moved.minX + moved.maxX) / 2.0, moved.minY, (moved.minZ + moved.maxZ) / 2.0).mutable();
         for (int i = 0; i < 32; i++) {

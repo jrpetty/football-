@@ -71,6 +71,8 @@ public final class MineWay {
         /** [tp46] The walk the way was planned along, heart first ({x, z}), and its cells' ground; null for one never cut off. */
         @Nullable List<int[]> line;
         boolean lined, relined;
+        /** [tp47] The town's ferry is out of this bridge's way (Ferries.giveWay). */
+        boolean ferryClear;
         String status = "";
         Way(BlockPos site) { this.site = site; }
     }
@@ -160,11 +162,52 @@ public final class MineWay {
             if (d < best) { best = d; near = i; }
         }
         if (near < 0 || best > 40L * 40L) return null;
-        int to = best > 6L * 6L ? near : out ? Math.min(line.size() - 1, near + 16) : Math.max(0, near - 16);
         // Nearly there: the last stretch is the pathfinder's own.
         if (out ? near >= line.size() - 4 : near <= 3) return null;
         if (!(f.level() instanceof ServerLevel level)) return null;
+        if (best > 6L * 6L) {
+            // [tp47] Off the way: onto it where it can be walked to, not merely where it is nearest (beside an old bridge out over
+            // a lake, the nearest stop was out on the bridge across the water, and a miner on the shore swam for it).
+            int on = join(level, line, f);
+            return on < 0 ? null : dryStop(level, line, on, out ? 1 : -1);
+        }
+        int to = out ? Math.min(line.size() - 1, near + 16) : Math.max(0, near - 16);
         return dryStop(level, line, to, out ? 1 : -1);
+    }
+
+    /**
+     * [tp47] Where a folk off the way gets onto it: the nearest stop on it (within forty blocks) it can walk straight to
+     * without crossing water (the ground's top between, a column at a time, the heightmap's: an old bridge's deck is ground;
+     * a deck high over the water from the shore beside it is no step). -1 if there is none.
+     */
+    private static int join(ServerLevel level, List<int[]> line, AssistantEntity f) {
+        List<long[]> near = new ArrayList<>();
+        for (int i = 0; i < line.size(); i++) {
+            long d = sq(f.getBlockX() - line.get(i)[0], f.getBlockZ() - line.get(i)[1]);
+            if (d <= 40L * 40L) near.add(new long[]{ d, i });
+        }
+        near.sort((a, b) -> Long.compare(a[0], b[0]));
+        for (long[] n : near) {
+            int[] c = line.get((int) n[1]);
+            if (dryStraight(level, f.getBlockX(), f.getBlockZ(), f.getBlockY(), c[0], c[1])) return (int) n[1];
+        }
+        return -1;
+    }
+
+    /** [tp47] Is the straight walk from here to there over dry ground, never more than a few blocks up or down a step? */
+    private static boolean dryStraight(ServerLevel level, int x0, int z0, int y0, int x1, int z1) {
+        int n = (int) Math.ceil(Math.sqrt(sq(x1 - x0, z1 - z0)));
+        int own = level.hasChunk(x0 >> 4, z0 >> 4) ? Visitors.surface(level, new BlockPos(x0, 0, z0)).getY() : y0;
+        int last = Math.abs(own - y0) <= 3 ? y0 : own;                    // (down in the works: from the ground over it)
+        for (int k = 1; k <= n; k++) {
+            int x = x0 + Math.round((x1 - x0) * k / (float) n), z = z0 + Math.round((z1 - z0) * k / (float) n);
+            if (!level.hasChunk(x >> 4, z >> 4)) return false;
+            BlockPos top = Visitors.surface(level, new BlockPos(x, 0, z));
+            if (wet(level, top)) return false;
+            if (Math.abs(top.getY() - last) > 3) return false;            // a cliff or a deck high over the ground: no step
+            last = top.getY();
+        }
+        return true;
     }
 
     /** [tp46] The stop on the line at {@code i}, or the nearest dry one past it (never a stop out in the water). */
@@ -203,9 +246,73 @@ public final class MineWay {
             if (dt < bt) { bt = dt; nt = i; }
         }
         if (nf < 0 || bf > 40L * 40L || Math.abs(nt - nf) < 6) return null;
-        int to = bf > 4L * 4L ? nf : nf + Integer.signum(nt - nf) * Math.min(12, Math.abs(nt - nf));
         if (!(f.level() instanceof ServerLevel level)) return null;
-        return dryStop(level, line, to, Integer.signum(nt - nf));
+        int to = bf > 4L * 4L ? join(level, line, f) : nf + Integer.signum(nt - nf) * Math.min(12, Math.abs(nt - nf));   // [tp47]
+        return to < 0 ? null : dryStop(level, line, to, Integer.signum(nt - nf));
+    }
+
+    /** [tp47] Steps along the way to try a leg of, the furthest first. */
+    private static final int[] LEGS = { 16, 12, 8, 5, 3 };
+
+    /**
+     * [tp47] For a folk of a town whose way to the mine is open over water (bridged, or round by a dry walk it planned): stops
+     * along the way toward the end of it its errand lies at, the furthest first, each dry (FolkNavigation: a walk planned
+     * through the water is a walk to the furthest of these it reaches dry instead). Empty when the way is none of this walk's
+     * (no line, the folk or its errand nowhere near it, both at the same end).
+     */
+    public static List<BlockPos> legs(AssistantEntity f, BlockPos target) {
+        int[] at = ends(f, target);
+        if (at == null || !(f.level() instanceof ServerLevel level)) return List.of();
+        List<int[]> line = WAYS.get(f.ownerId()).line;
+        int nf = at[0], nt = at[1], dir = Integer.signum(nt - nf);
+        List<BlockPos> out = new ArrayList<>();
+        if (at[2] > 4 * 4) {                                              // off the way: onto it first, where it can walk to it
+            int j = join(level, line, f);
+            BlockPos on = j < 0 ? null : dryStop(level, line, j, dir);
+            if (on != null) out.add(on);
+            if (j < 0) return out;                                        // (no dry way onto it from here: none along it either)
+            nf = j;
+        }
+        for (int k : LEGS) {
+            int i = nf + dir * Math.min(k, Math.abs(nt - nf));
+            BlockPos s = dryStop(level, line, i, dir);
+            if (s != null && !out.contains(s) && s.distSqr(f.blockPosition()) > 4) out.add(s);
+        }
+        return out;
+    }
+
+    /**
+     * [tp47] Is there a dry way between this folk and where it is going by its town's way to the mine: the way open (the bridge
+     * down, or none wanted), the folk and its errand each near the way, at its two ends or far along it from each other? Then
+     * a walk through the water is never its way (FolkNavigation).
+     */
+    public static boolean dryWayBetween(AssistantEntity f, BlockPos target) {
+        UUID id = f.ownerId();
+        Way w = id == null ? null : WAYS.get(id);
+        if (w == null || !w.known || !w.walkable || !w.plans.isEmpty() && !w.open) return false;
+        return ends(f, target) != null;
+    }
+
+    /** [tp47] The way's stops nearest the folk and its errand, and the folk's distance (squared) from its own; null when the
+     *  way is none of this walk's. */
+    @Nullable
+    private static int[] ends(AssistantEntity f, BlockPos target) {
+        UUID id = f.ownerId();
+        Way w = id == null ? null : WAYS.get(id);
+        if (w == null || w.line == null || w.line.size() < 8) return null;
+        List<int[]> line = w.line;
+        int nf = -1, nt = -1;
+        long bf = Long.MAX_VALUE, bt = Long.MAX_VALUE;
+        for (int i = 0; i < line.size(); i++) {
+            int[] c = line.get(i);
+            long df = sq(f.getBlockX() - c[0], f.getBlockZ() - c[1]), dt = sq(target.getX() - c[0], target.getZ() - c[1]);
+            if (df < bf) { bf = df; nf = i; }
+            if (dt < bt) { bt = dt; nt = i; }
+        }
+        if (nf < 0 || bf > 40L * 40L || Math.abs(nt - nf) < 6) return null;
+        // The errand at the way's far end, or anywhere along it out past the water from the folk.
+        if (bt > 40L * 40L && !(nt == 0 || nt == line.size() - 1)) return null;
+        return new int[]{ nf, nt, (int) Math.min(Integer.MAX_VALUE, bf) };
     }
 
     /** Is this folk over the water at its town's mine while the mine is cut off (it works there; it cannot come over to help)? */
@@ -286,8 +393,17 @@ public final class MineWay {
         if (w == null || !w.site.equals(site)) { w = new Way(site); WAYS.put(id, w); }
         long now = level.getGameTime();
         if (w.looked < 0 || now - w.looked >= LOOK_EVERY || now < w.looked) look(level, v, w);
+        // [tp47] A ferry over the water the town is to bridge on the way to its mine, at the same crossing (both put where it is
+        // narrowest), gives way to the bridge as soon as it is planned, whenever the ferry was found: its landing would be a
+        // pocket under the deck, walled off from the bank by the abutment, and nobody is rowed to the mine meanwhile anyway.
+        if (!w.plans.isEmpty()) {
+            List<BlockPos> ground = new ArrayList<>();
+            for (BridgeKit.Plan p : w.plans) for (BridgeKit.Piece pc : p.pieces) ground.add(pc.pos());
+            w.ferryClear = Ferries.giveWay(level, v, ground);
+        }
         if (!w.plans.isEmpty() && (cutOff(id) || w.walkable) && (w.built < 0 || now - w.built >= BUILD_EVERY || now < w.built)) {
             w.built = now;
+            if (!w.ferryClear) { w.status = "waiting for the ferry's last crossing"; return; }
             build(level, v, w);
         }
     }
@@ -432,11 +548,16 @@ public final class MineWay {
     /** The bank by a bridge's end: from this place along it, outward till the ground is dry (a hand stood in the river before). */
     private static BlockPos dry(ServerLevel level, BridgeKit.Shape s, int major, int out) {
         BlockPos first = Visitors.surface(level, s.at(major, 0, s.deckY()));
-        for (int k = 0; k <= 8; k++) {
+        BlockPos made = null;
+        for (int k = 0; k <= 8 + BridgeKit.MOST_RAMP; k++) {
             BlockPos p = Visitors.surface(level, s.at(major + k * out, 0, s.deckY()));
-            if (level.getFluidState(p).isEmpty() && level.getFluidState(p.below()).isEmpty()) return p;
+            if (!level.getFluidState(p).isEmpty() || !level.getFluidState(p.below()).isEmpty()) continue;
+            // [tp47] Not on the ramp: its top step laid and the steps below it not yet, the hand's stand was up on the step,
+            // three blocks over the bank, and the hand stood under it the rest of the day ("waiting for a hand, 101 off").
+            if (BridgeKit.made(level.getBlockState(p.below()))) { if (made == null) made = p; continue; }
+            return p;
         }
-        return first;
+        return made != null ? made : first;
     }
 
     private static void skipDone(ServerLevel level, BridgeKit.Plan p) {
@@ -536,9 +657,21 @@ public final class MineWay {
         w.boughtAt = now;
         int want = 0;
         for (BridgeKit.Plan p : w.plans) want += BridgeKit.planksWanted(level, p);
-        int have = w.purse[0] + Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.PLANKS))
-            + 4 * Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.LOGS)) / 2;   // (half the logs: the houses want theirs)
-        int shortBy = want - have;
+        // [tp47] The bridge's planks put by out of the stores first (sawn from their logs if need be), then bought: counted on in
+        // the stores, they were sawn and spent on the houses and the terraces before the bridge came to them, and by then the
+        // terraces had spent the treasury on brick (the bridge waited on planks two thirds of a day, its miners taken on for the
+        // town's works meanwhile, and one of them never got to the mine at all).
+        int shortBy = want - w.purse[0];
+        if (shortBy <= 0) return;
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> plank = st -> st.is(net.minecraft.tags.ItemTags.PLANKS);
+        Crafts.planks(level, v, shortBy);                                   // (the logs sawn as far as they go)
+        int put = Math.min(shortBy, Crafts.stock(level, v, plank));
+        if (put > 0 && Crafts.take(level, v, plank, put)) {
+            w.purse[0] += put;
+            shortBy -= put;
+            LOG.info("[MCA-MINEWAY] {}: put by {} planks out of the stores for the bridge on the way to the mine", Villages.name(v.id()), put);
+        }
+        int have = w.purse[0];
         if (shortBy <= 0) return;
         int got = Market.importFor(level, v, level.getDayTime() / 24000L, net.minecraft.world.item.Items.SPRUCE_PLANKS, shortBy, "the bridge on the way to the mine", false);
         if (got > 0) {

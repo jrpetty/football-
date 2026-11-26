@@ -1188,7 +1188,10 @@ public class SupplyChainGameTests {
         int air = 0, rock = 0;
         for (int y = deep.y() + 1; y < MineWorksGameTests.TOP - 1; y++) if (level.getBlockState(new BlockPos(r.sx(), y, r.sz())).isAir()) air++; else rock++;
         boolean cap = level.getBlockState(new BlockPos(r.sx(), MineWorksGameTests.TOP - 1, r.sz())).getBlock() instanceof net.minecraft.world.level.block.TrapDoorBlock;
-        boolean water = level.getBlockState(new BlockPos(r.sx(), deep.y(), r.sz())).is(Blocks.WATER);
+        // [tp47] The pool a block under the deepest stop's floor (a sump), the stop itself clear: riders at the deepest stop
+        // stood in it getting in and out of the cage.
+        boolean water = level.getBlockState(new BlockPos(r.sx(), deep.y() - 1, r.sz())).is(Blocks.WATER)
+            && level.getBlockState(new BlockPos(r.sx(), deep.y(), r.sz())).isAir();
         boolean lever = level.getBlockState(deep.lever()).is(Blocks.LEVER);
         int bars = 0;
         for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) if (level.getBlockState(new BlockPos(r.sx() + dx, deep.y() + 1, r.sz() + dz)).is(Blocks.IRON_BARS)) bars++;

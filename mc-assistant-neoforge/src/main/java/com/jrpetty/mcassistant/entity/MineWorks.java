@@ -488,6 +488,11 @@ public final class MineWorks {
         return Math.max(Math.abs(pos.getX() - w.sx), Math.abs(pos.getZ() - w.sz)) <= ROOM_OFF + ROOM_HALF + 1 || inGround(level, w, pos.getX(), pos.getZ());
     }
 
+    /** [tp47] Out on the ground's top under the sky (not down the shaft's open first steps, not in the works). */
+    static boolean onSurface(ServerLevel level, Works w, BlockPos p) {
+        return !inShaftTop(w, p) && level.canSeeSky(p.above());
+    }
+
     private static boolean inShaftTop(Works w, BlockPos pos) {
         return Math.max(Math.abs(pos.getX() - w.sx), Math.abs(pos.getZ() - w.sz)) <= RING && pos.getY() <= w.top + 3;
     }
@@ -989,6 +994,11 @@ public final class MineWorks {
         if (w == null) return null;
         BlockPos p = a.blockPosition();
         if (p.getY() >= w.top - 1 && !inShaftTop(w, p)) return null;
+        // [tp47] Under the open sky, off the shaft's head: on the surface, if lower than the pithead (the hill falling away to a
+        // lake below it), not in the works. Its way up was to the shaft's step nearest its height, in the rock thirty blocks
+        // off: the walk to it went down the hill as far as it could get toward it, to the shore under an old bridge's end,
+        // and the miner swam out of there.
+        if (onSurface(level, w, p)) return null;
         List<Lvl> plan = plan(level, w);
         List<BlockPos> best = null;
         double bestD = Double.MAX_VALUE;
@@ -1070,6 +1080,7 @@ public final class MineWorks {
         // buildings: a miner in a cellar under the square, eleven blocks under the pithead's height and roofed, was "below in
         // the works" and sent up a way that was never there, every second.
         if (p.getY() >= w.top - 2) return false;
+        if (onSurface(level, w, p)) return false;                       // [tp47] the hill under the pithead's height, in the open
         if (ground) return true;
         if (Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) > 256 || p.getY() >= w.top - 12 || level.canSeeSky(p)) return false;
         if (!MineStairs.underground(level, p)) return false;
@@ -1405,6 +1416,7 @@ public final class MineWorks {
         }
         if (w.sunk >= 2) rail(level, v, w);
         int spoil = ShaftStair.upkeep(level, w);              // [stairs44] the stair kept walkable, clear, shored and lit
+        ShaftStair.drain(level, w);                          // [tp47] and the drifts kept dry
         if (spoil > 0) { w.dug += spoil; changed = true; }
         MineLift.upkeep(level, w);                           // [econ32c] the cage, once the works are deep enough
         IronPace.tick(level, w);                             // [econ32d] poor iron levels left for the next, while the age waits on iron
@@ -1820,6 +1832,31 @@ public final class MineWorks {
             int b = 0;
             for (int[] x : d.branches) if (x[2] > 0) b++;
             out.add(new int[]{ d.id, d.level, d.by == null ? 0 : d.by.hashCode(), d.path.length(), d.turns, d.bends, b, d.closed });
+        }
+        return out;
+    }
+
+    /**
+     * [tp47] Every cell of tunnel the works have cut on every level opened (drifts, their branches, the landing rooms), at its
+     * floor height, with how high it is cut (two, a room three): the works' own ground, for keeping them dry (ShaftStair.drain).
+     */
+    static Map<Long, Integer> tunnels(ServerLevel level, Works w) {
+        Map<Long, Integer> out = new HashMap<>();
+        List<Lvl> plan = plan(level, w);
+        for (Lvl l : plan) {
+            if ((w.rooms & (1 << l.id())) != 0) for (BlockPos c : roomCells(w, l)) out.put(c.asLong(), 3);
+        }
+        for (Drift d : w.drifts) {
+            Lvl l = lvl(plan, d.level);
+            if (l == null) continue;
+            List<BlockPos> cells = d.cells(l.y());
+            for (BlockPos c : cells) out.putIfAbsent(c.asLong(), 2);
+            for (int[] b : d.branches) {
+                if (b[0] >= cells.size()) continue;
+                Direction along = dirOf(d.path.charAt(b[0]));
+                Direction o = b[1] > 0 ? along.getClockWise() : along.getCounterClockWise();
+                for (int j = 1; j <= b[2]; j++) out.putIfAbsent(cells.get(b[0]).relative(o, j).asLong(), 2);
+            }
         }
         return out;
     }

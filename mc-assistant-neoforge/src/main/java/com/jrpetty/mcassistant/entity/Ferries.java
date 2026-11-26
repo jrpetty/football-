@@ -307,6 +307,11 @@ public final class Ferries {
         switch (c.state) {
             case SURVEYED, BUILDING -> build(level, v, c, false);
             case RUNNING -> {
+                // [tp47] A landing a bridge has been laid over: the ferry's work is the bridge's (giveWay).
+                if (roofed(level, c) && !VOYAGES.containsKey(id)) {
+                    retire(level, v, c, false);
+                    return;
+                }
                 if (c.landings != 3) build(level, v, c, false);           // a landing knocked about: put right
                 if (boat(level, c) == null) moor(level, v, c, false);
                 if (ferrymanOf(level, c) == null) appoint(level, v, c);
@@ -1194,7 +1199,61 @@ public final class Ferries {
      * the fishers and the children. The chronicle has it.
      */
     static void retire(ServerLevel level, Villages.Village v, Crossing c) {
+        retire(level, v, c, true);
+    }
+
+    /**
+     * [tp47] A bridge laid over the ferry's own crossing (the town's way to its mine, bridged where the water is narrowest, as
+     * the ferry was put): its abutment walls the jetty off from the bank and its deck roofs the landing, a pocket of planks
+     * under the bridge that whoever stepped onto it could leave only by swimming (the ferryman, sent each morning to sit in
+     * the boat there, and in a town short of hands that was a miner). The ferry gives way to it before the first block is
+     * laid, once no crossing is under way; and a landing found under a deck, whoever's bridge it is, is no landing either.
+     * True once the ferry is no longer running there.
+     */
+    public static boolean giveWay(ServerLevel level, Villages.Village v, java.util.Collection<BlockPos> bridge) {
+        Crossing c = crossing(v.id());
+        if (c == null || c.state == State.RETIRED) return true;
+        if (!under(c, bridge)) return true;
+        if (VOYAGES.containsKey(v.id())) return false;                   // the boat out on the water: its crossing finished first
+        retire(level, v, c, false);
+        return true;
+    }
+
+    /** [tp47] Does this bridge's ground (its blocks' places) come over either landing, its boat's water or its jetty? */
+    private static boolean under(Crossing c, java.util.Collection<BlockPos> bridge) {
+        List<BlockPos> ours = new ArrayList<>();
+        for (int end = 0; end <= 1; end++) {
+            Direction out = end == 0 ? c.way : c.way.getOpposite();
+            for (int k = 0; k <= c.jetty; k++) ours.add(c.root(end).relative(out, k));
+        }
+        for (BlockPos b : bridge) {
+            for (BlockPos q : ours) {
+                if (Math.abs(b.getX() - q.getX()) <= 2 && Math.abs(b.getZ() - q.getZ()) <= 2 && Math.abs(b.getY() - q.getY()) <= 6) return true;
+            }
+        }
+        return false;
+    }
+
+    /** [tp47] A landing roofed over (a deck within three blocks over the stand on its jetty): no landing, a pocket. */
+    private static boolean roofed(ServerLevel level, Crossing c) {
+        for (int end = 0; end <= 1; end++) {
+            BlockPos s = c.stand(end);
+            if (!level.isLoaded(s)) continue;
+            for (int k = 1; k <= 3; k++) {
+                BlockPos q = s.above(k);
+                BlockState st = level.getBlockState(q);
+                // (A bridge's own stuff: planks, beams, stone bricks, slabs, stairs; not a lantern or a post, not a tree's leaves.)
+                if (!st.getCollisionShape(level, q).isEmpty() && BridgeKit.made(st) && !(st.getBlock() instanceof net.minecraft.world.level.block.LanternBlock)
+                        && !st.is(net.minecraft.tags.BlockTags.FENCES) && !st.is(net.minecraft.tags.BlockTags.WALLS)) return true;
+            }
+        }
+        return false;
+    }
+
+    /** @param fishOff the ferryman fishes off the old landing after (not one a bridge has roofed over) */
+    static void retire(ServerLevel level, Villages.Village v, Crossing c, boolean fishOff) {
         if (c.state == State.RETIRED) return;
+        boolean ran = c.state == State.RUNNING;
         VOYAGES.remove(v.id());
         Boat boat = boat(level, c);
         VillageFolkEntity man = ferrymanOf(level, c);
@@ -1210,7 +1269,7 @@ public final class Ferries {
         c.boat = null;
         String next = "";
         if (man != null) {
-            if (Villages.wants(v.id(), AssistantEntity.StationTask.FISH) && Villages.share(v.id(), AssistantEntity.StationTask.FISH) < 0) {
+            if (fishOff && Villages.wants(v.id(), AssistantEntity.StationTask.FISH) && Villages.share(v.id(), AssistantEntity.StationTask.FISH) < 0) {
                 man.setStation(c.stand(0), AssistantEntity.StationTask.FISH);
                 man.assignPlot(WorkZone.around(c.root(0), 6, WorkZone.DEFAULT_DEPTH), "The Old Ferry");
                 next = "fishing off the old landing";
@@ -1218,14 +1277,15 @@ public final class Ferries {
                 man.setWorkZone(null);
                 next = "a new trade, as the town wants it";
             }
-            man.persona().remember(day, "I rowed the ferry's last crossing; the bridge carries everybody now", 5);
-            FolkTalk.speak(man, FolkTalk.pick(level.getRandom(), "That's the last crossing, then. I'll miss the old boat.",
+            if (ran) man.persona().remember(day, "I rowed the ferry's last crossing; the bridge carries everybody now", 5);
+            if (ran) FolkTalk.speak(man, FolkTalk.pick(level.getRandom(), "That's the last crossing, then. I'll miss the old boat.",
                 "A bridge! Well, my arms won't miss the oars.", c.crossings + " crossings, and now a bridge. Time for something new."));
         }
         c.ferryman = null;
         save(v.id(), c);
-        Villages.tell(v.id(), day, "the ferry rowed its last crossing after " + c.crossings + " crossings and " + c.fares + " coins in fares"
+        if (ran || c.crossings > 0) Villages.tell(v.id(), day, "the ferry rowed its last crossing after " + c.crossings + " crossings and " + c.fares + " coins in fares"
             + (man == null ? "" : "; " + man.displayNameCap() + " the ferryman took up " + next));
+        else Villages.tell(v.id(), day, "the ferry to " + c.toWhat + " was given up before it ran: the town is bridging the water there");   // [tp47]
         LOG.info("[MCA-FERRY] {}: the ferry retired after {} crossings", Villages.name(v.id()), c.crossings);
     }
 
