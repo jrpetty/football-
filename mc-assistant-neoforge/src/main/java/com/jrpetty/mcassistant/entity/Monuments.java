@@ -83,6 +83,7 @@ public final class Monuments {
 
     public static void resetForTests() {
         LOOKED.clear();
+        NEXT.clear();
     }
 
     // ------------------------------------------------------------------ who is notable
@@ -138,11 +139,19 @@ public final class Monuments {
         return out;
     }
 
+    private record Next(long at, @Nullable VillageFolkEntity folk) {}
+    private static final Map<UUID, Next> NEXT = new ConcurrentHashMap<>();
+
+    /** The next to be honoured (worked out again a minute after the last time, or when a statue is raised). */
     @Nullable
     static VillageFolkEntity next(UUID town) {
+        long now = System.currentTimeMillis();
+        Next n = NEXT.get(town);
+        if (n != null && now - n.at() < 60_000L && (n.folk() == null || n.folk().isAlive())) return n.folk();
         List<Object[]> c = candidates(town);
-        if (c.isEmpty() || (Integer) c.get(0)[1] < NOTABLE) return null;
-        return (VillageFolkEntity) c.get(0)[0];
+        VillageFolkEntity f = c.isEmpty() || (Integer) c.get(0)[1] < NOTABLE ? null : (VillageFolkEntity) c.get(0)[0];
+        NEXT.put(town, new Next(now, f));
+        return f;
     }
 
     // ------------------------------------------------------------------ the gardens wanted
@@ -201,6 +210,7 @@ public final class Monuments {
         for (String[] s : statues(town)) parts.add(String.join(";", s));
         parts.add(anchor.asLong() + ";" + f.getStringUUID() + ";" + f.displayNameCap().replace(';', ' ') + ";" + day + ";" + plaque.replace(';', ' ').replace('\n', ' '));
         Ledger.note(town, STATUES, String.join("\n", parts));
+        NEXT.remove(town);
     }
 
     // ------------------------------------------------------------------ the round (every second, Raids)

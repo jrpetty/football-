@@ -625,6 +625,8 @@ public final class Quarry {
         UUID id = f.ownerId();
         long t = Math.floorMod(level.getDayTime(), 24000L);
         if (t < 1000L || t > 11500L || Raids.underAlarm(id) || TownJobs.busy(f) || Weather.stormy(level)) return release(f);
+        if (t >= 5900L && t < 6900L) return release(f);                          // the noon bell: the midday meal with everybody
+        if (RestDay.now(id, level.getDayTime()) != null) return release(f);      // the day of rest
         Villages.Village v = Villages.get(id);
         Site s = v == null ? null : site(id);
         StoneYard.Site yard = StoneYard.site(id);
