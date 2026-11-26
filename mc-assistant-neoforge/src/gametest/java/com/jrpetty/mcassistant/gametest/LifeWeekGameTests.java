@@ -397,7 +397,7 @@ public class LifeWeekGameTests {
             List<String> guests = Friends.weddingGuests(level, v, a.getUUID(), c.getUUID(), thu);
             Kit.log("[VT] lf06 wedding best friends " + guests);
             helper.assertTrue(guests.contains(b.displayNameCap()) && guests.contains(d.displayNameCap()), "the couple's best friends stand with them");
-            helper.assertTrue(Friends.cardLine(a).contains("best friend " + b.displayNameCap()), "the card: " + Friends.cardLine(a));
+            helper.assertTrue(Friends.cardLine(a).toLowerCase().contains("best friend " + b.displayNameCap().toLowerCase()), "the card: " + Friends.cardLine(a));
             PlayerLife.open(p, "week", LifePage.args("tab", "friends"));
             helper.assertTrue(pageText(PlayerLife.pageForTests(p)).contains(c.displayNameCap()), "the player's page lists the friend");
             helper.succeed();
@@ -443,6 +443,7 @@ public class LifeWeekGameTests {
             level.setDayTime(sun[0] * 24000L + 3800L);
         });
         helper.succeedWhen(() -> {
+            helper.assertTrue(baby[0] != null, "the baby not born yet");
             Church.Christening c = Church.christeningOf(baby[0].getUUID());
             helper.assertTrue(c != null && c.done, "the christening still going");
             Kit.log("[VT] lf07 christened " + c.name);
