@@ -241,8 +241,8 @@ public class PaKitGameTests {
         Steps steps = new Steps();
         List<PaBlueprint.Spot> spots = bp.spots(anchor, true, 1);
         int[] t = {0};
-        helper.onEachTick(() -> steps.watch(a));
         helper.succeedWhen(() -> {
+            steps.watch(a);
             t[0]++;
             if (t[0] % 200 == 0) Kit.log("[VT] kit01 t" + t[0] + " placed " + run.placed + " dug " + run.dug + " of " + run.total + ", layer " + run.layer
                 + ", missing " + run.missing + ", step " + a.plan.current + ", at " + a.blockPosition());
@@ -336,8 +336,8 @@ public class PaKitGameTests {
             Kit.log("[VT] kit02 sent: market " + run.market + ", heart " + heart + ", player coins " + coinsBefore + " | " + allWords(a));
             Steps steps = new Steps();
             int[] t = {0};
-            helper.onEachTick(() -> steps.watch(a));
             helper.succeedWhen(() -> {
+                steps.watch(a);
                 t[0]++;
                 if (t[0] % 200 == 0) Kit.log("[VT] kit02 t" + t[0] + " stage " + run.stage + " at " + a.blockPosition() + " nearest " + run.nearestToMarket
                     + " sold " + run.sold + " bought " + run.bought + " notes " + run.notes);
@@ -400,11 +400,9 @@ public class PaKitGameTests {
         Zombie z = zombie(level, new BlockPos(x + 12, y, Z + 2));
         z.setTarget(vil);
         boolean[] onMe = {false}, blocked = {false};
-        helper.onEachTick(() -> {
+        helper.succeedWhen(() -> {
             if (z.isAlive() && z.getTarget() == a) onMe[0] = true;
             if (a.isUsingItem() && a.getUseItem().is(Items.SHIELD)) blocked[0] = true;
-        });
-        helper.succeedWhen(() -> {
             helper.assertTrue(onMe[0], "the zombie turned on it, off the villager");
             helper.assertTrue(blocked[0], "its shield went up");
             helper.assertTrue(!z.isAlive(), "the zombie is down (" + z.getHealth() + ")");
@@ -431,8 +429,8 @@ public class PaKitGameTests {
         z.setTarget(vil);
         z.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20 * 60, 1));
         double[] closest = {Double.MAX_VALUE};
-        helper.onEachTick(() -> { if (z.isAlive()) closest[0] = Math.min(closest[0], a.distanceTo(z)); });
         helper.succeedWhen(() -> {
+            if (z.isAlive()) closest[0] = Math.min(closest[0], a.distanceTo(z));
             int shots = a.rec().shots - shots0;
             helper.assertTrue(shots >= 2, "arrows loosed: " + shots);
             helper.assertTrue(!z.isAlive(), "the zombie is down (" + z.getHealth() + ", shots " + shots + ")");
@@ -459,8 +457,8 @@ public class PaKitGameTests {
         z.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 60, 4));
         z.setTarget(vil);
         float[] most = {0};
-        helper.onEachTick(() -> most[0] = Math.max(most[0], vil.getHealth()));
         helper.succeedWhen(() -> {
+            most[0] = Math.max(most[0], vil.getHealth());
             int[] tl = PaStance.talliesForTests(a);
             helper.assertTrue(vil.isAlive(), "the villager lives");
             helper.assertTrue(tl[1] >= 1, "it treated someone: " + tl[1]);
@@ -505,13 +503,11 @@ public class PaKitGameTests {
             }
             boolean[] joined = {false}, fought = {false};
             double[] nearest = {Double.MAX_VALUE};
-            helper.onEachTick(() -> {
+            int[] t = {0};
+            helper.succeedWhen(() -> {
                 if (PaStance.defending(a) != null) joined[0] = true;
                 if (a.getTarget() instanceof Raider) fought[0] = true;
                 nearest[0] = Math.min(nearest[0], Math.sqrt(a.distanceToSqr(Vec3.atCenterOf(heart))));
-            });
-            int[] t = {0};
-            helper.succeedWhen(() -> {
                 t[0]++;
                 helper.assertTrue(joined[0], "it joined the town's defence");
                 helper.assertTrue(saidAny(a, Villages.name(id)), "and said so: " + allWords(a));
