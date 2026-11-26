@@ -182,11 +182,12 @@ public class FolkLinesGameTests {
             VillageFolkEntity child = mother.raiseChildWith(father);
             helper.assertTrue(child != null && child.isBaby(), "a child born");
             helper.assertTrue(child.blockPosition().distSqr(bed) <= 4.0, "born at home, by its mother's bed: " + child.blockPosition() + " bed " + bed);
-            // Its mother's trade, learned at her side.
-            mother.setStation(heart.offset(10, 0, 0), StationTask.FARM);
-            mother.tradeXpForTests(StationTask.FARM, AssistantEntity.xpForLevel(10));
+            // Its parent's trade, learned at its side (the parent who is not the elder: the elder never retires).
+            VillageFolkEntity parent = mother.isElder() ? father : mother;
+            parent.setStation(heart.offset(10, 0, 0), StationTask.FARM);
+            parent.tradeXpForTests(StationTask.FARM, AssistantEntity.xpForLevel(10));
             child.apprenticeForTests(StationTask.FARM);
-            Apprenticeship.lessonsForTests(child, mother, 40);
+            Apprenticeship.lessonsForTests(child, parent, 40);
             helper.assertTrue(child.lines().skill() >= Apprenticeship.QUALIFY, "its skill rises at its master's side: " + child.lines().skill());
             child.childhoodForTests(VillageFolkEntity.GROW_DAYS);
             Kit.log("[VT] fl01 grown: " + child.stationTask() + " rank " + child.lines().rank() + " skill " + child.lines().skill());
@@ -194,16 +195,16 @@ public class FolkLinesGameTests {
             helper.assertTrue(Apprenticeship.JOURNEYMAN.equals(child.lines().rank()), "as a journeyman: " + child.lines().rank());
             // Its mother, old, hands it her post and retires.
             child.setStation(heart.offset(-12, 0, 0), StationTask.FARM);
-            mother.setAgeForTests(Lineage.RETIRE_AT + 1);
-            BlockPos post = mother.stationPos();
-            com.jrpetty.mcassistant.entity.WorkZone ground = mother.workZone();
-            Lineage.daily(level, mother, level.getDayTime() / 24000L);
-            Kit.log("[VT] fl01 retired " + mother.lines().retired() + " heir post " + child.stationPos() + " inherited " + child.lines().inherited());
-            helper.assertTrue(mother.lines().retired() && mother.stationTask() == StationTask.NONE, "the old mother retires");
+            parent.setAgeForTests(Lineage.RETIRE_AT + 1);
+            BlockPos post = parent.stationPos();
+            com.jrpetty.mcassistant.entity.WorkZone ground = parent.workZone();
+            Lineage.daily(level, parent, level.getDayTime() / 24000L);
+            Kit.log("[VT] fl01 retired " + parent.lines().retired() + " heir post " + child.stationPos() + " inherited " + child.lines().inherited());
+            helper.assertTrue(parent.lines().retired() && parent.stationTask() == StationTask.NONE, "the old mother retires");
             helper.assertTrue((ground != null ? ground.center().equals(child.workZone() == null ? null : child.workZone().center()) : post.equals(child.stationPos()))
                 && child.stationTask() == StationTask.FARM, "her post and ground are her child's now");
-            helper.assertTrue(!child.lines().inherited().isEmpty() && Lineage.cardLine(mother) != null, "the card says what was handed down");
-            helper.assertTrue("Retired".equals(mother.tradeTitle()), "she is retired: " + mother.tradeTitle());
+            helper.assertTrue(!child.lines().inherited().isEmpty() && Lineage.cardLine(parent) != null, "the card says what was handed down");
+            helper.assertTrue("Retired".equals(parent.tradeTitle()), "retired: " + parent.tradeTitle());
             // Kept across a save.
             CompoundTag t = child.lines().save();
             FolkLines back = new FolkLines();
