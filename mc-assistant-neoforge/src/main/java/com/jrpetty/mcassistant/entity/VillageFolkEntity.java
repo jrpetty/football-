@@ -1761,6 +1761,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return super.mobInteract(player, hand);
         }
         if (!level().isClientSide && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            if (Tills.keeperClicked(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;       // [till] on duty at a till: the checkout
             if (StoreFloor.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;   // [econ-store]
             if (Buskers.tipFrom(this, sp, held)) return net.minecraft.world.InteractionResult.SUCCESS;     // [arms] a coin in the busker's hat
             if (Auctions.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;     // [fleet] the auctioneer's bid screen

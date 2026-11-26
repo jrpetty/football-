@@ -117,7 +117,8 @@ public final class Sellers {
     static double reputation(UUID village, @Nullable Business b) {
         if (b == null) return 0.5;
         CompoundTag r = Enterprise.rec(village, b.id);
-        return r == null ? 0.5 : r.getDouble("rep");
+        double fit = (Fittings.footfall(village, "firm:" + b.id) - 1.0) * 0.5;   // [till] a fitted-out floor is a better name
+        return Math.min(1.0, (r == null ? 0.5 : r.getDouble("rep")) + fit);
     }
 
     /** How a buyer weighs a seller: the price and the walk against its name. */

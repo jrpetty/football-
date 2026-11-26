@@ -138,7 +138,7 @@ public final class ShopCustomers {
 
     /** A shop's name brings custom: four a day at the worst, two dozen at the best. */
     static int visitsADay(PlayerShops.Shop s) {
-        return 4 + (int) Math.round(s.rep * 20);
+        return (int) Math.round((4 + s.rep * 20) * Fittings.footfall(s.village, "pshop:" + s.key()));   // [till] its fit-out brings custom
     }
 
     static boolean hasWanted(ServerLevel level, VillageFolkEntity f, PlayerShops.Shop s) {
@@ -426,6 +426,8 @@ public final class ShopCustomers {
         String whoFor = who + (payer == ItemUses.Payer.FIRM ? " (for " + best.want().need().reason().replaceFirst(" is short of.*", "") + ")"
             : payer == ItemUses.Payer.TOWN ? " (for the town)" : "");
         PlayerShops.booked(level, s, whoFor, got, best.price(), best.going());
+        Tills.rang(level, s.village, "pshop:" + s.key(), f.blockPosition(), f.displayNameCap(),
+            s.keeper != null && level.getEntity(s.keeper) instanceof VillageFolkEntity k ? k : null);   // [till] its till rings
         String lotWords = PlayerStalls.thing(got, got.getCount());
         long day = PlayerShops.today(level);
         f.brain("bought " + lotWords + " at " + s.name);

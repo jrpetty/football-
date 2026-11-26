@@ -1,0 +1,243 @@
+{
+ "parent": "minecraft:block/block",
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "minecraft:block/dark_oak_planks",
+  "wood": "minecraft:block/dark_oak_planks",
+  "rail": "minecraft:block/gold_block",
+  "foot": "minecraft:block/stripped_dark_oak_log"
+ },
+ "elements": [
+  {
+   "name": "foot_l",
+   "from": [
+    0.5,
+    0,
+    5
+   ],
+   "to": [
+    2.5,
+    1,
+    11
+   ],
+   "faces": {
+    "north": {
+     "texture": "#foot"
+    },
+    "south": {
+     "texture": "#foot"
+    },
+    "east": {
+     "texture": "#foot"
+    },
+    "west": {
+     "texture": "#foot"
+    },
+    "up": {
+     "texture": "#foot"
+    },
+    "down": {
+     "texture": "#foot"
+    }
+   }
+  },
+  {
+   "name": "foot_r",
+   "from": [
+    13.5,
+    0,
+    5
+   ],
+   "to": [
+    15.5,
+    1,
+    11
+   ],
+   "faces": {
+    "north": {
+     "texture": "#foot"
+    },
+    "south": {
+     "texture": "#foot"
+    },
+    "east": {
+     "texture": "#foot"
+    },
+    "west": {
+     "texture": "#foot"
+    },
+    "up": {
+     "texture": "#foot"
+    },
+    "down": {
+     "texture": "#foot"
+    }
+   }
+  },
+  {
+   "name": "post_l",
+   "from": [
+    1,
+    1,
+    7.5
+   ],
+   "to": [
+    2,
+    15,
+    8.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wood"
+    },
+    "south": {
+     "texture": "#wood"
+    },
+    "east": {
+     "texture": "#wood"
+    },
+    "west": {
+     "texture": "#wood"
+    },
+    "up": {
+     "texture": "#wood"
+    },
+    "down": {
+     "texture": "#wood"
+    }
+   }
+  },
+  {
+   "name": "post_r",
+   "from": [
+    14,
+    1,
+    7.5
+   ],
+   "to": [
+    15,
+    15,
+    8.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wood"
+    },
+    "south": {
+     "texture": "#wood"
+    },
+    "east": {
+     "texture": "#wood"
+    },
+    "west": {
+     "texture": "#wood"
+    },
+    "up": {
+     "texture": "#wood"
+    },
+    "down": {
+     "texture": "#wood"
+    }
+   }
+  },
+  {
+   "name": "rail",
+   "from": [
+    1,
+    14,
+    7.6
+   ],
+   "to": [
+    15,
+    14.8,
+    8.4
+   ],
+   "faces": {
+    "north": {
+     "texture": "#rail"
+    },
+    "south": {
+     "texture": "#rail"
+    },
+    "east": {
+     "texture": "#rail"
+    },
+    "west": {
+     "texture": "#rail"
+    },
+    "up": {
+     "texture": "#rail"
+    },
+    "down": {
+     "texture": "#rail"
+    }
+   }
+  },
+  {
+   "name": "finial_l",
+   "from": [
+    0.75,
+    15,
+    7.25
+   ],
+   "to": [
+    2.25,
+    16,
+    8.75
+   ],
+   "faces": {
+    "north": {
+     "texture": "#rail"
+    },
+    "south": {
+     "texture": "#rail"
+    },
+    "east": {
+     "texture": "#rail"
+    },
+    "west": {
+     "texture": "#rail"
+    },
+    "up": {
+     "texture": "#rail"
+    },
+    "down": {
+     "texture": "#rail"
+    }
+   }
+  },
+  {
+   "name": "finial_r",
+   "from": [
+    13.75,
+    15,
+    7.25
+   ],
+   "to": [
+    15.25,
+    16,
+    8.75
+   ],
+   "faces": {
+    "north": {
+     "texture": "#rail"
+    },
+    "south": {
+     "texture": "#rail"
+    },
+    "east": {
+     "texture": "#rail"
+    },
+    "west": {
+     "texture": "#rail"
+    },
+    "up": {
+     "texture": "#rail"
+    },
+    "down": {
+     "texture": "#rail"
+    }
+   }
+  }
+ ]
+}

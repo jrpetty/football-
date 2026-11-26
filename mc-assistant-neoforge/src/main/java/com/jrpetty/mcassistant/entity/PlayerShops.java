@@ -604,6 +604,7 @@ public final class PlayerShops {
         save(s);
         com.jrpetty.mcassistant.Guard.run("shop on the register", () -> PropertyDesk.register(level, s));   // [join21] the property register (PropertyMarket)
         display(level, s);
+        com.jrpetty.mcassistant.Guard.run("shop till", () -> Tills.fitShop(level, s));   // [till] its till on its counter
         if (!ShopNeeds.ready(s.needs)) return "Registered. It opens once it has everything: " + ShopNeeds.missing(s.needs) + ".";
         return first ? "Registered with the town, and ready to open! " + stateWords(level, s) + "." : "Saved.";
     }

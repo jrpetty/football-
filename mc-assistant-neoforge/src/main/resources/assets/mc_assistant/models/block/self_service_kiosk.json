@@ -1,0 +1,262 @@
+{
+ "parent": "minecraft:block/block",
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "minecraft:block/dark_oak_planks",
+  "wood": "minecraft:block/dark_oak_planks",
+  "trim": "minecraft:block/stripped_dark_oak_log",
+  "iron": "minecraft:block/iron_block",
+  "glass": "minecraft:block/black_concrete",
+  "lit": "minecraft:block/light_blue_concrete",
+  "brass": "minecraft:block/gold_block",
+  "green": "minecraft:block/lime_concrete"
+ },
+ "elements": [
+  {
+   "name": "foot",
+   "from": [
+    3,
+    0,
+    3
+   ],
+   "to": [
+    13,
+    1,
+    13
+   ],
+   "faces": {
+    "north": {
+     "texture": "#iron"
+    },
+    "south": {
+     "texture": "#iron"
+    },
+    "east": {
+     "texture": "#iron"
+    },
+    "west": {
+     "texture": "#iron"
+    },
+    "up": {
+     "texture": "#iron"
+    },
+    "down": {
+     "texture": "#iron"
+    }
+   }
+  },
+  {
+   "name": "post",
+   "from": [
+    6,
+    1,
+    6
+   ],
+   "to": [
+    10,
+    10,
+    10
+   ],
+   "faces": {
+    "north": {
+     "texture": "#trim"
+    },
+    "south": {
+     "texture": "#trim"
+    },
+    "east": {
+     "texture": "#trim"
+    },
+    "west": {
+     "texture": "#trim"
+    },
+    "up": {
+     "texture": "#trim"
+    },
+    "down": {
+     "texture": "#trim"
+    }
+   }
+  },
+  {
+   "name": "console",
+   "from": [
+    2,
+    10,
+    3
+   ],
+   "to": [
+    14,
+    12,
+    13
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wood"
+    },
+    "south": {
+     "texture": "#wood"
+    },
+    "east": {
+     "texture": "#wood"
+    },
+    "west": {
+     "texture": "#wood"
+    },
+    "up": {
+     "texture": "#wood"
+    },
+    "down": {
+     "texture": "#wood"
+    }
+   }
+  },
+  {
+   "name": "console_lip",
+   "from": [
+    2,
+    12,
+    3
+   ],
+   "to": [
+    14,
+    12.5,
+    6
+   ],
+   "faces": {
+    "north": {
+     "texture": "#brass"
+    },
+    "south": {
+     "texture": "#brass"
+    },
+    "east": {
+     "texture": "#brass"
+    },
+    "west": {
+     "texture": "#brass"
+    },
+    "up": {
+     "texture": "#brass"
+    },
+    "down": {
+     "texture": "#brass"
+    }
+   }
+  },
+  {
+   "name": "screen_box",
+   "from": [
+    3,
+    12,
+    7
+   ],
+   "to": [
+    13,
+    16,
+    12
+   ],
+   "faces": {
+    "north": {
+     "texture": "#glass"
+    },
+    "south": {
+     "texture": "#glass"
+    },
+    "east": {
+     "texture": "#glass"
+    },
+    "west": {
+     "texture": "#glass"
+    },
+    "up": {
+     "texture": "#glass"
+    },
+    "down": {
+     "texture": "#glass"
+    }
+   }
+  },
+  {
+   "name": "screen",
+   "from": [
+    4,
+    12.8,
+    6.9
+   ],
+   "to": [
+    12,
+    15.4,
+    7
+   ],
+   "faces": {
+    "north": {
+     "texture": "#lit"
+    }
+   }
+  },
+  {
+   "name": "tick",
+   "from": [
+    10,
+    13.2,
+    6.85
+   ],
+   "to": [
+    11,
+    14.2,
+    6.9
+   ],
+   "faces": {
+    "north": {
+     "texture": "#green"
+    }
+   }
+  },
+  {
+   "name": "card_slot",
+   "from": [
+    9,
+    10.5,
+    2.9
+   ],
+   "to": [
+    12.5,
+    11.5,
+    3
+   ],
+   "faces": {
+    "north": {
+     "texture": "#brass"
+    }
+   }
+  },
+  {
+   "name": "coin_tray",
+   "from": [
+    4,
+    10.6,
+    2.6
+   ],
+   "to": [
+    8,
+    11.4,
+    3
+   ],
+   "faces": {
+    "north": {
+     "texture": "#iron"
+    },
+    "up": {
+     "texture": "#iron"
+    },
+    "east": {
+     "texture": "#iron"
+    },
+    "west": {
+     "texture": "#iron"
+    }
+   }
+  }
+ ]
+}

@@ -398,6 +398,7 @@ public final class StoreFloor {
             if (!left.isEmpty()) Crafts.store(level, v, left);
         }
         VillageFolkEntity server = lastServer(id);
+        Tills.rang(level, id, "town:shop", post.counter(), buyer.displayNameCap(), server);   // [till] "Serving: Hazel"
         buyer.brain("bought " + Bench.words(got.get(0).getItem(), n) + " at " + (Store.stands(id) ? "the store" : "the shop")
             + (server != null ? ", served by " + server.displayNameCap() : ""));
         return new Sale(true, server, post.counter(), price, got.get(0).copyWithCount(n), "");
