@@ -104,6 +104,11 @@ public final class LifeTown implements PlayerLife.Page {
             .button("What's for sale?", "say", LifePage.args("t", "Is there a house for sale?"))
             .button("Buy the one I'm in", "buyhouse", null)
             .button("Collect rent", "rent", null, houses[0] > 0, "You own no house here");
+        if (houses[0] > 0) {                                                 // [wpa] letting a house: a button, never typed
+            page.choice("letrent", "Let it for", new String[]{ "2", "3", "4", "5", "6", "8" },
+                new String[]{ "2 coins a day", "3 coins a day", "4 coins a day", "5 coins a day", "6 coins a day", "8 coins a day" }, "3");
+            page.buttons().button("Let my house to a household", "let", null);
+        }
         // [wpa] The Town Hall: the town's book, your papers, and your first week.
         page.heading("The Town Hall");
         boolean onBook = Belonging.registered(id, p.getUUID());
@@ -163,6 +168,7 @@ public final class LifeTown implements PlayerLife.Page {
             case "buyhouse" -> { return Homes.playerBuys(level, p); }
             case "envoy" -> { return PlayerLife.command(p, "village leader envoy " + (args.getBoolean("yes") ? "yes" : "no")); }
             case "rent" -> { return Homes.playerCollects(level, p); }
+            case "let" -> { return Homes.playerLets(level, p, ShopPage.parse(args.getCompound("f").getString("letrent"), 3)); }   // [wpa]
             default -> { return null; }
         }
     }

@@ -48,8 +48,7 @@ public final class TownHall implements PlayerLife.Page {
     public static volatile BiFunction<ServerPlayer, UUID, Boolean> ELECTIONS = null;
 
     /** The tabs: id and label. Kept short so they fit across the page at GUI scale 3 (ScreenFitTest). */
-    public static final String[][] TABS = { { "join", "Join" }, { "citizen", "Citizen" }, { "duties", "Duties" }, { "money", "Money" },
-        { "respect", "Respect" }, { "week", "Week" }, { "office", "Office" } };
+    public static final String[][] TABS = com.jrpetty.mcassistant.client.HallLayout.TABS;
 
     /** The amounts the money tab offers. */
     static final String[] AMOUNTS = { "5", "10", "20", "50", "100" };
@@ -753,6 +752,11 @@ public final class TownHall implements PlayerLife.Page {
                 "That's you, is it? Fair likeness.", "Keep those somewhere dry.");
         }
         return null;
+    }
+
+    /** Tests: a question put to the town, as the council would put one, voted on that day. Returns its id. */
+    public static int questionForTests(ServerLevel level, Villages.Village v, String title, long voteDay) {
+        return Referendums.call(level, v, "TEST", "test", title, "the council", "", "", "", voteDay, null).getInt("id");
     }
 
     /** Tests: the tab labels as drawn, in order (every one, the Office's too). */

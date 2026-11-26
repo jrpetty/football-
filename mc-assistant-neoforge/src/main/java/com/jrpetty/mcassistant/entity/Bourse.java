@@ -464,7 +464,7 @@ public final class Bourse {
     /** A player buys so many shares of a firm off the cheapest asks standing (folk's, issues, players'). */
     public static String playerBuys(ServerLevel level, Player p, UUID village, String firm, int n) {
         Business b = find(village, firm);
-        if (b == null) return "No firm by that name on the bourse. /village capital shares lists them.";
+        if (b == null) return "No firm by that name on the bourse. Everything you can do, its Capital tab, lists them.";
         long day = level.getDayTime() / 24000L;
         List<CompoundTag> asks = new ArrayList<>();
         for (Tag t : orders(village)) {
@@ -527,7 +527,7 @@ public final class Bourse {
         }
         orders(village).removeIf(t -> ((CompoundTag) t).getInt("n") <= 0);
         int sold = before - ask.getInt("n");
-        return (sold > 0 ? "Sold " + sold + " shares of " + b.name + "; the coin waits for you at the hall (/village capital bonds collect). " : "")
+        return (sold > 0 ? "Sold " + sold + " shares of " + b.name + "; the coin waits for you at the hall (the Town Hall's Money tab: Collect what's due). " : "")
             + (ask.getInt("n") > 0 ? ask.getInt("n") + " stand for sale at " + Businesses.pence(price) + " a share for " + PLAYER_ASK_DAYS + " days." : "");
     }
 

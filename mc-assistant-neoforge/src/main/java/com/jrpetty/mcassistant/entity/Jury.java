@@ -137,10 +137,33 @@ public final class Jury {
         return out;
     }
 
+    /** Cases the court has heard and now waits on the jury for. */
+    private static final java.util.Set<Integer> WAITING = ConcurrentHashMap.newKeySet();
+
+    /** The court has heard the case and waits on the jury: told to the jurors who haven't given their word. */
+    static void heard(int caseId) {
+        WAITING.add(caseId);
+        Map<UUID, Boolean> s = SEATS.get(caseId);
+        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (s == null || server == null) return;
+        for (Map.Entry<UUID, Boolean> e : s.entrySet()) {
+            if (e.getValue() != null) continue;
+            ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
+            if (p != null) p.sendSystemMessage(Component.literal("The court has heard the case and waits on the jury: give your verdict on the Town Hall's Duties tab.")
+                .withStyle(ChatFormatting.GOLD));
+        }
+    }
+
+    /** Is the court waiting on this case's jury now? */
+    public static boolean waiting(int caseId) {
+        return WAITING.contains(caseId);
+    }
+
     /** The verdict given: the jury thanked and stood down. */
     static void close(ServerLevel level, int caseId, boolean guilty) {
         Map<UUID, Boolean> s = SEATS.remove(caseId);
         Object[] w = WHERE.remove(caseId);
+        WAITING.remove(caseId);
         if (s == null || w == null) return;
         UUID village = (UUID) w[0];
         for (Map.Entry<UUID, Boolean> e : s.entrySet()) {
@@ -166,5 +189,6 @@ public final class Jury {
     public static void resetForTests() {
         SEATS.clear();
         WHERE.clear();
+        WAITING.clear();
     }
 }

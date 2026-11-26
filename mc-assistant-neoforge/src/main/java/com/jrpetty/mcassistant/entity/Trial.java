@@ -270,7 +270,7 @@ final class Trial {
             return;
         }
         if (s.jury) {                                                        // [wpa] the jury's word, then the verdict
-            if (s.juryFrom == 0) s.juryFrom = gt;
+            if (s.juryFrom == 0) { s.juryFrom = gt; Jury.heard(c.id); }
             if (!Jury.ready(c.id) && gt - s.juryFrom < (Crime.hurry ? 200 : Jury.WAIT)) return;
             int[] j = Jury.tally(c.id);
             s.ayes += j[0];

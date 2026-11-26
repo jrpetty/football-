@@ -44,6 +44,31 @@ class ScreenFitTest {
         }
     }
 
+    /** [wpa] The Town Hall's tabs, all seven (a leader's Office too), in one row at every GUI size; the longest rows of
+     *  buttons on its pages and on the arrival card inside the page. */
+    @Test
+    void theTownHallFitsAtEveryScale() {
+        for (int[] size : ScreenFit.GUI_SIZES) {
+            int page = HallLayout.pageWidth(size[0]);
+            assertTrue(HallLayout.stripWidth(HallLayout.TABS) <= page - 8, "the hall's tabs at " + size[0] + "x" + size[1] + ": "
+                + HallLayout.stripWidth(HallLayout.TABS) + " in " + page);
+            String[][] rows = {
+                { "Show me the Town Hall", "Your life in town", "The Guide" },
+                { "Elections and the ballot", "Stand for election" },
+                { "Guilty", "Not guilty", "Show me the court" },
+                { "Save", "Withdraw", "Borrow", "Repay" },
+                { "Tithe -2", "Tithe +2", "Wages -5", "Wages +5" },
+                { "Hire a man (2c a day)", "Release them all" },
+                { "Where's my manor?", "A grander manor" },
+                { "Not now", "Your life in town" },
+                { "Show my name over my head", "The Town Hall" } };
+            for (String[] r : rows) {
+                assertTrue(HallLayout.buttonsWidth(r) <= HallLayout.rowRoom(size[0]), String.join(" | ", r) + " at " + size[0] + ": "
+                    + HallLayout.buttonsWidth(r) + " in " + HallLayout.rowRoom(size[0]));
+            }
+        }
+    }
+
     @Test
     void aPanelNeverOutgrowsItsScreen() {
         for (int[] size : ScreenFit.GUI_SIZES) {
