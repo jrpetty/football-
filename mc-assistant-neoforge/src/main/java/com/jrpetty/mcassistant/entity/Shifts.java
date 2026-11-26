@@ -533,7 +533,7 @@ public final class Shifts {
     static void second(ServerLevel level, ServerPlayer p, Shift s) {
         long now = level.getGameTime();
         Villages.Village v = Villages.get(s.village);
-        if (v == null || !p.isAlive()) { end(level, p, s, "The town is gone."); return; }
+        if (v == null || !p.isAlive()) { end(level, p, s, v == null ? "The town is gone." : "You were knocked out."); return; }   // [wpb] the right reason
         if (now >= s.ends) { end(level, p, s, "The shift's hours are up."); return; }
         if (Raids.underAlarm(s.village) && s.role != ShiftRole.WATCH) { end(level, p, s, "The bell rang: everybody to safety."); return; }
         boolean roams = s.role == ShiftRole.HAUL || s.role == ShiftRole.SMELT || s.role == ShiftRole.FARM || s.role == ShiftRole.WATCH
