@@ -1,0 +1,848 @@
+{
+ "parent": "minecraft:block/block",
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "minecraft:block/dark_oak_planks",
+  "body": "minecraft:block/dark_oak_planks",
+  "top": "minecraft:block/spruce_planks",
+  "trim": "minecraft:block/stripped_dark_oak_log",
+  "page": "minecraft:block/white_concrete",
+  "cover": "minecraft:block/red_terracotta",
+  "ink": "minecraft:block/black_concrete",
+  "gold": "minecraft:block/gold_block",
+  "board": "minecraft:block/oak_planks",
+  "post": "minecraft:block/dark_oak_log"
+ },
+ "elements": [
+  {
+   "name": "desk",
+   "from": [
+    1,
+    0,
+    2
+   ],
+   "to": [
+    15,
+    12,
+    14
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      1,
+      4,
+      15,
+      16
+     ],
+     "texture": "#body"
+    },
+    "south": {
+     "uv": [
+      1,
+      4,
+      15,
+      16
+     ],
+     "texture": "#body"
+    },
+    "east": {
+     "uv": [
+      2,
+      4,
+      14,
+      16
+     ],
+     "texture": "#body"
+    },
+    "west": {
+     "uv": [
+      2,
+      4,
+      14,
+      16
+     ],
+     "texture": "#body"
+    },
+    "down": {
+     "uv": [
+      1,
+      2,
+      15,
+      14
+     ],
+     "texture": "#body",
+     "cullface": "down"
+    }
+   }
+  },
+  {
+   "name": "plinth",
+   "from": [
+    0.5,
+    0,
+    1.5
+   ],
+   "to": [
+    15.5,
+    1.5,
+    14.5
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      14,
+      16,
+      16
+     ],
+     "texture": "#trim"
+    },
+    "south": {
+     "uv": [
+      0,
+      14,
+      16,
+      16
+     ],
+     "texture": "#trim"
+    },
+    "east": {
+     "uv": [
+      0,
+      14,
+      16,
+      16
+     ],
+     "texture": "#trim"
+    },
+    "west": {
+     "uv": [
+      0,
+      14,
+      16,
+      16
+     ],
+     "texture": "#trim"
+    },
+    "up": {
+     "uv": [
+      0,
+      1,
+      16,
+      15
+     ],
+     "texture": "#trim"
+    },
+    "down": {
+     "uv": [
+      0,
+      1,
+      16,
+      15
+     ],
+     "texture": "#trim",
+     "cullface": "down"
+    }
+   }
+  },
+  {
+   "name": "drawer",
+   "from": [
+    3,
+    6,
+    1.5
+   ],
+   "to": [
+    13,
+    10,
+    2
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      3,
+      6,
+      13,
+      10
+     ],
+     "texture": "#trim"
+    },
+    "east": {
+     "uv": [
+      0,
+      6,
+      1,
+      10
+     ],
+     "texture": "#trim"
+    },
+    "west": {
+     "uv": [
+      0,
+      6,
+      1,
+      10
+     ],
+     "texture": "#trim"
+    },
+    "up": {
+     "uv": [
+      3,
+      0,
+      13,
+      1
+     ],
+     "texture": "#trim"
+    },
+    "down": {
+     "uv": [
+      3,
+      0,
+      13,
+      1
+     ],
+     "texture": "#trim"
+    }
+   }
+  },
+  {
+   "name": "knob",
+   "from": [
+    7.5,
+    7.5,
+    1
+   ],
+   "to": [
+    8.5,
+    8.5,
+    1.5
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "texture": "#gold"
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "texture": "#gold"
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "texture": "#gold"
+    },
+    "up": {
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "texture": "#gold"
+    },
+    "down": {
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "texture": "#gold"
+    }
+   }
+  },
+  {
+   "name": "top",
+   "from": [
+    0,
+    12,
+    1
+   ],
+   "to": [
+    16,
+    14,
+    15
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      2,
+      16,
+      4
+     ],
+     "texture": "#top"
+    },
+    "south": {
+     "uv": [
+      0,
+      2,
+      16,
+      4
+     ],
+     "texture": "#top"
+    },
+    "east": {
+     "uv": [
+      1,
+      2,
+      15,
+      4
+     ],
+     "texture": "#top"
+    },
+    "west": {
+     "uv": [
+      1,
+      2,
+      15,
+      4
+     ],
+     "texture": "#top"
+    },
+    "up": {
+     "uv": [
+      0,
+      1,
+      16,
+      15
+     ],
+     "texture": "#top"
+    },
+    "down": {
+     "uv": [
+      0,
+      1,
+      16,
+      15
+     ],
+     "texture": "#top"
+    }
+   }
+  },
+  {
+   "name": "ledger cover",
+   "from": [
+    3.5,
+    14,
+    4.5
+   ],
+   "to": [
+    12.5,
+    14.5,
+    11.5
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      9,
+      1
+     ],
+     "texture": "#cover"
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      9,
+      1
+     ],
+     "texture": "#cover"
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      7,
+      1
+     ],
+     "texture": "#cover"
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      7,
+      1
+     ],
+     "texture": "#cover"
+    },
+    "up": {
+     "uv": [
+      3,
+      4,
+      12,
+      11
+     ],
+     "texture": "#cover"
+    }
+   }
+  },
+  {
+   "name": "left page",
+   "from": [
+    4,
+    14.5,
+    5
+   ],
+   "to": [
+    7.9,
+    15.2,
+    11
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      4,
+      1
+     ],
+     "texture": "#page"
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      4,
+      1
+     ],
+     "texture": "#page"
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      6,
+      1
+     ],
+     "texture": "#page"
+    },
+    "up": {
+     "uv": [
+      4,
+      5,
+      8,
+      11
+     ],
+     "texture": "#page"
+    }
+   },
+   "rotation": {
+    "angle": 0,
+    "axis": "z",
+    "origin": [
+     8,
+     14.5,
+     8
+    ]
+   }
+  },
+  {
+   "name": "right page",
+   "from": [
+    8.1,
+    14.5,
+    5
+   ],
+   "to": [
+    12,
+    15.2,
+    11
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      4,
+      1
+     ],
+     "texture": "#page"
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      4,
+      1
+     ],
+     "texture": "#page"
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      6,
+      1
+     ],
+     "texture": "#page"
+    },
+    "up": {
+     "uv": [
+      8,
+      5,
+      12,
+      11
+     ],
+     "texture": "#page"
+    }
+   }
+  },
+  {
+   "name": "inkwell",
+   "from": [
+    12.8,
+    14,
+    9.5
+   ],
+   "to": [
+    14.6,
+    15.6,
+    11.3
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      2,
+      2
+     ],
+     "texture": "#ink"
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      2,
+      2
+     ],
+     "texture": "#ink"
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      2,
+      2
+     ],
+     "texture": "#ink"
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      2,
+      2
+     ],
+     "texture": "#ink"
+    },
+    "up": {
+     "uv": [
+      0,
+      0,
+      2,
+      2
+     ],
+     "texture": "#ink"
+    }
+   }
+  },
+  {
+   "name": "quill",
+   "from": [
+    13.6,
+    15.6,
+    10.3
+   ],
+   "to": [
+    13.9,
+    19,
+    10.6
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      1,
+      4
+     ],
+     "texture": "#page"
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      1,
+      4
+     ],
+     "texture": "#page"
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      1,
+      4
+     ],
+     "texture": "#page"
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      1,
+      4
+     ],
+     "texture": "#page"
+    }
+   },
+   "rotation": {
+    "angle": 22.5,
+    "axis": "x",
+    "origin": [
+     13.75,
+     15.6,
+     10.45
+    ]
+   }
+  },
+  {
+   "name": "post left",
+   "from": [
+    1,
+    14,
+    13
+   ],
+   "to": [
+    2.5,
+    22,
+    14.5
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      2,
+      8
+     ],
+     "texture": "#post"
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      2,
+      8
+     ],
+     "texture": "#post"
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      2,
+      8
+     ],
+     "texture": "#post"
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      2,
+      8
+     ],
+     "texture": "#post"
+    },
+    "up": {
+     "uv": [
+      0,
+      0,
+      2,
+      2
+     ],
+     "texture": "#post"
+    }
+   }
+  },
+  {
+   "name": "post right",
+   "from": [
+    13.5,
+    14,
+    13
+   ],
+   "to": [
+    15,
+    22,
+    14.5
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      2,
+      8
+     ],
+     "texture": "#post"
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      2,
+      8
+     ],
+     "texture": "#post"
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      2,
+      8
+     ],
+     "texture": "#post"
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      2,
+      8
+     ],
+     "texture": "#post"
+    },
+    "up": {
+     "uv": [
+      0,
+      0,
+      2,
+      2
+     ],
+     "texture": "#post"
+    }
+   }
+  },
+  {
+   "name": "sign board",
+   "from": [
+    2.5,
+    17.5,
+    13.3
+   ],
+   "to": [
+    13.5,
+    21.5,
+    14.2
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      2,
+      4,
+      13,
+      8
+     ],
+     "texture": "#board"
+    },
+    "south": {
+     "uv": [
+      2,
+      4,
+      13,
+      8
+     ],
+     "texture": "#board"
+    },
+    "up": {
+     "uv": [
+      2,
+      0,
+      13,
+      1
+     ],
+     "texture": "#board"
+    },
+    "down": {
+     "uv": [
+      2,
+      0,
+      13,
+      1
+     ],
+     "texture": "#board"
+    }
+   }
+  },
+  {
+   "name": "sign trim",
+   "from": [
+    3,
+    18,
+    13.2
+   ],
+   "to": [
+    13,
+    18.4,
+    13.3
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      10,
+      1
+     ],
+     "texture": "#gold"
+    }
+   }
+  },
+  {
+   "name": "sign trim top",
+   "from": [
+    3,
+    20.6,
+    13.2
+   ],
+   "to": [
+    13,
+    21,
+    13.3
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      10,
+      1
+     ],
+     "texture": "#gold"
+    }
+   }
+  }
+ ]
+}

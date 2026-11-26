@@ -425,10 +425,21 @@ public class BusinessBooksGameTests {
         // The dead owner's own purse is no longer counted (it is gone from the town's folk): count afresh from here.
         coin0 = CoinCensus.count(id) + Market.coinsHeld(you) * 100L;
         if (!cafe.town()) Businesses.windUpForTests(level, id, cafe);
-        String bought = Businesses.buy(level, id, cafe, you);
+        // [wpb] Bought by offer, answered by its owners (the council for the town's, the folk owner for its own): never one click.
+        String click = Businesses.buy(level, id, cafe, you);
+        helper.assertTrue(!cafe.ownedBy(you.getUUID()), "no instant buy: " + click);
+        int cafePrice = (int) (com.jrpetty.mcassistant.entity.BusinessOffers.value(level, id, cafe).fair() * 3 / 100) + 1;
+        com.jrpetty.mcassistant.entity.BusinessOffers.Offer o1 = com.jrpetty.mcassistant.entity.BusinessOffers.makeForTests(level, you, id, cafe, Business.WHOLE, cafePrice);
+        if (o1 != null) com.jrpetty.mcassistant.entity.BusinessOffers.decideForTests(level, o1);
+        String bought = o1 == null ? "no offer" : o1.state + " " + o1.reason;
         Kit.log("bb06 " + bought + " -> " + cafe.ownersWords());
         helper.assertTrue(cafe.ownedBy(you.getUUID()) && cafe.owners.size() == 1, "the player owns the café: " + bought);
-        String in = Businesses.invest(level, id, smithy, you, 20);
+        int sharePrice = (int) (com.jrpetty.mcassistant.entity.BusinessOffers.value(level, id, smithy).fair() * 5 / 1000) + 1;
+        com.jrpetty.mcassistant.entity.BusinessOffers.familyForTests(false);
+        com.jrpetty.mcassistant.entity.BusinessOffers.Offer o2 = com.jrpetty.mcassistant.entity.BusinessOffers.makeForTests(level, you, id, smithy, 1000, sharePrice);
+        if (o2 != null) com.jrpetty.mcassistant.entity.BusinessOffers.decideForTests(level, o2);
+        if (o2 != null && o2.state == com.jrpetty.mcassistant.entity.BusinessOffers.State.COUNTERED) com.jrpetty.mcassistant.entity.BusinessOffers.takeCounterForTests(level, you, o2);
+        String in = o2 == null ? "no offer" : o2.state + " " + o2.reason;
         Kit.log("bb06 " + in + " -> " + smithy.ownersWords());
         helper.assertTrue(smithy.ownedBy(you.getUUID()) && smithy.owners.stream().mapToInt(Business.Stake::parts).sum() == Business.WHOLE,
             "the player holds a share of the smithy, the stakes still the whole: " + smithy.ownersWords());

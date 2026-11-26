@@ -73,10 +73,7 @@ public final class FirmSale {
         if (s == null) return "!It isn't for sale.";
         if (b.ownedBy(buyer.getUUID())) return "!It's yours already.";
         long ask = s.getLong("ask");
-        if (Market.coinsHeld(buyer) * 100L < ask) return "!The asking price is " + Businesses.pence(ask) + "; you carry " + Market.coinsHeld(buyer) + "c.";
-        addOffer(s, buyer.getUUID(), buyer.getGameProfile().getName(), "player", ask, Businesses.today(level));
-        Accounts.dirty();
-        return "Your offer of " + Businesses.pence(ask) + " for " + b.name + " is with its owner. You pay only if they accept.";
+        return BusinessOffers.make(level, buyer, village, b, Business.WHOLE, (int) ((ask + 99) / 100), true, true, false, 3);   // by offer, with escrow
     }
 
     static void addOffer(CompoundTag s, UUID who, String name, String kind, long price, long day) {
@@ -153,19 +150,7 @@ public final class FirmSale {
             if (s == null) continue;
             ListTag l = s.getList("offers", Tag.TAG_COMPOUND);
             for (int i = l.size() - 1; i >= 0; i--) if (day - l.getCompound(i).getLong("day") > OFFER_DAYS) l.remove(i);
-            long ask = s.getLong("ask");
-            VillageFolkEntity best = null;
-            for (AssistantEntity a : Villages.folkOf(village)) {
-                if (!(a instanceof VillageFolkEntity f) || f.isBaby() || b.ownedBy(f.getUUID()) || !FirmBranches.owned(village, f.getUUID()).isEmpty()) continue;
-                if (Enterprise.means(f) * 100L < ask * 4 / 5 || Temperament.drive(f) < 0) continue;
-                if (best == null || Enterprise.means(f) > Enterprise.means(best)) best = f;
-            }
-            if (best != null && (day + best.getUUID().getLeastSignificantBits()) % 2 == 0) {
-                double k = 0.85 + Math.floorMod(best.getUUID().hashCode() + day, 21) / 100.0;   // 0.85 .. 1.05 of the ask
-                long price = Math.min(Enterprise.means(best) * 100L, Math.round(ask * k));
-                addOffer(s, best.getUUID(), best.displayNameCap(), "folk", price, day);
-            }
-            s.put("offers", l);
+            s.put("offers", l);                                             // folk buyers' offers go through BusinessOffers now, with escrow
         }
         Accounts.dirty();
     }

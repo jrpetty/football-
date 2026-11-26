@@ -343,6 +343,7 @@ public final class CoinCensus {
         out.put("held for players' building orders", BuildOrders.heldPence(village));   // [orders17] deposits and stages not yet spent
         out.put("haul contracts' escrow", HaulContracts.escrowed(village) * 100L);
         out.put("players' contracts' escrow", Contracts.escrowed(village) * 100L);   // [wpb] held at the hall till delivery
+        out.put("offers' escrow", BusinessOffers.escrowed(village) * 100L);   // [wpb] an offer for a business, held till its owners answer
         // [health] The rent a player's tenants have paid, waiting for the player at the treasury (or the bank's round).
         long rentDue = 0;
         for (Map.Entry<String, String> e : Commerce.notesStarting(village, "rentdue/")) rentDue += Homes.parse(e.getValue()) * 100L;

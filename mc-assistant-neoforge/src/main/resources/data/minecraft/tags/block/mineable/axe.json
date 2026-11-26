@@ -13,6 +13,7 @@
     "mc_assistant:rain_barrel",
     "mc_assistant:service_counter",
     "mc_assistant:map_table",
-    "mc_assistant:ballot_box"
+    "mc_assistant:ballot_box",
+    "mc_assistant:business_core"
   ]
 }

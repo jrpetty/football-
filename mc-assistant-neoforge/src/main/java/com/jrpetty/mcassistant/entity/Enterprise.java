@@ -900,13 +900,18 @@ public final class Enterprise {
                 if (r.getLong("petitionDay") < day) hear(level, id, b, r, day, "by the council on the square");
                 continue;
             }
-            if (MyBusinesses.paused(level, id, b, r)) continue;               // [wpb] its owner away and no manager: paused safely
+            Deputy.Charge charge = Deputy.charge(level, id, b, r, day);    // [wpb] who runs it today (shut only with no staff able to work)
+            if (!charge.runs()) continue;
             tidyStaff(level, v, b, r);
             share(level, id, b, r, day);
             sellOver(level, id, b, day);
             if (fortunes(level, v, b, r, day)) continue;
-            targets(level, id, b, r, wants);              // [econ-1c] what its shelf should hold of each ware
-            restock(level, id, b, r);                     // [econ-1c] a shop's stock bought in at the market
+            BusinessCore.daily(level, id, b, r, day);                     // [wpb] a record day, its quality and advert on its name
+            if (Deputy.morning(level, v, b, r, day, charge, wants)) {      // [wpb] its owner's routine; else the deputy's day, or the staff's
+                targets(level, id, b, r, wants);          // [econ-1c] what its shelf should hold of each ware
+                Deputy.ownerTargets(r);                   // [wpb] an owner's own stock targets, kept to exactly
+                restock(level, id, b, r);                 // [econ-1c] a shop's stock bought in at the market
+            }
             signs(level, v, b, r);
         }
         FirmBranches.weekly(id, day);                                       // [biz30] its good weeks tallied

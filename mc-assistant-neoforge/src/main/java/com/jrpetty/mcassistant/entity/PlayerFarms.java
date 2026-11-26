@@ -218,6 +218,13 @@ public final class PlayerFarms extends SavedData {
         return null;
     }
 
+    /** [wpb] Every farm of a town's (its Cores). */
+    public static List<Farm> ofTown(UUID town) {
+        List<Farm> out = new ArrayList<>();
+        for (Farm f : of().farms.values()) if (f.town.equals(town)) out.add(f);
+        return out;
+    }
+
     public static List<Farm> ofOwner(UUID town, UUID owner) {
         List<Farm> out = new ArrayList<>();
         for (Farm f : of().farms.values()) {
@@ -596,7 +603,7 @@ public final class PlayerFarms extends SavedData {
         Business b = business(f.id);
         if (b == null || !b.open) return;
         boolean ownerHere = level.getServer().getPlayerList().getPlayer(f.owner) != null;
-        f.paused = !ownerHere && f.manager == null && !f.hands.isEmpty();
+        f.paused = !ownerHere && f.hands.isEmpty();                         // [wpb] folk hands keep working while its owner is away
         if (day - f.ratesDay >= 7) {
             int rates = ratesFor(f);
             long paid = Businesses.payOut(level, f.town, b, rates * 100L, Businesses.today(level));
@@ -608,7 +615,7 @@ public final class PlayerFarms extends SavedData {
             b.note(Businesses.today(level), "land rates " + rates + "c (" + f.area() + " blocks, agricultural)");
         }
         if (f.paused) {
-            b.note(Businesses.today(level), "paused: its owner away and no manager; the hands stood down for the day");
+            b.note(Businesses.today(level), "idle: no hands, and its owner away");
             dirty();
             return;
         }

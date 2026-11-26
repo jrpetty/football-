@@ -62,7 +62,7 @@ public final class InWorld implements PlayerLife.Page {
         r("business invest", "business", "Invest in your firm: Your businesses, its Money tab (or the books' Invest button)", "life:firm"),
         r("business draw", "business", "Take your drawings: Your businesses, its Money tab", "life:firm"),
         r("business order", "business", "Order stock: Your businesses, its Stock tab", "life:firm"),
-        r("business buy", "business", "Buy a business: its books' Buy button (the Businesses page)", "page:Businesses"),
+        r("business buy", "business", "Buy a business: make an offer (its Business Core, or Make an offer on the Businesses page); its owners answer", "page:Businesses"),
         r("firms", "business", "Start a business: the bank, the village board's button, any folk's \"I'd like to start a business\"", "life:start"),
         r("firms charter", "business", "Start a business: three clicks (a kind, premises, confirm)", "life:start"),
         r("firms hire", "business", "Take on a hand: Your businesses, its Hands tab", "life:firm"),

@@ -79,7 +79,7 @@ import java.util.function.Predicate;
  * <li><b>pw18</b>: a contract with escrow: bond and price held, goods checked and handed over, paid out; a lapsed one refunds
  *     the buyer with the penalty.</li>
  * <li><b>pw21</b>: a whole firm sold: listed, an offer, accepted, the price to the seller, the firm the buyer's.</li>
- * <li><b>pw22</b>: the owner's tools: a manager keeps it running while the owner is away (else it pauses), a hand let go
+ * <li><b>pw22</b>: the owner's tools: a deputy appointed; a folk hand keeps it running while the owner is away (with no staff it shuts), a hand let go
  *     after a confirm with severance, a ware's own markup, a firm rescued from the court.</li>
  * </ul>
  * Each on its own ground, x 8,710,000 to 8,800,000 at z 71,000.
@@ -818,8 +818,8 @@ public class PlayerWorkGameTests {
                 String listed = com.jrpetty.mcassistant.entity.FirmSale.listForTests(level, p, t.id(), b, 1500);
                 VillageFolkEntity buyer = t.folk().get(2);
                 buyer.earn(40);
-                com.jrpetty.mcassistant.entity.FirmSale.offerForTests(t.id(), b, buyer, 1500, day(level));
-                String sold = com.jrpetty.mcassistant.entity.FirmSale.acceptForTests(level, p, t.id(), b, 0);
+                com.jrpetty.mcassistant.entity.BusinessOffers.Offer o = com.jrpetty.mcassistant.entity.BusinessOffers.folkOfferForTests(level, t.id(), b, buyer, 15);   // [wpb] by offer
+                String sold = o == null ? "no offer" : com.jrpetty.mcassistant.entity.BusinessOffers.acceptForTests(level, p, o);
                 Kit.log("[VT] pw21 " + listed + " | " + sold + " | owners " + b.ownersWords() + " coins " + coins(p));
                 Kit.noLeftoverPlayers(level);
                 helper.assertTrue(!b.ownedBy(p.getUUID()) && b.ownedBy(buyer.getUUID()), "the firm passes to the buyer");
@@ -845,15 +845,16 @@ public class PlayerWorkGameTests {
                 com.jrpetty.mcassistant.entity.Enterprise.staffForTests(t.id(), b, hand);
                 b.till += 3000;
                 String mgr = com.jrpetty.mcassistant.entity.MyBusinesses.handActionForTests(level, p, b, "manager", hand.getUUID(), false);
-                boolean pausedWithManager = com.jrpetty.mcassistant.entity.MyBusinesses.pausedTodayForTests(t.id(), b, day(level));
+                boolean deputy = com.jrpetty.mcassistant.entity.Enterprise.recordForTests(t.id(), b).hasUUID("manager");
                 com.jrpetty.mcassistant.entity.MyBusinesses.handActionForTests(level, p, b, "manager", hand.getUUID(), false);
                 com.jrpetty.mcassistant.entity.MyBusinesses.awayForTests(t.id(), b, p.getUUID(), day(level) - 1);
-                boolean paused = com.jrpetty.mcassistant.entity.MyBusinesses.pausedTodayForTests(t.id(), b, day(level));
+                boolean pausedWithManager = com.jrpetty.mcassistant.entity.MyBusinesses.pausedTodayForTests(t.id(), b, day(level));   // [wpb] its folk hand keeps it open
                 int purse = hand.purse();
                 long till = b.till;
                 String first = com.jrpetty.mcassistant.entity.MyBusinesses.handActionForTests(level, p, b, "letgo", hand.getUUID(), false);
                 String go = com.jrpetty.mcassistant.entity.MyBusinesses.handActionForTests(level, p, b, "letgo", hand.getUUID(), true);
                 boolean gone = com.jrpetty.mcassistant.entity.Enterprise.hands(t.id(), b).stream().noneMatch(f -> f.getUUID().equals(hand.getUUID()));
+                boolean paused = com.jrpetty.mcassistant.entity.MyBusinesses.pausedTodayForTests(t.id(), b, day(level));                // no staff but its absent owner: shut
                 String key = com.jrpetty.mcassistant.entity.Stockroom.key(new ItemStack(Items.BREAD));
                 String mk = com.jrpetty.mcassistant.entity.MyBusinesses.setWareMarkupForTests(level, t.id(), b, key, 20);
                 boolean has = com.jrpetty.mcassistant.entity.Enterprise.recordForTests(t.id(), b).getCompound("wareMarkup").contains(key);
@@ -864,7 +865,7 @@ public class PlayerWorkGameTests {
                 Kit.log("[VT] pw22 " + mgr + " paused with manager " + pausedWithManager + ", without (owner away) " + paused + " | " + first + " | " + go + " gone " + gone
                     + " purse " + purse + " -> " + hand.purse() + " till " + till + " -> " + b.till + " | " + mk + " " + has + " | court " + court + " -> " + saved + " " + free);
                 Kit.noLeftoverPlayers(level);
-                helper.assertTrue(!pausedWithManager && paused, "with a manager it runs; with its owner away and none, it pauses");
+                helper.assertTrue(deputy && !pausedWithManager && paused, "a deputy appointed; with a folk hand it runs with its owner away; with no staff it shuts");
                 helper.assertTrue(first.startsWith("!") && gone && hand.purse() > purse && b.till < till, "let go after a confirm, with severance from the till");
                 helper.assertTrue(has, "a ware's own markup");
                 helper.assertTrue(court && free, "rescued from the court");

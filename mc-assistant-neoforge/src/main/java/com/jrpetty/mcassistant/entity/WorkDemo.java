@@ -6,6 +6,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -39,6 +40,60 @@ public final class WorkDemo {
                 c.getSource().sendSuccess(() -> Component.literal("WPBDEMO " + said), false);
                 return 1;
             })))));
+    }
+
+    /** [wpb] The deputy's week, the report, the Cores. */
+    static String demo2(ServerLevel level, ServerPlayer p, Villages.Village v, String step) {
+        List<Business> mine = MyBusinesses.mine(v.id(), p.getUUID());
+        Business b = mine.isEmpty() ? null : mine.get(0);
+        long day = Businesses.today(level);
+        net.minecraft.core.BlockPos ahead = p.blockPosition().relative(p.getDirection(), 3);
+        switch (step) {
+            case "deputy" -> {
+                if (b == null) return "no firm";
+                while (Enterprise.hands(v.id(), b).size() < 3 && Enterprise.hireForTests(level, v, b) != null) { }
+                List<VillageFolkEntity> hs = Enterprise.hands(v.id(), b);
+                if (hs.isEmpty()) return "no hands";
+                CompoundTag r = Enterprise.rec(v.id(), b.id);
+                String said = Deputy.appoint(level, v.id(), b, hs.get(0), "Shop manager", 10);
+                for (int i = 6; i >= 1; i--) Deputy.day(level, v, b, r, day - i, java.util.Map.of(), true);
+                return said;
+            }
+            case "awayreport" -> {
+                if (b == null) return "no firm";
+                CompoundTag r = Enterprise.rec(v.id(), b.id);
+                r.putLong("left/" + p.getUUID(), day - 6);
+                return "reports " + Deputy.loginReport(level, p);
+            }
+            case "core" -> {
+                if (b == null) return "no firm";
+                b.at = ahead;
+                CoreSites.ensure(level, p);
+                CoreSites.Site s = CoreSites.site(v.id(), "firm:" + b.id);
+                return s == null ? "no spot" : "core at " + s.at().toShortString();
+            }
+            case "folkcore" -> {
+                for (Business x : Enterprise.open(v.id())) {
+                    if (x.ownedBy(p.getUUID())) continue;
+                    x.at = ahead;
+                    CoreSites.ensure(level, p);
+                    CoreSites.Site s = CoreSites.site(v.id(), "firm:" + x.id);
+                    if (s != null) return "folk core " + x.name + " at " + s.at().toShortString();
+                }
+                return "none";
+            }
+            case "offerin" -> {
+                if (b == null) return "no firm";
+                for (AssistantEntity a : Villages.folkOf(v.id())) {
+                    if (!(a instanceof VillageFolkEntity f) || f.isBaby() || b.ownedBy(f.getUUID())) continue;
+                    f.earn(80);
+                    BusinessOffers.Offer o = BusinessOffers.folkOffer(level, v.id(), b, f, 60);
+                    if (o != null) return "offer from " + f.displayNameCap();
+                }
+                return "none";
+            }
+            default -> { return "?"; }
+        }
     }
 
     static String step(ServerPlayer p, String step) {
@@ -110,6 +165,18 @@ public final class WorkDemo {
                 }
                 Businesses.dirty();
                 return "firm " + b.name;
+            }
+            case "deputy", "awayreport", "core", "folkcore", "offerin" -> { return demo2(level, p, v, step); }   // [wpb] the deputy and the Core, for the camera
+            case "openaway" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "away")); return "opened"; }
+            case "openhistory" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "history")); return "opened"; }
+            case "openoffers" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "offers")); return "opened"; }
+            case "openprices" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "prices")); return "opened"; }
+            case "opencore" -> {
+                CoreSites.Site best = null;
+                for (CoreSites.Site x : CoreSites.of().sites.values()) if (best == null || x.at().distSqr(p.blockPosition()) < best.at().distSqr(p.blockPosition())) best = x;
+                if (best == null) return "no core";
+                CoreSites.open(p, best.at());
+                return "opened " + best.key;
             }
             case "treasury" -> { com.jrpetty.mcassistant.village.Ledger.addCoins(v.id(), 500); return "500 coins to the treasury"; }
             case "goto" -> {                                                // ten blocks short of the workplace, facing it

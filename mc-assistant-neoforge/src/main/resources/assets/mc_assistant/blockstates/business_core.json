@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "mc_assistant:block/business_core" },
+    "facing=east": { "model": "mc_assistant:block/business_core", "y": 90 },
+    "facing=south": { "model": "mc_assistant:block/business_core", "y": 180 },
+    "facing=west": { "model": "mc_assistant:block/business_core", "y": 270 }
+  }
+}
