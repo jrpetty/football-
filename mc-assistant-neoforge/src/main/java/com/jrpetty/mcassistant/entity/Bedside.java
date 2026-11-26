@@ -60,12 +60,21 @@ public final class Bedside {
     public static void resetForTests() {
         SPOTS.clear();
         LYING.clear();
+        OUTDOORS.clear();
         FLOOR_NIGHTS = 0;
+        OUTDOOR_NIGHTS = 0;
     }
 
-    /** [tp46] The hour past which a bed this far off is not walked to: the night is spent on a floor nearer. */
-    public static final long TOO_LATE = 17500L;
+    /** [tp46] The hour past which a bed this far off is not walked to: the night is spent on a floor nearer. [tp50] Eleven, not
+     *  half past (and a bed nearer that the walk gets no nearer to as well): the floor walked to and lain on before one. */
+    public static final long TOO_LATE = 17000L;
     public static final int TOO_FAR = 40;
+
+    /** [tp50] Has this folk set off for a floor tonight already (it keeps to it, whatever its bed's distance does meanwhile)? */
+    public static boolean walkingToFloor(AssistantEntity f) {
+        Spot s = SPOTS.get(f.getUUID());
+        return s != null && s.night == nightOf(f.level().getDayTime()) && (s.at != null || s.tries > 0);
+    }
 
     /** Is this folk asleep on a floor (not in a bed)? */
     public static boolean onAFloor(AssistantEntity f) {
@@ -142,14 +151,36 @@ public final class Bedside {
         return true;
     }
 
-    /** Spots all tried: down where it stands if that is indoors on a floor, else nothing (it stands the night at home). */
+    /**
+     * Spots all tried: down where it stands if that is indoors on a floor; [tp50] past {@link #TOO_LATE}, out of doors too, on dry
+     * ground with water nowhere beside it (a folk cut off from its bed on a shore under a steep bank, or the far side of a slot it
+     * cannot climb out of, used to stand there till morning: a sixth of the soak's big town). Else nothing (it stands the night
+     * out at home).
+     */
     private static boolean lastResort(VillageFolkEntity f, Spot s) {
         BlockPos here = f.blockPosition();
-        if (f.level() instanceof ServerLevel level && standable(level, here) && !level.canSeeSky(here) && !taken(f, here)) {
+        if (!(f.level() instanceof ServerLevel level) || !standable(level, here) || taken(f, here)) return false;
+        if (!level.canSeeSky(here)) {
             lie(f, here);
             return true;
         }
-        return false;
+        long t = level.getDayTime() % 24000L;
+        if (t < TOO_LATE || t >= 23000L || !f.onGround() || f.isInWaterOrBubble()) return false;
+        for (Direction d : Direction.values()) if (!level.getFluidState(here.relative(d)).isEmpty()) return false;
+        lie(f, here);
+        OUTDOORS.add(f.getUUID());
+        OUTDOOR_NIGHTS++;
+        f.brain("its bed out of reach tonight: asleep out of doors where it was");
+        return true;
+    }
+
+    /** [tp50] Folk asleep out of doors now (the census), and nights so spent (the tests). */
+    private static final java.util.Set<UUID> OUTDOORS = ConcurrentHashMap.newKeySet();
+    public static volatile int OUTDOOR_NIGHTS;
+
+    /** [tp50] Is this folk asleep out of doors (no bed, no floor indoors it could get to)? */
+    public static boolean outdoors(AssistantEntity f) {
+        return onAFloor(f) && OUTDOORS.contains(f.getUUID());
     }
 
     /** Down on the floor: the sleeping pose, its "bed" the floor spot (the game lets it lie: canContinue below). */
@@ -176,6 +207,7 @@ public final class Bedside {
     /** Up in the morning (or woken): its floor given back. */
     public static void up(AssistantEntity f) {
         LYING.remove(f.getUUID());
+        OUTDOORS.remove(f.getUUID());
     }
 
     /**
@@ -183,11 +215,12 @@ public final class Bedside {
      * its bed: 12 off"); "asleep" or "asleep on a floor" for one that is.
      */
     public static String whyAwake(AssistantEntity a) {
-        if (a.isSleeping()) return onAFloor(a) ? "asleep on a floor" : "asleep";
+        if (a.isSleeping()) return outdoors(a) ? "asleep out of doors" : onAFloor(a) ? "asleep on a floor" : "asleep";
         if (a instanceof VillageFolkEntity f) {
             if (f.stationTask() == AssistantEntity.StationTask.GUARD && f.onShift()) return "on watch";
             if (TownJobs.busy(f)) return "on the town's work: " + TownJobs.doing(f);
-            if (f.onShift()) return "at work: " + f.offWorkWhy() + " " + f.brainNoteForBooks();
+            if (f.onShift()) return "at work: " + f.offWorkWhy() + (f.shift() == AssistantEntity.Shift.DAY ? "" : " (" + f.shift().name().toLowerCase(java.util.Locale.ROOT) + " shift)")
+                + " " + f.brainNoteForBooks();
         }
         String n = a.nightNote();
         if (!n.isEmpty()) return n;
