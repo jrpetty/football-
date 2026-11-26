@@ -117,6 +117,13 @@ public final class FolkLines {
 
     public List<String> pupils() { return List.copyOf(pupils); }
 
+    /** Mornings at school, and lessons at home, it had as a child (SchoolDays). */
+    int schoolMornings, homeLessons;
+
+    public int schoolMornings() { return schoolMornings; }
+
+    public int homeLessons() { return homeLessons; }
+
     // ------------------------------------------------------------------ courtship
 
     @Nullable UUID courting;
@@ -158,6 +165,8 @@ public final class FolkLines {
         t.put("Deeds", d);
         if (!rank.isEmpty()) t.putString("Rank", rank);
         t.putInt("Skill", skill);
+        t.putInt("SchoolMornings", schoolMornings);
+        t.putInt("HomeLessons", homeLessons);
         if (master != null) t.putUUID("Master", master);
         t.putString("MasterName", masterName);
         t.putString("Trade", trade);
@@ -186,6 +195,8 @@ public final class FolkLines {
         }
         rank = t.getString("Rank");
         skill = t.getInt("Skill");
+        schoolMornings = t.getInt("SchoolMornings");
+        homeLessons = t.getInt("HomeLessons");
         master = t.hasUUID("Master") ? t.getUUID("Master") : null;
         masterName = t.getString("MasterName");
         trade = t.getString("Trade");
@@ -208,6 +219,6 @@ public final class FolkLines {
 
     boolean isEmpty() {
         return deeds.isEmpty() && rank.isEmpty() && courting == null && !retired && inherited.isEmpty() && pupils.isEmpty()
-            && skill == 0 && trade.isEmpty();
+            && skill == 0 && trade.isEmpty() && schoolMornings == 0 && homeLessons == 0;
     }
 }

@@ -644,6 +644,7 @@ public final class School {
             }
             Slates.beat(level, v, f, teacher, topic(level, village, day));   // [leisure] handed a slate, the lesson chalked on it, its chalk worn
             learn(f, teacher, d.leaning(), topic(level, village, day));
+            SchoolDays.pupilBeat(f, r);                                   // [featfolk] writing on its slate; a hand up
         }
         if (r.nextInt(500) == 0) FolkTalk.speak(f, FolkTalk.pick(r, "I know! I know!", "Like this?", "Why, though?",
             "Can we go and see?", "I'm going to be " + a(d.leaning()) + "!"));
@@ -708,6 +709,7 @@ public final class School {
             for (VillageFolkEntity p : pupils(level, village)) if (inClass(p, b)) seated++;
             if (seated > 0) {
                 FolkTalk.speak(f, lessonLine(topic, r));
+                SchoolDays.teacherBeat(f, r);                                 // [featfolk] pointing at the board
                 f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
                 for (VillageFolkEntity p : pupils(level, village)) {
                     if (inClass(p, b) && r.nextInt(3) == 0) {
@@ -805,6 +807,7 @@ public final class School {
         if (village == null) return StationTask.NONE;
         Desk d = desk(village, f);
         if (d == null) return StationTask.NONE;
+        f.lines().schoolMornings = Math.max(f.lines().schoolMornings, d.mornings());   // [featfolk] the town's schooling (SchoolDays)
         Ledger.forget(village, PUPIL + f.getUUID());
         BEAT_AT.remove(f.getUUID());
         StationTask t = d.leaning();

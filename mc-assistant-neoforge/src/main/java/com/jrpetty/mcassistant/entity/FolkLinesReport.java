@@ -16,7 +16,9 @@ public final class FolkLinesReport {
     public static void viewer(CompoundTag books, ServerLevel level, Villages.Village v, ServerPlayer player) {
         try {
             books.put("families", Lineage.report(level, v.id()));
-            books.put("apprentices", Apprenticeship.report(v.id()));
+            CompoundTag ap = Apprenticeship.report(v.id());
+            ap.putString("education", SchoolDays.educationLine(level, v.id()));
+            books.put("apprentices", ap);
             books.put("respect", TownOpinion.report(v.id(), player.getUUID(), level.getGameTime()));
         } catch (RuntimeException e) {
             com.mojang.logging.LogUtils.getLogger().warn("[featfolk] the town's lines for the board: {}", e.toString());

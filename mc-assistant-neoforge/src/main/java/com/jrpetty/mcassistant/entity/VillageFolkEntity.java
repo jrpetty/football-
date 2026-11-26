@@ -2448,6 +2448,8 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || villageCentre == null) return;
+        if (SchoolDays.homeLesson(this, server)) return;      // [featfolk] no school (or no teacher): its lessons at home
+        if (SchoolDays.recess(this, server)) return;          // [featfolk] break in the school yard
         // Mornings, once it is old enough: at a grown-up's side at work, learning the trade.
         if (day - bornDay >= LawBook.apprenticeFrom(ownerId(), 1) && level().getDayTime() % 24000L < 7000L && apprentice(server)) return;   // [identity] the apprentice age
         // Afternoons in the park, when the town has one (Park).

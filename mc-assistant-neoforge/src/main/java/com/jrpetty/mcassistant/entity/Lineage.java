@@ -204,6 +204,10 @@ public final class Lineage {
      * steps off, with an opinion; of an afternoon it sits about the square or the park.
      */
     public static void retiredDay(VillageFolkEntity f, ServerLevel level) {
+        if (SchoolDays.tutoring(f)) {                                     // teaching a child its letters: it sits still for it
+            f.getNavigation().stop();
+            return;
+        }
         if (f.tickCount % 20 != 0) return;
         long t = level.getDayTime() % 24000L;
         RandomSource r = f.getRandom();

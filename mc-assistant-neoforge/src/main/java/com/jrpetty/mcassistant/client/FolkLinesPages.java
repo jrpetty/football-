@@ -64,7 +64,8 @@ public final class FolkLinesPages {
             case "Apprentices" -> {
                 CompoundTag c = data.getCompound("apprentices");
                 if (c.isEmpty()) return empty(g, font, x, y, w);
-                y = header(g, font, c.getString("summary"), "Children learn of a morning at a master's side; grown, they qualify as journeymen, then masters.", x, y, w);
+                y = header(g, font, c.getString("summary"), c.getString("education") + " Children learn of a morning at a master's side;"
+                    + " grown, they qualify as journeymen, then masters.", x, y, w);
                 ListTag trades = c.getList("trades", Tag.TAG_COMPOUND);
                 if (trades.isEmpty()) add(lines, font, 'M', 0, "Nobody is apprenticed yet: children start at their parents' side once they are old enough.", width);
                 for (int i = 0; i < trades.size(); i++) {
