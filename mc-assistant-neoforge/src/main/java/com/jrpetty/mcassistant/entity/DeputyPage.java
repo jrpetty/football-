@@ -85,7 +85,7 @@ final class DeputyPage {
             page.heading("Your deputy manager");
             page.text("None yet. Choose one of your folk staff: they cover for you while you're away, and their character shows in how.", 4);
             for (VillageFolkEntity f : Enterprise.hands(v.id(), b)) {
-                page.row(null, f.displayNameCap(), String.join(", ", traits(f)) + " · paid " + Wealth.wage(f) + "c a day", "")
+                page.row(null, f.displayNameCap(), String.join(", ", traits(f)) + " · paid " + Wealth.wage(f) + "c a day", "").face(f)
                     .button("Set as deputy manager", "deputy", LifePage.args("h", f.getUUID().toString()), decide, no);
                 if (c.args.getString("appoint").equals(f.getUUID().toString())) appointBox(f, r, page);
             }
@@ -103,6 +103,8 @@ final class DeputyPage {
             + (r.getInt("depRaise") > 0 ? " Paid " + r.getInt("depRaise") + "% over their wage." : ""));
         card.add("Rating: " + (rating < 0 ? "not yet tried" : rating + "/100, " + Deputy.ratingWord(rating)) + ".");
         for (String s : Deputy.reasons(r)) card.add(s + ".");
+        VillageFolkEntity depF = Deputy.deputy(v.id(), b, r);                // [rota] its face
+        page.row(null, dn, Deputy.title(r) + " at " + b.name, "").face(did, depF == null ? -1 : depF.getId(), false, dn);
         page.box(dn + (Deputy.on(r) ? "" : " (authority off)"), card, rating < 0 ? 4 : rating >= 70 ? 1 : rating >= 50 ? 4 : 3);
         page.buttons().button("Show me " + dn, "showme", LifePage.args("h", did.toString())).button("Remove as deputy", "undeputy", LifePage.args("h", did.toString()), decide, no);
         // A raise asked for.

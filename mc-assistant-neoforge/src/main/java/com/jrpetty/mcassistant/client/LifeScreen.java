@@ -273,7 +273,7 @@ public class LifeScreen extends Screen {
                     bws[i] = Math.min(bare ? iw : Math.max(150, iw / 3), font.width(btns.getCompound(i).getString("l")) + 12);   // [biz25] room for the whole label
                     all += bws[i] + 3;
                 }
-                int tx = x + (b.contains("icon") ? 20 : 0);
+                int tx = x + (b.contains("face") ? 22 : b.contains("icon") ? 20 : 0);   // [rota] a face is a little wider
                 String right = b.getString("r");
                 int rw = right.isEmpty() ? 0 : Math.min(120, font.width(right) + 6);
                 int room = Math.max(20, x + iw - all - rw - tx - 4);
@@ -298,7 +298,8 @@ public class LifeScreen extends Screen {
                     bx -= 3;
                 }
                 if (bare) return y + rh;
-                if (b.contains("icon")) {
+                if (b.contains("face")) face(g, b.getCompound("face"), x, y + (rh - 18) / 2, mx, my);   // [rota] the person's own face
+                else if (b.contains("icon")) {
                     ItemStack icon = ItemStack.parseOptional(Minecraft.getInstance().level.registryAccess(), b.getCompound("icon"));
                     g.renderItem(icon, x, y + (rh - 16) / 2);
                 }
@@ -553,6 +554,28 @@ public class LifeScreen extends Screen {
         }
         int legendH = under ? ((used.size() + 2) / 3) * 11 + 4 : 0;
         return y + mh + 4 + legendH;
+    }
+
+    /**
+     * [rota] A person's face in an 18-pixel frame: a folk's likeness (FolkPortrait's bust, live, when the client has it in
+     * the world; else its initial on its own colour), a player's skin face (its own when it is online, else the default
+     * skin its id gives).
+     */
+    private void face(GuiGraphics g, CompoundTag f, int x, int y, int mx, int my) {
+        java.util.UUID who = f.hasUUID("u") ? f.getUUID("u") : null;
+        String name = f.getString("n");
+        if (f.getBoolean("p") && who != null) {
+            net.minecraft.client.multiplayer.ClientPacketListener conn = Minecraft.getInstance().getConnection();
+            net.minecraft.client.multiplayer.PlayerInfo info = conn == null ? null : conn.getPlayerInfo(who);
+            net.minecraft.client.resources.PlayerSkin skin = info != null ? info.getSkin() : net.minecraft.client.resources.DefaultPlayerSkin.get(who);
+            UiStyle.well(g, x, y, 18, 18, UiStyle.PAGE);
+            net.minecraft.client.gui.components.PlayerFaceRenderer.draw(g, skin, x + 1, y + 1, 16);
+            g.renderOutline(x, y, 18, 18, UiStyle.EDGE);
+            return;
+        }
+        net.minecraft.world.entity.LivingEntity e = FolkPortrait.find(f.getInt("id"), who);
+        int rgb = who == null ? 0 : 0xFF000000 | (int) (who.getLeastSignificantBits() & 0xFFFFFF);
+        FolkPortrait.draw(g, font, e, name, rgb, 0xFF8FA3B5, x, y, 18, 18, true, mx, my);
     }
 
     /** A tiny helper so the tabs can make their arguments without the server's classes. */
