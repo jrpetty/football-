@@ -656,6 +656,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // watch or from it, in a fight or walked home; a guard on an incident, a prisoner in hand, or posted at a gathering (Police).
         // [war-after] A bounty hunter after an outlaw, or riding home from the hunt (Outlaws).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel huntLevel && Outlaws.hunting(this, huntLevel)) return;
+        // [wpe] Justice: a guard serving a warrant or walking a prisoner; the judge, the officer and the witnesses called to court.
+        if (level() instanceof net.minecraft.server.level.ServerLevel justiceLevel && Justice.hold(this, justiceLevel)) return;
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel policeLevel
                 && (tickCount % 4 == 1 ? Police.hold(this, policeLevel) : Police.busy(this))) return;
         // [crime] The law first: in the stocks or at its community work, called to a trial, a guard on a case; or a folk up

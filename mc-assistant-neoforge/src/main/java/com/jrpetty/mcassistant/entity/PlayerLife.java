@@ -90,6 +90,7 @@ public final class PlayerLife {
         PAGES.put("will", new Wills());              // [wpc] your will
         PAGES.put("away", new StandingOrders());     // [wpc] while you were away
         PAGES.put("week", new WeekPage());           // [featlife] the week, the hours, friends, clubs, the chapel's events
+        PAGES.put("record", new RecordPage());       // [wpe] your record, your case, the jail, the court
         PAGES.put("farm", new FarmPage());                                  // [wpb] a player's own farm as a business
         PAGES.put("contracts", new ContractsPage());                        // [wpb] contracts between players, with escrow
         PAGES.put("offer", new OfferPage());                                // [wpb] an offer for a business, answered by its owners
@@ -265,6 +266,8 @@ public final class PlayerLife {
         if (hall != null) return hall;
         String week = WeekPage.heard(f, p, t);                              // [featlife] what's on this week, the clubs, my friends here
         if (week != null) return week;
+        String law = Justice.heard(f, p, t);                                // [wpe] an apology, the healer paid, my record, giving up, a lawyer
+        if (law != null) return law;
         if (t.contains("village of my own") || t.contains("town of my own")) {   // [found23] the founding screen
             FoundingEasy.open(p, "talk");
             return "A place of your own? Good. Here's what the land round about looks like.";

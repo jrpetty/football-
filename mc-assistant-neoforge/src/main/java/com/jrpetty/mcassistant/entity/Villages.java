@@ -391,6 +391,8 @@ public final class Villages {
             case "golemyard" -> "the golem yard";                 // [golems]
             case "watchhouse" -> "the watch house";               // [police]
             case "stockade" -> "the stockade";                    // [war-after]
+            case "jailhouse" -> "the jailhouse";                  // [wpe]
+            case "courthouse" -> "the courthouse";                // [wpe]
             case "powderhut" -> "the powder hut";                // [fireworks]
             case "maproom" -> "the map room";                     // [cartographer]
             case "tradingpost" -> "the Trading Post";             // [emerald]
@@ -532,6 +534,9 @@ public final class Villages {
         Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
         Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
         Crime.resetForTests();              // [crime] the cases, the folk's records, the plans, the court
+        Justice.resetForTests();            // [wpe] the hurts, the warrants, the sittings (the books are the world's)
+        Restraint.resetForTests();          // [wpe]
+        com.jrpetty.mcassistant.JusticeConfig.resetForTests();   // [wpe]
         Police.resetForTests();             // [police] the watch's incidents, chases, beats, cells and players in hand
         AfterWar.resetForTests();           // [war-after] the prisoners, the ruins and the outlaws; the decay and the hunts stood down
         Weave.resetForTests();              // [weave] the homeless waiting to go, the day's looks; the round off again
@@ -1910,6 +1915,9 @@ public final class Villages {
         if (built(villageId, "well") < 1) out.add("well");
         // [war-after] Prisoners of war the cells will not take (or no cells at all): a stockade, from the Wood Age (Prisoners).
         if (Prisoners.stockadeWanted(villageId)) out.add(Prisoners.STOCKADE);
+        // [wpe] The jailhouse and the courthouse, late: the Iron Age, and a constable or folk enough (Jail, Assize).
+        if (Jail.wanted(villageId)) out.add(Jail.STRUCTURE);
+        if (Assize.courthouseWanted(villageId)) out.add(Assize.COURTHOUSE);
         // A house for the player the village has taken to its heart.
         if (com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId) != null
                 && built(villageId, "storage") > 0) out.add("guesthouse");
@@ -2410,6 +2418,8 @@ public final class Villages {
             case "golemyard" -> Golems.why(villageId);             // [golems]
             case "watchhouse" -> WatchHouse.why(villageId);        // [police]
             case "stockade" -> Prisoners.stockadeWhy(villageId);   // [war-after]
+            case "jailhouse" -> Jail.why(villageId);               // [wpe]
+            case "courthouse" -> Assize.courthouseWhy(villageId);  // [wpe]
             case "powderhut" -> FireworksMaker.why(villageId);     // [fireworks]
             case "maproom" -> Cartographers.why(villageId);        // [cartographer]
             case "tradingpost" -> EmeraldTrader.why(villageId);    // [emerald]

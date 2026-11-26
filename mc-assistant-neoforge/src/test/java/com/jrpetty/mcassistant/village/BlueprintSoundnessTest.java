@@ -752,6 +752,8 @@ class BlueprintSoundnessTest {
         "trainingyard 4 3 4 3 none",
         "villa 5 5 5 5 front",
         "watchhouse 4 5 4 5 front",
+        "courthouse 6 10 6 10 front",          // [wpe] the courthouse: the bench, the dock, the jury
+        "jailhouse 6 7 6 7 front",             // [wpe] the jailhouse: three cells, the desk, the key
         "watchtower 2 2 3 3 front",
         "watermill 4 4 5 4 front",             // [tech-tree] the watermill and its race
         "well 2 2 2 2 none",

@@ -386,6 +386,7 @@ public final class TownHall implements PlayerLife.Page {
         if (!badges.isEmpty()) page.text(badges, 0);
         int offences = Laws.offences(id, me), owes = Laws.owes(id, me);
         page.text(offences == 0 ? "A clean record here." : offences + (offences == 1 ? " offence" : " offences") + " on record" + (owes > 0 ? "; " + PlayerLife.coins(owes) + " in fines owed." : "."), offences == 0 ? 1 : 2);
+        page.buttons().button("Your record and the law", "lawrecord", null);   // [wpe] convictions, cases, the jail, the court
         page.heading("What lifts it, what lowers it");
         page.text("Lifts: talking with folk each day, gifts they like, work done well, a raid fought off, taxes paid, a jury served on.", 4);
         page.text("Lowers: theft, damage, fights, broken promises, unpaid fines. Folk only count what they saw or were told.", 4);
@@ -524,6 +525,7 @@ public final class TownHall implements PlayerLife.Page {
                     : "Your name is off the jury roll.";
             }
             case "verdict" -> { return Jury.vote(p, args.getInt("case"), args.getBoolean("g")); }
+            case "lawrecord" -> { PlayerLife.open(p, "record", LifePage.args("tab", "record")); return "#open:"; }   // [wpe]
             case "showcourt" -> {
                 BlockPos at = Jury.court(args.getInt("case"));
                 return showMe(p, at, "The court");

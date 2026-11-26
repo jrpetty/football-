@@ -114,6 +114,8 @@ public class BuildGoal extends Goal {
         "watchhouse",
         // [war-after] the stockade: a pen of fences and a lean-to for the prisoners of war the cells will not take (entity/Prisoners)
         "stockade",
+        // [wpe] the jailhouse (three cells, the guard's desk, the key) and the courthouse (the bench, the dock, the jury) (Jail, Assize)
+        "jailhouse", "courthouse",
         // [emerald] the Trading Post: the emerald trader's stall and its book of the villagers' villages (entity/EmeraldTrader)
         "tradingpost",
         // [diver] the diver's shed on the bank: a smoker, a campfire, a bench and a barrel (entity/Divers)
