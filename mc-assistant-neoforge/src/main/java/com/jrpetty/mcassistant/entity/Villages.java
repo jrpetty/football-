@@ -2868,7 +2868,7 @@ public final class Villages {
     public static final int FIELD_STEP = 2 * VillageFolkEntity.FIELD_MOST + 3;
 
     /** How far out the farmland's squares are laid (they go on past the town's plan). */
-    private static final int FIELD_ROWS = 6;
+    private static final int FIELD_ROWS = 9;                                  // [econ51] (six, before: the farmland moves out as the town grows: LandUse)
 
     /**
      * Which side of the town is its farmland (TownPlan.NORTH..WEST), or -1 before the village
@@ -2969,6 +2969,7 @@ public final class Villages {
         int reachOut = Math.max(hx, hz);
         if (al + reachOut < FIRST_BLOCK || ac - reachOut > al + reachOut + most) return false;
         for (int[] f : fieldSquares(side)) {
+            if (LandUse.released(villageId, along(side, f[0], f[1]))) continue;   // [econ51] given over to the town as it grew
             if (boxesMeet(dx, dz, hx, hz, f[0], f[1], most, most, 0)) return true;
         }
         return false;
@@ -3004,6 +3005,14 @@ public final class Villages {
             if (boxesMeet(lot.x(), lot.z(), hx, hz, z.center().getX() - heart.getX(), z.center().getZ() - heart.getZ(),
                     z.radius(), z.radius(), 1)) return true;
         }
+        return false;
+    }
+
+    /** [econ51] Is this lot of the plan built on or spoken for? */
+    public static boolean lotTaken(UUID villageId, com.jrpetty.mcassistant.village.TownPlan.Lot lot) {
+        java.util.Set<Long> taken = LOT_TAKEN.get(villageId);
+        if (taken == null) return false;
+        for (long cell : lot.cells()) if (taken.contains(cell)) return true;
         return false;
     }
 

@@ -34,6 +34,7 @@ public final class Fields14 {
             for (int[] sq : Villages.fieldSquares(side)) {
                 BlockPos p = f.surfaceAt(heart.getX() + sq[0], heart.getZ() + sq[1]);
                 if (p == null || Math.abs(p.getY() - heart.getY()) > VillageFolkEntity.FIELD_CLIMB) continue;
+                if (LandUse.inGrowthRoom(town, heart, p, VillageFolkEntity.FIELD_MOST)) continue;   // [econ51] not in the town's room to grow
                 if (!walk.fieldReaches(p, half)) continue;
                 if (Villages.builtOver(town, sq[0], sq[1], VillageFolkEntity.FIELD_MOST, VillageFolkEntity.FIELD_MOST)) continue;
                 if (VillageFolkEntity.buildingNearFor14(town, p, VillageFolkEntity.FIELD_MOST + 4)) continue;
@@ -45,7 +46,7 @@ public final class Fields14 {
         }
         // Ground by the town: rings out from just past the town's edge, every fourth column, a small field's room clear.
         int small = VillageFolkEntity.FIELD_FIRST;
-        int from = Villages.townReach(town) + small + 2;
+        int from = LandUse.growthReach(town) + small + 2;                    // [econ51] past the growth line
         for (int r = from; r <= from + 48; r += 4) {
             for (int dx = -r; dx <= r; dx += 4) {
                 for (int dz = -r; dz <= r; dz += 4) {

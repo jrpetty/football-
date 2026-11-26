@@ -448,6 +448,7 @@ public final class Quarters {
         out.putInt("farm_side", farm);
         out.putInt("craft_side", craft);
         out.putString("plan", planLine(id));
+        out.putString("land", LandUse.line(id));                    // [econ51] built on, under fields, free; the growth line
         ListTag smoky = new ListTag(), parkside = new ListTag(), mines = new ListTag();
         Map<District, Integer> counts = new EnumMap<>(District.class);
         for (Ledger.Building b : Ledger.buildings(id)) {

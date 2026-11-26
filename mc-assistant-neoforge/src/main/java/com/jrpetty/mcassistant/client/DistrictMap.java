@@ -179,7 +179,7 @@ final class DistrictMap {
             small(g, font, "the mine's ground", kx + 10, ky, Ui.MUTED);
         }
         ky += 12;
-        for (String line : new String[]{ d.getString("plan"), d.getString("park") }) {
+        for (String line : new String[]{ d.getString("plan"), d.getString("land"), d.getString("park") }) {   // [econ51] the land
             for (FormattedCharSequence s : TextCache.split(font, line, (int) ((w - size - 8) / 0.75F))) {
                 if (ky > y + h - 8) break;
                 small(g, font, s, kx, ky, Ui.MUTED);
