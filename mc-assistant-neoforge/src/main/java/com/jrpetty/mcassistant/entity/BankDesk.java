@@ -46,16 +46,19 @@ final class BankDesk implements ServicePoints.Desk {
         DeskRows.amount(d.row("withdraw", "Withdraw", "Take coin out", "In the bank: " + balance + ".",
             new ItemStack(Items.GOLD_INGOT), balance <= 0 ? "You've nothing in the bank." : ""), 1, balance, Math.min(10, balance), 1);
         Bank.Loan loan = Bank.playerLoan(id, p.getUUID());
+        Bank.Loan l = loan;
         d.section("Your mortgage");
         if (loan != null) {
             d.line(Bank.loanLine(id, loan));
             DeskRows.amount(d.row("repay", "Repay", "Pay off some of it", loan.owed() + " owed, " + loan.weekly + " a week.",
                 new ItemStack(Items.PAPER), held <= 0 ? "You've no coin on you." : ""), 1, Math.min(held, loan.owed()), Math.min(held, loan.weekly), 1);
         } else {
-            d.line("Stand in an empty house of the town's and the bank will lend you four fifths of its price.");
-            d.row("mortgage", "Ask", "A mortgage on this house", "A fifth down; the rest paid weekly from your account.",
-                new ItemStack(Items.TRIPWIRE_HOOK), "");
+            d.line("Choose a house, your deposit and the term: the rate follows how much you put down and your credit score.");   // [wpc] Mortgages
         }
+        d.row("mortgages", "Open", l == null ? "Get a mortgage" : "Your mortgage: overpay, remortgage, port", "The deposit, the rate, the term, what you can afford",
+            new ItemStack(Items.TRIPWIRE_HOOK), "");
+        d.row("debts", "Open", "Your debts and credit score", Debts.status(id, p.getUUID(), visit.level().getDayTime() / 24000L), new ItemStack(Items.PAPER), "");
+        d.row("will", "Open", "Your will", Wills.has(id, p.getUUID()) ? "Made and witnessed: change it here" : "Not made yet: say who gets what you own", new ItemStack(Items.WRITABLE_BOOK), "");
         // [player15] A business of your own (the bank lends what the charter is short of), and the town's capital market.
         d.section("A business of your own");
         d.row("startbiz", "Start", "Start a business", "The charter is " + Enterprise.CHARTER_FEE + " coins; the bank lends you what you're short.",
@@ -86,6 +89,11 @@ final class BankDesk implements ServicePoints.Desk {
         if (p != null && action.equals("startbiz")) {
             p.server.execute(() -> PlayerLife.open(p, "start", LifePage.args("loan", true)));   // after the counter's own answer
             return ServicePoints.Result.said("Here's how to start one.");
+        }
+        if (p != null && (action.equals("mortgages") || action.equals("debts") || action.equals("will") || action.equals("mortgage"))) {   // [wpc] Mortgages, Debts, Wills
+            String page = action.equals("debts") ? "debts" : action.equals("will") ? "will" : "mortgage";
+            p.server.execute(() -> PlayerLife.open(p, page, null));
+            return ServicePoints.Result.said(page.equals("mortgage") ? "The mortgage desk." : page.equals("debts") ? "Your ledger." : "Your will.");
         }
         if (p != null && action.equals("capital")) {
             p.server.execute(() -> PlayerLife.open(p, "all", LifePage.args("tab", "capital")));

@@ -1359,6 +1359,10 @@ public final class Bank {
         if (banker != null && banker != f) {
             return "That's the bank's business — see " + banker.displayNameCap() + ", our banker, at the bank's desk.";
         }
+        if (mortgage && !repays && playerLoan(id, p.getUUID()) == null && p instanceof net.minecraft.server.level.ServerPlayer sp) {   // [wpc] the mortgage desk (Mortgages)
+            sp.server.execute(() -> PlayerLife.open(sp, "mortgage", null));
+            return "Here are our terms: choose a house, how much you put down, and the term. The rate follows your deposit and your credit.";
+        }
         return handle(level, id, p, t);
     }
 
