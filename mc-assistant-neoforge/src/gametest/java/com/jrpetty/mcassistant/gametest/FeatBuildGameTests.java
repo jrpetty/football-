@@ -1094,6 +1094,75 @@ public class FeatBuildGameTests {
         });
     }
 
+    /**
+     * [quarry2] fb12: a building site waiting on stone comes first: the cart sets part of its load down at the site (the
+     * builders there draw on it before the yard), the rest at the yard, and comes home; the board names the site.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "fb12_cart_to_a_site")
+    public static void fb12_cart_to_a_site(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, level, 8_280_000, 70, Villages.Age.STONE);
+        UUID id = t.id();
+        Villages.setFieldsSide(id, TownPlan.WEST);
+        Quarry.standDownForTests(false);
+        Quarry.readyForTests(true);
+        BlockPos c = rock(level, Kit.surface(level, t.heart().getX() + 40, t.heart().getZ() + 40), 14, 0);
+        Quarry.openForTests(level, t.v(), new Quarry.Site(c, Quarry.START, true));
+        StoneYard.layOutForTests(level, t.v());
+        chest(level, t.heart(), 4, -4, new ItemStack(Items.OAK_FENCE, 64), new ItemStack(Items.OAK_FENCE_GATE, 2), new ItemStack(Items.LANTERN, 16),
+            new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64),
+            new ItemStack(Items.BRICKS, 64));
+        Villages.forgetStores(id);
+        Quarry.fenceForTests(level, t.v());
+        com.jrpetty.mcassistant.entity.QuarryCart.ensureForTests(level, t.v());
+        com.jrpetty.mcassistant.entity.TradeWagon cart = com.jrpetty.mcassistant.entity.QuarryCart.cartForTests(level, id);
+        helper.assertTrue(cart != null, "a handcart at the quarry's rim");
+        BlockPos site = Kit.surface(level, t.heart().getX() + 12, t.heart().getZ() + 20);
+        StoneYard.waitAt(level, id, Items.COBBLESTONE, 40, "Ann's cottage", site);
+        VillageFolkEntity m = t.first();
+        m.keepTradeForTests();
+        m.setJob(StationTask.MINE);
+        m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_PICKAXE));
+        Ledger.note(id, "quarry.men", m.getStringUUID());
+        level.setDayTime((level.getDayTime() / 24000L) * 24000L + 1200L);
+        Quarry.loadedForTests(m, com.jrpetty.mcassistant.entity.QuarryCart.FULL);
+        com.jrpetty.mcassistant.entity.Blink.reset();
+        com.jrpetty.mcassistant.entity.Blink.setOn(true);
+        int[] tick = { 0 };
+        List<String> said = new ArrayList<>();
+        helper.onEachTick(() -> {
+            tick[0]++;
+            if (tick[0] % 100 == 0) StoneYard.waitAt(level, id, Items.COBBLESTONE, 40, "Ann's cottage", site);   // the site says so again, as a build does
+            String words = com.jrpetty.mcassistant.entity.QuarryCart.words(id);
+            if (words != null && (said.isEmpty() || !said.get(said.size() - 1).equals(words))) {
+                said.add(words);
+                Kit.log("[VT] fb12 tick " + tick[0] + " " + words + " (cart at " + cart.blockPosition().toShortString() + ")");
+            }
+            long[] tally = com.jrpetty.mcassistant.entity.QuarryCart.tallyForTests(id);
+            if (tally[0] >= 1 && "PARKED".equals(com.jrpetty.mcassistant.entity.QuarryCart.phaseForTests(cart))) {
+                Kit.Expect ok = new Kit.Expect();
+                int there = StoneYard.atSite(id).getOrDefault(Items.COBBLESTONE, 0);
+                ok.that(there == 40, "the site's forty set down there: " + there);
+                ok.that(tally[1] >= com.jrpetty.mcassistant.entity.QuarryCart.FULL, "the whole load set down (the rest where it was wanted next): " + tally[1]);
+                ok.that(StoneYard.waiting(id).isEmpty(), "the site no longer waits: " + StoneYard.waiting(id));
+                ok.that(said.stream().anyMatch(x -> x.startsWith("Cart: taking 40 stone to Ann's cottage")), "the board named the site: " + said);
+                ok.that(StoneYard.forBuild(level, t.v(), Items.COBBLESTONE, 1, "Ann's cottage") && StoneYard.atSite(id).getOrDefault(Items.COBBLESTONE, 0) == 39,
+                    "the builders draw on what the cart set down at the site first");
+                ok.that(com.jrpetty.mcassistant.entity.Blink.byCause().isEmpty(), "no jumps: " + com.jrpetty.mcassistant.entity.Blink.byCause());
+                Kit.log("[VT] fb12 home after " + tick[0] + " ticks: " + said);
+                Quarry.standDownForTests(true);
+                com.jrpetty.mcassistant.entity.Blink.setOn(false);
+                if (!ok.clean()) helper.fail(ok.summary());
+                helper.succeed();
+            }
+            if (tick[0] == 5800) {
+                com.jrpetty.mcassistant.entity.Blink.setOn(false);
+                helper.fail("the cart never made the round: " + said + "; " + com.jrpetty.mcassistant.entity.QuarryCart.phaseForTests(cart) + " at "
+                    + cart.blockPosition().toShortString() + "; quarryman " + Quarry.doingForTests(m));
+            }
+        });
+    }
+
     // ------------------------------------------------------------------ fb09: up the wall's steps, never put there
 
     @GameTest(template = EMPTY, timeoutTicks = 7000, batch = "fb09_wall_stairs")

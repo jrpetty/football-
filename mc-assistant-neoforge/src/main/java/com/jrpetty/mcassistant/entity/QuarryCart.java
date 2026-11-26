@@ -485,6 +485,7 @@ public final class QuarryCart {
     /** Each cart's driver at its handles (hitched) since this tick; best distance to the stop and when it was had. */
     private static final Map<UUID, Long> HITCHED = new java.util.concurrent.ConcurrentHashMap<>();
     private static final Map<UUID, double[]> BEST = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<UUID, Long> NOT_BUSY = new java.util.concurrent.ConcurrentHashMap<>();
     /** Blocks between the driver (at the handles) and the cart's middle, along the way walked. */
     static final double DRAW = TradeWagon.HANDLES;
     /** The driver's pace pulling the cart (the folk's own walking, a little slower than its errands). */
@@ -526,6 +527,15 @@ public final class QuarryCart {
         if (d == null) { HITCHED.remove(w.getUUID()); return; }
         long now = level.getGameTime();
         UUID id = w.getUUID();
+        // A driver called away (to bed, the bell, the town's work) and not back in a minute: the cart left for another hand.
+        if (Quarry.busy(d)) NOT_BUSY.remove(id);
+        else if (now - NOT_BUSY.computeIfAbsent(id, k -> now) > 1200) {
+            NOT_BUSY.remove(id);
+            w.driver = null;
+            HITCHED.remove(id);
+            words(w.town, "standing out by " + w.blockPosition().toShortString() + ", waiting for a hand to push it");
+            return;
+        }
         // First the driver to the handles (walking: never put there).
         if (!HITCHED.containsKey(id)) {
             Vec3 at = w.spot(level, DRAW, 0);
