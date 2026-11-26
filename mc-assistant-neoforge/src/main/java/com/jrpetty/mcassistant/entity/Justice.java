@@ -79,7 +79,7 @@ public final class Justice extends SavedData {
 
     public enum Charge {
         THEFT("theft", 1, true),
-        BURGLARY("burglary", 2, true),
+        BURGLARY("burglary", 2, false),
         VANDALISM("vandalism", 1, true),
         FRAUD("fraud", 2, true),
         ASSAULT("assault", 3, false),
@@ -527,6 +527,9 @@ public final class Justice extends SavedData {
 
     // ------------------------------------------------------------------ pace
 
+    /** Tests: a test's stand-in player (always "creative") under the law all the same. */
+    public static volatile boolean creativeUnderLawForTests;
+
     /** Tests: the witnesses, the watch and the court without the long waits. */
     static volatile boolean hurry;
 
@@ -778,7 +781,6 @@ public final class Justice extends SavedData {
             if (!o.accused.equals(p.getUUID()) || o.stage.ordinal() > Stage.TRIAL.ordinal() && o.stage != Stage.UNSOLVED) continue;
             for (Wit w : o.witnesses) if (w.id.equals(dead.getUUID())) { motive.add(o); break; }
         }
-        if (!motive.isEmpty()) intent += 2;
         boolean projectile = direct instanceof Projectile;
         ItemStack held = p.getMainHandItem();
         if (!projectile && held.getItem() instanceof SwordItem) intent++;
@@ -804,7 +806,7 @@ public final class Justice extends SavedData {
         if (projectile && carries(p, s -> s.getItem() instanceof BowItem || s.getItem() instanceof CrossbowItem)) c.evidence.add(new Ev("WEAPON", "an arrow in the body", 0.5, false));
         else if (!projectile && held.getItem() instanceof SwordItem) c.evidence.add(new Ev("WEAPON", "a blade wound", 0.5, false));
         for (JCase o : motive) {
-            c.evidence.add(new Ev("MOTIVE", victimName + " had seen " + c.accusedName + "'s " + o.charge.word + " at " + o.place, 1.0, false));
+            c.evidence.add(new Ev("MOTIVE:" + o.id + ":" + dead.getUUID(), victimName + " had seen " + c.accusedName + "'s " + o.charge.word + " at " + o.place, 1.0, false));
             o.notes.add("its witness " + victimName + " was killed");
             c.linkedNote(o);
         }
@@ -999,6 +1001,22 @@ public final class Justice extends SavedData {
             }
         }
         Arrests.fines(level, v);
+        if (!TownJobs.instantNow()) {                                       // never in another feature's test
+            FolkCrimes.daily(level, v);
+            FolkCrimes.night(level, v);
+        }
+        if (level.getGameTime() % 1200 < 20) prune(v.id(), level.getDayTime() / 24000L);
+    }
+
+    /** Old closed cases let go (the record keeps the convictions): at most a hundred and fifty a town, none older than sixty days. */
+    static void prune(UUID village, long day) {
+        List<JCase> mine = cases(village);
+        int kept = 0;
+        for (JCase c : mine) {
+            boolean closed = !c.stage.open() && Jail.custody(c.accused) == null;
+            if (closed && (++kept > 150 || day - c.day > 60) && (c.fine <= 0 || c.finePaid)) of().cases.remove(c.id);
+        }
+        changed();
     }
 
     /** The witnesses' part: a word to a neighbour, then to the watch. */
@@ -1048,13 +1066,16 @@ public final class Justice extends SavedData {
             changed();
         }
         if (c.stage != Stage.REPORTED) return;
-        // The watch looks: what there is to be found is found.
-        for (Ev e : c.evidence) if (!e.found) { e.found = true; changed(); }
+        // The watch looks: what there is to be found is found. A motive only if the watch knows the dead had seen
+        // something (it told, or somebody told on its word); else the watch has no reason to look for one.
         for (Ev e : c.evidence) {
-            if (e.kind.equals("MOTIVE")) for (JCase o : of().cases.values()) if (o.accused.equals(c.accused) && o.stage == Stage.SEEN && c.notes.contains("linked " + o.id)) {
-                // the motive points to a deed of its own the watch had not known of
-                o.notes.add("brought to light by the inquiry into " + c.title());
+            if (e.found) continue;
+            if (e.kind.startsWith("MOTIVE:")) {
+                if (!motiveKnown(e.kind)) continue;
+                if (c.charge == Charge.MANSLAUGHTER) c.charge = Charge.MURDER;   // killed to silence a witness
             }
+            e.found = true;
+            changed();
         }
         double need = warrantNeed();
         if (c.score() >= need) {
@@ -1069,6 +1090,20 @@ public final class Justice extends SavedData {
         }
     }
 
+    /** "MOTIVE:case:witness": does the watch know that witness saw that case (its own report, or hearsay of it)? */
+    static boolean motiveKnown(String kind) {
+        String[] p = kind.split(":");
+        if (p.length < 3) return false;
+        JCase o;
+        try { o = get(Integer.parseInt(p[1])); } catch (NumberFormatException e) { return false; }
+        if (o == null) return false;
+        for (Wit w : o.witnesses) {
+            if (!w.reported) continue;
+            if (w.id.toString().equals(p[2]) || !w.own && o.witnesses.stream().anyMatch(x -> x.id.toString().equals(p[2]) && x.name.equals(w.from))) return true;
+        }
+        return false;
+    }
+
     /** What the watch wants before it names somebody (harsher towns want less). */
     static double warrantNeed() {
         return 3.0 / Math.sqrt(Math.max(0.25, JusticeConfig.harshness()));
@@ -1076,6 +1111,10 @@ public final class Justice extends SavedData {
 
     /** Named: a summons for a first lesser offence, a warrant for anything graver. */
     static void name(ServerLevel level, Villages.Village v, JCase c) {
+        if (!c.player) {                                                    // a folk: the watch's own way (FolkCrimes)
+            FolkCrimes.named(level, v, c);
+            return;
+        }
         long now = level.getGameTime();
         boolean summons = c.charge.summons && c.extra.isEmpty() && recordScore(c.accused) < 3 && c.player;
         if (!c.player) summons = false;
@@ -1222,6 +1261,8 @@ public final class Justice extends SavedData {
         SEEN_WITH.clear();
         NOTICES.clear();
         hurry = false;
+        creativeUnderLawForTests = false;
+        FolkCrimes.resetForTests();
         Arrests.resetForTests();
         Assize.resetForTests();
         Jail.resetForTests();
@@ -1234,6 +1275,18 @@ public final class Justice extends SavedData {
         j.custody.remove(who.toString());
         j.cases.values().removeIf(c -> c.accused.equals(who));
         j.setDirty();
+    }
+
+    /** Tests: a case opened against a player as if the deed were done here (no witnesses). */
+    public static int openForTests(ServerLevel level, Villages.Village v, Charge charge, ServerPlayer p, @Nullable VillageFolkEntity victim) {
+        JCase c = open(level, v.id(), charge, p.getUUID(), Belonging.called(p), true, victim == null ? null : victim.getUUID(),
+            victim == null ? "the town" : victim.displayNameCap(), false, placeOf(level, v, p.blockPosition()), p.blockPosition());
+        return c.id;
+    }
+
+    /** Tests: what the officer is about ("GO", "LEAD", ...), or "". */
+    public static String officerTaskForTests(VillageFolkEntity g) {
+        return Arrests.taskName(g);
     }
 
     public static void roundForTests(ServerLevel level, Villages.Village v) {

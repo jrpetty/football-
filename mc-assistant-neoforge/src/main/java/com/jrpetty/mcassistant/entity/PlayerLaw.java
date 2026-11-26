@@ -325,7 +325,7 @@ public final class PlayerLaw {
     @SubscribeEvent
     public static void onHurt(LivingIncomingDamageEvent e) {
         if (!(e.getEntity() instanceof VillageFolkEntity f) || !(f.level() instanceof ServerLevel level)) return;
-        if (!(e.getSource().getEntity() instanceof ServerPlayer p) || Laws.exempt(p) || !enabled()) return;
+        if (!(e.getSource().getEntity() instanceof ServerPlayer p) || Laws.exempt(p) || !enabled() && !Justice.enabled()) return;   // [wpe] justice's too
         com.jrpetty.mcassistant.Guard.run("the watch and a blow struck", () -> struck(level, p, f, e.getAmount()));
     }
 

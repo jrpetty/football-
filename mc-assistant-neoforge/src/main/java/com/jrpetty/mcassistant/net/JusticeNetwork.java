@@ -19,6 +19,12 @@ public final class JusticeNetwork {
         registrar.playToClient(JusticePayload.TYPE, JusticePayload.STREAM_CODEC, JusticeNetwork::handle);
     }
 
+    /** To one player, if its connection has the mod's channel (a test's stand-in player, a client without the mod: nothing). */
+    public static void send(net.minecraft.server.level.ServerPlayer p, net.minecraft.nbt.CompoundTag t) {
+        if (p.connection == null || !p.connection.hasChannel(JusticePayload.TYPE)) return;
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new JusticePayload(t));
+    }
+
     /** Clientbound: the class behind this call only loads on the client. */
     private static void handle(JusticePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> com.jrpetty.mcassistant.client.JusticeClient.heard(payload.tag()));

@@ -444,7 +444,7 @@ public final class Assize {
     }
 
     static void verdict(ServerLevel level, Villages.Village v, Sitting s, JCase c, @Nullable ServerPlayer p) {
-        double need = 4.0 / Math.sqrt(Math.max(0.25, JusticeConfig.harshness()));
+        double need = 2.5 / Math.sqrt(Math.max(0.25, JusticeConfig.harshness()));
         int[] jt = Jury.tally(c.id);
         List<JCase> all = withJoined(c);
         List<JCase> guilty = new ArrayList<>(), cleared = new ArrayList<>();
@@ -469,6 +469,7 @@ public final class Assize {
         if (guilty.isEmpty()) {
             say(level, s, c, s.judge, judge, "The court finds " + c.accusedName + " not guilty. You are free to go.");
             for (JCase k : all) acquit(level, v, k);
+            if (!c.player) FolkCrimes.CompoundTagHolder.release(level, Civics.find(level, c.accused));
             if (p != null) {
                 Jail.release(level, p.getUUID(), "The court found you not guilty of " + c.chargeWords() + ".");
                 Restraint.off(p);
@@ -512,9 +513,10 @@ public final class Assize {
     /** For a killing: accident, manslaughter or murder; else the charge itself. */
     static String finding(JCase c, JCase k) {
         if (!k.charge.killing()) return k.charge.word + (k.minor ? " (a minor assault)" : "");
-        if (k.intent >= 2 && !c.plea.equals("guilty")) return "murder";
-        if (k.intent >= 2) return "murder";
-        if (k.intent == 0 && c.account.equals("accident") && k.charge == Charge.MANSLAUGHTER) return "causing death by accident";
+        int intent = k.intent;
+        for (Ev e : k.evidence) if (e.found && e.kind.startsWith("MOTIVE")) intent += 2;
+        if (intent >= 2) return "murder";
+        if (intent == 0 && c.account.equals("accident") && k.charge == Charge.MANSLAUGHTER) return "causing death by accident";
         return "manslaughter";
     }
 
@@ -609,7 +611,10 @@ public final class Assize {
         Standing.stir(v.id(), c.accused);
         Villages.tell(v.id(), day, c.accusedName + " was convicted of " + c.finding + " and sentenced to " + c.sentence);
         Police.log(v.id(), level.getDayTime(), "verdict", c.accusedName + " convicted: " + c.sentence, null, paid);
-        if (p == null) return;
+        if (p == null) {
+            if (!c.player && c.charge.killing()) FolkCrimes.banish(level, v, c);   // a folk killer: banished
+            return;
+        }
         Restraint.off(p);
         if (s.sweeps > 0) {
             Justice.record(p.getUUID()).putInt("work", Justice.record(p.getUUID()).getInt("work") + s.sweeps);

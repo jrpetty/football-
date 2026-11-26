@@ -4,7 +4,6 @@ import com.jrpetty.mcassistant.JusticeConfig;
 import com.jrpetty.mcassistant.McAssistantMod;
 import com.jrpetty.mcassistant.entity.Justice.JCase;
 import com.jrpetty.mcassistant.entity.Justice.Stage;
-import com.jrpetty.mcassistant.net.JusticePayload;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -33,7 +32,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -286,7 +284,7 @@ public final class Jail {
         if (guard != null) FolkTalk.speak(guard, FolkTalk.pick(guard.getRandom(), "There. Your things are safe with me till you're out.",
             "Make yourself at home. Meals at noon and dusk.", "The court will send for you.", "Visiting's mornings and late afternoon.",
             "Behave, and we'll get on fine.", "Shout if you're dying. Otherwise, don't."));
-        if (p != null && t.getBoolean("remand")) {
+        if (p != null && t.getBoolean("remand") && c.stage == Stage.REMAND) {
             BlockPos court = Assize.courtPlace(level, v);
             Planner.add(p, level.getDayTime() + (c.courtAt - level.getGameTime()), "court", "Your trial: " + c.title(), court);
             Justice.notice(p, "Held for trial", "You are held in " + spot.words + " for " + c.chargeWords() + " at " + c.place + ". Your belongings have been taken and will be returned when you leave.",
@@ -498,7 +496,7 @@ public final class Jail {
             h.putBoolean("visiting", visiting(p.level().getDayTime()));
             h.putBoolean("incourt", t.getBoolean("court"));
         }
-        PacketDistributor.sendToPlayer(p, new JusticePayload(h));
+        com.jrpetty.mcassistant.net.JusticeNetwork.send(p, h);
     }
 
     // ------------------------------------------------------------------ visitors
@@ -648,6 +646,16 @@ public final class Jail {
         return out;
     }
 
+    /** Tests: a special constable sworn in the town. */
+    public static void swornForTests(UUID village) {
+        CompoundTag t = Police.town(village);
+        CompoundTag all = t.getCompound("constables");
+        CompoundTag one = new CompoundTag();
+        one.putLong("sworn", 1);
+        all.put(UUID.randomUUID().toString(), one);
+        t.put("constables", all);
+    }
+
     public static boolean wantedForTests(UUID village) {
         return wanted(village);
     }
@@ -659,6 +667,11 @@ public final class Jail {
     public static void lockUpForTests(ServerLevel level, Villages.Village v, ServerPlayer p, int caseId) {
         JCase c = Justice.get(caseId);
         if (c != null) lockUp(level, v, p.getUUID(), c, null, null);
+    }
+
+    public static void sentenceForTests(ServerLevel level, Villages.Village v, ServerPlayer p, int caseId, double seconds) {
+        JCase c = Justice.get(caseId);
+        if (c != null) sentence(level, v, p, c, seconds);
     }
 
     public static void backForTests(ServerLevel level, ServerPlayer p, long awayMillis) {

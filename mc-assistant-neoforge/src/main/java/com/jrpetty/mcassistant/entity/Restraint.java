@@ -1,7 +1,6 @@
 package com.jrpetty.mcassistant.entity;
 
 import com.jrpetty.mcassistant.McAssistantMod;
-import com.jrpetty.mcassistant.net.JusticePayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -26,7 +25,6 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -152,7 +150,7 @@ public final class Restraint {
     // ------------------------------------------------------------------ what a restrained player cannot do
 
     private static boolean held(@Nullable Player p) {
-        return p != null && !p.isCreative() && !p.isSpectator() && HELD.containsKey(p.getUUID());
+        return p != null && (!p.isCreative() || Justice.creativeUnderLawForTests) && !p.isSpectator() && HELD.containsKey(p.getUUID());
     }
 
     private static void refuse(Player p, String why) {
@@ -233,7 +231,11 @@ public final class Restraint {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post e) {
-        MinecraftServer server = e.getServer();
+        if (HELD.isEmpty() && !dirty && e.getServer().getTickCount() % 60 != 0) return;
+        com.jrpetty.mcassistant.Guard.run("the restrained", () -> tick(e.getServer()));
+    }
+
+    private static void tick(MinecraftServer server) {
         long t = server.getTickCount();
         for (Hold h : HELD.values()) {
             ServerPlayer p = server.getPlayerList().getPlayer(h.who);
@@ -306,7 +308,7 @@ public final class Restraint {
             CompoundTag t = new CompoundTag();
             t.putString("kind", "r");
             t.put("list", list);
-            for (ServerPlayer p : level.players()) PacketDistributor.sendToPlayer(p, new JusticePayload(t));
+            for (ServerPlayer p : level.players()) com.jrpetty.mcassistant.net.JusticeNetwork.send(p, t);
         }
     }
 }

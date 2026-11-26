@@ -113,7 +113,8 @@ public final class RecordPage implements PlayerLife.Page {
             boolean poor = Market.coinsHeld(p) < Assize.LAWYER_FEE * 2;
             page.row(new ItemStack(Items.FEATHER), "Speak for yourself", "Your account is heard before the verdict.", "")
                 .button(c.charge.killing() || c.charge == Charge.ASSAULT ? "It was an accident" : "It was a mistake", "account", LifePage.args("case", c.id, "d", "accident"), !closed, why)
-                .button("I wasn't there", "account", LifePage.args("case", c.id, "d", "elsewhere"), !closed, why)
+                .button("I wasn't there", "account", LifePage.args("case", c.id, "d", "elsewhere"), !closed, why);
+            page.buttons()
                 .button("I was provoked", "account", LifePage.args("case", c.id, "d", "provoked"), !closed, why)
                 .button("I ask for mercy", "account", LifePage.args("case", c.id, "d", "mercy"), !closed, why);
             page.row(new ItemStack(Items.WRITTEN_BOOK), "Have someone speak for you", "A lawyer (" + Assize.LAWYER_FEE + " coins) picks holes in hearsay and weak evidence; "

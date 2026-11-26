@@ -45,6 +45,66 @@
       "covers": ["talk:WATCH", "item:constable_badge"]
     },
     {
+      "id": "defence_justice",
+      "title": "The law, the jail and the court",
+      "icon": "minecraft:iron_bars",
+      "kind": "how",
+      "q": [
+        "what happens if i steal",
+        "can i go to jail",
+        "how do i get arrested",
+        "what if i kill a villager",
+        "how does the court work",
+        "i hurt a villager by accident",
+        "how do i say sorry to a villager",
+        "how long is a jail sentence",
+        "can i break out of jail",
+        "how do i get a lawyer",
+        "what is on my record",
+        "what happens if i kill a witness"
+      ],
+      "kw": [
+        "jail",
+        "arrest",
+        "court",
+        "trial",
+        "crime",
+        "witness",
+        "lawyer",
+        "sentence",
+        "record",
+        "handcuffs",
+        "apologise",
+        "murder"
+      ],
+      "answer": "Crimes are only known through witnesses and clues. The watch arrests you in irons and walks you to the jail; the court tries you with a jury and sentences you. Sentences last minutes of real play.",
+      "more": [
+        "Nobody knows what you did unless a folk saw it or the watch finds a clue (boot prints by a body, who the dead was last seen with, stolen goods found on you). A witness goes to the watch when its nature lets it: honest folk soon, shy ones late, and it may tell a neighbour first.",
+        "What a witness saw dies with it if it hasn't told anyone. What it told a neighbour lives on as hearsay, worth half. Killing a witness is a murder case of its own: done cleanly it may never be solved; done sloppily it leads to an arrest for both.",
+        "Hurt a folk by accident? Talk to them and choose 'I'm sorry I hurt you' within the time shown; offering to pay the healer helps. Left alone it's a complaint, and two complaints are an assault charge. A killing always goes to court, which can find it an accident, manslaughter or murder.",
+        "Lesser charges bring a summons with a date on your planner; graver ones a warrant. A guard walks to you and puts you in irons: you're slowed and can't fight or use items, and you're led on a lead to the jail. Pulling free is resisting arrest; outrunning the watch puts your name on the board as wanted.",
+        "In jail your belongings are kept at the desk and handed back when you leave. Meals are brought; friends may pass things through the bars at visiting hours. Time counts while you're online (slower while away, as the server sets it). Breaking out is a crime.",
+        "At court: the charges, the watch's case, the witnesses one by one, the evidence, your defence (your own account, a lawyer for 15 coins, or the public defender), the jury (players on the jury roll too), the verdict and the judge's sentence: a fine, compensation, community work with the watch's broom, the stocks, days in the cells, or banishment.",
+        "Your record stays with you: it costs respect, some employers turn you away, and lenders think twice."
+      ],
+      "controls": [
+        "U → Your life in town → You and the law",
+        "Town Hall → Respect → Your record and the law",
+        "Talk to any folk → Law → What's on my record?"
+      ],
+      "tips": [
+        "Plead guilty for a quarter off the sentence.",
+        "Giving yourself up to a guard counts in your favour.",
+        "Admins set harshness, jail length, the offline rate and whether killing players counts in mc_assistant-justice-server.toml."
+      ],
+      "related": [
+        "defence_crime",
+        "defence_watch",
+        "civic_jury"
+      ],
+      "covers": []
+    },
+    {
       "id": "defence_outlaws",
       "title": "Outlaws, bounties and prisoners of war",
       "icon": "mc_assistant:wanted_poster",

@@ -532,6 +532,9 @@ public final class Villages {
         Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
         Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
         Crime.resetForTests();              // [crime] the cases, the folk's records, the plans, the court
+        Justice.resetForTests();            // [wpe] the hurts, the warrants, the sittings (the books are the world's)
+        Restraint.resetForTests();          // [wpe]
+        com.jrpetty.mcassistant.JusticeConfig.resetForTests();   // [wpe]
         Police.resetForTests();             // [police] the watch's incidents, chases, beats, cells and players in hand
         AfterWar.resetForTests();           // [war-after] the prisoners, the ruins and the outlaws; the decay and the hunts stood down
         Weave.resetForTests();              // [weave] the homeless waiting to go, the day's looks; the round off again

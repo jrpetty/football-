@@ -68,6 +68,10 @@ final class Arrests {
         PATHED.clear();
     }
 
+    static void put(VillageFolkEntity g, Task t) {
+        TASKS.put(g.getUUID(), t);
+    }
+
     static boolean busy(VillageFolkEntity g) {
         return TASKS.containsKey(g.getUUID());
     }

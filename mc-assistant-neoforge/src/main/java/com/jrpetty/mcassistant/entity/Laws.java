@@ -89,6 +89,7 @@ public final class Laws {
     }
 
     static boolean exempt(Player p) {
+        if (Justice.creativeUnderLawForTests) return p.isSpectator();       // [wpe] a test's stand-in player is always "creative"
         return p.isCreative() || p.isSpectator();
     }
 
