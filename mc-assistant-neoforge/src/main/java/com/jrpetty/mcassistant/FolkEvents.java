@@ -40,13 +40,18 @@ public final class FolkEvents {
         if (!(event.getEntity().level() instanceof ServerLevel level) || !(event.getEntity() instanceof Enemy)) return;
         if (!(event.getSource().getEntity() instanceof Player player)) return;
         Errands.monsterKilled(level, player, event.getEntity().blockPosition());
-        List<VillageFolkEntity> saw = level.getEntitiesOfClass(VillageFolkEntity.class,
-            event.getEntity().getBoundingBox().inflate(24.0), f -> f.isAlive() && f.persona().rolled() && !f.isSleeping());
-        if (saw.isEmpty()) return;
-        String who = player.getName().getString();
-        for (VillageFolkEntity f : saw) f.persona().feelFor(player.getUUID(), who, 3);
-        // The one it had cornered owes them its life.
+        // [featfolk] Only folk who saw it (in sight and range of the player: Witness) think the better of them for it, and
+        // remember it: in a raid, as the player holding the square; else as a monster put down near the houses.
+        Villages.Village near = Villages.nearest(level, player.blockPosition(), 64);
+        boolean raid = near != null && com.jrpetty.mcassistant.entity.Raids.underAlarm(near.id());
+        List<VillageFolkEntity> saw = com.jrpetty.mcassistant.entity.Witness.seen(level, player,
+            raid ? com.jrpetty.mcassistant.entity.Witness.Kind.DEFENDED : com.jrpetty.mcassistant.entity.Witness.Kind.SLEW,
+            raid ? "" : com.jrpetty.mcassistant.entity.Witness.monster(event.getEntity()), null, 3);
+        // The one it had cornered owes them its life (it is beset: it saw, whatever stood in the way).
         String what = event.getEntity().getType().getDescription().getString().toLowerCase(java.util.Locale.ROOT);
+        for (VillageFolkEntity f : level.getEntitiesOfClass(VillageFolkEntity.class, event.getEntity().getBoundingBox().inflate(24.0),
+                f -> f.isAlive() && f.persona().rolled() && f.besetBy(event.getEntity().getUUID()) && !saw.contains(f))) saw.add(f);
+        if (saw.isEmpty()) return;
         boolean saved = false;
         for (VillageFolkEntity f : saw) {
             if (!f.besetBy(event.getEntity().getUUID())) continue;

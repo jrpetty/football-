@@ -213,6 +213,7 @@ public final class Trade {
             price = Errands.matcher(d.alt());
             priceCount = d.altCount();
         } else {
+            Witness.dealt(f, p, Witness.Kind.SHORTED, d.goods().words());     // [featfolk] it remembers being offered short
             return "That's not enough. It's " + describe(f) + ".";
         }
         // The goods may have gone since it offered them.
@@ -242,6 +243,7 @@ public final class Trade {
         String you = p.getName().getString();
         long day = f.level().getDayTime() / 24000L;
         me.feelFor(p.getUUID(), you, inKind ? 3 : 1);
+        Witness.dealt(f, p, Witness.Kind.TRADED, d.goods().words());          // [featfolk]
         if (inKind && f.ownerId() != null) Standing.stir(f.ownerId(), p.getUUID());
         if (me.memories().stream().noneMatch(m -> m.text().equals("I traded with " + you))) {
             me.remember(day, "I traded with " + you, 2);

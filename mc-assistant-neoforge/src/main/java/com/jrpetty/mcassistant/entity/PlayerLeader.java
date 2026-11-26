@@ -839,6 +839,7 @@ public final class PlayerLeader {
             return null;
         }
         String name = leaderName(village);
+        if (!Witness.contact(a, leaderId(village))) return null;         // [featfolk] only one who has dealt with the leader
         if (q[0].equals("broken")) {
             return new String[]{ "Did you hear? " + name + " promised to " + q[2] + ", and nothing.",
                 FolkTalk.pick(a.getRandom(), "Promises are cheap.", "I never believed it.", "Typical."), "We'll remember at the election." };
