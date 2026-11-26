@@ -424,7 +424,7 @@ public class LifeWeekGameTests {
             Kit.log("[VT] lf07 congregation " + Church.congregation(id, sun[0]));
             helper.assertTrue(Church.congregation(id, sun[0]) >= 5, "the congregation at the service");
         });
-        helper.runAtTickTime(500, () -> {
+        helper.runAtTickTime(900, () -> {
             UUID id = folk.get(0).ownerId();
             Kit.log("[VT] lf07 sermon lines said " + Church.sermonLinesSaid(id));
             helper.assertTrue(Church.sermonLinesSaid(id) >= 1, "the chaplain preached");

@@ -174,11 +174,12 @@ public final class Fairground {
         BlockPos c = v.centre();
         int near = Math.max(24, Villages.townReach(v.id()) + 8);
         int start = r.nextInt(8);
-        for (int out = 176; out >= near; out -= 8) {
+        for (int out = near; out <= 176; out += 8) {
             for (int k = 0; k < 8; k++) {
                 double a = Math.toRadians((start + k) * 45.0);
                 int x = c.getX() + (int) Math.round(Math.sin(a) * out), z = c.getZ() + (int) Math.round(Math.cos(a) * out);
                 if (!level.hasChunk(x >> 4, z >> 4) || Blink.seenAt(level, x, z, 8.0)) continue;
+                if (!level.isPositionEntityTicking(new BlockPos(x, c.getY(), z))) continue;      // it must walk from its first tick
                 BlockPos top = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
                 if (!level.getFluidState(top.below()).isEmpty() || !level.getFluidState(top).isEmpty()) continue;
                 if (!level.getBlockState(top.below()).isFaceSturdy(level, top.below(), Direction.UP)) continue;
