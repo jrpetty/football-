@@ -33,7 +33,7 @@ public final class FarmPage implements PlayerLife.Page {
     public LifePage build(ServerPlayer p, PlayerLife.Ctx c) {
         ServerLevel level = p.serverLevel();
         Villages.Village v = PlayerLife.here(p);
-        LifePage page = new LifePage("farm", "Your farm", v == null ? "No town near" : "In " + Villages.name(v.id()) + ": a farm, orchard, ranch, woodlot, mine or fishery of your own",
+        LifePage page = new LifePage("farm", "Your farm", v == null ? "No town near" : "In " + Villages.name(v.id()),
             p.registryAccess());
         if (v == null) return page;
         PlayerFarms.Farm f = chosen(p, v, c);
@@ -68,6 +68,8 @@ public final class FarmPage implements PlayerLife.Page {
         checks.add(r != null ? "✔ Standing on farmland: a field of " + ((r[2] - r[0] + 1) * (r[3] - r[1] + 1)) + " blocks" : "✘ Not on farmland (for a crop farm: stand on the field)");
         String no = r == null ? "" : PlayerFarms.whyNotField(level, v, r);
         if (r != null) checks.add(no.isEmpty() ? "✔ Nobody else's: not the town's, not another farm's" : "✘ Not yours: " + no);
+        boolean known = Citizens.is(v.id(), p.getUUID()) || Standing.of(v.id(), p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.FRIEND);
+        checks.add(known ? "✔ A citizen or a friend of " + Villages.name(v.id()) : "✘ A citizen or a friend of " + Villages.name(v.id()) + " (talk with its folk, help them, trade fair)");
         checks.add(Government.allowsPrivateFirms(v.id()) ? "✔ Private firms are allowed here" : "✘ The state owns the farms here");
         checks.add(Market.coinsHeld(p) >= PlayerFarms.FEE ? "✔ The fee: " + PlayerFarms.FEE + "c (you carry " + Market.coinsHeld(p) + "c)" : "✘ The fee: " + PlayerFarms.FEE + "c (you carry " + Market.coinsHeld(p) + "c)");
         page.box("Checks", checks, 4);
