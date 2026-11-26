@@ -7433,6 +7433,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // A carrier with a load in hand takes it to the stores first: the break waits. (One went
         // on its break holding the furnace's sixteen ingots and held them for the whole of it.)
         if (stationTask() == StationTask.HAUL && stashable() > 0) return false;
+        // [tp52] So does a courier with a run under way, loaded or not: taken off the list just before its break, the run was
+        // held for the whole of the break (half a day's wait for a full chest that no other courier could take).
+        if (stationTask() == StationTask.HAUL && Couriers.onARun(this)) return false;
         // [economy] A farmer with a ripe field takes the harvest in first: the break waits (Fields).
         if (Fields.harvestWaits(this)) return false;
         long day = level().getDayTime() % 24000L;

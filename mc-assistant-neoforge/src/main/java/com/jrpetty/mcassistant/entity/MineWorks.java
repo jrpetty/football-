@@ -1126,6 +1126,9 @@ public final class MineWorks {
         return out;
     }
 
+    /** [tp52] Why a task left part-cut by its miner (not by anything ahead of it) ended: what it cut is booked, nothing more. */
+    public static final String STOPPED = "stopped";
+
     /** The task worked: the record brought up to date, the claim let go. */
     public static void done(ServerLevel level, VillageFolkEntity f, Task t) {
         event(f, t.words() + ": " + t.cut + " of " + t.cells.size() + " cells" + (t.why.isEmpty() ? "" : ", stopped: " + t.why));
@@ -1171,7 +1174,10 @@ public final class MineWorks {
                         BlockPos from = t.stand.get(i), to = t.cells.get(i);
                         d.path.append(letter(Direction.fromDelta(to.getX() - from.getX(), 0, to.getZ() - from.getZ())));
                     }
-                    if (!t.why.isEmpty()) {
+                    // [tp52] A face left part-cut ("stopped": the shift over, a breather, the miner called off) has met nothing: its
+                    // cells are booked and the drift goes on as it was heading. Taken for the edge of the ground, each one turned the
+                    // drift; a miner whose shifts kept ending at its face turned it sixteen times in seven blocks and closed it.
+                    if (!t.why.isEmpty() && !STOPPED.equals(t.why)) {
                         if (t.why.startsWith("tunnel")) d.closed = 'j';
                         else {
                             d.blocked = true;
@@ -1187,7 +1193,7 @@ public final class MineWorks {
                     int[] b = d.branch(t.anchor, t.side);
                     if (b == null) { b = new int[]{ t.anchor, t.side, 0, 0 }; d.branches.add(b); }
                     b[2] += t.cut;
-                    if (!t.why.isEmpty() || t.cut >= t.cells.size()) b[3] = 1;
+                    if (!t.why.isEmpty() && !STOPPED.equals(t.why) || t.cut >= t.cells.size()) b[3] = 1;   // [tp52] (a branch left part-cut goes on)
                 }
             }
         }
@@ -1232,7 +1238,11 @@ public final class MineWorks {
         if (tunnel && daylight(level, cell, t.height)) return "daylight";
         if (tunnel && open >= t.height) {
             // Open already: one of the works' own tunnels (it has met it), or a cave.
-            return ourTunnel(level, t, cell) ? "tunnel" : "cave";
+            if (ourTunnel(level, t, cell)) return "tunnel";
+            // [tp52] Or opened by the works' own picks and on no drift's books: a vein followed out of the wall ahead of the face,
+            // or the cell a miner was cutting when it was called off. Cut on through, as the works' own; taken for a cave, the
+            // drift turned off round its own tip and turned again until it was closed six blocks out.
+            return dugByUs(t, cell) ? null : "cave";
         }
         if (tunnel) {
             for (Direction d : Direction.values()) {
@@ -1242,6 +1252,31 @@ public final class MineWorks {
             }
         }
         return null;
+    }
+
+    /** [tp52] The blocks the works' miners have broken lately (cells and the veins they followed), by village; a bounded set. */
+    private static final Map<UUID, it.unimi.dsi.fastutil.longs.LongOpenHashSet> DUG = new ConcurrentHashMap<>();
+    private static final int DUG_MOST = 50_000;
+
+    /** [tp52] A block broken by a miner of the works (WorksGoal). */
+    public static void dug(@Nullable UUID village, BlockPos p) {
+        if (village == null) return;
+        it.unimi.dsi.fastutil.longs.LongOpenHashSet s = DUG.computeIfAbsent(village, k -> new it.unimi.dsi.fastutil.longs.LongOpenHashSet());
+        if (s.size() >= DUG_MOST) s.clear();
+        s.add(p.asLong());
+    }
+
+    /** [tp52] Is every open block of this cell one the works' miners broke? */
+    private static boolean dugByUs(Task t, BlockPos cell) {
+        UUID v = null;
+        for (Map.Entry<UUID, Works> e : CACHE.entrySet()) {
+            Works w = e.getValue();
+            if (Math.abs(cell.getX() - w.sx) < 100 && Math.abs(cell.getZ() - w.sz) < 100) v = e.getKey();
+        }
+        it.unimi.dsi.fastutil.longs.LongOpenHashSet s = v == null ? null : DUG.get(v);
+        if (s == null) return false;
+        for (int h = 0; h < t.height; h++) if (!s.contains(cell.above(h).asLong())) return false;
+        return true;
     }
 
     private static boolean ourTunnel(ServerLevel level, Task t, BlockPos cell) {
@@ -1732,6 +1767,7 @@ public final class MineWorks {
 
     public static void forgetForTests(UUID village) {
         CACHE.remove(village);
+        DUG.remove(village);
         CLAIMS.remove(village);
         WOOD.remove(village);
         Ledger.forget(village, NOTE);
