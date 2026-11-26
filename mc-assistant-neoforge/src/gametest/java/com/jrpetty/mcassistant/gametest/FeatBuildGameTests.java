@@ -305,8 +305,12 @@ public class FeatBuildGameTests {
         if (!g.takeUpTrade(StationTask.GUARD)) g.setJob(StationTask.GUARD);
         g.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
         long day = level.getDayTime() / 24000L;
-        if (day % 2 != 0) day++;
         level.setDayTime(day * 24000L + 12600L);
+        if (!"WALLS".equals(Police.dutyForTests(level, g))) {
+            day++;
+            level.setDayTime(day * 24000L + 12600L);
+        }
+        Kit.log("[VT] fb03 the guard's duty tonight: " + Police.dutyForTests(level, g));
         final long d = day;
         List<BlockPos> visited = new ArrayList<>();
         double[] worst = { 0 };
