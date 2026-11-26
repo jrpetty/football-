@@ -116,7 +116,7 @@ public final class WeekendLife {
         if (RestDay.now(village, dt) != null) return t >= RestDay.WALKING_FROM;       // Sunday afternoon, after the games
         if (WorkHours.dayOff(f)) return true;
         if (f.stationTask() == AssistantEntity.StationTask.GUARD || f.isHired()) return false;
-        return WorkHours.hour(dt) >= WorkHours.of(village, f).close();               // its employer shut early
+        return WorkHours.hour(dt) >= WorkHours.endsAt(village, f);                   // its employer shut early, or its rota's shift done
     }
 
     /**

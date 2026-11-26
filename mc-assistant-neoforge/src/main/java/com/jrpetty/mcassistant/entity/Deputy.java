@@ -73,8 +73,8 @@ public final class Deputy {
     static final long NEAR_FOR = 12000L;
     static final int KEEP_LOG = 42, LEARN_DAYS = 28, LONG_AWAY = 30;
     public static final String[] TITLES = { "Deputy manager", "Shop manager", "Foreman", "Head clerk" };
-    public static final String[] TASKS = { "restock", "prices", "wages", "bank", "cover", "hours" };
-    static final String[] TASK_WORDS = { "Restock", "Set prices", "Keep wages covered", "Bank takings", "Hire cover", "Open and close" };
+    public static final String[] TASKS = { "restock", "prices", "wages", "bank", "cover", "hours", "rota" };
+    static final String[] TASK_WORDS = { "Restock", "Set prices", "Keep wages covered", "Bank takings", "Hire cover", "Open and close", "Adjust the rota" };
 
     /** [WP-E's seam] An owner who can't attend to the business though online (in jail, say): counted as away. */
     public static Predicate<UUID> ABSENT = u -> false;
@@ -109,7 +109,7 @@ public final class Deputy {
 
     static boolean may(CompoundTag r, String task) {
         CompoundTag t = r.getCompound("depTasks");
-        return t.contains(task) ? t.getBoolean(task) : !task.equals("cover");
+        return t.contains(task) ? t.getBoolean(task) : !task.equals("cover") && !task.equals("rota");   // [rota] the rota only when allowed
     }
 
     static String title(CompoundTag r) {
@@ -409,6 +409,11 @@ public final class Deputy {
             VillageFolkEntity c = Enterprise.hire(level, v, b, r, t);
             if (c != null) { rec.putString("cover", c.displayNameCap()); BusinessCore.event(r, day, c.displayNameCap() + " taken on as cover by " + name(id, r)); }
         }
+        // [rota] The rota kept up: new hands into the gaps, the gone off it, the staff's requests answered.
+        if (full && may(r, "rota")) {
+            String rotaDid = Rota.deputyAdjust(level, id, b, d, name(id, r), day);
+            if (rotaDid != null) { rec.putString("rota", rotaDid); BusinessCore.event(r, day, name(id, r) + " " + rotaDid + " on the rota"); }
+        }
         // A dishonest deputy's hand in the till.
         int skim = 0;
         if (p.honesty() < 45 && (full || may(r, "bank"))) {
@@ -631,6 +636,7 @@ public final class Deputy {
                 if (d.getBoolean("complaint")) complaints++;
                 if (d.contains("walkout")) problems.add(d.getString("walkout") + " walked out after a row, day " + (d.getLong("d") + 1) + ".");
                 if (d.contains("cover")) problems.add("Took on " + d.getString("cover") + " as cover, day " + (d.getLong("d") + 1) + ".");
+                if (d.contains("rota")) problems.add("The rota: " + d.getString("rota") + ", day " + (d.getLong("d") + 1) + ".");
                 halt |= d.getBoolean("halt");
                 asks |= d.getBoolean("asks");
                 left |= d.getBoolean("left");

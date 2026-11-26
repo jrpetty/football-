@@ -202,6 +202,21 @@ public final class WorkDemo {
             case "openhandin" -> { PlayerLife.open(p, "jobs", LifePage.args("tab", "handin")); return "opened"; }
             case "openfirm" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "summary")); return "opened"; }
             case "openfirmhands" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "hands")); return "opened"; }
+            case "rota" -> {                                                  // [rota] a firm's staff on a rota, for the camera
+                Business b = null;
+                for (Business x : Enterprise.open(v.id())) if (x.ownedBy(p.getUUID())) b = x;
+                if (b == null) return "no firm";
+                for (int i = 0; i < 2; i++) Enterprise.hireForTests(level, v, b);
+                return Rota.autoFill(level, v.id(), b, p.getGameProfile().getName());
+            }
+            case "openfirmrota" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "rota")); return "opened"; }
+            case "openfirmrotaedit" -> {                                      // [rota] its first hand's week open to edit
+                Business b = null;
+                for (Business x : Enterprise.open(v.id())) if (x.ownedBy(p.getUUID())) b = x;
+                if (b == null || b.rota == null || b.rota.lines.isEmpty()) return "no rota";
+                PlayerLife.open(p, "firm", LifePage.args("tab", "rota", "firm", b.id, "rotaWho", b.rota.lines.keySet().iterator().next().toString(), "rotaDay", 1));
+                return "opened";
+            }
             case "openfirmmore" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "more")); return "opened"; }
             case "openfarm" -> { PlayerLife.open(p, "farm", LifePage.args("tab", "overview")); return "opened"; }
             case "openfarmsell" -> { PlayerLife.open(p, "farm", LifePage.args("tab", "sell")); return "opened"; }

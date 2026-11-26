@@ -18,7 +18,9 @@ public final class LifeCard {
         if (f.stationTask() != AssistantEntity.StationTask.NONE && f.stationTask() != AssistantEntity.StationTask.GUARD) {
             Business b = Businesses.employer(village, f);
             Business.Hours h = WorkHours.of(village, f);
-            sb.append(b != null ? "Works " + h.words() + " for " + b.name : "Works the town's week, " + h.words());
+            int[] rs = WorkHours.rotaToday(f);                             // [rota] on its employer's rota
+            if (b != null && rs != null) sb.append("On ").append(b.name).append("'s rota: today ").append(Rota.words(rs));
+            else sb.append(b != null ? "Works " + h.words() + " for " + b.name : "Works the town's week, " + h.words());
             if (WorkHours.kept(village, day)) sb.append(WorkHours.dayOff(f) ? "; off today" : "");
             else sb.append(" (a young town works every day)");
             sb.append(". ");

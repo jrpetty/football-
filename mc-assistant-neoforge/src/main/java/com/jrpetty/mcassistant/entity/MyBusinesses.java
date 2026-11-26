@@ -93,12 +93,13 @@ public final class MyBusinesses implements PlayerLife.Page {
         }
         page.buttons().button("Start another business", "start", null).button("Contracts with players", "contracts", null);   // [wpb]
         if (c.tab.isEmpty()) c.tab = "summary";
-        page.tab("summary", "Summary", c.tab.equals("summary")).tab("hands", "Staff", c.tab.equals("hands")).tab("stock", "Stock", c.tab.equals("stock"))
+        page.tab("summary", "Summary", c.tab.equals("summary")).tab("hands", "Staff", c.tab.equals("hands")).tab("rota", "Rota", c.tab.equals("rota")).tab("stock", "Stock", c.tab.equals("stock"))
             .tab("prices", "Prices", c.tab.equals("prices")).tab("away", "Deputy", c.tab.equals("away")).tab("money", "Money", c.tab.equals("money"))
             .tab("offers", "Offers", c.tab.equals("offers")).tab("history", "History", c.tab.equals("history")).tab("more", "Owners", c.tab.equals("more"));
         BusinessTypes.BusinessType t = Enterprise.kindOf(v.id(), b);
         switch (c.tab) {
             case "hands" -> hands(level, v, b, t, page, c);
+            case "rota" -> RotaPage.build(level, p, v, b, page, c);       // [rota] the staff rota
             case "away" -> DeputyPage.build(level, p, v, b, page, c);       // [wpb] the deputy's authority, its standing orders, its record
             case "offers" -> OfferPage.incoming(level, p, v, b, page);      // [wpb] offers for it: accept, refuse, counter
             case "history" -> CoreHub.history(level, p, v, b, page);        // [wpb] its charts, best sellers, customers, staff, timeline
@@ -378,6 +379,10 @@ public final class MyBusinesses implements PlayerLife.Page {
             case "deputy", "undeputy", "appoint", "showme", "depon", "depmode", "deptask", "depnotify", "orders", "letprice", "raiseyes", "raiseno",
                  "sack", "report", "readreport", "target" -> { return DeputyPage.act(level, p, v, b, action, args, c); }
             case "hours", "allhours", "discount", "quality", "advert", "premises", "tour", "showstock" -> { return CoreHub.act(level, p, v, b, action, args, c); }
+            case "rfill", "rstart", "rclear", "rot", "rsave", "rload", "rbusy", "rreq", "redit", "rtoggle", "rday", "rpreset", "radj", "rcopy", "rdone" -> {
+                return RotaPage.act(level, p, v, b, action, args, c);      // [rota]
+            }
+            case "hint" -> { Belonging.dismissHint(p.getUUID(), args.getString("id")); return ""; }
             case "waremk" -> {
                 if (!Partners.canDecide(v.id(), b, p.getUUID())) return "!" + Partners.whyNot(v.id(), b);
                 return setWareMarkup(level, v.id(), b, args.getString("k"), args.getInt("d"));

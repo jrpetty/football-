@@ -61,6 +61,15 @@ public final class Planner {
         }
     }
 
+    /** [rota] Every entry of this kind dropped (a rota changed: its shifts put back fresh). */
+    public static void clear(UUID player, String kind) {
+        List<Entry> l = ENTRIES.get(player);
+        if (l == null) return;
+        synchronized (l) {
+            l.removeIf(e -> e.kind().equals(kind));
+        }
+    }
+
     public static void resetForTests(UUID player) {
         ENTRIES.remove(player);
     }
