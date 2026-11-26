@@ -65,8 +65,7 @@ public final class BuildGhost {
     public static void onStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.options.hideGui && (ghost == null || !ghost.getBoolean("film"))) return;
-        CompoundTag g = ghost;
+        CompoundTag g = ghost;                                              // drawn under F1 too: it is what a film of it is for
         if (g == null || mc.level == null) return;
         if (System.currentTimeMillis() > until) { ghost = null; return; }
         Vec3 cam = event.getCamera().getPosition();
@@ -76,7 +75,7 @@ public final class BuildGhost {
         ps.translate(-cam.x, -cam.y, -cam.z);
         // the blocks, translucent: the house as it would stand
         BlockRenderDispatcher br = mc.getBlockRenderer();
-        float pulse = 0.42f + 0.08f * (float) Math.sin(System.currentTimeMillis() / 300.0);
+        float pulse = 0.6f + 0.08f * (float) Math.sin(System.currentTimeMillis() / 300.0);
         boolean rest = g.getBoolean("rest");
         VertexConsumer base = buf.getBuffer(RenderType.translucent());
         int[] c = cells;
@@ -85,7 +84,7 @@ public final class BuildGhost {
             if (st.isAir() || st.getRenderShape() != RenderShape.MODEL) continue;
             boolean bad = c[i + 4] == 1;
             float r = bad ? 1f : rest ? 0.75f : 1f, gr = bad ? 0.25f : 1f, b = bad ? 0.25f : rest ? 0.85f : 1f;
-            VertexConsumer vc = new Tint(base, r, gr, b, bad ? 0.65f : pulse);
+            VertexConsumer vc = new Tint(base, r, gr, b, bad ? 0.75f : rest ? 0.45f : pulse);
             BakedModel model = br.getBlockModel(st);
             ps.pushPose();
             ps.translate(c[i], c[i + 1], c[i + 2]);

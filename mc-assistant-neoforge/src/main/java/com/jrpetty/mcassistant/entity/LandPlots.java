@@ -294,6 +294,37 @@ public final class LandPlots implements PlayerLife.Page {
         return out;
     }
 
+    /**
+     * Is something of the town's standing on this lot: a building on its books, a house, a property on the register, a site its
+     * builders hold? (The plan's own list of lots spoken for is kept in memory and may be short after a restart.)
+     */
+    static boolean builtOn(UUID village, BlockPos heart, TownPlan.Lot l) {
+        int[] b = TownPlan.box(l);
+        int x0 = heart.getX() + b[0], z0 = heart.getZ() + b[1], x1 = heart.getX() + b[2], z1 = heart.getZ() + b[3];
+        for (com.jrpetty.mcassistant.village.Ledger.Building s : com.jrpetty.mcassistant.village.Ledger.buildings(village)) {
+            int[] f;
+            try { f = com.jrpetty.mcassistant.entity.goal.BuildGoal.box(s.structure(), s.anchor(), s.facing(), false); } catch (RuntimeException e) { continue; }
+            if (f[0] <= x1 && f[1] >= x0 && f[2] <= z1 && f[3] >= z0) return true;
+        }
+        for (Homes.Home h : Homes.homes(village).values()) if (h.anchor.getX() >= x0 && h.anchor.getX() <= x1 && h.anchor.getZ() >= z0 && h.anchor.getZ() <= z1) return true;
+        for (Villages.Site s : Villages.sitesOf(village).values()) if (s.anchor().getX() >= x0 - 2 && s.anchor().getX() <= x1 + 2 && s.anchor().getZ() >= z0 - 2 && s.anchor().getZ() <= z1 + 2) return true;
+        int cx = heart.getX() + l.x(), cz = heart.getZ() + l.z();
+        return PropertyMarket.overlapping(village, new BlockPos(cx, 0, cz), b[2] - l.x(), b[3] - l.z(), null) != null;
+    }
+
+    /** Something standing on the ground itself (a wall, a floor, a path), sampled at its middle and toward its corners. */
+    static boolean blocked(ServerLevel level, int[] world) {
+        int[][] pts = { { (world[0] + world[2]) / 2, (world[1] + world[3]) / 2 }, { world[0] + 2, world[1] + 2 }, { world[2] - 2, world[1] + 2 },
+            { world[0] + 2, world[3] - 2 }, { world[2] - 2, world[3] - 2 } };
+        for (int[] p : pts) {
+            if (!level.isLoaded(new BlockPos(p[0], 64, p[1]))) continue;
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p[0], p[1]);
+            net.minecraft.world.level.block.state.BlockState g = level.getBlockState(new BlockPos(p[0], y - 1, p[1]));
+            if (!BuildPlots.natural(g) && !g.is(net.minecraft.tags.BlockTags.LEAVES) && !g.is(net.minecraft.tags.BlockTags.LOGS)) return true;
+        }
+        return false;
+    }
+
     /** Why the player may not have this lot of the plan ("" if it may): the town's, kept, or another's. */
     static String lotProblem(UUID village, BlockPos heart, TownPlan.Lot l) {
         if (!CityGrowth.laidOut(village, l)) return "the town hasn't laid that ring out yet";
@@ -304,6 +335,7 @@ public final class LandPlots implements PlayerLife.Page {
             return t != null ? "it's " + t.ownerName() + "'s" : "the town has built on it, or is building on it";
         }
         if (Villages.lotKeptOff(village, heart, l)) return "it's the town's fields, pens or the mine's ground";
+        if (builtOn(village, heart, l)) return "the town has built on it, or is building on it";
         if (at(village, heart.getX() + l.x(), heart.getZ() + l.z()) != null) return "somebody holds it already";
         for (Villages.Site s : Villages.sitesOf(village).values()) {
             int[] b = TownPlan.box(l);
@@ -317,7 +349,7 @@ public final class LandPlots implements PlayerLife.Page {
     static int state(UUID village, BlockPos heart, TownPlan.Lot l, UUID me) {
         Title t = at(village, heart.getX() + l.x(), heart.getZ() + l.z());
         if (t != null) return t.owner().equals(me) ? 4 : 5;
-        if (Villages.lotTaken(village, l)) return 2;
+        if (Villages.lotTaken(village, l) || builtOn(village, heart, l)) return 2;
         if (Villages.lotKeptOff(village, heart, l)) return 3;
         return lotProblem(village, heart, l).isEmpty() ? 0 : 6;
     }
@@ -457,6 +489,9 @@ public final class LandPlots implements PlayerLife.Page {
             box = pc.box();
             cells.addAll(pc.lots());
             back = pc.back();
+            if (blocked(level, new int[]{ heart.getX() + box[0], heart.getZ() + box[1], heart.getX() + box[2], heart.getZ() + box[3] })) {
+                return "!Not that ground: something stands on it already (a floor, a path, a wall). Choose another lot.";
+            }
         }
         int[] pr = price(id, heart, kind, box);
         int have = Market.coinsHeld(p) + PropertyBook.account(id, p.getUUID());
@@ -707,7 +742,7 @@ public final class LandPlots implements PlayerLife.Page {
         LifePage.LotMap map = page.lotMap("The town's plan: click a free lot (" + kind.title.toLowerCase(Locale.ROOT) + " round it is chosen)", heart.getX(), heart.getZ());
         map.mark(heart.getX(), heart.getZ(), 1, "The square");
         map.mark(p.getBlockX(), p.getBlockZ(), 2, "You");
-        int rings = Math.min(CityGrowth.rings(id), 5);
+        int rings = Math.min(CityGrowth.rings(id), Math.max(2, LandUse.builtRings(id) + 1));
         for (TownPlan.Lot l : lots().values()) {
             if (TownPlan.ringOf(l) >= rings) continue;
             int[] b = TownPlan.box(l);

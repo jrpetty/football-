@@ -42,14 +42,21 @@ public final class PropertyRig {
     }
 
     /** The first free plan lot near the square a cottage fits, as offsets, or null. */
-    static int[] freeLot(UUID village, BlockPos heart) {
+    static int[] freeLot(ServerLevel level, Villages.Village v) {
+        UUID village = v.id();
+        BlockPos heart = v.centre();
+        int[] second = null;
         for (TownPlan.Lot l : TownPlan.lots()) {
             if (l.kind() != TownPlan.Kind.LOT) continue;
             if (!BuildPicker.lotProblem(village, heart, l, false).isEmpty()) continue;
             if (!LandPlots.lotProblem(village, heart, l).isEmpty()) continue;
-            return new int[]{ l.x(), l.z() };
+            int x = heart.getX() + l.x(), z = heart.getZ() + l.z();
+            if (!level.isLoaded(new BlockPos(x, 64, z))) continue;
+            BlockPos at = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+            if (second == null) second = new int[]{ l.x(), l.z() };
+            if (BuildPlots.whyNot(level, v, "house", at, LandPlots.door(l.back())).isEmpty()) return new int[]{ l.x(), l.z() };
         }
-        return null;
+        return second;
     }
 
     static String rig(ServerPlayer p, String what) {
@@ -58,7 +65,7 @@ public final class PropertyRig {
         if (v == null) return "no town near";
         UUID id = v.id();
         BlockPos heart = v.centre();
-        int[] lot = freeLot(id, heart);
+        int[] lot = freeLot(level, v);
         switch (what) {
             case "build", "walk" -> {
                 if (lot == null) return "no free lot";
@@ -68,11 +75,13 @@ public final class PropertyRig {
                     TownPlan.Lot l = LandPlots.lotAt(lot[0], lot[1]);
                     Direction door = LandPlots.door(l.back());
                     int ax = heart.getX() + lot[0], az = heart.getZ() + lot[1];
-                    int vx = ax + door.getStepX() * 14 + door.getClockWise().getStepX() * 7, vz = az + door.getStepZ() * 14 + door.getClockWise().getStepZ() * 7;
-                    int vy = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, vx, vz) + 4;
+                    int vx = ax + door.getStepX() * 16 + door.getClockWise().getStepX() * 9, vz = az + door.getStepZ() * 16 + door.getClockWise().getStepZ() * 9;
+                    int vy = Math.max(level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, vx, vz), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ax, az)) + 7;
+                    p.getAbilities().flying = true;
+                    p.onUpdateAbilities();
                     double dx = ax - vx, dz = az - vz;
                     float yaw = (float) (Math.toDegrees(Math.atan2(-dx, dz)));
-                    p.teleportTo(level, vx + 0.5, vy, vz + 0.5, yaw, 18f);
+                    p.teleportTo(level, vx + 0.5, vy, vz + 0.5, yaw, 22f);
                     return "walk lot " + lot[0] + "," + lot[1] + " at " + ax + "," + az + " viewer " + vx + "," + vy + "," + vz;
                 }
                 return "build lot " + lot[0] + "," + lot[1];
@@ -84,8 +93,10 @@ public final class PropertyRig {
                 if (what.equals("landwalk")) {
                     int ax = heart.getX() + lot[0], az = heart.getZ() + lot[1];
                     int vx = ax + 12, vz = az + 12;
-                    int vy = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, vx, vz) + 7;
-                    p.teleportTo(level, vx + 0.5, vy, vz + 0.5, 135f, 30f);
+                    int vy = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, vx, vz) + 9;
+                    p.getAbilities().flying = true;
+                    p.onUpdateAbilities();
+                    p.teleportTo(level, vx + 0.5, vy, vz + 0.5, 135f, 35f);
                 }
                 return "land lot " + lot[0] + "," + lot[1];
             }

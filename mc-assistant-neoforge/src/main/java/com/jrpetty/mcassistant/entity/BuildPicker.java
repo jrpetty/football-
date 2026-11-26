@@ -90,7 +90,7 @@ public final class BuildPicker implements PlayerLife.Page {
         boolean ok = l.use().equals("home") || premises && l.use().equals("civic");
         if (!ok) return "kept for the town's " + (l.use().equals("civic") ? "trades on the square" : l.use().startsWith("great") ? "great buildings" : "watchtowers");
         if (LandPlots.at(village, heart.getX() + l.x(), heart.getZ() + l.z()) != null) return "somebody holds it";
-        if (Villages.lotTaken(village, l)) return "the town has built on it, or is building on it";
+        if (Villages.lotTaken(village, l) || LandPlots.builtOn(village, heart, l)) return "the town has built on it, or is building on it";
         if (Villages.lotKeptOff(village, heart, l)) return "it's the town's fields, pens or the mine's ground";
         return "";
     }
@@ -219,14 +219,14 @@ public final class BuildPicker implements PlayerLife.Page {
         LifePage.LotMap map = page.lotMap("The town's plan: click a green or blue lot", heart.getX(), heart.getZ());
         map.mark(heart.getX(), heart.getZ(), 1, "The square");
         map.mark(p.getBlockX(), p.getBlockZ(), 2, "You");
-        int rings = Math.min(CityGrowth.rings(id), 5);
+        int rings = Math.min(CityGrowth.rings(id), Math.max(2, LandUse.builtRings(id) + 1));
         for (TownPlan.Lot l : LandPlots.lots().values()) {
             if (TownPlan.ringOf(l) >= rings) continue;
             LandPlots.Title t = LandPlots.at(id, heart.getX() + l.x(), heart.getZ() + l.z());
             if (t != null && t.owner().equals(me)) continue;                // drawn whole below
             int[] b = TownPlan.box(l);
             String why = lotProblem(id, heart, l, prem);
-            int st = t != null ? 5 : why.isEmpty() ? 0 : Villages.lotKeptOff(id, heart, l) ? 3 : Villages.lotTaken(id, l) ? 2 : 6;
+            int st = t != null ? 5 : why.isEmpty() ? 0 : Villages.lotKeptOff(id, heart, l) ? 3 : why.startsWith("the town has built") ? 2 : 6;
             String sid = "L:" + l.x() + ":" + l.z();
             boolean click = why.isEmpty();
             map.lot(heart.getX() + b[0], heart.getZ() + b[1], heart.getX() + b[2], heart.getZ() + b[3], st, s != null && s.id().equals(sid),
