@@ -51,6 +51,7 @@ public final class JusticeStage {
             case "build" -> {
                 BlockPos at = p.blockPosition();
                 Direction f = Direction.NORTH;
+                clear(level, at, 6, 10);                                   // room to see the scenes from
                 if (Jail.of(v.id()) == null) {
                     BlockPos site = at.relative(Direction.EAST, 12);
                     clear(level, site, 9, 9);
