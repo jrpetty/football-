@@ -4,6 +4,7 @@ import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
 import com.jrpetty.mcassistant.entity.Aboard;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Job;
+import com.jrpetty.mcassistant.entity.LandUse;
 import com.jrpetty.mcassistant.entity.MineSafety;
 import com.jrpetty.mcassistant.entity.MineStairs;
 import com.jrpetty.mcassistant.entity.TownMine;
@@ -373,6 +374,10 @@ public class MineSafetyGameTests {
      * woodcutter in a wood: lent out, the farmer is sent for timber to the wood, never for stone to the
      * miner's face; its trade and its field are its own all along; and once the lend is up, its work is on
      * its own field again.
+     *
+     * <p>[fixmf04] The wood is past the town's growth line ([econ51] LandUse): a wood inside it is the town's room to
+     * grow, and the council buys it out on its first rounds (the woodcutter off to find ground further out), as it does
+     * any field, pen, wood or hive there. The miner's face is no out-of-doors work and stays where it is put.
      */
     @GameTest(template = EMPTY, timeoutTicks = 100, batch = "mf04_idle_hands")
     public static void mf04_idle_hands(GameTestHelper helper) {
@@ -380,8 +385,8 @@ public class MineSafetyGameTests {
         reset(level);
         level.setDayTime(2000);
         int x = 886000;
-        Kit.hold(level, x, Z, 64);
-        Kit.prepare(level, x, Z, 64);
+        Kit.hold(level, x, Z, 104);
+        Kit.prepare(level, x, Z, 104);
         BlockPos heart = Kit.surface(level, x, Z);
         BlockPos fieldAt = Kit.surface(level, x - 12, Z);
         VillageFolkEntity f = farmer(helper, level, heart, fieldAt);
@@ -395,13 +400,14 @@ public class MineSafetyGameTests {
         helper.assertTrue(m != null, "a miner");
         m.setJob(StationTask.MINE);
         m.assignPlot(WorkZone.around(Kit.surface(level, mx, Z), 8, heart.getY() - 24), "Face 0,0");
-        // The woodcutter's wood, forty the other way.
-        int wx = x - 40;
+        // The woodcutter's wood the other way, just past the town's growth line (a young town's: 65 blocks out).
+        int wx = x - (LandUse.growthReach(v) + 14 + 4);
         Kit.forest(level, wx, Z, 8, 10, 11L);
         VillageFolkEntity w = VillageFolkSpawnerBlock.raise(level, heart.offset(-2, 0, 2), 0.0F);
         helper.assertTrue(w != null, "a woodcutter");
         w.setJob(StationTask.WOOD);
         w.assignPlot(WorkZone.around(Kit.surface(level, wx, Z), 14, WorkZone.DEFAULT_DEPTH), "The wood");
+        helper.assertTrue(!LandUse.inTheWayForTests(v, Villages.get(v).centre(), w), "the wood past the growth line, not in the town's way");
         f.moveTo(fieldAt.getX() + 0.5, fieldAt.getY(), fieldAt.getZ() + 0.5, 0.0F, 0.0F);
         WorkZone own = f.workZone();
         boolean faceInMine = TownMine.inMine(v, m.workZone().center());
