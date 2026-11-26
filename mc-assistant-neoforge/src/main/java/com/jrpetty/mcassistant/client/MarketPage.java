@@ -40,9 +40,10 @@ public final class MarketPage {
             + " (exports " + p(t.getLong("week_exports")) + "), staff " + p(t.getLong("week_staff")) + ". Today: bought " + p(t.getLong("today_bought"))
             + ", sold " + p(t.getLong("today_sold")) + ".", wide), x + 2, cy, Ui.MUTED);
         cy += 8;
-        TaxesPage.small(g, font, Ui.clip(font, "Owes producers " + p(t.getLong("credit")) + " (store credit); owed " + p(t.getLong("owed"))
-            + " by folk and businesses, " + p(t.getLong("debts")) + " on the town's IOUs; the treasury's float " + p(t.getLong("advanced")) + ".", wide),
-            x + 2, cy, Ui.MUTED);
+        String owes = "Owes producers " + p(t.getLong("credit")) + " (store credit); owed " + p(t.getLong("owed"))
+            + " by folk and businesses, and " + p(t.getLong("debts")) + " by the town itself on IOUs; the treasury's float " + p(t.getLong("advanced")) + ".";
+        boolean overOwes = mx >= x && mx < x + w && my >= cy - 1 && my < cy + 8;
+        TaxesPage.small(g, font, Ui.clip(font, owes, wide), x + 2, cy, Ui.MUTED);
         cy += 11;
         int[] cols = { 0, w * 34 / 100, w * 48 / 100, w * 62 / 100, w * 76 / 100, w * 88 / 100 };
         String[] heads = { "Good", "Bid", "Ask", "Stock", "Bought", "Sold" };
@@ -68,15 +69,43 @@ public final class MarketPage {
         }
         int fy = y + h - 46;
         List<String> foot = new ArrayList<>(strings(t, "programme"));
+        int iouLines = 0;
+        if (!t.getString("owing").isEmpty()) { foot.add(0, t.getString("owing")); iouLines++; }   // [econ51] what it owes, in plain words
         if (!t.getString("budget").isEmpty()) foot.add(0, t.getString("budget"));          // [econ-1b] the town's budget
-        if (!t.getString("iouWeek").isEmpty()) foot.add(Math.min(1, foot.size()), t.getString("iouWeek"));   // [econ-1d] the IOUs' week
+        if (!t.getString("iouWeek").isEmpty()) { foot.add(Math.min(2, foot.size()), t.getString("iouWeek")); iouLines++; }   // [econ-1d] the IOUs' week
         foot.add("The town's coin: " + t.getString("census"));
+        int i = 0;
         for (String s : foot) {
             if (fy > y + h - 8) break;
-            TaxesPage.small(g, font, Ui.clip(font, s, wide), x + 2, fy, Ui.FAINT);
+            boolean iou = !t.getString("budget").isEmpty() ? i >= 1 && i <= iouLines : i < iouLines;
+            if (iou && mx >= x && mx < x + w && my >= fy - 1 && my < fy + 7) {
+                g.fill(x, fy - 1, x + w, fy + 7, UiStyle.TILE_HOVER);
+                tip = iouTip();
+            }
+            TaxesPage.small(g, font, Ui.clip(font, s, wide), x + 2, fy, iou && s.contains("over it") ? Ui.BAD : Ui.FAINT);
             fy += 8;
+            i++;
         }
+        if (overOwes && tip == null) tip = iouTip();
         return tip;
+    }
+
+    /**
+     * [econ51] What an IOU is, for the mouse over the lines that count them (here and the Capital page): a player read
+     * "IOUs 367.23c of the 78.24c it can carry: short" and could make nothing of it.
+     */
+    static List<Component> iouTip() {
+        return List.of(
+            Component.literal("What an IOU is").withColor(0xFFE08A),
+            Component.literal("When the treasury has no coin, the town's builders and works"),
+            Component.literal("still take what they need from its own market, and the"),
+            Component.literal("treasury leaves a note for it: an IOU. The town owes it to itself."),
+            Component.literal("Taxes, rents and the market's takings pay them off first,"),
+            Component.literal("oldest first. Bonds sold to pay them off count too, past a"),
+            Component.literal("week's takings: a debt by another name is still a debt."),
+            Component.literal("What it can carry: half a week's takings (two coins a grown"),
+            Component.literal("folk at the least). Over that the builders get part of each"),
+            Component.literal("day's money and the rest pays the debt down. Slower, never stopped."));
     }
 
     private static List<String> strings(CompoundTag t, String key) {

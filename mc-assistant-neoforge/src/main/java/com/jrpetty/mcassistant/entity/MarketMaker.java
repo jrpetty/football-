@@ -1299,7 +1299,8 @@ public final class MarketMaker {
         for (String line : Accounts.debtLines(village)) ious.add(net.minecraft.nbt.StringTag.valueOf(line));
         out.put("ious", ious);
         out.putString("census", CoinCensus.line(village));
-        out.putString("budget", TownBudget.line(village));                        // [econ-1b] the town's budget
+        out.putString("budget", TownBudget.weekLine(village));                    // [econ-1b] the town's budget
+        out.putString("owing", TownBudget.owingLine(village));                    // [econ51] what it owes, in plain words
         out.putString("iouWeek", IouBook.weekLine(village));                       // [econ-1d] the IOUs' week: who wrote them, how cleared
         return out;
     }
@@ -1325,7 +1326,7 @@ public final class MarketMaker {
             .append(" (exports ").append(Businesses.pence(w[3])).append("), its staff paid ").append(Businesses.pence(w[2])).append("\n");
         sb.append("Owes producers ").append(Businesses.pence(storeCredit(village))).append(" in store credit; owed ")
             .append(Businesses.pence(Accounts.owedAll(village))).append(" by folk and businesses and ").append(Businesses.pence(Accounts.debts(village)))
-            .append(" on the town's IOUs; the treasury's float ").append(Businesses.pence(advanced(village))).append("\n");
+            .append(" on the town's IOUs (its notes for goods taken with no coin to pay); the treasury's float ").append(Businesses.pence(advanced(village))).append("\n");
         Map<String, long[]> today = goodsToday(village);
         for (String key : boardGoods(village)) {
             ItemStack one = Stockroom.sampleOf(key);
