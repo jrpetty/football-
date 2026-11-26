@@ -1195,7 +1195,7 @@ public final class Enterprise {
     public static String charter(ServerLevel level, Villages.Village v, net.minecraft.server.level.ServerPlayer p, String kind) {
         BusinessType t = BusinessTypes.of(kind);
         if (t == null) return "No such kind of business. The kinds: " + String.join(", ", BusinessTypes.keys()) + ".";
-        if (!Government.allowsPrivateFirms(v.id())) return "The state owns the firms in " + Villages.name(v.id()) + ": no private charter is granted here.";   // [wpb]
+        if (!Government.allowsPrivateFirms(v.id())) { String why = Regimes.businessBarred(v.id()); return why != null ? why : "The state owns the firms in " + Villages.name(v.id()) + ": no private charter is granted here."; }   // [wpb]
         UUID id = v.id();
         String planned = Regimes.businessBarred(id);                       // [featcivic] a planned state: the state runs them all
         if (planned != null) return planned;

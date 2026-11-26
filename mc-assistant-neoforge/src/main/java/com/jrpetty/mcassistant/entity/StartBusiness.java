@@ -352,7 +352,7 @@ public final class StartBusiness implements PlayerLife.Page {
     static String mayCharter(ServerLevel level, Villages.Village v, ServerPlayer p) {
         // [biz25] The town charters anybody it knows and has nothing against: a visitor who has passed the time of day with
         // its folk will do. A stranger nobody has spoken to says hello first; an unwelcome one mends fences.
-        if (!Government.allowsPrivateFirms(v.id())) return "The state owns the firms in " + Villages.name(v.id()) + ": no private charter is granted here.";   // [wpb] feat-civic's planned state
+        if (!Government.allowsPrivateFirms(v.id())) { String why = Regimes.businessBarred(v.id()); return why != null ? why : "The state owns the firms in " + Villages.name(v.id()) + ": no private charter is granted here."; }   // [wpb] feat-civic's planned state
         if (Citizens.is(v.id(), p.getUUID())) return "";
         Standing.Title t = Standing.of(v.id(), p.getUUID(), level.getGameTime()).title();
         if (t.atLeast(Standing.Title.VISITOR)) return "";
