@@ -3177,7 +3177,7 @@ public final class Villages {
                 boolean walked = CityPlan.reaches(level, v, lot);
                 BlockPos ground = TerraceRows.isRow(project) ? TerraceRows.ground(level, villageId, project, x, z, back)   // [house34] each house at its street's height
                     : groundFor(level, x, z, hx, hz, true, walked ? Integer.MIN_VALUE : heartGround, laps,
-                    great ? 4 : 2, whyNot(villageId));
+                    great || homesClimb(villageId, project) ? 4 : 2, whyNot(villageId));
                 if (ground == null) { SiteWhy.count("ground (wet, cliff, height, built)"); continue; }
                 if (Floods.lowGround(villageId, ground)) { SiteWhy.count("flood ground"); continue; }     // [disasters] not on the low ground the river came over
                 if (PlayerGap.crowds(level, villageId, ground, hx, hz)) { SiteWhy.count("a player's building"); continue; }   // [join21] never on or against a player's building
@@ -3225,6 +3225,16 @@ public final class Villages {
         if (site != null) TerraceRows.chosen(villageId, project, site);   // [house34] a row's steps kept with its lot
         if (site != null) AgeSites.keep(villageId, project, site);   // [econ32c] kept over a restart
         return site;
+    }
+
+    /**
+     * [econ51] A home in a town that has spread its plan out past its fifth ring: once looks for a lot have gone hungry it
+     * takes ground as steep as the great buildings do (two blocks more of fall across the lot, terraced up under its floor),
+     * not only the level lots, which on a hillside are long taken (a hill town's plan was three in ten cliff).
+     */
+    static boolean homesClimb(UUID villageId, String project) {
+        if (project == null || CityGrowth.rings(villageId) < com.jrpetty.mcassistant.village.TownPlan.RINGS + 2) return false;
+        return project.startsWith("house") || project.equals("flats") || TerraceRows.isRow(project);
     }
 
     /**
