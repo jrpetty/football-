@@ -58,7 +58,8 @@ final class PaBowGoal extends Goal {
         if (t == null) return;
         double distSq = a.distanceToSqr(t);
         boolean post = a.holdingAPost();
-        double minSq = t instanceof Creeper ? 81.0 : 36.0;
+        boolean archer = PaStance.archer(a);                             // [featpa] the archer's stance: further back, and never still for long
+        double minSq = t instanceof Creeper ? 81.0 : archer ? 81.0 : 36.0;
         if (post) {
             a.getNavigation().stop();
         } else if (distSq < minSq) {
@@ -69,7 +70,13 @@ final class PaBowGoal extends Goal {
             }
         } else if (distSq > Math.min(range() - 4, 20) * Math.min(range() - 4, 20)) {
             if (!a.onWatch()) a.getNavigation().moveTo(t, 1.2D);
-        } else {
+        } else if (archer && !PaBow.drawing(a) && a.tickCount % 40 < 2) {
+            Vec3 to = t.position().subtract(a.position()).multiply(1, 0, 1);   // a step sideways between shots: harder to reach
+            if (to.lengthSqr() > 0.01) {
+                Vec3 side = new Vec3(-to.z, 0, to.x).normalize().scale((a.tickCount / 40) % 2 == 0 ? 3 : -3);
+                a.getNavigation().moveTo(a.getX() + side.x, a.getY(), a.getZ() + side.z, 1.1D);
+            }
+        } else if (!archer || PaBow.drawing(a)) {
             a.getNavigation().stop();                                    // stand to shoot: a walking archer is a worse one
         }
         if (PaBow.drawing(a)) return;

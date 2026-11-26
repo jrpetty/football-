@@ -45,6 +45,7 @@ public final class PaServer {
             case "talk" -> talk(p, r, a, args);
             case "ping" -> ping(p, r, a, args);                     // [pa33c-2b] a ping wheel choice (a bare ping never reaches here)
             case "logi" -> PaLogiNet.act(p, r, a, args);            // [pa36] the Storage view, the chest wheel's pickers, the Craft view
+            case "kit" -> PaKit.act(p, r, a, args);                 // [featpa] Blueprints, Errand to town, Combat stance
             case "mark" -> {                                        // [pa33c-2b] a bare ping shared with players near by (never an order)
                 if (!MARKS.computeIfAbsent(p.getUUID(), k -> new PaPings.Rate()).allow(System.currentTimeMillis())) return;
                 BlockPos at = new BlockPos(args.getInt("x"), args.getInt("y"), args.getInt("z"));
@@ -182,6 +183,7 @@ public final class PaServer {
         int ent = args.contains("ent") ? args.getInt("ent") : -1;
         String label = args.getString("label");
         if (at != null) PaLogistics.seen(p, at);                    // [pa36]
+        if (at != null && args.contains("x2")) PaBuild.rememberArea(p, at, new BlockPos(args.getInt("x2"), args.getInt("y2"), args.getInt("z2")));   // [featpa]
         switch (o.id()) {
             case "look" -> {
                 String key = "ping.look." + target.name().toLowerCase(java.util.Locale.ROOT);
@@ -203,6 +205,11 @@ public final class PaServer {
                 return;
             }
             case "followthem" -> { PaTalk.reply(a, PaTalk.line(a, "not_yours_to_follow")); return; }
+            case "copy" -> {                                         // [featpa] the marked area taken in as a blueprint
+                if (at != null && args.contains("x2")) PaBuild.rememberArea(p, at, new BlockPos(args.getInt("x2"), args.getInt("y2"), args.getInt("z2")));
+                PaBuild.copyArea(p, a, "");
+                return;
+            }
             case "cancel", "area" -> { return; }
             default -> { }
         }
@@ -240,6 +247,12 @@ public final class PaServer {
         }
         BlockPos look = args.contains("bx") ? new BlockPos(args.getInt("bx"), args.getInt("by"), args.getInt("bz")) : null;
         int ent = args.contains("ent") ? args.getInt("ent") : -1;
+        if (PaKit.heard(p, a, text)) {                              // [featpa] "copy this building", "run an errand", "be a medic"
+            r.say(0, text, now);
+            PaData.touch();
+            PaNet.refresh(p, a);
+            return;
+        }
         // [pa33c-2b] every place pointed at while it was said (a ping first, then each look at "that"), in order
         List<BlockPos> more = new java.util.ArrayList<>();
         int[] ls = args.getIntArray("looks");
@@ -256,6 +269,7 @@ public final class PaServer {
                 if (w.length > 1 && w[1].startsWith("craft")) PaCraft.choice(p, a, w[1]);
                 else PaLogiNet.hash(p, a, w);
             }
+            case "kit" -> PaKit.hash(p, a, w);                      // [featpa] a build's "Get what's short", "Buy it", "Carry on"
             case "memforgetall" -> { PaMemoryAct.forgetAll(a); return; }     // [pa35] "forget everything", confirmed
             case "memkeep" -> PaTalk.reply(a, "Right. I'll hang on to all of it.", null, true);
             case "memlike", "memdislike" -> {                        // [pa35] "I like Sam": a thing after all, not a person

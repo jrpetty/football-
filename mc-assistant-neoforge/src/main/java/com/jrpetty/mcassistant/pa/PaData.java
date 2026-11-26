@@ -94,6 +94,11 @@ public final class PaData extends SavedData {
         public final PaMemory.Book memory = new PaMemory.Book();
         /** [pa35] Its bond with its player: the friendship, its favourites, its want, our story (PaBond). */
         public final PaBond.State bond = new PaBond.State();
+        /** [featpa] Its combat stance (PaStance.Kind: 0 its own way, 1 shield, 2 archer, 3 medic), who it guards (a villager,
+         *  or null for its player), and whether it joins a town's defence in a raid near by. */
+        public int stance;
+        @Nullable public UUID guardWho;
+        public boolean helpTown = true;
         /** Chests its player pointed it at (packed positions): always allowed. */
         public final java.util.Set<Long> pointed = new java.util.HashSet<>();
 
@@ -166,6 +171,9 @@ public final class PaData extends SavedData {
             t.putLong("LeftAt", leftAt);
             t.putLong("Xp", xp);
             t.putInt("Spend", spend);
+            t.putInt("KitStance", stance);                                   // [featpa]
+            if (guardWho != null) t.putUUID("KitGuard", guardWho);
+            t.putBoolean("KitTown", helpTown);
             if (spawner != null) { t.putLong("Spawner", spawner.asLong()); t.putString("SpawnerDim", spawnerDim); }
             t.putLong("DeadUntil", deadUntil);
             t.putLong("SummonAt", summonReadyAt);
@@ -229,6 +237,9 @@ public final class PaData extends SavedData {
             r.leftAt = t.getLong("LeftAt");
             r.xp = t.getLong("Xp");
             r.spend = t.contains("Spend") ? t.getInt("Spend") : 64;
+            r.stance = t.getInt("KitStance");                                // [featpa]
+            r.guardWho = t.hasUUID("KitGuard") ? t.getUUID("KitGuard") : null;
+            r.helpTown = !t.contains("KitTown") || t.getBoolean("KitTown");
             if (t.contains("Spawner")) { r.spawner = BlockPos.of(t.getLong("Spawner")); r.spawnerDim = t.getString("SpawnerDim"); }
             r.deadUntil = t.getLong("DeadUntil");
             r.summonReadyAt = t.getLong("SummonAt");

@@ -178,6 +178,8 @@ public class PaRenderer extends MobRenderer<PlayerAssistantEntity, HumanoidModel
         String name = a.shownName();
         String owner = a.ownerName().isEmpty() ? "Player AI Assistant" : a.ownerName() + "'s assistant";
         if (a.mute() > 0) owner += a.mute() == 2 ? "  \u00B7 quiet" : "  \u00B7 no jokes";      // [pa33b] hushed, on its plate
+        int stance = a.stanceSynced();                                                        // [featpa] its combat stance, at a glance on camera
+        if (stance == 1) owner += "  \u00B7 Shield"; else if (stance == 2) owner += "  \u00B7 Archer"; else if (stance == 3) owner += "  \u00B7 Medic";
         String[] st = a.state().split("\\|", -1);
         String icon = st.length > 0 ? st[0] : "";
         pose.pushPose();

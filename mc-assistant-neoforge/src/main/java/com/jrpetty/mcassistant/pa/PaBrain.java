@@ -277,6 +277,7 @@ public final class PaBrain {
         PaMemoryAct.jobDone(a, cur.kind, cur.label);                                // [pa35] "rubbish at mining, was I?"
         if ("BUILD".equals(cur.kind)) PaBondAct.first(a, "build", "Our first building: " + cur.label.replaceFirst("^build ", "") + ". It's still standing. So far.");
         if (PaLogistics.saidItsOwn(cur.task)) return;                       // [pa36] a logistics job says its own last word
+        if (PaKit.saidItsOwn(cur.task)) return;                             // [featpa] so do a build from a blueprint and an errand
         String res = cur.task != null && !cur.task.result.isEmpty() ? cur.task.result : "";
         boolean last = plan.steps.stream().noneMatch(s -> !s.auto);
         if (cur.auto) {
