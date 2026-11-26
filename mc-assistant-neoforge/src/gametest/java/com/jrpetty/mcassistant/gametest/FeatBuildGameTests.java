@@ -626,7 +626,7 @@ public class FeatBuildGameTests {
         Quarry.standDownForTests(false);
         Quarry.readyForTests(true);
         // A site near enough for the test's ground (the growth line is the real game's: this one is set by hand).
-        BlockPos c = rock(level, Kit.surface(level, t.heart().getX() + 40, t.heart().getZ() + 40), 14, 6);
+        BlockPos c = rock(level, Kit.surface(level, t.heart().getX() + 40, t.heart().getZ() + 40), 14, 0);   // flush with the ground: walked onto
         Quarry.openForTests(level, t.v(), new Quarry.Site(c, Quarry.START, true));
         StoneYard.Site yard = StoneYard.site(id);
         helper.assertTrue(yard != null, "a yard");
