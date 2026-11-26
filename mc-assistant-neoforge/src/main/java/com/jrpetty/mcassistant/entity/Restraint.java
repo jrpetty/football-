@@ -276,8 +276,13 @@ public final class Restraint {
             if (len < (h.pullTo != null ? 0.35 : 0.01)) continue;
             double behind = h.pullTo != null ? len : (h.leader == null ? len : Math.max(len, distTo(level, server, h.leader, p) - SLACK + 0.5));
             double speed = h.pullTo != null ? Math.min(0.22, 0.06 + len * 0.08) : Math.min(0.42, 0.12 + behind * 0.09);
+            // A doorway ahead: the door held open, and the prisoner steered through its middle, not into its frame.
+            Vec3 door = holdDoor(level, p, dir.scale(1.0 / len));
+            if (door != null) {
+                Vec3 mid = new Vec3(door.x - at.x, 0, door.z - at.z);
+                if (mid.length() > 0.3) { dir = mid; len = mid.length(); }
+            }
             Vec3 v = dir.scale(speed / len);
-            holdDoor(level, p, dir.scale(1.0 / len));
             double y = p.getDeltaMovement().y;
             if (p.horizontalCollision && p.onGround()) y = 0.42;                 // a step up: over it
             p.setDeltaMovement(v.x, y, v.z);
@@ -286,17 +291,23 @@ public final class Restraint {
         if (dirty || t % 60 == 0) sync(server);
     }
 
-    /** Its hands bound, the prisoner can't open a door: whoever leads it holds it open (a wooden one in its way). */
-    private static void holdDoor(ServerLevel level, ServerPlayer p, Vec3 dir) {
-        for (double k = 0.6; k <= 1.4; k += 0.4) {
+    /**
+     * Its hands bound, the prisoner can't open a door: whoever leads it holds it open (a wooden one in its way). Returns
+     * the middle of the doorway ahead (open or shut), or null.
+     */
+    @Nullable
+    private static Vec3 holdDoor(ServerLevel level, ServerPlayer p, Vec3 dir) {
+        for (double k = 0.5; k <= 1.6; k += 0.35) {
             BlockPos at = BlockPos.containing(p.getX() + dir.x * k, p.getY() + 0.5, p.getZ() + dir.z * k);
+            if (at.equals(BlockPos.containing(p.getX(), p.getY() + 0.5, p.getZ()))) continue;
             net.minecraft.world.level.block.state.BlockState st = level.getBlockState(at);
-            if (st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock door && st.is(net.minecraft.tags.BlockTags.WOODEN_DOORS)
-                    && !st.getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) {
+            if (!(st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock door)) continue;
+            if (st.is(net.minecraft.tags.BlockTags.WOODEN_DOORS) && !st.getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) {
                 door.setOpen(null, level, st, at, true);
-                return;
             }
+            return Vec3.atBottomCenterOf(at);
         }
+        return null;
     }
 
     private static double distTo(ServerLevel level, MinecraftServer server, UUID leader, ServerPlayer p) {
