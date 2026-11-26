@@ -319,7 +319,9 @@ public final class Friendlies {
             w.walkTick = f.tickCount;
         }
         // No nearer for half a minute (a river with no bridge, a cliff): set down at the next step, as the caravans are.
-        if (f.tickCount - w.gainedTick > 600) {
+        if (f.tickCount - w.gainedTick > 600 && !Blink.mayJumpTo(f, ground.getX() + 0.5, ground.getZ() + 0.5, "visitor: set down at the next step")) {
+            w.gainedTick = f.tickCount - 300;                                 // [tp49] in sight: it walks on, and is looked at again
+        } else if (f.tickCount - w.gainedTick > 600) {
             f.moveTo(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5, f.getYRot(), 0.0F);
             w.gainedTick = f.tickCount;
             w.best = Double.MAX_VALUE;

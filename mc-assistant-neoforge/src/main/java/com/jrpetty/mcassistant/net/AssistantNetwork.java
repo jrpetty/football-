@@ -106,7 +106,21 @@ public final class AssistantNetwork {
     public static void sendCityStats(ServerPlayer player, net.minecraft.server.level.ServerLevel level,
                                      com.jrpetty.mcassistant.entity.Villages.Village v) {
         net.minecraft.nbt.CompoundTag books = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
-        com.jrpetty.mcassistant.entity.CivicLand.viewer(books, level, v, player);   // [civic-land] the viewer's service, knighthood, taxes owed
+        try {
+            com.jrpetty.mcassistant.entity.CivicLand.viewer(books, level, v, player);   // [civic-land] the viewer's service, knighthood, taxes owed
+        } catch (RuntimeException e) {                                                  // [ui53] the books open without it
+            com.mojang.logging.LogUtils.getLogger().error("[ui53] the viewer's side of the books left out", e);
+        }
+        try {
+            com.jrpetty.mcassistant.entity.TownMapReport.viewer(books, level, v, player);   // [ui53] you, and yours, on the town map
+        } catch (RuntimeException e) {
+            com.mojang.logging.LogUtils.getLogger().error("[ui53] the viewer's side of the town map left out", e);
+        }
+        try {
+            com.jrpetty.mcassistant.entity.FolkLinesReport.viewer(books, level, v, player);   // [featfolk] families, apprentices, respect
+        } catch (RuntimeException e) {                                                  // [ui53] the books open without it
+            com.mojang.logging.LogUtils.getLogger().error("[featfolk] the viewer's families and respect left out", e);
+        }
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CityStatsPayload(books));
     }
 

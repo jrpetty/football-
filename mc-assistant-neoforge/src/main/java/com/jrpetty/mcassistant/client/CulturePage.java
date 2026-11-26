@@ -138,6 +138,7 @@ public final class CulturePage {
         List<String> body = strings(t, "lines");
         if (body.isEmpty() && !none.isEmpty()) add(lines, font, 'M', none, width);
         for (String s : body) {
+            if (s.isEmpty()) continue;                                                           // [ui53] an empty line was a crash
             char kind = s.contains("today!") || s.startsWith("on now") || s.startsWith("the theatre stands")
                 || s.startsWith("rising:") || s.startsWith("standing:") ? 'G'                                     // [culture-wonders]
                 : s.startsWith("waiting on") || s.startsWith("the band waits") ? 'W' : 'N';

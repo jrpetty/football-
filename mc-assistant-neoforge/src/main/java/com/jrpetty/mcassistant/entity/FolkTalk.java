@@ -99,6 +99,7 @@ public final class FolkTalk {
         // A word a day goes a long way.
         if (op.lastTalkDay != day && topic != TalkTopic.BYE) {
             op.lastTalkDay = day;
+            Witness.dealt(f, p, Witness.Kind.TALKED, "");                // [featfolk] a word passed: it knows them now
             Social.Life life = f.life();
             int warm = life.has(Social.Trait.SOCIABLE) ? 3 : life.has(Social.Trait.SHY) || life.has(Social.Trait.GRUMPY) ? 1 : 2;
             warm += QuestRewards.warmth(f, p);                           // [quests] the town's medal or key, carried
@@ -109,6 +110,9 @@ public final class FolkTalk {
             return bye(f, p);
         }
         f.startTalking(p);
+        // [featfolk] The courting buttons, the proposal, a baby, its name: said in words (PlayerFamily).
+        String family = typed || topic == TalkTopic.SAY ? PlayerFamily.talk(f, p, text) : null;
+        if (family != null) return manner(f, family);
         // [war-after] A prisoner of war; the watch on its prisoners and bounties; an outlaw's dealings, and the folk afraid of it.
         String afterWar = AfterWar.talk(f, p, topic, text);
         if (afterWar != null) return manner(f, afterWar);
@@ -300,6 +304,7 @@ public final class FolkTalk {
         if (first) {
             op.lastPraiseDay = day;
             f.persona().feelFor(p.getUUID(), p.getName().getString(), life.has(Social.Trait.GRUMPY) ? 1 : 3);
+            Witness.dealt(f, p, Witness.Kind.PRAISED, "");                // [featfolk]
             f.persona().remember(day, p.getName().getString() + " told me I was doing a fine job", 2);
         }
         String said;
@@ -367,6 +372,7 @@ public final class FolkTalk {
             if (PlayerLeader.leads(village, p.getUUID())) sb.append(" leader");
             if (Laws.owes(village, p.getUUID()) > 0) sb.append(" fine");
             sb.append(CivicLand.contextFlags(village, p));           // [civic-land] " knight", " taxowed"
+            sb.append(TownHall.contextFlags(village, p));            // [wpa] " registered", " referendum", " juror"
         }
         if (Birthdays.today(f)) sb.append(" birthday");
         if (!f.isBaby() && Interviews.shortlisted(f)) sb.append(" interview");
@@ -381,6 +387,7 @@ public final class FolkTalk {
         if (!f.isBaby()) sb.append(TradeWorld.contextFlags(f));               // [trade-world] leaving, harbourmaster, harbour
         sb.append(" colour=").append(Integer.toHexString(FolkIdentity.rgb(f)));   // [ui] its colour, for the talk screen's band
         if (Favourites.has(p.getUUID(), f.getUUID())) sb.append(" fav");     // [ui] on the player's favourites
+        sb.append(PlayerFamily.contextFlags(f, p));                           // [featfolk] courtable, courting, proposable, spouse, naming
         return sb.toString();
     }
 
@@ -482,6 +489,9 @@ public final class FolkTalk {
                 : job == AssistantEntity.StationTask.SHOP ? StoreStaff.title(f) : job.title) + ", level " + f.veteranLevel()   // [econ-store]
                 + (f.isElder() ? " · the elder" : ""));
         line(sb, "Looks", Individual.looksLine(f));         // [individual] its face, its build, the marks of its life
+        line(sb, "Courting", Courtship.cardLine(f));         // [featfolk] walking out: the walks, the flower
+        line(sb, "Its trade's line", Apprenticeship.cardLine(f));   // [featfolk] apprentice, journeyman, master; under whom
+        line(sb, "Handed down", Lineage.cardLine(f));        // [featfolk] retired, and to whom; what it came into
         // The storehouse's staff: the couriers work for it, under its storekeeper (Couriers).
         if (job == AssistantEntity.StationTask.HAUL && !f.isBaby() && f.ownerId() != null) {
             VillageFolkEntity keeper = Storekeeping.keeper(f.ownerId());
@@ -689,7 +699,7 @@ public final class FolkTalk {
     static String greet(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op, boolean first,
                         String heard) {
         RandomSource r = f.getRandom();
-        String you = p.getName().getString();
+        String you = Belonging.first(p);                      // [wpa] the name it gave the town
         Persona me = f.persona();
         int aff = op.affinity;
         Social.Life life = f.life();
@@ -722,12 +732,19 @@ public final class FolkTalk {
                 + Errands.describe(me) + ".";
         }
         for (Persona.Memory m : me.memories()) {
-            if (day - m.day() > 2 || !m.text().startsWith(you + " ")) continue;
-            String did = m.text().substring(you.length() + 1);
+            String known = p.getName().getString();                          // [wpa] memories keep the username
+            if (day - m.day() > 2 || !m.text().startsWith(known + " ")) continue;
+            String did = m.text().substring(known.length() + 1);
             if (m.weight() < 0) return pick(r, "Oh. You. I've not forgotten — you " + did.replace(" me", " me") + ".",
                 "Keep your distance. You " + did + ".");
             if (r.nextInt(3) == 0) break;
             return pick(r, "Hello again, " + you + "! ", you + "! ") + "Thank you again — you " + did + ".";
+        }
+        if (PlayerFamily.isSpouse(f, p)) return PlayerFamily.spouseLine(f, p);   // [featfolk] its spouse, home
+        // [featfolk] What it saw of you itself, or (said as theirs) what a witness told it: one greeting in three.
+        if (r.nextInt(3) == 0) {
+            String seen = Witness.aboutYou(f, p);
+            if (seen != null) return pick(r, "Hello, " + you + ". ", you + ". ", timeOfDay(f) + ". ") + seen;
         }
         if (aff >= 55) return pick(r, you + "! Good to see you.", "There you are, " + you + "!",
             "Ah, my friend " + you + ".", you + "! I was hoping you'd come by.");
@@ -829,6 +846,7 @@ public final class FolkTalk {
             case "bard", "visit" -> Visitors.moodWords(f, why);        // [batchG] the bard's songs, a friend from away
             case "cold" -> Health.moodWords(f);                                     // [batchA]
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
+            case "statue", "kinstatue" -> Monuments.moodWords(f, why);                // [featbuild] a statue near, or its kin's
             case "proud" -> Museum.prideWords(f);
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "taxcut", "taxed", "arrears" -> TaxUnrest.moodWords(f, why);         // [civic-land]
@@ -1156,6 +1174,10 @@ public final class FolkTalk {
         if (v.title() == Standing.Title.FRIEND && r.nextBoolean()) {
             sb.append(" Keep helping and they'll make you an honoured guest.");
         }
+        // [featfolk] Why, in the words of those who saw it (TownOpinion): its own memory first, else the town's best reason.
+        String mine = Witness.aboutYou(f, p);
+        if (mine == null) mine = Witness.townWord(f, p);
+        if (mine != null) sb.append(' ').append(mine);
         return sb.toString();
     }
 
@@ -1236,7 +1258,7 @@ public final class FolkTalk {
         if (f.life().has(Social.Trait.GRUMPY)) return pick(r, "Right. Back to it.", "Mm. Bye.");
         String farewell = TownSpeech.bye(f, p);              // [culture2] its town's own farewell ("Fair winds to you!")
         if (farewell != null) return farewell;
-        if (aff >= 55) return pick(r, "Come back soon, " + p.getName().getString() + "!", "Take care of yourself!");
+        if (aff >= 55) return pick(r, "Come back soon, " + Belonging.first(p) + "!", "Take care of yourself!");
         return pick(r, "Goodbye!", "See you around.", "Safe travels.", "Mind how you go.");
     }
 
@@ -1291,7 +1313,7 @@ public final class FolkTalk {
         RandomSource r = f.getRandom();
         Persona me = f.persona();
         ItemStack held = p.getMainHandItem();
-        String you = p.getName().getString();
+        String you = Belonging.first(p);                      // [wpa] the name it gave the town
         if (held.isEmpty()) return pick(r, "There's nothing in your hand!", "A gift of… air? How thoughtful.");
         // A letter from a neighbour's elder: delivered, not kept (Bonds).
         String letter = Bonds.deliver(f, p, held);
@@ -1314,6 +1336,7 @@ public final class FolkTalk {
         String said;
         if (kind == me.hates() || kind == Persona.Gift.ROTTEN) {
             me.feelFor(p.getUUID(), you, -8);
+            Witness.dealt(f, p, Witness.Kind.SNUB, article(what.toLowerCase(Locale.ROOT)));   // [featfolk]
             return pick(r, "Ugh. " + what + "? Why would you give me that?", "Is this a joke? Keep your " + what + ".");
         } else if (kind != null && kind == me.loves()) {
             delta = 15;
@@ -1347,8 +1370,14 @@ public final class FolkTalk {
         op.giftsToday++;
         me.feelFor(p.getUUID(), you, delta);
         me.gotAGift(day, you);
+        PlayerFamily.gifted(f, p);                            // [featfolk] courting: a gift counted
+        if (delta >= 5) {                                     // [featfolk] a gift worth the name: it remembers, and so do onlookers
+            String given = article(what.toLowerCase(Locale.ROOT));
+            Witness.dealt(f, p, Witness.Kind.GIFT, given);
+            if (f.level() instanceof ServerLevel seen) Witness.seen(seen, p, Witness.Kind.GIFT, given, f, 0);
+        }
         Knights.gift(f, p, delta);                            // [civic-land] a gift the town was glad of, toward the player's service
-        if (delta >= 12) me.remember(day, you + " gave me " + what.toLowerCase(Locale.ROOT), 6);
+        if (delta >= 12) me.remember(day, p.getName().getString() + " gave me " + what.toLowerCase(Locale.ROOT), 6);
         if (f.level() instanceof ServerLevel server) {
             server.sendParticles(delta >= 12 ? net.minecraft.core.particles.ParticleTypes.HEART
                     : net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER,
@@ -1609,7 +1638,7 @@ public final class FolkTalk {
     /** A word for a player walking past. */
     public static String passing(VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
         RandomSource r = f.getRandom();
-        String you = p.getName().getString();
+        String you = Belonging.first(p);                      // [wpa] the name it gave the town
         int aff = f.persona().affinity(p.getUUID());
         if (aff <= -50) return pick(r, "…", "Keep walking.", "Hmph.");
         if (aff <= -15) return pick(r, "Oh. You.", "Hm.");
@@ -1624,7 +1653,7 @@ public final class FolkTalk {
     /** A player has just killed a monster near the village. */
     public static String thanks(VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
         RandomSource r = f.getRandom();
-        String you = p.getName().getString();
+        String you = Belonging.first(p);                      // [wpa] the name it gave the town
         if (f.life().has(Social.Trait.GRUMPY)) return pick(r, "Hm. Good riddance.", "About time somebody did.");
         return pick(r, "Thank you, " + you + "!", "Well fought!", "One less of those, thank goodness.",
             "Our hero, " + you + "!", "Phew! Thank you.");
@@ -1706,7 +1735,7 @@ public final class FolkTalk {
             }
             if (a == f || !a.persona().rolled()) continue;
             UUID other = a.persona().talkedAbout();
-            if (other != null && !other.equals(p.getUUID())) {
+            if (other != null && !other.equals(p.getUUID()) && Witness.contact(a, other)) {   // [featfolk] a witness's word only
                 String name = a.persona().nameOf(other);
                 said.add(a.persona().affinity(other) >= 0
                     ? "Word is " + name + " is a good sort. " + a.displayNameCap() + " says so, anyway."
@@ -1714,10 +1743,14 @@ public final class FolkTalk {
             }
         }
         Standing.View v = Standing.of(village, p.getUUID(), f.level().getGameTime());
-        if (!v.bestFriend().isEmpty() && !v.bestFriend().equals(f.displayNameCap())) {
+        // [featfolk] Of you: what it saw itself, or a witness's word as theirs; and who thinks what of you only where
+        // they know you for themselves (Witness).
+        String seen = Witness.aboutYou(f, p);
+        if (seen != null) { said.add(seen); said.add(seen); }
+        if (!v.bestFriend().isEmpty() && !v.bestFriend().equals(f.displayNameCap()) && Witness.contactByName(village, v.bestFriend(), p.getUUID())) {
             said.add("Don't tell anyone I told you, but " + v.bestFriend() + " thinks the world of you.");
         }
-        if (!v.worstCritic().isEmpty() && !v.worstCritic().equals(f.displayNameCap())) {
+        if (!v.worstCritic().isEmpty() && !v.worstCritic().equals(f.displayNameCap()) && Witness.contactByName(village, v.worstCritic(), p.getUUID())) {
             said.add("I'd keep clear of " + v.worstCritic() + " if I were you. Not a kind word for you.");
         }
         List<Villages.News> n = Villages.news(village);
@@ -1728,33 +1761,13 @@ public final class FolkTalk {
         said.addAll(QuestTalk.gossip(f, p));                  // [quests] who did what for whom, and the story going on
         said.addAll(TownSpeech.gossip(f));                    // [culture2] who the town calls what now, and why
         said.addAll(Individual.gossip(f));                    // [individual] who's afraid of what, who's always where
-        if (said.isEmpty()) return pick(r, "Nothing worth repeating. It's been quiet.", "Gossip? Me? Never.");
+        said = Witness.screen(f, p, said);                    // [featfolk] nothing of you it has no contact to back
+        if (said.isEmpty()) return pick(r, "Nothing worth repeating. It's been quiet.", "Gossip? Me? Never.",
+            "Nothing I'd swear to.", "I keep my nose out, mostly.", "Quiet week. Nobody's done anything daft.",
+            "Not a thing. Ask me tomorrow.");
         String line = said.get(r.nextInt(said.size()));
         if (f.life().has(Social.Trait.SHY)) line = "Oh — well, I shouldn't, but… " + line;
         return line;
-    }
-
-    /** One folk telling another what it thinks of a player, out loud — they may be listening. */
-    public static void gossip(VillageFolkEntity a, VillageFolkEntity b, String player, int mine, boolean news) {
-        RandomSource r = a.getRandom();
-        String other = b.displayNameCap();
-        String line, back;
-        if (mine >= 0) {
-            line = news ? pick(r, "Have you met " + player + ", " + other + "? Ever so kind.",
-                    "If " + player + " comes by, make them welcome.",
-                    "There's a traveller called " + player + " — one of the good ones.")
-                : pick(r, "I'd trust " + player + " with anything.", player + " was good to me, you know.",
-                    "Say what you like, " + player + "'s all right.");
-            back = pick(r, "Is that so? I'll look out for them.", "Good to know.", "So I've heard!");
-        } else {
-            line = news ? pick(r, "Keep an eye on " + player + ", " + other + ". Trouble, that one.",
-                    "If " + player + " comes by, lock your chest.", "Watch out for " + player + ".")
-                : pick(r, "Don't trust " + player + ". Just don't.", player + "? Don't get me started.",
-                    "I've not forgotten what " + player + " did.");
-            back = pick(r, "Noted. I'll keep my distance.", "Really? Well, I never.", "Hm. I'd wondered.");
-        }
-        speak(a, line);
-        b.sayLater(back, 40);
     }
 
     // ------------------------------------------------------------------ words

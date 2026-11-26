@@ -227,6 +227,18 @@ public final class McAssistantMod {
 
     public static final DeferredItem<BlockItem> FERRY_BELL_ITEM =
         ITEMS.registerSimpleBlockItem(FERRY_BELL);
+    /** [featcivic] The ballot box: a town's polling station (entity/Polls); used, the ballot screen (entity/GovActions). */
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.BallotBoxBlock> BALLOT_BOX =
+        BLOCKS.registerBlock("ballot_box",
+            com.jrpetty.mcassistant.block.BallotBoxBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.COLOR_BROWN)
+                .strength(1.5F, 3.0F)
+                .sound(SoundType.WOOD)
+                .noOcclusion());
+
+    public static final DeferredItem<BlockItem> BALLOT_BOX_ITEM =
+        ITEMS.registerSimpleBlockItem(BALLOT_BOX);
     // [arms] The town's arms (entity/Arms): the festival tabard, eight wool cut like a tunic, given a banner's arms at
     // the crafting table as a shield is (TabardDecorationRecipe); and the loom's patterns for the three charges a town
     // is granted for what it lives by, each a sheet of paper and a fish, a pickaxe or wheat.
@@ -396,6 +408,7 @@ public final class McAssistantMod {
                     out.accept(q.get());
                 }
                 out.accept(FERRY_BELL_ITEM.get());                       // [transport]
+                out.accept(BALLOT_BOX_ITEM.get());                       // [featcivic]
             })
             .build());
 
@@ -407,6 +420,9 @@ public final class McAssistantMod {
     public McAssistantMod(IEventBus modBus, net.neoforged.fml.ModContainer container) {
         // Every tunable number lives in config/mc_assistant-common.toml.
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, AssistantConfig.SPEC);
+        modBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Loading e) -> {   // [grow54] the old village sizes, moved once
+            if (e.getConfig().getSpec() == AssistantConfig.SPEC) AssistantConfig.migrateVillageSizes();
+        });
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.jrpetty.mcassistant.admin.AdminConfig.SPEC);   // [admin] the admin toolkit's switches
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, AnimConfig.SPEC);   // [anim] how much of the folk's life is drawn
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, UiConfig.SPEC, "mc_assistant-ui-client.toml");
@@ -419,7 +435,8 @@ public final class McAssistantMod {
         TABS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
         RECIPE_SERIALIZERS.register(modBus);                          // [arms] the tabard given a banner's arms
-        com.jrpetty.mcassistant.item.CivicItems.register(modBus);      // [player-civic] the masters' goods, and their recipes
+        com.jrpetty.mcassistant.item.CivicItems.register(modBus);
+        com.jrpetty.mcassistant.item.TownHallItems.register(modBus);   // [wpa] the citizen papers      // [player-civic] the masters' goods, and their recipes
         com.jrpetty.mcassistant.entity.RealmLinks.wire();             // [realm] outlawed knights, taxes and the road's dangers for migrants
         com.jrpetty.mcassistant.item.WorkItems.register(modBus);       // [workitems] the mine's, the woods' and the roads' tools, thatch
         com.jrpetty.mcassistant.item.FieldItems.register(modBus);      // [fields] the tools of the fields and the pens, the bees and the water
@@ -506,6 +523,7 @@ public final class McAssistantMod {
             event.accept(STOREHOUSE_ITEM);
             event.accept(VILLAGE_BOARD_ITEM);
             event.accept(FERRY_BELL_ITEM);                               // [transport]
+            event.accept(BALLOT_BOX_ITEM);                               // [featcivic]
         }
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(VILLAGE_COIN);

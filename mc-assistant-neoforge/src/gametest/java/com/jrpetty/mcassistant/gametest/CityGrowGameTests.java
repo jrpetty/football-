@@ -52,6 +52,9 @@ import java.util.UUID;
  * <li><b>cg03</b>: a spot on a flat world's meadow is not "below the sea", and scores as a flat meadow should.</li>
  * <li><b>cg04</b>: right-clicking the board a spawner put up (the way the game hands a player's click on to the
  *     block, an item in hand or not) opens the founding screen.</li>
+ * <li><b>cg05</b>: [econ51] a town grown out past the fields its farmers staked round it when it was young: the fields
+ *     inside its growth line (and the farmland's inner rows, given over to the town) bought out and moved further out,
+ *     a field on the farmland past the line left where it is, the lots they kept off free to build on again.</li>
  * </ul>
  * x 5,800,000 to 5,900,000, z 90000.
  */
@@ -379,6 +382,94 @@ public class CityGrowGameTests {
                 FoundingEasy.TEST_SINK = null;
             }
             helper.succeed();
+        });
+    }
+
+    // ============================================================ cg05: the fields move out as the town grows
+
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "cg05_farms_move_out")
+    public static void cg05_farms_move_out(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x = 5880000;
+        int reach = TownPlan.reach(6) + 40;
+        Kit.hold(level, x, Z, reach);
+        Kit.prepare(level, x, Z, reach);
+        BlockPos heart0 = Kit.surface(level, x, Z);
+        com.jrpetty.mcassistant.entity.VillageFolkEntity first = VillageFolkSpawnerBlock.raise(level, heart0, 0.0F);
+        helper.assertTrue(first != null && first.ownerId() != null, "a village");
+        UUID id = first.ownerId();
+        Villages.Village v = Villages.get(id);
+        BlockPos heart = v.centre();
+        Villages.setFieldsSide(id, TownPlan.NORTH);
+        List<com.jrpetty.mcassistant.entity.VillageFolkEntity> folk = new ArrayList<>();
+        folk.add(first);
+        for (int i = 0; i < 3; i++) {                                     // three more grown folk to farm
+            com.jrpetty.mcassistant.entity.VillageFolkEntity f = McAssistantMod.VILLAGE_FOLK.get().create(level);
+            BlockPos s = Kit.surface(level, heart.getX() + 3 + i, heart.getZ() + 3);
+            f.moveTo(s.getX() + 0.5, s.getY(), s.getZ() + 0.5, 0.0F, 0.0F);
+            f.rename(com.jrpetty.mcassistant.entity.Names.freeFor(id));
+            com.jrpetty.mcassistant.VillageSpawner.starterKit(f);
+            f.joinVillage(id, heart);
+            level.addFreshEntity(f);
+            Villages.recordBirth(id);
+            folk.add(f);
+        }
+        helper.assertTrue(folk.size() >= 4, "four grown folk to farm: " + folk.size());
+        // Its fields as a young town staked them: one east and one south of the town, sixty blocks out (the town stood one
+        // ring out then), one on the farmland's first row to the north, and one on the farmland's third row.
+        List<int[]> wedge = Villages.fieldSquares(TownPlan.NORTH);
+        int[] row1 = wedge.get(0), row3 = null;
+        for (int[] f : wedge) if (row3 == null && Villages.along(TownPlan.NORTH, f[0], f[1]) > 110) row3 = f;
+        int[][] at = { { 62, 0 }, { 0, 62 }, row1, row3 };
+        String[] names = { "East Field", "South Field", "Home Fields", "Far Field" };
+        for (int i = 0; i < 4; i++) {
+            com.jrpetty.mcassistant.entity.VillageFolkEntity f = folk.get(i);
+            f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM);
+            BlockPos c = Kit.surface(level, heart.getX() + at[i][0], heart.getZ() + at[i][1]);
+            f.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(c, 8, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), names[i]);
+        }
+        // Young: one ring out, three laid out (the fields as they were staked, the lots under them kept off).
+        com.jrpetty.mcassistant.entity.LandUse.builtRingsForTests(id, 1);
+        int[] young = com.jrpetty.mcassistant.entity.LandUse.numbers(id);
+        boolean eastWayYoung = com.jrpetty.mcassistant.entity.LandUse.inTheWayForTests(id, heart, folk.get(0));
+        // Grown: six rings laid out, standing five out. The growth line is out past the east and south fields and the
+        // farmland's first row is the town's; its third row is past the line and farmed still.
+        CityGrowth.setRings(id, 6);
+        com.jrpetty.mcassistant.entity.LandUse.builtRingsForTests(id, 5);
+        int[] before = com.jrpetty.mcassistant.entity.LandUse.numbers(id);
+        String lineBefore = com.jrpetty.mcassistant.entity.LandUse.line(id);
+        int coins0 = Ledger.coins(id);
+        int moved = com.jrpetty.mcassistant.entity.LandUse.buyOutForTests(level, v, 10);
+        int[] after = com.jrpetty.mcassistant.entity.LandUse.numbers(id);
+        Kit.log("[VT] cg05 young (3 rings, 1 out): " + java.util.Arrays.toString(young) + ", the east field in the way " + eastWayYoung
+            + "; grown before: " + lineBefore + " " + java.util.Arrays.toString(before) + "; bought out " + moved + ", paid "
+            + (coins0 - Ledger.coins(id)) + "; after: " + com.jrpetty.mcassistant.entity.LandUse.line(id) + " " + java.util.Arrays.toString(after));
+        helper.assertTrue(moved == 3, "the east, south and first-row fields bought out: " + moved);
+        for (int i = 0; i < 3; i++) helper.assertTrue(folk.get(i).workZone() == null, names[i] + " given up");
+        helper.assertTrue(folk.get(3).workZone() != null, "the far field on the farmland kept");
+        helper.assertTrue(after[1] < before[1] && after[2] > before[2], "lots once under fields free again: kept off " + before[1] + " -> " + after[1]
+            + ", free " + before[2] + " -> " + after[2]);
+        // And the farmers find ground past the line (or on the farmland still farmed), never back in the town's way.
+        helper.onEachTick(() -> {
+            int settled = 0;
+            for (int i = 0; i < 3; i++) {
+                com.jrpetty.mcassistant.entity.WorkZone z = folk.get(i).workZone();
+                if (z == null) continue;
+                helper.assertTrue(!com.jrpetty.mcassistant.entity.LandUse.inTheWayForTests(id, heart, folk.get(i)),
+                    names[i] + " moved back into the town's way: " + z.center().subtract(heart).toShortString());
+                settled++;
+            }
+            if (settled >= 1 && helper.getTick() > 200) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < 4; i++) {
+                    com.jrpetty.mcassistant.entity.WorkZone z = folk.get(i).workZone();
+                    sb.append(names[i]).append(": ").append(z == null ? "looking" : z.center().subtract(heart).toShortString()).append("; ");
+                }
+                Kit.log("[VT] cg05 at " + helper.getTick() + ": " + sb + "growth line " + com.jrpetty.mcassistant.entity.LandUse.growthReach(id));
+                com.jrpetty.mcassistant.entity.LandUse.builtRingsForTests(id, null);
+                helper.succeed();
+            }
         });
     }
 }

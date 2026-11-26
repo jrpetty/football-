@@ -274,6 +274,9 @@ public final class Errands {
             default -> 30;
         };
         p.giveExperiencePoints(xp);
+        // [featfolk] It remembers who did what it asked, in its own words.
+        if (kind.equals(HUNT)) Witness.dealt(f, p, Witness.Kind.CLEARED, "");
+        else Witness.dealt(f, p, Witness.Kind.HELPED, words(me.errandItem(), me.errandCount()).replace(" (ingots or raw)", ""));
         StringBuilder said = new StringBuilder(pickOf(r, "That's everything! ", "You did it! ", "Wonderful! "));
         // Work for the village is paid work: coin from the treasury.
         UUID home = f.ownerId();

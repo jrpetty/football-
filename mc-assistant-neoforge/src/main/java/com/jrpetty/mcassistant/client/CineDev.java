@@ -180,10 +180,50 @@ public final class CineDev {
                 case "size" -> mc.getWindow().setWindowed(Integer.parseInt(w[1]), Integer.parseInt(w[2]));
                 case "close" -> mc.setScreen(null);
                 case "page" -> LifeClient.open(w[1]);                               // a player page, as its button asks
+                case "lifeact" -> {                                                 // [wpa] a page's button: page action k=v...
+                    net.minecraft.nbt.CompoundTag args = new net.minecraft.nbt.CompoundTag();
+                    net.minecraft.nbt.CompoundTag f = new net.minecraft.nbt.CompoundTag();
+                    for (int i = 3; i < w.length; i++) {
+                        int eq = w[i].indexOf('=');
+                        if (eq < 0) continue;
+                        String k = w[i].substring(0, eq), v = w[i].substring(eq + 1).replace('_', ' ');
+                        if (k.startsWith("f.")) f.putString(k.substring(2), v);
+                        else if (v.equals("true") || v.equals("false")) args.putBoolean(k, Boolean.parseBoolean(v));
+                        else args.putString(k, v);
+                    }
+                    if (!f.isEmpty()) args.put("f", f);
+                    com.jrpetty.mcassistant.net.LifeNetwork.act(w[1], w[2], args);
+                }
                 case "cmd" -> com.jrpetty.mcassistant.net.LifeNetwork.command(line.trim().substring(4));
                 case "open" -> open(mc, w[1]);
                 case "waiting" -> { mc.setScreen(null); Waiting.start(line.trim().substring(8)); }   // the "opening..." line, as on a slow server
                 case "city" -> { if (mc.screen instanceof CityScreen c) c.devPage(line.trim().substring(5).replace('_', ' ')); }
+                // [ui53] the board test: a click on the Folk page's heading N, where it is drawn; the wheel N notches down
+                // (up if negative); a click at GUI X Y
+                case "cityhead" -> { if (mc.screen instanceof CityScreen c) c.devFolkHead(Integer.parseInt(w[1])); }
+                case "cityscroll" -> {                                              // a notch at a time, as the wheel
+                    int n = Integer.parseInt(w[1]);
+                    for (int i = 0; i < Math.abs(n) && mc.screen instanceof CityScreen c; i++) c.mouseScrolled(c.width / 2.0, c.height / 2.0, 0, -Math.signum(n));
+                }
+                case "scroll" -> {                                                  // [wpa] any screen's wheel, a notch at a time
+                    int n = Integer.parseInt(w[1]);
+                    for (int i = 0; i < Math.abs(n) && mc.screen != null; i++) mc.screen.mouseScrolled(mc.screen.width / 2.0, mc.screen.height / 2.0, 0, -Math.signum(n));
+                }
+                case "cursor" -> {                                                  // the pointer, at GUI X Y
+                    double px = d(w[1]) * mc.getWindow().getGuiScale(), py = d(w[2]) * mc.getWindow().getGuiScale();
+                    org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), px, py);
+                    try {                                                           // a window with no focus hears no move
+                        for (String f : new String[]{ "xpos", "ypos" }) {
+                            java.lang.reflect.Field fl = net.minecraft.client.MouseHandler.class.getDeclaredField(f);
+                            fl.setAccessible(true);
+                            fl.setDouble(mc.mouseHandler, f.equals("xpos") ? px : py);
+                        }
+                    } catch (ReflectiveOperationException | RuntimeException e) {
+                        com.mojang.logging.LogUtils.getLogger().warn("[ui53] cinedev cursor: {}", e.toString());
+                    }
+                }
+                case "cityclick" -> { if (mc.screen != null) mc.screen.mouseClicked(d(w[1]), d(w[2]), 0); }
+                case "gov" -> GovScreen.dev(line.trim().substring(4).trim());          // [featcivic] the Town Hall: open TAB | tab TAB | hint on|off
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
         }

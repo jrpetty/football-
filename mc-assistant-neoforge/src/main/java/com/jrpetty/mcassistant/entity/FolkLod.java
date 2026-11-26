@@ -102,7 +102,15 @@ public final class FolkLod {
      */
     static boolean rests(VillageFolkEntity f, Vec3 input) {
         if (!scaling(f.level())) return false;
-        if (f.isSleeping() && !f.isPassenger()) return true;
+        if (f.isSleeping() && !f.isPassenger()) {
+            // [tp49] Nor does anything move it while it lies there: the shoves of the folk lying beside it (a floor slept on by
+            // a dozen, their small sleeping bodies touching) were added to its way every tick of the night with the movement
+            // that spends them skipped, up to a hundred and fifty blocks a tick, and at dawn the first tick on its feet
+            // carried it the length of the room in one: four and five folk at once seen to shoot eight blocks along a passage.
+            Vec3 v = f.getDeltaMovement();
+            if (v.x != 0.0 || v.z != 0.0) f.setDeltaMovement(0.0, v.y, 0.0);
+            return true;
+        }
         return standsStill(f, input);
     }
 

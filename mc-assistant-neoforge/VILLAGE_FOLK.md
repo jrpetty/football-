@@ -4833,7 +4833,7 @@ ripen, days pass, folk work and houses go up at that pace.
 
 ## Config (`config/mc_assistant-common.toml`, section `[villages]`)
 
-`naturalVillages`, `villageSpacing`, `villageMinFolk`, `villageMaxFolk`, `villageCharterFolk` (70),
+`naturalVillages`, `villageSpacing`, `villageMinFolk` (30), `villageMaxFolk` (40), `villageSettlerBase` (30), `villageCharterFolk` (70),
 `villageFoundingMost` (500), `villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers` (off),
 `protectTradedVillagers`, `villageColonies` (on), `villageColonyAt` (40),
 `villageWorldCap` (200).
@@ -4844,8 +4844,17 @@ ripen, days pass, folk work and houses go up at that pace.
 
 * `villageCharterFolk` (70) is how many a Village Charter founds a village with, and where the
   founding screen at a spawner's board starts; a player may choose 2 to `villageFoundingMost` there.
-  Villages the world grows on its own start with `villageMinFolk` to `villageMaxFolk` (8 to 12), and a
-  colony with `villageMinFolk`.
+  Villages the world grows on its own start with `villageMinFolk` to `villageMaxFolk` (30 to 40; it was 8 to
+  12, too few hands to build, farm and staff the trades at once), with a fifth more beds at the camp than folk so
+  children can come before the first house. A colony goes out with `villageMinFolk` but never more than ten.
+* `villageSettlerBase` (30): a village smaller than this sends word for settlers. Every few minutes, while it is at
+  peace and not starving, a party of one to four is set down out of every player's sight past its streets, walks in
+  on the road and is taken in at the edge of town with no vote, each with a founder's kit and a bed laid at the camp.
+  The board says "Settlers arriving: 3 on the road". At the base size it stops and the village grows by its own
+  children and the odd newcomer. Villages of eight or twelve from older builds, and colonies, are brought up the same
+  way whenever their heart is loaded. 0 turns it off.
+* `villageSizeMigrated` is set by the mod. A config file from an older build still holding the old defaults exactly
+  (8 and 12) has them moved to 30 and 40 once, when it loads, and the log says so; sizes an admin chose are kept.
 * `villageFoundingMost` (500) is the most a village may be founded with, at the board or by charter.
 * `villageGrowthCap` (100) is the largest a village grows by raising children.
 * `villageBuildSpeed` (100) is how fast village builders lay blocks, as a percentage:

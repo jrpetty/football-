@@ -23,6 +23,7 @@ public final class PaClientConfig {
     /** [pa35] The natural voice: fetched automatically (auto) unless the player said not to (declined); the basic system voice only if picked; a woman's or a man's voice. */
     public static final ModConfigSpec.ConfigValue<String> VOICEPACK;
     public static final ModConfigSpec.BooleanValue BASICVOICE, VOICEWOMAN, VOICEREADYSAID, PROGRESSTOUR;
+    public static final ModConfigSpec.ConfigValue<String> KITHINTS;                  // [featpa]
     /** [voice37] The voice engine tier (auto, expressive, natural, basic), the expressive voice's download choice, how much it performs, and the benchmarks. */
     public static final ModConfigSpec.ConfigValue<String> VOICETIER, EXPRESSIVEPACK;
     public static final ModConfigSpec.IntValue EXPRESSIVENESS;
@@ -86,6 +87,7 @@ public final class PaClientConfig {
         HUD = b.comment("A small line on screen saying what your assistant is doing.").define("hud", true);
         TOURED = b.comment("You have seen the assistant's tour.").define("toured", false);
         PROGRESSTOUR = b.comment("[pa35] You have seen (or dismissed) the Progress tab's three tips.").define("progressTips", false);
+        KITHINTS = b.comment("[featpa] The first-time hints you have seen on its Blueprints, Errand and Stance screens.").define("kitHints", "");
         b.pop();
         SPEC = b.build();
     }

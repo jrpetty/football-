@@ -62,6 +62,13 @@ public final class Park {
     private Park() {}
 
     public static final String STRUCTURE = "park";
+    /** [featbuild] A statue garden (entity/Monuments): kept, visited and sat in as a park is, its statue and ponds Monuments'. */
+    public static final String GARDEN = "garden";
+
+    /** [featbuild] A park or a statue garden: a green the town keeps and its folk visit. */
+    public static boolean isGreen(@Nullable String structure) {
+        return STRUCTURE.equals(structure) || GARDEN.equals(structure);
+    }
     /** The town's size when it wants a park. */
     public static final int FOLK = 20;
     /** A home this near a park is by it. */
@@ -82,7 +89,9 @@ public final class Park {
 
     /** Does the village want a park now: twenty folk or more, and none yet. (Villages, with the amenities.) */
     public static boolean wanted(UUID village, int folk) {
-        return folk >= FOLK && !Villages.hasBuilt(village, STRUCTURE) && parks(village).isEmpty();
+        if (folk < FOLK || Villages.hasBuilt(village, STRUCTURE)) return false;
+        for (Ledger.Building b : parks(village)) if (b.structure().equals(STRUCTURE)) return false;   // [featbuild] a garden is no park
+        return true;
     }
 
     // ------------------------------------------------------------------ the park's ground
@@ -97,11 +106,17 @@ public final class Park {
     private static final Map<String, Layout> LAYOUTS = new ConcurrentHashMap<>();
 
     public static Layout layout(BlockPos anchor, Direction facing) {
-        return LAYOUTS.computeIfAbsent(anchor.asLong() + "/" + facing.getName(), k -> lay(anchor, facing));
+        return layout(anchor, facing, STRUCTURE);
+    }
+
+    /** [featbuild] A park's or a garden's layout, by its drawing. */
+    public static Layout layout(BlockPos anchor, Direction facing, String structure) {
+        String drawing = isGreen(structure) ? structure : STRUCTURE;
+        return LAYOUTS.computeIfAbsent(anchor.asLong() + "/" + facing.getName() + "/" + drawing, k -> lay(anchor, facing, drawing));
     }
 
     public static Layout layout(Ledger.Building b) {
-        return layout(b.anchor(), b.facing());
+        return layout(b.anchor(), b.facing(), b.structure());
     }
 
     /** The park laid out so far (built, or being built) whose fountain has water here, or null. */
@@ -111,10 +126,10 @@ public final class Park {
         return null;
     }
 
-    private static Layout lay(BlockPos anchor, Direction facing) {
+    private static Layout lay(BlockPos anchor, Direction facing, String drawing) {
         List<Seat> seats = new ArrayList<>();
         List<BlockPos> flowers = new ArrayList<>(), lights = new ArrayList<>(), water = new ArrayList<>(), stone = new ArrayList<>();
-        for (BuildGoal.Placement p : BuildGoal.plan(STRUCTURE, anchor, facing, 0)) {
+        for (BuildGoal.Placement p : BuildGoal.plan(drawing, anchor, facing, 0)) {
             switch (p.part()) {
                 case BLOCK -> {
                     if (p.style() == Blueprints.Style.ROOF_STAIR) {
@@ -148,7 +163,7 @@ public final class Park {
     public static List<Ledger.Building> parks(@Nullable UUID village) {
         if (village == null) return List.of();
         List<Ledger.Building> out = new ArrayList<>();
-        for (Ledger.Building b : Ledger.buildings(village)) if (b.structure().equals(STRUCTURE)) out.add(b);
+        for (Ledger.Building b : Ledger.buildings(village)) if (isGreen(b.structure())) out.add(b);   // [featbuild] and the statue gardens
         return out;
     }
 
@@ -442,6 +457,8 @@ public final class Park {
         @Nullable Vec3 spot;
         @Nullable BlockPos target;
         int sitUntil, moveTick, lastTick, walkStarted;
+        /** [tp49] When it came within a step of its bench (-1: not yet). */
+        int nearSince = -1;
         String doing = "on the way to the park";
 
         Visit(long day, int kind, long park, int until, int now) {
@@ -554,8 +571,18 @@ public final class Park {
             Seat s = l.seats().get(vis.seat);
             Vec3 spot = seatSpot(s);
             if (f.distanceToSqr(spot) <= 1.8 * 1.8) {
-                sit(f, level, vis, s, spot);
-                return true;
+                // [tp49] Lowered onto the bench only from beside it in a player's sight (Seats.settled), never put on it from
+                // a block and a half off.
+                if (Seats.settled(f, spot)) {
+                    sit(f, level, vis, s, spot);
+                    return true;
+                }
+                if (vis.nearSince < 0) vis.nearSince = f.tickCount;
+                if (f.tickCount - vis.nearSince <= Seats.SETTLE_TICKS) {
+                    Seats.stepTo(f, spot);
+                    return true;
+                }
+                vis.walkStarted = f.tickCount - 601;                              // it cannot get up to it: as below
             }
             if (f.tickCount - vis.walkStarted > 600) {                         // no way to it: walk about instead
                 release(f, vis);
@@ -788,6 +815,7 @@ public final class Park {
         Map<Integer, UUID> taken = SEATED.get(vis.park);
         if (taken != null && vis.seat >= 0) taken.remove(vis.seat, f.getUUID());
         vis.seat = -1;
+        vis.nearSince = -1;
     }
 
     private static void finish(VillageFolkEntity f, Visit vis) {
@@ -835,7 +863,8 @@ public final class Park {
 
     /** The park in a line, for the books: where it stands and how it is coming on, or when it is wanted. */
     public static String status(ServerLevel level, Villages.Village v) {
-        List<Ledger.Building> all = parks(v.id());
+        List<Ledger.Building> all = new ArrayList<>(parks(v.id()));
+        all.removeIf(b -> !b.structure().equals(STRUCTURE));               // [featbuild] the park itself, not a statue garden
         if (all.isEmpty()) {
             int folk = Villages.headcount(v.id());
             if (Villages.sitesOf(v.id()).containsKey(STRUCTURE)) return "The park is going up.";

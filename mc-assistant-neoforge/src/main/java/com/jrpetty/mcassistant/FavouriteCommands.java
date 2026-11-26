@@ -119,7 +119,7 @@ public final class FavouriteCommands {
         CompoundTag t = Favourites.listTag(p);
         var cards = t.getList("cards", 10);
         if (cards.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("You follow nobody yet: star a folk on its profile, or /village favourite add <name>."), false);
+            ctx.getSource().sendSuccess(() -> Component.literal("You follow nobody yet: star a folk on its profile (the star by its name)."), false);
             return 1;
         }
         List<String> lines = new ArrayList<>();

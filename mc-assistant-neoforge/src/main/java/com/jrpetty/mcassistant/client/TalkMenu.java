@@ -321,7 +321,15 @@ public final class TalkMenu {
                 ask("pet", Items.BONE, TalkTopic.PET),
                 ask("keepsake", Items.HEART_OF_THE_SEA, TalkTopic.KEEPSAKE),
                 GODPARENT,
-                MIG_STAY),                                                   // [trade-world] only to one thinking of leaving
+                MIG_STAY,                                                    // [trade-world] only to one thinking of leaving
+                // [featfolk] Courting, the proposal, a home together, a baby and its name (PlayerFamily): each only when it applies.
+                say("court_walk_out", Items.DANDELION, "Will you walk out with me?", flag("courtable")),
+                say("court_stroll", Items.OAK_SAPLING, "Take a walk with me", c -> !c.known() || c.has("pcourting") || c.has("spouse")),
+                say("court_supper", Items.MUSHROOM_STEW, "Supper with me tonight?", c -> !c.known() || c.has("pcourting") || c.has("spouse")),
+                say("court_propose", Items.DIAMOND, "Will you marry me?", flag("pcourting")),   // not ready: it says what is still to do
+                say("spouse_day", Items.CAMPFIRE, "How was your day, love?", flag("spouse")),
+                say("spouse_baby", Items.WHITE_WOOL, "Shall we try for a baby?", flag("spouse")),
+                prompt("spouse_name_baby", Items.NAME_TAG, TalkTopic.SAY, "Let's call the baby ", flag("naming"))),
             group("work", Items.IRON_PICKAXE,
                 ask("workings", Items.CRAFTING_TABLE, TalkTopic.WORKINGS),
                 ask("knack", Items.EXPERIENCE_BOTTLE, TalkTopic.KNACK),
@@ -392,6 +400,8 @@ public final class TalkMenu {
             ask("census", Items.ARMOR_STAND, TalkTopic.CENSUS),
             ask("repute", Items.PLAYER_HEAD, TalkTopic.REPUTE),
             group("council_group", Items.LECTERN,
+                say("town_hall", Items.BELL, "How is this town governed?"),          // [featcivic] the Town Hall screen
+                say("ballot", Items.WRITABLE_BOOK, "I'd like to vote in the election"),  // [featcivic] the ballot screen
                 ask("council", Items.BOOKSHELF, TalkTopic.COUNCIL),
                 prompt("build", Items.BRICK, TalkTopic.BUILD, "You should build a "),
                 ask("citizen", Items.BLUE_BANNER, TalkTopic.CITIZEN, c -> !c.has("citizen")),
@@ -408,7 +418,13 @@ public final class TalkMenu {
                 say("knight_service", Items.IRON_SWORD, "What's my standing in the town's service?"),
                 prompt("knight_vote", Items.WRITABLE_BOOK, TalkTopic.SAY, "My vote on the taxes: lower", flag("knight")),
                 say("retinue_call", Items.SHIELD, "Retinue, to me!", flag("knight")),
-                say("retinue_stand", Items.OAK_DOOR, "Retinue, stand down", flag("knight"))),
+                say("retinue_stand", Items.OAK_DOOR, "Retinue, stand down", flag("knight")),
+                // [wpa] The Town Hall: its page, your papers, a vote on what's put to the town, jury duty.
+                say("town_hall", Items.WRITABLE_BOOK, "Where's the Town Hall?"),
+                say("my_papers", Items.PAPER, "May I see my papers?", flag("registered")),
+                say("ref_aye", Items.LIME_DYE, "I vote aye", flag("referendum")),
+                say("ref_nay", Items.RED_DYE, "I vote nay", flag("referendum")),
+                say("jury_duty", Items.WRITTEN_BOOK, "I'm here for jury duty", flag("juror"))),
             group("law", Items.IRON_BARS,
                 WATCH,
                 say("report", Items.REDSTONE_TORCH, "I want to report a crime"),

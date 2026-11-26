@@ -126,6 +126,7 @@ public final class PaPings {
                 o.add(new Option("clear", "Clear this area", Sort.GATHER, "clear this area"));
                 o.add(new Option("field", "Farm this field", Sort.BUILD, "build a farm there"));
                 o.add(new Option("lightall", "Light the whole area", Sort.GATHER, "light up the area"));
+                o.add(new Option("copy", "Copy this building", Sort.BUILD, ""));                 // [featpa] a blueprint of what's in it
             }
         }
         o.add(new Option("look", "Look at this", Sort.LOOK, ""));

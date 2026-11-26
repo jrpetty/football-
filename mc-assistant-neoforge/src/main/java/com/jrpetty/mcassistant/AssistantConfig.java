@@ -38,6 +38,8 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_SPACING;
     public static final ModConfigSpec.IntValue VILLAGE_MIN_FOLK;
     public static final ModConfigSpec.IntValue VILLAGE_MAX_FOLK;
+    public static final ModConfigSpec.IntValue VILLAGE_SETTLER_BASE;                    // [grow54]
+    public static final ModConfigSpec.BooleanValue VILLAGE_SIZE_MIGRATED;              // [grow54]
     public static final ModConfigSpec.BooleanValue VILLAGE_BREEDING;
     public static final ModConfigSpec.BooleanValue VILLAGE_RAIDS;
     public static final ModConfigSpec.BooleanValue RAID_MUSTER, CASTLE_WALLS;      // [defence]
@@ -152,10 +154,24 @@ public final class AssistantConfig {
                 "Blocks between candidate settlement sites. One village per grid cell,",
                 "its exact spot fixed by the world seed. Bigger means rarer and further apart.")
             .defineInRange("villageSpacing", 768, 256, 8000);
-        VILLAGE_MIN_FOLK = b.comment("Fewest folk a settlement the world grows on its own (or a colony) is founded with.")
-            .defineInRange("villageMinFolk", 8, 1, 60);
+        // [grow54] Thirty to forty: a village of eight or twelve had too few hands to build its first houses, feed itself
+        // and staff its trades at once, and sat for days at its founding size.
+        VILLAGE_MIN_FOLK = b.comment("Fewest folk a settlement the world grows on its own is founded with.",
+                "(A colony sends out at most ten of its own, however high this is: see villageSettlerBase.)")
+            .defineInRange("villageMinFolk", 30, 1, 60);
         VILLAGE_MAX_FOLK = b.comment("Most folk a settlement the world grows on its own is founded with.")
-            .defineInRange("villageMaxFolk", 12, 1, 60);
+            .defineInRange("villageMaxFolk", 40, 1, 60);
+        VILLAGE_SETTLER_BASE = b.comment(                                               // [grow54]
+                "A village smaller than this sends word for settlers: small parties walk in on the road every few",
+                "minutes, bringing their own bedding, food and tools, and are taken in as they come, till the village",
+                "has this many folk. Past it, it grows by its own children and the odd newcomer as ever. Villages of",
+                "eight or twelve founded under older builds are brought up to it the same way. 0: no settlers sent for.")
+            .defineInRange("villageSettlerBase", 30, 0, 500);
+        VILLAGE_SIZE_MIGRATED = b.comment(                                              // [grow54]
+                "Set by the mod: whether villageMinFolk and villageMaxFolk have been moved from the old defaults",
+                "(8 and 12) to the new ones (30 and 40). Done once, and only if they were exactly 8 and 12; sizes an",
+                "admin chose are never touched. Leave it as it is.")
+            .define("villageSizeMigrated", false);
         VILLAGE_RAIDS = b.comment(
                 "Raiders come at walled villages with a watch, about one night in five:",
                 "the bell rings, the guards take the walls, everybody else goes indoors.")
@@ -191,7 +207,7 @@ public final class AssistantConfig {
                 "How many folk a Village Charter, or a Village Folk Spawner set down away from any village,",
                 "founds a village with: the founding screen at the board starts here, and the player may",
                 "choose anything from two to villageFoundingMost before confirming. (Villages the world grows",
-                "on its own are founded with villageMinFolk to villageMaxFolk; colonies with villageMinFolk.)")
+                "on its own are founded with villageMinFolk to villageMaxFolk; colonies with up to ten.)")
             .defineInRange("villageCharterFolk", 70, 2, 500);
         FOUNDING_WHO = b.comment(                                                         // [found23]
                 "Who may found a town (the founding screen, a spawner, a charter): everyone, citizens (a citizen",
@@ -430,8 +446,9 @@ public final class AssistantConfig {
     public static int workTickInterval() { return read(WORK_TICK_INTERVAL, 40); }
     public static boolean naturalVillages() { return read(NATURAL_VILLAGES, true); }
     public static int villageSpacing() { return read(VILLAGE_SPACING, 768); }
-    public static int villageMinFolk() { return read(VILLAGE_MIN_FOLK, 8); }
-    public static int villageMaxFolk() { return read(VILLAGE_MAX_FOLK, 12); }
+    public static int villageMinFolk() { return read(VILLAGE_MIN_FOLK, 30); }                    // [grow54] was 8
+    public static int villageMaxFolk() { return read(VILLAGE_MAX_FOLK, 40); }                    // [grow54] was 12
+    public static int villageSettlerBase() { return read(VILLAGE_SETTLER_BASE, 30); }            // [grow54]
     public static boolean villageBreeding() { return read(VILLAGE_BREEDING, true); }
     public static boolean villageRaids() { return read(VILLAGE_RAIDS, true); }
     public static boolean raidMuster() { return read(RAID_MUSTER, true); }           // [defence]
@@ -490,6 +507,29 @@ public final class AssistantConfig {
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */
+    /**
+     * [grow54] Once, when the config loads: a file still holding the old village sizes exactly (8 and 12, as an older
+     * build wrote them) is moved to the new ones (30 and 40) and marked done; any other sizes are kept. Logged once.
+     */
+    public static void migrateVillageSizes() {
+        try {
+            if (!SPEC.isLoaded()) return;
+            com.jrpetty.mcassistant.village.SizeMigration.Result r = com.jrpetty.mcassistant.village.SizeMigration.decide(
+                VILLAGE_MIN_FOLK.get(), VILLAGE_MAX_FOLK.get(), VILLAGE_SIZE_MIGRATED.get());
+            if (VILLAGE_SIZE_MIGRATED.get() && !r.migrated()) return;          // decided before: nothing to do
+            if (r.migrated()) {
+                VILLAGE_MIN_FOLK.set(r.min());
+                VILLAGE_MAX_FOLK.set(r.max());
+                com.mojang.logging.LogUtils.getLogger().info("[MCA-CONFIG] villageMinFolk/villageMaxFolk were the old defaults "
+                    + "(8 and 12): moved to {} and {} (villageSizeMigrated set; sizes an admin chose are never changed)", r.min(), r.max());
+            }
+            VILLAGE_SIZE_MIGRATED.set(true);
+            SPEC.save();
+        } catch (RuntimeException e) {
+            com.mojang.logging.LogUtils.getLogger().warn("[MCA-CONFIG] the village sizes could not be checked: {}", e.toString());
+        }
+    }
+
     private static <T> T read(ModConfigSpec.ConfigValue<T> value, T fallback) {
         try {
             T v = value.get();

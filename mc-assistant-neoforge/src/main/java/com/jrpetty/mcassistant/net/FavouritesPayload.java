@@ -24,7 +24,7 @@ public record FavouritesPayload(CompoundTag data, boolean open) implements Custo
             buf.writeBoolean(p.open());
         },
         buf -> {
-            CompoundTag t = buf.readNbt();
+            CompoundTag t = CityStatsPayload.readBig(buf);   // [ui53] the books' budget, not 2 MiB
             return new FavouritesPayload(t == null ? new CompoundTag() : t, buf.readBoolean());
         });
 

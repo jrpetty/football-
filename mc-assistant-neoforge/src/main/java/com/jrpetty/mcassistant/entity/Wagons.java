@@ -902,15 +902,60 @@ public final class Wagons {
 
     /** The handcart's driver between its handles, walking it along. */
     private static void holdHandles(ServerLevel level, TradeWagon w, VillageFolkEntity d) {
-        Vec3 at = w.spot(level, TradeWagon.HANDLES, 0);
+        Vec3 at = handles(level, w, d);
         d.getNavigation().stop();
         // [tp43] Not yet at the handles (just come to the cart): in a player's sight it walks the last steps to them.
-        if (d.position().distanceTo(at) > 1.2 && Blink.seen(d)) at = d.position().add(at.subtract(d.position()).normalize().scale(0.3));
-        d.moveTo(at.x, at.y, at.z, w.getYRot(), 0.0F);
+        // [tp49] By its own movement, so round a corner and never through it.
+        if (d.position().distanceTo(at) > 1.2 && Blink.seen(d)) {
+            Vec3 by = at.subtract(d.position());
+            d.move(net.minecraft.world.entity.MoverType.SELF, by.scale(Math.min(1.0, 0.3 / by.length())));
+            d.setYRot(w.getYRot());
+        } else {
+            d.moveTo(at.x, at.y, at.z, w.getYRot(), 0.0F);
+        }
         d.setYHeadRot(w.getYRot());
         d.yBodyRot = w.getYRot();
         if (d.getPose() == Pose.SITTING) d.setPose(Pose.STANDING);
     }
+
+    /**
+     * [tp49] Where the driver's body fits between its handcart's handles: the handles' own spot if its body is clear of
+     * every block there, else the nearest spot a little nearer the cart or further out, or a little to one side, that is.
+     * The handles' spot alone, wherever the cart was, put the driver in a house's wall or the bank beside a narrow road
+     * as the cart came round a corner by it: hurt by the wall, stepped out of it, and set back in it by the cart the next
+     * tick, ninety times a day for one hauler on its town's trade run. Never up on a wall or a roof beside the road (the
+     * ground under a spot is the top of what stands there), and as before where nothing near is clear.
+     */
+    static Vec3 handles(ServerLevel level, TradeWagon w, VillageFolkEntity d) {
+        Vec3 raw = w.spot(level, TradeWagon.HANDLES, 0);
+        Vec3 best = null;
+        double bestCost = Double.MAX_VALUE;
+        for (double ahead : HANDLE_AHEAD) {
+            for (double right : HANDLE_SIDE) {
+                double cost = (ahead - TradeWagon.HANDLES) * (ahead - TradeWagon.HANDLES) + right * right;
+                if (cost >= bestCost) continue;
+                Vec3 p = ahead == TradeWagon.HANDLES && right == 0.0 ? raw : w.spot(level, ahead, right);
+                if (Math.abs(p.y - raw.y) > 1.0) continue;                   // (not up on the bank or the wall by the road)
+                if (!fits(level, d, p)) continue;
+                best = p;
+                bestCost = cost;
+            }
+        }
+        if (best != null) return best;
+        // Nowhere near the handles clear (a hollow way a cart's width, its banks over the handles): it stays where it stands,
+        // clear, a step or two behind, and comes up to them again where there is room.
+        if (d.position().distanceToSqr(raw) <= 3.0 * 3.0 && fits(level, d, d.position())) return d.position();
+        return raw;
+    }
+
+    /** [tp49] Room for this folk's body standing here: clear of every block. */
+    private static boolean fits(ServerLevel level, VillageFolkEntity d, Vec3 p) {
+        return level.noCollision(d, d.getDimensions(d.getPose()).makeBoundingBox(p.x, p.y, p.z));
+    }
+
+    /** [tp49] How far ahead of the cart's middle, and to its right, the driver may stand between the handles. */
+    private static final double[] HANDLE_AHEAD = { TradeWagon.HANDLES, 1.35, 1.85, 1.1, 2.1 };
+    private static final double[] HANDLE_SIDE = { 0.0, 0.25, -0.25, 0.5, -0.5 };
 
     private static boolean harnessed(AbstractHorse a) {
         return a.isNoAi() && a.getTags().contains("mca_harnessed");
@@ -1898,5 +1943,7 @@ public final class Wagons {
     public static String phaseForTests(TradeWagon w) { return w.phase.name(); }
     @Nullable public static UUID shipmentForTests(TradeWagon w) { return w.shipment; }
     @Nullable public static VillageFolkEntity driverForTests(ServerLevel level, TradeWagon w) { return driver(level, w); }
+    /** [tp49] Tests: where this folk would stand between the cart's handles now. */
+    public static Vec3 handlesForTests(ServerLevel level, TradeWagon w, VillageFolkEntity d) { return handles(level, w, d); }
 
 }

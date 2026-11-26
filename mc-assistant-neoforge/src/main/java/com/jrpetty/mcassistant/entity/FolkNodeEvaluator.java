@@ -69,7 +69,11 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
         search = m.search;
         memo = m;
         gates = FolkWays.opensGates(mob);   // [access-3]
+        liftWorld = mob.level().dimension() == net.minecraft.world.level.Level.OVERWORLD;   // [tp48]
     }
+
+    /** [tp48] Is the search in the world the mines' cages are in (MineLift.barred)? */
+    private boolean liftWorld;
 
     /** [access-3] Does the mob this search is for open fence gates (FolkWays)? */
     private boolean gates;
@@ -109,6 +113,7 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
 
     /** WalkNodeEvaluator.getPathTypeStatic, step for step, its look round the place memoised. */
     private PathType pathTypeStatic(PathfindingContext context, Memo m, int x, int y, int z) {
+        if (liftWorld && MineLift.barred(x, y, z)) return PathType.BLOCKED;   // [tp48] a mine's cage well and the doorway to its pool
         PathType here = context.getPathTypeFromState(x, y, z);
         // [access-3] A shut gate, to one who opens gates, is a way through as a shut door is (FolkWays).
         if (here == PathType.FENCE && gates && FolkWays.shutGate(context.level().getBlockState(at.set(x, y, z)))) return PathType.WALKABLE_DOOR;

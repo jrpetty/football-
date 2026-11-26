@@ -49,6 +49,8 @@ public final class Seats {
         final String where;
         boolean seated;
         int moveTick = -1000;
+        /** [tp49] When it came within a step of the seat (-1: not yet). */
+        int nearSince = -1;
 
         Sit(int why, BlockPos seat, Vec3 spot, float yaw, int until, int started, String where) {
             this.why = why;
@@ -247,8 +249,20 @@ public final class Seats {
         String why = s.why == BREAK ? " on its break" : "";
         if (!s.seated) {
             if (f.position().distanceToSqr(s.spot) <= 1.5 * 1.5) {
-                sit(f, s);
-                f.hobbyNow = "sitting " + s.where + why;
+                // [tp49] Down onto the seat only from beside it in a player's sight: put on it from a block and a half off, a
+                // folk was seen to jump onto a bench or a step (the soak's "untraced" moves on a stair, a dozen a day).
+                if (settled(f, s.spot)) {
+                    sit(f, s);
+                    f.hobbyNow = "sitting " + s.where + why;
+                    return true;
+                }
+                if (s.nearSince < 0) s.nearSince = f.tickCount;
+                if (f.tickCount - s.nearSince > SETTLE_TICKS) {    // it cannot get up to it from here: the seat given up
+                    stand(f, s);
+                    return false;
+                }
+                stepTo(f, s.spot);
+                f.hobbyNow = "going to sit down" + why;
                 return true;
             }
             if (f.tickCount - s.started > WALK) {                  // no way to it: the seat given up
@@ -278,6 +292,23 @@ public final class Seats {
         }
         f.hobbyNow = "sitting " + s.where + why + (s.why == BREAK && by != null ? ", with " + by.displayNameCap() : "");
         return true;
+    }
+
+    /** [tp49] Near enough the spot on a seat to be lowered onto it with no jump seen: beside it (a little over half a block
+     *  across, the half step up), or nobody near to see. */
+    static final double SETTLE = 0.7;
+    /** [tp49] How long a folk a step from a seat gives the last of the way to it before it gives the seat up. */
+    static final int SETTLE_TICKS = 80;
+
+    static boolean settled(VillageFolkEntity f, Vec3 spot) {
+        double dx = spot.x - f.getX(), dz = spot.z - f.getZ();
+        return dx * dx + dz * dz <= SETTLE * SETTLE && Math.abs(spot.y - f.getY()) <= SETTLE || !Blink.seen(f);
+    }
+
+    /** [tp49] The last step to a seat: walked straight at it (up the half step a seat is), not planned round. */
+    static void stepTo(VillageFolkEntity f, Vec3 spot) {
+        if (!f.getNavigation().isDone()) f.getNavigation().stop();
+        f.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 0.6D);
     }
 
     private static void sit(VillageFolkEntity f, Sit s) {

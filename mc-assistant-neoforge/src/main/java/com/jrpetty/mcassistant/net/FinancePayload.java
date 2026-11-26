@@ -23,7 +23,7 @@ public record FinancePayload(int kind, CompoundTag data) implements CustomPacket
         },
         buf -> {
             int kind = buf.readVarInt();
-            CompoundTag t = buf.readNbt();
+            CompoundTag t = CityStatsPayload.readBig(buf);   // [ui53] the books' budget, not 2 MiB
             return new FinancePayload(kind, t == null ? new CompoundTag() : t);
         });
 

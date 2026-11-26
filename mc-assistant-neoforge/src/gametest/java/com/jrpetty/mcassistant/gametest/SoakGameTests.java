@@ -205,4 +205,144 @@ public class SoakGameTests {
         com.jrpetty.mcassistant.entity.TownLod.forceForTests(level.getServer(), null);
         helper.succeed();
     }
+
+    /**
+     * [tp49] A folk set down a hair into a wall (a hundredth of a block: a led walk's step, the glide out of the cage, a seat)
+     * and then walking at the wall stops at its face like anybody: the game's own movement takes no notice of a block a body
+     * is already in, and the folk walked on into it, was hurt by it and stepped out of it (ClearOfWalls).
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "soak_sk05_hair_into_a_wall")
+    public static void sk05_hair_into_a_wall(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int x = 9_444_000, z = 92000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        // A floor up in the clear air, and a wall three high along its east side.
+        int y = heart.getY() + 12, x0 = x + 6, z0 = z + 6;
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) {
+            level.setBlock(new BlockPos(x0 + dx, y - 1, z0 + dz), Blocks.STONE.defaultBlockState(), 3);
+            for (int dy = 0; dy <= 3; dy++) level.setBlock(new BlockPos(x0 + dx, y + dy, z0 + dz),
+                (dx == 2 && dy <= 2 ? Blocks.STONE_BRICKS : Blocks.AIR).defaultBlockState(), 3);
+        }
+        // Set down with its body a hundredth of a block into the wall, and pressed at it: three steps of its own movement a
+        // tick, each with a way at the wall (whatever its own mind has it do besides).
+        double at = x0 + 2 - f.getBbWidth() / 2.0 + 0.01;
+        f.moveTo(at, y, z0 + 0.5, -90.0F, 0.0F);
+        f.getNavigation().stop();
+        boolean[] walled = { false };
+        double[] most = { 0.0 };                                               // the furthest its body went past the wall's face
+        int[] ran = { 0 };
+        helper.onEachTick(() -> {
+            if (ran[0] < 0) return;
+            f.getNavigation().stop();
+            for (int k = 0; k < 3; k++) {
+                f.setDeltaMovement(0.15, -0.08, 0.0);
+                f.travel(net.minecraft.world.phys.Vec3.ZERO);
+                if (f.isInWall()) walled[0] = true;
+                most[0] = Math.max(most[0], f.getBoundingBox().maxX - (x0 + 2));
+            }
+            if (++ran[0] < 30) return;
+            ran[0] = -1;
+            Kit.log("sk05 set a hundredth into the wall at " + String.format("%.3f", at) + ", pressed at it 30 ticks: now at "
+                + String.format("%.3f", f.getX()) + " (the wall's face at " + (x0 + 2) + "), the most into it " + String.format("%.3f", most[0])
+                + ", in the wall " + walled[0]);
+            helper.assertTrue(!walled[0], "never in the wall pressed at it");
+            helper.assertTrue(level.noCollision(f, f.getBoundingBox()) && f.getBoundingBox().maxX <= x0 + 2 + 1.0E-6,
+                "stopped at the wall's face, clear of it: " + f.getBoundingBox().maxX);
+            helper.assertTrue(most[0] < 0.05, "never further into the wall than it was set: " + most[0]);
+            helper.succeed();
+        });
+    }
+
+    /**
+     * [tp49] A sapling does not grow into a tree while a folk stands where its trunk would go (a woodsman back at its plot
+     * stood on the sapling it had planted, and the oak came up through it); with nobody there it grows.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "soak_sk06_tree_room")
+    public static void sk06_tree_room(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int x = 9_446_000, z = 92000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        int y = heart.getY() + 12, x0 = x + 6, z0 = z + 6;
+        for (int dx = -4; dx <= 4; dx++) for (int dz = -4; dz <= 4; dz++) {
+            level.setBlock(new BlockPos(x0 + dx, y - 1, z0 + dz), Blocks.DIRT.defaultBlockState(), 3);
+            for (int dy = 0; dy <= 10; dy++) level.setBlock(new BlockPos(x0 + dx, y + dy, z0 + dz), Blocks.AIR.defaultBlockState(), 3);
+        }
+        BlockPos sap = new BlockPos(x0, y, z0);
+        level.setBlock(sap, Blocks.OAK_SAPLING.defaultBlockState(), 3);
+        f.moveTo(x0 + 0.5, y, z0 + 0.5, 0.0F, 0.0F);
+        f.getNavigation().stop();
+        net.minecraft.world.level.block.SaplingBlock block = (net.minecraft.world.level.block.SaplingBlock) Blocks.OAK_SAPLING;
+        for (int i = 0; i < 6; i++) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(sap);
+            if (st.is(Blocks.OAK_SAPLING)) block.advanceTree(level, sap, st, level.getRandom());
+        }
+        boolean grewOnIt = !level.getBlockState(sap).is(Blocks.OAK_SAPLING);
+        boolean walled = f.isInWall();
+        // Gone: it grows.
+        f.moveTo(x0 + 3.5, y, z0 + 3.5, 0.0F, 0.0F);
+        boolean grew = false;
+        for (int i = 0; i < 40 && !grew; i++) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(sap);
+            if (st.is(Blocks.OAK_SAPLING)) block.advanceTree(level, sap, st, level.getRandom());
+            grew = level.getBlockState(sap).is(Blocks.OAK_LOG);
+        }
+        Kit.log("sk06 the sapling with a folk on it grew " + grewOnIt + " (in the wall " + walled + "); with it gone, grew " + grew);
+        helper.assertTrue(!grewOnIt && !walled, "no tree up through the folk standing on its sapling");
+        helper.assertTrue(grew, "with nobody on it, the sapling grows");
+        helper.succeed();
+    }
+
+    /**
+     * [tp49] Gravel hung over a folk (a path laid across a passage with nothing under it) that is set to fall stays where it
+     * hung while the folk is under it, and falls once it is gone (ClearOfWalls.blockFalls): it never comes down on the folk.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "soak_sk07_gravel_held")
+    public static void sk07_gravel_held(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int x = 9_448_000, z = 92000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        // A pit a block across and two deep up in the clear air, gravel hung over it with nothing under the gravel.
+        int y = heart.getY() + 12, x0 = x + 6, z0 = z + 6;
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int dy = -1; dy <= 4; dy++) {
+            boolean pit = dx == 0 && dz == 0 && dy >= 0 && dy <= 1;
+            level.setBlock(new BlockPos(x0 + dx, y + dy, z0 + dz), (dy == -1 || dy <= 1 && !pit ? Blocks.STONE : Blocks.AIR).defaultBlockState(), 3);
+        }
+        BlockPos hung = new BlockPos(x0, y + 2, z0);
+        level.setBlock(hung, Blocks.GRAVEL.defaultBlockState(), 2 | 16);
+        f.moveTo(x0 + 0.5, y, z0 + 0.5, 0.0F, 0.0F);
+        f.getNavigation().stop();
+        level.scheduleTick(hung, Blocks.GRAVEL, 1);
+        helper.runAfterDelay(12, () -> {
+            boolean held = level.getBlockState(hung).is(Blocks.GRAVEL);
+            boolean walled = f.isInWall() || level.getBlockState(new BlockPos(x0, y + 1, z0)).is(Blocks.GRAVEL);
+            // The folk gone: it falls.
+            f.moveTo(x0 + 0.5, y + 3, z0 + 3.5, 0.0F, 0.0F);
+            level.scheduleTick(hung, Blocks.GRAVEL, 1);
+            helper.runAfterDelay(30, () -> {
+                boolean fell = !level.getBlockState(hung).is(Blocks.GRAVEL) && level.getBlockState(new BlockPos(x0, y, z0)).is(Blocks.GRAVEL);
+                Kit.log("sk07 gravel over a folk in a pit: held " + held + " (the folk walled in " + walled + "); with the folk gone, fell " + fell);
+                helper.assertTrue(held && !walled, "the gravel stays hung while the folk is under it");
+                helper.assertTrue(fell, "and falls once it is gone");
+                helper.succeed();
+            });
+        });
+    }
 }

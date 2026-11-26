@@ -58,15 +58,20 @@ public final class Citizens {
     public static String ask(VillageFolkEntity f, Player p) {
         UUID village = f.ownerId();
         if (village == null) return "Live where? I've no village myself.";
+        return apply(f.level(), village, p);
+    }
+
+    /** [wpa] The same, at the Town Hall's desk: the rules and the fee are the town's, whoever is asked. */
+    public static String apply(net.minecraft.world.level.Level level, UUID village, Player p) {
         String name = p.getName().getString();
         if (is(village, p.getUUID())) {
             return "You're one of us already, " + name + ". You've a vote on the council, and the stores are yours as much as ours.";
         }
-        Standing.Title title = Standing.of(village, p.getUUID(), f.level().getGameTime()).title();
+        Standing.Title title = Standing.of(village, p.getUUID(), level.getGameTime()).title();
         if (!title.atLeast(Standing.Title.FRIEND)) {
             return "Live here? We hardly know you yet. Be a friend to " + Villages.name(village) + " first: talk with us each day, bring a gift now and then.";   // [ui29] how
         }
-        if (Laws.owes(village, p.getUUID()) > 0 || Laws.banished(village, p.getUUID(), f.level().getDayTime() / 24000L)) {
+        if (Laws.owes(village, p.getUUID()) > 0 || Laws.banished(village, p.getUUID(), level.getDayTime() / 24000L)) {
             return "Not while you owe the village a fine.";
         }
         Chronicle.Guest guest = Chronicle.guest(village, p.getUUID());
@@ -81,8 +86,10 @@ public final class Citizens {
             CoinCensus.playerIn(village, fee, p, PlayerFinance.Cat.FEES, "the citizen's fee");                            // [health]
         }
         Ledger.addCitizen(village, p.getUUID(), name);
-        long day = f.level().getDayTime() / 24000L;
+        long day = level.getDayTime() / 24000L;
         Villages.tell(village, day, name + " became a citizen of " + Villages.name(village));
+        Villages.Village vv = Villages.get(village);                          // [wpa] a citizen is on the town's book too
+        if (p instanceof ServerPlayer reg && vv != null && !Belonging.registered(village, p.getUUID())) Belonging.register(reg, vv);
         // A citizen needs a home: the village builds one, as it does for its honoured guests.
         if (guest == null) Chronicle.welcome(village, p.getUUID(), name);
         for (AssistantEntity a : Villages.folkOf(village)) {
@@ -90,7 +97,7 @@ public final class Citizens {
         }
         Standing.stir(village, p.getUUID());
         if (p instanceof ServerPlayer sp) refresh(sp);
-        String banner = f.level() instanceof ServerLevel sl ? Arms.citizen(sl, village, p) : "";   // [arms] the town's banner, a citizen's
+        String banner = level instanceof ServerLevel sl ? Arms.citizen(sl, village, p) : "";   // [arms] the town's banner, a citizen's
         return "Welcome, citizen " + name + "! " + (housed ? "Your house is your own. " : "We'll build you a house on one of our lots. ")
             + "You've a vote on the council now, and the stores are yours as much as ours." + banner;
     }

@@ -62,18 +62,31 @@ public final class Standing {
     }
 
     private static View compute(UUID village, UUID player) {
-        int sum = 0, known = 0;
+        int sum = 0, known = 0, weights = 0;
         int best = Integer.MIN_VALUE, worst = Integer.MAX_VALUE;
         String bestName = "", worstName = "";
+        int bestW = Integer.MIN_VALUE, worstW = Integer.MAX_VALUE;
+        String bestWName = "", worstWName = "";
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || !f.persona().rolled() || !f.persona().knows(player)) continue;
             int aff = f.persona().affinity(player);
-            sum += aff;
+            // [featfolk] Formed from its witnesses: a folk who saw the player or dealt with them counts four times, one
+            // with a witness's word for it twice, anyone else once (TownOpinion.weight).
+            int w = TownOpinion.weight(f, player);
+            sum += aff * w;
+            weights += w;
             known++;
+            // Its best friend and worst critic are folk who know the player for themselves, where there are any.
+            if (w == 4) {
+                if (aff > bestW) { bestW = aff; bestWName = f.displayNameCap(); }
+                if (aff < worstW) { worstW = aff; worstWName = f.displayNameCap(); }
+            }
             if (aff > best) { best = aff; bestName = f.displayNameCap(); }
             if (aff < worst) { worst = aff; worstName = f.displayNameCap(); }
         }
-        int score = known == 0 ? 0 : sum / known;
+        if (!bestWName.isEmpty()) { best = bestW; bestName = bestWName; }
+        if (!worstWName.isEmpty()) { worst = worstW; worstName = worstWName; }
+        int score = weights == 0 ? 0 : sum / weights;
         Title t;
         if (known == 0) t = Title.STRANGER;
         else if (score <= -40) t = Title.OUTCAST;

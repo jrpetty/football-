@@ -73,6 +73,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class Enterprise {
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();   // [econ51] the founding decisions
+
     private Enterprise() {}
 
     /** A sole trader's purse is never taken under this in a bankruptcy. */
@@ -417,7 +419,7 @@ public final class Enterprise {
             // [econ-1d] A batch, not a piece: a baker bakes a tray of loaves at a time (up to four, as far as its shelf is
             // short), and a firm with a town's worth of call for its wares and one pair of hands made five loaves a day of
             // the fifty wanted. A batch it cannot make is tried a piece at a time.
-            int batch = (int) Math.max(1, Math.min(BATCH, tg.getInt(key) - held(b, key)));
+            int batch = (int) Math.max(1, Math.min(BATCH + Temperament.outputShift(v.id(), b), tg.getInt(key) - held(b, key)));   // [econ51] its owner's character
             Bench.Plan plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), batch, hand));   // [econ-1d] a paying firm: the keeps eased
             if (!plan.ok() && batch > 1) plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, hand));
             if (!plan.ok()) {
@@ -819,6 +821,7 @@ public final class Enterprise {
     @Nullable
     static String barred(UUID village, VillageFolkEntity f, BusinessType t) {
         if (f.isBaby() || !f.isAlive() || f.isHired() || f.isShowcase()) return "not one who could";
+        if (Regimes.businessBarred(village) != null) return "no private business in a planned state";   // [featcivic]
         VillageFolkEntity elder = Orders.elderOf(village);
         if (elder == f) return "the elder has the town to run";
         if (ownsAny(village, f.getUUID())) {                                // [biz30] a second, a third, as its success carries it (FirmBranches)
@@ -843,20 +846,31 @@ public final class Enterprise {
      *  without the skill puts up its skilled hand's first days' wages besides. */
     @Nullable
     static VillageFolkEntity founderFor(UUID village, BusinessType t, long startupPence, long profit7Pence) {
+        return founderFor(village, t, startupPence, profit7Pence, 0);
+    }
+
+    /**
+     * [econ51] As above, its character counted (Temperament: ambition above all, the nerve it adds), and {@code ease} the
+     * mornings a want worth meeting has gone unmet for want of anybody to open it, halved (at most two): each such morning
+     * a little less nerve and a little less of its own money asked of whoever takes it on.
+     */
+    @Nullable
+    static VillageFolkEntity founderFor(UUID village, BusinessType t, long startupPence, long profit7Pence, int ease) {
         VillageFolkEntity best = null;
         double bestScore = -1e9;
-        int nerve = Math.max(1, nerveFor(profit7Pence, startupPence) + EconCycle.nerveShift(village));   // [econ4] bolder in a boom, warier in a slump
-        double share = shareFor(profit7Pence, startupPence);
+        int nerve = Math.max(ease > 0 ? 0 : 1, nerveFor(profit7Pence, startupPence) + EconCycle.nerveShift(village) - ease);   // [econ4] bolder in a boom, warier in a slump
+        double share = shareFor(profit7Pence, startupPence) * (1.0 - 0.25 * ease);
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f)) continue;
             if (barred(village, f, t) != null) continue;
-            int bold = boldness(f);
-            if (bold < nerve) continue;
+            int bold = boldness(f) + Temperament.drive(f);                  // [econ51] its character: ambition the most of it
+            boolean ambitious = Temperament.ambitious(f);
+            if (bold < nerve) continue;                                     // [econ51] ambition's +3 the most of the nerve
             boolean own = skilled(village, f, t.work());
             long need = startupPence + (own ? 0 : handStake(village, t));
             // [econ-1c] Its own coin and its partners': a founder short of the money finds folk to go in with it.
             if (founderMeans(village, f) < OWN_LEAST || raisable(village, f, own ? null : skilledHand(village, t, f)) * 100L < share * need) continue;   // [econ-1d] (founderMeans)
-            double s = bold * 10 + f.tradeLevel(t.work()) + Math.min(10, founderMeans(village, f) / 5.0) + (f.stationTask() == t.work() ? 5 : 0) + (own ? 5 : 0);
+            double s = bold * 10 + (ambitious ? 20 : 0) + f.tradeLevel(t.work()) + Math.min(10, founderMeans(village, f) / 5.0) + (f.stationTask() == t.work() ? 5 : 0) + (own ? 5 : 0);
             if (s > bestScore || s == bestScore && best != null && f.getUUID().compareTo(best.getUUID()) < 0) {
                 best = f;
                 bestScore = s;
@@ -886,6 +900,7 @@ public final class Enterprise {
                 if (r.getLong("petitionDay") < day) hear(level, id, b, r, day, "by the council on the square");
                 continue;
             }
+            if (MyBusinesses.paused(level, id, b, r)) continue;               // [wpb] its owner away and no manager: paused safely
             tidyStaff(level, v, b, r);
             share(level, id, b, r, day);
             sellOver(level, id, b, day);
@@ -928,14 +943,24 @@ public final class Enterprise {
         List<Opportunity> all = scan(level, v);
         ListTag tag = scanTag(all);
         Opportunity pick = null;
+        CompoundTag unmet = Accounts.sub(d, "unmet");                        // [econ51] mornings each want went unmet for a founder
         for (Opportunity o : all) {
             if (o.profit7() <= 0.15 * o.startup() || o.profit7() <= 0) break;
-            VillageFolkEntity f = founderFor(id, o.type(), Math.round(o.startup() * 100), Math.round(o.profit7() * 100));
-            tag.add(StringTag.valueOf("  " + o.type().key() + " is worth opening: " + (f != null ? f.displayNameCap() + " means to" : founders(id, o))));
+            int ease = ease(unmet, o.type().key());
+            VillageFolkEntity f = founderFor(id, o.type(), Math.round(o.startup() * 100), Math.round(o.profit7() * 100), ease);
+            tag.add(StringTag.valueOf("  " + o.type().key() + " is worth opening: " + (f != null ? f.displayNameCap() + " (" + Temperament.words(f) + ") means to"
+                : founders(id, o) + (ease > 0 ? "; waited " + unmet.getInt(o.type().key()) + " mornings" : ""))));
             if (f != null) { pick = o; break; }
+            unmet.putInt(o.type().key(), unmet.getInt(o.type().key()) + 1);
         }
         d.put("scan", tag);
+        Accounts.dirty();
         return pick;
+    }
+
+    /** [econ51] How far a want long unmet eases what is asked of a founder: a step each morning it went unmet, two at most. */
+    static int ease(CompoundTag unmet, String type) {
+        return Math.min(2, unmet.getInt(type));
     }
 
     /** Why nobody opens a business worth opening: how many have the skill, the nerve, the means. */
@@ -944,7 +969,7 @@ public final class Enterprise {
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || barred(village, f, o.type()) != null) continue;
             skilled++;
-            if (boldness(f) < nerveFor(o.profit7(), o.startup())) continue;
+            if (boldness(f) + Temperament.drive(f) < nerveFor(o.profit7(), o.startup())) continue;   // [econ51] its character
             bold++;
             boolean own = skilled(village, f, o.type().work());
             long need = Math.round(o.startup() * 100) + (own ? 0 : handStake(village, o.type()));
@@ -962,7 +987,8 @@ public final class Enterprise {
     /** The founder says what it means to do (the morning before it does). */
     static void intend(ServerLevel level, Villages.Village v, Opportunity o, long day) {
         UUID id = v.id();
-        VillageFolkEntity f = founderFor(id, o.type(), Math.round(o.startup() * 100), Math.round(o.profit7() * 100));
+        VillageFolkEntity f = founderFor(id, o.type(), Math.round(o.startup() * 100), Math.round(o.profit7() * 100),
+            ease(Accounts.sub(data(id), "unmet"), o.type().key()));
         if (f == null) return;
         CompoundTag in = new CompoundTag();
         in.putString("type", o.type().key());
@@ -976,7 +1002,8 @@ public final class Enterprise {
         FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "I've a mind to open a " + o.type().noun() + ": " + why + ".",
             "A " + o.type().noun() + " of my own, that's what this town wants. " + cap(why) + ".",
             "I've been doing my sums. A " + o.type().noun() + " would pay: " + why + "."));
-        f.brain("means to open a " + o.type().noun() + " tomorrow: " + why);
+        f.brain("means to open a " + o.type().noun() + " tomorrow: " + why + " (" + Temperament.words(f) + ")");
+        LOG.info("[MCA-FIRM] {}: {} ({}) means to open a {}: {}", Villages.name(id), f.displayNameCap(), Temperament.words(f), o.type().noun(), why);
         f.persona().remember(day, "I made up my mind to open a " + o.type().noun(), 2);
     }
 
@@ -1142,11 +1169,17 @@ public final class Enterprise {
             : "a player's charter";
         b.note(day, "opened by " + b.ownersWords() + " as a " + t.noun() + ", with " + how + (o == null ? "" : String.format(Locale.ROOT,
             ": the town wanted %.0f %s a week and had %.0f", o.demand(), Stockroom.plural(o.good()).toLowerCase(Locale.ROOT), o.supply())));
-        Villages.tell(id, day, (founder != null ? founder.displayNameCap() : first) + " opened " + b.name + (t.stall() ? " on the square" : "")
+        if (founder != null) {                                              // [econ51] who, and the character that did it
+            r.putString("character", Temperament.words(founder));
+            Accounts.sub(d, "unmet").remove(t.key());
+            LOG.info("[MCA-FIRM] {}: {} ({}) opened {}, a {}", Villages.name(id), founder.displayNameCap(), r.getString("character"), b.name, t.noun());
+        }
+        Villages.tell(id, day, (founder != null ? founder.displayNameCap() + " (" + r.getString("character") + ")" : first) + " opened " + b.name + (t.stall() ? " on the square" : "")
             + ", a " + t.noun() + " of " + (founder != null ? "their" : "its") + " own");
         Accounts.add(d, "founded", 1);
         if (founder != null) FolkAction.mark(founder, FolkAction.Mark.IDEA);   // [anim] the bright idea over its head
         signs(level, v, b, r);
+        Premises.linkFirm(level, id, b, true);                              // [wpb] WP-C's register of premises (a stub till then)
         return b;
     }
 
@@ -1157,7 +1190,10 @@ public final class Enterprise {
     public static String charter(ServerLevel level, Villages.Village v, net.minecraft.server.level.ServerPlayer p, String kind) {
         BusinessType t = BusinessTypes.of(kind);
         if (t == null) return "No such kind of business. The kinds: " + String.join(", ", BusinessTypes.keys()) + ".";
+        if (!Government.allowsPrivateFirms(v.id())) return "The state owns the firms in " + Villages.name(v.id()) + ": no private charter is granted here.";   // [wpb]
         UUID id = v.id();
+        String planned = Regimes.businessBarred(id);                       // [featcivic] a planned state: the state runs them all
+        if (planned != null) return planned;
         BlockPos hall = Villages.builtAt(id, "hall");
         BlockPos at = hall != null ? hall : v.centre();
         if (!p.blockPosition().closerThan(at, hall != null ? 24 : 48)) return "Charters are granted at " + (hall != null ? "the hall" : "the town's heart") + ": go there first.";
@@ -1171,9 +1207,8 @@ public final class Enterprise {
         TownBudget.in(id, "fees", CHARTER_FEE * 100L);
         Business b = found(level, v, t, null, p, Businesses.today(level), null);
         if (b == null) return "The charter could not be drawn up.";
-        return "Your charter is granted: " + b.name + " (" + b.id + "), a " + t.noun() + ". Fund it with /village business invest " + b.id
-            + " <coins>, take on a hand with /village firms hire " + b.id + ", order its makings with /village business order " + b.id
-            + " <item> <qty>, and set its prices with /village firms markup " + b.id + " <percent>.";
+        return "Your charter is granted: " + b.name + ", a " + t.noun() + ". Run it from Your businesses (press U, then Your businesses): "   // [wpb] no commands
+            + "put coin in its till (Money), take on a hand (Hands), order its makings (Stock) and set its prices (Prices).";
     }
 
     static String firstName(String n) {
@@ -1239,7 +1274,18 @@ public final class Enterprise {
                 if (Villages.folkOf(v.id()).stream().noneMatch(a -> a.getUUID().equals(u))) removeStaff(v.id(), r, u);
                 continue;
             }
-            if (!f.isAlive() || t != null && f.stationTask() != t.work()) removeStaff(v.id(), r, u);
+            if (!f.isAlive() || t != null && f.stationTask() != t.work()) { removeStaff(v.id(), r, u); continue; }
+            // [econ51] A quarrelsome owner's hands walk out on it now and then (its founder, the owner, stays), and it takes on
+            // another, new to the bench.
+            if (r.hasUUID("founder") && !u.equals(r.getUUID("founder")) && t != null && level.getRandom().nextDouble() < Temperament.quitChance(v.id(), b)) {
+                removeStaff(v.id(), r, u);
+                f.brain("walked out of " + b.name + ": no working for that one");
+                long day = Businesses.today(level);
+                VillageFolkEntity boss = Temperament.owner(v.id(), b);
+                b.note(day, f.displayNameCap() + " walked out" + (boss == null ? "" : " on " + boss.displayNameCap() + " (" + Temperament.words(boss) + ")"));
+                Accounts.add(r, "quits", 1);
+                hire(level, v, b, r, t);
+            }
         }
     }
 
@@ -1355,7 +1401,8 @@ public final class Enterprise {
         r.putInt("under", eq < 0 ? r.getInt("under") + 1 : 0);
         boolean player = BizGuide.playerOwned(b);                           // [biz25] a player's new firm: a grace, and a warning first
         if (player) BizGuide.firmWarning(level, id, b, r, day);
-        if (day - b.opened >= (player ? BizGuide.FIRM_GRACE : 3) && (r.getInt("broke") >= BROKE_DAYS || r.getInt("under") >= UNDER_DAYS)) {
+        int stay = Temperament.staying(id, b);                              // [econ51] its owner's character: given longer, or less
+        if (day - b.opened >= (player ? BizGuide.FIRM_GRACE : 3) && (r.getInt("broke") >= Math.max(2, BROKE_DAYS + stay) || r.getInt("under") >= Math.max(1, UNDER_DAYS + stay))) {
             // [econ-1c] Its creditors take it to the court, which hears it at its next sitting (hear).
             petition(level, id, b, r, day, r.getInt("broke") >= BROKE_DAYS ? "its cash and its credit gone" : "it owed more than it was worth");
             return true;
@@ -1463,6 +1510,7 @@ public final class Enterprise {
         if (r == null || r.getBoolean("closed")) return;
         String why = whyItFailed(level, village, b, cause);
         r.remove("petition");
+        Premises.onBankrupt(level, village, b);                             // [wpb] WP-C: its firm-held premises to its creditors first
         // The stock, to the market at its bid (or the stores at cost where the market is not open).
         long fromStock = liquidate(level, village, b, day);
         long fromKit = FirmKit.sell(level, village, b, day);              // [econ-1d] its kit sold to the market, not written off
@@ -1863,6 +1911,7 @@ public final class Enterprise {
 
     /** Closed: its hands laid off, its premises back, its sign taken down, its books kept. */
     static void close(ServerLevel level, UUID village, Business b, CompoundTag r, long day, String status) {
+        Premises.linkFirm(level, village, b, false);                        // [wpb] WP-C's register: its premises released
         for (UUID u : staffOf(r)) {
             VillageFolkEntity f = Homes.loaded(village, u);
             if (f != null && !b.ownedBy(u)) {
@@ -1996,7 +2045,7 @@ public final class Enterprise {
         CompoundTag r = rec(village, b.id);
         BusinessType t = kindOf(village, b);
         if (r == null || t == null) return;
-        row.putString("type", t.title() + " (its own folk's)");
+        row.putString("type", t.title() + " (its own folk's" + (r.getString("character").isEmpty() ? "" : "; its founder " + r.getString("character")) + ")");
         row.putString("status", r.getString("status"));
         row.putDouble("share", r.getDouble("share"));
         row.putString("why", r.getString("closedWhy"));

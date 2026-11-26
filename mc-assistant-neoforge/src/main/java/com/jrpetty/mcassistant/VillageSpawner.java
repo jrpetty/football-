@@ -30,8 +30,12 @@ import java.util.Set;
  * world seed, so the same world always grows the same settlements and no two
  * end up on top of each other. When the chunk holding a candidate spot loads
  * for the first time and the ground there is worth living on, a village is
- * founded — a handful of folk, a chest of the things you cannot start without,
- * and nothing else. From that moment nobody helps them again.
+ * founded — thirty to forty folk (villageMinFolk to villageMaxFolk), a chest of
+ * the things you cannot start without, and nothing else. From that moment nobody
+ * helps them again, but for the settlers a village under villageSettlerBase sends
+ * for (entity/Settlers). [grow54] It was eight to twelve: too few hands to build,
+ * farm and staff the trades at once, and such a village sat at its founding size
+ * for a week and more.
  *
  * <p>They are given exactly enough to begin: food to live on while the first
  * field is dug, an axe and a pick so the first tree and the first stone are
@@ -286,6 +290,12 @@ public final class VillageSpawner {
             new AABB(anchor).inflate(Villages.VILLAGE_RANGE), e -> true).isEmpty();
     }
 
+    /** [grow54] Tests: found a village here exactly as the world founds one it comes upon (its size drawn from
+     *  villageMinFolk to villageMaxFolk by the seed and the spot). */
+    public static void foundForTests(ServerLevel level, BlockPos ground) {
+        found(level, ground);
+    }
+
     /** Put a settlement here: a supply chest, some folk, and nothing else. */
     private static void found(ServerLevel level, BlockPos ground) {
         int min = Math.max(1, AssistantConfig.villageMinFolk());
@@ -303,7 +313,7 @@ public final class VillageSpawner {
 
         Villages.Village village = Villages.found(level, ground);
         supplyChest(level, ground);
-        pitchCamp(level, ground, size);
+        pitchCamp(level, ground, size + spareBedding(size));                // [grow54] and a few beds to spare
 
         Set<String> used = new HashSet<>();
         for (int i = 0; i < size; i++) {
@@ -465,6 +475,9 @@ public final class VillageSpawner {
                 goods.addAll(List.of(new ItemStack(Items.BREAD, 32), new ItemStack(Items.WHEAT_SEEDS, 32),
                     new ItemStack(Items.CARROT, 16), new ItemStack(Items.POTATO, 16), new ItemStack(Items.OAK_SAPLING, 16),
                     new ItemStack(Items.TORCH, 32), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.COBBLESTONE, 64),
+                    // [grow54] And a house's worth more: thirty-five founders on real ground had their stone and logs out at
+                    // the mine and the woods, and stood "cannot afford the house" through the first day, every bed taken.
+                    new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.COBBLESTONE, 64),
                     new ItemStack(Items.STRING, 2)));
             } else {
                 for (int i = 0; i < chest.getContainerSize() && beds < unbedded; i++, beds++) {
@@ -527,6 +540,17 @@ public final class VillageSpawner {
             }
         }
         return false;
+    }
+
+    /**
+     * [grow54] The beds a founding party lays at its camp over and above one each: a fifth more, two at least. A child is
+     * born only where there is a bed for it (Villages.housing), and a party that laid exactly one bed apiece had no room
+     * for one until its first house was built, which took a village of eight five days and more on real ground (it sat
+     * at eight, "every home is full, a house comes first", the larder piling up). Room for a few children from the
+     * first day; the houses still have to come after.
+     */
+    public static int spareBedding(int folk) {
+        return Math.max(2, folk / 5);
     }
 
     /** How many beds the camp has room for, on level ground. */

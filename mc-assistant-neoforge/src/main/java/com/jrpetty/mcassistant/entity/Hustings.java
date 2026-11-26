@@ -194,7 +194,7 @@ public final class Hustings {
 
     /** Standing, said to a folk ({@code heard}) or from the hustings page (/village civic stand). */
     public static String stand(ServerLevel level, UUID village, Player p, @Nullable VillageFolkEntity heard) {
-        String title = Homeland.leaderTitle(village);
+        String title = Government.title(village);                       // [featcivic] "mayor" in a democracy, the land's title else
         String name = p.getName().getString();
         long day = Civics.day(level);
         if (PlayerLeader.leads(village, p.getUUID())) {

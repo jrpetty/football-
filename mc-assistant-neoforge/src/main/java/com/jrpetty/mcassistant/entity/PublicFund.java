@@ -234,7 +234,7 @@ public final class PublicFund {
         if (open(village)) {
             return List.of("RN|The statue fund: " + f.getInt("raised") + " of " + NEEDED + " coins raised"
                 + (f.getCompound("donors").isEmpty() ? "" : " (" + f.getCompound("donors").size() + " givers)")
-                + ". Give with coins in hand here, or /village donate.");
+                + ". Give with coins in hand here, or from Everything you can do, its Money tab.");
         }
         if (wanted(village)) return List.of("RG|The statue fund is raised: the statue goes up next.");
         return List.of();

@@ -502,8 +502,52 @@ public final class Annals {
      * Everything the analytics screen shows, in one tag: the days of the books as series, every
      * trade's numbers, every folk, the leader, the homes, the stores, the neighbours, the news, the
      * board's own page, and what is driving the village's growth.
+     *
+     * <p>[ui53] Never throws: if any page's report fails, the books still open, with the essentials made one part at a
+     * time ({@link #snapshotSafe}) and the Board page saying what went wrong, instead of the board not opening at all.
      */
     public static CompoundTag snapshot(ServerLevel level, Villages.Village v) {
+        try {
+            return snapshotAll(level, v);
+        } catch (RuntimeException | StackOverflowError e) {
+            com.mojang.logging.LogUtils.getLogger().error("[ui53] the books of {} could not all be made; the board opens with the essentials",
+                Villages.name(v.id()), e);
+            return snapshotSafe(level, v, e);
+        }
+    }
+
+    /** [ui53] The essentials of the books, each part made on its own: a part that fails is left out (its page shows as empty). */
+    public static CompoundTag snapshotSafe(ServerLevel level, Villages.Village v, Throwable why) {
+        UUID id = v.id();
+        long today = level.getDayTime() / 24000L;
+        CompoundTag out = new CompoundTag();
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        safely(() -> { for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f); });
+        safely(() -> out.putString("name", Villages.name(id)));
+        safely(() -> out.putString("age", Villages.ageOf(id).label));
+        safely(() -> out.putString("rank", Villages.rank(id).label));
+        out.putLong("today", today);
+        safely(() -> out.put("people", people(level, id, folk, today)));
+        safely(() -> out.put("players", players(level, id)));
+        safely(() -> out.put("leader", leader(level, id, folk, today)));
+        safely(() -> out.put("homes", homes(level, id, folk)));
+        safely(() -> out.put("now", now(level, v, folk)));
+        safely(() -> out.put("news", strings(news(id))));
+        out.putString("board_title", out.getString("name"));
+        out.putString("board", "Some of the town's books could not be made just now, so only the essentials are here (People, the "
+            + "Leader, Homes). The server's log has why: " + why);
+        return out;
+    }
+
+    private static void safely(Runnable part) {
+        try {
+            part.run();
+        } catch (RuntimeException | StackOverflowError e) {
+            com.mojang.logging.LogUtils.getLogger().warn("[ui53] a part of the town's books left out: {}", e.toString());
+        }
+    }
+
+    private static CompoundTag snapshotAll(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         long today = level.getDayTime() / 24000L;
         CompoundTag out = new CompoundTag();
@@ -600,6 +644,9 @@ public final class Annals {
         out.put("fashion", Fashion.report(level, v));            // [fashion] the season's look, who wears it, the tailor's book
         out.put("crime", Crime.report(level, v));                // [crime] the casebook and the crime rate: the Cases page
         out.put("police", Police.report(level, v));              // [police] the roster, the beats, the cells, the incidents: the Watch page
+        out.put("defences", FeatReports.defences(level, v));     // [featbuild] the danger, the wall, the night watch: the Defences page
+        out.put("greens", FeatReports.greens(level, v));         // [featbuild] the parks and statue gardens: the Parks page
+        out.put("stone", FeatReports.stone(level, v));           // [featbuild] the quarry and the stone yard: the Stone page
         out.put("auction", Auctions.report(level, v));           // [fleet] the auction and the fleet: the Auction page
         out.getCompound("prices").putString("fleet", FishMarket.pricesLine(level, id));   // [fleet] the fish market, on the Prices page
         out.put("library", Library.report(level, v));            // [library] the catalogue, the authors, the loans: the Library page
@@ -614,6 +661,7 @@ public final class Annals {
         out.put("emerald", EmeraldTrader.report(level, v));      // [emerald] the Trading Post page: the account, the villagers' villages
         out.put("lands", Borders.report(level, v));              // [borders-map] the Lands page: area, neighbours, disputes, markers
         out.put("realm", CivicLand.report(level, v));
+        out.put("government", GovReport.report(level, v, null));   // [featcivic] the Government page
         out.put("business", BusinessBooks.list(level, id));
         out.put("market", MarketMaker.page(level, id));                 // [econ-1a] the Market page: the storehouse's bid and ask, its trades            // [business-books] the Businesses page            // [civic-land] the Taxes and the Knights pages
         List<String> queue = new ArrayList<>();
@@ -629,6 +677,7 @@ public final class Annals {
         String[] page = VillageBoards.page(VillageBoards.compose(level, id));
         out.putString("board_title", page[0]);
         out.putString("board", page[1].length() > 20000 ? page[1].substring(0, 20000) : page[1]);
+        out.put("townmap", TownMapReport.report(level, v, folk));        // [ui53] the town map: the land, the folk, the sites, the plots
         out.put("overview", BoardOverview.report(level, v, folk, out));   // [folk-ui] the Overview's readings and alerts
         return out;
     }

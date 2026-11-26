@@ -325,6 +325,17 @@ public final class TownWork {
                 if (have >= n) break;
             }
             if (have < n) return false;
+            // [econ51] All or nothing, and a town in debt only what the works' day's allowance buys (TownBudget.mayTake).
+            for (ZoneChests.Found f : stores) {
+                if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
+                net.minecraft.world.Container c = f.container();
+                ItemStack first = ItemStack.EMPTY;
+                for (int i = 0; i < c.getContainerSize() && first.isEmpty(); i++) if (!c.getItem(i).isEmpty() && what.test(c.getItem(i))) first = c.getItem(i);
+                if (!first.isEmpty()) {
+                    if (TownBudget.mayTake(level, v.id(), first, n) < n) return false;
+                    break;
+                }
+            }
             int left = n;
             for (ZoneChests.Found f : stores) {
                 if (left <= 0) break;

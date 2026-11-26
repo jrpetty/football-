@@ -43,6 +43,12 @@ public final class LifeTown implements PlayerLife.Page {
             page.text("A friend of the town may live here. Talk with folk each day and give them gifts: how warm they are to you is"
                 + " what it reads (" + view.score() + " now; a friend at 12).", 4);
         }
+        // [featfolk] The town's respect, named, from its witnesses, and why; and the player's own family here.
+        String rating = TownOpinion.ratingOf(id, p.getUUID(), level.getGameTime());
+        page.bar("Respect: " + rating, Math.max(0, Math.min(1, (view.score() + 100) / 200.0)), (view.score() > 0 ? "+" : "") + view.score());
+        TownOpinion.View seen = TownOpinion.of(id, p.getUUID());
+        for (int i = 0; i < Math.min(3, seen.reasons().size()); i++) page.text("• " + TownOpinion.line(seen.reasons().get(i)), 4);
+        PlayerFamily.lifeRows(p, page, id);
         int[] earned = Earnings.earned(p, id, day, 7);
         page.row(new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get()), "You carry " + PlayerLife.coins(Market.coinsHeld(p)),
                 "Earned here today " + PlayerLife.coins(earned.length > 0 ? earned[0] : 0) + ", this week " + PlayerLife.coins(Earnings.sum(earned))
@@ -83,6 +89,8 @@ public final class LifeTown implements PlayerLife.Page {
         List<Business> firms = MyBusinesses.mine(id, p.getUUID());
         if (firms.isEmpty()) page.text("None yet.", 4);
         for (Business b : firms) page.row(null, b.name, Enterprise.line(level, id, b), "").button("Run it", "firm", LifePage.args("firm", b.id));
+        for (PlayerFarms.Farm fm : PlayerFarms.ofOwner(id, p.getUUID())) page.row(new ItemStack(Items.WHEAT), fm.name + " (your " + fm.kind + ")",   // [wpb]
+            fm.area() + " blocks, " + fm.hands.size() + " hands" + (fm.paused ? ", paused" : ""), "").button("Run it", "farmpage", LifePage.args("farm", fm.id));
         page.buttons().button("Start a business", "start", null).button("The town's businesses", "books", LifePage.args("page", "Businesses"));
         // building
         List<BuildDesk.Status> builds = BuildDesk.mine(level, id, p.getUUID());
@@ -98,6 +106,24 @@ public final class LifeTown implements PlayerLife.Page {
             .button("What's for sale?", "say", LifePage.args("t", "Is there a house for sale?"))
             .button("Buy the one I'm in", "buyhouse", null)
             .button("Collect rent", "rent", null, houses[0] > 0, "You own no house here");
+        if (houses[0] > 0) {                                                 // [wpa] letting a house: a button, never typed
+            page.choice("letrent", "Let it for", new String[]{ "2", "3", "4", "5", "6", "8" },
+                new String[]{ "2 coins a day", "3 coins a day", "4 coins a day", "5 coins a day", "6 coins a day", "8 coins a day" }, "3");
+            page.buttons().button("Let my house to a household", "let", null);
+        }
+        // [wpa] The Town Hall: the town's book, your papers, and your first week.
+        page.heading("The Town Hall");
+        boolean onBook = Belonging.registered(id, p.getUUID());
+        Belonging.Rp rp = Belonging.rp(p.getUUID());
+        page.row(new ItemStack(Items.LECTERN), onBook ? (rp == null ? "On " + town + "'s book" : rp.full() + ", of " + town) : "Join " + town,
+                onBook ? (rp == null ? "Tell the town who you are: a name of your own, on the Join tab." : "Your papers, your vote, the jury, the treasury and the notices.")
+                    : "Sign the town's book at the Town Hall: a resident, a bed if you fall, a name of your own. Free.", "")
+            .button("The Town Hall", "hall", null).button("My card", "papers", null, rp != null, "Sign a town's book and give your name first");
+        if (FirstWeek.town(p.getUUID()) != null && FirstWeek.next(p.getUUID()) != null) {
+            FirstWeek.Step nx = FirstWeek.next(p.getUUID());
+            page.row(new ItemStack(nx.icon), "Your first week: " + FirstWeek.count(p.getUUID()) + " of " + FirstWeek.firstEight(), "Next: " + nx.label + ". " + nx.why, "")
+                .button("The checklist", "hallweek", null);
+        }
         // belonging
         page.heading("Belonging");
         page.buttons().button("The town's council and elections", "council", null).button("Taxes", "say", LifePage.args("t", "What are the taxes here?"))
@@ -127,6 +153,7 @@ public final class LifeTown implements PlayerLife.Page {
             case "shopstep" -> { PlayerLife.open(p, "shop", LifePage.args("tab", args.getString("tab"))); return "#open:"; }   // [biz25]
             case "found" -> { FoundingEasy.open(p, "life"); return "#open:"; }   // [found23]
             case "firm" -> { PlayerLife.open(p, "firm", LifePage.args("firm", args.getString("firm"))); return "#open:"; }
+            case "farmpage" -> { PlayerLife.open(p, "farm", LifePage.args("farm", args.getString("farm"))); return "#open:"; }   // [wpb]
             case "earnings" -> { books(p, "Earnings"); return "#close"; }
             case "books" -> { books(p, args.getString("page")); return "#close"; }
             case "property" -> { return PropertyDesk.open(p, args.getString("what"), "life"); }
@@ -137,10 +164,14 @@ public final class LifeTown implements PlayerLife.Page {
                 return said.startsWith("!") || v == null || Citizens.is(v.id(), p.getUUID()) ? said : "!" + said;
             }
             case "council" -> { return sayToNearest(p, "Who's on the council?"); }
+            case "hall" -> { TownHall.open(p, "join"); return "#open:"; }                // [wpa]
+            case "hallweek" -> { TownHall.open(p, "week"); return "#open:"; }
+            case "papers" -> { IdCard.openOwn(p); return "#open:"; }
             case "say" -> { return sayToNearest(p, args.getString("t")); }
             case "buyhouse" -> { return Homes.playerBuys(level, p); }
             case "envoy" -> { return PlayerLife.command(p, "village leader envoy " + (args.getBoolean("yes") ? "yes" : "no")); }
             case "rent" -> { return Homes.playerCollects(level, p); }
+            case "let" -> { return Homes.playerLets(level, p, ShopPage.parse(args.getCompound("f").getString("letrent"), 3)); }   // [wpa]
             default -> { return null; }
         }
     }

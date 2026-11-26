@@ -870,6 +870,7 @@ public final class PaUnderstand {
     public static List<String> grammar() {
         List<String> all = new java.util.ArrayList<>(EXAMPLES);
         for (String b : BRITISH_SAYINGS) if (!all.contains(b)) all.add(b);
+        for (String b : PaKitWords.VOICE) if (!all.contains(b)) all.add(b);        // [featpa] blueprints, errands, stances by voice too
         return all;
     }
 

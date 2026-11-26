@@ -142,8 +142,8 @@ public final class IouBook {
         }
         long[] wk = week(village);
         if (wk[0] == 0 && wk[1] == 0) return "";
-        return "IOUs this week: written " + Businesses.pence(wk[0]) + (by.isEmpty() ? "" : " (" + words(by, 4) + ")") + ", cleared "
-            + Businesses.pence(wk[1]) + (how.isEmpty() ? "" : " (" + words(how, 4) + ")");
+        return "IOUs this week: " + Businesses.pence(wk[0]) + " of goods taken on them" + (by.isEmpty() ? "" : " (" + words(by, 4) + ")") + ", "
+            + Businesses.pence(wk[1]) + " paid off" + (how.isEmpty() ? "" : " (" + words(how, 4) + ")");   // [econ51] in plain words
     }
 
     static String top(CompoundTag c, int n) {

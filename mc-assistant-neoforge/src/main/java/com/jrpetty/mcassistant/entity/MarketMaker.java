@@ -604,6 +604,12 @@ public final class MarketMaker {
             if (k <= 0) return;
         }
         double each = ask(level, village, st);
+        // [econ51] A firm of the folk's own buys as well as its owner's character lets it (Temperament: a thrifty or shrewd
+        // owner a few in the hundred under the ask, a spendthrift or careless one over it).
+        if (r.account().kind() == Kind.FIRM) {
+            Business buyer = Businesses.of(village, r.account().key());
+            if (buyer != null && Enterprise.isFirm(buyer)) each *= Temperament.costFactor(village, buyer);
+        }
         long price = Math.max(1, Math.round(each * 100 * k));
         String what = k + " " + Businesses.nameOf(key).toLowerCase(Locale.ROOT);
         long got = Accounts.debit(level, village, r.account(), price, r.purpose(), what);
@@ -1299,7 +1305,8 @@ public final class MarketMaker {
         for (String line : Accounts.debtLines(village)) ious.add(net.minecraft.nbt.StringTag.valueOf(line));
         out.put("ious", ious);
         out.putString("census", CoinCensus.line(village));
-        out.putString("budget", TownBudget.line(village));                        // [econ-1b] the town's budget
+        out.putString("budget", TownBudget.weekLine(village));                    // [econ-1b] the town's budget
+        out.putString("owing", TownBudget.owingLine(village));                    // [econ51] what it owes, in plain words
         out.putString("iouWeek", IouBook.weekLine(village));                       // [econ-1d] the IOUs' week: who wrote them, how cleared
         return out;
     }
@@ -1325,7 +1332,7 @@ public final class MarketMaker {
             .append(" (exports ").append(Businesses.pence(w[3])).append("), its staff paid ").append(Businesses.pence(w[2])).append("\n");
         sb.append("Owes producers ").append(Businesses.pence(storeCredit(village))).append(" in store credit; owed ")
             .append(Businesses.pence(Accounts.owedAll(village))).append(" by folk and businesses and ").append(Businesses.pence(Accounts.debts(village)))
-            .append(" on the town's IOUs; the treasury's float ").append(Businesses.pence(advanced(village))).append("\n");
+            .append(" on the town's IOUs (its notes for goods taken with no coin to pay); the treasury's float ").append(Businesses.pence(advanced(village))).append("\n");
         Map<String, long[]> today = goodsToday(village);
         for (String key : boardGoods(village)) {
             ItemStack one = Stockroom.sampleOf(key);

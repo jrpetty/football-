@@ -997,7 +997,7 @@ public final class Founding extends SavedData {
         // The founders' camp (a bed each, as many as it has room for) and the stores for a party this size,
         // and the treasury opened with the savings the whole party brings (Market.foundingPurse): its first
         // morning's wages are paid when only some of them have come.
-        int camped = VillageSpawner.pitchCamp(level, centre, s.count);
+        int camped = VillageSpawner.pitchCamp(level, centre, s.count + VillageSpawner.spareBedding(s.count));   // [grow54] a few to spare
         VillageSpawner.foundingStores(level, centre, s.count, camped);
         Market.openTreasury(s.village, s.count);
         FoundingEasy.founded(s.village, s.name, s.theme);               // [found23] the name and look chosen

@@ -43,6 +43,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
     @Nullable net.minecraft.world.phys.Vec3 lastPos;
     private static final EntityDataAccessor<Integer> DATA_MUTE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);   // [pa33b] for its nameplate
     private static final EntityDataAccessor<String> DATA_SHOWN = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Integer> DATA_STANCE = SynchedEntityData.defineId(PlayerAssistantEntity.class, EntityDataSerializers.INT);   // [featpa] its combat stance, for its plate
 
     private int slot;
     private long incarnation;
@@ -69,6 +70,17 @@ public class PlayerAssistantEntity extends AssistantEntity {
         builder.define(DATA_FOOD, 20);
         builder.define(DATA_ANIM, 0);
         builder.define(DATA_SHOWN, "");
+        builder.define(DATA_STANCE, 0);
+    }
+
+    /** [featpa] Its combat stance as its plate shows it (PaStance.Kind). */
+    public int stanceSynced() { return this.entityData.get(DATA_STANCE); }
+
+    public void setStanceSynced(int k) { if (k != this.entityData.get(DATA_STANCE)) this.entityData.set(DATA_STANCE, k); }
+
+    /** Tests: its goals. */
+    public java.util.stream.Stream<net.minecraft.world.entity.ai.goal.Goal> paGoalsForTests() {
+        return this.goalSelector.getAvailableGoals().stream().map(net.minecraft.world.entity.ai.goal.WrappedGoal::getGoal);
     }
 
     @Override
@@ -86,6 +98,9 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.goalSelector.addGoal(2, new PaSidestep.Goal(this));           // [pa38] its player in the line of fire: a step aside
         this.goalSelector.addGoal(2, new PaRodPull(this));                 // [pa38] the rod in a fight
         this.goalSelector.addGoal(2, new PaMace(this));
+        this.goalSelector.addGoal(2, new PaBuildGoal(this));               // [featpa] a copy from a blueprint
+        this.goalSelector.addGoal(2, new PaErrand.ErrandGoal(this));       // [featpa] an errand to town
+        PaStance.register(this, this.goalSelector);                        // [featpa] shield, medic, the rally to a town attacked
         this.goalSelector.addGoal(2, new PaCureGoal(this));                // [pa38] a zombie villager cured when asked                    // [pa38] the mace's smash from height
     }
 
@@ -125,6 +140,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         this.entityData.set(DATA_LOOK, r.look);
         this.entityData.set(DATA_PERS, r.personality);
         this.entityData.set(DATA_MUTE, r.mute);
+        this.entityData.set(DATA_STANCE, r.stance);                       // [featpa]
         if (!r.name.isEmpty() && !r.name.equalsIgnoreCase(getAssistantName())) rename(r.name);
         this.entityData.set(DATA_SHOWN, displayNameCap());
     }
@@ -404,6 +420,7 @@ public class PlayerAssistantEntity extends AssistantEntity {
         if (!level().isClientSide) PaPace.tick(this);                    // [pa35] the cracks, as a player's digging shows
         if (!level().isClientSide) PaIdleTake.flush(this);               // [pa36b] what it borrowed from a chest, said once
         if (!level().isClientSide) PaFieldTick.tick(this);               // [pa38] its throws, its pillar, its slips
+        if (!level().isClientSide) PaStance.tick(this);                  // [featpa] the archer's mark, a town's defence
     }
 
     /** [pa36b] On its own account it takes only from chests its player allows, never below a stock rule, never valuables. */

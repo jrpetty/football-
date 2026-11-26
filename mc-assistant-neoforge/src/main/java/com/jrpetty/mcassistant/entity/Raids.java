@@ -163,6 +163,17 @@ public final class Raids {
                 }
             }
         });
+        // [featbuild] The quarry and its stone yard, and the statues and gardens to the town's notable folk.
+        Guard.run("featbuild works", () -> {
+            for (ServerLevel level : event.getServer().getAllLevels()) {
+                for (Villages.Village v : Villages.every()) {
+                    if (!v.dim().equals(level.dimension())) continue;
+                    Quarry.tick(level, v);
+                    StoneYard.tick(level, v);
+                    Monuments.tick(level, v);
+                }
+            }
+        });
         // [golems] The town's golems kept to their posts, back from a fight to the gate or the square (Golems).
         Guard.run("golems", () -> {
             for (ServerLevel level : event.getServer().getAllLevels()) {
@@ -261,6 +272,7 @@ public final class Raids {
     static Alarm raise(ServerLevel level, Villages.Village v, String why, @Nullable Direction from) {
         Alarm a = new Alarm(level.getGameTime(), why, from);
         ALARMS.put(v.id(), a);
+        TownDanger.alarm(v.id(), why, level.getDayTime() / 24000L);   // [featbuild] counted toward the town's danger
         Watch.shut(level, v.id(), true);
         Watch.ring(level, v);
         WarHorn.alarm(level, v);                                   // [war] the town's war horn, if it has one
@@ -498,6 +510,7 @@ public final class Raids {
         if (a == null) {
             if (g.post() != null && !Beats.onTheWall(g)) leavePost(g);   // [police] the roster's night watch keeps its post
             SENT.remove(g.getUUID());
+            if (NightWatch.guard(g)) return true;              // [featbuild] the night watch's rounds on the town wall and its gates
             return Militia.yard(g) || CastleWall.warden(g);   // [war-prep] between the bells, a turn at the training yard; [defence] or a gate kept
         }
         if (!(g.level() instanceof ServerLevel level)) return false;

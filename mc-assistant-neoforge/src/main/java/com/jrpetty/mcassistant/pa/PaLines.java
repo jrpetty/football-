@@ -24,7 +24,8 @@ public final class PaLines {
     public static final String[] FILES = {"lines_say.txt", "lines_death.txt", "lines_quip.txt", "lines_comeback.txt", "lines_look.txt", "lines_tone.txt", "lines_ping.txt", "lines_skills.txt",
         "lines_memory.txt", "lines_progress.txt", "lines_sincere.txt",                          // [pa35] its memory
         "lines_logi.txt",                                                                    // [pa36] chests and logistics
-        "lines_field.txt"};                                                                  // [pa38] rod, throws, mace, table, trades, slips
+        "lines_field.txt",                                                                   // [pa38] rod, throws, mace, table, trades, slips
+        "lines_kit.txt"};                                                                    // [featpa] blueprints, errands, combat stances
 
     private static volatile Map<String, List<String>> all;
     /** [pa33b] Tags written in front of a line ("[bad] ...": a joke it knows is terrible; "[anim:shrug] ...": done with a gesture). */

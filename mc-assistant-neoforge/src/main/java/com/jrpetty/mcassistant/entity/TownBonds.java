@@ -442,7 +442,7 @@ public final class TownBonds {
         Accounts.add(weekBook(village, day), "funded", paid);
         CapitalBook.tell(village, day, p.getName().getString() + " bought " + n + " coin of the town's bonds at " + pct(bp) + " a week");
         return "You lent the town " + n + Homes.coins(n) + " on a bond at " + pct(bp) + " a week, repaid in " + TERM + " days (or rolled over at the day's rate). "
-            + "Coupons wait for you at the hall: /village capital bonds collect.";
+            + "Coupons wait for you at the hall: collect them on the Town Hall's Money tab.";
     }
 
     /** A player takes what waits for it at the hall: coupons and repayments, whole coins. */
@@ -491,6 +491,7 @@ public final class TownBonds {
         t.putLong("arrears", arrears(village));
         t.putLong("ious", Accounts.debts(village));
         t.putLong("limit", TownBudget.limit(village));
+        t.putLong("load", TownBudget.load(village));                       // [econ51] what weighs on its works
         t.putLong("week", TownBudget.week(village));
         t.putLong("soldAll", book(village).getLong("soldAll"));
         t.put("thisWeek", book(village).getCompound("week").copy());

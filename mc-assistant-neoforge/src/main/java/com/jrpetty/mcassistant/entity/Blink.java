@@ -52,6 +52,8 @@ public final class Blink {
     public static final double SIGHT = 96.0;
     /** A change of place of more than this in one tick, not the game's own movement, is a jump. */
     public static final double HOP = 1.5;
+    /** [tp49] A shift of more than this by a call (not the game's movement) is kept for the tick's own look. */
+    static final double SHIFT = 0.3;
 
     /** The detector on (counting): off in normal play. */
     static volatile boolean on = Boolean.getBoolean("mca.blink");
@@ -162,7 +164,18 @@ public final class Blink {
     static void moved(VillageFolkEntity f, double fx, double fy, double fz, @Nullable String via) {
         if (!on || f.tickCount <= 0 || f.isRemoved() || f.level().isClientSide || f.isPassenger()) return;   // riding: the vehicle's movement
         double dx = f.getX() - fx, dy = f.getY() - fy, dz = f.getZ() - fz;
-        if (dx * dx + dy * dy + dz * dz <= HOP * HOP) return;
+        if (dx * dx + dy * dy + dz * dz <= HOP * HOP) {
+            // [tp49] A shift under a hop, by a call with a cause (onto a seat, up out of a floor): kept for the tick's own look,
+            // which may see it and the folk's own step of the same tick come to more than a hop together, and blame it, not
+            // "untraced".
+            if (dx * dx + dy * dy + dz * dz > SHIFT * SHIFT) {
+                String why = WHY.get(f.getId());
+                if (why != null && why.startsWith("~")) { f.blinkTick = f.tickCount; return; }   // carried: no jump
+                f.blinkShift = (why != null ? why : via != null ? via : site()) + " (with its own step)";
+                f.blinkShiftTick = f.tickCount;
+            }
+            return;
+        }
         String why = WHY.remove(f.getId());
         Long at = WHY_AT.remove(f.getId());
         if (why != null && at != null && f.level().getGameTime() - at > 2) why = null;    // a stale note: not this move's
@@ -201,7 +214,7 @@ public final class Blink {
         if (Math.sqrt(dx * dx + dy * dy + dz * dz) <= HOP) return;
         if (dy < 0 && flat <= 1.0) return;                                   // a fall
         if (f.hurtTime > 0 || f.getDeltaMovement().lengthSqr() > 0.5) return; // knocked back, flung
-        count(f, "untraced (between ticks)", last[0], last[1], last[2], "");
+        count(f, f.blinkShiftTick >= f.tickCount - 1 && f.blinkShift != null ? f.blinkShift : "untraced (between ticks)", last[0], last[1], last[2], "");
     }
 
     /** Tests driving a thing by hand (the cage run tick by tick): the once-a-tick look, now. */

@@ -393,6 +393,118 @@ public class BlinkGameTests {
         return gone;
     }
 
+    // ============================================================ bk10: a sleeper shoved all night
+
+    /**
+     * [tp49] bk10: a folk asleep with others pressing on it all night (a crowd standing about a floor slept on in a passage,
+     * the game shoving bodies that touch) gets up at dawn and stands where it lay. The game's movement is skipped for a
+     * sleeper (FolkLod) and the night's shoves were saved up in it, a hundred and fifty blocks a tick by dawn, and spent in
+     * one tick the moment it stood: in the soak four and five folk at once shot eight blocks along the passage at daybreak,
+     * in the player's sight, "untraced".
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "bk10_sleepers_shoved")
+    public static void bk10_sleepers_shoved(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x = 6_784_000, z = 40_000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        level.setDayTime(18000L);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        BlockPos head = EmeraldGameTests.bed(level, heart.offset(4, 0, 4), net.minecraft.core.Direction.NORTH);
+        helper.assertTrue(f.claimBedNear(head), "a bed claimed");
+        f.moveTo(head.getX() + 0.5, head.getY(), head.getZ() + 1.5, 0.0F, 0.0F);
+        f.startSleeping(f.bedPos());
+        helper.assertTrue(f.isSleeping(), "asleep in its bed");
+        ServerPlayer you = watcher(helper, level, heart.getX() + 6.5, heart.getY(), heart.getZ() + 0.5);
+        com.jrpetty.mcassistant.entity.FolkLod.liveForTests(true);
+        Blink.reset();
+        Blink.setOn(true);
+        int[] ran = { 0 }, asleep = { 0 };
+        double[] most = { 0.0, 0.0 };                                         // the most it was carried in one tick: asleep, after
+        double[] was = { f.getX(), f.getY(), f.getZ() };
+        helper.onEachTick(() -> {
+            if (ran[0] < 0) return;
+            ran[0]++;
+            double moved = Math.sqrt(f.distanceToSqr(was[0], was[1], was[2]));
+            was[0] = f.getX(); was[1] = f.getY(); was[2] = f.getZ();
+            if (ran[0] <= 400) {
+                if (f.isSleeping()) {
+                    asleep[0]++;
+                    most[0] = Math.max(most[0], moved);
+                    f.push(0.03, 0.0, 0.02);                                  // a body standing in it, as the game shoves one
+                }
+                if (ran[0] == 400) f.stopSleeping();                         // dawn
+                return;
+            }
+            most[1] = Math.max(most[1], moved);
+            if (ran[0] < 420) return;
+            ran[0] = -1;
+            Kit.log("[VT] bk10 asleep " + asleep[0] + " of 400 ticks, shoved each; carried at most " + String.format("%.2f", most[0])
+                + " a tick asleep and " + String.format("%.2f", most[1]) + " the twenty ticks after it got up; seen jumps " + Blink.seenJumps()
+                + "\n" + Blink.report());
+            com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
+            letGo(level, you);
+            helper.assertTrue(asleep[0] >= 380, "asleep all night: " + asleep[0] + " of 400 ticks");
+            helper.assertTrue(most[0] < 0.1 && most[1] < 1.0, "never carried off by the night's shoves: " + most[0] + " asleep, " + most[1] + " after");
+            helper.assertTrue(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenLines());
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ bk11: a handcart by a wall
+
+    /**
+     * [tp49] bk11: a handcart on a lane along a wall, its handles' spot so near the wall that a body standing there would be
+     * a hand's breadth into it: its driver stands between the handles a little off that spot, clear of the wall, not in it
+     * and not up on top of it. (A hauler pulling its town's handcart was set by the cart into a house's wall or the bank of a
+     * narrow road at every corner, hurt by the wall and stepped out of it, and set back into it by the cart the next tick:
+     * ninety-odd times in a day of the soak, each one a jump in the player's sight.)
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "bk11_handcart_by_a_wall")
+    public static void bk11_handcart_by_a_wall(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Wagons.resetForTests();
+        int x = 6_788_000, z = 40_000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        com.jrpetty.mcassistant.entity.TradeWagon w = com.jrpetty.mcassistant.entity.Wagons.giveForTests(level, f.ownerId(),
+            com.jrpetty.mcassistant.entity.WagonKind.HANDCART);
+        helper.assertTrue(w != null, "a handcart");
+        // A lane paved flat up in the clear air off the town, five wide, and a wall two high along its south side.
+        int y = heart.getY() + 12, x0 = x + 6, z0 = z + 6;
+        for (int dx = -2; dx <= 12; dx++) for (int dz = -2; dz <= 3; dz++) {
+            level.setBlock(new BlockPos(x0 + dx, y - 1, z0 + dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+            for (int dy = 0; dy <= 3; dy++) level.setBlock(new BlockPos(x0 + dx, y + dy, z0 + dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        }
+        for (int dx = -2; dx <= 12; dx++) for (int dy = 0; dy <= 1; dy++)
+            level.setBlock(new BlockPos(x0 + dx, y + dy, z0 + 2), net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+        // The cart on the lane facing east, its middle eight tenths into the row by the wall: a body at its handles' own spot
+        // would stand a tenth of a block into the wall.
+        w.moveTo(x0 + 2.5, y, z0 + 1.8, -90.0F, 0.0F);
+        net.minecraft.world.phys.Vec3 raw = new net.minecraft.world.phys.Vec3(w.getX() + 1.6, y, w.getZ());
+        boolean rawIn = !level.noCollision(f, f.getDimensions(f.getPose()).makeBoundingBox(raw.x, raw.y, raw.z));
+        net.minecraft.world.phys.Vec3 at = com.jrpetty.mcassistant.entity.Wagons.handlesForTests(level, w, f);
+        boolean clear = level.noCollision(f, f.getDimensions(f.getPose()).makeBoundingBox(at.x, at.y, at.z));
+        Kit.log("[VT] bk11 the cart at " + w.position() + " facing east; its handles' spot " + raw + " in the wall " + rawIn
+            + "; the driver stands at " + at + ", clear " + clear + ", " + String.format("%.2f", at.distanceTo(raw)) + " off it");
+        helper.assertTrue(rawIn, "the handles' own spot is in the wall (the case looked at)");
+        helper.assertTrue(clear, "the driver stands clear of the wall: " + at);
+        helper.assertTrue(at.distanceTo(raw) <= 0.6 && Math.abs(at.y - y) < 0.01, "between the handles still, on the lane, not up on the wall: " + at);
+        // In the open middle of the lane the handles' own spot, as ever.
+        w.moveTo(x0 + 2.5, y, z0 + 0.5, -90.0F, 0.0F);
+        net.minecraft.world.phys.Vec3 open = com.jrpetty.mcassistant.entity.Wagons.handlesForTests(level, w, f);
+        helper.assertTrue(open.distanceTo(new net.minecraft.world.phys.Vec3(w.getX() + 1.6, y, w.getZ())) < 0.01, "in the open, the handles' own spot: " + open);
+        w.discard();
+        helper.succeed();
+    }
+
     // ============================================================ bk04 / bk05: before the cage
 
     /** bk04: a young mine, its shaft not yet begun (no headframe, no cage): six miners sink it and work it by the stair. */

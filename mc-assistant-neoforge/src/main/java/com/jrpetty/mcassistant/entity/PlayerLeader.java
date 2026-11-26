@@ -2,9 +2,7 @@ package com.jrpetty.mcassistant.entity;
 
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -147,7 +145,7 @@ public final class PlayerLeader {
         if (p instanceof ServerPlayer sp) {
             sp.sendSystemMessage(Component.literal((again ? "Re-elected" : "Elected") + " " + Homeland.leaderTitle(id) + " of " + Villages.name(id)
                 + "! " + (pledges.isEmpty() ? "" : "You promised " + Hustings.nouns(pledges) + ": the town will hold you to it. ")
-                + "Open your Leader's page with /village leader.").withStyle(ChatFormatting.GOLD));
+                + "Your office is at the Town Hall: its Office tab (U, then the Town Hall).").withStyle(ChatFormatting.GOLD));
             Advancements.grant(sp, "village/elected");
             Citizens.refresh(sp);
         }
@@ -480,7 +478,7 @@ public final class PlayerLeader {
         StringBuilder why = new StringBuilder();
         Villages.Village v = ruled(level, p, why);
         if (v == null) return why.toString();
-        if (question == null || question.isBlank()) return "Put a question to the town: \"/village leader referendum should we build a tavern\".";
+        if (question == null || question.isBlank()) return "Put a question to the town: choose one, or write your own, on the Town Hall's Office tab.";
         Referendums seam = REFERENDUMS;
         if (seam != null) {
             String said = seam.call(level, v, p.getUUID(), question);
@@ -747,16 +745,10 @@ public final class PlayerLeader {
         MutableComponent msg = Component.literal("An envoy from " + Villages.name(t.from) + ", " + e.displayNameCap() + ", has come to "
             + Villages.name(v.id()) + " " + t.errand.purpose + ". ").withStyle(ChatFormatting.GOLD);
         if (t.errand != Envoys.Errand.TRADE && t.errand != Envoys.Errand.WAR) {
-            msg.append(button("[Yes]", "/village leader envoy yes", ChatFormatting.GREEN)).append(" ")
-                .append(button("[No]", "/village leader envoy no", ChatFormatting.RED));
+            // [wpa] No chat buttons that run a command (a server may ban them): the answer is a button on the Town Hall's Office tab.
+            msg.append(Component.literal("Your answer: the Town Hall's Office tab, or Your life in town (U).").withStyle(ChatFormatting.YELLOW));
         }
         p.sendSystemMessage(msg);
-    }
-
-    static MutableComponent button(String label, String command, ChatFormatting colour) {
-        return Component.literal(label).withStyle(s -> s.withColor(colour)
-            .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
-            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(command))));
     }
 
     // ------------------------------------------------------------------ for the board, the gazette and the gossip
@@ -839,6 +831,7 @@ public final class PlayerLeader {
             return null;
         }
         String name = leaderName(village);
+        if (!Witness.contact(a, leaderId(village))) return null;         // [featfolk] only one who has dealt with the leader
         if (q[0].equals("broken")) {
             return new String[]{ "Did you hear? " + name + " promised to " + q[2] + ", and nothing.",
                 FolkTalk.pick(a.getRandom(), "Promises are cheap.", "I never believed it.", "Typical."), "We'll remember at the election." };
@@ -890,7 +883,7 @@ public final class PlayerLeader {
             sb.append("\n\nInterviews: ").append(interview);
             buttons.add("Interviews\tvillage interviews page\tThe candidates' particulars, and your choice");
         }
-        sb.append("\n\nA referendum: /village leader referendum <your question>.");
+        sb.append("\n\nA referendum, the minimum wage and the laws: the Town Hall's Office tab.");
         buttons.add("Food first\tvillage leader plan food\tMore hands to the fields, the river and the hunt");
         buttons.add("Growth\tvillage leader plan growth\tTimber in the Wood Age, then the mines and the furnaces");
         buttons.add("Defence\tvillage leader plan defence\tMore of the town on the watch");

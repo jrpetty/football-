@@ -51,6 +51,7 @@ public final class FolkProfile {
         Map.entry("Loves", "about"), Map.entry("Feeling", "about"), Map.entry("Style", "about"), Map.entry("Birthday", "about"),
         Map.entry("Culture", "about"), Map.entry("Town ways", "about"), Map.entry("Its town", "about"),
         Map.entry("Pastimes", "about"),
+        Map.entry("Courting", "life"), Map.entry("Handed down", "life"), Map.entry("Its trade's line", "work"),   // [featfolk]
         Map.entry("Home", "life"), Map.entry("Own house", "life"), Map.entry("Family", "life"), Map.entry("Household", "life"),
         Map.entry("Pet", "life"), Map.entry("Friends", "life"), Map.entry("Neighbours", "life"), Map.entry("Quarter", "life"),
         Map.entry("About town", "life"), Map.entry("Town life", "life"), Map.entry("Votes and works", "life"),
@@ -240,6 +241,9 @@ public final class FolkProfile {
             you.putString("standing", Persona.standing(aff));
             you.putBoolean("knows", p.knows(viewer.getUUID()));
             you.putString("heard_from", p.heardFrom(viewer.getUUID()));
+            ListTag seen = new ListTag();                                       // [featfolk] what it saw of you, or was told and by whom
+            for (String s : Witness.profileLines(f, viewer.getUUID())) seen.add(net.minecraft.nbt.StringTag.valueOf(s));
+            you.put("seen", seen);
             l.put("you", you);
         }
         return l;

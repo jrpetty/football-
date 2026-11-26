@@ -905,7 +905,10 @@ public final class Interviews {
             vis.walkTick = f.tickCount;
         }
         // No nearer for half a minute (a river with no bridge, a cliff): set down at the next step, as a traveller is.
-        if (f.tickCount - vis.gainedTick > (hurry ? 200 : 600)) {
+        int lapse = hurry ? 200 : 600;
+        if (f.tickCount - vis.gainedTick > lapse && !Blink.mayJumpTo(f, onGround.getX() + 0.5, onGround.getZ() + 0.5, "interview: set down at the next step")) {
+            vis.gainedTick = f.tickCount - lapse / 2;                         // [tp49] in sight: it walks on, and is looked at again
+        } else if (f.tickCount - vis.gainedTick > lapse) {
             f.moveTo(onGround.getX() + 0.5, onGround.getY(), onGround.getZ() + 0.5, f.getYRot(), 0.0F);
             f.getNavigation().stop();
             vis.gainedTick = f.tickCount;
@@ -1163,7 +1166,7 @@ public final class Interviews {
                     } catch (RuntimeException e) {
                         LOG.warn("[MCA-INTERVIEW] the interview page could not be sent: {}", e.toString());
                     }
-                    p.sendSystemMessage(Component.literal("The panel has heard them all. Yours is the choice: use the page, or /village interviews choose <name>.")
+                    p.sendSystemMessage(Component.literal("The panel has heard them all. Yours is the choice: the Interviews page of the city books.")
                         .withStyle(ChatFormatting.GOLD));
                 }
                 return;
@@ -1176,7 +1179,7 @@ public final class Interviews {
                 VillageFolkEntity chair = iv.chair == null ? null : Civics.find(level, iv.chair);
                 if (chair != null) FolkTalk.speak(chair, iv.chairName + " will choose. You'll hear by sundown.");
                 if (p != null) p.sendSystemMessage(Component.literal(Villages.name(iv.village) + " has interviewed for " + iv.title
-                    + ": the choice is yours by sundown (/village interviews page), or the panel's.").withStyle(ChatFormatting.GOLD));
+                    + ": the choice is yours by sundown (the Interviews page of the city books), or the panel's.").withStyle(ChatFormatting.GOLD));
                 InterviewBook.changed();
                 return;
             }
@@ -2242,7 +2245,7 @@ public final class Interviews {
         iv.guest = p.getUUID();
         iv.guestName = p.getName().getString();
         InterviewBook.changed();
-        return "We'd be honoured. Your chair's at the end; your choice counts as one vote of three. (/village interviews page)";
+        return "We'd be honoured. Your chair's at the end; your choice counts as one vote of three. (The Interviews page of the city books.)";
     }
 
     /**

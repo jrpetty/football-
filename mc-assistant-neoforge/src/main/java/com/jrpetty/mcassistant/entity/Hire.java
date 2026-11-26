@@ -82,6 +82,7 @@ public final class Hire {
         }
         f.hire(p, until);
         f.persona().remember(day, you + " hired me for an adventure", 4);
+        Witness.dealt(f, p, Witness.Kind.HIRED, "a day's adventuring at " + price + " coins");   // [featfolk]
         if (p instanceof net.minecraft.server.level.ServerPlayer sp) PlayerEmotes.shake(sp, f);   // [anim] shaken on
         Social.Life life = f.life();
         if (life.has(Social.Trait.CURIOUS)) return "An adventure? I've been waiting all my life for somebody to ask! Lead the way.";

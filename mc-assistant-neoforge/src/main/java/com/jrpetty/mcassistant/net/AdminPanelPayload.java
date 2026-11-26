@@ -19,7 +19,7 @@ public record AdminPanelPayload(CompoundTag data) implements CustomPacketPayload
     public static final StreamCodec<RegistryFriendlyByteBuf, AdminPanelPayload> STREAM_CODEC = StreamCodec.of(
         (buf, p) -> buf.writeNbt(p.data()),
         buf -> {
-            CompoundTag t = buf.readNbt();
+            CompoundTag t = CityStatsPayload.readBig(buf);   // [ui53] the books' budget, not 2 MiB
             return new AdminPanelPayload(t == null ? new CompoundTag() : t);
         });
 

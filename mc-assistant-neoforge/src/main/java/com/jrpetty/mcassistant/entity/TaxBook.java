@@ -120,7 +120,7 @@ public final class TaxBook {
     /** The rate a lever stands at, nought to three. */
     public static int rate(UUID village, Lever l) {
         if (l == Lever.WAGE) return LawBook.value(village, LawBook.Law.TITHE);
-        return Math.max(0, Math.min(3, CivicLand.town(village).getInt("rate." + l.name())));
+        return Regimes.taxRate(village, l, Math.max(0, Math.min(3, CivicLand.town(village).getInt("rate." + l.name()))));   // [featcivic] the state's taxes
     }
 
     /** The head tax each grown hand pays a tax day, in coin. */
@@ -130,7 +130,8 @@ public final class TaxBook {
 
     /** The war levy each grown hand pays a tax day (nothing at peace). */
     public static int levy(UUID village) {
-        return Wars.enemies(village).isEmpty() ? 0 : LEVY_COINS[rate(village, Lever.LEVY)];
+        boolean standing = !Identity.neutral() && Government.of(village) == Government.Form.JUNTA;   // [featcivic] the general's standing levy
+        return Wars.enemies(village).isEmpty() && !standing ? 0 : LEVY_COINS[rate(village, Lever.LEVY)];
     }
 
     /** The toll, in the hundred. */
@@ -167,6 +168,7 @@ public final class TaxBook {
 
     /** Can the council move this lever here (the share of wages wants the town's law-book)? */
     static boolean movable(UUID village, Lever l) {
+        if (Regimes.taxFixed(village, l)) return false;                     // [featcivic] fixed by the form (a planned state's toll)
         return l != Lever.WAGE || !Identity.neutral() && Identity.known(village) != null;
     }
 
@@ -601,7 +603,7 @@ public final class TaxBook {
             me.putInt("weeks", before > 0 ? me.getInt("weeks") + 1 : 0);
             me.putLong("since", before > 0 ? me.getLong("since") : day + 1);
             CivicLand.tell(level.getServer(), c.getKey(), "Tax day in " + Villages.name(id) + ": you owe " + coins(me.getInt("owed"))
-                + (fee > 0 ? " (your knight's fee of " + coins(fee) + " with it)" : "") + ". Pay any of its folk (\"I'd like to pay my taxes\") or /village taxes pay.",
+                + (fee > 0 ? " (your knight's fee of " + coins(fee) + " with it)" : "") + ". Pay any of its folk (\"I'd like to pay my taxes\") or at the Town Hall.",
                 ChatFormatting.GOLD);
             if (me.getInt("weeks") == 3) {
                 for (AssistantEntity a : Villages.folkOf(id)) {
@@ -646,6 +648,7 @@ public final class TaxBook {
             me.putInt("fee", Math.max(0, me.getInt("fee") - paid));
         }
         CivicLand.changed();
+        if (owed - paid <= 0) Witness.seen(level, p, Witness.Kind.PAID_TAXES, "", null, 2);   // [featfolk] those who saw it paid
         Standing.stir(village, p.getUUID());
         return owed - paid <= 0 ? "That's your taxes paid, " + coins(paid) + ". " + town + " thanks you."
             : coins(paid) + " paid. You still owe " + coins(owed - paid) + ".";
@@ -736,7 +739,7 @@ public final class TaxBook {
         if (war && rate(id, Lever.LEVY) < 2) return new Motion(Lever.LEVY, 1, rate(id, Lever.LEVY) + 1, "the war must be paid for");
         if (!thin && !plans && !owing) return null;
         if (unrest >= TaxUnrest.GRUMBLE + 10) return null;                    // not with the town grumbling already
-        String why = share >= 0 && share < 100 ? "the wages were paid short" : owing ? "the town owes its market more than it can carry"
+        String why = share >= 0 && share < 100 ? "the wages were paid short" : owing ? "the town owes more than it can carry, its IOUs and its bonds"
             : days < 3 ? "the treasury is all but empty"
             : wonderPlanned(id) ? "the town has a wonder of the world to raise" : "the town is saving for what it means to buy";
         // [econ-1b] Where the market is open the businesses' profits are taxed first: they are where the town's money is made now.
@@ -830,6 +833,7 @@ public final class TaxBook {
         if (Wealth.tier(f) == Wealth.Tier.POOR) { s -= 12; no = "I can barely pay as it is"; }
         if (arrears(id, f.getUUID()) > 0) s -= 8;
         s += urged(id, f);
+        s += Policy.taxLean(id, f) * 12.0;                         // [featcivic] the leader's tax policy, and the party line
         s /= 2.0;
         s *= m.dir();
         // A devout soul (the old ways its first care) follows its leader's lead.

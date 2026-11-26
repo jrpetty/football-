@@ -1195,8 +1195,13 @@ public class SupplyChainGameTests {
         boolean lever = level.getBlockState(deep.lever()).is(Blocks.LEVER);
         int bars = 0;
         for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) if (level.getBlockState(new BlockPos(r.sx() + dx, deep.y() + 1, r.sz() + dz)).is(Blocks.IRON_BARS)) bars++;
-        Kit.log("[VT] sc17 the well: " + air + " open, " + rock + " not; cap " + cap + ", water at its foot " + water + ", lever " + lever + ", bars at the copper stop " + bars);
-        ok.that(rock == 0 && cap && water && lever && bars == 3, "the well open, capped, water at its foot, a lever and a window at the stop");
+        // [tp48] At the deepest stop one of the window's three cells is the doorway over the pool, open three high for good.
+        BlockPos door = com.jrpetty.mcassistant.entity.MineLift.doorwayForTests(v);
+        boolean doorway = door != null && door.getY() == deep.y() && level.getBlockState(door).isAir() && level.getBlockState(door.above()).isAir()
+            && level.getBlockState(door.above(2)).isAir();
+        Kit.log("[VT] sc17 the well: " + air + " open, " + rock + " not; cap " + cap + ", water at its foot " + water + ", lever " + lever + ", bars at the copper stop " + bars
+            + ", the doorway open " + doorway);
+        ok.that(rock == 0 && cap && water && lever && bars == 2 && doorway, "the well open, capped, water at its foot, a lever, a window and the doorway at the stop");
         // Down and up.
         m.teleportTo(top.board().getX() + 0.5, top.board().getY(), top.board().getZ() + 0.5);
         float hp = m.getHealth();

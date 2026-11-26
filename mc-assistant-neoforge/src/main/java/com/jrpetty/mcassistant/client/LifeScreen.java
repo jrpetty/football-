@@ -229,7 +229,7 @@ public class LifeScreen extends Screen {
                 int at = 0;
                 for (int i = 0; i < opts.size(); i++) if (opts.getCompound(i).getString("v").equals(v)) at = i;
                 String label = opts.isEmpty() ? "" : opts.getCompound(at).getString("l");
-                int bw = Math.min(iw - 116, Math.max(90, font.width(label) + 30));
+                int bw = Math.min(iw - 116, Math.max(90, font.width(label) + 44));   // [wpb] the label whole, not clipped
                 int next = opts.isEmpty() ? 0 : (at + 1) % opts.size();
                 int prev = opts.isEmpty() ? 0 : (at + opts.size() - 1) % opts.size();
                 button(g, "<", x + 112, y + 1, 14, mx, my, opts.size() > 1, false, "", () -> form.put(id, opts.getCompound(prev).getString("v")));
@@ -238,6 +238,7 @@ public class LifeScreen extends Screen {
                 return y + 19;
             }
             case "map" -> { return map(g, b, x, y, iw, mx, my); }
+            case "box" -> { return box(g, b, x, y, iw, y0, y1); }        // [wpb] a framed box
             case "pic" -> {
                 int ph = 104, pw = Math.min(iw, 240);
                 if (y + ph >= y0 && y <= y1) {
@@ -303,6 +304,33 @@ public class LifeScreen extends Screen {
                 return y + rh;
             }
         }
+    }
+
+    /** [wpb] A framed box: an accent down its left, its title, its lines wrapped under it. */
+    private int box(GuiGraphics g, CompoundTag b, int x, int y, int iw, int y0, int y1) {
+        int accent = switch (b.getInt("c")) {
+            case 1 -> UiStyle.SUCCESS;
+            case 2 -> UiStyle.WARNING;
+            case 3 -> UiStyle.DANGER;
+            case 4 -> UiStyle.INFO;
+            default -> UiStyle.TEXT_MUTED;
+        };
+        List<FormattedCharSequence> lines = new ArrayList<>();
+        ListTag l = b.getList("lines", Tag.TAG_STRING);
+        for (int i = 0; i < l.size(); i++) lines.addAll(font.split(Component.literal(l.getString(i)), iw - 16));
+        int bh = 6 + 12 + lines.size() * 10 + 5;
+        y += 2;
+        if (y + bh >= y0 && y <= y1) {
+            UiStyle.well(g, x, y, iw, bh, UiStyle.CARD);
+            g.fill(x, y, x + 3, y + bh, accent);
+            g.drawString(font, b.getString("title"), x + 9, y + 6, accent, false);
+            int ly = y + 19;
+            for (FormattedCharSequence s : lines) {
+                g.drawString(font, s, x + 9, ly, UiStyle.TEXT, false);
+                ly += 10;
+            }
+        }
+        return y + bh + 4;
     }
 
     /** A small map of places: the town's heart, you, and the places to choose (the chosen ringed). */

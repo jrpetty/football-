@@ -641,7 +641,7 @@ public final class FolkCredit {
         CoinCensus.playerOut(village, n, p, PlayerFinance.Cat.BORROWED, "borrowed against your holdings");
         CapitalBook.dirty();
         return lenderName(village).substring(0, 1).toUpperCase(Locale.ROOT) + lenderName(village).substring(1) + " lent you " + n + Homes.coins(n) + " at "
-            + TownBonds.pct(l.getInt("bp")) + " a week, against what you hold with the town. Repay with /village capital repay.";
+            + TownBonds.pct(l.getInt("bp")) + " a week, against what you hold with the town. Repay at the Town Hall's Money tab, or the bank.";
     }
 
     public static String playerRepays(ServerLevel level, Player p, UUID village, int n) {
