@@ -12,7 +12,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -38,7 +37,6 @@ import java.util.UUID;
  * </ul>
  * Kept with the player's own data (Earnings' tag), so it outlasts a restart.
  */
-@EventBusSubscriber(modid = McAssistantMod.MODID)
 public final class PlayerJobs {
 
     private PlayerJobs() {}
@@ -49,19 +47,13 @@ public final class PlayerJobs {
     /** The shift a trade is worked at, or null if a player cannot do that work. */
     @Nullable
     static ShiftRole roleFor(@Nullable AssistantEntity.StationTask t) {
-        if (t == null) return null;
-        return switch (t) {
-            case FARM -> ShiftRole.FARM;
-            case WOOD -> ShiftRole.WOOD;
-            case RANCH -> ShiftRole.SHEAR;
-            case GUARD -> ShiftRole.WATCH;
-            case SMELT, SMITH -> ShiftRole.SMELT;
-            case STORE, HAUL -> ShiftRole.HAUL;
-            case COOK -> ShiftRole.COOK;
-            case SHOP -> ShiftRole.COUNTER;
-            case HEAL -> ShiftRole.HEALER;
-            default -> null;
-        };
+        return t == null ? null : JobCards.shiftFor(t.name());               // [wpb] every trade has its card and its shift
+    }
+
+    /** [wpb] The trade the player's job is at, if it is worked at this shift ("" else: a day's shift off the board). */
+    static String tradeOf(Player p, ShiftRole r) {
+        CompoundTag j = job(p);
+        return j.getString("role").equals(r.id) ? j.getString("trade") : "";
     }
 
     /** The player's job, or an empty tag. */
@@ -77,9 +69,9 @@ public final class PlayerJobs {
     public static String line(Player p) {
         CompoundTag j = job(p);
         if (!j.contains("role")) return "";
-        ShiftRole r = ShiftRole.of(j.getString("role"));
-        return (r == null ? "Hand" : r.title) + " at " + j.getString("employerName") + " in " + Villages.name(j.getUUID("town")) + ", "
-            + PlayerLife.coins(j.getInt("wage")) + " a day (since day " + j.getLong("since") + ")";
+        boolean comm = "commission".equals(j.getString("pay"));             // [wpb] the rank, and the way of pay
+        return WorkLife.rankTitle(j) + " at " + j.getString("employerName") + " in " + Villages.name(j.getUUID("town")) + ", "
+            + (comm ? "on commission (" + j.getString("rateWords") + ")" : PlayerLife.coins(j.getInt("wage")) + " a day") + " (since day " + j.getLong("since") + ")";
     }
 
     /** An opening a player might apply for. */
@@ -102,6 +94,11 @@ public final class PlayerJobs {
      * Apply for an opening: interviewed now, as the employer would interview a folk. Returns what was said ("!" refused).
      */
     static String apply(ServerLevel level, ServerPlayer p, UUID village, int id) {
+        return apply(level, p, village, id, false, 0);
+    }
+
+    /** [wpb] As above, on the pay chosen, with the interview's own marks (0 for none: the old way, one click). */
+    static String apply(ServerLevel level, ServerPlayer p, UUID village, int id, boolean commission, double interview) {
         if (employed(p)) return "!You have a job already (" + line(p) + "): quit it first.";
         LabourBook.Town tw = LabourBook.peek(village);
         LabourBook.Vacancy vac = null;
@@ -120,7 +117,7 @@ public final class PlayerJobs {
         }
         // The interview: what the employer weighs, against the best folk who applied.
         int lv = EarnMath.level(Shifts.xp(p, role));
-        double score = 2.0 + view.title().ordinal() + lv * 1.5 + (Citizens.is(village, p.getUUID()) ? 1.5 : 0);
+        double score = 2.0 + view.title().ordinal() + lv * 1.5 + (Citizens.is(village, p.getUUID()) ? 1.5 : 0) + interview;
         double best = 0;
         String bestName = "";
         for (LabourBook.Application a : vac.apps) {
@@ -142,20 +139,49 @@ public final class PlayerJobs {
             vac.closed = day;
         }
         LabourBook.changed();
-        CompoundTag j = new CompoundTag();
-        j.putString("role", role.id);
-        j.putUUID("town", village);
-        j.putString("employer", vac.employer);
-        j.putString("employerName", employerName(vac));
-        j.putInt("wage", Math.max(1, vac.wage));
-        j.putString("hours", vac.hours);
-        j.putLong("since", day);
-        j.putLong("lastWorked", day);
-        Earnings.data(p).put(KEY, j);
-        Shifts.take(p, village, role.id, true);
+        JobCards.Card card = JobCards.of(vac.trade);                         // [wpb] the job written with its card and its terms
+        if (card == null) card = JobCards.forRole(role);
+        WorkLife.hire(level, p, village, vac.employer, employerName(vac), card, Math.max(1, vac.wage), vac.hours, commission, false);
+        CompoundTag j = job(p);
         Villages.tell(village, day, p.getGameProfile().getName() + " was taken on as " + role.title.toLowerCase(Locale.ROOT) + " at " + employerName(vac));
         return "Interviewed and taken on: " + why + ". You're " + role.title.toLowerCase(Locale.ROOT) + " at " + employerName(vac) + " for "
             + PlayerLife.coins(j.getInt("wage")) + " a day, paid each morning for each day you work. Your shift starts at its hours.";
+    }
+
+    /**
+     * [wpb] The employer's weighing, as in {@link #apply}, with the interview's marks: null if the player is the one it
+     * takes, else why not.
+     */
+    @Nullable
+    static String judge(ServerLevel level, ServerPlayer p, UUID village, LabourBook.Vacancy vac, double interview) {
+        ShiftRole role = roleFor(vac.task());
+        if (role == null) role = JobCards.shiftFor(vac.trade);
+        if (role == null) return "it isn't work a player can take on";
+        Standing.View view = Standing.of(village, p.getUUID(), level.getGameTime());
+        int lv = EarnMath.level(Shifts.xp(p, role));
+        double score = 2.0 + view.title().ordinal() + lv * 1.5 + (Citizens.is(village, p.getUUID()) ? 1.5 : 0) + interview;
+        double best = 0;
+        String bestName = "";
+        for (LabourBook.Application a : vac.apps) {
+            if (a.verdict != LabourBook.Verdict.WAITING && a.verdict != LabourBook.Verdict.SHORTLISTED) continue;
+            double s = 3.0 + a.level * 0.6;
+            if (s > best) { best = s; bestName = a.name; }
+        }
+        if (best > score) return "they took " + bestName + ", who knows the trade better. Work a few day shifts at it, and apply again";
+        return null;
+    }
+
+    /** [wpb] The opening filled by the player (its count down, closed when full, who took it written). */
+    static void fill(ServerLevel level, ServerPlayer p, LabourBook.Vacancy vac) {
+        long day = level.getDayTime() / 24000L;
+        vac.openings--;
+        vac.by = "taken: " + p.getGameProfile().getName() + ", a player";
+        vac.note = "after an interview";
+        if (vac.openings <= 0) {
+            vac.state = LabourBook.State.FILLED;
+            vac.closed = day;
+        }
+        LabourBook.changed();
     }
 
     /** Can this work be done here as a shift (the town has its place: grown trees for the woods, a pen for shearing...)? */
@@ -196,55 +222,15 @@ public final class PlayerJobs {
         j.putInt("stars", j.getInt("stars") + stars);
         j.putInt("starTasks", j.getInt("starTasks") + 1);
         if (j.getInt("tasks") >= TASKS_A_DAY) j.putLong("lastWorked", day);
+        CompoundTag rec = WorkLife.day(j, day);                             // [wpb] the boss's tally (a shift's task adds its units in WorkLife.taskDone)
+        if (Shifts.of(p) == null) { rec.putDouble("u", rec.getDouble("u") + 1); rec.putInt("n", rec.getInt("n") + 1); rec.putInt("s", rec.getInt("s") + stars); rec.putBoolean("o", true); }
         Earnings.data(p).put(KEY, j);
         return true;
     }
 
-    private static long lastDay = -1;
-
-    /** Payday, once a morning for every player online with a job. */
-    @SubscribeEvent
-    public static void onServerTick(ServerTickEvent.Post e) {
-        if (e.getServer().getTickCount() % 100 != 37) return;
-        ServerLevel level = e.getServer().overworld();
-        long day = level.getDayTime() / 24000L;
-        if (day == lastDay) return;
-        lastDay = day;
-        for (ServerPlayer p : e.getServer().getPlayerList().getPlayers()) payday(level, p, day);
-    }
-
-    /** Yesterday's wage if yesterday was worked; a rise after a good week; let go after three days missed. */
+    /** [wpb] Payday and the boss's review are WorkLife's now (held pay, offline never absence, warnings before dismissal). */
     public static String payday(ServerLevel level, ServerPlayer p, long day) {
-        CompoundTag j = job(p);
-        if (!j.contains("role") || j.getLong("paidDay") >= day) return "";
-        j.putLong("paidDay", day);
-        UUID town = j.getUUID("town");
-        String said = "";
-        boolean worked = j.getLong("lastWorked") >= day - 1 && j.getLong("taskDay") >= day - 1 && j.getInt("tasks") >= TASKS_A_DAY;
-        if (worked) {
-            int wage = j.getInt("wage");
-            int paid = pay(level, p, town, j.getString("employer"), j.getString("employerName"), wage);
-            said = paid > 0 ? "Paid " + PlayerLife.coins(paid) + " for yesterday's work at " + j.getString("employerName") + "."
-                : j.getString("employerName") + " couldn't pay yesterday's wage.";
-            j.putInt("daysPaid", j.getInt("daysPaid") + 1);
-            if (j.getInt("daysPaid") % 7 == 0 && j.getInt("starTasks") > 0 && j.getInt("stars") / (double) j.getInt("starTasks") >= 3.5) {
-                int rise = Math.max(1, (int) Math.round(wage * 0.1));
-                j.putInt("wage", wage + rise);
-                said += " A good week's work: a rise of " + PlayerLife.coins(rise) + " a day.";
-                j.putInt("stars", 0);
-                j.putInt("starTasks", 0);
-            }
-        } else if (day - j.getLong("lastWorked") > MISSED) {
-            Earnings.data(p).remove(KEY);
-            Shifts.quit(p, true);
-            said = j.getString("employerName") + " has let you go: " + MISSED + " days without you at work.";
-            p.sendSystemMessage(Component.literal(said).withStyle(ChatFormatting.RED));
-            return said;
-        }
-        j.putInt("tasks", 0);
-        Earnings.data(p).put(KEY, j);
-        if (!said.isEmpty()) p.sendSystemMessage(Component.literal(said).withStyle(ChatFormatting.GOLD));
-        return said;
+        return WorkLife.morning(level, p, day);
     }
 
     /** The wage out of the employer's purse: a firm's till, else the treasury. Returns coins paid. */
@@ -269,64 +255,8 @@ public final class PlayerJobs {
 
     // ------------------------------------------------------------------ the board
 
-    /** The Jobs board: the town's openings, its day shifts, and your job. */
-    public static final class Board implements PlayerLife.Page {
-        @Override
-        public LifePage build(ServerPlayer p, PlayerLife.Ctx c) {
-            ServerLevel level = p.serverLevel();
-            Villages.Village v = PlayerLife.here(p);
-            LifePage page = new LifePage("jobs", "The jobs board", v == null ? "No town near" : Villages.name(v.id()) + ": its openings and shifts", p.registryAccess());
-            page.heading("Your job");
-            if (employed(p)) {
-                CompoundTag j = job(p);
-                page.row(new ItemStack(Items.CLOCK), line(p), "Hours: " + j.getString("hours") + ". Today " + (j.getLong("taskDay") == level.getDayTime() / 24000L ? j.getInt("tasks") : 0)
-                    + " tasks (" + TASKS_A_DAY + " make a day's work); paid each morning.", "").button("Quit", "quit", null);
-                page.buttons().button("Start today's shift", "shift", null, !Shifts.onShift(p), "You're on a shift");
-            } else {
-                page.text("None yet. Apply for an opening below, or take a day's shift.", 4);
-            }
-            if (v == null) return page;
-            page.heading("Openings");
-            List<Opening> os = openings(v.id());
-            if (os.isEmpty()) page.text(LabourMarket.live(v.id()) ? "No openings posted just now: the board fills in the morning." : "The town has no labour market yet (its market isn't open): its shifts are below.", 4);
-            for (Opening o : os) {
-                boolean work = o.role() != null && workable(level, v, p, o.role());
-                boolean can = work && !employed(p);
-                page.row(new ItemStack(o.role() == null ? Items.BARRIER : Items.PAPER), capitalize(JobMarket.noun(o.trade())) + " at " + o.employerName(),
-                        PlayerLife.coins(o.wage()) + " a day, " + o.hours() + "; " + o.applied() + " applied" + (o.role() == null ? "; not work a player can do here yet" : ""), "")
-                    .button("Apply", "apply", LifePage.args("id", o.id()), can, employed(p) ? "You have a job"
-                        : o.role() == null ? "Not work a player can do here yet" : "No such work here yet: it needs " + o.role().needs);
-            }
-            page.heading("Day shifts (paid by the task)");
-            for (Shifts.Offer o : Shifts.offers(level, v, p)) {
-                page.row(null, o.title() + " — " + o.role().place + ", " + o.hours(), String.format(Locale.ROOT, "about %.1f a task", o.perTask()) + (o.whyNot().isEmpty() ? "" : "; " + o.whyNot()), "")
-                    .button("Take", "take", LifePage.args("r", o.role().id), o.whyNot().isEmpty() && !Shifts.onShift(p), o.whyNot().isEmpty() ? "You're on a shift" : o.whyNot());
-            }
-            page.buttons().button("The Earnings page", "earnings", null).button("Your life in town", "life", null);
-            return page;
-        }
-
-        @Override
-        public String act(ServerPlayer p, PlayerLife.Ctx c, String action, CompoundTag args) {
-            ServerLevel level = p.serverLevel();
-            Villages.Village v = PlayerLife.here(p);
-            switch (action) {
-                case "apply" -> { return v == null ? "!No town here." : apply(level, p, v.id(), args.getInt("id")); }
-                case "quit" -> { return quit(p); }
-                case "shift" -> {
-                    CompoundTag j = job(p);
-                    String s = Shifts.take(p, j.getUUID("town"), j.getString("role"), true);
-                    return s.isEmpty() ? "Your shift has started." : s;
-                }
-                case "take" -> {
-                    String s = Shifts.take(p, v == null ? null : v.id(), args.getString("r"), false);
-                    return s.isEmpty() ? "Your shift has started." : s;
-                }
-                case "earnings" -> { LifeTown.books(p, "Earnings"); return "#close"; }
-                case "life" -> { PlayerLife.open(p, "life", null); return "#open:"; }
-                default -> { return null; }
-            }
-        }
+    /** The Jobs board: [wpb] the adverts, your job, your applications, your week and the hand-in (JobAdverts). */
+    public static final class Board extends JobAdverts {
     }
 
     static String capitalize(String s) {
@@ -350,15 +280,34 @@ public final class PlayerJobs {
         return id;
     }
 
+    /** [wpb] Tests: a folk applicant on an opening (its level), as the labour market would add one. */
+    public static void rivalForTests(UUID village, int id, VillageFolkEntity f, int level, long day) {
+        LabourBook.Town tw = LabourBook.town(village);
+        for (LabourBook.Vacancy v : tw.vacancies) {
+            if (v.id != id) continue;
+            LabourBook.Application a = new LabourBook.Application();
+            a.folk = f.getUUID();
+            a.name = f.displayNameCap();
+            a.level = level;
+            a.day = day;
+            v.apps.add(a);
+        }
+        LabourBook.changed();
+    }
+
+    /** [wpb] Tests: the opening's state and who took it. */
+    public static String vacancyForTests(UUID village, int id) {
+        LabourBook.Town tw = LabourBook.peek(village);
+        if (tw != null) for (LabourBook.Vacancy v : tw.vacancies) if (v.id == id) return v.state + "|" + v.by;
+        return "";
+    }
+
     /** Tests. */
     public static String applyForTests(ServerLevel level, ServerPlayer p, UUID village, int id) {
         return apply(level, p, village, id);
     }
 
     public static String paydayForTests(ServerLevel level, ServerPlayer p) {
-        CompoundTag j = job(p);
-        j.putLong("paidDay", -1);
-        Earnings.data(p).put(KEY, j);
-        return payday(level, p, level.getDayTime() / 24000L);
+        return WorkLife.morningForTests(level, p, level.getDayTime() / 24000L);
     }
 }

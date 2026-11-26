@@ -35,6 +35,11 @@ public final class Planner {
         add(player.getUUID(), when, kind, text, pos);
     }
 
+    /** [wpb] By day and hour (0-23, the clock's hour; day time 0 is six in the morning). */
+    public static void add(ServerPlayer player, long day, int hour, String kind, String text, @Nullable BlockPos pos) {
+        add(player.getUUID(), day * 24000L + (long) Math.floorMod(hour - 6, 24) * 1000L, kind, text, pos);
+    }
+
     public static void add(UUID player, long when, String kind, String text, @Nullable BlockPos pos) {
         long day = Math.max(0, when / 24000L), time = Math.floorMod(when, 24000L);
         List<Entry> l = ENTRIES.computeIfAbsent(player, k -> new ArrayList<>());

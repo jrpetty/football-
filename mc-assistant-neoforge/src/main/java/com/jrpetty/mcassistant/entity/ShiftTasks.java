@@ -172,6 +172,9 @@ public final class ShiftTasks {
             case WAGON -> {
                 return Wheelwrights.shiftPost(level, v);                                // [roles-e]
             }
+            case MINE, FISH, CRAFT -> {
+                return WorkShifts.post(level, v, r, near);                               // [wpb]
+            }
             case HEALER -> {
                 // [roles-a] The infirmary, with somebody laid up who has not been seen to lately.
                 com.jrpetty.mcassistant.village.Ledger.Building ward = Infirmary.of(id);
@@ -221,7 +224,9 @@ public final class ShiftTasks {
             case WOOD, SHEAR -> OutdoorShifts.task(level, p, s, v, now);  // [roles-d]
             case BAKE -> HospitalityShifts.task(level, p, v, now);         // [roles-c]
             case WAGON -> Wheelwrights.shiftTask(level, p, s, v, now);    // [roles-e]
+            case MINE, FISH, CRAFT -> WorkShifts.task(level, p, s, v, now);  // [wpb]
         };
+        if (t == null) s.noWork += 20;                                   // [wpb] nothing to do this second: not the worker's fault
         if (t != null) {
             s.task = t;
             p.displayClientMessage(Component.literal(t.text).withStyle(ChatFormatting.AQUA), true);
@@ -245,6 +250,7 @@ public final class ShiftTasks {
             case WOOD -> "No grown trees to fell just now. Wait by the woods.";        // [roles-d]
             case SHEAR -> "The flock's all shorn just now. Wait by the pen.";          // [roles-d]
             case BAKE -> "Nothing's short at the bakery just now. Wait by the ovens.";  // [roles-c]
+            case MINE, FISH, CRAFT -> WorkShifts.idleWords(s);                          // [wpb]
         };
     }
 
@@ -406,6 +412,11 @@ public final class ShiftTasks {
             if (out.size() >= most) break;
         }
         return out;
+    }
+
+    /** [wpb] The town's fields, for Provenance (whose a crop is). */
+    static List<BlockPos> fieldsOf(Villages.Village v) {
+        return fields(v);
     }
 
     /** The middles of the town's fields: its farmers' plots and its farm buildings. */
@@ -675,6 +686,7 @@ public final class ShiftTasks {
             case WOOD, SHEAR -> OutdoorShifts.watch(level, p, s, t);                       // [roles-d]
             case BAKE -> HospitalityShifts.watch(level, p, s, t);                          // [roles-c] in the oven
             case WAGON -> Wheelwrights.shiftWatch(level, p, s, t);                         // [roles-e]
+            case MINE, FISH, CRAFT -> WorkShifts.watch(level, p, s, t);                    // [wpb]
             case BUILD -> {
                 if (t.leg == 1) {
                     for (int i = t.marks.size() - 1; i >= 0; i--) {
@@ -718,6 +730,7 @@ public final class ShiftTasks {
             case WAITER -> waiterClick(level, p, s, t, at);
             case COOK -> cookClick(level, p, s, t, at);
             case BAKE -> HospitalityShifts.use(level, p, s, t, at);                        // [roles-c] in, and out
+            case MINE, FISH, CRAFT -> WorkShifts.use(level, p, s, t, at);                  // [wpb]
             case HAUL, SMELT, BUILD -> t.leg == 0 ? load(level, p, s, t, at) : t.to != null && near(at, t.to, 1) && s.role != ShiftRole.BUILD && unload(level, p, s, t);
             default -> false;
         };
@@ -950,6 +963,7 @@ public final class ShiftTasks {
         if (Shifts.ON.isEmpty() || !(e.getBreaker() instanceof ServerPlayer p)) return;
         Shift s = Shifts.of(p);
         if (s == null || s.role != ShiftRole.FARM || s.task == null || !e.getPos().equals(s.task.target)) return;
+        if (WorkLife.commissioned(p)) { Provenance.farmDrops(e, p, s); return; }   // [wpb] on commission the harvest is the hand's to hand in
         ServerLevel level = e.getLevel();
         Item seed = e.getState().getBlock().asItem();
         boolean handed = false;
@@ -1055,6 +1069,7 @@ public final class ShiftTasks {
 
     /** A task ended any way but done: its line back to the kitchen, its load back to the stores (or its deposit kept). */
     static void release(ServerLevel level, @Nullable ServerPlayer p, Shift s, Task t) {
+        if (WorkShifts.release(level, p, s, t)) return;                     // [wpb] the miner's, fisher's and workshop's own
         Dining.Order o = t.order >= 0 ? Dining.ORDERS.get(t.order) : null;
         Dining.Line l = o != null && t.line >= 0 && t.line < o.lines.size() ? o.lines.get(t.line) : null;
         switch (s.role) {

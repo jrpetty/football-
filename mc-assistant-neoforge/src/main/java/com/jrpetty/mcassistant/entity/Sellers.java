@@ -49,7 +49,8 @@ public final class Sellers {
         long day = Businesses.today(level);
         double cost = normalCost(level, village, b, one, day);              // [econ-1e] at its normal trade, not its first week's
         if (cost <= 0.0001) cost = CostBook.of(one).total() * MarketMaker.priceLevel(village);
-        double p = cost * (1 + b.markup);
+        double mk = MyBusinesses.wareMarkup(village, b, one);                // [wpb] its owner's markup on this ware, else its own
+        double p = cost * (1 + mk);
         // [econ-1d] What the market will bear: a firm whose full cost a piece (its week's wages and rent spread over a few
         // sales) would put it over the going price sells at the going price, so long as that pays its makings and its markup,
         // and lets its trade grow to carry its overheads: a new bakery priced its bread at three fifths over the going price
@@ -61,7 +62,7 @@ public final class Sellers {
             // and won every tie: a firm at the going price sold nothing), so long as that pays its makings and a tenth. A firm
             // whose makings cost it more than that (it bought dear) cannot, and sells dear.
             p = Math.max(alone(level, village, b, one) ? Math.max(going, worth(village, one)) : going * UNDERCUT,
-                makings * (1 + Math.min(b.markup, Businesses.LEAST_MARKUP)));
+                makings * (1 + Math.min(mk, Businesses.LEAST_MARKUP)));
         }
         p = Math.max(p, going * LEAST_OF_GOING);
         p = Math.min(p, going * Businesses.MOST_OVER_GOING);

@@ -261,6 +261,7 @@ public final class OutdoorShifts {
         if (Shifts.ON.isEmpty() || !(e.getBreaker() instanceof ServerPlayer p)) return;
         Shift s = Shifts.of(p);
         if (s == null || s.role != ShiftRole.WOOD || s.task == null || !e.getState().is(BlockTags.LOGS) || !inTrunk(s.task, e.getPos())) return;
+        if (WorkLife.commissioned(p)) { Provenance.woodDrops(e, p, s); return; }   // [wpb] on commission the logs are the hand's to hand in
         for (ItemEntity ie : e.getDrops()) {
             ItemStack left = Market.intoStores(e.getLevel(), s.village, ie.getItem().copy());
             if (!left.isEmpty()) give(p, left);
@@ -299,7 +300,7 @@ public final class OutdoorShifts {
             return;
         }
         if (!sh.readyForShearing()) return;
-        int wool = shear(level, s.village, sh);
+        int wool = WorkLife.commissioned(p) ? Provenance.shearToHand(level, p, s, sh) : shear(level, s.village, sh);   // [wpb]
         e.getItemStack().hurtAndBreak(1, p, e.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
         Shifts.done(level, p, s, s.task, 0, 1, "shearing a sheep (" + wool + " wool to the stores)", null);
     }

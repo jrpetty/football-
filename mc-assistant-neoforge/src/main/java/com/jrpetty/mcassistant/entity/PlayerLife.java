@@ -81,6 +81,8 @@ public final class PlayerLife {
         PAGES.put("hall", new TownHall());           // [wpa] the Town Hall
         PAGES.put("arrival", new ArrivalCard());     // [wpa] the card on a first arrival
         PAGES.put("id", new IdCard());               // [wpa] a player's ID card
+        PAGES.put("farm", new FarmPage());                                  // [wpb] a player's own farm as a business
+        PAGES.put("contracts", new ContractsPage());                        // [wpb] contracts between players, with escrow
     }
 
     /** [wpa] Is there a page called this (another package's, not yet merged)? */
