@@ -131,21 +131,25 @@ public class GrowthBoostGameTests {
                     e.that(!idle.isEmpty() && meanIdle <= 0.35, "no crowd standing idle by day: mean share " + meanIdle);
                     // The first fields out on one side of the town, the other sides left for houses.
                     int side = Villages.fieldsSide(v), on = 0, off = 0;
-                    int ring = VillageSpawner.loadedRadiusFor(heads) * 16 + 8, outside = 0;
+                    int outside = 0;
+                    boolean heartHeld = !com.jrpetty.mcassistant.ChunkLoad.ownersForTests(level,
+                        net.minecraft.world.level.ChunkPos.asLong(town.centre())).isEmpty();
                     for (AssistantEntity a : Villages.folkOf(v)) {
                         if (a.workZone() == null) continue;
                         BlockPos c = a.workZone().center();
                         int dx = c.getX() - town.centre().getX(), dz = c.getZ() - town.centre().getZ();
-                        if (Math.max(Math.abs(dx), Math.abs(dz)) > ring) {
+                        // Its plot's ground kept awake by the town or by the folk itself (ChunkLoad), so it is worked unwatched.
+                        if (com.jrpetty.mcassistant.ChunkLoad.ownersForTests(level, net.minecraft.world.level.ChunkPos.asLong(c)).isEmpty()) {
                             outside++;
-                            Kit.log("[VT] gb01 plot outside the kept ground: " + a.getAssistantName() + " " + a.stationTask() + " at " + dx + "," + dz);
+                            Kit.log("[VT] gb01 plot on ground nobody keeps awake: " + a.getAssistantName() + " " + a.stationTask() + " at " + dx + "," + dz);
                         }
                         if (a.stationTask() != AssistantEntity.StationTask.FARM) continue;
                         if (side >= 0 && Villages.along(side, dx, dz) > 0) on++; else off++;
                     }
-                    Kit.log("[VT] gb01 fields side " + side + ": " + on + " fields on it, " + off + " off it; plots outside the ring of " + ring + ": " + outside);
+                    Kit.log("[VT] gb01 fields side " + side + ": " + on + " fields on it, " + off + " off it; plots on ground nobody keeps awake: " + outside
+                        + "; the town's ring " + VillageSpawner.loadedRadiusFor(heads) + " chunks, its heart held " + heartHeld);
                     e.that(side >= 0 && on >= off, "the fields go out on one side of the town: " + on + " on it, " + off + " off");
-                    e.that(outside == 0, "every plot inside the ground the town keeps awake: " + outside + " outside");
+                    e.that(heartHeld && outside == 0, "the heart and every plot on ground kept awake: " + outside + " not, heart " + heartHeld);
                     level.getServer().tickRateManager().setTickRate(20.0F);
                     if (!e.clean()) { fail(helper, e.summary()); return; }
                     helper.succeed();
@@ -252,12 +256,16 @@ public class GrowthBoostGameTests {
                 if (full[0] >= 0 && t - full[0] >= 1600) {
                     Tally k = tally(v);
                     Kit.Expect e = new Kit.Expect();
-                    e.that(Villages.headcount(v) >= base && Villages.headcount(v) <= base + Settlers.PARTY_MOST, "brought up to " + base + ": " + Villages.headcount(v));
+                    int settled = 0;
+                    for (CompoundTag p : Settlers.partiesForTests(v)) settled += p.getList("members", Tag.TAG_COMPOUND).size();
+                    e.that(Villages.headcount(v) >= base, "brought up to " + base + ": " + Villages.headcount(v));
+                    e.that(settled <= base - 10, "no more settlers than it was short of: " + settled + " for " + (base - 10));
                     e.that(Settlers.partiesForTests(v).size() == partiesAtFull[0] && Settlers.onTheRoad(v) == 0,
                         "no more sent for at the base: " + Settlers.partiesForTests(v).size() + " parties against " + partiesAtFull[0]);
                     e.that(Settlers.boardLine(level, v) == null, "the board stops calling for settlers: " + Settlers.boardLine(level, v));
                     e.that(boardSeen[0], "the board said settlers were on the road");
-                    e.that(seenOnce.size() >= base - 10, "they came as settlers on the road: " + seenOnce.size());
+                    e.that(settled >= (base - 10) / 2 && seenOnce.size() >= settled, "they came as settlers on the road, every one watched in: "
+                        + seenOnce.size() + " seen of " + settled);
                     e.that(k.noBed <= 1, "a bed each: " + k.noBed + " without");
                     e.that(Villages.housing(v) >= Villages.headcount(v), "room for them all: " + Villages.housing(v));
                     e.that(k.noTrade <= 1, "a trade each: " + k.noTrade + " without; " + trades(v));

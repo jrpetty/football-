@@ -224,8 +224,13 @@ public final class Settlers {
         Villages.bedsMadeUp(level, town.id());
         int spare = Villages.housing(town.id()) - Villages.headcount(town.id());
         int laid = 0;
+        int stored = 0;
         for (int i = 0; i < Math.max(n, n - spare); i++) {                // a bed each, brought with them, and more if the town is short
-            if (layBed(level, town.centre(), BEDDING[(int) Math.floorMod(pid.hashCode() + i, BEDDING.length)])) laid++;
+            Block bed = BEDDING[(int) Math.floorMod(pid.hashCode() + i, BEDDING.length)];
+            if (layBed(level, town.centre(), bed)) laid++;
+            // No ground for it by the heart: the bedding into the stores, for the first house (as a founding's bedding chests).
+            else if (i < n && Villages.hasStores(level, town.id())
+                    && Market.intoStores(level, town.id(), new net.minecraft.world.item.ItemStack(bed.asItem())).isEmpty()) stored++;
         }
         if (laid > 0) {
             Villages.recountBeds(town.id());
@@ -234,25 +239,25 @@ public final class Settlers {
         Newcomers.takeIn(level, town, pid, day);
         Newcomers.record(town.id(), p, day, "settled, sent for", 0, 0);
         ChunkLoad.setLoaded(level, town.id(), town.centre(), VillageSpawner.loadedRadiusFor(Villages.headcount(town.id())), true);
-        LOG.info("[MCA-SETTLERS] {}: party {} of {} taken in ({} beds laid at the camp); now {} folk of {} wanted",
-            Villages.name(town.id()), pid, n, laid, Villages.headcount(town.id()), base());
+        LOG.info("[MCA-SETTLERS] {}: party {} of {} taken in ({} beds laid at the camp, {} into the stores); now {} folk of {} wanted",
+            Villages.name(town.id()), pid, n, laid, stored, Villages.headcount(town.id()), base());
     }
 
     /**
      * One settler's bedding laid by the heart: at the camp's own places (VillageSpawner.campBed); and where the ground
      * there is too broken for one (a town that stood up on a knoll, unlevelled: the camp's places are within two blocks
-     * of the heart's height), on the nearest level pair of blocks within the camp's reach, up to six above or below the
-     * heart. A real run's eight on a hill took in twenty-two settlers and laid not one bed for them.
+     * of the heart's height), on the nearest level pair of blocks within the camp's reach, up to eight above or below
+     * it. A real run's eight on a hill took in twenty-two settlers and laid not one bed for them.
      */
     static boolean layBed(ServerLevel level, BlockPos heart, Block bed) {
         if (VillageSpawner.campBed(level, heart, bed)) return true;
-        for (int r = 3; r <= VillageSpawner.CAMP_REACH - 1; r++) {
+        for (int r = 3; r <= VillageSpawner.CAMP_REACH - 1; r++) {          // the camp's ground: clear of the lots and streets
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r || (dx & 1) != 0 || (dz & 1) != 0) continue;   // every other block: a gap between
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r || ((dx + dz) & 1) != 0) continue;   // a gap between one and the next
                     Direction out = Math.abs(dz) >= Math.abs(dx) ? (dz < 0 ? Direction.NORTH : Direction.SOUTH) : (dx < 0 ? Direction.WEST : Direction.EAST);
                     BlockPos foot = ground(level, heart.getX() + dx, heart.getZ() + dz);
-                    if (foot == null || Math.abs(foot.getY() - heart.getY()) > 6) continue;
+                    if (foot == null || Math.abs(foot.getY() - heart.getY()) > 8) continue;
                     BlockPos head = foot.relative(out);
                     BlockPos headGround = ground(level, head.getX(), head.getZ());
                     if (headGround == null || headGround.getY() != foot.getY()) continue;
