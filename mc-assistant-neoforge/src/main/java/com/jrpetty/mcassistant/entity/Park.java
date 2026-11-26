@@ -850,7 +850,8 @@ public final class Park {
 
     /** The park in a line, for the books: where it stands and how it is coming on, or when it is wanted. */
     public static String status(ServerLevel level, Villages.Village v) {
-        List<Ledger.Building> all = parks(v.id());
+        List<Ledger.Building> all = new ArrayList<>(parks(v.id()));
+        all.removeIf(b -> !b.structure().equals(STRUCTURE));               // [featbuild] the park itself, not a statue garden
         if (all.isEmpty()) {
             int folk = Villages.headcount(v.id());
             if (Villages.sitesOf(v.id()).containsKey(STRUCTURE)) return "The park is going up.";
