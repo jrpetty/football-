@@ -151,7 +151,8 @@ public final class FeatStage {
             BlockPos stop = NightWatch.stopForTests(g);
             out.add("WATCH " + g.displayNameCap() + " " + g.blockPosition().getX() + " " + g.blockPosition().getY() + " " + g.blockPosition().getZ()
                 + (lit ? " lantern" : "") + (stop == null ? "" : " stop " + stop.toShortString()) + (g.isSleeping() ? " asleep" : "")
-                + " duty " + Roster.dutyOf(level, g));
+                + " duty " + Roster.dutyOf(level, g) + " first " + g.firstWatch() + " onShift " + g.onShift() + " | " + g.brainNoteForBooks()
+                + " | " + g.hobbyNow());
         }
         if (out.isEmpty()) out.add("WATCH nobody");
         return out;
