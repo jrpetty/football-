@@ -96,7 +96,9 @@ public final class FeatReports {
     }
 
     public static CompoundTag greens(ServerLevel level, Villages.Village v) {
-        return Monuments.report(level, v);
+        CompoundTag c = Monuments.report(level, v);
+        c.put("great", GreatParks.report(level, v));
+        return c;
     }
 
     public static CompoundTag stone(ServerLevel level, Villages.Village v) {

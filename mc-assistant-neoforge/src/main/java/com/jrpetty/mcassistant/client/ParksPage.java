@@ -38,6 +38,21 @@ final class ParksPage {
                 r.text(g.getString("status"), UiStyle.TEXT_FAINT, 1);
             }
         }
+        // [featbuild] The bigger parks and the central park, by the town's size.
+        CompoundTag great = c.getCompound("great");
+        r.heading("Parks as the town grows");
+        for (Tag t : great.getList("great", Tag.TAG_COMPOUND)) {
+            CompoundTag g = (CompoundTag) t;
+            int pct = g.getInt("pct");
+            String head = g.getString("kind") + ", " + g.getInt("w") + " by " + g.getInt("d") + ", " + g.getInt("dist") + " blocks from the square"
+                + (pct < 100 ? " · being laid out (" + pct + "%)" : "") + (g.getInt("there") > 0 ? " · " + g.getInt("there") + " there now" : "");
+            r.showMe(head, pct < 100 ? UiStyle.WARNING : UiStyle.TEXT, WorksPages.at(g), g.getString("kind").toLowerCase(java.util.Locale.ROOT),
+                "on ground the plan set aside for it: its lots are kept for the green, the homes go up round it.", "its ground is not loaded.");
+            r.text("With " + g.getString("has") + ".", UiStyle.TEXT_FAINT, 1);
+        }
+        r.text(great.getString("next"), UiStyle.TEXT_MUTED);
+        r.text("Small statue gardens first; a park a block across at " + 40 + " folk and another at 70; at 90 a central park four blocks across."
+            + " Folk stroll, picnic and sit in them; the water in every pond and lake is dug in and kept in.", UiStyle.TEXT_FAINT);
         int folk = c.getInt("folk"), coins = c.getInt("coins"), keeps = c.getInt("gardensFor");
         r.heading("Statue gardens");
         r.text("The town keeps " + keeps + (keeps == 1 ? " statue garden" : " statue gardens") + " for " + folk + " folk and " + coins

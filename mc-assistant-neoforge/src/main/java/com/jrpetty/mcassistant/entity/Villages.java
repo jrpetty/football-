@@ -2994,6 +2994,7 @@ public final class Villages {
         int hx = turned ? lot.halfDeep() : lot.halfAcross();
         int hz = turned ? lot.halfAcross() : lot.halfDeep();
         if (lot.kind() == com.jrpetty.mcassistant.village.TownPlan.Kind.SQUARE) return false;
+        if (GreatParks.reserved(villageId, heart, lot)) return true;   // [featbuild] set aside for a park
         // [mine7] The mine's ground, this town's or a neighbour's: set aside for the mine for good.
         if (MineGround.anyMeets(heart.getX() + lot.x() - hx, heart.getZ() + lot.z() - hz, heart.getX() + lot.x() + hx, heart.getZ() + lot.z() + hz)) return true;
         if (onFarmland(villageId, lot.x(), lot.z(), hx, hz)) return true;
