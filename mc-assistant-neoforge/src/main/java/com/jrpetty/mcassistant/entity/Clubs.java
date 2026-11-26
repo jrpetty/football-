@@ -586,6 +586,8 @@ public final class Clubs {
         final long day, kickoff;
         final boolean fromStores;
         int greenGoals, goldGoals;
+        /** After a goal: the ball dead in the centre circle till then (the sides back in their halves). */
+        long restartAt;
         @Nullable String lastScorer;
 
         Match(Field field, UUID ball, long day, long kickoff, boolean fromStores) {
@@ -770,6 +772,7 @@ public final class Clubs {
             Vec3 c = m.field.point(0, 0);
             ball.moveTo(c.x, c.y + 0.3, c.z);
             ball.setDeltaMovement(Vec3.ZERO);
+            m.restartAt = level.getGameTime() + 80;
             level.playSound(null, BlockPos.containing(c), SoundEvents.PLAYER_LEVELUP, SoundSource.NEUTRAL, 0.8F, 1.4F);
             level.sendParticles(ParticleTypes.HAPPY_VILLAGER, bp.x, bp.y + 1, bp.z, 12, 0.6, 0.6, 0.6, 0.0);
             if (scorer != null) FolkTalk.speak(scorer, FolkTalk.pick(scorer.getRandom(), "Get in.", "Meant that.", "Did you see that?", "One-nil. Or whatever it is.",
@@ -793,28 +796,50 @@ public final class Clubs {
                 if (d < best) { best = d; nearest = o; }
             }
         }
-        if (nearest == f) {
+        boolean dead = level.getGameTime() < m.restartAt;
+        int me = Math.max(0, side.indexOf(f.getUUID()));
+        boolean keeper = side.size() >= 3 && me == 0;
+        if (keeper) {
+            // In goal: across the mouth after the ball, and a clearance up the field when it comes near.
+            Vec3 at = m.field.point(Math.max(-1.5, Math.min(1.5, uw[0])), -attack * (HALF_LONG - 0.5));
+            if (f.position().distanceToSqr(at) > 0.8 && (f.getNavigation().isDone() || f.tickCount - f.hobbyTick > 8)) {
+                f.getNavigation().moveTo(at.x, at.y, at.z, 1.0D);
+                f.hobbyTick = f.tickCount;
+            }
+            f.getLookControl().setLookAt(bp.x, bp.y, bp.z);
+            if (!dead && f.distanceToSqr(bp) < 2.2 * 2.2) {
+                Vec3 up = m.field.point((f.getRandom().nextDouble() - 0.5) * 6, 0).subtract(bp);
+                double d = Math.max(0.1, Math.sqrt(up.x * up.x + up.z * up.z));
+                ball.kick(new Vec3(up.x / d * 0.5, 0.18, up.z / d * 0.5), f);
+                f.swing(InteractionHand.MAIN_HAND);
+            }
+            return;
+        }
+        if (nearest == f && !dead) {
             if (f.distanceToSqr(bp) > 1.6 * 1.6) {
                 if (f.getNavigation().isDone() || f.tickCount - f.hobbyTick > 10) {
                     f.getNavigation().moveTo(bp.x, bp.y, bp.z, 1.15D);
                     f.hobbyTick = f.tickCount;
                 }
             } else {
-                Vec3 goal = m.field.point((f.getRandom().nextDouble() - 0.5) * 2.4, attack * (HALF_LONG + 1));
+                // Close in, a shot (wide as often as not); further out, the ball run on a few blocks toward goal.
+                double toGoal = Math.abs(attack * HALF_LONG - uw[1]);
+                boolean shot = toGoal < 6;
+                Vec3 goal = m.field.point((f.getRandom().nextDouble() - 0.5) * (shot ? 5.0 : 6.0), attack * (HALF_LONG + 1));
                 Vec3 to = goal.subtract(bp);
-                double dist = Math.sqrt(to.x * to.x + to.z * to.z);
+                double dist = Math.max(0.1, Math.sqrt(to.x * to.x + to.z * to.z));
                 Vec3 dir = new Vec3(to.x / dist, 0, to.z / dist);
-                double power = dist > 8 ? 0.55 : 0.4 + f.getRandom().nextDouble() * 0.15;
-                double spread = (f.getRandom().nextDouble() - 0.5) * 0.5;
+                double power = shot ? 0.42 + f.getRandom().nextDouble() * 0.12 : 0.2 + f.getRandom().nextDouble() * 0.1;
+                double spread = (f.getRandom().nextDouble() - 0.5) * (shot ? 0.4 : 0.8);
                 Vec3 kick = new Vec3(dir.x + dir.z * spread, 0, dir.z - dir.x * spread);
-                ball.kick(new Vec3(kick.x * power, 0.08 + f.getRandom().nextDouble() * 0.1, kick.z * power), f);
+                ball.kick(new Vec3(kick.x * power, 0.06 + f.getRandom().nextDouble() * (shot ? 0.12 : 0.05), kick.z * power), f);
                 f.swing(InteractionHand.MAIN_HAND);
             }
         } else {
-            int i = Math.max(0, side.indexOf(f.getUUID()));
+            int i = me;
             double u = -HALF_WIDE + 1 + (i * 3) % (2 * HALF_WIDE - 1);
-            double w = -attack * 2 + attack * (uw[1] * attack > 0 ? 2 : -1) + (i % 2 == 0 ? -attack * 3 : 0);
-            Vec3 at = m.field.point(u, Math.max(-HALF_LONG + 1, Math.min(HALF_LONG - 1, w + uw[1] * 0.4)));
+            double w = dead ? -attack * (2 + i) : -attack * 2 + attack * (uw[1] * attack > 0 ? 2 : -1) + (i % 2 == 0 ? -attack * 3 : 0) + uw[1] * 0.4;
+            Vec3 at = m.field.point(u, Math.max(-HALF_LONG + 1, Math.min(HALF_LONG - 1, w)));
             if (f.position().distanceToSqr(at) > 4 && (f.getNavigation().isDone() || f.tickCount - f.hobbyTick > 30)) {
                 f.getNavigation().moveTo(at.x, at.y, at.z, 0.9D);
                 f.hobbyTick = f.tickCount;
