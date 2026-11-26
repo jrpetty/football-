@@ -480,12 +480,22 @@ public final class Blink {
             for (AssistantEntity a : Villages.folkOf(v.id())) {
                 all++;
                 if (a.bedPos() != null) bed++;
-                if (a.isSleeping()) { asleep++; if (Bedside.onAFloor(a)) floor++; continue; }
+                if (a.isSleeping()) {
+                    asleep++;
+                    if (Bedside.onAFloor(a)) {
+                        floor++;                                                 // [tp50] where each sleeps on a floor, and how far from its bed
+                        net.minecraft.core.BlockPos bp = a.bedPos();
+                        each.append("  ").append(a.getAssistantName()).append(" (asleep on a floor) at ").append(a.blockPosition().toShortString())
+                            .append(bp == null ? "" : " bed " + bp.toShortString() + " " + (int) Math.sqrt(bp.distSqr(a.blockPosition())) + " off").append('\n');
+                    }
+                    continue;
+                }
                 String w = Bedside.whyAwake(a);
                 why.merge(Bedside.kind(w), 1, Integer::sum);
                 net.minecraft.core.BlockPos bp = a.bedPos();
                 each.append("  ").append(a.getAssistantName()).append(" (").append(w).append(") at ").append(a.blockPosition().toShortString())
-                    .append(bp == null ? "" : " bed " + bp.toShortString() + " " + (int) Math.sqrt(bp.distSqr(a.blockPosition())) + " off").append('\n');
+                    .append(bp == null ? "" : " bed " + bp.toShortString() + " " + (int) Math.sqrt(bp.distSqr(a.blockPosition())) + " off")
+                    .append(w.startsWith("walking") ? " [" + a.bedWalkNote() + "]" : "").append('\n');
             }
             if (all == 0) continue;
             b.append(Villages.name(v.id())).append(": ").append(asleep).append(" of ").append(all).append(" asleep (").append(floor)

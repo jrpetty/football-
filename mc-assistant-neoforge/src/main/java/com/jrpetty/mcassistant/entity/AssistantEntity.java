@@ -3498,7 +3498,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // No bed of its own? Claim the nearest free one around home or the
         // patch, once a night, instead of standing bedless until the player
         // notices and presses the button.
-        if (bed == null && tickCount - bedClaimTick > 6000) {
+        // [tp50] At night a look every minute (a bed given back, taken up or found out of reach in the evening left a folk
+        // bedless the rest of the night: five of the soak's big town, "no bed" with four free beds to be had).
+        if (bed == null && tickCount - bedClaimTick > (level().isNight() ? 1200 : 6000)) {
             bedClaimTick = tickCount;
             BlockPos base = homePos != null ? homePos
                 : workZone != null ? workZone.center() : blockPosition();
@@ -3541,8 +3543,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         // [tp46] Half past eleven and its bed still the far side of the town (a bed given back to its household late, the only one
         // free across the town): the night on a floor indoors near where it is, not a walk at one in the morning.
+        // [tp50] And a nearer bed it has walked at in a player's sight a couple of looks with no headway (the far side of a wall
+        // it cannot get round, a shore under a bank): the same.
         if (!isSleeping() && this instanceof VillageFolkEntity vfl && level().getDayTime() % 24000L >= Bedside.TOO_LATE
-                && level().getDayTime() % 24000L < 23000L && bed.distSqr(blockPosition()) > (double) Bedside.TOO_FAR * Bedside.TOO_FAR
+                && level().getDayTime() % 24000L < 23000L
+                && (bed.distSqr(blockPosition()) > (double) Bedside.TOO_FAR * Bedside.TOO_FAR || bedSeenFails >= 2 || Bedside.walkingToFloor(vfl))
                 && Bedside.onTheFloor(vfl, true)) {
             night(isSleeping() ? "asleep on a floor" : "walking to a floor indoors: its bed too far tonight");
             return true;
@@ -3550,6 +3555,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (bed.distSqr(blockPosition()) > 4.0) {
             if (isSleeping()) stopSleeping();
             bedSideSince = tickCount;                                   // [tp43]
+            if (PitStep.digging(this)) {                                // [tp50] steps up out of a pit first
+                night("walking to its bed: digging steps up out of a pit, " + (int) Math.sqrt(bed.distSqr(blockPosition())) + " off");
+                bedWalkSince = tickCount;
+                return true;
+            }
             night("walking to its bed: " + (int) Math.sqrt(bed.distSqr(blockPosition())) + " off" + (bedSeenFails > 0 ? ", no headway in sight x" + bedSeenFails : ""));
             // A watch on the walk home: no nearer in twenty seconds, and a villager is set down
             // by its bed; one that still cannot get there gives the bed up for a nearer one.
@@ -3561,13 +3571,19 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 bedStepTick = tickCount;
                 if (stepOntoBed(bed)) { brain("stepped over to its bed"); return true; }
             }
-            if (far < bedWalkBest - 2.0) {
-                bedWalkBest = far;
-                bedSeenFails = 0;
+            // [tp50] Headway in blocks, a block and a half of it (it was reckoned in the square of the distance, two of that:
+            // forty blocks off, a fiftieth of a block nearer was "headway", and a folk jostled in a knot at a gate was never
+            // short of it); and a look that finds none starts the next from where it stands, not from nothing (the next
+            // tick was always "nearer" than nothing, and the count of looks in sight without headway never got past one:
+            // half a town stood all night "on its way to bed in sight — walking on").
+            double gap = Math.sqrt(far);
+            if (gap < bedWalkBest - 1.5) {
+                if (bedWalkBest != Double.MAX_VALUE) bedSeenFails = 0;
+                bedWalkBest = gap;
                 bedWalkSince = tickCount;
             } else if (tickCount - bedWalkSince > 400) {
                 bedWalkSince = tickCount;
-                bedWalkBest = Double.MAX_VALUE;
+                bedWalkBest = gap;
                 net.minecraft.world.level.pathfinder.Path toBed = getNavigation().getPath();
                 if (isSettler() && putBeside(bed, "bed: could not walk to it, put beside it")) {
                     brain("could not walk to my bed — put beside it");
@@ -3597,8 +3613,34 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (getNavigation().isDone() && staggerBeat()) {
                 // Home from a far field by the village's walk map, a stop at a time.
                 BlockPos via = far > 28 * 28 ? wayToward(bed) : null;
-                if (via != null) getNavigation().moveTo(via.getX() + 0.5, via.getY(), via.getZ() + 0.5, 1.0D);
-                else getNavigation().moveTo(bed.getX() + 0.5, bed.getY(), bed.getZ() + 0.5, 1.0D);
+                // [tp50] A stop the walk cannot get to (the map's way down into a sunken yard, the pathfinder's search giving out
+                // short of it at the lip of a slot): the way straight to the bed if that one gets there, or gets nearer.
+                if (via != null && this instanceof VillageFolkEntity) {
+                    net.minecraft.world.level.pathfinder.Path toVia = getNavigation().createPath(via, 1);
+                    if (toVia == null || !toVia.canReach()) {
+                        net.minecraft.world.level.pathfinder.Path toBed = getNavigation().createPath(bed, 1);
+                        if (toBed != null && (toBed.canReach() || toVia == null || toVia.getEndNode() == null
+                                || toBed.getEndNode() != null && toBed.getEndNode().asBlockPos().distSqr(bed) < toVia.getEndNode().asBlockPos().distSqr(bed))) via = null;
+                    }
+                }
+                BlockPos to = via != null ? via : bed;
+                // [tp50] Never a walk that ends short of where it goes down in a pit it cannot get out of (the slot behind the
+                // terrace row, the pathfinder's nearest to a bed in the sunken house beside it, where half the town stood all
+                // night): the other way (the bed, or the map's stop) if that does not, else it waits where it is (the night's
+                // floor, or the morning) rather than drop in. Looked at in a player's sight; out of it the walk is travelled.
+                if (this instanceof VillageFolkEntity && Blink.seen(this)) {
+                    net.minecraft.world.level.pathfinder.Path way = getNavigation().createPath(to, 1);
+                    if (shortIntoAPit(way) && via != null) {
+                        to = bed;
+                        way = getNavigation().createPath(to, 1);
+                    }
+                    if (shortIntoAPit(way)) {
+                        night("walking to its bed: its way ends down in a pit, waiting, " + (int) Math.sqrt(far) + " off");
+                        return true;
+                    }
+                    if (way != null) { getNavigation().moveTo(way, 1.0D); return true; }
+                }
+                getNavigation().moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, 1.0D);
             }
             return true;
         }
@@ -3667,6 +3709,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** [tp46] What the bedtime routine is doing with it now ("" if it has not run for a couple of seconds: it is elsewhere). */
     public String nightNote() {
         return tickCount - nightNoteTick <= 140 ? nightNote : "";       // (the agenda looks in every five seconds)
+    }
+
+    /** [tp50] A way that does not get there and ends down in a pit it could not climb out of (PitStep.deadEnd)? */
+    private boolean shortIntoAPit(@Nullable net.minecraft.world.level.pathfinder.Path way) {
+        return way != null && !way.canReach() && way.getEndNode() != null
+            && PitStep.deadEnd(level(), way.getEndNode().asBlockPos(), blockPosition());
+    }
+
+    /** [tp50] How its walk to bed stands (the census): the way it has, how long since it last got nearer. */
+    public String bedWalkNote() {
+        net.minecraft.world.level.pathfinder.Path p = getNavigation().getPath();
+        String way = p == null ? "no way" : (p.isDone() ? "way done" : "way " + p.getNextNodeIndex() + "/" + p.getNodeCount())
+            + (p.canReach() ? "" : " short") + " to " + p.getTarget().toShortString();
+        return way + (getNavigation().isDone() ? ", nav idle" : "") + ", " + (tickCount - bedWalkSince) + "t since nearer";
     }
 
     /** [tp46] Beds given up as out of reach (the census). */
@@ -3920,7 +3976,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     private boolean wentHomeTonight;  // one trip per night
-    private double bedWalkBest = Double.MAX_VALUE;   // the nearest it has got to its bed on the way
+    private double bedWalkBest = Double.MAX_VALUE;   // the nearest it has got to its bed on the way (blocks)
     private int bedWalkSince;
     private int bedWalkFails;
     /** [tp43] Looks in a player's sight that got it no nearer its bed (four, and the bed is given up for one it can reach). */

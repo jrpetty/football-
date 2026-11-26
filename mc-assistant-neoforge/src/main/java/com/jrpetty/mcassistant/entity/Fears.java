@@ -169,6 +169,10 @@ public final class Fears {
         long day = level.getDayTime() / 24000L;
         boolean home = f.distanceToSqr(bed.getX() + 0.5, bed.getY(), bed.getZ() + 0.5) <= 2.5 * 2.5;
         if (home && tod >= f.bedtimeTick() - 200L) return false;    // at home at bedtime: bed, as ever
+        // [tp50] And at its bedtime wherever it has got to: the walk home is the bedtime's own from there (the way it has, a floor
+        // near if its bed is out of its reach tonight). Hurrying home all night it was never let go to bed, nor to a floor: one
+        // of the soak's big town stood till morning on the shore under the terrace, "hurrying home before dark".
+        if (tod >= f.bedtimeTick()) return release(f);
         HELD.put(f.getUUID(), f.tickCount);
         f.hobbyNow = home ? "indoors before dark" : "hurrying home before dark";
         f.lastLeisureTick = f.tickCount;
