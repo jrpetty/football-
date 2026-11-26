@@ -399,16 +399,34 @@ public final class Quarry {
     /** The next post or lantern the fence wants, or null when it is up. */
     @Nullable
     static BlockPos[] fenceWanted(ServerLevel level, Villages.Village v, Site s) {
+        return fenceWanted(level, v, s, null);
+    }
+
+    /** As above, the nearest to this spot first (a quarryman goes round the rim, not back and forth across it). */
+    @Nullable
+    static BlockPos[] fenceWanted(ServerLevel level, Villages.Village v, Site s, @Nullable BlockPos near) {
+        BlockPos[] best = null;
+        double bestD = Double.MAX_VALUE;
         for (BlockPos[] f : fence(level, v, s)) {
+            if (!wantsWork(level, f)) continue;
+            if (near == null) return f;
+            double d = f[0].distSqr(near);
+            if (d < bestD) { bestD = d; best = f; }
+        }
+        return best;
+    }
+
+    private static boolean wantsWork(ServerLevel level, BlockPos[] f) {
+        {
             BlockState st = level.getBlockState(f[0]);
             boolean postUp = st.is(BlockTags.FENCES) || st.is(BlockTags.FENCE_GATES);
-            if (!postUp && (st.isAir() || st.canBeReplaced())) return f;
+            if (!postUp && (st.isAir() || st.canBeReplaced())) return true;
             if (postUp && f[2] != null) {
                 BlockState l = level.getBlockState(f[2]);
-                if (!(l.is(Blocks.LANTERN) || l.is(Blocks.TORCH)) && (l.isAir() || l.canBeReplaced())) return f;
+                if (!(l.is(Blocks.LANTERN) || l.is(Blocks.TORCH)) && (l.isAir() || l.canBeReplaced())) return true;
             }
         }
-        return null;
+        return false;
     }
 
     /** Put up a post (or its lantern) out of the stores, unless {@code free}. */
@@ -416,6 +434,8 @@ public final class Quarry {
         BlockState st = level.getBlockState(f[0]);
         boolean postUp = st.is(BlockTags.FENCES) || st.is(BlockTags.FENCE_GATES);
         if (!postUp) {
+            // Never a post under somebody's feet (they would be left standing on top of it).
+            if (!level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(f[0]).inflate(0.3, 0.0, 0.3)).isEmpty()) return false;
             boolean gate = f[1] != null;
             if (!free && !TownWork.take(level, v, x -> x.is(gate ? ItemTags.FENCE_GATES : ItemTags.WOODEN_FENCES), 1)
                     && !TownWork.take(level, v, x -> x.is(ItemTags.PLANKS), gate ? 4 : 2)) return false;
@@ -511,6 +531,24 @@ public final class Quarry {
         }
         UNREACHABLE.computeIfAbsent(id, k -> new ConcurrentHashMap<>()).values().removeIf(t -> now - t > 2400L || now < t);
         men(level, v);
+        gate(level, v, s);
+    }
+
+    /** The quarry's gate open by day for its hands and their loads, shut at night (and the yard's with it). */
+    static void gate(ServerLevel level, Villages.Village v, Site s) {
+        long t = Math.floorMod(level.getDayTime(), 24000L);
+        boolean open = t >= 900L && t < 12000L && !Raids.underAlarm(v.id());
+        List<BlockPos> gates = new ArrayList<>();
+        for (BlockPos[] f : fence(level, v, s)) if (f[1] != null) gates.add(f[0]);
+        StoneYard.Site y = StoneYard.site(v.id());
+        if (y != null) gates.add(StoneYard.ground(StoneYard.at(y, 0, -StoneYard.HALF_D), y));
+        for (BlockPos g : gates) {
+            if (!level.isLoaded(g)) continue;
+            BlockState st = level.getBlockState(g);
+            if (st.getBlock() instanceof FenceGateBlock && st.getValue(FenceGateBlock.OPEN) != open) {
+                level.setBlock(g, st.setValue(FenceGateBlock.OPEN, open), 3);
+            }
+        }
     }
 
     static void open(ServerLevel level, Villages.Village v, Site s) {
@@ -647,13 +685,22 @@ public final class Quarry {
             case FENCE, CUT -> {
                 ensurePick(level, v, f);
                 // The fence and its lanterns before the cutting.
-                BlockPos[] fw = fenceWanted(level, v, s);
+                BlockPos[] fw = fenceWanted(level, v, s, f.blockPosition());
                 if (fw != null) {
-                    if (!walkTo(f, m, fw[0], 3.5, now, "putting up the quarry's fence")) return true;
-                    if (now - m.lastCut >= CUT_EVERY) {
+                    // Worked from the pit's side of the rim, a step in, never standing on the line itself.
+                    Direction in = Direction.getNearest(s.centre().getX() - fw[0].getX(), 0, s.centre().getZ() - fw[0].getZ());
+                    BlockPos stand = fw[0].relative(in, 2);
+                    stand = new BlockPos(stand.getX(), top(level, stand.getX(), stand.getZ(), s.centre().getY() + 8, s.centre().getY() - DEEPEST - 2) + 1, stand.getZ());
+                    if (f.blockPosition().equals(fw[0]) || !walkTo(f, m, stand, 2.0, now, "putting up the quarry's fence")) {
+                        if (f.blockPosition().equals(fw[0])) Incidents.walk(f, stand, 0.8D);
+                        return true;
+                    }
+                    f.getLookControl().setLookAt(fw[0].getX() + 0.5, fw[0].getY() + 0.5, fw[0].getZ() + 0.5);
+                    if (now - m.lastCut >= CUT_EVERY / 2) {
                         m.lastCut = now;
                         f.swing(InteractionHand.MAIN_HAND);
-                        if (!putFence(level, v, s, fw, false)) skip(id, fw[0], now);
+                        if (!putFence(level, v, s, fw, false) && level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                                new net.minecraft.world.phys.AABB(fw[0]).inflate(0.3, 0.0, 0.3)).isEmpty()) skip(id, fw[0], now);
                     }
                     return true;
                 }
