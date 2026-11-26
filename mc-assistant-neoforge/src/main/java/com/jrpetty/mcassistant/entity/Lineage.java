@@ -190,10 +190,19 @@ public final class Lineage {
         }
     }
 
-    /** Where a child is born: on its mother's bed at home when she is near it, else where she is. */
+    /** Where a child is born: on the floor beside its mother's bed at home when she is near it, else where she is. */
     public static BlockPos birthplace(ServerLevel level, VillageFolkEntity mother) {
         BlockPos bed = mother.bedPos();
-        if (bed != null && bed.distSqr(mother.blockPosition()) < 48 * 48 && level.isLoaded(bed)) return bed;
+        if (bed == null || bed.distSqr(mother.blockPosition()) >= 48 * 48 || !level.isLoaded(bed)) return mother.blockPosition();
+        for (int r = 1; r <= 2; r++) {
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                for (int dy = 0; dy >= -1; dy--) {
+                    BlockPos p = bed.relative(d, r).above(dy);
+                    if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
+                            && level.getBlockState(p.below()).isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) return p;
+                }
+            }
+        }
         return mother.blockPosition();
     }
 

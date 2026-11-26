@@ -181,7 +181,7 @@ public class FolkLinesGameTests {
             father.insertItem(new ItemStack(Items.BREAD, 4));
             VillageFolkEntity child = mother.raiseChildWith(father);
             helper.assertTrue(child != null && child.isBaby(), "a child born");
-            helper.assertTrue(child.blockPosition().distSqr(bed) <= 4.0, "born at home, by its mother's bed: " + child.blockPosition() + " bed " + bed);
+            helper.assertTrue(child.blockPosition().distSqr(bed) <= 9.0, "born at home, by its mother's bed: " + child.blockPosition() + " bed " + bed);
             // Its parent's trade, learned at its side (the parent who is not the elder: the elder never retires).
             VillageFolkEntity parent = mother.isElder() ? father : mother;
             parent.setStation(heart.offset(10, 0, 0), StationTask.FARM);

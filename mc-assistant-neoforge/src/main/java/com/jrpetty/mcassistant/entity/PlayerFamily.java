@@ -458,8 +458,8 @@ public final class PlayerFamily {
         put(village, p.getUUID(), "crib", "");
         VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(level);
         if (child == null) return null;
-        BlockPos at = f.bedPos() != null ? f.bedPos() : f.blockPosition();
-        child.moveTo(at.getX() + 0.5, at.getY() + 0.6, at.getZ() + 0.5, f.getYRot(), 0.0F);
+        BlockPos at = Lineage.birthplace(level, f);                           // on the floor by the bed at home
+        child.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, f.getYRot(), 0.0F);
         child.rename("Baby " + f.displayNameCap().split(" ")[0]);
         com.jrpetty.mcassistant.VillageSpawner.childKit(child);
         child.joinVillage(village, f.villageCentre());

@@ -7146,7 +7146,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (child == null) return null;
         BlockPos born = Lineage.birthplace(server, this);            // [featfolk] at home, when its mother is near it
         if (born.equals(blockPosition())) child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
-        else child.moveTo(born.getX() + 0.5, born.getY() + 0.6, born.getZ() + 0.5, getYRot(), 0.0F);
+        else child.moveTo(born.getX() + 0.5, born.getY(), born.getZ() + 0.5, getYRot(), 0.0F);
         child.rename(Beliefs.childName(village, server.getRandom(), this, partner));   // [culture2] a name of its town's faith
         // Less than its parents spent on it — see childKit. A village that
         // could breed its way to a full larder would never have to farm.

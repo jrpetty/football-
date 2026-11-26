@@ -324,8 +324,8 @@ public final class TalkMenu {
                 MIG_STAY,                                                    // [trade-world] only to one thinking of leaving
                 // [featfolk] Courting, the proposal, a home together, a baby and its name (PlayerFamily): each only when it applies.
                 say("court_walk_out", Items.DANDELION, "Will you walk out with me?", flag("courtable")),
-                say("court_stroll", Items.OAK_SAPLING, "Take a walk with me", c -> c.has("pcourting") || c.has("spouse")),
-                say("court_supper", Items.MUSHROOM_STEW, "Supper with me tonight?", c -> c.has("pcourting") || c.has("spouse")),
+                say("court_stroll", Items.OAK_SAPLING, "Take a walk with me", c -> !c.known() || c.has("pcourting") || c.has("spouse")),
+                say("court_supper", Items.MUSHROOM_STEW, "Supper with me tonight?", c -> !c.known() || c.has("pcourting") || c.has("spouse")),
                 say("court_propose", Items.DIAMOND, "Will you marry me?", flag("pcourting")),   // not ready: it says what is still to do
                 say("spouse_day", Items.CAMPFIRE, "How was your day, love?", flag("spouse")),
                 say("spouse_baby", Items.WHITE_WOOL, "Shall we try for a baby?", flag("spouse")),
