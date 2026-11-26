@@ -144,6 +144,7 @@ public final class ServicePoints {
                 }
             }
         }
+        if (role == ServiceRole.HALL) TownHallDesk.known(level, village, out);   // [wpa] the hall's desk, set in an empty cell of its floor
         List<Point> kept = List.copyOf(out);
         POINTS.put(key, new Found(now, kept));
         return kept;

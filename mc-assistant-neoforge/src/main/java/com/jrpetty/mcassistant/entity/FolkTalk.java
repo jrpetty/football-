@@ -699,7 +699,7 @@ public final class FolkTalk {
     static String greet(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op, boolean first,
                         String heard) {
         RandomSource r = f.getRandom();
-        String you = p.getName().getString();
+        String you = Belonging.first(p);                      // [wpa] the name it gave the town
         Persona me = f.persona();
         int aff = op.affinity;
         Social.Life life = f.life();
@@ -732,8 +732,9 @@ public final class FolkTalk {
                 + Errands.describe(me) + ".";
         }
         for (Persona.Memory m : me.memories()) {
-            if (day - m.day() > 2 || !m.text().startsWith(you + " ")) continue;
-            String did = m.text().substring(you.length() + 1);
+            String known = p.getName().getString();                          // [wpa] memories keep the username
+            if (day - m.day() > 2 || !m.text().startsWith(known + " ")) continue;
+            String did = m.text().substring(known.length() + 1);
             if (m.weight() < 0) return pick(r, "Oh. You. I've not forgotten — you " + did.replace(" me", " me") + ".",
                 "Keep your distance. You " + did + ".");
             if (r.nextInt(3) == 0) break;
@@ -1256,7 +1257,7 @@ public final class FolkTalk {
         if (f.life().has(Social.Trait.GRUMPY)) return pick(r, "Right. Back to it.", "Mm. Bye.");
         String farewell = TownSpeech.bye(f, p);              // [culture2] its town's own farewell ("Fair winds to you!")
         if (farewell != null) return farewell;
-        if (aff >= 55) return pick(r, "Come back soon, " + p.getName().getString() + "!", "Take care of yourself!");
+        if (aff >= 55) return pick(r, "Come back soon, " + Belonging.first(p) + "!", "Take care of yourself!");
         return pick(r, "Goodbye!", "See you around.", "Safe travels.", "Mind how you go.");
     }
 
@@ -1311,7 +1312,7 @@ public final class FolkTalk {
         RandomSource r = f.getRandom();
         Persona me = f.persona();
         ItemStack held = p.getMainHandItem();
-        String you = p.getName().getString();
+        String you = Belonging.first(p);                      // [wpa] the name it gave the town
         if (held.isEmpty()) return pick(r, "There's nothing in your hand!", "A gift of… air? How thoughtful.");
         // A letter from a neighbour's elder: delivered, not kept (Bonds).
         String letter = Bonds.deliver(f, p, held);
@@ -1375,7 +1376,7 @@ public final class FolkTalk {
             if (f.level() instanceof ServerLevel seen) Witness.seen(seen, p, Witness.Kind.GIFT, given, f, 0);
         }
         Knights.gift(f, p, delta);                            // [civic-land] a gift the town was glad of, toward the player's service
-        if (delta >= 12) me.remember(day, you + " gave me " + what.toLowerCase(Locale.ROOT), 6);
+        if (delta >= 12) me.remember(day, p.getName().getString() + " gave me " + what.toLowerCase(Locale.ROOT), 6);
         if (f.level() instanceof ServerLevel server) {
             server.sendParticles(delta >= 12 ? net.minecraft.core.particles.ParticleTypes.HEART
                     : net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER,
@@ -1636,7 +1637,7 @@ public final class FolkTalk {
     /** A word for a player walking past. */
     public static String passing(VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
         RandomSource r = f.getRandom();
-        String you = p.getName().getString();
+        String you = Belonging.first(p);                      // [wpa] the name it gave the town
         int aff = f.persona().affinity(p.getUUID());
         if (aff <= -50) return pick(r, "…", "Keep walking.", "Hmph.");
         if (aff <= -15) return pick(r, "Oh. You.", "Hm.");
@@ -1651,7 +1652,7 @@ public final class FolkTalk {
     /** A player has just killed a monster near the village. */
     public static String thanks(VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
         RandomSource r = f.getRandom();
-        String you = p.getName().getString();
+        String you = Belonging.first(p);                      // [wpa] the name it gave the town
         if (f.life().has(Social.Trait.GRUMPY)) return pick(r, "Hm. Good riddance.", "About time somebody did.");
         return pick(r, "Thank you, " + you + "!", "Well fought!", "One less of those, thank goodness.",
             "Our hero, " + you + "!", "Phew! Thank you.");

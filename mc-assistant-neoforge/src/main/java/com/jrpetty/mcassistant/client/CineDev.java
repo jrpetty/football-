@@ -180,6 +180,20 @@ public final class CineDev {
                 case "size" -> mc.getWindow().setWindowed(Integer.parseInt(w[1]), Integer.parseInt(w[2]));
                 case "close" -> mc.setScreen(null);
                 case "page" -> LifeClient.open(w[1]);                               // a player page, as its button asks
+                case "lifeact" -> {                                                 // [wpa] a page's button: page action k=v...
+                    net.minecraft.nbt.CompoundTag args = new net.minecraft.nbt.CompoundTag();
+                    net.minecraft.nbt.CompoundTag f = new net.minecraft.nbt.CompoundTag();
+                    for (int i = 3; i < w.length; i++) {
+                        int eq = w[i].indexOf('=');
+                        if (eq < 0) continue;
+                        String k = w[i].substring(0, eq), v = w[i].substring(eq + 1).replace('_', ' ');
+                        if (k.startsWith("f.")) f.putString(k.substring(2), v);
+                        else if (v.equals("true") || v.equals("false")) args.putBoolean(k, Boolean.parseBoolean(v));
+                        else args.putString(k, v);
+                    }
+                    if (!f.isEmpty()) args.put("f", f);
+                    com.jrpetty.mcassistant.net.LifeNetwork.act(w[1], w[2], args);
+                }
                 case "cmd" -> com.jrpetty.mcassistant.net.LifeNetwork.command(line.trim().substring(4));
                 case "open" -> open(mc, w[1]);
                 case "waiting" -> { mc.setScreen(null); Waiting.start(line.trim().substring(8)); }   // the "opening..." line, as on a slow server
@@ -190,6 +204,10 @@ public final class CineDev {
                 case "cityscroll" -> {                                              // a notch at a time, as the wheel
                     int n = Integer.parseInt(w[1]);
                     for (int i = 0; i < Math.abs(n) && mc.screen instanceof CityScreen c; i++) c.mouseScrolled(c.width / 2.0, c.height / 2.0, 0, -Math.signum(n));
+                }
+                case "scroll" -> {                                                  // [wpa] any screen's wheel, a notch at a time
+                    int n = Integer.parseInt(w[1]);
+                    for (int i = 0; i < Math.abs(n) && mc.screen != null; i++) mc.screen.mouseScrolled(mc.screen.width / 2.0, mc.screen.height / 2.0, 0, -Math.signum(n));
                 }
                 case "cursor" -> {                                                  // the pointer, at GUI X Y
                     double px = d(w[1]) * mc.getWindow().getGuiScale(), py = d(w[2]) * mc.getWindow().getGuiScale();

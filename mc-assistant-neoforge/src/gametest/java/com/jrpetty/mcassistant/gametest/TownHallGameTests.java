@@ -238,7 +238,8 @@ public class TownHallGameTests {
             Kit.log("[VT] th03 identity: " + said + " / display " + p.getDisplayName().getString());
             Belonging.Rp rp = Belonging.rp(p.getUUID());
             helper.assertTrue(rp != null && rp.full().equals("Ada Marsh"), "written in (capitalised): " + said);
-            helper.assertTrue(p.getDisplayName().getString().equals("Ada Marsh"), "over its head and in chat: " + p.getDisplayName().getString());
+            // (The mock players share one username, and so one scoreboard team: its title may follow the name.)
+            helper.assertTrue(p.getDisplayName().getString().startsWith("Ada Marsh"), "over its head and in chat: " + p.getDisplayName().getString());
             helper.assertTrue(Belonging.called(p).equals("Ada Marsh") && Belonging.first(p).equals("Ada"), "what the town calls it");
             // Nobody else's.
             ServerPlayer q = player(helper, heart.offset(2, 0, 0), 0);
@@ -259,9 +260,9 @@ public class TownHallGameTests {
             helper.assertTrue(coins(p) == before - Belonging.RENAME_FEE, "the fee paid: " + (before - coins(p)));
             helper.assertTrue(!Belonging.formerNames(p.getUUID()).isEmpty() && Belonging.formerNames(p.getUUID()).get(0).contains("Ada Marsh"), "the old name on record");
             String hide = act(p, "plate", LifePage.args("on", false));
-            helper.assertTrue(p.getDisplayName().getString().equals(p.getGameProfile().getName()), "the plate hidden: " + hide);
+            helper.assertTrue(p.getDisplayName().getString().startsWith(p.getGameProfile().getName()), "the plate hidden: " + hide);
             act(p, "plate", LifePage.args("on", true));
-            helper.assertTrue(p.getDisplayName().getString().equals("Ada Brook"), "and shown");
+            helper.assertTrue(p.getDisplayName().getString().startsWith("Ada Brook"), "and shown");
             helper.succeed();
         });
     }
@@ -318,10 +319,12 @@ public class TownHallGameTests {
             helper.assertTrue(apply != null && apply.getBoolean("on"), "ready: " + apply);
             act(p, "citizen", null);
             helper.assertTrue(!Citizens.is(id, p.getUUID()) && PlayerLife.ctx(p).args.contains("ask"), "asked first");
+            int before = coins(p), steps = FirstWeek.count(p.getUUID());
             String said = act(p, "confirm", null);
             Kit.log("[VT] th05 " + said);
             helper.assertTrue(Citizens.is(id, p.getUUID()), "a citizen: " + said);
-            helper.assertTrue(coins(p) == 30 - Citizens.FEE, "the fee paid");
+            int rewards = (FirstWeek.count(p.getUUID()) - steps) * FirstWeek.REWARD_COINS;   // the first week's coin for the bill
+            helper.assertTrue(coins(p) == before - Citizens.FEE + rewards, "the fee paid: " + before + " -> " + coins(p) + " (+" + rewards + ")");
             helper.assertTrue(said.contains("Next"), "and what's next");
             helper.succeed();
         });
@@ -477,8 +480,13 @@ public class TownHallGameTests {
             BlockPos heart = Kit.surface(level, x, Z);
             ServerPlayer p = player(helper, heart, 40);
             TownHall.open(p, "office");
-            helper.assertTrue(PlayerLife.ctx(p).tab.equals("office") && !PlayerLife.pageForTests(p).toString().contains("\"office\""), "no Office tab for a resident");
+            CompoundTag plain = PlayerLife.pageForTests(p);
+            boolean officeTab = false;
+            for (Tag t : plain.getList("tabs", Tag.TAG_COMPOUND)) if (((CompoundTag) t).getString("id").equals("office")) officeTab = true;
+            helper.assertTrue(!officeTab && PlayerLife.ctx(p).tab.equals("duties"), "no Office tab for a resident: " + PlayerLife.ctx(p).tab);
+            friend(id, p, folk);
             List<String> stage = PlayerLeader.stage(level, v, p);
+            for (int i = 0; i < 3 && !PlayerLeader.leads(id, p.getUUID()); i++) stage = PlayerLeader.stage(level, v, p);   // the folk's votes, by what each cares for
             Kit.log("[VT] th09 stage " + stage);
             helper.assertTrue(PlayerLeader.leads(id, p.getUUID()), "the player leads");
             TownHall.open(p, "office");
@@ -487,6 +495,8 @@ public class TownHallGameTests {
             String wage = act(p, "minwage", form("wage", "8"));
             Kit.log("[VT] th09 wage: " + wage);
             helper.assertTrue(!wage.startsWith("!"), "the minimum wage set: " + wage);
+            com.jrpetty.mcassistant.entity.LawBook.resetLawsForTests(level, v);   // the town's first morning: its law-book
+            com.jrpetty.mcassistant.entity.LawBook.setForTests(id, com.jrpetty.mcassistant.entity.LawBook.Law.CURFEW, 0);
             act(p, "law", LifePage.args("law", "CURFEW", "n", 1));
             helper.assertTrue(PlayerLife.ctx(p).args.contains("ask"), "a law asked first");
             String law = act(p, "confirm", null);

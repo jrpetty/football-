@@ -110,6 +110,25 @@ public final class TownHallDesk implements ServicePoints.Desk {
         return level.isLoaded(c) ? level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c.offset(2, 0, 2)) : null;
     }
 
+    /** Where the desk was set (Ledger note): kept, as it stands in a cell its hall's drawing leaves empty. */
+    static final String NOTE = "hall.desk";
+
+    /** The desk the town set in, as a point of the HALL (ServicePoints.of): if it still stands in its hall. */
+    static void known(ServerLevel level, UUID village, List<ServicePoints.Point> out) {
+        String n = Ledger.note(village, NOTE);
+        if (n == null || n.isEmpty() || !out.isEmpty()) return;
+        BlockPos at;
+        try { at = BlockPos.of(Long.parseLong(n)); } catch (NumberFormatException e) { return; }
+        if (!level.isLoaded(at)) return;
+        net.minecraft.world.level.block.state.BlockState s = level.getBlockState(at);
+        if (!(s.getBlock() instanceof com.jrpetty.mcassistant.block.ServiceCounterBlock)) return;
+        Ledger.Building h = hall(village);
+        if (h == null || h.anchor().distSqr(at) > 24 * 24) return;
+        Direction front = s.getValue(com.jrpetty.mcassistant.block.ServiceCounterBlock.FACING);
+        BlockPos stand = StoreFloor.standable(level, at.relative(front.getOpposite())) ? at.relative(front.getOpposite()).immutable() : null;
+        out.add(new ServicePoints.Point(ServiceRole.HALL, village, at.immutable(), front, stand, h));
+    }
+
     // ------------------------------------------------------------------ the clerk
 
     /** Who keeps the desk now: the elder or a councillor at the hall (near the desk), else nobody. */
@@ -153,21 +172,46 @@ public final class TownHallDesk implements ServicePoints.Desk {
         return at;
     }
 
-    /** The spot for the desk in this hall: a few steps in from the door, to one side, with room before and behind. */
+    /**
+     * The spot for the desk in this hall: inside, three to eight steps from the door and off the way in from it, on the
+     * floor, with room in front for the one being served and behind for the clerk; the nearest such to the door.
+     */
     @Nullable
     static BlockPos spot(ServerLevel level, Ledger.Building h) {
-        Direction in = h.facing();
-        BlockPos base = h.anchor().above();
-        for (int k = 3; k <= 6; k++) {
-            for (int s : new int[]{ 2, -2, 3, -3 }) {
-                BlockPos c = base.relative(in, k).relative(in.getClockWise(), s);
-                if (!level.isLoaded(c) || !level.getBlockState(c).isAir() || !level.getBlockState(c.above()).isAir()) continue;
-                if (!level.getBlockState(c.below()).isFaceSturdy(level, c.below(), Direction.UP)) continue;
-                if (!StoreFloor.standable(level, c.relative(in.getOpposite())) || !StoreFloor.standable(level, c.relative(in))) continue;
-                return c;
-            }
+        BlockPos door = TownLife.fittings(h).door();
+        if (door == null) return null;
+        java.util.Set<BlockPos> solid = new java.util.HashSet<>();
+        int x0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, z0 = Integer.MAX_VALUE, z1 = Integer.MIN_VALUE;
+        for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement pl : com.jrpetty.mcassistant.entity.goal.BuildGoal.plan(h.structure(), h.anchor(), h.facing(), 13)) {
+            if (pl.part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.CLEAR) continue;
+            solid.add(pl.pos());
+            if (pl.pos().getY() != door.getY()) continue;
+            x0 = Math.min(x0, pl.pos().getX()); x1 = Math.max(x1, pl.pos().getX());
+            z0 = Math.min(z0, pl.pos().getZ()); z1 = Math.max(z1, pl.pos().getZ());
         }
-        return null;
+        List<BlockPos> empty = new ArrayList<>();                           // the cells its drawing leaves empty on the door's floor
+        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
+            BlockPos c = new BlockPos(x, door.getY(), z);
+            if (!solid.contains(c)) empty.add(c);
+        }
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (BlockPos c : empty) {
+            boolean roofed = false;                                         // inside: under the hall's own roof
+            for (int up = 2; up <= 8 && !roofed; up++) roofed = solid.contains(c.above(up));
+            if (!roofed) continue;
+            double d = c.distSqr(door);
+            if (d < 9 || d > 64 || d >= bd) continue;
+            Direction front = StoreFloor.front(c, door);
+            int lateral = Math.abs(front.getAxis() == Direction.Axis.X ? c.getZ() - door.getZ() : c.getX() - door.getX());
+            if (lateral < 2) continue;                                      // never in the way in
+            if (!level.isLoaded(c) || !level.getBlockState(c).isAir() || !level.getBlockState(c.above()).isAir()) continue;
+            if (!level.getBlockState(c.below()).isFaceSturdy(level, c.below(), Direction.UP)) continue;
+            if (!StoreFloor.standable(level, c.relative(front)) || !StoreFloor.standable(level, c.relative(front.getOpposite()))) continue;
+            best = c.immutable();
+            bd = d;
+        }
+        return best;
     }
 
     @Nullable
@@ -176,11 +220,14 @@ public final class TownHallDesk implements ServicePoints.Desk {
         if (at == null) return null;
         if (!TownBlocks.mayBuild(level, v, at, h.anchor(), TownBlocks.Why.RENOVATE)) return null;
         if (!free && !Crafts.usePlanks(level, v, 4)) return null;          // three slabs and the sides, as any counter
-        Direction front = h.facing().getOpposite();                        // toward the door, where the visitor stands
+        BlockPos door = TownLife.fittings(h).door();
+        Direction front = StoreFloor.front(at, door);                      // toward the door, where the visitor stands
         level.setBlock(at, McAssistantMod.SERVICE_COUNTER.get().defaultBlockState()
             .setValue(com.jrpetty.mcassistant.block.ServiceCounterBlock.FACING, front), 3);
+        Ledger.note(v.id(), NOTE, Long.toString(at.asLong()));
         ServicePoints.resetPointsForStage();
         if (!free) Villages.tell(v.id(), level.getDayTime() / 24000L, "a desk was set in the Town Hall for the town's book");
+        com.mojang.logging.LogUtils.getLogger().info("[wpa] {}: the Town Hall's desk set in at {} {} {}", Villages.name(v.id()), at.getX(), at.getY(), at.getZ());
         return at;
     }
 

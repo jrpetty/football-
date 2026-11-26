@@ -423,11 +423,13 @@ public final class TownHall implements PlayerLife.Page {
             page.buttons().button("Tithe -2", "tithe", LifePage.args("d", -2)).button("Tithe +2", "tithe", LifePage.args("d", 2))
                 .button("Wages -5", "wages", LifePage.args("d", -5)).button("Wages +5", "wages", LifePage.args("d", 5));
             page.heading("The laws");
+            boolean book = Identity.known(id) != null;
+            if (!book) page.text("The town's law-book is written on its first morning; the laws can be changed after that.", 4);
             for (LawBook.Law l : LawBook.Law.values()) {
                 int now = LawBook.value(id, l);
                 int nx = (now + 1) % l.options.length;
                 page.row(new ItemStack(Items.BOOK), cap(l.name) + ": " + l.option(now), "Next: " + l.option(nx) + ".", "")
-                    .button("Change", "law", LifePage.args("law", l.name(), "n", nx));
+                    .button("Change", "law", LifePage.args("law", l.name(), "n", nx), book, "The law-book is written on the town's first morning");
             }
             VillageFolkEntity envoy = Envoys.waitingAt(level, v);
             if (envoy != null && envoy.trip() != null && envoy.trip().errand != null) {
@@ -752,6 +754,27 @@ public final class TownHall implements PlayerLife.Page {
                 "That's you, is it? Fair likeness.", "Keep those somewhere dry.");
         }
         return null;
+    }
+
+    /** The bell: every player in the town's militia who is about is told, and the arrow points to the square. Returns how many. */
+    public static int militiaCalled(ServerLevel level, Villages.Village v, BlockPos square) {
+        int n = 0;
+        for (ServerPlayer p : level.players()) {
+            if (!Belonging.inMilitia(v.id(), p.getUUID())) continue;
+            if (p.blockPosition().distSqr(v.centre()) > 9.0 * Villages.VILLAGE_RANGE * Villages.VILLAGE_RANGE) continue;
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("The bell! " + Villages.name(v.id())
+                + "'s militia gathers at the square: the arrow points the way.").withStyle(net.minecraft.ChatFormatting.GOLD));
+            CompoundTag t = new CompoundTag();
+            CompoundTag m = new CompoundTag();
+            m.putIntArray("at", new int[]{ square.getX(), square.getY(), square.getZ() });
+            m.putString("l", "The square: the muster");
+            t.put("marker", m);
+            t.putBoolean("close", true);
+            com.jrpetty.mcassistant.net.LifeNetwork.send(p, t);
+            Planner.add(p, level.getDayTime(), "militia", "The bell: the militia at the square", square);
+            n++;
+        }
+        return n;
     }
 
     /** Tests: a question put to the town, as the council would put one, voted on that day. Returns its id. */

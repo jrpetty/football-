@@ -135,6 +135,7 @@ public final class Muster {
             if (f.isSleeping()) f.stopSleeping();
             if (f.peekJob() != null) f.clearQueue();
         }
+        TownHall.militiaCalled(level, v, g.at);                           // [wpa] the players in the militia told, the arrow on the square
     }
 
     /** The town's muster, worked out once a bell. */
