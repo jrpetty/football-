@@ -457,6 +457,17 @@ public class PaScreen extends Screen {
         }
         int py = y + 2 + rows * (th + 3) + 4;
         if (picker.isEmpty()) {
+            // [featpa] its three screens of its own: a building copied, an errand to town, a stance for a fight
+            int kw = (iw - 8) / 3;
+            String[][] kit = {{"Blueprints...", "Show it a building and it builds a copy wherever you point"},
+                {"Errand to town...", "It sells your loot at the market and brings back what you need"},
+                {"Combat stance...", "Shield, archer or medic; and helping a town's guards in a raid"}};
+            for (int i = 0; i < 3; i++) {
+                final int k = i;
+                button(g, kit[i][0], x + i * (kw + 4), py, kw, 16, mx, my, true, true, kit[i][1],
+                    () -> { if (k == 0) PaKitClient.openBlueprints(); else if (k == 1) PaKitClient.openErrand(); else PaKitClient.openStance(); });
+            }
+            py += 20;
             para(g, "Click an order. The ones with choices open a picker here. Everything you click shows in Talk, where it answers.", x + 2, py + 2, iw - 4, faint());
             return;
         }

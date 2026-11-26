@@ -346,6 +346,7 @@ class PaPersonaTest {
             if (k.startsWith("say.mem.") || k.startsWith("say.lock.") || k.startsWith("say.gear.") || k.startsWith("say.bond.") || k.startsWith("say.xbow.") || k.startsWith("say.autohelp_tool") || k.equals("say.challenge_xbow") || k.equals("say.need_crossbow")) continue;   // [pa35] answers about memory and progress, not banter
             if (k.startsWith("logi.") || k.startsWith("craft.")) continue;                     // [pa36] working lines, not jokes (their cheese is [daft])
             if (k.startsWith("field.")) continue;                                              // [pa38] the same for its rod, throws, mace, table, trades, slips
+            if (k.startsWith("kit.")) continue;                                                // [featpa] and for blueprints, errands, stances
             for (String l : e.getValue()) { funny++; if (PaLines.bad(l)) bad++; }
         }
         double share = 100.0 * bad / funny;
@@ -381,7 +382,8 @@ class PaPersonaTest {
                 Map.entry("instead", "coal ore"), Map.entry("tier", "Good Mate"), Map.entry("day", "3"),   // [pa35] the memory and progress lines' blanks
                 // [pa36] the logistics lines' blanks
                 Map.entry("chest", "the iron chest"), Map.entry("have", "40"), Map.entry("trip", "2"), Map.entry("from", "the mine"),
-                Map.entry("to", "storage"), Map.entry("answer", "20 in all."), Map.entry("secs", "60"), Map.entry("left", "24"), Map.entry("chests", "3"), Map.entry("why", "for tools")));
+                Map.entry("to", "storage"), Map.entry("answer", "20 in all."), Map.entry("secs", "60"), Map.entry("left", "24"), Map.entry("chests", "3"), Map.entry("why", "for tools"),
+                Map.entry("spent", "12")));                                                          // [featpa] an errand's coins spent
             assertFalse(f.contains("{") || f.contains("}"), "a blank left in: " + f);
         }
         assertNotNull(PaLines.get("say.ok"));

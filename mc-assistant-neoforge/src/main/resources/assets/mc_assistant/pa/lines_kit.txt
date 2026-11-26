@@ -1,0 +1,1171 @@
+# [featpa] Blueprints (a building copied), errands to town, combat stances.
+# Blanks: {item} a name (a blueprint, a town, a villager, a mob), {n} a number, {what} a list or a size, {need} a list or a
+# number, {spent} coins spent. Dry, short, never shouting. "[daft]" lines only for Daft humour. "x(s)" reads right for 1.
+
+# ================================================================== blueprints
+
+== kit.bp_nothing
+I don't see a building there. That's just the ground being the ground.
+Nothing built there to copy. Point me at something with walls.
+I looked. It's landscape. Lovely landscape, but I can't copy a hill.
+There's no building in that. Look right at a wall and try again.
+No building found. Stand inside it, or look at it, and ask again.
+That's nature's work, not yours. Point me at a building.
+[daft] I can copy a building or I can copy a hill. Only one of those has a door.
+== kit.bp_nothing@gloomy
+Nothing there. Just ground. It's always just ground.
+I can't find a building. Perhaps it was never there.
+No walls, no roof, nothing to copy. Story of the countryside.
+I looked hard. Dirt. That's all there ever is.
+There's no building. I'll try not to take it personally.
+Nothing built there. The world's quite empty when you look.
+== kit.bp_nothing@serious
+No building found there. Look at a wall, or stand inside it.
+Nothing to copy: that's natural ground.
+I can't find a structure at that spot.
+No building detected. Point at it directly and try again.
+That area has no built blocks.
+Nothing built there. Try again from inside the building.
+
+== kit.bp_no_area
+I need two corners first. Ping one, pick Mark an area, then ping the other.
+No area marked. Two pings, one at each corner, and I'll take it in.
+Mark the corners for me: ping, Mark an area, ping again.
+I'd copy the area, but there isn't one yet. Two corners, please.
+Ping the corners on the ground and I'll do the rest.
+Show me where it starts and ends: two pings on the ground.
+== kit.bp_no_area@gloomy
+No area marked. I'd only be guessing, and I guess badly.
+There aren't any corners. Two pings, if it's not too much bother.
+Nothing marked. I can't copy what isn't drawn round.
+Two corners, please. Otherwise I'm copying thin air.
+I need the corners. Without them it's just a feeling.
+No area yet. Mark it and I'll get on, as ever.
+== kit.bp_no_area@serious
+Mark an area first: ping one corner, choose Mark an area, ping the other.
+No marked area. Two corner pings are needed.
+I need two corners marked before I can copy.
+Mark the area with two pings, then ask again.
+No area set. Ping both corners.
+Two corners are required to copy an area.
+
+== kit.bp_saved
+Got it. "{item}": {what}, {n} blocks. It's in Blueprints whenever you want it.
+Taken in. "{item}", {what}. I'll remember every stair.
+"{item}" saved: {n} blocks, {what}. Point at an empty spot and I'll build another.
+Done. "{item}" is in the book. {what}, every block where it was.
+Copied "{item}". {n} blocks, {what}. Chests come out empty, before you ask.
+"{item}" is drawn up: {what}. Where would you like the next one.
+[daft] "{item}" saved. I've got it memorised. Brick for brick. Literally.
+== kit.bp_saved@gloomy
+"{item}" saved. {n} blocks I'll have to place one at a time. Lovely.
+Taken in. {what}. It looked smaller from outside.
+"{item}" is in the book. {n} blocks. I counted every one, sadly.
+Copied. {what}. Someone will want two of everything now.
+"{item}" saved: {n} blocks. At least it can't fall down in a book.
+Got it. "{item}", {what}. I'll try to forget how many stairs.
+== kit.bp_saved@serious
+Saved "{item}": {what}, {n} blocks.
+Blueprint "{item}" recorded: {n} blocks, {what}.
+"{item}" copied. {what}. It's listed under Blueprints.
+Recorded "{item}" ({n} blocks). Choose Place where I look to build it.
+"{item}" saved: {what}. Containers are copied empty.
+Blueprint stored: "{item}", {n} blocks.
+
+== kit.bp_offlimits
+That spot's on a town's ground or someone else's land. I won't build there.
+Not there: it's somebody else's land. Pick a spot that's yours.
+That's a town's ground. They'd have words. Somewhere else.
+I'd be building on another's land. Choose a spot you own.
+Can't build there: it isn't yours to build on.
+Some of that falls on land that's not yours. Move it over.
+== kit.bp_offlimits@gloomy
+That's someone else's land. Everything nice usually is.
+I can't build there. Town ground. They'd only complain.
+Not yours, that bit. So not mine either.
+That's off limits. Find a sadder, emptier spot.
+Someone else's land. I'll not start a feud over a shed.
+Can't. Not your ground. Somewhere nobody cares about, then.
+== kit.bp_offlimits@serious
+That spot is on a town's ground or another player's land. Choose another.
+I can't build there: the land isn't yours.
+Part of that area is off limits. Move the blueprint.
+Building there isn't allowed.
+That location is protected. Pick somewhere else.
+Not permitted: someone else's land.
+
+== kit.bp_start
+Right. "{item}", {n} blocks, from the ground up. I'll shout if I run short.
+Building "{item}". {n} blocks. Watch the ghost fill in.
+On it: "{item}", layer by layer. Mind the scaffolding that isn't there.
+"{item}" it is. {n} blocks, all by hand. Kettle on.
+Starting "{item}". Ground first, then the walls, then the fiddly bits.
+"{item}", coming up. {n} blocks. I'll take it slow and get it right.
+[daft] Building "{item}". If anyone asks, I'm a professional. I have a hat. Somewhere.
+== kit.bp_start@gloomy
+"{item}". {n} blocks. One at a time. Of course.
+Building it. {n} blocks. My arms are already tired.
+Right then. "{item}". The ground first, as ever.
+Starting. {n} blocks. I'll see you in a while.
+"{item}". Every block placed by me. Nobody else ever does it.
+On it. {n} blocks. At least it won't rain. It might.
+== kit.bp_start@serious
+Building "{item}": {n} blocks, layer by layer.
+Starting "{item}". {n} blocks to place.
+Construction of "{item}" under way.
+Building "{item}" from the ground up.
+"{item}" started. Progress shows on the HUD.
+Placing "{item}": {n} blocks.
+
+== kit.bp_start_short
+Building "{item}", but I'm short of {what}. I'll do what I can and you choose about the rest.
+Starting "{item}". Short of {what}, mind. Want me to get it, or buy it.
+"{item}" is under way, minus {what}. Say the word and I'll sort that out.
+I'll start "{item}". I'll run out of {what} somewhere around the roof.
+Short of {what} for "{item}". I'll build round it till you decide.
+"{item}": started. Missing {what}. Fetch, buy, or leave gaps for character.
+== kit.bp_start_short@gloomy
+Starting "{item}". Short of {what}. Naturally.
+I'll build what I can. There's no {what}, so it'll have holes.
+"{item}", with no {what}. It'll be a ruin from the start.
+Short of {what}. I'll get as far as I get.
+Building anyway. Missing {what}. It never all lines up.
+"{item}" begun. {what} short. Of course it is.
+== kit.bp_start_short@serious
+Building "{item}". Short of {what}: choose Get what's short or Buy it at the market.
+Started "{item}". Missing: {what}.
+"{item}" under way. Not enough {what}.
+I'll build "{item}" as far as materials allow. Short: {what}.
+Started. Shortfall: {what}.
+"{item}" begun. I need {what} to finish.
+
+== kit.bp_nothing_short
+I'm not short of anything. Unusual, I know.
+Nothing's short. Everything I need is here or in your chests.
+I have the lot. No shopping needed.
+All present. Not a block short.
+Nothing to fetch. I've everything for it.
+I'm fully stocked for this one. Enjoy the novelty.
+== kit.bp_nothing_short@gloomy
+Nothing short. That won't last.
+I have everything. Something else will go wrong instead.
+All here. Suspicious, really.
+Not short of anything. Give it time.
+Everything's here. I keep checking. It still is.
+Fully stocked. I don't trust it.
+== kit.bp_nothing_short@serious
+Nothing is short.
+I have every material needed.
+No shortfall.
+All materials are available.
+Nothing to fetch or buy.
+Materials complete.
+
+== kit.bp_fetching
+Off to get {what}. The build waits for me.
+Getting {what} first. Then back to the building.
+{what}, coming up. I'll craft what I can and go for the rest.
+Right, {what}. Back before the ghost gets lonely.
+Fetching {what}. The building will still be there.
+I'll get {what}, then carry on where I left off.
+== kit.bp_fetching@gloomy
+Getting {what}. Another trip. My feet send their regards.
+{what}, then. Somebody has to.
+Off for {what}. The building won't build itself, sadly.
+Fetching {what}. It's always one more thing.
+Right. {what}. Then the walls. Then the rest of my life.
+Going for {what}. Back eventually.
+== kit.bp_fetching@serious
+Getting {what}, then resuming the build.
+Fetching: {what}.
+I'll craft or gather {what} first.
+Collecting {what} before continuing.
+Getting materials: {what}.
+On my way for {what}. The build resumes after.
+
+== kit.bp_stopped
+Stopped. Carry on picks it up again where I left it.
+Building stopped. It'll keep. Buildings are patient.
+Down tools. Carry on when you're ready.
+Stopped. I've left it half built, which is very on trend.
+Right, stopped. The rest is still in the plan.
+Stopping there. Nothing's lost; Carry on resumes it.
+== kit.bp_stopped@gloomy
+Stopped. Half a building. Fitting, somehow.
+Fine. It can stand there unfinished, like most things.
+Down tools. It'll wait. Things do.
+Stopped. I'll pretend it's a ruin on purpose.
+Building stopped. It won't mind. It's a building.
+Stopped. Carry on, if you ever want it finished.
+== kit.bp_stopped@serious
+Build stopped. Choose Carry on to resume.
+Stopped. Progress is kept.
+Building paused.
+Stopped. I'll resume from where I was.
+Build halted.
+Stopped building.
+
+== kit.bp_lost
+I've lost my place in that build. Place it again from Blueprints and I'll pick up from there.
+I can't find the drawing for that build any more. Start it again and I'll skip what's done.
+My notes on that build went missing. Point me at it again.
+That build slipped my mind, which is embarrassing. Place it again and I'll carry on.
+I've lost the plan. The blocks I placed are still there, at least.
+No plan for that build in my head now. Set it again from Blueprints.
+== kit.bp_lost@gloomy
+I've lost the plan. Of course I have.
+The drawing's gone. Like most things.
+I don't know where I was. Place it again.
+Lost it. The building's half done and so am I.
+I've forgotten the build. Set it again, I suppose.
+No plan any more. Start me again.
+== kit.bp_lost@serious
+Build plan lost. Place the blueprint again to continue.
+I no longer have that build's plan. Restart it from Blueprints.
+Build data missing. Please place it again.
+Lost the build. Re-place it and finished blocks will be skipped.
+No active plan for that build.
+The build needs to be set again.
+
+== kit.bp_short_end
+"{item}" is as far as I can take it: {n} blocks in. I'm out of {what}.
+Got "{item}" up to {n} blocks, then ran out of {what}. Your call.
+That's all I can do on "{item}" without {what}. {n} blocks placed.
+"{item}" stops here for want of {what}. Fetch it, buy it, or admire the gaps.
+{n} blocks of "{item}" done. The rest needs {what}.
+I've built what I could of "{item}". Short of {what} for the rest.
+== kit.bp_short_end@gloomy
+Out of {what}. "{item}" stands there with holes in it. {n} blocks.
+That's as far as it goes. No {what}. Typical.
+"{item}" is unfinished. {n} blocks and no {what}.
+I ran out of {what}. It always runs out.
+{n} blocks in and nothing left. "{item}" will have to wait.
+No more {what}. "{item}" looks a bit sorry for itself.
+== kit.bp_short_end@serious
+"{item}": {n} blocks placed. Out of {what}.
+Build paused at {n} blocks. Need {what}.
+I can't finish "{item}" without {what}.
+"{item}" incomplete. Missing: {what}.
+Stopped at {n} blocks for lack of {what}.
+Materials ran out: {what}.
+
+== kit.bp_around
+I built round {n} block(s) of yours.
+{n} of your blocks were in the way. I left them be.
+I didn't touch {n} block(s) of yours; the copy goes round them.
+Your {n} block(s) stayed where they were.
+I left {n} of yours standing, as promised.
+{n} block(s) of yours, untouched. I built round them.
+== kit.bp_around@gloomy
+{n} of your blocks in the way. I left them. It looks odd.
+I built round {n} of yours. Lopsided, but yours.
+{n} block(s) left as they were. Compromise. Never pretty.
+Your {n} block(s) are still there, in the middle of things.
+I went round {n} of yours. It shows.
+Left {n} of yours alone. Nobody will ever know. They will.
+== kit.bp_around@serious
+I built around {n} of your blocks.
+{n} block(s) of yours were left untouched.
+Skipped {n} of your blocks.
+{n} existing block(s) kept.
+Built around {n} block(s) you placed.
+{n} of your blocks remain.
+
+== kit.bp_unreachable
+{n} block(s) I couldn't reach. A ladder would help.
+I couldn't get to {n} block(s). They're up where I'm not.
+{n} spot(s) were out of my reach. Point me at a way up.
+I left {n} block(s) I had no way of reaching.
+{n} block(s) too high or too boxed in for me.
+There were {n} I couldn't get near. Sorry about those.
+== kit.bp_unreachable@gloomy
+{n} I couldn't reach. Out of reach. Like most things.
+{n} block(s) too far up. I'm not tall enough for this life.
+Couldn't get to {n} of them. I tried.
+{n} spot(s) beyond me. Quite literally.
+{n} I couldn't reach. They'll be holes now.
+I left {n}. My arms only go so far.
+== kit.bp_unreachable@serious
+{n} block(s) were out of reach.
+I couldn't reach {n} position(s).
+Unreachable: {n} block(s).
+{n} block(s) left unplaced: no way to reach them.
+Could not reach {n} spot(s).
+{n} block(s) skipped (unreachable).
+
+== kit.bp_kept
+Your blocks I cleared are in my pack: {n} of them.
+I took down {n} of yours. They're in my pack, not lost.
+{n} block(s) of yours cleared and kept in my pack.
+The {n} I took down are safe in my pack.
+Cleared {n} of yours, as asked. All in my pack.
+{n} of yours moved into my pack. Nothing went to waste.
+== kit.bp_kept@gloomy
+{n} of yours are in my pack now. Heavy.
+I took down {n} of yours. I feel bad. They're in my pack.
+{n} of your blocks, in my pack. Like a sad souvenir.
+Cleared {n}. Kept them. It seemed only right.
+{n} block(s) of yours, carried about by me now.
+Your {n} are in my pack. Ask for them back. Please.
+== kit.bp_kept@serious
+{n} of your blocks were cleared and are in my pack.
+Cleared blocks kept: {n}.
+I have {n} of your blocks in my pack.
+{n} removed block(s) stored in my pack.
+Your {n} cleared block(s) are in my pack.
+Cleared {n}; all kept.
+
+== kit.bp_done
+"{item}" is finished. {n} blocks in {what}. Not bad for someone without thumbs worth mentioning.
+Done: "{item}". {n} blocks, {what}. Same as the first, give or take nothing.
+"{item}" built. {n} blocks, {what}. Doors open the right way and everything.
+That's "{item}" up. {n} blocks in {what}. Do inspect the stairs.
+Finished "{item}". {what}, {n} blocks. I'd move in.
+"{item}", copied to the block. {n} of them, {what}.
+[daft] "{item}" is done. I'd call it a carbon copy, but it's mostly planks.
+== kit.bp_done@gloomy
+"{item}" is done. {n} blocks. {what} of my life.
+Finished. {n} blocks. It'll be covered in creepers by Thursday.
+"{item}" built. {what}. Nobody claps for the builder.
+That's it up. {n} blocks. My arms have left without me.
+Done. "{item}". {n} blocks, every one by hand. As usual.
+"{item}" finished. It's just like the other one. Doomed, probably.
+== kit.bp_done@serious
+"{item}" complete: {n} blocks in {what}.
+Finished "{item}". {n} blocks placed.
+Build complete: "{item}", {what}.
+"{item}" is built. {n} blocks.
+Done: "{item}" ({n} blocks, {what}).
+"{item}" finished, matching the blueprint.
+
+# ================================================================== errands
+
+== kit.er_screen
+The errand list's open. Hand me what's going and tell me what to fetch.
+Right, the errand screen. Things to sell on the left, shopping on the right.
+Errand list's up. Load me up and point me at town.
+Open. What's going to market, and what's coming back.
+There's the errand list. I'll want coins if I'm buying.
+Errand screen. Fill it in and I'm off.
+== kit.er_screen@gloomy
+The list's open. Load me up like a mule.
+Errand screen. What am I carrying to town this time.
+There's the list. I'll be walking, as usual.
+Open. Things to sell, things to buy, miles to walk.
+The errand list. I'll pack my patience.
+There it is. Fill it in and I'll trudge off.
+== kit.er_screen@serious
+Errand screen open: items to sell on the left, shopping list on the right.
+Fill in the errand and press Send.
+Errand list open.
+Choose what to sell and what to buy.
+The errand screen is open.
+Set the errand and send me.
+
+== kit.er_pack_full
+My pack's full. Something has to come out first.
+No room in my pack. I'm carrying enough as it is.
+I'm full up. I can't take any more.
+Pack's full. I'm a companion, not a cart.
+No space left in my pack.
+That won't fit. My pack's stuffed.
+== kit.er_pack_full@gloomy
+Full. My pack and my patience.
+No room. There never is.
+My pack's full. I'm basically a walking cupboard.
+Can't fit any more. I'm at capacity, emotionally too.
+Full up. Something's got to give.
+No space. I'll stagger about as I am.
+== kit.er_pack_full@serious
+My pack is full.
+No room in my pack.
+Pack full: nothing more fits.
+I have no space left.
+My inventory is full.
+Can't carry more: pack full.
+
+== kit.er_no_town
+There's no town near enough to run an errand to.
+I can't find a town within a sensible walk.
+No town close by. I'd be walking for days.
+No market near here. Build a town first, or take me nearer one.
+There's nowhere to shop round here.
+No town in reach. I'll stay put.
+== kit.er_no_town@gloomy
+No town. Just wilderness. And me.
+There's nowhere to go. Nowhere at all.
+No town near. We're alone out here.
+Not a market for miles. Not one.
+No town. I'd only get lost.
+Nowhere to shop. Typical of out here.
+== kit.er_no_town@serious
+No town is close enough for an errand.
+I can't find a town nearby.
+No market within range.
+There's no town in reach.
+No nearby town found.
+Errand not possible: no town nearby.
+
+== kit.er_nothing
+You haven't given me anything to sell or anything to buy.
+There's nothing on the list. I'd just be going for a walk.
+Nothing to do in town. Load me up or write a list.
+An empty errand. I'd come back with nothing, very efficiently.
+Hand me something to sell, or put something on the list.
+Nothing to sell, nothing to buy. Am I just sightseeing.
+== kit.er_nothing@gloomy
+Nothing on the list. A pointless walk. My favourite.
+Empty-handed and nothing to fetch. Why go at all.
+There's nothing to do. I'll go anyway, if you like. I won't.
+Nothing to sell, nothing to buy. Just me, walking.
+Empty list. I've had emptier days. Not many.
+Nothing on it. I'll stand here instead.
+== kit.er_nothing@serious
+The errand is empty: add items to sell or buy.
+Nothing to sell or buy.
+Add something to the errand first.
+No items set for the errand.
+The list is empty.
+Nothing to do in town.
+
+== kit.er_go
+Off to {item}. Selling {what}, buying {need}. {n} blocks or so.
+Right, {item}: {what} to sell, {need} to fetch. Back with change, hopefully.
+Heading to {item}'s market. Selling {what}, then shopping for {need}.
+{item} it is. {what} going, {need} coming back. {n} blocks.
+Off I go. Sell {what}, buy {need}. Don't wait up. Do, actually.
+To market in {item}. {what} out, {need} in.
+[daft] To market, to market, to sell {what}. Home again, home again, with {need}.
+== kit.er_go@gloomy
+{n} blocks to {item}. Carrying {what}. Coming back with {need}, if I come back.
+Off to {item}. I'll sell {what} for less than it's worth. Everyone does.
+To {item}. {what} to sell. {need} to buy. My feet to wear out.
+Walking to {item}. {n} blocks. Each one of them.
+{item}, then. Selling {what}. Buying {need}. Back eventually.
+Off. {what} on my back, {n} blocks of road ahead.
+== kit.er_go@serious
+Going to {item}: selling {what}, buying {need}.
+Errand to {item} ({n} blocks): sell {what}, buy {need}.
+Heading to the market in {item}.
+Off to {item}. Selling {what}; shopping list: {need}.
+To {item}'s market and back.
+Errand started: {item}, {n} blocks away.
+
+== kit.er_go_buy
+Off to {item} for {need}. {n} blocks.
+Shopping in {item}: {need}. Back soon.
+Right, {need} from {item}'s market.
+To {item} for {need}. I'll keep the receipt.
+Heading to {item}. Shopping list: {need}.
+{need}, from {item}. I'll haggle with my face.
+== kit.er_go_buy@gloomy
+Off to {item} to spend your money on {need}.
+{n} blocks to buy {need}. Lovely.
+Shopping. In {item}. For {need}. Joy.
+To {item} for {need}. They'll have run out. They always have.
+{need} from {item}. I'll walk. I always walk.
+Off for {need}. Back with less than you hoped.
+== kit.er_go_buy@serious
+Going to {item} to buy {need}.
+Errand to {item}: buying {need}.
+Heading to {item}'s market for {need}.
+Buying {need} in {item}.
+To {item}, {n} blocks, for {need}.
+Shopping trip to {item} started.
+== kit.er_go_sell
+Off to {item} to sell {what}. {n} blocks.
+Selling {what} in {item}. I'll bring the coins straight back.
+To market with {what}. {item}, here I come.
+Right, {what} to {item}. Best price going.
+Heading to {item} to turn {what} into coin.
+{what}, to {item}'s stalls. Back with a jingle.
+== kit.er_go_sell@gloomy
+Off to sell {what}. They'll offer pennies.
+{n} blocks with {what} on my back. Lovely.
+To {item}. Selling {what}. To people who won't want it.
+Selling {what}. I'll get what I get.
+Off to {item}. I'll try not to be robbed. By the prices.
+{what}, to market. Back with whatever's left of the day.
+== kit.er_go_sell@serious
+Going to {item} to sell {what}.
+Errand to {item}: selling {what}.
+Heading to the market to sell {what}.
+Selling {what} in {item} ({n} blocks).
+To {item}'s stalls with {what}.
+Sale errand started: {item}.
+
+== kit.er_called
+Right, coming back. I'll bring whatever I've got so far.
+Turning round. Back with what I have.
+Called back. On my way.
+Coming home. The rest can wait.
+Fine, back I come. With change, possibly.
+Heading back now.
+== kit.er_called@gloomy
+Turning back. All that walking for nothing.
+Coming back. Half an errand. Story of my day.
+Fine. Back I come. Again.
+On my way back. My feet are confused.
+Called back. Of course I am.
+Coming. Slowly. As always.
+== kit.er_called@serious
+Coming back now.
+Errand cancelled: returning.
+Heading back with what I have.
+Returning to you.
+On my way back.
+Errand stopped; coming back.
+
+== kit.er_out_of_stock
+{item} was sold out in {what}.
+They'd no {item} to spare in {what}.
+{what} had run out of {item}.
+No {item} going in {what} today.
+Couldn't get {item}: none to spare in {what}.
+The market in {what} was out of {item}.
+== kit.er_out_of_stock@gloomy
+No {item} in {what}. There never is when you want it.
+{what} was out of {item}. Naturally.
+Sold out of {item}. Someone got there first. Someone always does.
+They'd no {item}. Not a scrap.
+{item}: none. {what} looked at me like I was mad.
+Out of {item} in {what}. I stood there a while anyway.
+== kit.er_out_of_stock@serious
+{item} was out of stock in {what}.
+No {item} available in {what}.
+{what} had no {item} to sell.
+Couldn't buy {item}: out of stock.
+{item} unavailable in {what}.
+{what}'s market had no {item}.
+== kit.er_limit
+I stopped buying {item} at my spending limit of {n}.
+More {item} would have gone past my limit of {n} coin(s).
+I kept to my limit of {n} and left the rest of the {item}.
+{item} got too dear for my limit of {n}. Raise it in Settings if you like.
+My limit's {n}. I stopped before the {item} broke it.
+Stopped at {n} coin(s), my limit. The {item} can wait.
+== kit.er_limit@gloomy
+I hit my limit of {n}. No more {item}. Money's like that.
+{n} coin(s) and not a penny over. The {item} stayed behind.
+My limit, {n}. I watched the {item} I couldn't buy.
+Spent up to {n}. The rest of the {item} will have to grieve without us.
+{n} was the limit. {item} was more. Life.
+Limit reached at {n}. I'm good at reaching limits.
+== kit.er_limit@serious
+Spending limit of {n} reached: no more {item}.
+Stopped buying {item}: limit {n}.
+{item} would exceed the {n} coin limit.
+Limit reached ({n}). Raise it in Settings > Behaviour.
+I kept within the {n} coin limit.
+Purchases stopped at the {n} coin limit.
+== kit.er_skint
+{item} was {n} coin(s) a lot and I had {need}. Hand me more next time.
+Couldn't afford the {item}: {n} a lot, I had {need}.
+I ran out of coin before the {item}. {n} needed, {need} in my pocket.
+The {item} wanted {n}; I had {need}. Short, I'm afraid.
+Not enough coin for {item}. {n} against my {need}.
+{item} at {n} a lot. My {need} didn't stretch.
+== kit.er_skint@gloomy
+{n} for the {item}. I had {need}. Poverty.
+Couldn't afford it. {item}, {n}. Me, {need}. The usual gap.
+Skint. {need} in my pocket, {n} on the tag.
+The {item} cost {n}. I had {need}. I just looked at it.
+Out of money. {need} doesn't buy {item}. Not at {n}.
+I had {need}. They wanted {n}. That was that.
+== kit.er_skint@serious
+Not enough coins for {item}: {n} needed, {need} carried.
+Couldn't afford {item} ({n} per lot, I had {need}).
+Ran out of coins before buying {item}.
+{item} costs {n}; I had {need}.
+Insufficient coins for {item}.
+Short of coin for {item}: {need} of {n}.
+
+== kit.er_lost
+I've lost track of that errand. Whatever I was carrying is still in my pack.
+That errand's gone from my head. Your things are in my pack, safe.
+I've forgotten where I was going. Your things are in my pack.
+Lost my list. Nothing's lost but the list; it's all in my pack.
+My errand notes went missing. Check my pack, it's all there.
+I don't know what I was doing out here. Your things are in my pack.
+== kit.er_lost@gloomy
+I've lost the errand. Like everything else.
+Forgot the list. Your things are in my pack. My dignity isn't.
+Lost track. Wandering. It's what I'm good at.
+I don't know what I was buying. Everything's in my pack.
+The errand's gone. I'm still here, sadly.
+Lost it. Your stuff's safe. I'm not sure about me.
+== kit.er_lost@serious
+Errand lost. Your items are in my pack.
+I've lost the errand details. Items are in my pack.
+Errand data missing. Nothing was lost from my pack.
+I no longer have the errand. Check my pack.
+The errand ended unexpectedly. Items kept.
+Errand interrupted; items are safe in my pack.
+
+== kit.er_danger
+Too rough out here. I'm turning back with your things.
+I've taken a beating on the road. Coming home before it gets worse.
+Not worth it. I'm hurt, so I'm heading back.
+Monsters on the road. I'm coming back with everything.
+I've had enough of this road. Turning round.
+Hurt and still half the way to go. Back I come.
+== kit.er_danger@gloomy
+The road's out to get me. Coming back. Bruised.
+Turning back. I knew the road was trouble.
+I'm hurt. I'll limp home with your things.
+Monsters. Of course there were monsters. Coming back.
+That went badly. Heading home in pieces.
+Too dangerous. I'm retreating. I'm good at retreating.
+== kit.er_danger@serious
+I'm hurt: turning back with your items.
+Too dangerous to continue. Returning.
+Errand abandoned due to danger. Coming back.
+Heading back: badly hurt.
+Retreating from the road.
+Returning early: hostile mobs.
+== kit.er_night
+It was getting dark, so I came home.
+Night fell before I got there. I turned back, as you asked.
+Too dark to finish the trip. I came back.
+Dusk caught me on the road, so I headed home.
+I didn't fancy the road at night. Back I came.
+Home by dark, as ordered. The market will keep.
+== kit.er_night@gloomy
+It got dark. I came back. Night's no friend of mine.
+Darkness. Monsters. I turned round.
+Night fell. Like it always does. I came home.
+Too dark. I don't like the dark, and it doesn't like me.
+It got late. I came back with nothing done.
+Night. Back. The end.
+== kit.er_night@serious
+Night fell, so I returned.
+Came back before dark, as set.
+Returned: too late in the day to reach the market.
+It was getting dark; I turned back.
+Home by dark, per your setting.
+Errand cut short at dusk.
+== kit.er_road
+{n} blocks to {item}. Still walking.
+{item}'s about {n} blocks off now.
+Making progress. {n} blocks left to {item}.
+On the road. {item} in about {n}.
+{n} to go. Lovely day for it.
+Still heading for {item}. {n} blocks.
+== kit.er_road@gloomy
+{n} blocks to go. Each one longer than the last.
+Still walking. {item} is {n} away. Still.
+{n} blocks. My feet have opinions.
+On and on. {n} to {item}.
+{n} left. I've stopped counting. I haven't.
+The road goes on. {n} more to {item}.
+== kit.er_road@serious
+{n} blocks to {item}.
+Distance to {item}: {n}.
+On my way. {n} blocks remaining.
+Heading to {item}: {n} to go.
+{item} is {n} blocks away.
+Still travelling: {n} blocks left.
+== kit.er_shut_wait
+{item}'s market is shut. I'll wait till it opens.
+Shut, the lot of it. I'll hang about till morning.
+The stalls are closed. I'll wait for opening.
+Closed. I'll loiter respectably until they open.
+Market's shut in {item}. Waiting.
+Nothing open yet. I'll wait here.
+== kit.er_shut_wait@gloomy
+Shut. I'll stand here till they open. In the cold.
+Closed. Waiting. It's what I'm for.
+The market's shut. I'll wait. I'm good at that.
+Nobody's open. I'll stand by the stalls looking sad.
+Shut. Waiting. Don't worry about me.
+Closed until morning. I'll just be here.
+== kit.er_shut_wait@serious
+The market in {item} is closed. Waiting for it to open.
+Market closed: waiting.
+{item}'s stalls are shut; I'll wait.
+Closed. I'll wait for opening hours.
+Waiting for the market to open.
+The market opens later. Waiting here.
+== kit.er_shut
+The market in {item} was shut.
+{item}'s stalls were closed.
+I got to {item} and everything was shut.
+Shut in {item}. Nothing doing.
+The market in {item} had closed for the day.
+Closed, in {item}. I couldn't trade.
+== kit.er_shut@gloomy
+Shut. All that way and shut.
+{item}'s market was closed. Of course.
+Closed. Nobody there. Just me and the stalls.
+Shut. I stood there a while to make the trip worth it.
+The market was shut. The day was wasted.
+Closed, in {item}. Story of my life.
+== kit.er_shut@serious
+The market in {item} was closed.
+Couldn't trade: {item}'s market was shut.
+Market closed in {item}.
+The stalls in {item} were shut.
+No trading: the market was closed.
+{item}'s market had closed.
+== kit.er_stuck
+I couldn't find a way to {item}. I came back.
+The way to {item} beat me. Back I came.
+No path to {item} that I could find. Sorry.
+I got stuck on the way to {item}, so I turned round.
+Couldn't get through to {item}. Something's in the way.
+I tried every way to {item}. None worked.
+== kit.er_stuck@gloomy
+There's no way to {item}. There never is.
+I got stuck. Stood there ages. Came back.
+Couldn't get to {item}. The world wouldn't let me.
+Stuck. Turned round. Walked back. Lovely.
+No road to {item}. Not for me.
+I never got there. The road had other ideas.
+== kit.er_stuck@serious
+I couldn't find a path to {item}.
+No route to {item}. Returned.
+Path to {item} blocked.
+Couldn't reach {item}.
+Errand failed: no way to {item}.
+Unable to get to {item}.
+== kit.er_heading_back
+Done in {item}. Took {n} coin(s), spent {need}. Heading back.
+That's the shopping. {n} in, {need} out. Back I come.
+All done at the market. On my way back.
+Finished in {item}. Back with the goods.
+Trading done. {n} earned, {need} spent. Coming home.
+Right, that's {item} sorted. Heading back.
+== kit.er_heading_back@gloomy
+Done. {n} in, {need} out. Now the long walk back.
+That's that. Back I go. All that way again.
+Finished at the market. The road home awaits. Sigh.
+Trading done. I'll walk back now. Naturally.
+{n} earned, {need} spent. Now for the walk.
+Done in {item}. Back the way I came.
+== kit.er_heading_back@serious
+Trading done in {item}: earned {n}, spent {need}. Returning.
+Finished at the market. Heading back.
+Done. Coming back with the goods.
+Errand trading complete. Returning.
+Leaving {item}: {n} earned, {need} spent.
+Heading back from {item}.
+
+== kit.er_report
+Back from {item}. Sold {what} for {n} coin(s), bought {need} for {spent}. Here you go.
+{item} done: {what} went for {n} coin(s), and I got {need} for {spent}. All yours.
+Home. Sold {what}, {n} coin(s). Bought {need}, {spent}. Change is in your pocket.
+There you are: {need}, for {spent}. And {what} sold for {n}. Not bad.
+Sold {what} for {n} coin(s). Bought {need} for {spent}. I accept tips in bread.
+Back. {what} sold, {n} coin(s). {need} bought, {spent}. I've put it all in your pack.
+[daft] Back from {item}. Sold {what} for {n}. Bought {need} for {spent}. Market forces, I'm told.
+== kit.er_report@gloomy
+Back. Sold {what} for {n}. They robbed us, probably. Bought {need} for {spent}.
+{item}. {what} for {n} coin(s). {need} for {spent}. The road was long.
+Home, somehow. {n} for {what}. {spent} on {need}. Money comes and goes. Mostly goes.
+There. {need}, {spent} coin(s). {what} sold for {n}. Don't ask about the walk.
+Back from {item}. {what} gone for {n}. {need} cost {spent}. I'm still standing.
+{n} for {what}, {spent} for {need}. That's commerce. Bleak, isn't it.
+== kit.er_report@serious
+Back from {item}. Sold {what} for {n} coin(s). Bought {need} for {spent}.
+Errand done: {what} sold ({n}), {need} bought ({spent}).
+Returned. Earned {n} from {what}. Spent {spent} on {need}.
+{item}: sold {what} for {n}; bought {need} for {spent}. Items and change handed over.
+Done. Sales: {what}, {n}. Purchases: {need}, {spent}.
+Errand complete: +{n}, -{spent}. Goods in your pack.
+== kit.er_report_sold
+Back from {item}. Sold {what} for {n} coin(s). It's in your pocket.
+{what} sold in {item} for {n} coin(s). Here's the money.
+Done. {what} went for {n}. All yours.
+Sold the lot I could: {what}, {n} coin(s).
+{n} coin(s) for {what}. I didn't even haggle much.
+Home. {what} sold, {n} coin(s) handed over.
+== kit.er_report_sold@gloomy
+Sold {what} for {n}. Worth more. Everything is.
+Back. {n} for {what}. It'll be gone by Tuesday.
+{what} sold. {n} coin(s). The walk was worse.
+{n} for the lot. Barely worth the boots.
+Back from {item}. {what} gone. {n} coin(s). Hm.
+Sold. {n} coin(s). The coins are cold, like the market.
+== kit.er_report_sold@serious
+Sold {what} in {item} for {n} coin(s).
+Back. Earned {n} from {what}.
+Sale complete: {what}, {n} coin(s).
+{what} sold for {n}. Coins handed over.
+Errand done: +{n} coin(s).
+Sold {what}. Total {n}.
+== kit.er_report_bought
+Back from {item} with {need}. Cost {spent} coin(s). In your pack.
+Got {need} for {spent}. Here you are.
+Shopping done: {need}, {spent} coin(s).
+{need}, as ordered. {spent} spent. Change in your pocket.
+Home with {need}. That was {spent}.
+Bought {need} for {spent}. I'd have got more but I'm not made of coin.
+== kit.er_report_bought@gloomy
+{need}. {spent} coin(s). Prices these days.
+Back with {need}. Cost {spent}. I won't say what I think.
+Got {need}. {spent} gone. Money never stays.
+Here. {need}. It cost {spent}. And a bit of my soul.
+{need} for {spent}. Back now. Tired.
+Bought {need}. {spent} coin(s) we'll never see again.
+== kit.er_report_bought@serious
+Bought {need} in {item} for {spent} coin(s).
+Back with {need}. Spent {spent}.
+Purchase complete: {need}, {spent} coin(s).
+{need} delivered. Cost: {spent}.
+Errand done: bought {need}.
+Shopping done: {spent} spent.
+== kit.er_report_none
+Back from {item}, and I'm afraid I got nothing done.
+I went to {item} and came back with nothing. Here's why.
+Nothing sold, nothing bought in {item}. Not for want of trying.
+That errand was a walk and nothing more.
+Back empty-handed from {item}.
+I got nowhere in {item}. Your things are back with me.
+== kit.er_report_none@gloomy
+Nothing. I went all that way for nothing.
+Back from {item}. Empty-handed. As expected.
+Nothing sold, nothing bought. Just a walk. A long one.
+I failed. Gracefully, but I failed.
+Back. Nothing done. It wasn't my day. It rarely is.
+Empty-handed. {item} didn't want me.
+== kit.er_report_none@serious
+Errand to {item} finished with no trades.
+Nothing sold or bought in {item}.
+Back. No trades made.
+The errand produced nothing.
+No sales and no purchases.
+Returned without trading.
+
+# ================================================================== combat stances
+
+== kit.st_shield
+Shield stance. Anything that wants you goes through me first.
+Right, I'm the wall. Stand behind me.
+Shield up. I'll take the hits; you take the credit.
+I'm your shield now. Monsters will find me very interesting.
+Shield it is. I'll draw them in and hold them off.
+On guard. Anything nasty, I'll be in its face.
+[daft] Shield stance. I'm basically a door with opinions.
+== kit.st_shield@gloomy
+Shield stance. So I get hit. Fine.
+I'm the one they'll aim at. As usual.
+Shield up. Bring the pain. I'm used to it.
+Right. I'll stand in front and suffer. Professionally.
+I'll take the blows. Someone has to.
+Shield stance. I've always been good at absorbing things.
+== kit.st_shield@serious
+Shield stance: I'll draw their attention and block.
+Shield role active. Stay behind me.
+I'll guard and block.
+Shield stance set.
+I'll hold the line in front of you.
+Tank role: drawing aggression and blocking.
+
+== kit.st_archer
+Archer. I'll keep my distance and keep them busy.
+Bow out. I'll be the one at the back, being useful.
+Archer stance. Anything near a villager gets an arrow first.
+Right, ranged. I'll stay back and shoot straight. Mostly.
+Archer it is. Keep them off me and I'll keep them off you.
+I'll take the high ground and the long shots.
+[daft] Archer stance. I've always wanted to be a bow-it-all.
+== kit.st_archer@gloomy
+Archer. I'll stand at the back. Where nobody notices me.
+Bow out. I'll miss some. I'll hit some. That's life.
+Archer stance. I'll shoot. They'll keep coming.
+Ranged. Safer, they say. Not much.
+I'll keep back. It's lonely at the back.
+Archer. I'll aim. Hope does the rest.
+== kit.st_archer@serious
+Archer stance: keeping range, shooting threats to villagers first.
+Ranged role active.
+I'll keep my distance and shoot.
+Archer stance set.
+Bow ready. Priority: threats to villagers.
+Ranged support in position.
+
+== kit.st_medic
+Medic. I'll keep you and the villagers on your feet.
+Right, I'm the healer. Get hurt near me, please.
+Medic stance. Golden apples for the bad ones, bread for the rest.
+I'll stay out of the fight and patch people up.
+Medic it is. I've got bandages. Well, bread.
+I'll keep an eye on everyone's health. Try to keep yours up.
+[daft] Medic stance. Is there a doctor in the house. There is now. Sort of.
+== kit.st_medic@gloomy
+Medic. I'll patch them up so they can get hurt again.
+Healer. Someone has to clean up afterwards.
+Medic stance. I'll be busy. Everybody gets hurt.
+I'll heal people. They'll only thank me sometimes.
+Medic. I'll kneel in the mud next to the wounded. Lovely.
+Right. I'll keep everyone going. For now.
+== kit.st_medic@serious
+Medic stance: healing you and the villagers.
+Healer role active. I'll stay out of combat.
+I'll treat the wounded and pull them back if needed.
+Medic stance set.
+Healing priority: the most hurt first.
+Medic in position.
+
+== kit.st_none
+Back to my own way. Blade close, bow at range.
+No special role. I'll fight as the fight calls.
+My own way it is. I'll improvise.
+Right, no stance. I'll just be generally helpful with a sword.
+Fighting my usual way. Which is the best way, obviously.
+Normal stance. Nothing fancy.
+== kit.st_none@gloomy
+No role. I'll just get hit in the usual way.
+My own way. Which mostly goes wrong.
+No stance. I'll muddle through.
+Back to normal. Normal's not great either.
+Usual way. I'll try. That's all I do.
+No special role. Just me and my sword.
+== kit.st_none@serious
+Default stance: melee close, bow at range.
+No role set.
+Fighting as the situation needs.
+Stance cleared.
+Back to my normal fighting style.
+Default combat behaviour.
+
+== kit.st_no_shield
+I haven't a shield. Hand me one and I'll do this properly.
+No shield in my pack. I'll guard with my face until you find one.
+A shield would help. I've only got good intentions.
+No shield. Iron and planks make one, or give me yours.
+I'll guard you, but without a shield it's mostly bravery.
+Shield stance, no shield. Bit of a gap in the plan.
+== kit.st_no_shield@gloomy
+No shield. So I'll block with myself.
+I haven't got a shield. I'll just stand there and take it.
+No shield. Of course not.
+A shield would be nice. I'm not holding my breath.
+Shieldless. Brave. Foolish. Both.
+No shield. I'll be very bruised.
+== kit.st_no_shield@serious
+I need a shield for this stance.
+No shield in my pack.
+Shield required: one iron ingot and six planks.
+I don't have a shield.
+Give me a shield to block properly.
+Missing: a shield.
+
+== kit.st_no_bow
+I've no bow. Archer without a bow is just a person pointing.
+No bow or crossbow in my pack. Hand me one.
+A bow would help. And arrows. Mostly arrows.
+I can't be an archer with no bow. I'll throw insults instead.
+No bow. Sticks and string make one.
+I'm an archer in spirit only. Give me a bow.
+== kit.st_no_bow@gloomy
+No bow. So I'll stand at the back and watch.
+I haven't a bow. An archer with nothing. Poetic.
+No bow, no arrows. No hope.
+I'd shoot, if I could. I can't.
+No bow. Sad, really.
+Archer. Without a bow. Like most of my plans.
+== kit.st_no_bow@serious
+I need a bow or crossbow for this stance.
+No bow in my pack.
+Archer stance requires a bow and arrows.
+I don't have a ranged weapon.
+Give me a bow and arrows.
+Missing: a bow or crossbow.
+
+== kit.st_no_remedy
+I've nothing to heal with. Golden apples, potions or food, please.
+No food, no potions. I'm a medic with empty pockets.
+My medical kit is a pocket of lint. Hand me some food at least.
+Nothing to treat anyone with. Bread will do; golden apples better.
+I can pull people out of trouble, but I can't heal them without something.
+I'm out of remedies. Food, potions, golden apples, anything.
+== kit.st_no_remedy@gloomy
+Nothing to heal with. I'll just offer sympathy.
+No food, no potions. I'll hold their hand.
+Empty pockets. Some medic.
+I can't heal anyone. Not with this.
+Nothing in my bag. Not even a crust.
+No remedies. We'll all just have to cope.
+== kit.st_no_remedy@serious
+I have nothing to heal with: food, potions or golden apples are needed.
+No healing items in my pack.
+Medic stance needs food, potions or golden apples.
+Out of remedies.
+I can't treat anyone without supplies.
+Missing: healing items.
+
+== kit.st_raid_join
+{item}'s under attack. I'm joining the guards as {what}.
+Raid on {item}. I'm going to help, {what} stance.
+{item} needs a hand. I'll stand with the guards.
+Trouble in {item}. I'm off to the square to help.
+They're raiding {item}. I'll fight with the guards.
+{item}'s ringing the bell. I'm joining the defence.
+== kit.st_raid_join@gloomy
+{item}'s being raided. Of course it is. I'll go and help.
+A raid. On {item}. I'll join the guards and get hit with them.
+They're attacking {item}. Off I go, into it.
+{item} needs help. I'll go. It'll be awful.
+Raid. {item}. I knew today was too quiet.
+The bell's going in {item}. Right. Here we go.
+== kit.st_raid_join@serious
+{item} is under attack. Joining the town's guards ({what}).
+Raid on {item}: I'm helping defend it.
+Joining {item}'s defence.
+{item}'s alarm is up. Going to the square.
+Defending {item} with the guards.
+Assisting {item}'s guards.
+
+== kit.st_raid_over
+All clear in {item}. That went well enough.
+{item}'s safe. The guards can stand down, and so can I.
+That's the raid seen off. {item} can breathe.
+All clear. {item} still standing. Mostly.
+The fighting's over in {item}. Back to you.
+Raid over. I'll leave the guards to their tea.
+== kit.st_raid_over@gloomy
+All clear. For now. They'll be back.
+{item}'s safe. Until the next time.
+Raid's over. Everybody's bruised.
+It's quiet in {item} again. Too quiet.
+Over. I'm still here. Somehow.
+The all-clear. I don't trust it.
+== kit.st_raid_over@serious
+All clear in {item}.
+The raid on {item} is over.
+{item} is safe. Returning to you.
+Defence ended: all clear.
+{item}'s alarm has stopped.
+Raid over.
+
+== kit.st_taunt
+Oi, {item}. Over here.
+Right, {item}, you're dealing with me now.
+Eyes on me, {item}. Leave them alone.
+Come on then, {item}. Try the one with the shield.
+This way, {item}. I'm much more annoying.
+Over here, {item}. Yes, you.
+[daft] Hey {item}, your mum was a spawner. Come on then.
+== kit.st_taunt@gloomy
+Come on, {item}. Hit me instead. Everyone does.
+Over here, {item}. I'm the one you want. Nobody else does.
+{item}, this way. Let's get it over with.
+Fine, {item}. Me. Pick me.
+Here, {item}. I'll take it.
+{item}. Over here. I'm used to it.
+== kit.st_taunt@serious
+{item}: over here.
+Drawing the {item} off.
+Taking the {item}'s attention.
+{item} is on me now.
+Pulling the {item} away.
+I've got the {item}.
+
+== kit.st_pull
+{item}'s badly hurt. I'm getting them out of there.
+Pulling {item} back. Someone keep that monster busy.
+{item}, with me. Out of the fight.
+Hold on, {item}. I'm moving you somewhere safer.
+{item} needs out. I've got them.
+Getting {item} clear, then patching them up.
+== kit.st_pull@gloomy
+{item}'s in a bad way. I'll drag them clear.
+Pulling {item} out. Before it gets worse. It always gets worse.
+{item}, come on. Away from that.
+I've got {item}. Let's not stay here.
+Dragging {item} back. Grim work.
+{item} needs out. So do I, honestly.
+== kit.st_pull@serious
+Pulling {item} out of the fight.
+Moving {item} to safety.
+{item} is badly hurt: retreating with them.
+Extracting {item}.
+Getting {item} clear before treating them.
+{item}: withdrawing to safety.
+
+== kit.st_healed
+Patched up {item} with {what}.
+{item}'s better. {what} did it.
+There, {item}. {what}, and try not to do that again.
+Gave {item} {what}. Back on their feet.
+{item} sorted, with {what}.
+That's {item} healed. {what}, doctor's orders.
+== kit.st_healed@gloomy
+{item} patched up. {what}. They'll only get hurt again.
+Healed {item}. With {what}. For now.
+{what} for {item}. It's all I could do.
+{item}'s better. Ish. {what} helped.
+Gave {item} {what}. No thanks, of course.
+{item} mended. {what}. Until next time.
+== kit.st_healed@serious
+Healed {item} with {what}.
+Treated {item}: {what}.
+{item} healed.
+Used {what} on {item}.
+{item} treated with {what}.
+{item} is recovering.
+== kit.st_healed_you
+There. {what}. You'll live.
+Patched you up with {what}. Mind yourself.
+{what} for you. Doctor's orders: stop getting hit.
+You looked rough. {what} should help.
+Have {what}. You're back in business.
+{what}. There. Better.
+== kit.st_healed_you@gloomy
+{what}. You'll be fine. For now.
+Patched you up. {what}. Don't make me do it again. You will.
+{what}. It's all I had. Well, nearly.
+There. {what}. Try not to look so beaten.
+Healed you with {what}. Until the next creeper.
+{what}. Better. Briefly.
+== kit.st_healed_you@serious
+Healed you with {what}.
+Used {what} on you.
+Treated: {what}.
+You're healed: {what}.
+{what} given.
+Treatment done: {what}.
+
+== kit.st_ward
+I'll guard {item} now.
+{item}'s under my protection.
+Right, {item}, I'm with you.
+Guarding {item}. Anything that tries it goes through me.
+I'll keep {item} safe.
+{item} it is. I'll stay close.
+== kit.st_ward@gloomy
+Guarding {item}. They'd better appreciate it.
+I'll protect {item}. Somebody should.
+{item}, I'm your guard now. Sorry.
+Watching over {item}. It'll end in tears.
+Fine, {item}. I'll stand near you looking worried.
+{item}'s mine to guard. Lovely.
+== kit.st_ward@serious
+Guarding {item}.
+{item} is now my ward.
+I'll protect {item}.
+Ward set: {item}.
+Guarding {item} from threats.
+Protecting {item}.
+== kit.st_ward_you
+Back to guarding you.
+I'm with you again.
+Guarding you. As it should be.
+You're my ward again.
+Right, eyes on you.
+Back by your side.
+== kit.st_ward_you@gloomy
+Guarding you again. Lucky me. Lucky you.
+Back to you. Of course.
+You again. Fine.
+I'll guard you. Try not to make it hard.
+Back by your side. Where the trouble usually is.
+You're my ward. Again.
+== kit.st_ward_you@serious
+Guarding you.
+Ward set: you.
+I'll protect you.
+Back to guarding you.
+You are my ward again.
+Protecting you.
