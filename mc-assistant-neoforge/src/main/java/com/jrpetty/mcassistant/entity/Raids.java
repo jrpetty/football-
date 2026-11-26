@@ -261,6 +261,7 @@ public final class Raids {
     static Alarm raise(ServerLevel level, Villages.Village v, String why, @Nullable Direction from) {
         Alarm a = new Alarm(level.getGameTime(), why, from);
         ALARMS.put(v.id(), a);
+        TownDanger.alarm(v.id(), why, level.getDayTime() / 24000L);   // [featbuild] counted toward the town's danger
         Watch.shut(level, v.id(), true);
         Watch.ring(level, v);
         WarHorn.alarm(level, v);                                   // [war] the town's war horn, if it has one

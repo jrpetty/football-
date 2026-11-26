@@ -1005,6 +1005,8 @@ public final class CastleWall {
         final List<WallPlan.Tower> towers;
         final Fit[] fits = new Fit[4];
         final int height, tier;
+        /** [featbuild] A portcullis over each gate: the danger's towers' stage, in stone (TownDanger). */
+        final boolean portcullis;
         final BlockPos heart;
         final int[] cornerGround = new int[4];
         final List<int[]> stairs;
@@ -1012,9 +1014,14 @@ public final class CastleWall {
         Wall(Villages.Village village, WallPlan.Sides sides, BlockPos heart, Villages.Age age) {
             this.village = village;
             this.sides = sides;
-            this.towers = WallPlan.towers(sides);
+            // [featbuild] The wall as the town's danger has it (TownDanger): towers between the gatehouses and the corners
+            // only at the towers' stage; a palisade below the stone stage whatever the age.
+            List<WallPlan.Tower> all = WallPlan.towers(sides);
+            if (!TownDanger.midTowers(village.id())) all.removeIf(t -> t.kind() == WallPlan.TowerKind.MID);
+            this.towers = all;
             this.heart = heart;
-            this.tier = tier(age);
+            this.tier = TownDanger.tier(village.id(), tier(age));
+            this.portcullis = TownDanger.portcullis(village.id(), this.tier);
             this.height = WallPlan.height(age.ordinal());
             this.stairs = WallPlan.stairs(sides, towers, height);
         }
@@ -1275,7 +1282,7 @@ public final class CastleWall {
                 out.add(new Want(new BlockPos(x, floor + 1, z), Role.AIR, outD, 0));
                 // The arch's shoulders at either side of the way through; over a gate's passage its portcullis, raised.
                 if (low || high) out.add(new Want(new BlockPos(x, floor + 2, z), Role.ARCH, low ? along.getOpposite() : along, 1));
-                else if (gate && layer == 1 && w.tier >= PORTCULLIS) out.add(new Want(new BlockPos(x, floor + 2, z), Role.GRATE, outD, 0));
+                else if (gate && layer == 1 && w.portcullis) out.add(new Want(new BlockPos(x, floor + 2, z), Role.GRATE, outD, 0));
                 else out.add(new Want(new BlockPos(x, floor + 2, z), Role.AIR, outD, 0));
             } else {
                 out.add(new Want(new BlockPos(x, floor, z), Role.DOOR, outD, a <= 0 && gate || low && !gate ? 0 : 2));
@@ -1588,7 +1595,7 @@ public final class CastleWall {
                 for (int k = a0; k <= a; k++) {
                     int[] o = WallPlan.offset(side, line + WallPlan.THICK - 1, k), q = WallPlan.offset(side, line + 1, k);
                     doors.add(new BlockPos(c.getX() + o[0], f.floor(k), c.getZ() + o[1]));
-                    if (gate && w.tier >= PORTCULLIS) {
+                    if (gate && w.portcullis) {
                         for (int y = 0; y < 2; y++) drop.add(new BlockPos(c.getX() + q[0], f.floor(k) + y, c.getZ() + q[1]));
                     }
                 }
@@ -1709,6 +1716,8 @@ public final class CastleWall {
         KEEPERS.clear();
         HAILED.clear();
         readyForTests = false;
+        TownDanger.resetForTests();                                       // [featbuild] the wall by its age, unless a test stages it
+        NightWatch.resetForTests();
     }
 
     public static void readyForTests(boolean on) {
@@ -1718,6 +1727,7 @@ public final class CastleWall {
     /** Has the town what comes first (its stores, its homes and its food) and the hands to spare for a wall? */
     static boolean ready(UUID id) {
         if (!live()) return false;
+        if (!TownDanger.wallWanted(id)) return false;                    // [featbuild] an open town: the danger calls for no wall yet
         if (readyForTests) return true;
         if (Villages.headcount(id) < BigWorks.GROWN_AT_LEAST) return false;
         if (!Villages.hasBuilt(id, "storage") && !Villages.hasBuilt(id, "storehouse")) return false;
@@ -1738,6 +1748,8 @@ public final class CastleWall {
         if (!live()) return;
         if (Founding.settling(level, v.centre(), 16)) return;   // [city26] not while the founding is still making the ground it stands on
         com.jrpetty.mcassistant.Guard.run("castle wall", () -> keepNow(level, v));
+        com.jrpetty.mcassistant.Guard.run("town danger", () -> TownDanger.tick(level, v));        // [featbuild] the danger reckoned again
+        com.jrpetty.mcassistant.Guard.run("night watch", () -> NightWatch.tick(level, v));        // [featbuild] the night watch's look out
     }
 
     private static void keepNow(ServerLevel level, Villages.Village v) {
@@ -1784,7 +1796,8 @@ public final class CastleWall {
             if (Ledger.note(id, SIDES) == null) Ledger.note(id, SIDES, s.encode());
             Wall w = wall(level, v, s);
             if (w == null) return 0;                               // its ground not all loaded yet
-            if (!s.equals(st.sides) || st.wall == null || st.wall.height != w.height || st.wall.tier != w.tier) st.counts.clear();
+            if (!s.equals(st.sides) || st.wall == null || st.wall.height != w.height || st.wall.tier != w.tier
+                || st.wall.towers.size() != w.towers.size() || st.wall.portcullis != w.portcullis) st.counts.clear();   // [featbuild] a new stage
             st.sides = s;
             st.wall = w;
             st.openings = openings(w);
@@ -2417,6 +2430,79 @@ public final class CastleWall {
         return out;
     }
 
+    /**
+     * [featbuild] The night watch's round along one side's wall walk (NightWatch): a spot to stand on the walkway's middle
+     * every so many columns from one corner to the other, where it is laid (its floor under foot, head room over it);
+     * empty while the wall is off, not begun, or its ground not loaded.
+     */
+    public static List<BlockPos> walkway(ServerLevel level, UUID id, int side, int step) {
+        List<BlockPos> out = new ArrayList<>();
+        State st = STATES.get(id);
+        Villages.Village v = Villages.get(id);
+        if (st == null || st.wall == null || v == null || !live()) return out;
+        Wall w = st.wall;
+        int line = w.sides.of(side);
+        int lo = WallPlan.lo(w.sides, side) + 2, hi = WallPlan.hi(w.sides, side) - 2;
+        for (int a = lo; a <= hi; a += Math.max(2, step)) {
+            int[] o = WallPlan.offset(side, line + 1, a);
+            BlockPos p = new BlockPos(v.centre().getX() + o[0], w.top(side, a), v.centre().getZ() + o[1]);
+            if (!level.isLoaded(p)) continue;
+            if (!level.getBlockState(p.below()).isSolid() || !level.getBlockState(p).getCollisionShape(level, p).isEmpty()
+                || !level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()) continue;
+            out.add(p);
+        }
+        return out;
+    }
+
+    /** [featbuild] The street just inside one side of the wall, every so many columns: the night watch's round where the
+     *  wall walk cannot be got up to. */
+    public static List<BlockPos> wallStreet(ServerLevel level, UUID id, int side, int step) {
+        List<BlockPos> out = new ArrayList<>();
+        Villages.Village v = Villages.get(id);
+        if (v == null || !live()) return out;
+        WallPlan.Sides s = sides(id);
+        int line = s.of(side);
+        for (int a = WallPlan.lo(s, side) + 4; a <= WallPlan.hi(s, side) - 4; a += Math.max(2, step)) {
+            int[] o = WallPlan.offset(side, line - 2, a);
+            int x = v.centre().getX() + o[0], z = v.centre().getZ() + o[1];
+            if (!level.hasChunk(x >> 4, z >> 4)) continue;
+            out.add(new BlockPos(x, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z));
+        }
+        return out;
+    }
+
+    /** [featbuild] The wall's works in figures for the board: {laid, wanted, left out, towers, portcullis 0/1, tier, stage
+     *  lines' stage}; all nought while it is not planned. */
+    public static int[] figures(UUID id) {
+        State st = STATES.get(id);
+        if (st == null || st.wall == null) return new int[7];
+        Wall w = st.wall;
+        return new int[]{ st.laid, st.total, st.blocked, w.towers.size(), w.portcullis ? 1 : 0, w.tier, w.height };
+    }
+
+    /** [featbuild] The wall's sides, its towers' middles and its old line (if it is moving out), as offsets from the heart,
+     *  for the board's map and its "Show me" markers: {n, e, s, w}, then {x, z} for each tower. */
+    public static List<int[]> plan(UUID id) {
+        List<int[]> out = new ArrayList<>();
+        State st = STATES.get(id);
+        if (st == null || st.wall == null) return out;
+        Wall w = st.wall;
+        out.add(new int[]{ w.sides.n(), w.sides.e(), w.sides.s(), w.sides.w() });
+        for (WallPlan.Tower t : w.towers) out.add(t.middle());
+        return out;
+    }
+
+    /** [featbuild] The old line still standing where the wall moved out (null when it has not, or is down). */
+    @Nullable
+    public static WallPlan.Sides oldLine(UUID id) {
+        return old(id);
+    }
+
+    /** [featbuild] Is the wall begun (works under way or done)? */
+    public static boolean begun(UUID id) {
+        return live() && Ledger.note(id, BEGUN) != null;
+    }
+
     /** Where a raiding band gathers, out past the wall if it stands: never nearer the heart than this. */
     public static int outside(UUID id, int near) {
         if (!live() || !stands(id)) return near;
@@ -2439,11 +2525,13 @@ public final class CastleWall {
         WallPlan.Sides s = sides(id);
         out.add("The town wall: its inner face " + s.n() + " out to the north, " + s.e() + " east, " + s.s() + " south, "
             + s.w() + " west of the heart; " + (st.wall == null ? "its ground not all loaded yet" : st.wall.towers.size() + " towers, "
-            + st.wall.height + " high, in " + Villages.ageOf(id).label + "'s stone"));
+            + st.wall.height + " high, " + (st.wall.tier == WOOD ? "a log palisade" : "in " + Villages.Age.values()[Math.min(st.wall.tier, Villages.Age.values().length - 1)].label + "'s stone")
+            + (st.wall.portcullis ? ", a portcullis over each gate" : "")));   // [featbuild] as the danger has it
         if (st.wall != null) {
             int pct = st.total == 0 ? 0 : (int) (100L * st.laid / st.total);
             out.add("Laid " + st.laid + " of " + st.total + " blocks (" + pct + "%)" + (st.blocked > 0 ? ", built round " + st.blocked + " of somebody's work on its line" : "")
-                + "; " + (ready(id) ? "the hands are at it" : "it waits on the town's homes, food and stores"));
+                + "; " + (ready(id) ? "the hands are at it" : !TownDanger.wallWanted(id) ? "no wall wanted yet: the danger does not call for one"
+                : "it waits on the town's homes, food and stores"));
             if (!st.wanted.isEmpty()) {
                 List<String> w = new ArrayList<>();
                 for (Map.Entry<String, Integer> e : st.wanted.entrySet()) w.add(e.getValue() + " " + e.getKey());
