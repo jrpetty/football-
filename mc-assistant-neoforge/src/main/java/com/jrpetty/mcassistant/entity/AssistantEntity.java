@@ -768,6 +768,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** How long this hand has been in the water, in seconds, and where it was when the count began. */
     private int wetFor;
+    /** [tp47] When it went into the water this time (-1: out of it). */
+    private long wetSince = -1;
     /** [tp47] Looks in the water that found no bank in reach, running. */
     private int wetNoBank;
     /** [tp47] Looks for a bank in the water, to look further now and then. */
@@ -786,10 +788,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * is getting somewhere, and is left to it.
      */
     private void climbOutOfTheWater() {
-        if (!isInWater() || isPassenger() || isSleeping()) { wetFor = 0; wetSwims = 0; wetNoBank = 0; return; }
+        if (!isInWater() || isPassenger() || isSleeping()) { wetFor = 0; wetSwims = 0; wetNoBank = 0; wetSince = -1; return; }
         if (underwaterWork()) { wetFor = 0; return; }        // [diver] down there on purpose, or being pulled out
         if (MineLift.state(getUUID()) == MineLift.State.RIDING) { wetFor = 0; wetSwims = 0; return; }   // [tp43] in the cage, at the well's foot
         if (wetFor++ == 0) wetFrom = position();
+        if (wetSince < 0) wetSince = level().getGameTime();
         // [tp43] Out of breath (a long swim, a current carrying it along the river): out at once, whatever way it was making.
         boolean drowning = getAirSupply() < getMaxAirSupply() / 3;
         // [tp46] A village's folk at its work is out within a couple of seconds (it swims only where there is no dry way, and
@@ -850,7 +853,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (best == null) return;
         // [tp43] In a player's sight it swims for the bank and climbs out (the game's own swim and step), never put there.
         // Thirty seconds of that and still in (a pool it cannot climb out of): lifted out for its life's sake.
-        if (this instanceof VillageFolkEntity vf && wetSwims < 3 && !Blink.mayJumpTo(this, best.getX() + 0.5, best.getZ() + 0.5, "out of the water onto the bank")) {
+        // [tp47] Reckoned in time: counted in tries, a climb up a bank too high for the lead started the count again each time
+        // (a miner swam and climbed at the foot of a bluff by an old bridge for half a day's quarter).
+        if (this instanceof VillageFolkEntity vf && Stroll.led(vf)) return;                 // (being led up the bank: let it)
+        boolean longIn = wetSince >= 0 && level().getGameTime() - wetSince > 600;
+        if (this instanceof VillageFolkEntity vf && wetSwims < 3 && !longIn && !Blink.mayJumpTo(this, best.getX() + 0.5, best.getZ() + 0.5, "out of the water onto the bank")) {
             wetSwims++;
             // The swim for it first; then, the bank a step or two over the water, it wades to it and climbs out (led, a step a
             // tick: up the bank, not lifted onto it).
@@ -869,7 +876,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             brain("swimming for the bank");
             return;
         }
-        if (wetSwims >= 3) Blink.safety(this, "out of the water after half a minute's swimming");
+        if (wetSwims >= 3 || longIn) Blink.safety(this, "out of the water after half a minute's swimming");
         wetSwims = 0;
         moveTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5, getYRot(), getXRot());
         getNavigation().stop();
