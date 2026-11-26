@@ -85,6 +85,8 @@ public final class Polls {
     private static final Map<UUID, List<UUID>> QUEUE = new ConcurrentHashMap<>();
     /** A folk at the slot: the tick its ballot started going in. */
     private static final Map<UUID, Long> DROPPING = new ConcurrentHashMap<>();
+    /** When each folk came to the front of its queue (game time). */
+    private static final Map<UUID, Long> FRONT = new ConcurrentHashMap<>();
     /** When each folk joined its queue (game time). */
     private static final Map<UUID, Long> JOINED = new ConcurrentHashMap<>();
     /** The floating notice over each town's box. */
@@ -112,6 +114,7 @@ public final class Polls {
         QUEUE.clear();
         DROPPING.clear();
         JOINED.clear();
+        FRONT.clear();
         NOTICE.clear();
         COUNTING.clear();
         SWEPT.clear();
@@ -342,6 +345,42 @@ public final class Polls {
         return down;
     }
 
+    /** The key the government's own notices are kept under (not a candidate's). */
+    public static final UUID NOTICES = new UUID(0L, 0x6F76L);
+
+    /**
+     * The government's notices round the square (an unelected form's: "By order of General Fen / Curfew at dusk"): signs
+     * in its colour, kept with the posters so that a change of government tears them down with the rest. Returns how many.
+     */
+    static int placeNotices(ServerLevel level, Villages.Village v, String[] lines, DyeColor colour, int want) {
+        UUID id = v.id();
+        BlockPos board = speechSpot(level, v);
+        Random r = new Random(Objects.hash(id, "notices", lines[1]));
+        List<String> saved = posterList(id);
+        int placed = 0;
+        for (int tries = 0; tries < 30 && placed < want; tries++) {
+            double ang = r.nextDouble() * Math.PI * 2;
+            int rad = 4 + r.nextInt(9);
+            BlockPos at = groundAt(level, board.offset((int) Math.round(Math.cos(ang) * rad), 0, (int) Math.round(Math.sin(ang) * rad)));
+            if (at == null || Math.abs(at.getY() - board.getY()) > 5 || nearPoster(saved, at)) continue;
+            Direction toBoard = Direction.getNearest(board.getX() - at.getX(), 0, board.getZ() - at.getZ());
+            if (toBoard.getAxis() == Direction.Axis.Y) toBoard = Direction.NORTH;
+            level.setBlock(at, Blocks.SPRUCE_SIGN.defaultBlockState().setValue(StandingSignBlock.ROTATION, RotationSegment.convertToSegment(toBoard)), Block.UPDATE_ALL);
+            if (level.getBlockEntity(at) instanceof SignBlockEntity s) {
+                SignText text = new SignText();
+                for (int i = 0; i < 4 && i < lines.length; i++) text = text.setMessage(i, Component.literal(fit(lines[i])));
+                text = text.setColor(colour == DyeColor.WHITE || colour == DyeColor.YELLOW ? DyeColor.BLACK : colour);
+                s.setText(text, true);
+                s.setText(text, false);
+                s.setWaxed(true);
+            }
+            saved.add(NOTICES + "@" + key(at));
+            placed++;
+        }
+        savePosters(id, saved);
+        return placed;
+    }
+
     /** Every poster of the town down (a change of government: the old order's posters torn down). */
     static int tearDownAll(ServerLevel level, Villages.Village v, String why) {
         return tearDown(level, v, k -> true, why);
@@ -373,7 +412,17 @@ public final class Polls {
         f.hobbyNow = i == 0 ? "voting" : "queuing to vote";
         f.lastLeisureTick = f.tickCount;
         double dx = f.getX() - (spot.getX() + 0.5), dz = f.getZ() - (spot.getZ() + 0.5);
-        boolean there = dx * dx + dz * dz <= (i == 0 ? 0.8 * 0.8 : 1.3 * 1.3) && Math.abs(f.getY() - spot.getY()) < 2.5;
+        double bx = f.getX() - (box.getX() + 0.5), bz = f.getZ() - (box.getZ() + 0.5);
+        // The front of the queue is at the box (a walk stops about a block short of where it is sent: within two of the
+        // box will do); the rest within a stride of their places.
+        boolean there = (i == 0 ? bx * bx + bz * bz <= 2.1 * 2.1 : dx * dx + dz * dz <= 1.8 * 1.8) && Math.abs(f.getY() - spot.getY()) < 2.5;
+        // At the front and close, but the last step will not come (the queue's line crowded, a block in the way): it reaches
+        // across after a few seconds, as anyone would.
+        if (i == 0 && !there) {
+            Long front = FRONT.get(me);
+            if (front == null) FRONT.put(me, now);
+            else if (now - front > 120 && bx * bx + bz * bz <= 4.5 * 4.5) there = true;
+        }
         if (!there) {
             if (f.getNavigation().isDone() || f.tickCount % 30 == 0) f.walkTo(spot, i == 0 ? 0.7D : 0.85D);
             if (now - JOINED.get(me) > 3600L) {                                // could not reach the box: its vote goes by a neighbour
@@ -417,6 +466,7 @@ public final class Polls {
         if (q != null) q.remove(folk);
         JOINED.remove(folk);
         DROPPING.remove(folk);
+        FRONT.remove(folk);
     }
 
     /** The ballot going in: a sheet of paper out of its hand, over and down into the slot, that cannot be picked up. */
@@ -849,5 +899,45 @@ public final class Polls {
 
     static String capital(String s) {
         return s == null || s.isEmpty() ? "" : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    // ------------------------------------------------------------------ tests
+
+    /** Tests: the ballots of the election under way, voter to candidate. */
+    public static Map<UUID, UUID> ballotsForTests(UUID village) {
+        Elections.Campaign c = Elections.campaign(village);
+        return c == null ? Map.of() : new HashMap<>(c.ballots);
+    }
+
+    /** Tests: the first candidate's rally, now. */
+    public static boolean rallyForTests(ServerLevel level, Villages.Village v) {
+        Elections.Campaign c = Elections.campaign(v.id());
+        if (c == null || c.candidates.isEmpty()) return false;
+        for (Elections.Candidate k : c.candidates) if (Elections.loaded(v.id(), k.id()) != null) return rally(level, v, k, level.getDayTime() / 24000L);
+        return false;
+    }
+
+    /** Tests: an election between these two (neither in office) with a ballot each, counted. Returns how it was settled. */
+    public static String tieForTests(ServerLevel level, Villages.Village v, VillageFolkEntity a, VillageFolkEntity b, VillageFolkEntity va, VillageFolkEntity vb) {
+        long day = level.getDayTime() / 24000L;
+        Elections.Campaign c = new Elections.Campaign(v.id(), day, day);
+        c.candidates.add(new Elections.Candidate(a.getUUID(), a.displayNameCap(), Values.top(a), Values.second(a), "the test"));
+        c.candidates.add(new Elections.Candidate(b.getUUID(), b.displayNameCap(), Values.top(b), Values.second(b), "the test"));
+        c.ballots.put(va.getUUID(), a.getUUID());
+        c.ballots.put(vb.getUUID(), b.getUUID());
+        Elections.putForTests(c);
+        Elections.Result r = Elections.countForTests(level, v);      // the two candidates vote for themselves: two each
+        List<String[]> rows = lastRows(v.id());
+        return (rows.isEmpty() ? "" : rows.get(0)[2]) + "|" + (r.winner() == null ? "" : r.winner().name());
+    }
+
+    /** Tests: nobody stood at an election called now. */
+    public static void nobodyStoodForTests(ServerLevel level, Villages.Village v) {
+        nobodyStood(level, v, level.getDayTime() / 24000L);
+    }
+
+    /** Tests: is this the town's ballot box? */
+    public static boolean boxAt(ServerLevel level, BlockPos p) {
+        return p != null && level.getBlockState(p).is(McAssistantMod.BALLOT_BOX.get());
     }
 }

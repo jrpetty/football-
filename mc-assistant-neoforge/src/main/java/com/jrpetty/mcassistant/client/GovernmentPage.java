@@ -58,6 +58,11 @@ public final class GovernmentPage {
         return tip.isEmpty() ? null : tip;
     }
 
+    /** For the pictures (CineDev): the tab shown. */
+    static void devTab(String t) {
+        for (String x : GovDraw.TABS) if (x.equalsIgnoreCase(t)) tab = x;
+    }
+
     /** A press on the page: a mark in the world and the petition go straight to the server; the rest open the Town Hall. */
     static void act(String action, CompoundTag args) {
         switch (action) {

@@ -82,7 +82,7 @@ public final class Regimes {
                 "Devout: the day of rest kept strictly, feasts mid-week",
                 List.of("A shared faith holds the town together", "Feasts and rest days"), List.of("The worldly chafe", "No say for the folk"),
                 List.of("Open a business", "Own a house"));
-            case PLANNED -> new Rules("The state's: the committee owns every workshop",
+            case PLANNED -> new Rules("The state's: the committee runs the workshops; no new private firm (old ones wind down)",
                 "No private business: the state runs them all", "Nobody: the committee assigns the houses",
                 "Nobody votes: the party congress appoints the chair", "Guarded: criticism goes through the committee",
                 "No market: rations and state shops; quotas set each week", "Equal: one wage for every hand",
@@ -275,13 +275,14 @@ public final class Regimes {
         UUID id = v.id();
         if (was == to) return;
         com.jrpetty.mcassistant.Guard.run("the government's flag", () -> raiseFlag(level, v, to, true));
-        com.jrpetty.mcassistant.Guard.run("the old posters", () -> Polls.tearDownAll(level, v, "the old order's posters"));
+        com.jrpetty.mcassistant.Guard.run("the old posters", () -> Polls.tearDownAll(level, v, "the old order's posters and notices"));
+        Ledger.note(id, "gov.notices", "");
         Ledger.note(id, "gov.changed", day + "|" + was.name() + "|" + to.name());
         Factions.reset(id);
         Dissent.formChanged(level, v, was, to, day);
         if (to == Government.Form.PLANNED) {
-            Villages.tell(id, day, Villages.name(id) + " is a planned state now: the committee takes every workshop into the town's hands, "
-                + "assigns the jobs and the houses, and pays every hand the same");
+            Villages.tell(id, day, Villages.name(id) + " is a planned state now: no new private business is chartered, the committee runs the "
+                + "town's workshops, assigns the jobs and the houses, and pays every hand the same");
         } else if (was == Government.Form.PLANNED) {
             Villages.tell(id, day, "the committee's workshops are free to change hands again: anybody in good standing may open a business");
         }
@@ -290,6 +291,24 @@ public final class Regimes {
             Villages.tell(id, day, "the town will elect a mayor and a council: the first election is called, and the parties are forming");
         }
         Market.assemblyNews(id, "Hear this: " + Villages.name(id) + " is " + to.words + " from today. " + capital(rules(to).style) + ".");
+    }
+
+    /** An unelected government's notices round the square, put up once a form (Politics, the morning). */
+    static void notices(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        Government.Form f = Government.of(id);
+        if (!Government.appointed(f)) return;
+        String done = Ledger.note(id, "gov.notices");
+        if (f.name().equals(done)) return;
+        String leader = Villages.elderName(id);
+        Identity.Rec r = Identity.known(id);
+        String[] lines = switch (f) {
+            case JUNTA -> new String[]{ "BY ORDER OF", leader.isEmpty() ? "THE GENERAL" : "General " + leader, "Curfew at dusk", "Keep the peace" };
+            case PLANNED -> new String[]{ "THE PLAN", "Work for all", "Quotas by", "the hall door" };
+            case LORD -> new String[]{ "BY COMMAND OF", r == null || r.house.isEmpty() ? "THE LORD" : r.house.replace("the House of ", "House "), "Dues on", "tax day" };
+            default -> new String[]{ "THE CHAPEL", "Rest day", "kept strictly", leader };
+        };
+        if (Polls.placeNotices(level, v, lines, colour(f), 3) > 0) Ledger.note(id, "gov.notices", f.name());
     }
 
     /** The government's flag beside the board: the form's colour on a post. Returns where it stands, or null. */
@@ -335,7 +354,7 @@ public final class Regimes {
     }
 
     @Nullable
-    static BlockPos parse(@Nullable String s) {
+    public static BlockPos parse(@Nullable String s) {
         if (s == null || s.isEmpty()) return null;
         String[] p = s.split(",");
         if (p.length < 3) return null;

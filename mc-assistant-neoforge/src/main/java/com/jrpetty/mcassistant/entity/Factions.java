@@ -136,7 +136,7 @@ public final class Factions {
             m.sort(Comparator.comparingInt((VillageFolkEntity f) -> -esteem.getOrDefault(f.getUUID(), 0)
                 - (f.getUUID().equals(Villages.elder(village)) ? 40 : 0) - (f.life().has(Social.Trait.SHY) ? -25 : 0)));
             VillageFolkEntity c = m.get(0);
-            out.add(new Elections.Candidate(c.getUUID(), c.displayNameCap(), p.cares, p.second, p.pledge + " (" + p.words + ")"));
+            out.add(new Elections.Candidate(c.getUUID(), c.displayNameCap(), p.cares, p.second, p.pledge));
         }
         return out;
     }

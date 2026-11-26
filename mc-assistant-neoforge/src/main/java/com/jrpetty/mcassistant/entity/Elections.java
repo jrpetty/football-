@@ -745,7 +745,8 @@ public final class Elections {
             out.add(today ? "RG|ELECTION TODAY: vote here at the board! " + c.ballots.size() + " of " + voters(village).size() + " have voted."
                 : "RG|Election on day " + c.voteDay + ": choosing our " + title(village) + ".");
             for (Candidate k : c.candidates) {
-                out.add("RN|" + k.name() + " (" + k.platform().type + "): " + k.pledge() + (today ? " — " + c.votesFor(k.id()) + " so far" : "") + ".");
+                Factions.Party party = Government.of(village) == Government.Form.DEMOCRACY ? Factions.partyOfCandidate(village, k.id()) : null;   // [featcivic]
+                out.add("RN|" + k.name() + " (" + (party != null ? party.words : k.platform().type) + "): " + k.pledge() + (today ? " — " + c.votesFor(k.id()) + " so far" : "") + ".");
             }
             return out;
         }
@@ -944,6 +945,12 @@ public final class Elections {
     public static boolean[] votedForTests(UUID village, UUID folk) {
         Campaign c = campaign(village);
         return c == null ? new boolean[]{ false, false } : new boolean[]{ c.ballots.containsKey(folk), c.atTheBoard.contains(folk) };
+    }
+
+    /** [featcivic] Tests: an election put in place as it stands. */
+    static void putForTests(Campaign c) {
+        NOW.put(c.village, c);
+        save(c);
     }
 
     /** Tests: count now, quietly. */

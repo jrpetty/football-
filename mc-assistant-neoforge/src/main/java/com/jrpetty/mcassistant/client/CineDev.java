@@ -184,6 +184,7 @@ public final class CineDev {
                 case "open" -> open(mc, w[1]);
                 case "waiting" -> { mc.setScreen(null); Waiting.start(line.trim().substring(8)); }   // the "opening..." line, as on a slow server
                 case "city" -> { if (mc.screen instanceof CityScreen c) c.devPage(line.trim().substring(5).replace('_', ' ')); }
+                case "gov" -> GovScreen.dev(line.trim().substring(4).trim());          // [featcivic] the Town Hall: open TAB | tab TAB | hint on|off
                 default -> com.mojang.logging.LogUtils.getLogger().warn("[vision27] cinedev: what is '{}'?", w[0]);
             }
         }

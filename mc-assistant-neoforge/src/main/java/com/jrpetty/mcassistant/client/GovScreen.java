@@ -55,6 +55,25 @@ public class GovScreen extends Screen {
         mc.setScreen(new GovScreen(data));
     }
 
+    /** [featcivic] For the pictures only (CineDev): "open TAB" asks the server, "tab TAB" switches, "board TAB" the board page's tab, "hint on|off". */
+    static void dev(String line) {
+        String[] w = line.split(" ", 2);
+        Minecraft mc = Minecraft.getInstance();
+        String arg = w.length > 1 ? w[1].trim() : "";
+        switch (w[0]) {
+            case "open" -> GovNetwork.act("open", GovDraw.args("tab", arg.isEmpty() ? "Overview" : arg));
+            case "tab" -> { if (mc.screen instanceof GovScreen g) { g.tab = tabNamed(arg); g.scroll = 0; } }
+            case "board" -> GovernmentPage.devTab(arg);
+            case "scroll" -> { if (mc.screen instanceof GovScreen g) g.scroll = Integer.parseInt(arg); }
+            case "hint" -> {
+                String seen = PaClientConfig.get(PaClientConfig.KITHINTS, "");
+                String without = ("," + seen + ",").replace("," + HINT + ",", ",").replaceAll("^,|,$", "");
+                PaClientConfig.set(PaClientConfig.KITHINTS, arg.equals("on") ? without : without.isEmpty() ? HINT : without + "," + HINT);
+            }
+            default -> { }
+        }
+    }
+
     static String tabNamed(String s) {
         for (String t : TABS) if (t.equalsIgnoreCase(s)) return t;
         return "Overview";

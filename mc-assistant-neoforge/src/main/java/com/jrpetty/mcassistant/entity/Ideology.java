@@ -118,6 +118,14 @@ public final class Ideology {
                 String line = "news of " + Villages.name(free) + "'s elections was talked of in " + Villages.name(ruled) + "'s square";
                 Villages.tell(ruled, day, line);
                 log(ruled, day, line);
+                if (rng.nextInt(3) == 0) {
+                    // An agent caught at it: the town that sent it is the worse thought of.
+                    String l3 = "the watch in " + Villages.name(ruled) + " caught an agent from " + Villages.name(free) + " handing out news-sheets";
+                    Villages.tell(ruled, day, l3);
+                    Villages.tell(free, day, l3);
+                    log(ruled, day, l3);
+                    lean -= 2;
+                }
                 if (rng.nextInt(2) == 0) {
                     Dissent.stir(free, day, 2, Villages.name(ruled));
                     String l2 = "pamphlets from " + Villages.name(ruled) + " were found in " + Villages.name(free) + "'s square; few read them";
@@ -212,5 +220,10 @@ public final class Ideology {
         List<String> h = new ArrayList<>();
         if (s != null && !s.isEmpty()) for (String x : s.split(";;")) h.add(x);
         return h;
+    }
+
+    /** Tests: a day's dealings over how they are ruled, now. Returns the lean. */
+    public static int dailyForTests(ServerLevel level, Villages.Village a, Villages.Village b) {
+        return daily(level, a, b, level.getDayTime() / 24000L, Ledger.relation(a.id(), b.id()));
     }
 }

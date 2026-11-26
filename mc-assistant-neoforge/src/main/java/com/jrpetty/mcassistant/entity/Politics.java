@@ -46,6 +46,7 @@ public final class Politics {
             com.jrpetty.mcassistant.Guard.run("the unrest", () -> Dissent.daily(level, v, day));
             com.jrpetty.mcassistant.Guard.run("the policy", () -> Policy.look(level, v, day));
             com.jrpetty.mcassistant.Guard.run("the posters", () -> Polls.morning(level, v, day));
+            com.jrpetty.mcassistant.Guard.run("the notices", () -> Regimes.notices(level, v));
             com.jrpetty.mcassistant.Guard.run("the flag", () -> {
                 String flag = Ledger.note(id, "gov.flag");
                 if (flag == null || flag.isEmpty()) Regimes.raiseFlag(level, v, Government.of(id), false);
