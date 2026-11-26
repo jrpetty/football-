@@ -70,7 +70,7 @@ public final class Restraint {
     private static final Map<UUID, Hold> HELD = new ConcurrentHashMap<>();
     static final ResourceLocation SLOW = ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "restrained");
     /** How far behind its leader a led prisoner walks before the lead pulls, and past which it has broken away. */
-    static final double SLACK = 2.4, SNAP = 14.0;
+    static final double SLACK = 2.4, SNAP = 16.0;
     private static volatile boolean dirty;
 
     public static void resetForTests() {

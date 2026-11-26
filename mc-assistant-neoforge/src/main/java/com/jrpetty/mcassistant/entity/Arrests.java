@@ -174,6 +174,17 @@ final class Arrests {
         g.getNavigation().stop();
     }
 
+    /** A guard leading a prisoner waits for it when it falls behind (a door post, a step): it never drags it off. True if waiting. */
+    private static boolean waitFor(VillageFolkEntity g, ServerPlayer p) {
+        if (g.distanceTo(p) <= 4.5) return false;
+        g.getNavigation().stop();
+        g.getLookControl().setLookAt(p, 30.0F, 30.0F);
+        if (g.tickCount % 200 == 0) FolkTalk.speak(g, FolkTalk.pick(g.getRandom(), "Keep up.", "This way. Come on.", "Don't dawdle.",
+            "Mind the step and keep walking.", "Stay with me.", "Over here."));
+        PATHED.remove(g.getUUID());
+        return true;
+    }
+
     private static void walk(VillageFolkEntity g, BlockPos to, double speed) {
         Integer last = PATHED.get(g.getUUID());
         if (g.getNavigation().isDone() || last == null || g.tickCount - last > 40) {
@@ -365,7 +376,7 @@ final class Arrests {
         }
         double d = Math.sqrt(g.distanceToSqr(Vec3.atBottomCenterOf(to)));
         if (d > 1.6) {
-            walk(g, to, 0.55);
+            if (!waitFor(g, p)) walk(g, to, 0.55);
             g.getLookControl().setLookAt(p, 20.0F, 20.0F);
             if (now - t.since > Math.max(3600, Justice.pause(7200))) {      // the way blocked: held where it stands
                 Jail.lockUp(level, v, p.getUUID(), c, Jail.here(p), g);
@@ -432,7 +443,7 @@ final class Arrests {
         if (dock == null) { end(g, p); return; }
         double d = Math.sqrt(g.distanceToSqr(Vec3.atBottomCenterOf(dock)));
         if (d > 2.2) {
-            walk(g, dock.relative(net.minecraft.core.Direction.SOUTH), 0.6);
+            if (!waitFor(g, p)) walk(g, dock.relative(net.minecraft.core.Direction.SOUTH), 0.6);
             if (now - t.since > Justice.pause(9600)) {
                 Restraint.pullTo(p, dock);
                 end(g, p);
