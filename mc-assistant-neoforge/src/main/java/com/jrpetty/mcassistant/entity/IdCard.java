@@ -53,7 +53,7 @@ public final class IdCard implements PlayerLife.Page {
             if (own) page.buttons().button("The Town Hall", "hall", null).primary();
         } else {
             String about = (rp.age() > 0 ? rp.age() + " years" : "") + (rp.trade().isEmpty() ? "" : (rp.age() > 0 ? ", " : "") + rp.trade())
-                + (rp.look().isEmpty() || rp.look().equals("plain") ? "" : (rp.age() > 0 || !rp.trade().isEmpty() ? ", " : "") + "dresses " + rp.look());
+                + (rp.look().isEmpty() || rp.look().equals("plain") ? "" : (rp.age() > 0 || !rp.trade().isEmpty() ? ", " : "") + "dresses as a " + rp.look());
             page.row(head, rp.full(), about.isEmpty() ? "In town since day " + rp.since() : about + ". In town since day " + rp.since() + ".", "");
             if (!rp.bio().isEmpty()) page.text("\"" + rp.bio() + "\"", 0);
         }
