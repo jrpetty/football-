@@ -89,6 +89,11 @@ public final class LifeTick {
         long day = level.getDayTime() / 24000L;
         switch (what) {
             case "weekend" -> { WorkHours.forceForTests = true; return "The week kept in this town whatever its age."; }
+            case "where" -> {
+                net.minecraft.core.BlockPos c = v.centre(), g = Clubs.green(level, v).centre(), f = Church.font(level, v.id());
+                return "centre " + c.getX() + " " + c.getY() + " " + c.getZ() + " green " + g.getX() + " " + g.getY() + " " + g.getZ()
+                    + " font " + (f == null ? "none" : f.getX() + " " + f.getY() + " " + f.getZ()) + " day " + day;
+            }
             case "off" -> {
                 WorkHours.forceForTests = false;
                 Fairground.forceForTests(v.id(), false);

@@ -81,6 +81,7 @@ public final class ShoppingTrips {
     @Nullable
     private static Trip plan(ServerLevel level, Villages.Village v, VillageFolkEntity f, long day) {
         if (!ShopStock.open(v.id())) return null;
+        if (!WorkHours.openNow(level, v.id(), Business.Type.SHOP)) return null;   // [featlife] the shop's own hours
         ServicePoints.Point point = ServicePoints.nearest(level, v.id(), ServiceRole.SHOP, f.blockPosition());
         if (point != null && !ServicePoints.status(level, v.id(), ServiceRole.SHOP, point).open()) return null;
         List<Needs.Want> list = Needs.of(level, f);

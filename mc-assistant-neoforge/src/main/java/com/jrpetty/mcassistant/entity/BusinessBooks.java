@@ -57,6 +57,8 @@ public final class BusinessBooks {
             r.putBoolean("mirror", b.mirror());
             r.putBoolean("open", b.open);
             r.putInt("staff", Businesses.staff(village, b).size());
+            Business.Hours hrs = WorkHours.hoursOf(village, b);                 // [featlife] its days and hours, and who set them
+            r.putString("hours", hrs.words() + " (" + hrs.why() + ")");
             r.putLong("rev7", w.revenue);
             r.putLong("net7", w.net());
             r.putLong("revAll", b.allTime.revenue);
