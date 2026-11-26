@@ -1284,6 +1284,19 @@ public final class Rota {
         return out;
     }
 
+    /** "Who's on today", as lines (for their faces), by their first hour. */
+    public static List<Line> onTodayLines(UUID village, Business b, long day) {
+        Rota r = of(village, b);
+        List<Line> out = new ArrayList<>();
+        if (r == null) return out;
+        for (Line l : r.lines.values()) {
+            int[] s = r.slotsOn(l.who, day);
+            if (s != null && works(s)) out.add(l);
+        }
+        out.sort(Comparator.comparingInt(l -> r.slotsOn(l.who, day)[0]));
+        return out;
+    }
+
     public static void resetForTests() {
         dayForTests = -1;
     }

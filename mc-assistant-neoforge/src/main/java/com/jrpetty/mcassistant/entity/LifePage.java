@@ -273,6 +273,34 @@ public final class LifePage {
             return button(label, action, args, true, "");
         }
 
+        /**
+         * [rota] The row's picture is this person's face instead of an item: a folk's likeness (FolkPortrait, when the
+         * client has it in the world: its entity id), a player's skin face. Its name for the stand-in when neither shows.
+         */
+        public Row face(java.util.UUID who, int entityId, boolean player, String name) {
+            CompoundTag f = new CompoundTag();
+            f.putUUID("u", who);
+            f.putInt("id", entityId);
+            f.putBoolean("p", player);
+            f.putString("n", name == null ? "" : name);
+            x.put("face", f);
+            return this;
+        }
+
+        /** [rota] A folk's face on the row: its look and marks too, so the client paints its face when it isn't in sight. */
+        public Row face(VillageFolkEntity f) {
+            face(f.getUUID(), f.getId(), false, f.displayNameCap());
+            CompoundTag t = x.getCompound("face");
+            t.putLong("look", f.clientLook());
+            t.putInt("marks", f.clientMarks());
+            return this;
+        }
+
+        /** [rota] A player's face on the row. */
+        public Row face(net.minecraft.world.entity.player.Player p) {
+            return face(p.getUUID(), p.getId(), true, p.getGameProfile().getName());
+        }
+
         /** The one thing the page is for: drawn with the accent. */
         public Row primary() {
             if (!b.isEmpty()) ((CompoundTag) b.get(b.size() - 1)).putBoolean("main", true);
