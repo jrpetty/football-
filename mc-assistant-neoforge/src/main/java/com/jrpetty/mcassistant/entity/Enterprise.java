@@ -864,7 +864,7 @@ public final class Enterprise {
             if (barred(village, f, t) != null) continue;
             int bold = boldness(f) + Temperament.drive(f);                  // [econ51] its character: ambition the most of it
             boolean ambitious = Temperament.ambitious(f);
-            if (bold < nerve + (ambitious ? 0 : 1)) continue;               // [econ51] the unambitious need more nerve besides
+            if (bold < nerve) continue;                                     // [econ51] ambition's +3 the most of the nerve
             boolean own = skilled(village, f, t.work());
             long need = startupPence + (own ? 0 : handStake(village, t));
             // [econ-1c] Its own coin and its partners': a founder short of the money finds folk to go in with it.
@@ -956,9 +956,9 @@ public final class Enterprise {
         return pick;
     }
 
-    /** [econ51] How far a want long unmet eases what is asked of a founder: a step every two mornings, two at most. */
+    /** [econ51] How far a want long unmet eases what is asked of a founder: a step each morning it went unmet, two at most. */
     static int ease(CompoundTag unmet, String type) {
-        return Math.min(2, unmet.getInt(type) / 2);
+        return Math.min(2, unmet.getInt(type));
     }
 
     /** Why nobody opens a business worth opening: how many have the skill, the nerve, the means. */

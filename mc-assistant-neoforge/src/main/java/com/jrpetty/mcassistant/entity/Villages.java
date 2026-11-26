@@ -3384,6 +3384,17 @@ public final class Villages {
             defer(villageId, project, gameTime + 2400L, "the builders could not get to its ground just now");
             return;
         }
+        // [econ51] A building with no lot of its own to change for (the wall round the heart, the courtyard, a manor on its
+        // granted land, a shed or an office on its bank) gets the same ground again on the next look: it was taken up again
+        // and again, its lead loading four hundred blocks of the stores' stone each time and handing them back, while the
+        // houses behind it on the list read "cannot afford the house" against the stone in the lead's pack (grow-54's
+        // thirty-five-folk town stood at four buildings from its third day). Set aside half a day, the list goes on.
+        if (!usesALot(project)) {
+            crewDone(villageId, project);
+            defer(villageId, project, gameTime + 12000L, "the builders could not get to its ground; the next thing on the list first");
+            LAST_PROJECT.put(villageId, gameTime - gapFor(villageId));
+            return;
+        }
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);
         AgeSites.forget(villageId, project);                          // [econ32c] its ground given up
@@ -3396,6 +3407,12 @@ public final class Villages {
         crewDone(villageId, project);
         long gap = gapFor(villageId);
         LAST_PROJECT.put(villageId, gameTime - gap + Math.min(600L, gap / 8));
+    }
+
+    /** [econ51] Does this building go on a lot of the plan (another can be picked when one is given up)? */
+    static boolean usesALot(String project) {
+        return !(project.equals("fortify") || project.equals("court") || KnightManors.STRUCTURE.equals(project) || KnightManors.GRAND.equals(project)
+            || project.equals(Divers.SHED) || project.equals(Harbours.OFFICE) || project.equals(Harbours.LIGHT));
     }
 
     private static final int WET = 0, CLIFF = 1, HEIGHT = 2, TRUNK = 3, BLOCKED = 4, TAKEN = 5;
