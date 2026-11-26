@@ -92,6 +92,8 @@ public final class Rota {
         public final UUID who;
         public String name;
         public boolean player, owner;
+        /** New to the rota, not yet rostered by anyone: on the opening hours (five days) till they are. */
+        public boolean fresh;
         public final int[] h = new int[28];
 
         Line(UUID who, String name, boolean player) {
@@ -129,6 +131,7 @@ public final class Rota {
             t.putString("n", name);
             t.putBoolean("p", player);
             if (owner) t.putBoolean("o", true);
+            if (fresh) t.putBoolean("f", true);
             t.putIntArray("h", h);
             return t;
         }
@@ -136,6 +139,7 @@ public final class Rota {
         static Line load(CompoundTag t) {
             Line l = new Line(t.getUUID("w"), t.getString("n"), t.getBoolean("p"));
             l.owner = t.getBoolean("o");
+            l.fresh = t.getBoolean("f");
             int[] a = t.getIntArray("h");
             System.arraycopy(a, 0, l.h, 0, Math.min(28, a.length));
             return l;
@@ -566,9 +570,11 @@ public final class Rota {
 
     /** The rota's lines brought up to date with who works there: new hands added (off till rostered), the gone taken off. */
     public static void sync(ServerLevel level, UUID village, Business b, Rota r) {
+        int before = r.lines.size();
         Set<UUID> here = new HashSet<>();
-        for (VillageFolkEntity f : staffOf(village, b)) { here.add(f.getUUID()); r.line(f.getUUID(), f.displayNameCap(), false); }
-        for (ServerPlayer p : PlayerHiring.hands(level, "firm:" + b.id)) { here.add(p.getUUID()); r.line(p.getUUID(), p.getGameProfile().getName(), true); }
+        Business.Hours hrs = WorkHours.hoursOf(village, b);
+        for (VillageFolkEntity f : staffOf(village, b)) { here.add(f.getUUID()); join(r, hrs, f.getUUID(), f.displayNameCap(), false); }
+        for (ServerPlayer p : PlayerHiring.hands(level, "firm:" + b.id)) { here.add(p.getUUID()); join(r, hrs, p.getUUID(), p.getGameProfile().getName(), true); }
         CompoundTag rec = Enterprise.rec(village, b.id);
         Set<UUID> books = new HashSet<>(rec == null ? List.of() : Enterprise.staffOf(rec));
         r.lines.values().removeIf(l -> {
@@ -579,6 +585,17 @@ public final class Rota {
             }
             return !books.contains(l.who);                                                 // unloaded folk on its books: kept
         });
+        if (r.lines.size() != before) Businesses.dirty();
+    }
+
+    /** A new hand on the rota: the opening hours on its first five open days, marked new till someone rosters it. */
+    static void join(Rota r, Business.Hours h, UUID who, String name, boolean player) {
+        boolean isNew = !r.lines.containsKey(who);
+        Line l = r.line(who, name, player);
+        if (!isNew) return;
+        l.fresh = true;
+        int k = 0;
+        for (int d = 0; d < 7; d++) if (h.openOn(d) && k < MOST_DAYS) { l.set(d, preset("full", h)); k++; }
     }
 
     /** One of the staff, as the filling sees it: who, its liking, the days it can't work and why. */
@@ -678,6 +695,7 @@ public final class Rota {
         }
         for (Line l : r.lines.values()) {
             if (l.owner) continue;
+            if (l.fresh) out.add(new Warning(l.name + " is new on the rota: on the opening hours, five days, till you set their week.", 2));
             if (l.daysWorked() > MOST_DAYS) out.add(new Warning(l.name + " works " + l.daysWorked() + " days: everyone needs two days off a week.", 3));
             if (l.weekHours() > r.overtimeAt) out.add(new Warning(l.name + " is on " + l.weekHours() + " hours: " + (l.weekHours() - r.overtimeAt) + " of them overtime at time and a half.", 2));
             VillageFolkEntity f = Homes.loaded(village, l.who);
@@ -716,6 +734,7 @@ public final class Rota {
         for (Staff s : staff) {
             Line l = r.line(s.who(), s.name(), s.player());
             java.util.Arrays.fill(l.h, 0);
+            l.fresh = false;
             l.owner = s.who().equals(ownerHand);
             week.put(s.who(), l.h);
             hrs.put(s.who(), 0);
@@ -795,6 +814,29 @@ public final class Rota {
         return gaps;
     }
 
+    /** New hands still short of their hours after the gaps: a shift on the thinnest-covered open days, up to their liking. */
+    static void topUp(Rota r, Business.Hours h, List<Staff> staff) {
+        for (Staff s : staff) {
+            Line l = r.lines.get(s.who());
+            if (l == null) continue;
+            int open = h.open(), close = Math.min(24, h.close()), len = close - open, half = len > 9 ? (len + 1) / 2 : len;
+            for (int guard = 0; guard < 7 && l.weekHours() < s.pref() - 4 && l.daysWorked() < MOST_DAYS; guard++) {
+                int[][] c = coverage(r);
+                int best = -1, bestCov = Integer.MAX_VALUE, bestFrom = open;
+                for (int d = 0; d < 7; d++) {
+                    if (!h.openOn(d) || works(l.day(d)) || clash(s.busy().get(d), open, close)) continue;
+                    for (int from : len > 9 ? new int[]{ open, open + half } : new int[]{ open }) {
+                        int sum = 0;
+                        for (int i = from; i < Math.min(close, from + half); i++) sum += c[d][i];
+                        if (sum < bestCov) { bestCov = sum; best = d; bestFrom = from; }
+                    }
+                }
+                if (best < 0) break;
+                l.set(best, new int[]{ bestFrom, Math.min(close, bestFrom + half), 0, 0 });
+            }
+        }
+    }
+
     /** Fill a player's rota for it: its staff now, its hours, its busy hours. What it says. */
     public static String autoFill(ServerLevel level, UUID village, Business b, String by) {
         Rota r = b.rota != null && !b.rota.auto ? b.rota : new Rota();
@@ -854,6 +896,7 @@ public final class Rota {
         Line l = lines.get(who);
         if (l == null) return;
         l.set(dow, s);
+        l.fresh = false;
         setBy = by;
         setDay = day;
         auto = false;
@@ -1003,24 +1046,22 @@ public final class Rota {
         List<String> did = new ArrayList<>();
         if (r.lines.size() != before) did.add((r.lines.size() > before ? "put the new hands on" : "took the gone off"));
         Business.Hours h = WorkHours.hoursOf(village, b);
-        boolean gaps = false;
-        for (Warning w : warnings(village, b, r, h)) if (w.colour() == 3 && w.text().startsWith("No one")) gaps = true;
-        boolean blank = false;
-        for (Line l : r.lines.values()) if (l.weekHours() == 0) blank = true;
-        if (gaps && blank) {
-            // Only the blank lines filled: the owner's shifts for the rest stand.
-            List<Staff> fresh = new ArrayList<>();
-            Map<UUID, VillageFolkEntity> folk = new HashMap<>();
-            for (VillageFolkEntity f : staffOf(village, b)) folk.put(f.getUUID(), f);
-            for (Line l : r.lines.values()) if (l.weekHours() == 0 && folk.containsKey(l.who)) fresh.add(Staff.of(folk.get(l.who), village, day));
-            if (!fresh.isEmpty()) {
+        List<Staff> fresh = new ArrayList<>();
+        Map<UUID, VillageFolkEntity> folk = new HashMap<>();
+        for (VillageFolkEntity f : staffOf(village, b)) folk.put(f.getUUID(), f);
+        for (Line l : r.lines.values()) if ((l.fresh || l.weekHours() == 0) && !l.player && folk.containsKey(l.who)) fresh.add(Staff.of(folk.get(l.who), village, day));
+        if (!fresh.isEmpty()) {
+            // Only the new (or idle) hands rostered, into what the rest leave uncovered: the owner's shifts for the rest stand.
+            for (Staff s : fresh) java.util.Arrays.fill(r.lines.get(s.who()).h, 0);
+            {
                 int[][] need = need(village, b, h, r.lines.size(), day);
                 int[][] c = coverage(r);
                 for (int d = 0; d < 7; d++) for (int i = 0; i < 24; i++) need[d][i] = Math.max(0, need[d][i] - c[d][i]);
                 Map<UUID, Line> keep = new LinkedHashMap<>(r.lines);
                 fill(r, h, fresh, need, null);
                 for (Map.Entry<UUID, Line> e : keep.entrySet()) if (!r.lines.containsKey(e.getKey())) r.lines.put(e.getKey(), e.getValue());
-                did.add("rostered " + fresh.size() + " new " + (fresh.size() == 1 ? "hand" : "hands") + " into the gaps");
+                topUp(r, h, fresh);
+                did.add("rostered " + fresh.size() + " new " + (fresh.size() == 1 ? "hand" : "hands") + " where the cover was thinnest");
             }
         }
         if (deputy != null) {
@@ -1217,6 +1258,7 @@ public final class Rota {
             int[] a = m.get(l.who);
             if (a == null) continue;
             System.arraycopy(a, 0, l.h, 0, 28);
+            l.fresh = false;
             n++;
         }
         r.setBy = by;
@@ -1250,6 +1292,7 @@ public final class Rota {
     public static Rota ensureForTests(ServerLevel level, UUID village, Business b) {
         if (b.rota == null || b.rota.auto) b.rota = new Rota();
         sync(level, village, b, b.rota);
+        for (Line l : b.rota.lines.values()) { java.util.Arrays.fill(l.h, 0); l.fresh = false; }
         return b.rota;
     }
 

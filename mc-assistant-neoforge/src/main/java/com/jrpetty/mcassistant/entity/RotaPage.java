@@ -240,6 +240,8 @@ final class RotaPage {
                 Rota.sync(level, id, b, n);
                 if (n.lines.isEmpty()) return "!Nobody works there yet: take on staff first (Staff tab).";
                 for (Rota.Line l : n.lines.values()) {
+                    l.fresh = false;
+                    java.util.Arrays.fill(l.h, 0);
                     int k = 0;
                     for (int d = 0; d < 7; d++) if (h.openOn(d) && k < Rota.MOST_DAYS) { l.set(d, Rota.preset("full", h)); k++; }
                 }
@@ -327,6 +329,7 @@ final class RotaPage {
                 int[] s = l.day(d);
                 int n = 0;
                 for (int x = 0; x < 7; x++) if (x != d && Rota.works(l.day(x))) { l.set(x, s); n++; }
+                l.fresh = false;
                 r.setBy = by;
                 r.setDay = day;
                 said = "Copied " + Rota.words(s) + " to " + n + " other working " + (n == 1 ? "day" : "days") + " of " + l.name + "'s.";
