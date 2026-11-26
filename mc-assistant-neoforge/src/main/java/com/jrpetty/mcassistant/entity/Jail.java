@@ -131,15 +131,13 @@ public final class Jail {
         Villages.Village v = Villages.get(village);
         net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         ServerLevel level = v == null || server == null ? null : server.getLevel(v.dim());
-        Ledger.Building unseen = null;
         for (Ledger.Building b : Ledger.buildings(village)) {
             if (!b.structure().equals(structure) || Ledger.raising(village, b.anchor())) continue;
             if (level == null) return b;
             BlockPos at = at(b, probe);
-            if (!level.isLoaded(at)) { if (unseen == null) unseen = b; continue; }
-            if (is.test(level.getBlockState(at))) return b;
+            if (level.isLoaded(at) && is.test(level.getBlockState(at))) return b;   // out of reach, it can't be walked to anyway
         }
-        return unseen;
+        return null;
     }
 
     static BlockPos at(Ledger.Building b, int[] c) {
