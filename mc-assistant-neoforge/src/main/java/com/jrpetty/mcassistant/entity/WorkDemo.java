@@ -210,6 +210,13 @@ public final class WorkDemo {
                 return Rota.autoFill(level, v.id(), b, p.getGameProfile().getName());
             }
             case "openfirmrota" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "rota")); return "opened"; }
+            case "openfirmrotaedit" -> {                                      // [rota] its first hand's week open to edit
+                Business b = null;
+                for (Business x : Enterprise.open(v.id())) if (x.ownedBy(p.getUUID())) b = x;
+                if (b == null || b.rota == null || b.rota.lines.isEmpty()) return "no rota";
+                PlayerLife.open(p, "firm", LifePage.args("tab", "rota", "firm", b.id, "rotaWho", b.rota.lines.keySet().iterator().next().toString(), "rotaDay", 1));
+                return "opened";
+            }
             case "openfirmmore" -> { PlayerLife.open(p, "firm", LifePage.args("tab", "more")); return "opened"; }
             case "openfarm" -> { PlayerLife.open(p, "farm", LifePage.args("tab", "overview")); return "opened"; }
             case "openfarmsell" -> { PlayerLife.open(p, "farm", LifePage.args("tab", "sell")); return "opened"; }

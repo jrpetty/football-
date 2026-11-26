@@ -86,6 +86,7 @@ final class RotaPage {
         }
         // Cover by the hour.
         page.heading("Cover by the hour");
+        page.text("How many are on each opening hour, from opening to closing (· for nobody).", 4);
         int[][] cov = Rota.coverage(r);
         for (int d = 0; d < 7; d++) {
             if (!h.openOn(d)) {
@@ -96,9 +97,9 @@ final class RotaPage {
             }
             int covered = 0, open = Math.min(24, h.close()) - h.open();
             StringBuilder sb = new StringBuilder();
-            for (int i = h.open(); i < Math.min(24, h.close()); i++) { if (cov[d][i] > 0) covered++; sb.append(cov[d][i]); }
-            page.bar(Rota.DAY_SHORT[d] + "  " + Rota.hh(h.open()) + " " + spaced(sb.toString()) + " " + Rota.hh(Math.min(24, h.close())),
-                open == 0 ? 1 : covered / (double) open, covered + "/" + open + "h");
+            for (int i = h.open(); i < Math.min(24, h.close()); i++) { if (cov[d][i] > 0) covered++; sb.append(cov[d][i] == 0 ? "·" : Integer.toString(Math.min(9, cov[d][i]))); }
+            page.bar(Rota.DAY_SHORT[d] + " " + sb, open == 0 ? 1 : covered / (double) open,
+                covered + "/" + open + "h from " + Rota.hh(h.open()));
         }
         List<Rota.Warning> ws = Rota.warnings(id, b, r, h);
         if (ws.isEmpty()) page.text("No gaps and nobody idle: every opening hour has someone on, and everyone has two days off.", 1);
@@ -201,12 +202,6 @@ final class RotaPage {
             out.add(Rota.DAY_SHORT[d] + " " + (!Rota.works(s) ? "off" : s[0] + "–" + s[1] + (s[2] > 0 ? "/" + s[2] + "–" + s[3] : "")));
         }
         return String.join(" · ", out);
-    }
-
-    static String spaced(String digits) {
-        StringBuilder sb = new StringBuilder();
-        for (char ch : digits.toCharArray()) sb.append(sb.length() == 0 ? "" : " ").append(ch == '0' ? '·' : ch);
-        return sb.toString();
     }
 
     static String[] hoursWords(String[] a) {
