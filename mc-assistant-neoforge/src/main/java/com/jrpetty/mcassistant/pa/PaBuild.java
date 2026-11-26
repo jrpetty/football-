@@ -408,6 +408,7 @@ public final class PaBuild {
     }
 
     static String plural(String n, int k) {
+        if (java.util.Set.of("bread", "wheat", "sugar", "string", "leather", "paper", "coal", "redstone", "glowstone", "honey", "milk", "wool").contains(n.substring(n.lastIndexOf(' ') + 1))) return n;
         if (k == 1 || n.endsWith("s") || n.endsWith("glass") || n.endsWith("wool") || n.endsWith("stone") || n.endsWith("dirt") || n.endsWith("sand")
             || n.endsWith("gravel") || n.endsWith("terracotta") || n.endsWith("concrete") || n.endsWith("clay") || n.endsWith("snow")) return n;
         if (n.endsWith("y") && !n.endsWith("ey")) return n.substring(0, n.length() - 1) + "ies";
