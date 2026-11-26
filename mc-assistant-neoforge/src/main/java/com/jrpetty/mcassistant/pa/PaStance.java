@@ -60,10 +60,10 @@ public final class PaStance {
     private PaStance() {}
 
     public enum Kind {
-        NONE("Its own way", "Fights as it always has: blade close, bow at range, guards you."),
-        SHIELD("Shield", "Draws the monsters onto itself, blocks with a shield, guards you or a villager."),
-        ARCHER("Archer", "Keeps its distance with a bow or crossbow, shooting first at what goes for villagers."),
-        MEDIC("Medic", "Stays out of the fight; heals you and the villagers, pulls the wounded back.");
+        NONE("Its own way", "Blade close, bow at range; it guards you."),
+        SHIELD("Shield", "Draws monsters onto itself and blocks; guards you or a villager."),
+        ARCHER("Archer", "Keeps its distance and shoots: villagers' attackers first."),
+        MEDIC("Medic", "Keeps out of fights; heals you and villagers, pulls the hurt clear.");
 
         public final String label, blurb;
 

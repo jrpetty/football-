@@ -46,7 +46,8 @@ public final class PaStanceScreen extends PaKitBase {
     protected void body(GuiGraphics g, int mx, int my) {
         CompoundTag s = PaKitClient.stance;
         int x = left + 8, y = top + 28, iw = w - 16;
-        int footH = 30, foot = top + h - footH - 6;
+        boolean small = h < 250;
+        int footH = small ? 34 : 40, foot = top + h - footH - 6;
         if (hint(g, x, y, iw, "Combat stances", new String[]{
                 "Shield draws monsters onto itself and blocks; Archer keeps its distance and shoots; Medic stays back and heals.",
                 "Each card says if it's missing the kit for that stance: hand it over in its Pack tab.",
@@ -54,7 +55,7 @@ public final class PaStanceScreen extends PaKitBase {
                 "With Help a town's guards on, it joins a town's defence in a raid, in its stance."}, mx, my)) return;
         feedback(g, x, foot, iw, footH);
         if (s == null) { g.drawString(font, "Asking it...", x, y + 2, UiStyle.TEXT_MUTED, false); return; }
-        int cw = (iw - 6) / 2, ch = 52;
+        int cw = (iw - 6) / 2, ch = small ? 42 : 52;
         int k = s.getInt("k");
         PaStance.Kind[] kinds = PaStance.Kind.values();
         for (int i = 0; i < kinds.length; i++) {
@@ -66,8 +67,9 @@ public final class PaStanceScreen extends PaKitBase {
             icon(g, icon, cx + 5, cy + 4, 1);
             UiStyle.title(g, font, (on ? "✔ " : "") + kind.label, cx + 25, cy + 8);
             int ty = cy + 22;
+            if (small) ty = cy + 21;
             for (var line : font.split(Component.literal(kind.blurb), cw - 10)) {
-                if (ty > cy + ch - 19) break;
+                if (ty > cy + ch - (small ? 9 : 19)) break;
                 g.drawString(font, line, cx + 5, ty, UiStyle.TEXT_MUTED, false);
                 ty += 9;
             }
@@ -75,10 +77,15 @@ public final class PaStanceScreen extends PaKitBase {
                 case SHIELD -> s.getBoolean("shield") ? "Has a shield" : "No shield: hand it one";
                 case ARCHER -> !s.getBoolean("bow") ? "No bow: hand it one" : s.getInt("arrows") == 0 ? "A bow, but no arrows" : s.getInt("arrows") + " arrows";
                 case MEDIC -> s.getInt("remedies") == 0 ? "Nothing to heal with" : s.getInt("apples") + " golden apples, " + s.getInt("potions") + " potions, food";
-                default -> "Blade close, bow at range";
+                default -> "Nothing special needed";
             };
             boolean ok = switch (kind) { case SHIELD -> s.getBoolean("shield"); case ARCHER -> s.getBoolean("bow") && s.getInt("arrows") > 0; case MEDIC -> s.getInt("remedies") > 0; default -> true; };
-            g.drawString(font, UiStyle.clip(font, kit, cw - 10), cx + 5, cy + ch - 11, ok ? UiStyle.SUCCESS : UiStyle.DANGER, false);
+            if (small) {                                                   // the kit beside the title: no room under the words
+                int tw = UiStyle.titleWidth(font, (on ? "\u2714 " : "") + kind.label) + 31;
+                String kc = UiStyle.clip(font, kit, cw - tw - 6);
+                g.drawString(font, kc, cx + cw - 5 - font.width(kc), cy + 8, ok ? UiStyle.SUCCESS : UiStyle.DANGER, false);
+                if (!kc.equals(kit) && in(mx, my, cx, cy, cw, 18)) tipNow = kit;
+            } else g.drawString(font, UiStyle.clip(font, kit, cw - 10), cx + 5, cy + ch - 11, ok ? UiStyle.SUCCESS : UiStyle.DANGER, false);
             zone(cx, cy, cw, ch, () -> { CompoundTag t = new CompoundTag(); t.putInt("k", kind.ordinal()); PaKitClient.send("st_set", t); },
                 on ? kind.label + " (its stance now)" : "Set " + kind.label + ": " + kind.blurb);
         }

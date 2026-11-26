@@ -124,10 +124,10 @@ public final class PaBuildScreen extends PaKitBase {
             boolean on = n.equalsIgnoreCase(sel);
             tile(g, x, y, iw, 15, on, mx, my);
             g.drawString(font, UiStyle.clip(font, n, iw / 2 - 4), x + 6, y + 4, UiStyle.TEXT, false);
-            String sz = b.getString("size") + " · " + b.getInt("blocks") + " blocks";
+            String sz = b.getString("size");
             String szc = UiStyle.clip(font, sz, iw / 2 - 6);
             g.drawString(font, szc, x + iw - 4 - font.width(szc), y + 4, UiStyle.TEXT_MUTED, false);
-            zone(x, y, iw, 15, () -> PaKitClient.send("bp_select", args("name", n)), "Pick " + n);
+            zone(x, y, iw, 15, () -> PaKitClient.send("bp_select", args("name", n)), "Pick " + n + ": " + b.getString("size") + ", " + b.getInt("blocks") + " blocks");
             y += 16;
         }
         if (list.size() > rows) {
@@ -138,10 +138,12 @@ public final class PaBuildScreen extends PaKitBase {
         }
         if (sel.isEmpty()) return;
         y += 2;
+        if (y + 16 > foot - 4) return;                                   // no room (a build box above, a small window): the list alone
         int third = (iw - 8) / 3;
         button(g, "Place where I look", x, y, iw, 16, mx, my, true, true, "Close this, look at the ground where it should go, open Blueprints, click: a ghost of it stands there (its middle where you look)",
             () -> PaKitClient.send("bp_aim", args("name", sel)));
         y += 19;
+        if (y + 14 > foot - 4) return;
         boolean named = !name.getValue().isBlank();
         button(g, "Rename", x, y, third, 14, mx, my, named, false, named ? "Rename it to \"" + name.getValue() + "\"" : "type the new name in the box at the top first",
             () -> { CompoundTag t = args("name", sel); t.putString("to", name.getValue()); PaKitClient.send("bp_rename", t); });
@@ -149,6 +151,7 @@ public final class PaBuildScreen extends PaKitBase {
             "Forget this blueprint for good (the building itself stays standing)", () -> PaKitClient.send("bp_delete", args("name", sel)));
         button(g, "Recount", x + 2 * (third + 4), y, third, 14, mx, my, true, false, "Count what it has again (its pack and your chests near it)", () -> PaKitClient.send("bp_select", args("name", sel)));
         y += 18;
+        if (y + 30 > foot - 4) return;
         // what it takes
         UiStyle.heading(g, font, "What it takes (has / needs)", x, y, iw);
         y += 12;
@@ -173,14 +176,15 @@ public final class PaBuildScreen extends PaKitBase {
         String head = (active ? "Building " : run.getBoolean("done") ? "Built " : "Stopped: ") + run.getString("name");
         UiStyle.title(g, font, UiStyle.clip(font, head, iw - 60), x + 4, y + 4);
         button(g, "Show me", x + iw - 52, y + 2, 48, 12, mx, my, true, false, "Mark the build on your screen, with how far it is", () -> PaKitClient.send("bp_show"));
-        String line = "Layer " + run.getInt("layer") + " of " + run.getInt("layers") + " · " + run.getInt("placed") + "/" + run.getInt("total") + " blocks";
+        String line = active ? "Layer " + run.getInt("layer") + " of " + run.getInt("layers") + " · " + run.getInt("placed") + " of " + run.getInt("total") + " blocks"
+            : run.getInt("placed") + " of " + run.getInt("total") + " blocks done";
         g.drawString(font, UiStyle.clip(font, line, iw - 8), x + 4, y + 16, UiStyle.TEXT_MUTED, false);
         UiStyle.bar(g, x + 4, y + 27, iw - 8, 6, run.getInt("pct") / 100f, UiStyle.ACCENT_FILL);
         ListTag miss = run.getList("missing", Tag.TAG_COMPOUND);
         boolean shortOf = !miss.isEmpty();
         if (shortOf) {
             StringBuilder b = new StringBuilder("Short of: ");
-            for (int i = 0; i < miss.size() && i < 4; i++) { CompoundTag m = miss.getCompound(i); b.append(i > 0 ? ", " : "").append(m.getInt("n")).append(' ').append(nameOf(m.getString("i")).toLowerCase()); }
+            for (int i = 0; i < miss.size() && i < 4; i++) { CompoundTag m = miss.getCompound(i); b.append(i > 0 ? ", " : "").append(m.getInt("n")).append(' ').append(plural(nameOf(m.getString("i")).toLowerCase(), m.getInt("n"))); }
             g.drawString(font, UiStyle.clip(font, b.toString(), iw - 8), x + 4, y + 36, UiStyle.DANGER, false);
         }
         int q = (iw - 8 - 12) / 4;
@@ -193,6 +197,11 @@ public final class PaBuildScreen extends PaKitBase {
         return y + 68;
     }
 
+    private static String plural(String n, int k) {
+        if (k == 1 || n.endsWith("s") || n.endsWith("glass") || n.endsWith("stone") || n.endsWith("wool") || n.endsWith("bread") || n.endsWith("dirt") || n.endsWith("sand")) return n;
+        return n.endsWith("ch") || n.endsWith("sh") || n.endsWith("x") ? n + "es" : n + "s";
+    }
+
     /** Placing: the ghost's buttons. */
     private void placing(GuiGraphics g, CompoundTag pv, int x, int y, int iw, int bottom, int mx, int my) {
         String about = pv.getString("size") + (pv.getBoolean("mirror") ? ", mirrored" : "") + ", turned " + pv.getInt("rot") * 90 + "°";
@@ -202,7 +211,7 @@ public final class PaBuildScreen extends PaKitBase {
         g.drawString(font, UiStyle.clip(font, about, iw), x, y, UiStyle.TEXT_MUTED, false);
         y += 11;
         int half = (iw - 4) / 2;
-        button(g, "↻ Turn", x, y, half, 16, mx, my, true, false, "A quarter turn clockwise, about its middle", () -> PaKitClient.send("bp_rot"));
+        button(g, "Turn", x, y, half, 16, mx, my, true, false, "A quarter turn clockwise, about its middle", () -> PaKitClient.send("bp_rot"));
         button(g, pv.getBoolean("mirror") ? "Unmirror" : "Mirror", x + half + 4, y, half, 16, mx, my, true, false, "Flip it left for right", () -> PaKitClient.send("bp_mirror"));
         y += 20;
         Direction f = Minecraft.getInstance().player == null ? Direction.NORTH : Minecraft.getInstance().player.getDirection();

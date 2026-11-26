@@ -48,7 +48,10 @@ abstract class PaKitBase extends PaLogiBase {
             g.drawString(font, l, x + (bw - font.width(l)) / 2, y + (bh - UiStyle.GLYPH) / 2 + 1, UiStyle.TEXT_ON_DARK, false);
             if (hover) g.renderOutline(x, y, bw, bh, UiStyle.EDGE);
         } else {
-            UiStyle.button(g, font, label, x, y, bw, bh, st);
+            if (font.width(label) <= bw - 2) {                            // a short label on a small button: whole, never clipped
+                UiStyle.tile(g, x, y, bw, bh, st);
+                g.drawString(font, label, x + (bw - font.width(label)) / 2, y + (bh - UiStyle.GLYPH) / 2 + 1, st.ink(), false);
+            } else UiStyle.button(g, font, label, x, y, bw, bh, st);
         }
         if (enabled) zone(x, y, bw, bh, run, tip);
         if (hover && !tip.isEmpty()) tipNow = enabled ? tip : "Not now: " + tip;

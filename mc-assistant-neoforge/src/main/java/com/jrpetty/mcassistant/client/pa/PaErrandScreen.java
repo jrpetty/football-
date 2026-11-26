@@ -76,7 +76,7 @@ public final class PaErrandScreen extends PaKitBase {
         CompoundTag run = e.contains("run") ? e.getCompound("run") : null;
         boolean out = run != null && run.getBoolean("active");
         // ---- left: your inventory, and what it carries to sell
-        UiStyle.heading(g, font, out ? "Your things (it's out: wait for it)" : "Your things: click to hand over to sell", x, y, colW);
+        UiStyle.heading(g, font, out ? "Your things (it's out)" : "Your things: click to sell", x, y, colW);
         int gy = y + 12;
         var pl = Minecraft.getInstance().player;
         if (pl != null) {
@@ -119,8 +119,9 @@ public final class PaErrandScreen extends PaKitBase {
             int want = gd.getInt("want"), price = gd.getInt("price");
             tile(g, rx, ry, colW, 17, want > 0, mx, my);
             icon(g, id, rx + 3, ry, 1);
-            g.drawString(font, UiStyle.clip(font, nameOf(id), colW - 104), rx + 21, ry + 5, UiStyle.TEXT, false);
-            g.drawString(font, price > 0 ? price + "c" : "none", rx + colW - 84, ry + 5, price > 0 ? UiStyle.TEXT_MUTED : UiStyle.DANGER, false);
+            g.drawString(font, UiStyle.clip(font, nameOf(id), colW - 124), rx + 21, ry + 5, UiStyle.TEXT, false);
+            String pr = price > 0 ? price + "c" : "no stock";
+            g.drawString(font, pr, rx + colW - 58 - font.width(pr), ry + 5, price > 0 ? UiStyle.TEXT_MUTED : UiStyle.DANGER, false);
             int step = new ItemStack(BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(id))).getMaxStackSize() > 1 ? 8 : 1;
             boolean can = !out;
             button(g, "-", rx + colW - 54, ry + 2, 13, 13, mx, my, can && want > 0, false, out ? "it's out on an errand" : want > 0 ? step + " fewer" : "none on the list to take off", () -> {
@@ -148,7 +149,7 @@ public final class PaErrandScreen extends PaKitBase {
         button(g, "-8", rx + 2 * (q + 4), ry, q, 13, mx, my, !out && coins > 0, false, out ? why : coins > 0 ? "Take 8 back" : "it carries no coins", () -> coinsBy(-8));
         button(g, "All back", rx + 3 * (q + 4), ry, q, 13, mx, my, !out && coins > 0, false, out ? why : coins > 0 ? "Take all its coins back" : "it carries no coins", () -> coinsBy(-100000));
         ry += 16;
-        g.drawString(font, UiStyle.clip(font, "Spends at most " + limit + " (Settings, Behaviour)" + (e.getBoolean("openNow") ? "" : " · market shut now"), colW), rx, ry, UiStyle.TEXT_MUTED, false);
+        g.drawString(font, UiStyle.clip(font, "Spends at most " + limit + " (see Settings)" + (e.getBoolean("openNow") ? "" : " · market shut now"), colW), rx, ry, UiStyle.TEXT_MUTED, false);
         ry += 12;
         boolean wait = e.getBoolean("wait"), dark = e.getBoolean("dark");
         int hw = (colW - 4) / 2;

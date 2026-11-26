@@ -412,6 +412,7 @@ public final class PaBuild {
         if (k == 1 || n.endsWith("s") || n.endsWith("glass") || n.endsWith("wool") || n.endsWith("stone") || n.endsWith("dirt") || n.endsWith("sand")
             || n.endsWith("gravel") || n.endsWith("terracotta") || n.endsWith("concrete") || n.endsWith("clay") || n.endsWith("snow")) return n;
         if (n.endsWith("y") && !n.endsWith("ey")) return n.substring(0, n.length() - 1) + "ies";
+        if (n.endsWith("ch") || n.endsWith("sh") || n.endsWith("x")) return n + "es";
         return n + "s";
     }
 
