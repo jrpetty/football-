@@ -71,7 +71,7 @@ public final class BuildingAudit {
 
     /** What has no rooms to look into (gardens, yards, the pitch, monuments): looked at for its ground and blocks only. */
     public static final Set<String> OPEN = Set.of("wall", "platform", "pen", "fortify", "column", "well", "monument", "fountain",
-        "statue", "park", "orchard", "allotments", "pitch", "range", "graveyard", "theatre", "amphitheatre", "trainingyard",
+        "statue", "park", "garden", "orchard", "allotments", "pitch", "range", "graveyard", "theatre", "amphitheatre", "trainingyard",
         "stockade", "arena", "colossus", "aqueduct", "court", "gateway", "clockworkgate", "skygarden", "golemyard", "seamark");
 
     /** What the audit found: counts by kind, and the first few of each with where. */

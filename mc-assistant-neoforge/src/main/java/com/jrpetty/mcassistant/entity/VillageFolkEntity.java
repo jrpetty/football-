@@ -687,6 +687,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // Called to the town's own work (TownJobs): to the spot, and at it.
         if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
                 && TownJobs.hold(this, works)) return;
+        // [featbuild] A quarryman's day: out to the face with its pick, its loads to the stone yard and on to the stores (Quarry).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel quarry
+                && (tickCount % 4 == 0 ? Quarry.hold(this, quarry) : Quarry.busy(this))) return;
         // [roles-e] Called away from its trade for a stint of its post's work (PostStints): the wheelwright to its bench or
         // the wagon's side, the town planner to the hall's table.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel posts
@@ -1480,6 +1483,7 @@ public class VillageFolkEntity extends AssistantEntity {
             else m += led;
         }
         m = Quarters.mood(this, m, why);                // where it lives: the crafts' smoke and din, the park (Quarters)
+        m = Monuments.mood(this, day, m, why);          // [featbuild] by a statue garden or a statue; a statue of its own kin
         m = FolkSkills.mood(this, m, why);              // Bright Spirit, a bright friend near, Unflappable's floor
         m = Birthdays.mood(this, day, m, why);          // its birthday (Birthdays)
         m = Families.mood(this, day, m, why);           // its wedding anniversary (Families)

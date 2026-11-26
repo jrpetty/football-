@@ -62,6 +62,13 @@ public final class Park {
     private Park() {}
 
     public static final String STRUCTURE = "park";
+    /** [featbuild] A statue garden (entity/Monuments): kept, visited and sat in as a park is, its statue and ponds Monuments'. */
+    public static final String GARDEN = "garden";
+
+    /** [featbuild] A park or a statue garden: a green the town keeps and its folk visit. */
+    public static boolean isGreen(@Nullable String structure) {
+        return STRUCTURE.equals(structure) || GARDEN.equals(structure);
+    }
     /** The town's size when it wants a park. */
     public static final int FOLK = 20;
     /** A home this near a park is by it. */
@@ -82,7 +89,9 @@ public final class Park {
 
     /** Does the village want a park now: twenty folk or more, and none yet. (Villages, with the amenities.) */
     public static boolean wanted(UUID village, int folk) {
-        return folk >= FOLK && !Villages.hasBuilt(village, STRUCTURE) && parks(village).isEmpty();
+        if (folk < FOLK || Villages.hasBuilt(village, STRUCTURE)) return false;
+        for (Ledger.Building b : parks(village)) if (b.structure().equals(STRUCTURE)) return false;   // [featbuild] a garden is no park
+        return true;
     }
 
     // ------------------------------------------------------------------ the park's ground
@@ -97,11 +106,17 @@ public final class Park {
     private static final Map<String, Layout> LAYOUTS = new ConcurrentHashMap<>();
 
     public static Layout layout(BlockPos anchor, Direction facing) {
-        return LAYOUTS.computeIfAbsent(anchor.asLong() + "/" + facing.getName(), k -> lay(anchor, facing));
+        return layout(anchor, facing, STRUCTURE);
+    }
+
+    /** [featbuild] A park's or a garden's layout, by its drawing. */
+    public static Layout layout(BlockPos anchor, Direction facing, String structure) {
+        String drawing = isGreen(structure) ? structure : STRUCTURE;
+        return LAYOUTS.computeIfAbsent(anchor.asLong() + "/" + facing.getName() + "/" + drawing, k -> lay(anchor, facing, drawing));
     }
 
     public static Layout layout(Ledger.Building b) {
-        return layout(b.anchor(), b.facing());
+        return layout(b.anchor(), b.facing(), b.structure());
     }
 
     /** The park laid out so far (built, or being built) whose fountain has water here, or null. */
@@ -111,10 +126,10 @@ public final class Park {
         return null;
     }
 
-    private static Layout lay(BlockPos anchor, Direction facing) {
+    private static Layout lay(BlockPos anchor, Direction facing, String drawing) {
         List<Seat> seats = new ArrayList<>();
         List<BlockPos> flowers = new ArrayList<>(), lights = new ArrayList<>(), water = new ArrayList<>(), stone = new ArrayList<>();
-        for (BuildGoal.Placement p : BuildGoal.plan(STRUCTURE, anchor, facing, 0)) {
+        for (BuildGoal.Placement p : BuildGoal.plan(drawing, anchor, facing, 0)) {
             switch (p.part()) {
                 case BLOCK -> {
                     if (p.style() == Blueprints.Style.ROOF_STAIR) {
@@ -148,7 +163,7 @@ public final class Park {
     public static List<Ledger.Building> parks(@Nullable UUID village) {
         if (village == null) return List.of();
         List<Ledger.Building> out = new ArrayList<>();
-        for (Ledger.Building b : Ledger.buildings(village)) if (b.structure().equals(STRUCTURE)) out.add(b);
+        for (Ledger.Building b : Ledger.buildings(village)) if (isGreen(b.structure())) out.add(b);   // [featbuild] and the statue gardens
         return out;
     }
 

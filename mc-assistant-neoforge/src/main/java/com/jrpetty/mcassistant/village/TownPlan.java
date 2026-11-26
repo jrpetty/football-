@@ -273,6 +273,7 @@ public final class TownPlan {
             case "well" -> "well";
             case "monument", "fountain", "belltower" -> "monument";
             case "statue" -> "monument";                              // [batchF] on the square (PublicFund)
+            case "garden" -> "civic";                                 // [featbuild] a statue garden facing the square (Monuments)
             case "postoffice" -> "civic";                             // [batchF] facing the square (Post)
             case "hall", "chapel", "barracks", "manor", "townhall", "store" -> "great";   // [econ-store] the store on a long lot
             case "court" -> "court";

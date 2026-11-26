@@ -383,6 +383,7 @@ public final class Villages {
             case "postoffice" -> "the post office";               // [batchF]
             case "townlibrary" -> "the town library";             // [library]
             case "statue" -> "the statue on the square";          // [batchF]
+            case "garden" -> "a statue garden";                   // [featbuild] (Monuments)
             case "trainingyard" -> "the training yard";            // [war-prep]
             case "firestation" -> "the fire station";              // [disasters]
             case "lodge" -> "the Delvers' Lodge";                 // [caves]
@@ -1940,6 +1941,8 @@ public final class Villages {
         if (Auctions.wanted(villageId, folk) && built(villageId, "auction") < 1) extras.add("auction");
         // And a park among the homes, once the town is big enough to want one (Park).
         if (Park.wanted(villageId, folk)) extras.add(Park.STRUCTURE);
+        // [featbuild] And a statue garden by the square to its most notable folk, more of them as the town grows and prospers (Monuments).
+        if (Monuments.wanted(villageId, folk)) extras.add(Park.GARDEN);
         // [batchC] A football pitch by the park, for the rest day's match (Pitch).
         if (Pitch.wanted(villageId, folk)) extras.add(Pitch.STRUCTURE);
         // A stable, once the village has horses of its own (or, in the Iron Age, a rancher and a saddle: Stables).
@@ -2392,6 +2395,7 @@ public final class Villages {
             case "flats" -> Flats.why(villageId);                  // [flats]
             case "terrace", "terrace2", "terrace3", "terrace4", "terrace5" -> TerraceRows.why(villageId, project);   // [house34]
             case "pitch" -> Pitch.why(villageId);                  // [batchC]
+            case "garden" -> Monuments.why(villageId);             // [featbuild] a statue garden to its notable folk
             case "range" -> Archery.why(villageId);                // [batchC]
             case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";
             case "gateway" -> "a gateway of obsidian, the way out of the world the Nether Age is named for";

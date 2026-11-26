@@ -163,6 +163,17 @@ public final class Raids {
                 }
             }
         });
+        // [featbuild] The quarry and its stone yard, and the statues and gardens to the town's notable folk.
+        Guard.run("featbuild works", () -> {
+            for (ServerLevel level : event.getServer().getAllLevels()) {
+                for (Villages.Village v : Villages.every()) {
+                    if (!v.dim().equals(level.dimension())) continue;
+                    Quarry.tick(level, v);
+                    StoneYard.tick(level, v);
+                    Monuments.tick(level, v);
+                }
+            }
+        });
         // [golems] The town's golems kept to their posts, back from a fight to the gate or the square (Golems).
         Guard.run("golems", () -> {
             for (ServerLevel level : event.getServer().getAllLevels()) {
