@@ -1209,7 +1209,7 @@ public final class BuildOrders {
                 try (Accounts.Scope paid = Accounts.free("a player's commission, paid by the block")) { had = takeOne(level, v, c); }
                 if (!had) {
                     if (c.fitting() && left(o, day)) { laid.set(i); o.putInt("leftOut", o.getInt("leftOut") + 1); continue; }
-                    if (shortOf.isEmpty()) shortOf = StoneYard.isYardStone(c.item()) && StoneYard.has(id)       // [featbuild] the yard's stone
+                    if (shortOf.isEmpty()) shortOf = StoneYard.yardWork(c.item()) && StoneYard.has(id)          // [featbuild] the yard's stone
                         ? StoneYard.waitWords(remainingOf(seq, laid, c.item(), i), c.item())
                         : remainingOf(seq, laid, c.item(), i) + " " + new ItemStack(c.item()).getHoverName().getString().toLowerCase(Locale.ROOT);
                     continue;                                       // another of the course may be had
@@ -1299,7 +1299,10 @@ public final class BuildOrders {
         Map<Block, Integer> want = new LinkedHashMap<>();
         want.put(c.block() == Blocks.WALL_TORCH ? Blocks.TORCH : c.block(), 1);
         if (HousingMarket.takeBlocks(level, v, want)) return true;
-        return Crafts.take(level, v, s -> s.is(c.item()), 1);
+        if (Crafts.take(level, v, s -> s.is(c.item()), 1)) return true;
+        // [featbuild] A cut stone (stairs, slabs, walls) the stores are short of: its blocks carted from the yard, then cut.
+        if (StoneYard.feedStores(level, v, c.item(), "a commission")) return HousingMarket.takeBlocks(level, v, want) || Crafts.take(level, v, s -> s.is(c.item()), 1);
+        return false;
     }
 
     static void clearCell(ServerLevel level, Villages.Village v, BlockPos at) {

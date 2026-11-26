@@ -158,6 +158,15 @@ public final class NightWatch {
 
     // ------------------------------------------------------------------ the guard's night (Beats.walls)
 
+    /** A guard between the bells (Raids.guardDuty): on the walls today and its watch on, the night watch's post. */
+    static boolean guard(VillageFolkEntity g) {
+        if (!Police.active() || !(g.level() instanceof ServerLevel level) || g.ownerId() == null) return false;
+        if (phase(level.getDayTime()) == 0 || !keeps(g.ownerId())) return false;
+        if (Roster.dutyOf(level, g) != Roster.Duty.WALLS) return false;
+        Villages.Village v = Villages.get(g.ownerId());
+        return v != null && walls(g, level, v);
+    }
+
     /** A guard of the walls by night, on a town wall (Beats.walls): its post, its round, its lantern. False to leave it
      *  to the old posts (no town wall begun). */
     static boolean walls(VillageFolkEntity g, ServerLevel level, Villages.Village v) {

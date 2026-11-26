@@ -80,7 +80,10 @@ public final class BoardPages {
         "Property",
         // [featfolk] The family trees, the masters and their apprentices, and the town's respect for you (FamiliesPage,
         // ApprenticesPage, RespectPage), after them.
-        "Families", "Apprentices", "Respect" };
+        "Families", "Apprentices", "Respect",
+        // [featbuild] The danger, the wall and the night watch; the parks and statue gardens; the quarry and the stone yard
+        // (DefencesPage, ParksPage, StonePage), after them.
+        "Defences", "Parks", "Stone" };
 
     /** One of the board's sections: its name, its icon, what it holds, and its pages by name. */
     public record Section(String name, Item icon, String tip, String... pages) {}
@@ -93,8 +96,8 @@ public final class BoardPages {
         new Section("Economy", Items.EMERALD, "Money, what is made and sold, the prices, the jobs and the stores",
             "Dashboard", "Money", "Production", "Prices", "Shops", "Jobs", "Stock", "Stores", "Trade", "Auction", "Trading Post", "Earnings", "Harbour",
             "Businesses", "Market", "Capital", "Property"),   // [orders17]                                                                // [business-books] [econ-1a] [capital]
-        new Section("Town", Items.BRICKS, "Its buildings, the roads and rails, the maps, the caves and the watch",
-            "Buildings", "Transport", "Roads", "Maps", "Caves", "Nether", "Watch", "Cases"),
+        new Section("Town", Items.BRICKS, "Its buildings, walls and watch, parks, the quarry, the roads and rails, the maps and the caves",
+            "Buildings", "Defences", "Parks", "Stone", "Transport", "Roads", "Maps", "Caves", "Nether", "Watch", "Cases"),   // [featbuild]
         new Section("Civic", Items.BELL, "Who leads, what the town studies, what it stands for, and its wars",
             "Leader", "Respect", "Research", "Inventions", "Identity", "War", "War map", "Lands", "Region", "Taxes", "Knights"),   // [featfolk] Respect   // [tech-tree] [borders-map] [civic-land] [links12]
         new Section("Culture", Items.PAINTING, "Its banner and customs, what it wears, its library, museum and wonders",

@@ -78,6 +78,11 @@ public final class Quarry {
         standDown = down;
     }
 
+    /** Stood down for the other features' tests (the yard too). */
+    static boolean stoodDown() {
+        return standDown;
+    }
+
     public static void readyForTests(boolean on) {
         readyForTests = on;
     }

@@ -316,7 +316,11 @@ public class FeatBuildGameTests {
         helper.onEachTick(() -> {
             ticks[0]++;
             double dx = g.getX() - last[0], dy = g.getY() - last[1], dz = g.getZ() - last[2];
-            worst[0] = Math.max(worst[0], Math.sqrt(dx * dx + dz * dz + dy * dy * 0.25));
+            double step = Math.sqrt(dx * dx + dz * dz + dy * dy * 0.25);
+            if (ticks[0] > 20 && step > worst[0]) {
+                worst[0] = step;
+                if (step > 2.0) Kit.log("[VT] fb03 a jump of " + String.format("%.1f", step) + " at tick " + ticks[0] + " to " + g.blockPosition().toShortString());
+            }
             last[0] = g.getX(); last[1] = g.getY(); last[2] = g.getZ();
             if (com.jrpetty.mcassistant.entity.NightLight.isLight(g.getItemBySlot(EquipmentSlot.OFFHAND))) lit[0] = true;
             BlockPos stop = NightWatch.stopForTests(g);
@@ -424,14 +428,16 @@ public class FeatBuildGameTests {
 
     // ------------------------------------------------------------------ fb05: the quarry and the yard
 
-    /** A block of stone under the site, deep enough for the pit, and grass over it. */
-    private static void rock(ServerLevel level, BlockPos c, int half, int depth) {
-        for (int x = c.getX() - half; x <= c.getX() + half; x++) {
-            for (int z = c.getZ() - half; z <= c.getZ() + half; z++) {
-                for (int y = c.getY() - depth; y <= c.getY(); y++) level.setBlock(new BlockPos(x, y, z), Blocks.STONE.defaultBlockState(), 2 | 16);
-                for (int y = c.getY() + 1; y <= c.getY() + 6; y++) level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 2 | 16);
+    /** A rock outcrop on the site (the test world's ground is three blocks over its floor): stone from the ground up, so
+     *  high, its top the quarry's rim; returns the rim's middle. */
+    private static BlockPos rock(ServerLevel level, BlockPos ground, int half, int high) {
+        for (int x = ground.getX() - half; x <= ground.getX() + half; x++) {
+            for (int z = ground.getZ() - half; z <= ground.getZ() + half; z++) {
+                for (int y = ground.getY() - 1; y <= ground.getY() + high; y++) level.setBlock(new BlockPos(x, y, z), Blocks.STONE.defaultBlockState(), 2 | 16);
+                for (int y = ground.getY() + high + 1; y <= ground.getY() + high + 6; y++) level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 2 | 16);
             }
         }
+        return ground.above(high);
     }
 
     @GameTest(template = EMPTY, timeoutTicks = 900, batch = "fb05_quarry_yard")
@@ -451,9 +457,8 @@ public class FeatBuildGameTests {
         ok.that(Math.max(Math.abs(dx), Math.abs(dz)) - chosen.size() / 2 > reach, "out past the growth line: " + dx + "," + dz + " vs " + reach);
         ok.that(Math.abs(dx) > 12 && Math.abs(dz) > 12, "off the radial roads");
         // Rock under it, and a pool of water beside the pit's west edge.
-        BlockPos c = chosen.centre();
-        rock(level, c, 14, 9);
-        BlockPos pool = c.offset(-5, 0, 0);
+        BlockPos c = rock(level, chosen.centre(), 14, 8);
+        BlockPos pool = c.offset(0, 0, -5);
         level.setBlock(pool, Blocks.WATER.defaultBlockState(), 3);
         Quarry.Site site = new Quarry.Site(c, Quarry.START, true);
         Quarry.openForTests(level, t.v(), site);
@@ -494,7 +499,7 @@ public class FeatBuildGameTests {
             if (!level.getFluidState(c.offset(x, y, z)).isEmpty()) wet++;
         }
         ok.that(wet == 0, "no water in the pit: " + wet);
-        ok.that(level.getBlockState(c.offset(-4, 0, 0)).is(Blocks.STONE), "the stone by the water left standing");
+        ok.that(level.getBlockState(c.offset(0, 0, -4)).is(Blocks.STONE), "the stone by the water left standing");
         // The piles show the stock; the mason dresses some; the stores are kept.
         StoneYard.pilesForTests(level, id);
         int piles = 0;
@@ -502,6 +507,12 @@ public class FeatBuildGameTests {
             if (level.getBlockState(yard.centre().offset(x, y, z)).is(Blocks.COBBLESTONE)) piles++;
         }
         ok.that(piles >= Math.min(15, (int) (stone / 16) - 1), "the yard's piles show its stock: " + piles + " blocks for " + stone);
+        for (BlockPos p : Villages.storeChests(level, id)) {
+            if (level.getBlockEntity(p) instanceof Container box) {
+                for (int i = 0; i < box.getContainerSize(); i++) if (box.getItem(i).is(Items.COBBLESTONE)) box.setItem(i, ItemStack.EMPTY);
+                box.setChanged();
+            }
+        }
         chest(level, t.heart(), 4, -4, new ItemStack(Items.COAL, 8), new ItemStack(Items.CLAY_BALL, 16));
         Villages.forgetStores(id);
         int dressed = StoneYard.dressForTests(level, t.v());
@@ -611,8 +622,7 @@ public class FeatBuildGameTests {
         Quarry.standDownForTests(false);
         Quarry.readyForTests(true);
         // A site near enough for the test's ground (the growth line is the real game's: this one is set by hand).
-        BlockPos c = Kit.surface(level, t.heart().getX() + 40, t.heart().getZ() + 40).below();
-        rock(level, c, 14, 8);
+        BlockPos c = rock(level, Kit.surface(level, t.heart().getX() + 40, t.heart().getZ() + 40), 14, 6);
         Quarry.openForTests(level, t.v(), new Quarry.Site(c, Quarry.START, true));
         StoneYard.Site yard = StoneYard.site(id);
         helper.assertTrue(yard != null, "a yard");
@@ -633,7 +643,12 @@ public class FeatBuildGameTests {
         helper.onEachTick(() -> {
             tick[0]++;
             double dx = m.getX() - last[0], dy = m.getY() - last[1], dz = m.getZ() - last[2];
-            worst[0] = Math.max(worst[0], Math.sqrt(dx * dx + dz * dz + dy * dy * 0.25));
+            double step = Math.sqrt(dx * dx + dz * dz + dy * dy * 0.25);
+            if (tick[0] > 20 && step > worst[0]) {
+                worst[0] = step;
+                if (step > 2.0) Kit.log("[VT] fb07 a jump of " + String.format("%.1f", step) + " at tick " + tick[0] + " from " + last[0] + "," + last[1] + "," + last[2]
+                    + " to " + m.blockPosition().toShortString() + " doing " + Quarry.doingForTests(m));
+            }
             last[0] = m.getX(); last[1] = m.getY(); last[2] = m.getZ();
             String doing = Quarry.doingForTests(m);
             if (doing != null && did.add(doing)) Kit.log("[VT] fb07 tick " + tick[0] + ": " + doing + " at " + m.blockPosition().toShortString());

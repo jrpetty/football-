@@ -202,6 +202,48 @@ public final class StoneYard {
         return false;
     }
 
+    /** The yard's block a cut stone is cut from (stairs, slabs and walls of cobblestone, stone, stone bricks and bricks), or null. */
+    @Nullable
+    public static Item baseFor(@Nullable Item it) {
+        if (it == null) return null;
+        String p = BuiltInRegistries.ITEM.getKey(it).getPath();
+        if (!(p.endsWith("_stairs") || p.endsWith("_slab") || p.endsWith("_wall"))) return null;
+        String base = p.replaceAll("_(stairs|slab|wall)$", "");
+        return switch (base) {
+            case "cobblestone" -> Items.COBBLESTONE;
+            case "stone" -> Items.STONE;
+            case "stone_brick" -> Items.STONE_BRICKS;
+            case "brick" -> Items.BRICKS;
+            default -> null;
+        };
+    }
+
+    /** Is this stone the yard deals in, as it is or cut? */
+    public static boolean yardWork(@Nullable Item it) {
+        return isYardStone(it) || baseFor(it) != null;
+    }
+
+    /**
+     * A cut stone the stores are short of (BuildOrders): a batch of the blocks it is cut from carted out of the yard into the
+     * stores (six, as a batch of stairs is cut), for the builders to cut. True if the yard had them.
+     */
+    public static boolean feedStores(ServerLevel level, Villages.Village v, Item cut, String who) {
+        Item base = baseFor(cut);
+        if (base == null || !has(v.id())) return false;
+        int n = 6;
+        if (!take(v.id(), base, n)) {
+            long day = level.getDayTime() / 24000L;
+            SHORT.computeIfAbsent(v.id(), k -> new ConcurrentHashMap<>()).merge(base, new Short(n, day, who),
+                (a, b) -> new Short(Math.min(9999, a.wanted()), a.since(), b.who()));
+            return false;
+        }
+        Crafts.store(level, v, new ItemStack(base, n));
+        flow(level, v.id(), 3, n);
+        Map<Item, Short> s = SHORT.get(v.id());
+        if (s != null) s.remove(base);
+        return true;
+    }
+
     /** The words a builder's status uses for its wait: "stone from the yard (24 cobblestone)". */
     public static String waitWords(int n, Item it) {
         return "stone from the yard (" + n + " " + new ItemStack(it).getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + ")";
@@ -263,6 +305,7 @@ public final class StoneYard {
 
     /** Every second (Raids' round): the piles kept to the stock, the mason at its work. */
     static void tick(ServerLevel level, Villages.Village v) {
+        if (Quarry.stoodDown()) return;
         Site s = site(v.id());
         if (s == null || !level.isLoaded(s.centre())) return;
         long now = level.getGameTime();
@@ -304,9 +347,9 @@ public final class StoneYard {
         return made;
     }
 
-    /** A coal or charcoal of the stores' for the furnace (one does eight). */
+    /** A coal or charcoal of the stores' for the furnace (one does eight): smelting, as the smeltery's is. */
     private static boolean fuel(ServerLevel level, Villages.Village v) {
-        return Crafts.take(level, v, x -> x.is(Items.COAL) || x.is(Items.CHARCOAL), 1);
+        return !Crafts.takeOne(level, v, x -> x.is(Items.CHARCOAL)).isEmpty() || !Crafts.takeOne(level, v, x -> x.is(Items.COAL)).isEmpty();
     }
 
     private static void lit(ServerLevel level, Site s, boolean on) {
@@ -350,11 +393,24 @@ public final class StoneYard {
         return Math.min(PILES * HIGH, (stock + PER_BLOCK - 1) / PER_BLOCK);
     }
 
+    /** The pile blocks each row was last stacked to: {rough, dressed, brick}. */
+    static int[] stacked(UUID town) {
+        int[] n = new int[3];
+        String s = Ledger.note(town, "yard.shown");
+        if (s == null) return n;
+        String[] p = s.split(",");
+        for (int i = 0; i < 3 && i < p.length; i++) {
+            try { n[i] = Integer.parseInt(p[i].trim()); } catch (NumberFormatException ignored) { }
+        }
+        return n;
+    }
+
     /** A pile block somebody carried off is counted off the stock (sixteen of its row's stone for each). */
     static void reconcile(ServerLevel level, UUID town, Site s) {
         if (Ledger.note(town, "yard.laid") == null) return;
+        int[] stacked = stacked(town);
         for (int row = 0; row < 3; row++) {
-            int want = shown(rowStock(town, row));
+            int want = Math.min(stacked[row], shown(rowStock(town, row)));
             int there = 0;
             Block b = pileBlock(row);
             for (BlockPos base : slots(s, row)) for (int y = 0; y < HIGH; y++) if (level.getBlockState(base.above(y)).is(b)) there++;
@@ -374,6 +430,7 @@ public final class StoneYard {
     /** The piles stacked to the stock: a block for every sixteen, the first pile filled to three before the next. */
     static void piles(ServerLevel level, UUID town, Site s) {
         if (Ledger.note(town, "yard.laid") == null) return;
+        int[] put = new int[3];
         for (int row = 0; row < 3; row++) {
             int want = shown(rowStock(town, row));
             Block b = pileBlock(row);
@@ -384,12 +441,14 @@ public final class StoneYard {
                     BlockState st = level.getBlockState(p);
                     if (k < want) {
                         if (st.isAir() || st.canBeReplaced() && st.getFluidState().isEmpty()) level.setBlock(p, b.defaultBlockState(), 3);
+                        if (level.getBlockState(p).is(b)) put[row]++;
                     } else if (st.is(b)) {
                         level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }
         }
+        Ledger.note(town, "yard.shown", put[0] + "," + put[1] + "," + put[2]);
     }
 
     /** The yard laid out (once, by the quarry's first hands): its ground made level, its fence and gate, the sign, the mason's
