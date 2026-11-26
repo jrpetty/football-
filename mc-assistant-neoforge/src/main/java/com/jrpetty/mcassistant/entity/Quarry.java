@@ -236,8 +236,8 @@ public final class Quarry {
     }
 
     static boolean waterNear(ServerLevel level, int cx, int y0, int cz, int half, int deep) {
-        for (int x = cx - half; x <= cx + half; x += 2) {
-            for (int z = cz - half; z <= cz + half; z += 2) {
+        for (int x = cx - half; x <= cx + half; x++) {
+            for (int z = cz - half; z <= cz + half; z++) {
                 for (int y = y0 - deep; y <= y0 + 1; y++) {
                     if (!level.getFluidState(new BlockPos(x, y, z)).isEmpty()) return true;
                 }

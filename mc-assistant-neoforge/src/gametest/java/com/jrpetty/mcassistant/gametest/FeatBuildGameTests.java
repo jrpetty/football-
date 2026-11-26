@@ -510,10 +510,16 @@ public class FeatBuildGameTests {
         int cut = Quarry.cutForTests(level, t.v(), 600);
         long stone = StoneYard.count(id, Items.COBBLESTONE);
         Kit.log("[VT] fb05 cut " + cut + ", the yard holds " + StoneYard.stock(id));
-        ok.that(cut > 150, "the pit cut: " + cut + " blocks");
-        Quarry.Site wider = Quarry.site(id);
-        ok.that(wider != null && wider.size() > Quarry.START, "opened wider as it was worked: " + (wider == null ? "closed" : wider.size() + " across"));
-        ok.that(stone > 150, "its stone in the yard: " + stone + " cobblestone");
+        ok.that(cut > 120, "the pit cut: " + cut + " blocks");
+        boolean widened = false, closedByWater = false;
+        for (Villages.News n : Villages.news(id)) {
+            if (n.text().contains("the quarry was opened wider")) widened = true;
+            if (n.text().contains("the quarry was closed")) closedByWater = true;
+        }
+        Quarry.Site now = Quarry.site(id);
+        Kit.log("[VT] fb05 the quarry now " + (now == null ? "closed" : now.size() + " across") + "; news " + Villages.news(id));
+        ok.that(!widened && closedByWater && now == null, "never opened wider toward its pool: closed where it stood, a new one to be found further out");
+        ok.that(stone > 120, "its stone in the yard: " + stone + " cobblestone");
         // Terraces: no step of more than a block anywhere in the pit or onto its rim.
         int worst = 0;
         int h = Quarry.START / 2 + 1;

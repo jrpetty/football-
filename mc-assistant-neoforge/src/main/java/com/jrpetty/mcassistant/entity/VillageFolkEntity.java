@@ -3167,6 +3167,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Assemblies.attending(this)) return false;
         // On the town's own work (TownJobs): its trade waits till that is done.
         if (TownJobs.busy(this)) return false;
+        // [featbuild] At the quarry (Quarry): its own trade waits.
+        if (Quarry.busy(this)) return false;
         // At the school's lectern (School): its trade waits for the afternoon.
         if (School.teaching(this)) return false;
         // The bell: every guard turns out, whichever watch it keeps; nobody else works.
