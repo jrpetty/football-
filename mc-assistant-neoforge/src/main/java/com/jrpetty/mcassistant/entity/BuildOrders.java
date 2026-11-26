@@ -1209,7 +1209,9 @@ public final class BuildOrders {
                 try (Accounts.Scope paid = Accounts.free("a player's commission, paid by the block")) { had = takeOne(level, v, c); }
                 if (!had) {
                     if (c.fitting() && left(o, day)) { laid.set(i); o.putInt("leftOut", o.getInt("leftOut") + 1); continue; }
-                    if (shortOf.isEmpty()) shortOf = remainingOf(seq, laid, c.item(), i) + " " + new ItemStack(c.item()).getHoverName().getString().toLowerCase(Locale.ROOT);
+                    if (shortOf.isEmpty()) shortOf = StoneYard.yardWork(c.item()) && StoneYard.has(id)          // [featbuild] the yard's stone
+                        ? StoneYard.waitWords(remainingOf(seq, laid, c.item(), i), c.item())
+                        : remainingOf(seq, laid, c.item(), i) + " " + new ItemStack(c.item()).getHoverName().getString().toLowerCase(Locale.ROOT);
                     continue;                                       // another of the course may be had
                 }
                 spend(level, id, o, cost, true);
@@ -1237,7 +1239,8 @@ public final class BuildOrders {
         payHands(level, v, o, false);
         if (!shortOf.isEmpty()) {
             if (o.getLong("waitSince") <= 0) o.putLong("waitSince", day + 1);
-            waiting(level, id, o, shortOf.equals("your next payment") ? "your next payment of " + o.getInt("due") + " coins" : "waiting for " + shortOf);
+            waiting(level, id, o, shortOf.equals("your next payment") ? "your next payment of " + o.getInt("due") + " coins"
+                : shortOf.startsWith("stone from the yard") ? "waiting on " + shortOf : "waiting for " + shortOf);   // [featbuild]
         } else if (laidNow > 0) {
             o.putLong("waitSince", 0);
             if (!o.getString("waiting").isEmpty()) { o.putString("waiting", ""); revise(level, id, o, "under way again"); }
@@ -1291,10 +1294,15 @@ public final class BuildOrders {
             BlockState st = HousingMarket.takeThing(level, v, c.placement(), HousingMarket.Design.COTTAGE);
             if (st != null) return true;
         }
+        // [featbuild] City buildings draw their stone from the stone yard first (StoneYard), then the stores.
+        if (StoneYard.isYardStone(c.item()) && StoneYard.forBuild(level, v, c.item(), 1, "a commission")) return true;
         Map<Block, Integer> want = new LinkedHashMap<>();
         want.put(c.block() == Blocks.WALL_TORCH ? Blocks.TORCH : c.block(), 1);
         if (HousingMarket.takeBlocks(level, v, want)) return true;
-        return Crafts.take(level, v, s -> s.is(c.item()), 1);
+        if (Crafts.take(level, v, s -> s.is(c.item()), 1)) return true;
+        // [featbuild] A cut stone (stairs, slabs, walls) the stores are short of: its blocks carted from the yard, then cut.
+        if (StoneYard.feedStores(level, v, c.item(), "a commission")) return HousingMarket.takeBlocks(level, v, want) || Crafts.take(level, v, s -> s.is(c.item()), 1);
+        return false;
     }
 
     static void clearCell(ServerLevel level, Villages.Village v, BlockPos at) {

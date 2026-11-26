@@ -613,6 +613,7 @@ final class Beats {
         List<VillageFolkEntity> on = Roster.on(level, v, Roster.Duty.WALLS);
         int k = Math.max(0, on.indexOf(g));
         lantern(level, v, g, NightLight.dark(level.getDayTime()));
+        if (NightWatch.walls(g, level, v)) return true;                 // [featbuild] the town wall's night watch: its rounds and gates
         if (level.isNight()) {
             List<Watch.Post> posts = Watch.posts(level, id);
             if (!posts.isEmpty()) {

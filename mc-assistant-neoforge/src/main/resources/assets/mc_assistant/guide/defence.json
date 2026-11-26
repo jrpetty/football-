@@ -16,6 +16,20 @@
       "covers": []
     },
     {
+      "id": "defence_night_watch",
+      "title": "The night watch: rounds, lanterns and the bell",
+      "icon": "minecraft:lantern",
+      "kind": "what",
+      "q": ["what do guards do at night", "why are guards carrying lanterns", "who is on watch tonight", "the watch rota", "why did the bell ring at night", "guard patrol route"],
+      "kw": ["night watch", "watch", "lantern", "lanterns", "patrol", "rota", "handover", "bell", "guards at night", "sentry", "wall walk"],
+      "answer": "Once the town wall is begun, the guards on wall duty keep the night: rounds on the wall walk and posts at the gates, lanterns in hand, a bell when trouble is seen, the watch handed over at dusk, midnight and dawn.",
+      "more": ["The night's posts go round the wall: each side's wall walk and each gate. The guards the roster has on the walls take them in order; the first watch keeps them from dusk to midnight, the second from midnight to dawn.", "A guard on a wall walk climbs the steps by its gate and walks its side end to end and back, stopping to look out over the battlements. If it cannot get up, it walks the street inside that side instead. A gate guard stands inside the gate and challenges anyone after dark.", "Every guard on watch carries a lantern from the stores (a torch if there is none), so you can follow them on the wall at night.", "A watchman who sees raiders, or six monsters or more, rings the town's bell: the gates shut and the town musters. One who sees a monster or two calls it and rings its handbell, and the watch goes after it.", "At dusk the captain calls the first watch to its posts; as each post changes hands the two guards pass a word; at midnight the second watch takes over; at dawn the watch stands down and the gates open. All of it goes in the night's log."],
+      "steps": ["Open the village board: Town → Defences.", "The rota lists each post, who keeps it on each watch and who is on it now (with a lantern).", "Show me on a post marks its round; the night's log is below."],
+      "tips": ["Midnight on the wall: the watchmen call 'Midnight, and all's well!'"],
+      "related": ["build_wall", "defence_watch", "defence_raids"],
+      "covers": []
+    },
+    {
       "id": "defence_raids",
       "title": "Raids and the alarm bell",
       "icon": "minecraft:bell",

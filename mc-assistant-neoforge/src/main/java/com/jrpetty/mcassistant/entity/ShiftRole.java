@@ -98,7 +98,30 @@ public enum ShiftRole {
         List.of("The town's wagon, home in its yard and battered, is marked.",
             "Right-click it holding planks of your own: two planks mend it a step.",
             "Keep at it till it is sound; each step is paid when it is.",
-            "A wagon driven off before you are done is no fault of yours."));
+            "A wagon driven off before you are done is no fault of yours.")),
+    // [wpb] The miner: a face of the town's mine (or its quarry) cut back, the stone and ore up to the stores (WorkShifts).
+    MINE("mine", "Miner", "Shift boss", "the mine face", 0.35, 600,
+        "a mine or quarry with a face to cut", Set.of(StationTask.MINE, StationTask.CAVE),
+        List.of("The arrow takes you to the mine head, then down the stair (or the cage) to your face.",
+            "Cut every marked block of the face with your own pick.",
+            "Ore found in it counts three times; the stone counts once.",
+            "Leave the face clean: blocks cut outside the marks don't count.")),
+    // [wpb] The fisher: a catch from the town's water, with a rod of your own or one lent (WorkShifts).
+    FISH("fish", "Fisher", "Head fisher", "the water", 0.6, 1200,
+        "open water by the town", Set.of(StationTask.FISH, StationTask.DIVER),
+        List.of("Go to the marked water and fish from the bank or the jetty.",
+            "No rod? One is lent for the shift and taken back at the end.",
+            "Each fish caught near the mark counts. Junk and treasure don't.",
+            "Wet weather is good fishing; nobody counts a slow day against you.")),
+    // [wpb] The workshop hand: a batch of the trade's goods made at a crafting table from the stores' makings (WorkShifts).
+    CRAFT("craft", "Workshop hand", "Leading hand", "the workshop", 0.25, 900,
+        "a workshop trade with its makings in the stores",
+        Set.of(StationTask.SMITH, StationTask.TAILOR, StationTask.FLETCHER, StationTask.ENCHANT, StationTask.BREW,
+            StationTask.BEEKEEP, StationTask.FIREWORKS, StationTask.CARTOGRAPHER),
+        List.of("Collect the makings at the storehouse (right-click it): a small deposit is held for them.",
+            "Make the batch at any crafting table, by the usual recipe.",
+            "Bring what you made to the marked chest. The deposit comes back.",
+            "Pay is by the piece. Makings kept back are a mistake."));
 
     public final String id, title, senior, place;
     /** The wage a task, in coin, before the town's pay level, the stars and the skill. */
