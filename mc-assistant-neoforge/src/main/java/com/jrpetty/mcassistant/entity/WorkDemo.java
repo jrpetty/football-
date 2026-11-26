@@ -111,6 +111,18 @@ public final class WorkDemo {
                 Businesses.dirty();
                 return "firm " + b.name;
             }
+            case "treasury" -> { com.jrpetty.mcassistant.village.Ledger.addCoins(v.id(), 500); return "500 coins to the treasury"; }
+            case "goto" -> {                                                // ten blocks short of the workplace, facing it
+                net.minecraft.nbt.CompoundTag wp = WorkWay.workplace(level, p, PlayerJobs.job(p));
+                if (wp == null) return "no workplace";
+                int[] a = wp.getIntArray("at");
+                double dx = p.getX() - a[0], dz = p.getZ() - a[2], d = Math.max(1, Math.sqrt(dx * dx + dz * dz));
+                double x = a[0] + dx / d * 12, z = a[2] + dz / d * 12;
+                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) x, (int) z);
+                float yaw = (float) Math.toDegrees(Math.atan2(-(a[0] - x), a[2] - z));
+                p.teleportTo(level, x, y, z, yaw, 15);
+                return "at " + (int) x + " " + y + " " + (int) z;
+            }
             case "openadverts" -> { PlayerLife.open(p, "jobs", LifePage.args("tab", "adverts")); return "opened"; }
             case "opencard" -> {
                 List<String> keys = JobAdverts.advertKeysForTests(level, v, p);

@@ -229,7 +229,7 @@ public class LifeScreen extends Screen {
                 int at = 0;
                 for (int i = 0; i < opts.size(); i++) if (opts.getCompound(i).getString("v").equals(v)) at = i;
                 String label = opts.isEmpty() ? "" : opts.getCompound(at).getString("l");
-                int bw = Math.min(iw - 116, Math.max(90, font.width(label) + 30));
+                int bw = Math.min(iw - 116, Math.max(90, font.width(label) + 44));   // [wpb] the label whole, not clipped
                 int next = opts.isEmpty() ? 0 : (at + 1) % opts.size();
                 int prev = opts.isEmpty() ? 0 : (at + opts.size() - 1) % opts.size();
                 button(g, "<", x + 112, y + 1, 14, mx, my, opts.size() > 1, false, "", () -> form.put(id, opts.getCompound(prev).getString("v")));

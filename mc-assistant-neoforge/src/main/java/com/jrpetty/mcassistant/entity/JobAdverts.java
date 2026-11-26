@@ -518,7 +518,7 @@ public class JobAdverts implements PlayerLife.Page {
         String[] gv = new String[GROUPS.length], gl = new String[GROUPS.length];
         for (int i = 0; i < GROUPS.length; i++) { gv[i] = GROUPS[i][0]; gl[i] = GROUPS[i][1]; }
         page.choice("g", "Trade", gv, gl, g);
-        page.choice("pay", "Pay", new String[]{ "any", "salary", "commission" }, new String[]{ "Either way", "Salary on offer", "Commission on offer" }, pay);
+        page.choice("pay", "Pay", new String[]{ "any", "salary", "commission" }, new String[]{ "Either", "Salary", "Commission" }, pay);
         page.choice("who", "Employer", new String[]{ "any", "town", "firm", "player", "civic" }, new String[]{ "Anyone", "The town", "Firms and farms", "Players", "Civic posts" }, who);
         page.choice("sort", "Sort by", new String[]{ "pay", "near", "fit" }, new String[]{ "Pay", "Distance", "Fit for you" }, sort);
         boolean toastsOff = Earnings.data(p).getBoolean("wpb/toastsOff");
@@ -701,7 +701,7 @@ public class JobAdverts implements PlayerLife.Page {
         if (j.getLong("leaving") > 0) lines.add("You've given notice: your last day is day " + (j.getLong("leaving") - 1) + ".");
         page.box("Your job card: " + WorkLife.rankTitle(j) + " at " + j.getString("employerName"), lines, comm ? 4 : 1);
         double u = d.getDouble("u");
-        page.bar("Today", aim <= 0 ? 1 : u / aim, (int) u + " of " + aim + (card == null ? "" : " " + card.measure().many()) + " · " + EarnMath.starWord(WorkMath.dayStars(u, aim)));
+        page.bar("Today", aim <= 0 ? 1 : u / aim, (int) u + " of " + aim + " · " + EarnMath.starWord(WorkMath.dayStars(u, aim)));
         BlockPos at = null;
         CompoundTag wp = WorkWay.workplace(level, p, j);
         if (wp != null && wp.getIntArray("at").length == 3) { int[] a = wp.getIntArray("at"); at = new BlockPos(a[0], a[1], a[2]); }

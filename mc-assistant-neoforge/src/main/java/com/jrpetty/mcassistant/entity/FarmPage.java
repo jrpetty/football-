@@ -153,7 +153,7 @@ public final class FarmPage implements PlayerLife.Page {
                     .button("Offer the job", "offerjob", LifePage.args("id", x.id, "u", a.getKey().toString())).button("Turn down", "turndown", LifePage.args("id", x.id, "u", a.getKey().toString()));
             }
         }
-        page.choice("pw", "Pay", new String[]{ "0", "1", "2" }, new String[]{ "Either way", "Salary only", "Commission only" }, "0");
+        page.choice("pw", "Pay", new String[]{ "0", "1", "2" }, new String[]{ "Either", "Salary", "Commission" }, "0");
         page.buttons().button("Post an advert for a farm hand", "post", null);
         for (ServerPlayer h : PlayerHiring.hands(level, "farm:" + f.id)) {
             page.row(null, h.getGameProfile().getName() + " (a player hand)", PlayerJobs.line(h), "")

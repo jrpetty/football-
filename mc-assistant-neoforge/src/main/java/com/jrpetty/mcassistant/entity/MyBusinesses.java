@@ -91,7 +91,7 @@ public final class MyBusinesses implements PlayerLife.Page {
                     .button("Data", "shopdata", LifePage.args("key", sh.key()));       // [biz30]
             }
         }
-        page.buttons().button("Start another business", "start", null);
+        page.buttons().button("Start another business", "start", null).button("Contracts with players", "contracts", null);   // [wpb]
         if (c.tab.isEmpty()) c.tab = "summary";
         page.tab("summary", "Summary", c.tab.equals("summary")).tab("hands", "Hands", c.tab.equals("hands")).tab("stock", "Stock", c.tab.equals("stock"))
             .tab("prices", "Prices", c.tab.equals("prices")).tab("money", "Money", c.tab.equals("money")).tab("more", "Shares & closing", c.tab.equals("more"));
@@ -149,8 +149,8 @@ public final class MyBusinesses implements PlayerLife.Page {
             boolean mgr = r != null && r.hasUUID("manager") && r.getUUID("manager").equals(f.getUUID());
             boolean sure = pending.equals(f.getUUID().toString());
             int sev = severance(f);
-            page.row(null, f.displayNameCap() + (mgr ? " (manager)" : ""), "paid " + Wealth.wage(f) + "c a day" + (c == null ? "" : String.format(Locale.ROOT, " (%.0f%% of the going rate)", c.m * 100))
-                    + " · " + f.tradeLevel(t == null ? f.stationTask() : t.work()) + " at the trade", "")
+            page.row(null, f.displayNameCap() + (mgr ? " (manager)" : ""), "paid " + Wealth.wage(f) + "c a day · level " + f.tradeLevel(t == null ? f.stationTask() : t.work())
+                    + " at the trade" + (c == null ? "" : " · since day " + c.since), "")
                 .button("Raise", "raise", LifePage.args("h", f.getUUID().toString()), decide && c != null, c == null ? "Not on the town's books" : no)
                 .button("Cut", "cut", LifePage.args("h", f.getUUID().toString()), decide && c != null, c == null ? "Not on the town's books" : no)
                 .button(mgr ? "Not manager" : "Manager", "manager", LifePage.args("h", f.getUUID().toString()), decide, no)
@@ -174,7 +174,7 @@ public final class MyBusinesses implements PlayerLife.Page {
         }
         if (t != null) {
             JobCards.Card card = JobCards.of(t.work().name());
-            page.choice("pw", "Pay", new String[]{ "0", "1", "2" }, new String[]{ "Either way", "Salary only", "Commission only" }, "0");
+            page.choice("pw", "Pay", new String[]{ "0", "1", "2" }, new String[]{ "Either", "Salary", "Commission" }, "0");
             page.buttons().button("Post an advert for a " + (card == null ? "hand" : card.title().toLowerCase(Locale.ROOT)), "postplayer", null, card != null && decide,
                 card == null ? "No player job for this trade" : no);
         }
@@ -260,7 +260,7 @@ public final class MyBusinesses implements PlayerLife.Page {
         long worth = FirmSale.worth(v.id(), b);
         if (sale == null) {
             page.text("Worth about " + Businesses.pence(worth) + " (its stock, till and kit, less what it owes). List it, and offers come in over the next days.", 4);
-            page.choice("ask", "Asking", new String[]{ "100", "110", "125", "150" }, new String[]{ "Its worth", "A tenth over", "A quarter over", "Half over" }, "110");
+            page.choice("ask", "Asking", new String[]{ "100", "110", "125", "150" }, new String[]{ "Worth", "+10%", "+25%", "+50%" }, "110");
             page.buttons().button("List it for sale", "list", null, decide, no);
         } else {
             page.text("Listed at " + Businesses.pence(sale.getLong("ask")) + " since day " + (sale.getLong("listed") + 1) + " (worth " + Businesses.pence(worth) + ").", 1);
@@ -519,7 +519,6 @@ public final class MyBusinesses implements PlayerLife.Page {
                 .button(on ? "Confirm: pay " + t.getInt("coins") + "c" : "Accept (" + t.getInt("coins") + "c)", "acceptshare", LifePage.args("firm", x.id, "i", (int) o[1], "coins", t.getInt("coins"), "sure", on),
                     Market.coinsHeld(p) >= t.getInt("coins"), "You need " + t.getInt("coins") + "c");
         }
-        page.buttons().button("Contracts with players", "contracts", null);
     }
 
     /** A hand raised, cut, made manager, or let go (with severance, after a confirm). */

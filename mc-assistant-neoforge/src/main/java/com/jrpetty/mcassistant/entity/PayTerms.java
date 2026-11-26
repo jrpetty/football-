@@ -103,7 +103,7 @@ public final class PayTerms {
 
     /** The salaried terms. */
     public static Terms salary(JobCards.Card c, int wage, int target) {
-        return new Terms(false, 0, 0, wage, target, c.measure().many(), "the town's going rate for " + c.title().toLowerCase(Locale.ROOT) + "s", false, 0, 0);
+        return new Terms(false, 0, 0, wage, target, c.measure().many(), "the town's going rate for " + plural(c.title().toLowerCase(Locale.ROOT)), false, 0, 0);
     }
 
     /**
@@ -156,6 +156,12 @@ public final class PayTerms {
         String n = Goods.name(new ItemStack(good)).toLowerCase(Locale.ROOT);
         for (String w : new String[]{ "wheat", "cod", "salmon", "coal", "wool", "bread" }) if (n.endsWith(w)) return n;
         return n.endsWith("s") ? n : n + "s";
+    }
+
+    static String plural(String s) {
+        if (s.endsWith("man")) return s.substring(0, s.length() - 3) + "men";
+        if (s.endsWith("ch") || s.endsWith("sh") || s.endsWith("s") || s.endsWith("x")) return s + "es";
+        return s + "s";
     }
 
     /** "Hartwell Farm's", "the town's fields'". */
