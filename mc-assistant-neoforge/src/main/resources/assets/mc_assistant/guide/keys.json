@@ -1,0 +1,87 @@
+{
+  "category": "keys",
+  "entries": [
+    {
+      "id": "keys_all",
+      "title": "Every key in the mod",
+      "icon": "minecraft:oak_button",
+      "kind": "what",
+      "q": ["what are the keybinds", "list of keys", "what keys does the mod use", "controls for this mod", "hotkeys", "keyboard shortcuts", "what buttons do what", "all key bindings", "which keys do i press", "what keys are there"],
+      "kw": ["keybind", "keys", "controls", "hotkey", "shortcut", "bindings"],
+      "answer": "U your life in town, K camera, J journal, V emotes, H this Guide (or E, then the book with a question mark), and B, R, G and ; for your assistants.",
+      "more": ["U your life in town · K camera · J village journal · V emote wheel (hold) · H this Guide · [ ] \\ time slower, faster, normal (operators) · B plot book, R orders, G roster, ; crew (assistants).", "Unbound until you set them: favourite folk, your finances, the admin panel (operators)."],
+      "controls": ["[U] life · [K] camera · [J] journal · [V] emotes · [H] guide", "[[] slower · []] faster · [\\] normal", "[B] plots · [R] orders · [G] roster · [;] crew"],
+      "tips": ["Every key is in Options → Controls → Key Binds under the mod's own category; change any there.", "H isn't used by the base game. If another mod also uses it, the key shows red in Controls: give one of them another key. The inventory's book button always opens the Guide."],
+      "related": ["keys_rebind", "keys_inventory", "keys_in_screens"],
+      "covers": []
+    },
+    {
+      "id": "keys_rebind",
+      "title": "Changing a key",
+      "icon": "minecraft:tripwire_hook",
+      "kind": "howto",
+      "q": ["how do i change a keybind", "rebind keys", "key conflict with another mod", "set the favourites key", "unbound keys", "change the guide key", "u key doesnt work"],
+      "kw": ["rebind", "change", "conflict", "unbound", "bind"],
+      "answer": "Open Options, Controls, Key Binds and scroll to the MC Assistant section. Click a key and press the new one.",
+      "more": ["Some keys start unbound (favourite folk, your finances, the admin panel): set them there."],
+      "controls": ["[Esc] → Options → Controls → Key Binds"],
+      "tips": ["A key shown in red clashes with another; give one of them a different key."],
+      "related": ["keys_all"],
+      "covers": []
+    },
+    {
+      "id": "keys_inventory",
+      "title": "The inventory's buttons (coin and Guide)",
+      "icon": "minecraft:chest",
+      "kind": "what",
+      "q": ["what is the coin button in my inventory", "book button in inventory", "guide button inventory", "buttons next to the recipe book", "creative inventory buttons", "hide the coin button"],
+      "kw": ["inventory", "button", "coinbutton", "bookbutton", "guide button", "recipe book"],
+      "answer": "Press E: beside the recipe book are the coin (Your finances) and the book with a question mark (this Guide).",
+      "more": ["In the creative inventory they sit beside the panel's lower right corner."],
+      "controls": ["[E] → coin (finances) · book (Guide)"],
+      "tips": ["The coin button can be hidden in the client config (mc_assistant-ui-client.toml)."],
+      "related": ["property_finances", "start_guide"],
+      "covers": []
+    },
+    {
+      "id": "keys_in_screens",
+      "title": "Keys inside the screens",
+      "icon": "minecraft:lectern",
+      "kind": "what",
+      "q": ["keyboard shortcuts in the talk screen", "number keys in talk", "keys in the town books", "shortcuts in the shop screen", "how do i close a screen", "back key in menus"],
+      "kw": ["shortcuts", "numbers", "tab", "escape", "keys"],
+      "answer": "Most screens have their own keys: numbers pick options, Enter confirms, Esc goes back or closes.",
+      "more": ["Talk screen: 1-9 pick an option, T or Enter to type, Esc or Backspace back up, Esc to say goodbye.", "Town's books: 1-7 sections, Tab the next, left/right the pages.", "Counters: up/down, Enter, + and −, Tab through kinds, B to buy.", "Camera: Esc, Space, arrows, wheel, H.", "Guide: Enter, up/down history, Esc back."],
+      "related": ["talk_screen", "start_town_books", "biz_counters", "camera_while_filming"],
+      "covers": [],
+      "tips": ["The property office, business books, civic pages and finances have a Close button top right as well as Esc."]
+    },
+    {
+      "id": "keys_hide_labels",
+      "title": "Hiding labels (F1)",
+      "icon": "minecraft:glass",
+      "kind": "howto",
+      "q": ["how do i hide the icons over villagers", "hide speech bubbles", "f1 hides labels", "too much on screen", "hide quest marks"],
+      "kw": ["hide", "labels", "icons", "bubbles", "f1"],
+      "answer": "Press F1 to hide every label of the mod's: name tags, icons over heads, speech bubbles and outlines.",
+      "more": ["Name-tag detail and range are set in the camera screen."],
+      "controls": ["[F1]", "[K] → Name tags"],
+      "related": ["camera_clean", "keys_all"],
+      "covers": []
+    },
+    {
+      "id": "admin_time_speed",
+      "title": "Fast time ([ ] \\ keys)",
+      "icon": "minecraft:clock",
+      "kind": "howto",
+      "q": ["how do i speed up time", "make the village grow faster", "time speed keys", "fast forward time", "what do the bracket keys do", "time faster key", "watch the village grow quickly"],
+      "kw": ["faster", "speed", "time", "slower", "tick", "fastforward"],
+      "answer": "] speeds time up, [ slows it, \\ puts it back to normal. Only operators (or a single-player world's owner) can.",
+      "more": ["] steps time faster (2×, 4×, 8× … 256×, then max), [ a step slower, \\ back to normal; the village journal (J) has the same as buttons.", "The top right corner shows the speed asked for and what the server really manages."],
+      "controls": ["[]] faster · [[] slower · [\\] normal", "[J] → 1× 2× 4× … max"],
+      "warn": ["It speeds up everything, you included: watch from somewhere safe, or in creative or spectator."],
+      "related": ["camera_happening", "start_journal", "admin_config"],
+      "covers": ["key:time_faster", "key:time_slower", "key:time_normal"]
+    }
+  ]
+}

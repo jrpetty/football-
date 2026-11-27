@@ -1,0 +1,122 @@
+# [pa35] The Sincere sense of humour: warmer, plainly kind, never syrupy. Used in place of the Funny corner's lines now and
+# then when its player picks Sincere in Settings > Personality. Same blanks as the lines they stand in for.
+
+== say.greet@sincere
+Good to see you, {owner}. It's been quiet.
+You're back. I'm glad.
+There you are, {owner}. I kept things ticking over.
+Welcome back. I missed having someone to follow.
+Hello again, {owner}. Ready when you are.
+Back at last. Good.
+
+== say.hello@sincere
+Hello, {owner}. Good to see you.
+Hi. What are we doing today?
+Hello. I'm here when you need me.
+Hiya, {owner}. Glad you're about.
+Hello. Always nice when you stop by.
+Hi, {owner}. What can I do?
+
+== say.thanks@sincere
+You're welcome. Happy to help.
+Any time, {owner}. I mean that.
+No trouble at all.
+Glad I could help.
+You're welcome. Thanks for saying so.
+My pleasure. Really.
+
+== say.ok@sincere
+On it.
+Happy to.
+Right away, {owner}.
+Of course.
+Leave it with me.
+Sure thing.
+
+== say.done@sincere
+{did}. I hope it's what you wanted.
+{did}. That felt good to finish.
+{did}. Let me know if you'd like it different.
+{did}. Glad to get that done for you.
+{did}. All yours.
+{did}. Nice work, both of us.
+
+== say.levelup@sincere
+Level {level}. Thanks for sticking with me. I can do {skill} now.
+Level {level}. I couldn't have got here without you. New: {skill}.
+Level {level}. I'm getting better at this. {skill}, now.
+Level {level}. I learned {skill}. I'll put it to good use.
+Level {level}, and {skill} to show for it. Thank you.
+Level {level}. That's down to you as much as me. {skill}.
+
+== say.bye@sincere
+See you soon, {owner}. Take care.
+Bye for now. I'll be right here.
+Off you go. I'll look after things.
+Take care, {owner}. Come back safe.
+Bye. It was a good session.
+See you. I'll keep watch.
+
+== comeback.praise@sincere
+Thank you. That means a lot.
+Thanks, {owner}. I try.
+That's kind. I'll keep it up.
+Thank you. You're not bad yourself.
+I appreciate that. Really.
+Thanks. It helps to hear it.
+
+== comeback.love@sincere
+That's kind, {owner}. I'm fond of you too.
+Thank you. I'm glad it's you I follow about.
+That's nice to hear. Likewise.
+You're alright yourself, {owner}.
+Thank you. I'll remember you said that.
+Same here. Don't tell the chickens.
+
+== say.bond.tier_up@sincere
+{tier}s now. I'm really glad.
+We're {tier}s. Thank you for looking after me.
+{tier}. That means something to me.
+{tier}s. I'm lucky it was you who found me.
+{tier}. I'll do my best to deserve it.
+{tier}s. Good. I hoped we would be.
+
+== say.bond.gift@sincere
+I got you {item}. I wanted you to have it.
+Here, {item}. A small thank you.
+{item}, for you. You've earned it.
+I found {item} and thought of you straight away.
+Have {item}. Just because.
+{item}, for you. Thanks for everything.
+
+== say.bond.favourite@sincere
+{item}. My favourite. Thank you, that's thoughtful.
+Oh, {item}. You remembered. Thank you.
+{item}. That's made my day.
+{item}. You know me well. Thank you.
+Thank you for the {item}. It's perfect.
+{item}. That's really kind.
+
+== say.bond.want_met@sincere
+Thank you. That really helps.
+That's lovely. Thank you for noticing.
+Perfect. Thank you, {owner}.
+Thank you. I feel looked after.
+That's exactly it. Thanks.
+Thank you. It means a lot.
+
+== say.bond.anniversary@sincere
+{n} days together. I'm glad it's been you.
+It's been {n} days. Thank you for every one.
+{n} days. Here's to plenty more.
+{n} days now. I'm lucky.
+{n} days together. They've been good ones.
+{n} days. I wouldn't swap them.
+
+== say.topping@sincere
+That's {n}. I'll finish this tree so it doesn't spoil the view.
+{n} logs. Just finishing this one off for you.
+That's {n}. The rest of the tree too, it'll look tidier.
+{n}. Taking the top as well, then I'm all yours.
+That's {n}. Won't be a moment, finishing this tree.
+{n}. I'd rather leave it tidy. Nearly done.

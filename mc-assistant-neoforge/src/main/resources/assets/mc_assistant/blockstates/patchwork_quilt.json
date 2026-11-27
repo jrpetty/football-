@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,tucked=false": {
+      "model": "mc_assistant:block/patchwork_quilt"
+    },
+    "facing=east,tucked=false": {
+      "model": "mc_assistant:block/patchwork_quilt",
+      "y": 90
+    },
+    "facing=south,tucked=false": {
+      "model": "mc_assistant:block/patchwork_quilt",
+      "y": 180
+    },
+    "facing=west,tucked=false": {
+      "model": "mc_assistant:block/patchwork_quilt",
+      "y": 270
+    },
+    "facing=north,tucked=true": {
+      "model": "mc_assistant:block/patchwork_quilt_tucked"
+    },
+    "facing=east,tucked=true": {
+      "model": "mc_assistant:block/patchwork_quilt_tucked",
+      "y": 90
+    },
+    "facing=south,tucked=true": {
+      "model": "mc_assistant:block/patchwork_quilt_tucked",
+      "y": 180
+    },
+    "facing=west,tucked=true": {
+      "model": "mc_assistant:block/patchwork_quilt_tucked",
+      "y": 270
+    }
+  }
+}

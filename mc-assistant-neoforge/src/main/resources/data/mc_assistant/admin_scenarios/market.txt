@@ -1,0 +1,9 @@
+# [admin] A busy shopping day in the nearest town: the stores full, coin in the treasury, the traders in, visitors come.
+village admin economy fill all
+village admin economy fill age
+village admin economy coin 2000
+village admin economy market
+village admin events now visitor merchant
+village admin events now visitor tourist
+village admin people needs folk:@all
+say Market day: the stalls and the shop are stocked, the traders and visitors are in.

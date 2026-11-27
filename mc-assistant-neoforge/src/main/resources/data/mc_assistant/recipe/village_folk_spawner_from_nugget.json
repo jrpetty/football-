@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": { "item": "minecraft:bread" },
+    "N": { "item": "minecraft:gold_nugget" }
+  },
+  "pattern": [
+    " B ",
+    "BNB",
+    " B "
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:village_folk_spawner"
+  }
+}

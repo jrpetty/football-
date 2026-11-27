@@ -1,0 +1,578 @@
+package com.jrpetty.mcassistant.entity;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * The town's own works, done by hand. Every street worn into a path, every square paved,
+ * lamp post put up, garden fenced, house refaced or raised a storey, ground levelled, jetty
+ * laid, gate hung, stall set out, sign nailed up and grave dug is paid for out of the
+ * stores. With this, it is also done by somebody: a folk from the village walks to the spot,
+ * and the work happens there in its hands. Until a folk has got there, the work waits.
+ *
+ * <p>Each piece of town work (the streets, the gardens, the road...) has a crew of one. The
+ * crew is a hand the village can spare: one between trades, a carrier or a storekeeper, one
+ * with nothing to work at, or the trade the work belongs to (a fisher for the jetty, a guard
+ * for the gate). It is never the watch at night, never the builder leading a build, and
+ * never more than one hand in eight at once. A crew hand downs its own tools while on it,
+ * and goes back to them once the town's work has not called it for half a minute. Town work
+ * is done by day.
+ *
+ * <p>Usage, in a town system, before it takes the materials and sets the blocks:
+ * <pre>    if (!TownJobs.atWork(level, v, "streets", spot, "laying the streets")) return;</pre>
+ */
+public final class TownJobs {
+
+    private TownJobs() {}
+
+    /** How near the spot a hand must stand to work it. */
+    static final int REACH = 6;
+    /** How long a hand stays on the town's work after its last call. */
+    static final long HOLD = 600;
+    /**
+     * A hand sticks to the spot it was sent to while it is still being called there: another spot
+     * waits its turn. Otherwise every house in a round would pull it its way in turn and it would
+     * get to none of them.
+     */
+    static final long STICKY = 100;
+    /**
+     * A hand's turn on the town's work, and then its rest from it: it goes back to its own trade
+     * (and, between trades, gets the chance to look for ground) while another takes its place.
+     * The road out to a colony is a long walk, so its crew does a longer turn.
+     */
+    static final long SHIFT = 2400, ROAD_SHIFT = 6000, REST = 4800;
+    /**
+     * A village of fewer grown folk than this spares nobody for its finer works (the streets, the
+     * lamps, the gardens, the signs): every hand it has is needed at its trade and on its first
+     * buildings. Its beds are made up and its stores given room all the same.
+     */
+    static final int SETTLED = 5;
+
+    static final class Crew {
+        final UUID folk;
+        BlockPos at;
+        String what = "";
+        long calledAt, spotCalledAt = -100000L, since;
+        int walkTick = -1000;
+        int pieces;
+        /** [vision27] When it was sent to this spot (the walk there timed: a spot it cannot reach is worked from as near
+         *  as it can get). */
+        long sentAt;
+        /** [vision27] Its way to the spot itself found not to get there (a bank, a wall): make for the near side. */
+        boolean unreach;
+
+        @Nullable BlockPos window;
+
+        Crew(UUID folk) { this.folk = folk; }
+    }
+
+    private static final org.slf4j.Logger LOG_LIFE = com.mojang.logging.LogUtils.getLogger();
+    private static final Map<String, Crew> CREW = new ConcurrentHashMap<>();
+    private static final Map<UUID, String> ON = new ConcurrentHashMap<>();
+    /** Hands resting from the town's work after a turn at it, till when. */
+    private static final Map<UUID, Long> RESTING = new ConcurrentHashMap<>();
+    /** [life28] The town's works that last asked for a hand and found none to spare, and when (the census, the tests). */
+    private static final Map<String, Long> UNSTAFFED = new ConcurrentHashMap<>();
+
+    /** [life28] Could the town's works call this folk now (fit, on no other works, not a miner the age keeps at its mine)? */
+    static boolean callable(ServerLevel level, VillageFolkEntity f) {
+        UUID id = f.ownerId();
+        if (id == null || !fit(f, "") || busy(f) || PostStints.busy(f)) return false;
+        if (f.stationTask() == AssistantEntity.StationTask.NONE && f.workZone() == null) return false;
+        if (SmelterFuel.kept(level, f)) return false;                 // [econ32] the age's iron raw at its smelters
+        if (Enterprise.benchFirst(f)) return false;                   // [biz30d] its firm's shelf short: its bench first
+        return !(f.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, id));
+    }
+
+    /** [life28] The works of this town waiting on a hand just now (asked within the last ten seconds and none to spare). */
+    public static java.util.List<String> unstaffed(UUID village, long now) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        String prefix = village + "/";
+        for (Map.Entry<String, Long> e : UNSTAFFED.entrySet()) {
+            if (e.getKey().startsWith(prefix) && now - e.getValue() <= 200) out.add(e.getKey().substring(prefix.length()));
+        }
+        return out;
+    }
+    /** The game tests that check what the works build (not who builds it) have them done at once. */
+    private static volatile boolean instant;
+
+    public static void resetForTests() {
+        UNSTAFFED.clear();                                             // [life28]
+        CREW.clear();
+        ON.clear();
+        RESTING.clear();
+        HOMEWARD.clear();
+    }
+
+    /** Tests: the works done at once (true), or by hand (false, as in a real game). */
+    public static void instantForTests(boolean on) {
+        instant = on;
+    }
+
+    /** [war-peace] Whether the works are being done at once (so a command that turns it on can put it back as it was). */
+    public static boolean instantNow() {
+        return instant;
+    }
+
+    public static boolean atWork(ServerLevel level, Villages.Village v, String works, BlockPos at, String what) {
+        return atWork(level, v, works, at, what, null);
+    }
+
+    /**
+     * Is a hand at this spot to do this piece of the town's work, now? If not, one is sent and
+     * the work waits for it. True once a hand stands within reach of the spot: it turns to the
+     * work and swings, and the caller then takes the materials and sets the blocks.
+     */
+    public static boolean atWork(ServerLevel level, Villages.Village v, String works, BlockPos at, String what,
+                                 @Nullable AssistantEntity.StationTask prefer) {
+        if (instant) return true;
+        long t = level.getDayTime() % 24000L;
+        if (t >= 12500L && t < 23500L) return false;                 // by day
+        UUID id = v.id();
+        if (Raids.underAlarm(id)) return false;
+        if (Weather.stormy(level)) return false;                       // [wf] nobody up a ladder in a thunderstorm
+        long now = level.getGameTime();
+        String key = id + "/" + works;
+        Crew c = CREW.get(key);
+        VillageFolkEntity f = c == null ? null : live(level, c.folk);
+        if (f != null && least(works) && !key.equals(ON.get(f.getUUID()))) {
+            CREW.remove(key);                                        // its hand taken for other works: these wait
+            return false;
+        }
+        if (f == null || !fit(f, works)) {
+            if (c != null) ON.remove(c.folk);
+            f = choose(level, v, works, at, prefer, now);
+            if (f == null) { UNSTAFFED.put(key, now); return false; }    // [life28] the town's work waiting on a hand
+            UNSTAFFED.remove(key);
+            Crew back = HOMEWARD.remove(f.getUUID());          // called out again on its way home
+            if (back != null) release(level, f, back);
+            c = new Crew(f.getUUID());
+            c.since = now;
+            CREW.put(key, c);
+            ON.put(f.getUUID(), key);
+            f.clearQueue();
+            f.getNavigation().stop();
+            f.brain("called to the town's work: " + what);
+            Business firm = Enterprise.employerOf(id, f);               // [biz30d] the log: a firm's hand called off its bench
+            if (firm != null) LOG_LIFE.info("[MCA-TOWNJOBS] {}: {}, a hand of {}, called to the town's work: {}", Villages.name(id), f.displayNameCap(), firm.name, what);
+        }
+        // [tp46] The way to the mine keeps its hand till it is done, once it has got there (a fresh hand each turn spent its
+        // turn on the walk out to the bank, and the bridge stood "waiting for a hand" half of every day); one that never gets
+        // there in its turn is let go for another as ever.
+        if (!(MINEWAY.equals(works) && c.pieces > 0) && now - c.since > (works.startsWith("road/") ? ROAD_SHIFT : SHIFT)) {
+            // Its turn is done: back to its own work, and the next call sends somebody else.
+            CREW.remove(key);
+            ON.remove(f.getUUID());
+            RESTING.put(f.getUUID(), now + REST);
+            sendHome(level, f, c);
+            f.brain("its turn at the town's work done: " + c.what);
+            return false;
+        }
+        boolean sameArea = c.at != null && c.at.distSqr(at) <= (double) (REACH * 2) * (REACH * 2);
+        if (c.at != null && !sameArea && now - c.spotCalledAt < STICKY) return false;   // busy at another spot: this waits its turn
+        if (c.at == null || !sameArea) { c.sentAt = now; c.unreach = false; }   // [vision27]
+        c.at = at.immutable();
+        c.spotCalledAt = now;
+        c.what = what;
+        c.calledAt = now;
+        f.hobbyNow = what;
+        // [vision27] A spot it cannot get right up to (a plot raised over the street on its own bank, a wall's top): after
+        // half a minute's trying, worked from the nearest it got, if that is near enough to reach up to. A villa paid for
+        // and ordered sat all day at "waiting for a hand": its hands walked to the foot of its bank and stood there.
+        boolean stuckNear = (c.unreach || now - c.sentAt > 600L) && f.getNavigation().isDone() && near(f, at, REACH * 2 + 2)
+            && Math.abs(f.getY() - at.getY()) <= 8;
+        if (near(f, at, REACH) || stuckNear) {
+            f.getLookControl().setLookAt(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
+            f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            if (c.pieces++ % 4 == 0) {
+                level.playSound(null, at, SoundEvents.WOOD_PLACE, SoundSource.NEUTRAL, 0.6F, 0.9F + level.getRandom().nextFloat() * 0.2F);
+            }
+            f.note(AssistantEntity.Deed.BLOCKS_BUILT, 1);
+            return true;
+        }
+        if (f.getNavigation().isDone() || f.tickCount - c.walkTick > 60) {
+            f.walkTo(approach(f, c, at, now), 1.0D);
+            noteWay(f, c, at);
+            c.walkTick = f.tickCount;
+        }
+        return false;
+    }
+
+    /** [trade-world] The hand at these works just now (the road gang's, paid by the stretch: RoadWorks), or null. */
+    @Nullable
+    public static VillageFolkEntity handAt(ServerLevel level, UUID village, String works) {
+        Crew c = CREW.get(village + "/" + works);
+        return c == null ? null : live(level, c.folk);
+    }
+
+    /** Is this folk on the town's work just now (its own trade waits)? */
+    /**
+     * [townlife] The works that wait for all the others: a hand at them is a hand to spare for anything
+     * else. (A town of eight had its one hand putting up the welcome sign while its streets waited.)
+     */
+    static final String LEAST = "signs";
+    /**
+     * [leisure] The town's bench (Pastimes: the lanterns, the lutes, the boards) waits with the signs: a town of eight
+     * had a hand making a paper lantern at the storehouse while its streets went unlaid.
+     */
+    static final String BENCH = "pastimes";
+
+    /** [city9] The streets' works: the paving, and the doors' ways and lamps (a works key, or a crew's "village/works"). */
+    static boolean streetsWork(String works) {
+        return works != null && (works.equals("streets") || works.equals("paving") || works.endsWith("/streets") || works.endsWith("/paving"));
+    }
+
+    /** Works that wait for all the others. */
+    static boolean least(String works) {
+        return works.equals(LEAST) || works.equals(BENCH);
+    }
+
+    private static boolean onLeast(VillageFolkEntity f) {
+        String k = ON.get(f.getUUID());
+        return k != null && (k.endsWith("/" + LEAST) || k.endsWith("/" + BENCH));
+    }
+
+    /** Is a hand at this town's work anywhere but at these works, just now? */
+    public static boolean busyElsewhere(ServerLevel level, UUID village, String works) {
+        String prefix = village + "/", mine = prefix + works;
+        for (Map.Entry<String, Crew> e : CREW.entrySet()) {
+            if (!e.getKey().startsWith(prefix) || e.getKey().equals(mine)) continue;
+            VillageFolkEntity f = live(level, e.getValue().folk);
+            if (f != null && busy(f)) return true;
+        }
+        return false;
+    }
+
+    public static boolean busy(VillageFolkEntity f) {
+        String key = ON.get(f.getUUID());
+        if (key == null) return false;
+        Crew c = CREW.get(key);
+        if (c == null || !c.folk.equals(f.getUUID())) {
+            ON.remove(f.getUUID());
+            return false;
+        }
+        return f.level().getGameTime() - c.calledAt <= HOLD;
+    }
+
+    /**
+     * From the folk's tick: while it is on the town's work, it goes to the spot and stays there,
+     * at the work. True while it is busy with it.
+     */
+    public static boolean hold(VillageFolkEntity f, ServerLevel level) {
+        String key = ON.get(f.getUUID());
+        if (key == null) return homeward(level, f);
+        Crew c = CREW.get(key);
+        if (c == null || !c.folk.equals(f.getUUID()) || level.getGameTime() - c.calledAt > HOLD || !fit(f, key)) {
+            ON.remove(f.getUUID());
+            if (c != null && c.folk.equals(f.getUUID())) {
+                CREW.remove(key);
+                sendHome(level, f, c);
+            }
+            return false;
+        }
+        if (c.at == null) return false;
+        keepAwake(level, f, c);
+        if (!near(f, c.at, REACH - 1)) {
+            if (f.getNavigation().isDone() || f.tickCount - c.walkTick > 60) {
+                f.walkTo(approach(f, c, c.at, level.getGameTime()), 1.0D);   // [vision27] the near side, if the spot cannot be reached
+                noteWay(f, c, c.at);
+                c.walkTick = f.tickCount;
+            }
+        } else {
+            f.getNavigation().stop();
+            f.getLookControl().setLookAt(c.at.getX() + 0.5, c.at.getY() + 0.5, c.at.getZ() + 0.5);
+        }
+        f.hobbyNow = c.what;
+        f.lastLeisureTick = f.tickCount;
+        return true;
+    }
+
+    /** What this folk is doing for the town, or null. */
+    @Nullable
+    public static String doing(VillageFolkEntity f) {
+        String key = ON.get(f.getUUID());
+        Crew c = key == null ? null : CREW.get(key);
+        return c == null || !busy(f) ? null : c.what;
+    }
+
+    // ------------------------------------------------------------------ who
+
+    @Nullable
+    private static VillageFolkEntity live(ServerLevel level, UUID u) {
+        return level.getEntity(u) instanceof VillageFolkEntity f && f.isAlive() ? f : null;
+    }
+
+    /** Free to be put on the town's work? */
+    static boolean fit(VillageFolkEntity f, String works) {
+        if (!f.isAlive() || f.isBaby() || f.isSleeping() || f.isHired() || f.getTarget() != null) return false;
+        if (f.trip() != null || f.expedition() != null || Nether.away(f) || Drover.busy(f)) return false;
+        if (FriendVisits.away(f) || Visitors.is(f)) return false;               // [batchG] away at a friend's; or nobody's to call on
+        if (f.talkPartner() != null || f.companionPlayer() != null || f.guidePlayer() != null) return false;
+        if (Assemblies.attending(f) || Patrols.escorting(f)) return false;      // (or walking with the leader)
+        if (FireBrigade.onIt(f) || Weather.sheltering(f)) return false;          // [wf] at a fire, or in out of a storm
+        if (Sport.busy(f)) return false;                                         // [batchC] at a match, a contest, the butts, away
+        if (Fleet.out(f) || Auctions.busy(f) || FishMarket.busy(f)) return false;   // [fleet] at sea, at the auction, at the fish market
+        if (Engineers.abroad(f)) return false;                                   // [redstone] at a machine, or sent to the gate's lever
+        if (f.stationTask() == AssistantEntity.StationTask.GUARD && (f.level().isNight() || f.onWatch()) && !works.endsWith("watch")) return false;
+        UUID id = f.ownerId();
+        return id == null || !Villages.holdsTheLead(id, f.getUUID(), f.level().getGameTime());
+    }
+
+    /** The hand the village can best spare for this work, near enough the spot; or null if it has none to spare. */
+    @Nullable
+    static VillageFolkEntity choose(ServerLevel level, Villages.Village v, String works, BlockPos at,
+                                    @Nullable AssistantEntity.StationTask prefer, long now) {
+        int adults = 0, busy = 0;
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (a.isBaby()) continue;
+            adults++;
+            if (a instanceof VillageFolkEntity f && ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) {
+                if (!streetsWork(works) && streetsWork(ON.get(f.getUUID()))) continue;   // [city9] the streets' hands are on top of the eighth
+                busy++;
+            }
+        }
+        int may = allowance(adults, busy, works);
+        // [life28] Past the town's share of hands for its works, a hand with nothing at all to do (filling its time:
+        // Busywork) is still a hand to spare, up to half the town: no folk stands idle while the town's work waits on a hand.
+        boolean idleOnly = may == NONE_TO_SPARE;
+        if (idleOnly && busy >= Math.max(1, adults / 2)) return null;
+        java.util.Set<AssistantEntity.StationTask> over = null;
+        if (may == IDLE_ONLY) {
+            over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);
+            for (AssistantEntity.StationTask t : AssistantEntity.StationTask.values()) {
+                if (Villages.overStaffed(v.id(), t)) over.add(t);
+            }
+        }
+        RESTING.values().removeIf(until -> until <= now);
+        VillageFolkEntity best = null;
+        double bestScore = -Double.MAX_VALUE;
+        java.util.Map<String, Integer> passed = new java.util.TreeMap<>();   // [life28] why the idle hands were passed over (the log)
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (a instanceof VillageFolkEntity g && Busywork.spare(g)) {
+                String why = !fit(g, works) ? "unfit" : ON.containsKey(g.getUUID()) && busy(g) ? "on other works"
+                    : PostStints.busy(g) ? "post" : g.stationTask() == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id()) && !MINEWAY.equals(works) ? "mine kept"
+                    : SmelterFuel.kept(level, g) ? "furnaces kept"                                        // [econ32]
+                    : Enterprise.benchFirst(g) ? "its firm's shelf short"                                // [biz30d]
+                    : g.stationTask() == AssistantEntity.StationTask.NONE && g.workZone() == null ? "no trade yet" : "";
+                if (!why.isEmpty()) passed.merge(why, 1, Integer::sum);
+            }
+            if (!(a instanceof VillageFolkEntity f) || !fit(f, works)
+                || ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) continue;
+            boolean idleHand = Busywork.spare(f);                         // [life28] nothing at all to do just now
+            if (RESTING.containsKey(f.getUUID()) && !idleHand) continue; // had its turn: somebody else's now (unless it stands idle)
+            if (PostStints.busy(f)) continue;                            // [roles-e] at its post's work: the wagon, the town's plans
+            // [city9] The streets' hands, past the eighth, are never a post's holder (its stints would wait on the streets).
+            if (streetsWork(works) && (f == Wheelwrights.holder(v.id()) || f == TownPlanner.holder(v.id()))) continue;
+            if (idleOnly && !idleHand) continue;
+            if (over != null && !spare(f, over) && !idleHand) continue;  // past the eighth: only a hand standing idle
+            AssistantEntity.StationTask trade = f.stationTask();
+            // [growth24] the age waits on the mine; [tp43] but its miners are the first hands for the bridge out to it
+            if (trade == AssistantEntity.StationTask.MINE && MineHands.kept(level, v.id()) && !MINEWAY.equals(works)) continue;
+            if (SmelterFuel.kept(level, f)) continue;                    // [econ32] the age's iron raw at the smelters
+            // [biz30d] A firm's hand whose firm's shelf is short is at its bench (Enterprise.benchFirst), not the town's works:
+            // a bakery's two hands were called out to washing lines, rain barrels and the green on the square eight times in a
+            // morning while its loaves ran out and the town's folk went without (the firm paying their wages all the while).
+            if (Enterprise.benchFirst(f)) continue;
+            // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a
+            // folk with no ground for it yet is just the hand to spare: see below.)
+            if (trade == AssistantEntity.StationTask.NONE && f.workZone() == null) continue;
+            double score = 0;
+            if (prefer != null && trade == prefer) score += 60;
+            if (MINEWAY.equals(works) && trade == AssistantEntity.StationTask.MINE) {
+                if (MineWay.farSide(f)) continue;                        // [tp43] over the water at the mine: it cannot come over
+                score += 80;                                             // [tp43] the miners build their own way out
+            }
+            if (f.workZone() == null && trade != AssistantEntity.StationTask.HAUL
+                && trade != AssistantEntity.StationTask.STORE && trade != AssistantEntity.StationTask.GUARD) score += 40;   // between grounds
+            switch (trade) {
+                case NONE -> score += 50;
+                case HAUL -> score += 35;
+                case STORE -> score += 30;
+                case GUARD -> score += works.endsWith("watch") ? 50 : -60;
+                case SCOUT -> score -= 40;
+                case CAVE -> score -= 40;                // [caves] its day is down the caves
+                case FERRY -> score -= 40;               // [transport] its day is at the ferry
+                case GOLEMS -> score += works.equals("golem") ? 40 : -20;   // [golems] the town's golem is its work
+                case FIREWORKS -> score -= 15;           // [fireworks] its day is at the powder hut
+                case CARTOGRAPHER -> score -= Cartographers.surveying(f) ? 60 : 15;   // [cartographer] out with its sheets, or at its table
+                case EMERALD -> score -= 40;             // [emerald] its day is on the road to the villagers
+                case DIVER -> score -= 40;               // [diver] its day is in the water (and it watches it)
+                case NETHER -> score -= 60;              // [nether] its day is through the gateway, or resting from it
+                case REDSTONE -> score -= 20;            // [redstone] its day is at the machines, and its one hand
+                case HEAL -> score -= 40;                // [roles-a] its day is at the infirmary and the bedsides
+                default -> { if (trade.isCraft()) score -= 10; }
+            }
+            if (f.workedOut()) score += 25;                              // nothing to work at in its own trade
+            if (idleHand) score += 45;                                   // [life28] stood idle: the first to call
+            score += Hospitality.townWorkLean(f, works);                 // [dining] the baker to the ovens; the floor kept at its post
+            score += Sexton.lean(f, works);                              // [roles-a] the sexton to the graves and the chapel's candles
+            score += Lamplighter.lean(f, works);                         // [roles-a] a quarter's warden to the street lamps
+            score += Windmill.lean(f, works);                            // [roles-c] the miller to the mill
+            if (!f.missingEssentials().isEmpty()) score += 20;            // short of its kit: its trade is idle anyway
+            score -= Math.sqrt(f.blockPosition().distSqr(at)) / 4.0;
+            if (score > bestScore) { bestScore = score; best = f; }
+        }
+        if (best == null && !passed.isEmpty()) LOG_LIFE.info("[MCA-TOWNJOBS] {}: {} found no hand; idle hands passed over: {} (may {}, busy {} of {})",
+            Villages.name(v.id()), works, passed, may, busy, adults);
+        return best;
+    }
+
+    /**
+     * A hand standing idle that its trade can spare: nothing done at its trade a while, and either a
+     * trade with more hands than the village's shape wants of it (its goods piling up in the stores
+     * as often as not), or none to work at it with (its kit still to come). Never a craft's one hand,
+     * a courier or the storekeeper (the storehouse's staff), nor the watch.
+     */
+    static boolean spare(VillageFolkEntity f, java.util.Set<AssistantEntity.StationTask> over) {
+        AssistantEntity.StationTask trade = f.stationTask();
+        if (trade == AssistantEntity.StationTask.HAUL || trade == AssistantEntity.StationTask.STORE
+            || trade == AssistantEntity.StationTask.GUARD || trade.isCraft()) return false;
+        if (!f.workedOut()) return false;
+        return trade == AssistantEntity.StationTask.NONE || !f.missingEssentials().isEmpty() || over.contains(trade);
+    }
+
+    /** [tidy] The tidy crew's works (Tidy): called only with an eyesore waiting, it may have the one hand past the eighth
+     *  (a town of forty had its works' hands all at the streets and beds, and a dropped torch lay four days). */
+    static final String TIDY = "tidy";
+
+    /** The works a village has done even while it is young: its beds made up, room in its stores. */
+    /** What a town of so many grown folk, so many already at its works, may call for these works: nobody, a hand
+     *  standing idle in a trade with hands to spare only, or any hand. */
+    public static final int NONE_TO_SPARE = 0, IDLE_ONLY = 1, ANY = 2;
+
+    /** [tp43] The bridge on the way to a mine cut off by water (MineWay). */
+    static final String MINEWAY = "mineway";
+
+    public static int allowance(int adults, int busy, String works) {
+        if (adults < SETTLED && !essential(works) && !paid(works) && !MINEWAY.equals(works)) return NONE_TO_SPARE;   // [tp43] (the mine's bridge: its miners wait on it)   // a young village: its trades first
+        // Never more than one hand in eight — unless hands are standing idle in trades with more
+        // hands than they want (or short of their kit): then up to one in four, and the hands past
+        // the eighth only from those. The hundred had sixty standing about while its works waited,
+        // its one hand in eight (ten or eleven) already at them.
+        int cap = Math.max(1, adults / 8);
+        // The beds made up and room in the stores may have one hand past the eighth: a town of eight had
+        // one hand, always at the levelling on its hillside, and five houses stood a week with twelve beds
+        // unmade and no child born for want of one.
+        boolean extra = (essential(works) || works.equals(TIDY)) && busy < cap + 1;   // [tidy] the crew is never starved of its one hand
+        // [city9] Nor the streets: a town of ninety had its hands all at its signs, beds and gardens, and four days on not a
+        // yard of street laid. The paving's hand and the doors' ways' are on top of the eighth (and not counted against the
+        // other works'), so the roads, the beds and the rest keep theirs.
+        if (streetsWork(works) && busy < cap + 2) extra = true;
+        // [house34b] Nor a row's finishing: the town's other works kept the eighth's hands for days while its new terraces
+        // stood half in cobble and timber; their one hand is on top of the eighth, as the streets' are.
+        // (A city's eighth and the streets' two are always out at something: up to a third of the town, then.)
+        if (TerraceRows.ROWS_WORK.equals(works) && busy < Math.max(cap + 2, adults / 3)) extra = true;
+        // [vision27] Nor a paid order (a player's commission, a household's own house): it was quoted a time and paid for,
+        // and a villa ordered and paid for in a town of sixty sat all day at "waiting for a hand the town can spare",
+        // its one hand in eight always taken by the town's beds, signs and gardens first.
+        if (paid(works) && busy < Math.max(cap + 2, adults / 2)) extra = true;
+        // [tp43] Nor the bridge on the way to the mine: the mine waits on it, its miners kept off it meanwhile.
+        if (MINEWAY.equals(works) && busy < cap + 2) extra = true;
+        if (busy < cap || extra) return ANY;
+        return busy >= Math.max(1, adults / 4) ? NONE_TO_SPARE : IDLE_ONLY;
+    }
+
+    /** [vision27] Works somebody has paid for and been promised a time for: a commission (BuildOrders), a household's house. */
+    static boolean paid(String works) {
+        return works != null && (works.startsWith("commission") || works.equals("homebuild"));
+    }
+
+    static boolean essential(String works) {
+        return works.equals("beds") || works.equals("stores")
+            || works.equals("rebuild");                                  // [disasters] what a fire burnt put back
+    }
+
+    private static UUID owner(VillageFolkEntity f) {
+        return UUID.nameUUIDFromBytes(("mca-townjob-" + f.getUUID()).getBytes());
+    }
+
+    /** Out beyond the town (the road's head): the ground round the hand kept awake as it goes. */
+    private static void keepAwake(ServerLevel level, VillageFolkEntity f, Crew c) {
+        UUID id = f.ownerId();
+        Villages.Village v = id == null ? null : Villages.get(id);
+        BlockPos here = f.blockPosition();
+        boolean out = v != null && Math.max(Math.abs(here.getX() - v.centre().getX()), Math.abs(here.getZ() - v.centre().getZ()))
+            > Villages.townReach(id) + 16;
+        if (!out) {
+            release(level, f, c);
+            return;
+        }
+        if (c.window != null && c.window.distSqr(here) < 16 * 16) return;
+        if (c.window != null) com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, owner(f), c.window, 1, false);
+        com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, owner(f), here, 1, true);
+        c.window = here.immutable();
+    }
+
+    /** Hands whose turn ended out beyond the town, on their way home: the ground round each kept
+     *  awake till it is back. The ground used to be let go where the turn ended, and a farmer sent
+     *  to level a road's end stood frozen a hundred blocks out for the rest of the game. */
+    private static final Map<UUID, Crew> HOMEWARD = new ConcurrentHashMap<>();
+
+    private static void sendHome(ServerLevel level, VillageFolkEntity f, Crew c) {
+        if (c.window == null) return;                 // never left the town: nothing kept awake
+        c.calledAt = level.getGameTime();
+        HOMEWARD.put(f.getUUID(), c);
+    }
+
+    /** From the folk's tick: on its way home from the town's work, out beyond the town. */
+    private static boolean homeward(ServerLevel level, VillageFolkEntity f) {
+        Crew c = HOMEWARD.get(f.getUUID());
+        if (c == null) return false;
+        UUID id = f.ownerId();
+        Villages.Village v = id == null ? null : Villages.get(id);
+        if (v == null || level.getGameTime() - c.calledAt > 12000L) {
+            release(level, f, c);
+            HOMEWARD.remove(f.getUUID());
+            return false;
+        }
+        keepAwake(level, f, c);                       // the window goes with it, and is let go at home
+        if (c.window == null) {
+            HOMEWARD.remove(f.getUUID());
+            return false;
+        }
+        if (f.getNavigation().isDone() || f.tickCount - c.walkTick > 60) {
+            f.walkTo(v.centre(), 1.0D);
+            c.walkTick = f.tickCount;
+        }
+        f.brain("on the way home from the town's work");
+        return true;
+    }
+
+    private static void release(ServerLevel level, VillageFolkEntity f, Crew c) {
+        if (c.window != null) com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, owner(f), c.window, 1, false);
+        c.window = null;
+    }
+
+    /** [vision27] Where to walk for a spot: the spot; after a minute not there, its near side (the foot of its bank, the
+     *  nearer end of a wall), from where it can reach. */
+    private static BlockPos approach(VillageFolkEntity f, Crew c, BlockPos at, long now) {
+        if (!c.unreach && now - c.sentAt <= 1200L) return at;
+        double dx = f.getX() - at.getX(), dz = f.getZ() - at.getZ(), d = Math.sqrt(dx * dx + dz * dz);
+        if (d <= REACH * 2) return at;
+        return at.offset((int) Math.round(dx / d * REACH * 1.5), 0, (int) Math.round(dz / d * REACH * 1.5));
+    }
+
+    /** [vision27] Its way laid straight for the spot does not get there (no way at all, or one that stops short). */
+    private static void noteWay(VillageFolkEntity f, Crew c, BlockPos at) {
+        if (c.unreach) return;
+        net.minecraft.world.level.pathfinder.Path way = f.getNavigation().getPath();
+        if (way == null) {
+            if (f.getNavigation().isDone() && !near(f, at, REACH)) c.unreach = true;
+            return;
+        }
+        net.minecraft.core.BlockPos end = way.getTarget();
+        if (!way.canReach() && end != null && end.distSqr(at) < 4.0) c.unreach = true;   // its own straight way, not a road's leg
+    }
+
+    private static boolean near(VillageFolkEntity f, BlockPos at, int reach) {
+        double dx = f.getX() - (at.getX() + 0.5), dz = f.getZ() - (at.getZ() + 0.5);
+        return dx * dx + dz * dz <= (double) reach * reach && Math.abs(f.getY() - at.getY()) <= 5;
+    }
+}

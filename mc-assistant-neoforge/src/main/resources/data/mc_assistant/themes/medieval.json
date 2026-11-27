@@ -1,0 +1,293 @@
+// [styles] The medieval look: every town's, unless told otherwise. Block for block what the builders, the ages and the
+// building styles did before the look was data (StylesGameTests st01 holds it to that). THEMES.md says what each part is.
+{
+  "name": "Medieval",
+  "about": "timber, stone and slate: the folk's own look",
+  "selectable": true,
+  "thatch": true,
+
+  "woods": ["oak", "spruce", "birch", "dark_oak", "jungle", "acacia", "mangrove", "cherry"],
+  "dark_woods": ["dark_oak", "spruce", "mangrove"],
+
+  "sets": {
+    "great": ["hall", "chapel", "library", "granary", "tavern", "restaurant", "guesthouse", "market", "watchtower", "lighthouse",
+              "barracks", "belltower", "manor", "townhall"],
+    "homes": ["house", "house2"]
+  },
+
+  "lands": {
+    "default":  {"walls": "oak", "roof": "dark_oak", "floor": "spruce", "frame": "spruce",
+                 "footing": ["cobblestone", "stone", "andesite", "diorite", "granite", "cobbled_deepslate", "tuff"],
+                 "dressed": ["stone_bricks", "polished_andesite", "mossy_stone_bricks", "polished_diorite", "polished_granite", "deepslate_bricks"]},
+    "TAIGA":    {"walls": "spruce", "roof": "dark_oak", "floor": "spruce", "frame": "dark_oak",
+                 "footing": ["cobblestone", "stone", "andesite", "cobbled_deepslate", "diorite", "granite", "tuff"],
+                 "dressed": ["stone_bricks", "polished_andesite", "mossy_stone_bricks", "deepslate_bricks", "polished_diorite", "polished_granite"]},
+    "SNOW":     {"walls": "spruce", "roof": "dark_oak", "floor": "spruce", "frame": "dark_oak",
+                 "footing": ["cobblestone", "stone", "andesite", "cobbled_deepslate", "diorite", "granite", "tuff"],
+                 "dressed": ["stone_bricks", "polished_andesite", "mossy_stone_bricks", "deepslate_bricks", "polished_diorite", "polished_granite"]},
+    "FOREST":   {"walls": "birch", "roof": "dark_oak", "floor": "oak", "frame": "dark_oak",
+                 "footing": ["cobblestone", "stone", "andesite", "mossy_cobblestone", "diorite", "granite", "cobbled_deepslate"],
+                 "dressed": ["stone_bricks", "mossy_stone_bricks", "polished_andesite", "polished_diorite", "polished_granite", "deepslate_bricks"]},
+    "MOUNTAIN": {"walls": "spruce", "roof": "dark_oak", "floor": "spruce", "frame": "spruce",
+                 "footing": ["cobbled_deepslate", "cobblestone", "andesite", "tuff", "stone", "granite", "diorite"],
+                 "dressed": ["deepslate_bricks", "stone_bricks", "polished_deepslate", "polished_andesite", "tuff_bricks", "polished_granite"]},
+    "DESERT":   {"walls": "birch", "roof": "jungle", "floor": "acacia", "frame": "jungle",
+                 "footing": ["sandstone", "smooth_sandstone", "cobblestone", "stone", "andesite", "granite"],
+                 "dressed": ["cut_sandstone", "smooth_sandstone", "chiseled_sandstone", "stone_bricks", "polished_granite", "polished_andesite"]},
+    "SAVANNA":  {"walls": "acacia", "roof": "dark_oak", "floor": "acacia", "frame": "dark_oak",
+                 "footing": ["cobblestone", "stone", "granite", "andesite", "terracotta", "diorite"],
+                 "dressed": ["stone_bricks", "polished_granite", "polished_andesite", "bricks", "polished_diorite", "mud_bricks"]},
+    "JUNGLE":   {"walls": "jungle", "roof": "dark_oak", "floor": "jungle", "frame": "jungle",
+                 "footing": ["mossy_cobblestone", "cobblestone", "stone", "andesite", "granite", "diorite"],
+                 "dressed": ["mossy_stone_bricks", "stone_bricks", "polished_andesite", "polished_granite", "polished_diorite", "mud_bricks"]},
+    "SWAMP":    {"walls": "mangrove", "roof": "dark_oak", "floor": "spruce", "frame": "mangrove",
+                 "footing": ["mud_bricks", "cobblestone", "stone", "andesite", "mossy_cobblestone", "diorite"],
+                 "dressed": ["mud_bricks", "stone_bricks", "mossy_stone_bricks", "polished_andesite", "polished_diorite", "packed_mud"]},
+    "BADLANDS": {"walls": "dark_oak", "roof": "spruce", "floor": "acacia", "frame": "spruce",
+                 "footing": ["terracotta", "red_sandstone", "cobblestone", "stone", "granite", "andesite"],
+                 "dressed": ["cut_red_sandstone", "smooth_red_sandstone", "bricks", "stone_bricks", "polished_granite", "polished_andesite"]},
+    "MEADOW":   {"walls": "cherry", "roof": "spruce", "floor": "oak", "frame": "spruce",
+                 "footing": ["cobblestone", "stone", "andesite", "diorite", "granite", "cobbled_deepslate"],
+                 "dressed": ["stone_bricks", "polished_diorite", "polished_andesite", "mossy_stone_bricks", "polished_granite", "deepslate_bricks"]},
+    "COAST":    {"walls": "oak", "roof": "spruce", "floor": "spruce", "frame": "spruce",
+                 "footing": ["cobblestone", "stone", "andesite", "diorite", "granite", "cobbled_deepslate"],
+                 "dressed": ["stone_bricks", "polished_andesite", "polished_diorite", "mossy_stone_bricks", "polished_granite", "deepslate_bricks"]},
+    "RIVER":    {"walls": "oak", "roof": "spruce", "floor": "spruce", "frame": "spruce",
+                 "footing": ["cobblestone", "stone", "andesite", "diorite", "granite", "cobbled_deepslate"],
+                 "dressed": ["stone_bricks", "polished_andesite", "polished_diorite", "mossy_stone_bricks", "polished_granite", "deepslate_bricks"]}
+  },
+
+  "land_stone": {
+    "DESERT":   {"block": "cut_sandstone", "pay": ["sandstone", "cut_sandstone"], "each": 1},
+    "BADLANDS": {"block": "terracotta", "pay": ["terracotta", "orange_terracotta", "red_terracotta", "brown_terracotta", "yellow_terracotta"], "each": 1},
+    "MOUNTAIN": {"block": "polished_andesite", "pay": ["andesite", "polished_andesite"], "each": 1},
+    "JUNGLE":   {"block": "mossy_stone_bricks", "pay": ["mossy_stone_bricks"], "each": 1},
+    "SWAMP":    {"block": "mossy_stone_bricks", "pay": ["mossy_stone_bricks"], "each": 1},
+    "SNOW":     {"block": "stone_bricks", "pay": ["stone_bricks"], "each": 1}
+  },
+
+  "parts": {
+    "WALL":           ["woods(walls):{}_planks", "bamboo_planks"],
+    "FLOOR":          ["woods(floor):{}_planks", "bamboo_planks"],
+    "ROOF_BLOCK":     ["darkwoods(roof):{}_planks"],
+    "ROOF_STAIR":     ["darkwoods(roof):{}_stairs"],
+    "ROOF_STAIR_TOP": ["darkwoods(roof):{}_stairs"],
+    "ROOF_SLAB":      ["darkwoods(roof):{}_slab"],
+    "ROOF_SLAB_TOP":  ["darkwoods(roof):{}_slab"],
+    "POST":           ["darkwoods(frame):{}_log"],
+    "BEAM_ACROSS":    ["darkwoods(frame):{}_log"],
+    "BEAM_ALONG":     ["darkwoods(frame):{}_log"],
+    "FOUNDATION":     ["list(footing):{}"],
+    "WALL_LOW":       ["list(footing):{}"],
+    "MASONRY":        ["list(dressed):{}"]
+  },
+
+  "ages": {
+    "WALL": [
+      {"structures": ["manor"], "age_min": "IRON", "now": ["#planks"], "to": "bricks"},
+      {"home": false, "age_min": "STONE", "town_mod": [2, 0], "structures": ["infirmary", "chapel", "school", "bakery", "postoffice", "cafe"], "now": ["#planks", "cobblestone"], "to": "polished_diorite"},
+      {"home": false, "age_min": "STONE", "town_mod": [3, 0], "lands": ["PLAINS", "RIVER", "MEADOW", "FOREST", "TAIGA", "COAST"], "not_structures": "@great", "now": ["#planks"]},
+      {"home": false, "age_min": "STONE", "town_mod": [3, 1], "lands": ["PLAINS", "RIVER", "SAVANNA", "SWAMP", "MEADOW", "COAST"], "not_structures": "@great", "now": ["#planks", "cobblestone"], "to": "bricks"},
+      {"home": false, "age_min": "STONE", "now": ["#planks", "cobblestone"], "to": "$land_stone|stone_bricks"}
+    ],
+    "FOUNDATION": [
+      {"age": "NETHER", "structures": "@great", "now": ["stone_bricks", "mossy_stone_bricks", "cobblestone", "mossy_cobblestone"], "to": "quartz_bricks"},
+      {"age_min": "DIAMOND", "chance": 3, "now": ["stone_bricks"], "to": "mossy_stone_bricks"},
+      {"age_min": "DIAMOND", "chance": 3, "now": ["cobblestone"], "to": "mossy_cobblestone"},
+      {"age_min": "IRON", "now": ["cobblestone"], "to": "stone_bricks"}
+    ],
+    "WALL_LOW": [
+      {"age": "NETHER", "structures": "@great", "now": ["stone_bricks", "mossy_stone_bricks", "cobblestone", "mossy_cobblestone"], "to": "quartz_bricks"},
+      {"age_min": "DIAMOND", "chance": 3, "now": ["stone_bricks"], "to": "mossy_stone_bricks"},
+      {"age_min": "DIAMOND", "chance": 3, "now": ["cobblestone"], "to": "mossy_cobblestone"},
+      {"age_min": "IRON", "now": ["cobblestone"], "to": "stone_bricks"}
+    ],
+    "ROOF_STAIR": [
+      {"age_min": "DIAMOND", "structures": "@great", "now": ["#wooden_stairs", "deepslate_tile_stairs", "stone_brick_stairs"], "to": "like:cut_copper_stairs"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["brick_stairs", "sandstone_stairs", "red_sandstone_stairs"], "to": "like:cut_copper_stairs"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#wooden_stairs"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#wooden_stairs"], "to": "like:sandstone_stairs"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#wooden_stairs"], "to": "like:red_sandstone_stairs"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#wooden_stairs"], "to": "like:brick_stairs"},
+      {"age_min": "IRON", "now": ["#wooden_stairs"], "to": "like:deepslate_tile_stairs"}
+    ],
+    "ROOF_STAIR_TOP": [
+      {"age_min": "DIAMOND", "structures": "@great", "now": ["#wooden_stairs", "deepslate_tile_stairs", "stone_brick_stairs"], "to": "like:cut_copper_stairs"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["brick_stairs", "sandstone_stairs", "red_sandstone_stairs"], "to": "like:cut_copper_stairs"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#wooden_stairs"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#wooden_stairs"], "to": "like:sandstone_stairs"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#wooden_stairs"], "to": "like:red_sandstone_stairs"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#wooden_stairs"], "to": "like:brick_stairs"},
+      {"age_min": "IRON", "now": ["#wooden_stairs"], "to": "like:deepslate_tile_stairs"}
+    ],
+    "ROOF_SLAB": [
+      {"age_min": "DIAMOND", "structures": "@great", "now": ["#wooden_slabs", "deepslate_tile_slab", "stone_brick_slab"], "to": "like:cut_copper_slab"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["brick_slab", "sandstone_slab", "red_sandstone_slab"], "to": "like:cut_copper_slab"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#wooden_slabs"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#wooden_slabs"], "to": "like:sandstone_slab"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#wooden_slabs"], "to": "like:red_sandstone_slab"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#wooden_slabs"], "to": "like:brick_slab"},
+      {"age_min": "IRON", "now": ["#wooden_slabs"], "to": "like:deepslate_tile_slab"}
+    ],
+    "ROOF_SLAB_TOP": [
+      {"age_min": "DIAMOND", "structures": "@great", "now": ["#wooden_slabs", "deepslate_tile_slab", "stone_brick_slab"], "to": "like:cut_copper_slab"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["brick_slab", "sandstone_slab", "red_sandstone_slab"], "to": "like:cut_copper_slab"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#wooden_slabs"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#wooden_slabs"], "to": "like:sandstone_slab"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#wooden_slabs"], "to": "like:red_sandstone_slab"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#wooden_slabs"], "to": "like:brick_slab"},
+      {"age_min": "IRON", "now": ["#wooden_slabs"], "to": "like:deepslate_tile_slab"}
+    ],
+    "ROOF_BLOCK": [
+      {"age_min": "DIAMOND", "structures": "@great", "now": ["#planks", "deepslate_tiles", "stone_bricks"], "to": "cut_copper"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["bricks", "cut_sandstone", "cut_red_sandstone"], "to": "cut_copper"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#planks"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#planks"], "to": "cut_sandstone"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#planks"], "to": "cut_red_sandstone"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#planks"], "to": "bricks"},
+      {"age_min": "IRON", "now": ["#planks"], "to": "deepslate_tiles"}
+    ]
+  },
+
+  "styles": {
+    "TIMBERED": {
+      "look": {"walls": "birch", "roof": "spruce", "frame": "dark_oak"},
+      "dress": {
+        "WALL":       [{"band": true, "to": "axis_run:dark_oak_log|axis_run:spruce_log", "what": "the timber band"}],
+        "POST":       [{"to": "axis_y:dark_oak_log|axis_y:spruce_log", "what": "the corner posts"}],
+        "ROOF_STAIR": [{"now_not": ["#wooden_stairs"], "to": "like:spruce_stairs", "what": "the roof"}],
+        "ROOF_SLAB":  [{"now_not": ["#wooden_slabs"], "to": "like:spruce_slab", "what": "the roof"}],
+        "MASONRY":    [{"age_min": "STONE", "to": "bricks", "what": "the chimney"}]
+      },
+      "ornaments": {"shutters": "spruce_trapdoor", "chimney_fire": "campfire"},
+      "lamp_post": {"block": "dark_oak_fence", "pay": ["dark_oak_log", "dark_oak_fence"], "cost": 2},
+      "keep_roof": true,
+      "boxes_everywhere": true
+    },
+    "HILL_FORT": {
+      "look": {"roof": "dark_oak", "frame": "spruce"},
+      "dress": {
+        "WALL":       [{"age_min": "IRON", "to": "deepslate_bricks", "what": "the walls"},
+                       {"age_min": "STONE", "to": "cobblestone", "what": "the walls"}],
+        "POST":       [{"age_min": "STONE", "to": "stone_bricks", "what": "the corner posts"}],
+        "ROOF_STAIR": [{"age_min": "IRON", "to": "like:deepslate_tile_stairs", "what": "the roof"},
+                       {"age_min": "STONE", "to": "like:cobblestone_stairs", "what": "the roof"}],
+        "ROOF_SLAB":  [{"age_min": "IRON", "to": "like:deepslate_tile_slab", "what": "the roof"},
+                       {"age_min": "STONE", "to": "like:cobblestone_slab", "what": "the roof"}],
+        "MASONRY":    [{"to": "cobblestone", "what": "the chimney"}],
+        "WINDOW":     [{"side": true, "age_min": "STONE", "to": "cobblestone", "what": "the side windows walled up small"}]
+      },
+      "ornaments": {"banners": true, "battlements": {"block": "cobblestone_wall", "age_min": "STONE"}},
+      "lamp_post": {"block": "cobblestone_wall", "pay": ["cobblestone", "cobblestone_wall"], "cost": 2},
+      "bench": [{"block": "stone_brick_stairs", "pay": ["stone_bricks", "stone_brick_stairs"]},
+                {"block": "cobblestone_stairs", "pay": ["cobblestone", "cobblestone_stairs"]}]
+    },
+    "COASTAL": {
+      "look": {"walls": "birch", "roof": "spruce", "frame": "birch"},
+      "dress": {
+        "WALL":       [{"age_min": "STONE", "to": "polished_diorite", "what": "the walls"},
+                       {"to": "birch_planks", "what": "the walls"}],
+        "POST":       [{"to": "axis_y:stripped_birch_log|axis_y:stripped_spruce_log", "what": "the corner posts"}],
+        "MASONRY":    [{"age_min": "STONE", "to": "polished_diorite", "what": "the chimney"}],
+        "WINDOW":     [{"to": "like:{trim}_stained_glass_pane", "what": "the windows' glass"}]
+      },
+      "ornaments": {"banners": true, "by_door": {"kind": "barrel", "block": "barrel", "what": "a barrel by the door"}},
+      "lamp_post": {"block": "birch_fence", "pay": ["birch_log", "birch_fence"], "cost": 2}
+    },
+    "DESERT_COURT": {
+      "look": {"walls": "birch", "frame": "acacia"},
+      "dress": {
+        "WALL":       [{"age_min": "STONE", "to": "cut_sandstone", "what": "the walls"}],
+        "POST":       [{"age_min": "STONE", "to": "smooth_sandstone", "what": "the corner posts"}],
+        "ROOF_STAIR": [{"age_min": "STONE", "to": "like:sandstone_stairs", "what": "the roof"}],
+        "ROOF_SLAB":  [{"age_min": "STONE", "to": "like:sandstone_slab", "what": "the roof"}],
+        "MASONRY":    [{"to": "sandstone", "what": "the chimney"}]
+      },
+      "ornaments": {"by_door": {"kind": "pot", "block": "decorated_pot", "what": "a fired pot by the door"}},
+      "lamp_post": {"block": "sandstone_wall", "pay": ["sandstone", "sandstone_wall"], "cost": 2},
+      "bench": [{"block": "sandstone_stairs", "pay": ["sandstone", "sandstone_stairs"]}]
+    },
+    "FOREST_LODGE": {
+      "look": {"walls": "spruce", "roof": "dark_oak", "frame": "spruce"},
+      "dress": {
+        "WALL":       [{"to": "axis_run:{frame}_log|axis_run:spruce_log", "what": "the walls"}],
+        "POST":       [{"to": "axis_y:stripped_{frame}_log|axis_y:stripped_spruce_log", "what": "the corner posts"}],
+        "ROOF_STAIR": [{"now_not": ["#wooden_stairs"], "to": "like:dark_oak_stairs", "what": "the roof"}],
+        "ROOF_SLAB":  [{"to": "like:mossy_cobblestone_slab", "what": "the mossy ridge"}],
+        "MASONRY":    [{"to": "mossy_cobblestone", "what": "the chimney"}]
+      },
+      "ornaments": {"shutters": "spruce_trapdoor", "chimney_fire": "campfire",
+                    "by_door": {"kind": "sign", "block": "spruce_wall_sign", "what": "a carved board by the door"}},
+      "keep_roof": true
+    },
+    "GRAND_CIVIC": {
+      "look": {"walls": "oak", "roof": "dark_oak", "frame": "dark_oak"},
+      "dress": {
+        "WALL":       [{"age_min": "STONE", "to": "polished_andesite", "what": "the walls"}],
+        "POST":       [{"age_min": "STONE", "to": "chiseled_stone_bricks", "what": "the corner posts"}],
+        "MASONRY":    [{"age_min": "STONE", "to": "stone_bricks", "what": "the chimney"}]
+      },
+      "ornaments": {"banners": true},
+      "lamp_post": {"block": "stone_brick_wall", "pay": ["stone_bricks", "stone_brick_wall"], "cost": 2},
+      "bench": [{"block": "stone_brick_stairs", "pay": ["stone_bricks", "stone_brick_stairs"]},
+                {"block": "cobblestone_stairs", "pay": ["cobblestone", "cobblestone_stairs"]}]
+    }
+  },
+
+  "street": {"lamp_post": "spruce_fence", "light": "lantern"},
+
+  "palettes": {
+    "civic":       {"walls": "stone_bricks", "frame": "dark_oak_log", "roof_stair": "deepslate_tile_stairs", "roof_slab": "deepslate_tile_slab",
+                    "roof_block": "deepslate_tiles", "floor": "spruce_planks", "door": "spruce_door", "fence": "spruce_fence",
+                    "gate": "spruce_fence_gate", "bed": "red_bed", "carpet": "red_carpet"},
+    "house_stone": {"walls": "stone_bricks", "frame": "spruce_log", "roof_stair": "dark_oak_stairs", "roof_slab": "dark_oak_slab",
+                    "roof_block": "dark_oak_planks", "floor": "spruce_planks", "door": "spruce_door", "fence": "spruce_fence",
+                    "gate": "spruce_fence_gate", "bed": "red_bed", "carpet": "red_carpet"},
+    "house_brick": {"walls": "bricks", "frame": "dark_oak_log", "roof_stair": "deepslate_tile_stairs", "roof_slab": "deepslate_tile_slab",
+                    "roof_block": "deepslate_tiles", "floor": "oak_planks", "door": "dark_oak_door", "fence": "dark_oak_fence",
+                    "gate": "dark_oak_fence_gate", "bed": "blue_bed", "carpet": "blue_carpet"}
+  },
+
+  // What is building material at all, and what stands in for a short block, age by age (Materials). The theme's own
+  // lists above (parts, ages, styles, land stones, palettes) are always its material, whatever is listed here.
+  "materials": {
+    "forbidden": ["diamond_block", "emerald_block", "gold_block", "iron_block", "lapis_block", "netherite_block",
+                  "raw_iron_block", "raw_gold_block", "raw_copper_block", "copper_block", "amethyst_block", "budding_amethyst",
+                  "redstone_block", "coal_block", "tnt", "sponge", "wet_sponge", "slime_block", "honey_block", "bone_block",
+                  "netherrack", "*nether_brick*", "*nether_wart_block", "warped_wart_block", "*blackstone*", "*basalt*",
+                  "*quartz*", "*obsidian", "end_stone*", "*purpur*", "soul_sand", "soul_soil", "magma_block", "glowstone",
+                  "shroomlight", "crimson_*", "warped_*", "ancient_debris", "lodestone", "respawn_anchor", "sculk*", "reinforced_deepslate"],
+    "rough": ["dirt", "coarse_dirt", "rooted_dirt", "podzol", "mycelium", "grass_block", "mud", "muddy_mangrove_roots",
+              "gravel", "sand", "red_sand", "suspicious_sand", "suspicious_gravel", "clay", "snow_block", "moss_block",
+              "dried_kelp_block", "hay_block", "#wool", "#leaves", "pumpkin", "melon"],
+    "rough_until": "STONE",
+    "groups": {
+      "walls":  ["WALL", "WALL_LOW", "FOUNDATION", "GENERIC", "POST", "BEAM_ACROSS", "BEAM_ALONG", "MASONRY", "BRICK"],
+      "floors": ["FLOOR", "STONE_SLAB", "STONE_STAIR"],
+      "roofs":  ["ROOF_BLOCK", "ROOF_STAIR", "ROOF_STAIR_TOP", "ROOF_SLAB", "ROOF_SLAB_TOP"]
+    },
+    "fallback": {
+      "walls": {
+        "WOOD":  ["#planks", "#logs", "cobblestone", "stone", "andesite", "diorite", "granite", "cobbled_deepslate", "mud_bricks"],
+        "STONE": ["cobblestone", "stone", "stone_bricks", "andesite", "diorite", "granite", "cobbled_deepslate", "tuff", "mud_bricks",
+                  "sandstone", "#terracotta", "bricks", "#planks", "#logs"],
+        "IRON":  ["stone_bricks", "cobblestone", "stone", "smooth_stone", "bricks", "polished_andesite", "andesite", "polished_diorite",
+                  "diorite", "polished_granite", "granite", "deepslate_bricks", "cobbled_deepslate", "polished_deepslate", "tuff",
+                  "tuff_bricks", "mud_bricks", "sandstone", "cut_sandstone", "smooth_sandstone", "red_sandstone", "#terracotta",
+                  "mossy_cobblestone", "mossy_stone_bricks", "#planks", "#logs"]
+      },
+      "floors": {
+        "WOOD":  ["#planks", "#logs", "#slabs", "cobblestone", "stone"],
+        "STONE": ["#planks", "#slabs", "#stairs", "cobblestone", "stone", "stone_bricks", "smooth_stone", "#logs"],
+        "IRON":  ["#planks", "#slabs", "#stairs", "stone_bricks", "smooth_stone", "polished_andesite", "bricks", "cobblestone", "stone",
+                  "deepslate_tiles", "#logs"]
+      },
+      "roofs": {
+        "WOOD":  ["#wooden_stairs", "#wooden_slabs", "#planks", "#logs"],
+        "STONE": ["#wooden_stairs", "#wooden_slabs", "#stairs", "#slabs", "#planks", "cobblestone", "stone_bricks", "#logs"],
+        "IRON":  ["#wooden_stairs", "#wooden_slabs", "deepslate_tile_stairs", "stone_brick_stairs", "brick_stairs", "cobblestone_stairs",
+                  "#stairs", "#slabs", "#planks", "deepslate_tiles", "stone_bricks", "bricks", "cobblestone", "#logs"]
+      }
+    }
+  }
+}

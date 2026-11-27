@@ -1,0 +1,14 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "mc_assistant:item/copper_watering_can"
+ },
+ "overrides": [
+  {
+   "predicate": {
+    "mc_assistant:water": 0.01
+   },
+   "model": "mc_assistant:item/copper_watering_can_filled"
+  }
+ ]
+}

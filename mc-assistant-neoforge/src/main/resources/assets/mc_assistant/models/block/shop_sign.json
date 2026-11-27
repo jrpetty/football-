@@ -1,0 +1,121 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "face": "minecraft:block/spruce_planks",
+    "edge": "minecraft:block/dark_oak_planks",
+    "trim": "minecraft:block/emerald_block",
+    "particle": "minecraft:block/spruce_planks"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        3,
+        14
+      ],
+      "to": [
+        15,
+        13,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#face",
+          "uv": [
+            1,
+            3,
+            15,
+            13
+          ]
+        },
+        "south": {
+          "texture": "#edge",
+          "uv": [
+            1,
+            3,
+            15,
+            13
+          ]
+        },
+        "east": {
+          "texture": "#edge",
+          "uv": [
+            14,
+            3,
+            16,
+            13
+          ]
+        },
+        "west": {
+          "texture": "#edge",
+          "uv": [
+            0,
+            3,
+            2,
+            13
+          ]
+        },
+        "up": {
+          "texture": "#edge",
+          "uv": [
+            1,
+            14,
+            15,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#edge",
+          "uv": [
+            1,
+            14,
+            15,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        5,
+        13.9
+      ],
+      "to": [
+        14,
+        11,
+        14
+      ],
+      "faces": {
+        "north": {
+          "texture": "#trim",
+          "uv": [
+            2,
+            5,
+            14,
+            11
+          ]
+        }
+      }
+    }
+  ],
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
+    }
+  }
+}

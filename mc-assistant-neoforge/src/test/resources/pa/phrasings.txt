@@ -1,0 +1,290 @@
+# [pa33] What a player types or says to the Player AI Assistant, and how it must be read.
+# phrase || expected steps, " > " between steps. A step is KIND[:item[:amount]][@PLACE]; only what is written is
+# checked (KIND alone checks just the kind). "?" alone: the assistant must ask back (a clarifying question).
+# --- following and standing
+follow me || FOLLOW
+Follow me! || FOLLOW
+folow me || FOLLOW
+follw me pls || FOLLOW
+come with me || FOLLOW
+stick with me || FOLLOW
+tag along || FOLLOW
+keep up with me || FOLLOW
+stay close || FOLLOW
+stay here || STAY
+stay || STAY
+wait here || STAY
+hold position || STAY
+dont move || STAY
+stop following me || STAY
+stay put || STAY
+come here || COME
+come || COME
+get over here || COME
+over here || COME
+come back || COME
+cmon over here || COME
+# --- guarding and fighting
+guard me || GUARD_ME
+protect me || GUARD_ME
+defend me || GUARD_ME
+keep me safe || GUARD_ME
+gaurd me || GUARD_ME
+protecc me || GUARD_ME
+guard the farm || GUARD_HERE:farm
+guard here || GUARD_HERE:here
+guard this spot || GUARD_HERE:here
+defend the base || GUARD_HERE:base
+watch over the house || GUARD_HERE:base
+attack that || FIGHT@LOOKED
+attack that zombie || FIGHT:zombie
+kill the zombies || FIGHT:zombie
+kill those skeletons || FIGHT:skeleton
+fight the monsters || FIGHT:monsters
+take out that creeper || FIGHT:creeper
+fight || FIGHT
+hunt 3 cows || HUNT:cows:3
+hunt some pigs || HUNT:pigs
+kill 2 chickens || HUNT:chickens:2
+go hunting for food || HUNT
+# --- going places
+go home || GO_HOME
+head home || GO_HOME
+go back to base || GO_HOME
+return || GO_HOME
+go to bed || SLEEP
+set home here || SET_HOME
+this is your home || SET_HOME
+explore || EXPLORE
+scout around || EXPLORE
+# --- gathering
+gather 16 logs || GATHER:logs:16
+get me 16 logs || GATHER:logs:16
+get 16 wood || GATHER:logs:16
+chop 64 logs || GATHER:logs:64
+chop some trees || GATHER:logs
+chop down a tree || GATHER:logs
+cut wood || GATHER:logs
+collect 32 stone || GATHER:stone:32
+get a stack of cobble || GATHER:stone:64
+gather two stacks of stone || GATHER:stone:128
+gather twenty logs || GATHER:logs:20
+get me twenty five sand || GATHER:sand:25
+gethur 16 logs || GATHER:logs:16
+gather 16 lgos || GATHER:logs:16
+colect stone || GATHER:stone
+gimme some logs || GIVE:logs
+grab some dirt || GATHER:dirt
+get gravel || GATHER:gravel
+collect clay || GATHER:clay
+get some sugar cane || GATHER:sugar cane
+gather 8 iron || GATHER:iron:8
+get coal || GATHER:coal
+punch some trees || GATHER:logs
+fetch 10 sand || GATHER:sand:10
+get half a stack of logs || GATHER:logs:32
+gather a dozen logs || GATHER:logs:12
+# --- mining
+mine iron until you have 20 || MINE_ORE:iron:20
+mine to find iron || MINE_ORE:iron
+mine for diamonds || MINE_ORE:diamond
+dig for diamonds || MINE_ORE:diamond
+find me some diamonds || MINE_ORE:diamond
+mine some coal || MINE_ORE:coal
+mine gold || MINE_ORE:gold
+mine iorn || MINE_ORE:iron
+mine diamods || MINE_ORE:diamond
+look for iron || MINE_ORE:iron
+strip mine || MINE_DOWN
+branch mine at level -59 || MINE_DOWN:level:-59
+dig a mine down to level 12 || MINE_DOWN:level:12
+dig down to y 16 || MINE_DOWN:level:16
+dig a tunnel || MINE_DOWN
+mine this vein || MINE_ORE@LOOKED
+mine that ore || MINE_ORE@LOOKED
+mine that iron || MINE_ORE@LOOKED
+mine 32 stone || GATHER:stone:32
+mine || ?
+# --- farming
+farm || FARM
+farm this field || FARM@LOOKED
+tend the farm || FARM
+harvest the wheat || FARM:wheat
+harvest the crops || FARM
+plant some carrots || FARM:carrots
+replant the field || FARM
+till the soil || FARM
+build a farm here || FARM@HERE
+make a wheat field || FARM
+breed the cows || BREED:cows
+breed animals || BREED
+shear the sheep || SHEAR
+catch 5 fish || FISH:fish:5
+go fishing || FISH
+fish for a bit || FISH
+# --- building
+build me a small house here || BUILD:house@HERE
+build a small house || BUILD:house
+build a house here || BUILD:house@HERE
+build a cottage || BUILD:house
+bulid a house || BUILD:house
+construct a shelter || BUILD:shelter
+build a hut || BUILD:shelter
+build a watchtower over there || BUILD:watchtower@LOOKED
+build a storage shed by my house || BUILD:storage@HOME
+put up a wall || BUILD:wall
+build a smeltery || BUILD:smeltery
+make a house || BUILD:house
+build something || ?
+build || ?
+fortify the base || BUILD:fortify
+# --- crafting
+craft a pickaxe || CRAFT:pickaxe
+craft a stone pickaxe || CRAFT:stone pickaxe
+make a wooden pickaxe || CRAFT:wooden pickaxe
+craft a pickaxe from logs || CRAFT:pickaxe
+make me an iron sword || CRAFT:iron sword
+craft 16 torches || CRAFT:torches:16
+make some torches || CRAFT:torches
+craft a crafting table || CRAFT:crafting table
+make a chest || CRAFT:chest
+craft a furnace || CRAFT:furnace
+make planks || CRAFT:planks
+make planks and sticks || CRAFT:planks > CRAFT:sticks
+craft a bed || CRAFT:bed
+craft a door || CRAFT:door
+craft iron armor || CRAFT:iron armor
+make a diamond chestplate || CRAFT:diamond chestplate
+craft a bow and arrows || CRAFT:bow > CRAFT:arrows
+crfat a pickaxe || CRAFT:pickaxe
+make me a pickax || CRAFT:pickaxe
+craft || ?
+make something || ?
+craft a shield || CRAFT:shield
+make a bucket || CRAFT:bucket
+craft a boat || CRAFT:boat
+# --- smelting
+smelt 8 iron || SMELT:iron:8
+smelt the iron || SMELT:iron
+smelt raw iron || SMELT:iron
+cook the meat || SMELT:food
+cook some beef || SMELT:beef
+cook the fish || SMELT:fish
+make charcoal || CRAFT:charcoal
+smelt 16 sand || SMELT:sand:16
+smelt || ?
+# --- storing and fetching
+deposit || DEPOSIT
+deposit your items || LOGI
+put everything in that chest || LOGI
+put it all in the chest || LOGI
+empty your pack || LOGI
+store your stuff || LOGI
+stash it || LOGI
+unload || LOGI
+get 10 iron from the chest || LOGI
+grab the logs from that chest || LOGI
+take 5 coal out of the chest || LOGI
+give me 16 logs || GIVE:logs:16
+hand me the pickaxe || GIVE:pickaxe
+bring me food || BRING_FOOD
+bring me something to eat || BRING_FOOD
+i am hungry || BRING_FOOD
+im hungry || BRING_FOOD
+feed me || BRING_FOOD
+give me food || BRING_FOOD
+get me food || BRING_FOOD
+# --- the base
+light up the area || LIGHT_AREA
+place torches around here || LIGHT_AREA
+light this place up || LIGHT_AREA
+sort the chests || LOGI
+organise the storage || LOGI
+tidy the chests || LOGI
+clear a 10x10 area || CLEAR_AREA:10x10
+flatten this area || CLEAR_AREA
+keep the furnace fuelled || LOGI
+refuel the furnace || LOGI
+repair your pickaxe || REPAIR
+buy 8 bread || TRADE_BUY:bread:8
+sell 32 cobblestone || TRADE_SELL:stone:32
+# --- control
+stop || STOP
+STOP! || STOP
+stop that || STOP
+cancel || STOP
+never mind || STOP
+halt || STOP
+undo || UNDO
+undo that || UNDO
+take that back || UNDO
+cancel last order || UNDO
+pause || PAUSE
+hold on || PAUSE
+wait a sec || PAUSE
+resume || RESUME
+carry on || RESUME
+keep going || RESUME
+continue || RESUME
+do your own thing || AUTO_ON
+help me out || AUTO_ON
+auto help on || AUTO_ON
+only do what i say || AUTO_OFF
+auto help off || AUTO_OFF
+your name is bob || RENAME:bob
+call yourself pip || RENAME:pip
+# --- asking it things
+what are you doing? || DOING
+what r u doing || DOING
+whatcha doing || DOING
+how are you || STATUS
+are you ok? || STATUS
+r u ok || STATUS
+what do you have || INVENTORY
+whats in your inventory || INVENTORY
+what do you need || NEEDS
+where are you || WHERE
+what can you do || HELP
+help || HELP
+how do i start a business? || QUESTION
+how do I found a town || QUESTION
+what is a charter || QUESTION
+where is the market || QUESTION
+# --- small talk
+hello || GREETING
+hi there || GREETING
+hey || GREETING
+thanks || THANKS
+thank you || THANKS
+good job || THANKS
+ty || THANKS
+bye || BYE
+yes || YES
+ok || YES
+go ahead || YES
+no || NO
+# --- addressed, polite and wordy
+can you follow me || FOLLOW
+could you get me 16 logs please || GATHER:logs:16
+please chop 32 logs || GATHER:logs:32
+i want you to build a house here || BUILD:house@HERE
+i need you to guard me || GUARD_ME
+assistant, follow me || FOLLOW
+hey assistant come here || COME
+ok now go and get some stone || GATHER:stone
+would you mind farming || FARM
+# --- many steps
+chop 64 logs, then make planks and sticks, then build a crafting table by my house || GATHER:logs:64 > CRAFT:planks > CRAFT:sticks > CRAFT:crafting table@HOME
+gather 32 logs and deposit || GATHER:logs:32 > DEPOSIT
+get 64 logs and 32 stone || GATHER:logs:64 > GATHER:stone:32
+chop logs then follow me || GATHER:logs > FOLLOW
+mine iron, smelt it and give it to me || MINE_ORE:iron > SMELT > GIVE
+gather 16 logs then craft a pickaxe then mine for iron || GATHER:logs:16 > CRAFT:pickaxe > MINE_ORE:iron
+get stone and then build a shelter here || GATHER:stone > BUILD:shelter@HERE
+craft a stone pickaxe and then mine 20 coal || CRAFT:stone pickaxe > MINE_ORE:coal:20
+harvest the wheat then make bread || FARM:wheat > CRAFT:bread
+# --- nonsense and unclear: never silent
+blargh || ?
+do the thing || ?
+gather unobtainium || ?
+banana phone || ?

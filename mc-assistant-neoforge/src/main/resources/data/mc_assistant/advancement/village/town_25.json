@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/founded",
+  "display": {
+    "icon": {
+      "id": "minecraft:white_bed"
+    },
+    "title": {
+      "text": "Twenty-Five Souls"
+    },
+    "description": {
+      "text": "A town you founded, or are a citizen of, reaches twenty-five folk"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

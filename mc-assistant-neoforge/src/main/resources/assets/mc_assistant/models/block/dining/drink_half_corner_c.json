@@ -1,0 +1,34 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
+  "textures": {
+    "drink": "mc_assistant:block/dining/drink",
+    "particle": "mc_assistant:block/dining/plate_top"
+  },
+  "elements": [
+    {
+      "from": [
+        11.6,
+        1.5,
+        1.6
+      ],
+      "to": [
+        14.4,
+        3.5,
+        4.4
+      ],
+      "faces": {
+        "up": {
+          "texture": "#drink",
+          "uv": [
+            11.6,
+            1.6,
+            14.4,
+            4.4
+          ]
+        }
+      }
+    }
+  ]
+}

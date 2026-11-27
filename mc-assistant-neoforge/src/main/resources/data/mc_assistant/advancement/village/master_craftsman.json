@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/journeyman",
+  "display": {
+    "icon": {
+      "id": "minecraft:anvil"
+    },
+    "title": {
+      "text": "Master of the Craft"
+    },
+    "description": {
+      "text": "Finish an apprenticeship: a master in your own right"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

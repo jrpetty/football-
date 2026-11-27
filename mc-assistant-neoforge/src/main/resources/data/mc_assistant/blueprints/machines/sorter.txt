@@ -1,0 +1,79 @@
+# [redstone] The hopper sorter beside the storehouse: ten filter slices, each sorting one good into its own chest.
+#
+# The couriers empty their packs into the delivery chest at the left-hand end. A line of hoppers carries
+# everything along to the right, under a slab roof. Under each hopper of the line sits a filter hopper
+# holding twenty-two of its good (eighteen in its first slot and one in each of the others), so it will
+# take nothing else from the line, and it gives nothing up of itself: it faces into its comparator. The
+# comparator reads it at strength 1; the twenty-third it pulls from the line makes it 2. The signal runs
+# back over two redstone dusts, so only a strength of 2 reaches the block under the second. That turns
+# off the redstone torch on the block's back. The torch, while it burns, sends its power down and forward
+# along the redstone underneath to a repeater, and the repeater powers the block under the output hopper,
+# which keeps the output hopper locked. So: one of the good too many, and the lock lifts; the output
+# hopper takes from the filter (always its first slot) and drops it into the good's own chest; the filter
+# falls back to twenty-two, the torch lights, and the hopper is locked again. Whatever no filter wants goes
+# on to the end of the line, into the overflow (in a town, a hopper there carries it on into the storehouse).
+#
+# The repeater is set to its longest delay on purpose. A torch put out and lit again for every item of a
+# steady stream burns out (the game's own rule: eight times in three seconds), and a burnt-out torch let a
+# filter run down to five. With the delay the lock stays lifted all through a stream, and after one lone
+# item the output hopper takes one or two before it shuts: the torch is put out a few times a minute at
+# most, and the filter never falls below twenty.
+#
+# The spare column between two slices is solid, so no slice's redstone touches its neighbour's; the glass
+# over the back keeps feet off the torch and the dust.
+name sorter
+key # casing
+key = casing_slab type=bottom
+key g glass
+key D chest facing=front
+key X chest facing=front
+key K chest facing=front
+key H hopper facing=right
+key f hopper facing=back
+key o hopper facing=front
+key c comparator facing=front mode=compare
+key r redstone_wire
+key R repeater facing=back delay=4
+key t redstone_wall_torch facing=back
+layer -3
+######################
+######################
+######################
+######################
+######################
+######################
+layer -2
+#r#r#r#r#r#r#r#r#r#r##
+#r#r#r#r#r#r#r#r#r#r##
+#r#r#r#r#r#r#r#r#r#r##
+#R#R#R#R#R#R#R#R#R#R##
+######################
+######################
+layer -1
+#t#t#t#t#t#t#t#t#t#t##
+######################
+######################
+######################
+#o#o#o#o#o#o#o#o#o#o##
+#K#K#K#K#K#K#K#K#K#K##
+layer 0
+#g#g#g#g#g#g#g#g#g#g##
+#r#r#r#r#r#r#r#r#r#r##
+#r#r#r#r#r#r#r#r#r#r##
+#c#c#c#c#c#c#c#c#c#c##
+#f#f#f#f#f#f#f#f#f#f##
+#.#.#.#.#.#.#.#.#.#.##
+layer 1
+......................
+......................
+......................
+......................
+HHHHHHHHHHHHHHHHHHHHHX
+......................
+layer 2
+......................
+......................
+......................
+......................
+D====================.
+......................

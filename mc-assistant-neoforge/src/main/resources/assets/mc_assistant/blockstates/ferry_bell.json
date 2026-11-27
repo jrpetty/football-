@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "mc_assistant:block/ferry_bell" },
+    "facing=east": { "model": "mc_assistant:block/ferry_bell", "y": 90 },
+    "facing=south": { "model": "mc_assistant:block/ferry_bell", "y": 180 },
+    "facing=west": { "model": "mc_assistant:block/ferry_bell", "y": 270 }
+  }
+}

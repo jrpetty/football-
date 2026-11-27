@@ -1,0 +1,38 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_redstone": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "minecraft:redstone"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "mc_assistant:zone_marker"
+      }
+    },
+    "in_the_world": {
+      "trigger": "minecraft:tick"
+    }
+  },
+  "requirements": [
+    [
+      "has_redstone",
+      "has_the_recipe",
+      "in_the_world"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "mc_assistant:zone_marker"
+    ]
+  }
+}

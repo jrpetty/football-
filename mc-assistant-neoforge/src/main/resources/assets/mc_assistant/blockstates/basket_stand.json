@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "mc_assistant:block/basket_stand"
+  },
+  "facing=east": {
+   "model": "mc_assistant:block/basket_stand",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "mc_assistant:block/basket_stand",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "mc_assistant:block/basket_stand",
+   "y": 270
+  }
+ }
+}

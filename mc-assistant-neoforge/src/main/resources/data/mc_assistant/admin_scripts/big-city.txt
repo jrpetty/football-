@@ -1,0 +1,8 @@
+# [admin] Example script: a 500-folk city for testing at scale. /village admin run big-city where you want it.
+say A 500-folk city: founding (several minutes), then walls and buildings.
+village admin world found 500 iron
+waitfor 450
+village admin economy fill all
+village admin build walls
+village admin build all
+village admin debug cost

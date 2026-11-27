@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "N": {
+      "item": "minecraft:gold_nugget"
+    },
+    "g": [
+      {
+        "item": "minecraft:emerald"
+      },
+      {
+        "item": "minecraft:diamond"
+      },
+      {
+        "item": "minecraft:lapis_lazuli"
+      }
+    ]
+  },
+  "pattern": [
+    " N ",
+    "NgN",
+    " N "
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:heirloom_ring"
+  }
+}

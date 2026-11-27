@@ -1,0 +1,113 @@
+{
+  "category": "festivals",
+  "entries": [
+    {
+      "id": "festivals_feasts",
+      "title": "Feasts and the town's calendar",
+      "icon": "minecraft:pumpkin_pie",
+      "kind": "what",
+      "q": ["when are the festivals", "feast day", "how often are feasts", "pay for a feast", "festival calendar", "may dance", "midsummer bonfire", "what festivals are there", "sponsor a feast"],
+      "kw": ["festival", "feast", "calendar", "maypole", "bonfire", "sponsor", "season"],
+      "answer": "Every seventh evening the town feasts, and its year has seasonal festivals. You can pay for a feast: Trade, then Services, then Pay for a feast.",
+      "more": ["Every seventh evening the town feasts (food passed round, music, dancing, toasts) and everyone is in a better mood the next day.", "Its year has four seasons of a week each, from Founding Day: the May dance round a maypole in spring, the midsummer bonfire, the town fair late in summer, and more.", "Pay for tonight's feast yourself ('Pay for a feast', Trade → Services) and the town remembers who paid."],
+      "controls": ["[Right-click] a folk → Trade → Services → Pay for a feast", "Town → Records → Fireworks (when's the next?)"],
+      "tips": ["A feast in your name costs ten coins and one for every mouth.", "The board, the crier and the gazette announce what's coming."],
+      "related": ["festivals_fair", "festivals_fireworks", "life_marriage", "festivals_founding_day"],
+      "covers": ["talk:SPONSOR"]
+    },
+    {
+      "id": "festivals_founding_day",
+      "title": "Celebrations: Founding Day, milestones, new ages",
+      "icon": "minecraft:firework_rocket",
+      "kind": "what",
+      "q": ["founding day", "town anniversary", "why are there fireworks", "milestone celebration", "celebration for a new age", "town reached 50 folk"],
+      "kw": ["founding day", "anniversary", "milestone", "celebration", "age"],
+      "answer": "Towns celebrate their Founding Day, each new age and each milestone with gatherings and fireworks.",
+      "more": ["A town celebrates its Founding Day each year (tabards out, honey cakes), the evening it comes into a new age (everybody out, fireworks over the heart), and milestones (25, 50 and 100 folk, the first diamond in its stores) with rockets from its stores and a message to players nearby."],
+      "items": ["mc_assistant:tabard", "mc_assistant:honey_cake"],
+      "related": ["festivals_feasts", "festivals_fireworks", "progress_ages"],
+      "covers": []
+    },
+    {
+      "id": "festivals_fair",
+      "title": "The town fair and the fashion show",
+      "icon": "mc_assistant:rosette",
+      "kind": "howto",
+      "q": ["town fair", "enter the fair", "fair competition", "best bread best wool contest", "fashion show", "win a rosette", "how do i enter a contest"],
+      "kw": ["fair", "contest", "competition", "show", "rosette", "prize"],
+      "answer": "Late in summer each town holds a fair: best bread, wool, fish and honey. On fair day, hold your entry and right-click the village board.",
+      "more": ["The best-dressed folk win a rosette at the fashion show."],
+      "controls": ["[Right-click] village board with your entry (fair day)", "[U] → Everything you can do → Home → The fair"],
+      "items": ["mc_assistant:rosette"],
+      "related": ["festivals_feasts", "life_fashion"],
+      "covers": []
+    },
+    {
+      "id": "festivals_fireworks",
+      "title": "Fireworks",
+      "icon": "minecraft:firework_star",
+      "kind": "howto",
+      "q": ["when are the next fireworks", "fireworks in the village", "buy rockets for elytra", "fireworks maker", "can i buy fireworks"],
+      "kw": ["fireworks", "rockets", "elytra", "firework"],
+      "answer": "Towns let off fireworks at celebrations. Ask any folk 'Fireworks' (Town, then Records) for the next show.",
+      "more": ["Towns let off fireworks for new ages, milestones, heroes' nights and festivals; a town with a fireworks maker puts on shows.", "Ask any folk 'Fireworks' (Town → Records) for the next ones, and ask the fireworks maker for rockets for your elytra ('Elytra rockets', Trade → Shop)."],
+      "controls": ["[Right-click] a folk → Town → Records → Fireworks", "Fireworks maker → Trade → Shop → Elytra rockets"],
+      "related": ["festivals_feasts", "festivals_founding_day"],
+      "covers": []
+    },
+    {
+      "id": "festivals_theatre",
+      "title": "The theatre and wonders",
+      "icon": "minecraft:jukebox",
+      "kind": "howto",
+      "q": ["theatre", "buy a theatre ticket", "watch a play", "wonders of the world", "playbill"],
+      "kw": ["theatre", "play", "ticket", "wonder", "wonders", "playbill"],
+      "answer": "A grown town builds a theatre. Buy a ticket from U, then Everything you can do, then the Home tab.",
+      "more": ["Towns also raise wonders (great buildings that rise over days) shown on the Culture and Perks pages."],
+      "controls": ["[U] → Everything you can do → Home → The theatre"],
+      "related": ["life_culture", "festivals_busking"],
+      "covers": []
+    },
+    {
+      "id": "festivals_busking",
+      "title": "Buskers and music (and busking yourself)",
+      "icon": "mc_assistant:lute",
+      "kind": "howto",
+      "q": ["buskers", "can i busk", "music in the street", "lute", "play music for coins", "street musicians"],
+      "kw": ["busk", "busker", "music", "lute", "note block", "tune"],
+      "answer": "Musical folk busk in the street for coins, and you can busk too: U, then Everything you can do, then Home.",
+      "more": ["Folk whose pastime is music busk two evenings in three at the well, the gates and the market: real tunes on a note block, folk stopping to listen and dropping coins in the hat.", "A Lute (sticks, string, planks) is the musical folk's comfort."],
+      "controls": ["[U] → Everything you can do → Home → Busk"],
+      "items": ["mc_assistant:lute", "minecraft:note_block"],
+      "related": ["festivals_theatre", "items_leisure"],
+      "covers": ["item:lute"]
+    },
+    {
+      "id": "festivals_sport",
+      "title": "Sport: football, kites and draughts",
+      "icon": "mc_assistant:leather_football",
+      "kind": "what",
+      "q": ["football in the village", "football league", "do folk play sports", "football pitch", "kite", "draughts board", "games on the rest day", "can i play football with villagers"],
+      "kw": ["sport", "football", "match", "league", "kite", "draughts", "games"],
+      "answer": "Towns of twenty in stone build a football pitch and play matches every rest day. Children fly kites and play draughts.",
+      "more": ["Once a stone-building town has twenty folk it builds a football pitch; every rest day two of the town's ends play a real match with a Leather Football, and there's a league and a cup.", "Children fly kites on dry windy afternoons, and draughts are played on a real board at the tavern and in the park."],
+      "items": ["mc_assistant:leather_football", "mc_assistant:kite", "mc_assistant:draughts_board"],
+      "tips": ["Put white wool or birch planks in the stores and you'll see the pitch's lines go down.", "The camera's 'Show me something happening' finds a match in play."],
+      "related": ["items_leisure", "camera_happening"],
+      "covers": ["item:leather_football", "item:kite", "item:draughts_board"]
+    },
+    {
+      "id": "festivals_birthdays",
+      "title": "Birthdays and the town bell",
+      "icon": "minecraft:cake",
+      "kind": "what",
+      "q": ["villager birthdays", "birthday present", "when is a folk's birthday", "town bell ringing", "news page birthdays"],
+      "kw": ["birthday", "bell", "news"],
+      "answer": "Each folk has a birthday: that day the talk screen suggests a Birthday present, which counts extra.",
+      "more": ["The town bell rings for gatherings, weddings and alarms; the News page lists birthdays and the bell."],
+      "controls": ["[Right-click] a folk → Suggested → Birthday present", "Town's books → Overview → News"],
+      "related": ["folk_gifts", "festivals_feasts"],
+      "covers": []
+    }
+  ]
+}

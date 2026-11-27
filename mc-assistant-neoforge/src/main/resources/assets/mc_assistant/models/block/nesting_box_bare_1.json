@@ -1,0 +1,349 @@
+{
+ "parent": "minecraft:block/block",
+ "textures": {
+  "particle": "mc_assistant:block/nesting_box_side",
+  "side": "mc_assistant:block/nesting_box_side",
+  "inside": "mc_assistant:block/nesting_box_inside",
+  "straw": "mc_assistant:block/nesting_box_straw",
+  "egg": "mc_assistant:block/nesting_box_egg"
+ },
+ "elements": [
+  {
+   "from": [
+    1,
+    0,
+    1
+   ],
+   "to": [
+    15,
+    1,
+    15
+   ],
+   "faces": {
+    "down": {
+     "texture": "#side",
+     "cullface": "down"
+    },
+    "up": {
+     "texture": "#inside"
+    },
+    "north": {
+     "texture": "#side"
+    },
+    "south": {
+     "texture": "#side"
+    },
+    "east": {
+     "texture": "#side"
+    },
+    "west": {
+     "texture": "#side"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    1,
+    13
+   ],
+   "to": [
+    15,
+    7,
+    15
+   ],
+   "faces": {
+    "north": {
+     "texture": "#inside"
+    },
+    "south": {
+     "texture": "#side"
+    },
+    "east": {
+     "texture": "#side"
+    },
+    "west": {
+     "texture": "#side"
+    },
+    "up": {
+     "texture": "#side"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    1,
+    1
+   ],
+   "to": [
+    15,
+    3.5,
+    3
+   ],
+   "faces": {
+    "north": {
+     "texture": "#side"
+    },
+    "south": {
+     "texture": "#inside"
+    },
+    "east": {
+     "texture": "#side"
+    },
+    "west": {
+     "texture": "#side"
+    },
+    "up": {
+     "texture": "#side"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    1,
+    3
+   ],
+   "to": [
+    3,
+    5,
+    8
+   ],
+   "faces": {
+    "north": {
+     "texture": "#side"
+    },
+    "east": {
+     "texture": "#inside"
+    },
+    "west": {
+     "texture": "#side"
+    },
+    "up": {
+     "texture": "#side"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    1,
+    8
+   ],
+   "to": [
+    3,
+    6,
+    13
+   ],
+   "faces": {
+    "north": {
+     "texture": "#side"
+    },
+    "east": {
+     "texture": "#inside"
+    },
+    "west": {
+     "texture": "#side"
+    },
+    "up": {
+     "texture": "#side"
+    }
+   }
+  },
+  {
+   "from": [
+    13,
+    1,
+    3
+   ],
+   "to": [
+    15,
+    5,
+    8
+   ],
+   "faces": {
+    "north": {
+     "texture": "#side"
+    },
+    "west": {
+     "texture": "#inside"
+    },
+    "east": {
+     "texture": "#side"
+    },
+    "up": {
+     "texture": "#side"
+    }
+   }
+  },
+  {
+   "from": [
+    13,
+    1,
+    8
+   ],
+   "to": [
+    15,
+    6,
+    13
+   ],
+   "faces": {
+    "north": {
+     "texture": "#side"
+    },
+    "west": {
+     "texture": "#inside"
+    },
+    "east": {
+     "texture": "#side"
+    },
+    "up": {
+     "texture": "#side"
+    }
+   }
+  },
+  {
+   "from": [
+    6.5,
+    1.0,
+    7.0
+   ],
+   "to": [
+    8.5,
+    3.5,
+    9.0
+   ],
+   "faces": {
+    "north": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      2,
+      3
+     ]
+    },
+    "south": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      2,
+      3
+     ]
+    },
+    "east": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      2,
+      3
+     ]
+    },
+    "west": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      2,
+      3
+     ]
+    },
+    "up": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      2,
+      2
+     ]
+    },
+    "down": {
+     "texture": "#egg"
+    }
+   },
+   "rotation": {
+    "origin": [
+     7.5,
+     1.0,
+     8.0
+    ],
+    "axis": "y",
+    "angle": 22.5
+   }
+  },
+  {
+   "from": [
+    6.9,
+    3.5,
+    7.4
+   ],
+   "to": [
+    8.1,
+    4.2,
+    8.6
+   ],
+   "faces": {
+    "north": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ]
+    },
+    "south": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ]
+    },
+    "east": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ]
+    },
+    "west": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ]
+    },
+    "up": {
+     "texture": "#egg",
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ]
+    },
+    "down": {
+     "texture": "#egg"
+    }
+   },
+   "rotation": {
+    "origin": [
+     7.5,
+     1.0,
+     8.0
+    ],
+    "axis": "y",
+    "angle": 22.5
+   }
+  }
+ ]
+}

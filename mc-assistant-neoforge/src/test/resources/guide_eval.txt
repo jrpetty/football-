@@ -1,0 +1,475 @@
+# [guide31] The Guide's eval: questions as players type them (typos, slang, half sentences), and the article that
+# should answer. "question => article id". GuideEvalTest needs 90% top-1 and 98% top-3.
+
+# the brief's own
+how do i make friends with the villagers => folk_make_friends
+how to start a buisness => biz_start
+why wont my folk work => trouble_folk_idle
+how do i get my own house => build_commission
+what does the camera do => camera_open
+how to become mayor => civic_stand
+how do taxes work => civic_taxes
+where do i get coins => money_earn
+how do i start a town => found_how
+my shop has no customers => trouble_no_customers
+
+# getting started
+im new what do i do first => start_first_steps
+wat do i do now lol => start_first_steps
+what even is this mod => start_what_is
+whats the u key for => start_u_page
+how do i open my life in town page => start_u_page
+is there a list of everything i can do => start_everything
+server has commands disabled how do i do stuff => start_no_commands
+can i play without using slash commands => start_no_commands
+how do i open the guide => start_guide
+where r the town stats => start_town_books
+how do i see how my village is doing => start_town_books
+what does j do => start_journal
+can i join someone elses village => start_join_town
+how do i move into a town => start_join_town
+which town am i in => start_entering
+where are the recipes for mod stuff => start_creative
+
+# founding
+how do i make a village => found_how
+how to create my own town => found_how
+how do i found a settlment => found_how
+best spot for my village? => found_where
+what does look at it do => found_where
+how many folk should i start with => found_size
+will 250 villagers lag => found_size
+can i rename my town => found_name_look
+what does take me there do => found_travel
+i founded a town but nobody is there => found_after
+why is the ground being flattened => found_levelling
+will founding destroy my base => found_levelling
+how do i get another founding kit => found_kit
+what does the village folk spawner do => found_spawner
+how do i add more villagers to my town => found_spawner
+what is a village charter => found_charter
+i broke the village board => found_board
+do villages spawn naturally => found_natural
+what happened to the normal villagers => found_natural
+how do towns make colonies => found_colony
+
+# folk and friendship
+how do i get villagers to like me => folk_make_friends
+how to raise friendship with npcs => folk_make_friends
+make folk like me more => folk_make_friends
+what does friend of the village mean => folk_standing
+how do i become a hero of the village => folk_standing
+what is my reputation => folk_standing
+what gifts do villagers like => folk_gifts
+best presents for folk => folk_gifts
+how do i give a villager a gift => folk_gifts
+why is my villager sad => folk_moods
+how do i make my folk happy => folk_moods
+how do i see a villagers info => folk_profile
+how do i favourite a folk => folk_favourites
+can i track one villager => folk_favourites
+i hit a villager by accident how do i fix it => folk_sorry
+how do i apologise => folk_sorry
+will the village build me a statue => folk_rewards
+a villager is screaming help => folk_protect
+how do i wave at villagers => folk_emotes
+what does v do => folk_emotes
+who is the elder => folk_elder
+what are knacks => folk_skills
+who are the folk => folk_who
+
+# talking
+how do i talk to a villager => talk_screen
+how does the talk screen work => talk_screen
+can i type my own message to a villager => talk_typing
+how do i hear the gossip => talk_chat
+ask a villager to tell a joke => talk_chat
+how do i find out a folks family => talk_about
+ask villager what its trade is like => talk_about_work
+can i eat with a villager => talk_together
+play dice with villagers => talk_together
+how do i trade with folk => talk_trade_tab
+can i buy stuff from a villager => talk_trade_tab
+will villagers give me free stuff => talk_favour
+how do i make a villager follow me => talk_follow
+how do i find the storehouse => talk_show_way
+can a villager show me where the cafe is => talk_show_way
+can i hire a villager as a bodyguard => talk_hire
+how do i help the village with errands => talk_errands
+how do i hand over items to a villager => talk_errands
+how do i see what a villager is carrying => talk_pack
+who lives in this village => talk_records
+how do i get the village history book => talk_records
+what do folk know about other towns => talk_world
+how do i get a map of the town => talk_maps
+i lost my items in town => talk_lost
+how do i train a villager => talk_teach
+
+# jobs
+how do i get a job => jobs_board
+can i work for the village => jobs_board
+how do i quit my job => jobs_board
+how do shifts work => jobs_shifts
+what is the night watch shift => jobs_shifts
+where do i see my earnings => jobs_earnings
+how do quests work => jobs_quests
+what does the gold ! mean over a villager => jobs_quests
+how do i give up a quest => jobs_quests
+what do i do with the sealed letter => jobs_stories
+lost child quest help => jobs_stories
+where is the quest board => jobs_quest_board
+how do i become an apprentice => jobs_apprentice
+how do i unlock the reinforced pickaxe recipe => jobs_apprentice
+how do i make a villager a miner => jobs_trades
+can i change a folks job => jobs_trades
+how are villagers paid => jobs_wages
+can i get paid for killing mobs => jobs_bounty
+can i deliver goods between towns for money => jobs_haul
+what are the interviews at the hall => jobs_interviews
+
+# building
+do i have to build the town myself => build_what_town_builds
+who builds the houses => build_what_town_builds
+can i tell the village to build a tavern => build_suggest
+how do i get a house built => build_commission
+build my house option => build_commission
+how much does a building cost => build_property_office
+what is the property office => build_property_office
+why does my town look like this => build_town_look
+can i build in the village => build_plots_lots
+why are the gates shut => build_wall
+
+# business
+how do i open a shop => biz_open_shop
+how do i make my own store => biz_open_shop
+how to set up a shop in town => biz_open_shop
+why is my shop closed => biz_shop_checklist
+shop says no path from the door to a street => biz_shop_checklist
+how do i set prices in my shop => biz_shop_stock
+what should i sell in my shop => biz_shop_stock
+can i hire someone to run my shop => biz_keeper
+what is the shop sign for => biz_shop_sign
+how do i start a company => biz_start
+how much does a business cost => biz_start
+how do i hire workers for my business => biz_run
+how do i take money out of my business => biz_run
+what kinds of business are there => biz_kinds
+can i open a bakery => biz_kind_food
+can i open a tavern => biz_kind_food
+what does a carpenter business sell => biz_kind_makers
+what does the general store sell => biz_kind_shops
+what premises does a business need => biz_premises
+how do i rent a stall => biz_stall
+how much is a market stall => biz_stall
+when is the shop open => biz_counters
+how do i buy from the town shop => biz_counters
+how do i see a businesses profit => biz_books
+do villagers start businesses too => biz_folk_firms
+how do i cut a ribbon => biz_ribbon
+
+# money
+how do i make money fast => money_earn
+i have no money => money_earn
+how do i turn gold into coins => money_coin
+can i craft village coins => money_coin
+where can i sell my stuff => money_sell
+does the village buy wheat => money_sell
+what are wanted orders => money_wanted
+can i buy food from the village => money_buy_from_town
+can i borrow a pickaxe from the village => money_stores
+how do i get a discount => money_haggle
+can the smith repair my armour => money_services
+can a villager make me an iron sword => money_services
+can i order 256 cobblestone => money_bulk
+how does the auction work => money_auction
+why are prices so high => money_prices
+where is iron cheap => money_prices
+how does the market work => money_market
+how do i donate to the town => money_treasury
+do towns trade with each other => money_trade_towns
+can i charter a trade route => money_caravans
+what does the emerald trader do => money_emerald
+what is a forged coin => money_forged
+
+# property and finance
+how does the bank work => property_bank
+can i take out a loan => property_bank
+how do i buy a house => property_buy_house
+is there a house for sale => property_buy_house
+how do i get a mortgage => property_mortgage
+can i rent out my house => property_rent
+how do i sell my house => property_sell_let
+can i buy shares in a business => property_land_shares
+can i buy land => property_land_shares
+whats my net worth => property_finances
+what is the coin button in my inventory => keys_inventory
+
+# civic
+how do i become a citizen => civic_citizen
+may i live here => civic_citizen
+who is on the council => civic_council
+when is the next election => civic_elections
+how do i run for mayor => civic_stand
+can i be the leader of the village => civic_stand
+what can the leader do => civic_leader
+i won the election now what => civic_leader
+what is a referendum => civic_referendum
+i got fined what do i do => civic_laws
+is it illegal to take from the chests => civic_laws
+do i have to pay taxes => civic_taxes
+how do i become a knight => civic_knights
+what makes each town different => civic_identity
+can i tell the elder what to order => civic_petition
+what is the morning assembly => civic_meetings
+why is the leader wearing a crown => civic_regalia
+
+# defence
+how do i defend my village => defence_watch
+does my village have guards => defence_watch
+why did the bell ring => defence_raids
+can i turn off raids => defence_raids
+someone stole from a villager => defence_crime
+how do i become a constable => defence_crime
+what is a wanted poster => defence_outlaws
+can villages go to war => defence_war
+how do i end a war => defence_war
+what does the map table do => defence_war_room
+how do i make peace between towns => defence_diplomacy
+how do i make steel => defence_arms
+is steel better than iron => defence_arms
+what is a war footing => defence_footing
+
+# progression
+how does my town reach the iron age => progress_ages
+what are the ages => progress_ages
+how does my village become a city => progress_rank
+how do i get more villagers in my town => progress_growth
+why did a new villager arrive => progress_newcomers
+where do my folk mine => progress_mine
+what are cave dwellers => progress_caves
+do villagers go to the nether => progress_nether
+how does research work => progress_research
+what is the storehouse => progress_storehouse
+how do i build a storehouse => progress_storehouse
+where do materials come from => progress_supply
+how far do my town borders go => progress_borders
+how do i call the ferry => progress_transport
+does my town keep going when im away => progress_long
+
+# life
+do villagers get married => life_marriage
+can i marry a villager => life_marriage
+can i be a godparent => life_children
+where do folk live => life_homes
+how do i get a pet => life_pets
+how do i adopt a dog => life_pets
+whats in fashion => life_fashion
+my villager is sick => life_health
+can a villager heal me => life_health
+do villagers die => life_death
+is there a school for kids => life_school
+how do i donate to the museum => life_museum
+how do i order food at the restaurant => life_dining
+what is the town banner => life_culture
+are there seasons => life_seasons
+
+# festivals
+when are the festivals => festivals_feasts
+can i pay for a feast => festivals_feasts
+why were there fireworks => festivals_founding_day
+how do i enter the fair => festivals_fair
+when are the next fireworks => festivals_fireworks
+how do i buy a theatre ticket => festivals_theatre
+can i busk => festivals_busking
+do villagers play football => festivals_sport
+when is a villagers birthday => festivals_birthdays
+
+# camera
+how do i film my village => camera_open
+how to record a cinematic of my town => camera_open
+how do i orbit around my town => camera_orbit
+how do i make a camera path => camera_flythrough
+can the camera follow a villager => camera_follow
+how do i make a timelapse => camera_happening
+how do i exit the camera => camera_while_filming
+how do i hide name tags => camera_clean
+
+# items
+what items does this mod add => items_all
+how do i dye a long coat => items_garments
+top hat recipe => items_garments
+how do i put a banner on a tabard => items_banners
+what does fish stew do => items_dishes
+how do i make cheese => items_kitchen
+why cant i craft the reinforced pickaxe => items_masters
+how do i use the watering can => items_field_tools
+what does the felling saw do => items_work_tools
+how do i use rope => items_work_tools
+paper lantern recipe => items_leisure
+what does the medal of the town do => items_honours
+what is the gold charm => items_nether_kit
+spectacles for old villager => items_spectacles
+how do i use the war horn => items_war_horn
+how do i use a fishing net => items_fishing_net
+what is the job board block => companions_job_board
+
+# keys
+what are the keybinds for this mod => keys_all
+how do i change a keybind => keys_rebind
+what is the book button in my inventory => keys_inventory
+keyboard shortcuts in the talk screen => keys_in_screens
+how do i hide the icons over villagers => keys_hide_labels
+how do i speed up time => admin_time_speed
+
+# companions
+how do i get an assistant => pa_getting
+what does r do => companions_orders
+what does the semicolon key do => companions_crew
+how do i use the plot book => companions_plots
+what is a place marker => companions_place_marker
+my crew hand died => companions_memory_core
+
+# admin
+how do i open the admin panel => admin_panel
+where is the config file => admin_config
+how do i limit who can found towns => admin_founding_rules
+how do i turn off bird sounds => admin_client_config
+
+# troubleshooting
+my villagers are just standing around => trouble_folk_idle
+villagers do nothing all day => trouble_folk_idle
+nobody buys from my shop => trouble_no_customers
+my stall isnt selling => trouble_no_customers
+my town isnt growing => trouble_not_growing
+no babies in my village => trouble_not_growing
+why isnt anything getting built => trouble_not_building
+why cant i found a town => trouble_cant_found
+they said we hardly know you yet => trouble_cant_citizen
+why cant i start a business => trouble_cant_charter
+why are folk leaving my town => trouble_folk_leaving
+my town is stuck in the stone age => trouble_stuck_age
+my items vanished in town => trouble_items_gone
+why do the villagers hate me => trouble_unfriendly
+the town books are empty => trouble_books_empty
+my business is losing money => trouble_firm_trouble
+it says nobodys near enough to ask => trouble_nobody_to_talk
+the game is laggy near my town => trouble_lag
+my village is starving => trouble_starving
+
+# typos and slang
+how do i make freinds with vilagers => folk_make_friends
+how 2 get coinz => money_earn
+how do i opne a shop => biz_open_shop
+wher do i get a job => jobs_board
+how do i becum a citizen => civic_citizen
+how do i get a hosue => build_commission
+how does the camra work => camera_open
+how do i strat a villige => found_how
+y wont my npcs work => trouble_folk_idle
+how 2 make a buisness => biz_start
+whats the best gift for a villiger => folk_gifts
+how do i becom the mayor => civic_stand
+taxes how do they wrok => civic_taxes
+how do i get mony => money_earn
+
+# round 2: kids and casual players
+how do i open the guide => start_guide
+wheres the help book => start_guide
+i dont get it what do i do => start_first_steps
+what do i do now => start_first_steps
+can i make my own village => found_how
+i want my own town => found_how
+how do u make a vilage => found_how
+how do i get the villagers to like me => folk_make_friends
+the villagers hate me => trouble_unfriendly
+why is evryone mad at me => trouble_unfriendly
+what do villagers like as presents => folk_gifts
+can i give them stuff => folk_gifts
+how do i talk to a villager => talk_screen
+can i chat with the villagers => talk_screen
+how do i get a job => jobs_board
+i want to work => jobs_board
+how do i get rich => money_earn
+how do i get lots of money => money_earn
+how do i sell my stuff => money_sell
+what are coins for => money_coin
+can i buy a house => property_buy_house
+i want a house => property_buy_house
+how do i make a shop => biz_open_shop
+how do i open a store => biz_open_shop
+nobody buys from my shop => trouble_no_customers
+can i be the boss of the town => civic_stand
+how do i win the election => civic_elections
+can i get married => life_marriage
+can villagers have babies => life_children
+do villagers die => life_death
+how do i film a video => camera_open
+how do i make a cool video => camera_open
+how do i make the camera go round => camera_orbit
+how do i speed up time to watch them build => camera_happening
+the villagers are just standing around => trouble_folk_idle
+my villagers dont do anything => trouble_folk_idle
+why isnt my town getting bigger => trouble_not_growing
+they arent building anything => trouble_not_building
+my stuff disappeared => trouble_items_gone
+its really laggy => trouble_lag
+whats the square => build_square
+why did they redo the square => build_square
+why did the wall get rebuilt => build_square
+the screen just says opening => trouble_opening
+what keys do i press => keys_all
+what does h do => keys_all
+what are the buttons => keys_all
+what is a raid => defence_raids
+are there parties => festivals_feasts
+whats the town meeting in the morning => civic_meetings
+
+# [biz30] the business data
+how do i see what my shop sold => biz_data
+where are my business stats => biz_data
+how much profit am i making => biz_data
+what sold the most today => biz_data
+how many bread did i sell per day => biz_data
+show me a chart of my sales => biz_data
+what are my shop's costs => biz_data
+which of my businesses makes most money => biz_data
+
+# [pa33] the Player AI Assistant
+how do i get an ai assistant => pa_getting
+whistle recipe => pa_getting
+how do i make my assistant build a house => pa_orders
+can i talk to my assistant with my voice => pa_voice
+my microphone isnt working => pa_trouble_voice
+the assistant doesnt understand my british accent => pa_voice_accent
+how do i set the voice to english uk => pa_voice_accent
+it keeps mishearing me => pa_voice_accent
+how do i make my assistant funnier => pa_personality
+can my assistant be grumpy => pa_personality
+make my assistant look like a skeleton => pa_looks
+my assistants voice sounds like a robot => pa_voices_natural
+how do i get the kokoro voices for my assistant => pa_voices_natural
+download more human british voices for my assistant => pa_voices_natural
+my assistant died => pa_fallen
+how do i stop my assistant doing stuff on its own => pa_autohelp
+make my assistant quieter => pa_settings
+is my assistant a villager => pa_not_villager
+what is the player ai assistant => pa_what
+what does x do => pa_wheel
+how do i see what my assistant is doing => pa_jobs
+how do i talk to my assistant => pa_talking
+how do i make my assistant shut up => pa_quiet
+my assistant keeps making jokes how do i stop it => pa_quiet
+how do i let my assistant talk again => pa_quiet
+why does my assistant swear back at me => pa_energy
+how do i stop my assistant swearing => pa_energy
+can my assistant roast other players => pa_energy
+# [featcivic] how towns are governed
+what is a planned state => gov_forms
+where is the ballot box => gov_vote
+why are folk protesting => gov_unrest
+can i vote early => gov_vote
+can i go to jail => defence_justice
+how do i apologise to a villager i hurt => defence_justice
+how does the court work => defence_justice
+which items have no recipe => items_not_crafted
+how do i get a deed => items_not_crafted

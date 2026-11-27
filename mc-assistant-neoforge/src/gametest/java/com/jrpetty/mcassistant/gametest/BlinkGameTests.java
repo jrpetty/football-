@@ -1,0 +1,798 @@
+package com.jrpetty.mcassistant.gametest;
+
+import com.jrpetty.mcassistant.entity.Blink;
+import com.jrpetty.mcassistant.entity.MineDemand;
+import com.jrpetty.mcassistant.entity.MineLift;
+import com.jrpetty.mcassistant.entity.VillageFolkEntity;
+import com.jrpetty.mcassistant.entity.goal.WorksGoal;
+import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Items;
+import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * [tp43] No folk visibly jumps while a player could see it (Blink).
+ *
+ * <ul>
+ * <li><b>bk01</b> A shift change at the pithead with a player standing by the headframe: ten miners come over from the
+ *     town to the mine, crowd round the cage and the stair head, go down to the deep level for their shift and come up
+ *     again at dusk. Not one jump in the player's sight, and every miner below at work within a few minutes and up at
+ *     the pithead again after the shift.</li>
+ * <li><b>bk02</b> The cage at a lower stop, watched from that stop's landing: the miners step in through the stop's
+ *     window and out of it, never popped through the bars.</li>
+ * </ul>
+ */
+@GameTestHolder("mc_assistant")
+@PrefixGameTestTemplate(false)
+public class BlinkGameTests {
+
+    private static final String EMPTY = "empty";
+
+    /** A stand-in player at this spot, counted as a player who could see (Blink.watchForTests). */
+    static ServerPlayer watcher(GameTestHelper helper, ServerLevel level, double x, double y, double z) {
+        ServerPlayer p = helper.makeMockServerPlayerInLevel();
+        net.neoforged.neoforge.network.registration.NetworkRegistry.configureMockConnection(p.connection.getConnection());
+        p.teleportTo(level, x, y, z, 0, 0);
+        Blink.watchForTests(p);
+        return p;
+    }
+
+    static String pathLine(com.jrpetty.mcassistant.entity.AssistantEntity a) {
+        net.minecraft.world.level.pathfinder.Path p = a.getNavigation().getPath();
+        return p == null ? "none" : (p.isDone() ? "done " : "") + p.getNextNodeIndex() + "/" + p.getNodeCount() + " to " + p.getTarget().toShortString()
+            + (p.canReach() ? "" : " (cannot reach)");
+    }
+
+    /** The nodes of the walk it is on from the next one (the log). */
+    static String pathNodes(com.jrpetty.mcassistant.entity.AssistantEntity a) {
+        net.minecraft.world.level.pathfinder.Path p = a.getNavigation().getPath();
+        if (p == null) return "none";
+        StringBuilder b = new StringBuilder();
+        for (int i = Math.max(0, p.getNextNodeIndex() - 2); i < p.getNodeCount(); i++) {
+            BlockPos q = p.getNodePos(i);
+            b.append(i == p.getNextNodeIndex() ? "*" : "").append(q.getX() % 1000).append(',').append(q.getY()).append(',').append(q.getZ() % 1000)
+                .append(a.level().getFluidState(q).isEmpty() ? "" : "~").append(' ');
+        }
+        return b.toString();
+    }
+
+    static String running(com.jrpetty.mcassistant.entity.AssistantEntity a) {
+        StringBuilder b = new StringBuilder();
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal g : a.goalsForTests().getAvailableGoals())
+            if (g.isRunning()) b.append(g.getGoal().getClass().getSimpleName()).append(',');
+        return b.length() == 0 ? "-" : b.toString();
+    }
+
+    static void letGo(ServerLevel level, ServerPlayer p) {
+        Blink.unwatchForTests(p);
+        Blink.setOn(false);
+        level.getServer().getPlayerList().remove(p);
+    }
+
+    // ============================================================ bk01: a shift change at the pithead, a player watching
+
+    /** The cage's rig (SupplyChainGameTests.liftRig) with rock at the coal and copper levels for ten miners to work in. */
+    static MineWorksGameTests.Rig workedRig(GameTestHelper helper, int x, int miners) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, x, miners);
+        ServerLevel level = r.level();
+        MineLift.forgetForTests(r.v());
+        int coal = com.jrpetty.mcassistant.entity.MineWorks.levelY(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COAL);
+        int copper = com.jrpetty.mcassistant.entity.MineWorks.levelY(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COPPER);
+        Kit.hold(level, r.sx(), r.sz(), 48);
+        MineWorksGameTests.tower(r, -59);                       // down to the ground: the shaft sunk deeper stays in rock
+        MineWorksGameTests.bed(r, coal, 32, net.minecraft.world.level.block.Blocks.COAL_ORE, 80, 4301L);
+        MineWorksGameTests.bed(r, copper, 32, net.minecraft.world.level.block.Blocks.COPPER_ORE, 80, 4302L);
+        com.jrpetty.mcassistant.entity.MineWorks.sinkForTests(level, r.v(), 4 * ((MineWorksGameTests.TOP - copper) / 3) + 1, null);
+        com.jrpetty.mcassistant.entity.MineWorks.roomForTests(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COAL);
+        com.jrpetty.mcassistant.entity.MineWorks.roomForTests(level, r.v(), com.jrpetty.mcassistant.entity.MineWorks.COPPER);
+        com.jrpetty.mcassistant.entity.MineWorks.tick(level, com.jrpetty.mcassistant.entity.Villages.get(r.v()));
+        return r;
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 30000, batch = "bk01_pithead_shift_change")
+    public static void bk01_pithead_shift_change(GameTestHelper helper) {
+        final int n = 10;
+        com.jrpetty.mcassistant.entity.MineRoof.resetForTests();
+        MineWorksGameTests.Rig r = workedRig(helper, 6740000, n);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        List<MineLift.Stop> stops = MineLift.stops(v);
+        helper.assertTrue(stops.size() == 3, "the cage, three stops: " + stops);
+        MineLift.Stop top = stops.get(0), deep = stops.get(2);
+        MineDemand.stockForTests(v, MineWorksGameTests.plenty());
+        // Ten miners over at the pithead for the morning shift, a stone's throw from it (as they come from the town).
+        for (int i = 0; i < n; i++) {
+            VillageFolkEntity m = r.miners().get(i);
+            MineWorksGameTests.kit(m, Items.IRON_PICKAXE);
+            MineWorksGameTests.zone(r, m, deep.y());
+            // On the pithead's ground (the top of the rock the shaft is cut in), round the far side of the stair from the cage.
+            int dx = i < 5 ? -5 + i * 2 + (i > 2 ? 1 : 0) : (i % 2 == 0 ? -5 : 5), dz = i < 5 ? -5 : -3 + (i - 5);
+            m.teleportTo(r.sx() + dx + 0.5, MineWorksGameTests.TOP, r.sz() + dz + 0.5);
+        }
+        ServerPlayer you = watcher(helper, level, r.sx() + 5.5, MineWorksGameTests.TOP + 1, r.sz() + 5.5);
+        WorksGoal.resetCountsForTests();
+        Blink.reset();
+        Blink.setOn(true);
+        MineWorksGameTests.fast(level);
+        level.setDayTime(1000);
+        final int[] tick = { 0 }, allDown = { -1 }, allUp = { -1 }, dusk = { -1 };
+        final int[] downAt = new int[n], upAt = new int[n];
+        java.util.Arrays.fill(downAt, -1);
+        java.util.Arrays.fill(upAt, -1);
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            int below = 0, up = 0;
+            for (int i = 0; i < n; i++) {
+                VillageFolkEntity m = r.miners().get(i);
+                // Miners they stay (the little test town would set some of them to farming, with no farmers of its own).
+                if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+                if (dusk[0] < 0) {
+                    // What it digs banked for it, and no trip to the stores: the test's town lies a hundred and sixty blocks
+                    // under the pithead's rock, with no way down to it but the mine.
+                    if (tick[0] % 100 == 0) m.removeMatching(st -> !st.is(net.minecraft.tags.ItemTags.PICKAXES) && !st.is(Items.TORCH) && !st.is(Items.BREAD)
+                        && !st.is(Items.COBBLESTONE), 64 * 36);
+                    if (m.peekJob() != null && m.peekJob().type() != com.jrpetty.mcassistant.entity.Job.Type.MINE) m.clearQueue();
+                    MineWorksGameTests.keepAtIt(r, m);
+                }
+                boolean isBelow = m.getY() <= stops.get(1).y() + 2, isUp = m.getY() >= MineWorksGameTests.TOP - 1;
+                if (isBelow) below++;
+                if (isUp) up++;
+                if (isBelow && downAt[i] < 0) downAt[i] = tick[0];
+                if (dusk[0] > 0 && isUp && upAt[i] < 0) upAt[i] = tick[0];
+            }
+            if (dusk[0] < 0 && allDown[0] < 0 && java.util.Arrays.stream(downAt).allMatch(t -> t > 0)) {
+                allDown[0] = tick[0];
+                Kit.log("[VT] bk01 all " + n + " have been below after " + tick[0] + " ticks; rides " + WorksGoal.RIDES + ", gave up on the cage " + WorksGoal.LIFT_GAVE_UP
+                    + "; seen jumps so far " + Blink.seenJumps());
+            }
+            if (tick[0] % 500 == 0) Kit.log("[VT] bk01 @" + tick[0] + ": below " + below + ", up " + up + ", seen jumps " + Blink.seenJumps() + ", leads "
+                + WorksGoal.LEADS + ", hops " + WorksGoal.TELEPORTS + "; cage " + MineLift.report(v));
+            if (tick[0] % 1500 == 0) for (VillageFolkEntity m : r.miners()) Kit.log("[VT] bk01   " + m.getAssistantName() + " at " + m.blockPosition().toShortString()
+                + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg()) + " cage " + MineLift.state(m.getUUID())
+                + " works " + WorksGoal.stateForTests(m) + " | " + m.brainNoteForBooks());
+            // An hour's work below once all are down (or after five minutes whatever), then the shift's end at dusk.
+            if (dusk[0] < 0 && (allDown[0] > 0 && tick[0] - allDown[0] > 1200 || tick[0] > 6000)) {
+                dusk[0] = tick[0];
+                level.setDayTime(12100);
+                Kit.log("[VT] bk01 dusk at " + tick[0] + " (below " + below + ")");
+            }
+            if (dusk[0] > 0 && allUp[0] < 0 && java.util.Arrays.stream(upAt).allMatch(t -> t > 0)) allUp[0] = tick[0];
+            boolean over = allUp[0] > 0 && tick[0] - allUp[0] > 1200 || dusk[0] > 0 && tick[0] - dusk[0] > 7000;
+            if (!over) return false;
+            Kit.log("[VT] bk01 jumps: \n" + Blink.report());
+            Kit.log("[VT] bk01 leads " + WorksGoal.LEADS + " (led on " + WorksGoal.LEAD_STROLLS + ", fresh ways " + WorksGoal.LEAD_REPLANS + ", digs " + WorksGoal.LEAD_DIGS + "), hops " + WorksGoal.TELEPORTS);
+            for (String h : WorksGoal.hopsForTests()) Kit.log("[VT] bk01 stuck: " + h);
+            for (String l : Blink.seenLines()) Kit.log("[VT] bk01 seen: " + l);
+            Kit.Expect ok = new Kit.Expect();
+            ok.that(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenJumps());
+            ok.that(allDown[0] > 0 && allDown[0] <= 4000, "all " + n + " miners down at work within 4000 ticks: " + allDown[0] + " " + java.util.Arrays.toString(downAt));
+            ok.that(allUp[0] > 0 && allUp[0] - dusk[0] <= 6000, "all up at the pithead within 6000 ticks of dusk: " + (allUp[0] - dusk[0]) + " " + java.util.Arrays.toString(upAt));
+            letGo(level, you);
+            level.setDayTime(1000);
+            helper.assertTrue(ok.clean(), ok.summary());
+            MineWorksGameTests.done(helper);
+            return true;
+        });
+    }
+
+    // ============================================================ bk02: the cage at a lower stop, watched from it
+
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "bk02_lower_stop")
+    public static void bk02_lower_stop(GameTestHelper helper) {
+        MineWorksGameTests.Rig r = SupplyChainGameTests.liftRig(helper, 6744000, 3);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        List<MineLift.Stop> stops = MineLift.stops(v);
+        helper.assertTrue(stops.size() == 3, "the cage, three stops: " + stops);
+        MineLift.Stop top = stops.get(0), coal = stops.get(1);
+        ServerPlayer you = watcher(helper, level, coal.board().getX() + 0.5, coal.y(), coal.board().getZ() + 0.5);
+        for (int i = 0; i < 3; i++) {
+            VillageFolkEntity m = r.miners().get(i);
+            m.setNoAi(true);                                    // the cage's walk in and out only: no errands of its own
+            m.teleportTo(top.board().getX() + 0.5, top.board().getY(), top.board().getZ() + 0.5 - i);
+        }
+        Blink.reset();
+        Blink.setOn(true);
+        Kit.Expect ok = new Kit.Expect();
+        final int[] tick = { 0 }, down = { -1 }, upAt = { -1 };
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            if (tick[0] == 10) for (VillageFolkEntity m : r.miners()) ok.that(MineLift.ask(m, v, top.index(), coal.index()), "a ride down asked for");
+            if (tick[0] <= 10) return false;
+            boolean all = r.miners().stream().allMatch(m -> MineLift.state(m.getUUID()) == MineLift.State.ARRIVED);
+            if (down[0] < 0 && all) {
+                down[0] = tick[0];
+                boolean there = r.miners().stream().allMatch(m -> Math.abs(m.getY() - coal.y()) < 1.1);
+                Kit.log("[VT] bk02 down to the coal stop after " + tick[0] + " ticks, all there " + there + "; seen jumps " + Blink.seenJumps());
+                ok.that(there, "down at the coal stop");
+                for (VillageFolkEntity m : r.miners()) MineLift.done(m.getUUID());
+                for (VillageFolkEntity m : r.miners()) ok.that(MineLift.ask(m, v, coal.index(), top.index()), "a ride up asked for");
+                return false;
+            }
+            if (down[0] > 0 && all && upAt[0] < 0) upAt[0] = tick[0];
+            if (upAt[0] < 0 && tick[0] < 1200) return false;
+            boolean back = r.miners().stream().allMatch(m -> Math.abs(m.getY() - top.y()) < 1.1);
+            for (VillageFolkEntity m : r.miners()) MineLift.done(m.getUUID());
+            Kit.log("[VT] bk02 up to the pithead after " + upAt[0] + " ticks, all there " + back + "; jumps:\n" + Blink.report());
+            for (String l : Blink.seenLines()) Kit.log("[VT] bk02 seen: " + l);
+            ok.that(down[0] > 0 && back, "down to the coal stop and back up");
+            ok.that(down[0] > 0 && down[0] < 400 && upAt[0] - down[0] < 400, "each run under twenty seconds: " + down[0] + ", " + (upAt[0] - down[0]));
+            ok.that(Blink.seenJumps() == 0, "no jump in sight at the lower stop: " + Blink.seenJumps());
+        boolean bars = true;
+        for (int h = 0; h < 2; h++) {
+            int[] o = { Integer.signum(coal.board().getX() - r.sx()), Integer.signum(coal.board().getZ() - r.sz()) };
+            for (BlockPos c : new BlockPos[]{ new BlockPos(r.sx() + o[0], coal.y() + h, r.sz() + o[1]), new BlockPos(r.sx() + o[0], coal.y() + h, r.sz()),
+                    new BlockPos(r.sx(), coal.y() + h, r.sz() + o[1]) })
+                bars &= level.getBlockState(c).is(net.minecraft.world.level.block.Blocks.IRON_BARS);
+        }
+            ok.that(bars, "the stop's window shut again behind them");
+            letGo(level, you);
+            helper.assertTrue(ok.clean(), ok.summary());
+            MineWorksGameTests.done(helper);
+            return true;
+        });
+    }
+
+    // ============================================================ bk03: a working town, a player at its heart, a day and a night
+
+    /**
+     * A town of thirty founded with its buildings put up, a player standing in the middle of it from six in the morning to
+     * six the next morning (the level of detail for scale on, as in a game: walks out of sight travelled, the path budget in
+     * force). Not one jump in the player's sight; the safety ones (a folk stepped out of a wall) are counted apart.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 60000, batch = "bk03_town_day_and_night")
+    public static void bk03_town_day_and_night(GameTestHelper helper) {
+        dayAndNight(helper, "bk03", 6748000, 30, -1);
+    }
+
+    /**
+     * [tp46] bk08: a town of twelve four beds short (four of its beds taken up before the first night): the four with no bed
+     * to be had lie down on a floor indoors, walked to; nine in ten of the town asleep at one in the morning all the same,
+     * and nobody seen to jump.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 60000, batch = "bk08_beds_short")
+    public static void bk08_beds_short(GameTestHelper helper) {
+        dayAndNight(helper, "bk08", 6776000, 12, 4);
+    }
+
+    /** A town of {@code folk} through a day and a night with a player at its heart; {@code short_} of its beds taken up first (-1: none). */
+    static void dayAndNight(GameTestHelper helper, String tag, int cx, int folk, int short_) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        level.setDayTime(22000L);
+        int cz = 40_000;
+        BuildAuditGameTests.shape(level, BuildAuditGameTests.Ground.MEADOW, cx, cz, com.jrpetty.mcassistant.village.TownPlan.reach() + 16, 2803);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        Kit.log("[VT] " + tag + " found " + folk + ": " + Kit.command(level, "village found " + folk + " " + cx + " " + cz));
+        UUID[] id = { null };
+        long[] began = { -1 };
+        int[] asleepAt1 = { -1, 0 };
+        ServerPlayer[] you = { null };
+        helper.onEachTick(() -> {
+            if (began[0] == -2) return;
+            if (id[0] == null) {
+                if (com.jrpetty.mcassistant.entity.Founding.near(level, heart, 8)) return;
+                com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.nearest(level, heart, 96);
+                if (v == null) { began[0] = -2; helper.fail("no village at " + heart); return; }
+                id[0] = v.id();
+                com.jrpetty.mcassistant.entity.Villages.ageForTests(v.id(), com.jrpetty.mcassistant.entity.Villages.Age.IRON);
+                Kit.stockForGrowth(level, v);
+                for (int i = 0; i < 24; i++) {
+                    String p = com.jrpetty.mcassistant.entity.AdminTools.nextProject(v.id());
+                    if (p == null) break;
+                    com.jrpetty.mcassistant.entity.AdminTools.buildProject(level, v, p, false);
+                }
+                Kit.stockForGrowth(level, v);
+                level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L);      // the next morning, six o'clock
+                you[0] = watcher(helper, level, heart.getX() + 0.5, heart.getY() + 1, heart.getZ() + 0.5);
+                com.jrpetty.mcassistant.entity.FolkLod.liveForTests(true);
+                MineWorksGameTests.fast(level);
+                Blink.reset();
+                Blink.setOn(true);
+                began[0] = level.getGameTime();
+                Kit.log("[VT] " + tag + " " + com.jrpetty.mcassistant.entity.Villages.name(v.id()) + ": " + com.jrpetty.mcassistant.entity.Villages.headcount(v.id())
+                    + " folk, a player at the heart from six in the morning");
+                return;
+            }
+            long ran = level.getGameTime() - began[0];
+            // The beds taken up at dusk, the day's works done (they would make them up again by day).
+            if (ran == 12600 && short_ > 0) Kit.log("[VT] " + tag + " beds taken up: " + takeUpBeds(level, heart, folk - short_) + ", " + (folk - short_) + " kept");
+            if (ran == 14000 || ran == 16000 || ran == 19000) {                   // the evening, bedtime, and one in the morning: who is in bed
+                int asleep = 0, all = 0, floor = 0, beds = 0;
+                java.util.Map<String, Integer> why = new java.util.TreeMap<>();
+                for (com.jrpetty.mcassistant.entity.AssistantEntity a : com.jrpetty.mcassistant.entity.Villages.folkOf(id[0])) {
+                    all++;
+                    String w = com.jrpetty.mcassistant.entity.Bedside.whyAwake(a);
+                    why.merge(com.jrpetty.mcassistant.entity.Bedside.kind(w), 1, Integer::sum);
+                    if (a.bedPos() != null) beds++;
+                    if (a.isSleeping()) { asleep++; if (com.jrpetty.mcassistant.entity.Bedside.onAFloor(a)) floor++; continue; }
+                    BlockPos bed = a.bedPos();
+                    Kit.log("[VT] " + tag + "   awake at night: " + a.getAssistantName() + " (" + w + ") at " + a.blockPosition().toShortString() + " bed " + (bed == null ? "-" : bed.toShortString()
+                        + " " + (int) Math.sqrt(bed.distSqr(a.blockPosition())) + " off") + " path " + pathLine(a) + " shift " + a.onShift() + " gave up " + a.bedsGivenUp()
+                        + " goals " + running(a) + " job " + (a.peekJob() == null ? "-" : a.peekJob().type()) + " | " + a.brainNoteForBooks());
+                }
+                if (ran == 19000) {                                            // [tp46] the room round the first two awake at their bedside
+                    int shown = 0;
+                    for (com.jrpetty.mcassistant.entity.AssistantEntity a : com.jrpetty.mcassistant.entity.Villages.folkOf(id[0])) {
+                        if (a.isSleeping() || a.bedPos() == null || a.bedPos().distSqr(a.blockPosition()) > 18 || shown++ >= 2) continue;
+                        BlockPos bed = a.bedPos();
+                        Kit.log("[VT] " + tag + " room round " + a.getAssistantName() + " at " + a.position() + " bed " + bed.toShortString() + " " + level.getBlockState(bed));
+                        for (int dy = -1; dy <= 1; dy++) for (int dz = -3; dz <= 3; dz++) {
+                            StringBuilder row = new StringBuilder("[VT] bk03 room y" + dy + " z" + (bed.getZ() + dz) + ":");
+                            for (int dx = -3; dx <= 3; dx++) {
+                                BlockPos q = bed.offset(dx, dy, dz);
+                                String n = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(q).getBlock()).getPath();
+                                if (q.equals(a.blockPosition())) n = "@" + n;
+                                row.append(' ').append(String.format("%-14.14s", n));
+                            }
+                            Kit.log(row.toString());
+                        }
+                    }
+                }
+                Kit.log("[VT] " + tag + " at night (" + (level.getDayTime() % 24000L) + "): " + asleep + " of " + all + " asleep (" + floor + " on a floor), " + beds + " with a bed; why: " + why);
+                if (ran == 19000) { asleepAt1[0] = asleep; asleepAt1[1] = all; }
+            }
+            if (ran % 4000 == 0) Kit.log("[VT] " + tag + " @" + ran + " (" + (level.getDayTime() % 24000L) + "): seen jumps " + Blink.seenJumps() + ", safety " + Blink.excusedSeenJumps());
+            if (ran < 24200) return;
+            began[0] = -2;
+            Kit.log("[VT] " + tag + " a day and a night with a player at the heart:\n" + Blink.report());
+            for (String l : Blink.seenLines()) Kit.log("[VT] " + tag + " seen: " + l);
+            List<String> held = Blink.heldLines();
+            for (int i = 0; i < Math.min(40, held.size()); i++) Kit.log("[VT] " + tag + " held: " + held.get(i));
+            // Every move through a teleport, set or put is counted with its cause: none may be seen. The once-a-tick look
+            // also counts a change of place of over a block and a half that came by none of them (the game's own push out of
+            // a block set where a folk stood, a step up a slab at a run): a residual of at most two a day is let be.
+            long untraced = Blink.seenLines().stream().filter(l -> l.contains("untraced")).count();
+            long seen = Blink.seenJumps() - untraced;
+            Kit.log("[VT] " + tag + " seen " + seen + " traced, " + untraced + " untraced");
+            if (untraced > 2) seen += untraced;
+            com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            level.getServer().tickRateManager().setTickRate(20.0F);
+            letGo(level, you[0]);
+            // [tp46] And nine in ten of the town asleep at one in the morning, in a bed or (with none to be had) on a floor.
+            int need = (asleepAt1[1] * 9 + 9) / 10;
+            if (seen != 0) helper.fail("jumps in the player's sight over a day and a night: " + seen);
+            else if (asleepAt1[0] < need) helper.fail("asleep at one in the morning: " + asleepAt1[0] + " of " + asleepAt1[1] + " (" + need + " wanted)");
+            else helper.succeed();
+        });
+    }
+
+    /** [tp46] The town's beds taken up (both halves, nothing dropped) but the {@code keep} nearest the heart; how many went. */
+    static int takeUpBeds(ServerLevel level, BlockPos heart, int keep) {
+        List<BlockPos> heads = new java.util.ArrayList<>();
+        for (int x = (heart.getX() >> 4) - 6; x <= (heart.getX() >> 4) + 6; x++) for (int z = (heart.getZ() >> 4) - 6; z <= (heart.getZ() >> 4) + 6; z++) {
+            net.minecraft.world.level.chunk.LevelChunk c = level.getChunkSource().getChunkNow(x, z);
+            if (c == null) continue;
+            for (net.minecraft.world.level.block.entity.BlockEntity be : c.getBlockEntities().values()) {
+                net.minecraft.world.level.block.state.BlockState st = level.getBlockState(be.getBlockPos());
+                if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock
+                        && st.getValue(net.minecraft.world.level.block.BedBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.HEAD) heads.add(be.getBlockPos());
+            }
+        }
+        heads.sort(java.util.Comparator.comparingDouble(p -> -p.distSqr(heart)));
+        int n = Math.max(0, heads.size() - keep);
+        int gone = 0;
+        for (BlockPos h : heads) {
+            if (gone >= n) break;
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(h);
+            BlockPos foot = h.relative(st.getValue(net.minecraft.world.level.block.BedBlock.FACING).getOpposite());
+            level.setBlock(foot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2 | 16);
+            level.setBlock(h, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2 | 16);
+            gone++;
+        }
+        return gone;
+    }
+
+    // ============================================================ bk10: a sleeper shoved all night
+
+    /**
+     * [tp49] bk10: a folk asleep with others pressing on it all night (a crowd standing about a floor slept on in a passage,
+     * the game shoving bodies that touch) gets up at dawn and stands where it lay. The game's movement is skipped for a
+     * sleeper (FolkLod) and the night's shoves were saved up in it, a hundred and fifty blocks a tick by dawn, and spent in
+     * one tick the moment it stood: in the soak four and five folk at once shot eight blocks along the passage at daybreak,
+     * in the player's sight, "untraced".
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "bk10_sleepers_shoved")
+    public static void bk10_sleepers_shoved(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x = 6_784_000, z = 40_000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        level.setDayTime(18000L);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        BlockPos head = EmeraldGameTests.bed(level, heart.offset(4, 0, 4), net.minecraft.core.Direction.NORTH);
+        helper.assertTrue(f.claimBedNear(head), "a bed claimed");
+        f.moveTo(head.getX() + 0.5, head.getY(), head.getZ() + 1.5, 0.0F, 0.0F);
+        f.startSleeping(f.bedPos());
+        helper.assertTrue(f.isSleeping(), "asleep in its bed");
+        ServerPlayer you = watcher(helper, level, heart.getX() + 6.5, heart.getY(), heart.getZ() + 0.5);
+        com.jrpetty.mcassistant.entity.FolkLod.liveForTests(true);
+        Blink.reset();
+        Blink.setOn(true);
+        int[] ran = { 0 }, asleep = { 0 };
+        double[] most = { 0.0, 0.0 };                                         // the most it was carried in one tick: asleep, after
+        double[] was = { f.getX(), f.getY(), f.getZ() };
+        helper.onEachTick(() -> {
+            if (ran[0] < 0) return;
+            ran[0]++;
+            double moved = Math.sqrt(f.distanceToSqr(was[0], was[1], was[2]));
+            was[0] = f.getX(); was[1] = f.getY(); was[2] = f.getZ();
+            if (ran[0] <= 400) {
+                if (f.isSleeping()) {
+                    asleep[0]++;
+                    most[0] = Math.max(most[0], moved);
+                    f.push(0.03, 0.0, 0.02);                                  // a body standing in it, as the game shoves one
+                }
+                if (ran[0] == 400) f.stopSleeping();                         // dawn
+                return;
+            }
+            most[1] = Math.max(most[1], moved);
+            if (ran[0] < 420) return;
+            ran[0] = -1;
+            Kit.log("[VT] bk10 asleep " + asleep[0] + " of 400 ticks, shoved each; carried at most " + String.format("%.2f", most[0])
+                + " a tick asleep and " + String.format("%.2f", most[1]) + " the twenty ticks after it got up; seen jumps " + Blink.seenJumps()
+                + "\n" + Blink.report());
+            com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
+            letGo(level, you);
+            helper.assertTrue(asleep[0] >= 380, "asleep all night: " + asleep[0] + " of 400 ticks");
+            helper.assertTrue(most[0] < 0.1 && most[1] < 1.0, "never carried off by the night's shoves: " + most[0] + " asleep, " + most[1] + " after");
+            helper.assertTrue(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenLines());
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ bk11: a handcart by a wall
+
+    /**
+     * [tp49] bk11: a handcart on a lane along a wall, its handles' spot so near the wall that a body standing there would be
+     * a hand's breadth into it: its driver stands between the handles a little off that spot, clear of the wall, not in it
+     * and not up on top of it. (A hauler pulling its town's handcart was set by the cart into a house's wall or the bank of a
+     * narrow road at every corner, hurt by the wall and stepped out of it, and set back into it by the cart the next tick:
+     * ninety-odd times in a day of the soak, each one a jump in the player's sight.)
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "bk11_handcart_by_a_wall")
+    public static void bk11_handcart_by_a_wall(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Wagons.resetForTests();
+        int x = 6_788_000, z = 40_000;
+        Kit.hold(level, x, z, 16);
+        Kit.prepare(level, x, z, 16);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        com.jrpetty.mcassistant.entity.TradeWagon w = com.jrpetty.mcassistant.entity.Wagons.giveForTests(level, f.ownerId(),
+            com.jrpetty.mcassistant.entity.WagonKind.HANDCART);
+        helper.assertTrue(w != null, "a handcart");
+        // A lane paved flat up in the clear air off the town, five wide, and a wall two high along its south side.
+        int y = heart.getY() + 12, x0 = x + 6, z0 = z + 6;
+        for (int dx = -2; dx <= 12; dx++) for (int dz = -2; dz <= 3; dz++) {
+            level.setBlock(new BlockPos(x0 + dx, y - 1, z0 + dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+            for (int dy = 0; dy <= 3; dy++) level.setBlock(new BlockPos(x0 + dx, y + dy, z0 + dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        }
+        for (int dx = -2; dx <= 12; dx++) for (int dy = 0; dy <= 1; dy++)
+            level.setBlock(new BlockPos(x0 + dx, y + dy, z0 + 2), net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+        // The cart on the lane facing east, its middle eight tenths into the row by the wall: a body at its handles' own spot
+        // would stand a tenth of a block into the wall.
+        w.moveTo(x0 + 2.5, y, z0 + 1.8, -90.0F, 0.0F);
+        net.minecraft.world.phys.Vec3 raw = new net.minecraft.world.phys.Vec3(w.getX() + 1.6, y, w.getZ());
+        boolean rawIn = !level.noCollision(f, f.getDimensions(f.getPose()).makeBoundingBox(raw.x, raw.y, raw.z));
+        net.minecraft.world.phys.Vec3 at = com.jrpetty.mcassistant.entity.Wagons.handlesForTests(level, w, f);
+        boolean clear = level.noCollision(f, f.getDimensions(f.getPose()).makeBoundingBox(at.x, at.y, at.z));
+        Kit.log("[VT] bk11 the cart at " + w.position() + " facing east; its handles' spot " + raw + " in the wall " + rawIn
+            + "; the driver stands at " + at + ", clear " + clear + ", " + String.format("%.2f", at.distanceTo(raw)) + " off it");
+        helper.assertTrue(rawIn, "the handles' own spot is in the wall (the case looked at)");
+        helper.assertTrue(clear, "the driver stands clear of the wall: " + at);
+        helper.assertTrue(at.distanceTo(raw) <= 0.6 && Math.abs(at.y - y) < 0.01, "between the handles still, on the lane, not up on the wall: " + at);
+        // In the open middle of the lane the handles' own spot, as ever.
+        w.moveTo(x0 + 2.5, y, z0 + 0.5, -90.0F, 0.0F);
+        net.minecraft.world.phys.Vec3 open = com.jrpetty.mcassistant.entity.Wagons.handlesForTests(level, w, f);
+        helper.assertTrue(open.distanceTo(new net.minecraft.world.phys.Vec3(w.getX() + 1.6, y, w.getZ())) < 0.01, "in the open, the handles' own spot: " + open);
+        w.discard();
+        helper.succeed();
+    }
+
+    // ============================================================ bk04 / bk05: before the cage
+
+    /** bk04: a young mine, its shaft not yet begun (no headframe, no cage): six miners sink it and work it by the stair. */
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "bk04_young_mine")
+    public static void bk04_young_mine(GameTestHelper helper) {
+        beforeTheCage(helper, "bk04", 6752000, 6, 0, 5000);
+    }
+
+    /** bk05: the shaft sunk to the coal level, the headframe up but no cage yet (the works under forty deep): eight miners at a
+     *  shift change at the pithead, down the stair and up it again at dusk. */
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "bk05_headframe_no_cage")
+    public static void bk05_headframe_no_cage(GameTestHelper helper) {
+        beforeTheCage(helper, "bk05", 6756000, 8, -1, 5000);
+    }
+
+    /**
+     * A mine with no cage, a player standing by the shaft's head: miners at a shift change at the pithead. {@code sinkTo} 0:
+     * not begun; -1: sunk to the coal level and its room cut, the headframe up. Not one jump in sight; never a knot of more
+     * than four standing at the stair's head; the shaft sunk on (bk04) or every miner down at work (bk05); up again at dusk.
+     */
+    static void beforeTheCage(GameTestHelper helper, String label, int x, int n, int sinkTo, int dayTicks) {
+        MineWorksGameTests.Rig r = MineWorksGameTests.rig(helper, x, n);
+        ServerLevel level = r.level();
+        UUID v = r.v();
+        MineLift.forgetForTests(v);
+        com.jrpetty.mcassistant.entity.MineRoof.resetForTests();
+        int coal = com.jrpetty.mcassistant.entity.MineWorks.levelY(level, v, com.jrpetty.mcassistant.entity.MineWorks.COAL);
+        Kit.hold(level, r.sx(), r.sz(), 48);
+        MineWorksGameTests.tower(r, -59);
+        MineWorksGameTests.bed(r, coal, 32, net.minecraft.world.level.block.Blocks.COAL_ORE, 80, 4401L);
+        if (sinkTo < 0) {
+            com.jrpetty.mcassistant.entity.MineWorks.sinkForTests(level, v, 4 * ((MineWorksGameTests.TOP - coal) / 3) + 1, null);
+            com.jrpetty.mcassistant.entity.MineWorks.roomForTests(level, v, com.jrpetty.mcassistant.entity.MineWorks.COAL);
+            com.jrpetty.mcassistant.entity.MineWorks.tick(level, com.jrpetty.mcassistant.entity.Villages.get(v));
+        }
+        int[] shaft0 = com.jrpetty.mcassistant.entity.MineWorks.shaftForTests(level, v);
+        MineDemand.stockForTests(v, MineWorksGameTests.plenty());
+        for (int i = 0; i < n; i++) {
+            VillageFolkEntity m = r.miners().get(i);
+            MineWorksGameTests.kit(m, Items.IRON_PICKAXE);
+            MineWorksGameTests.zone(r, m, coal);
+            int dx = -5 + (i % 4) * 3, dz = i < 4 ? -5 : 5;
+            m.teleportTo(r.sx() + dx + 0.5, MineWorksGameTests.TOP, r.sz() + dz + 0.5);
+        }
+        ServerPlayer you = watcher(helper, level, r.sx() + 5.5, MineWorksGameTests.TOP + 1, r.sz() - 5.5);
+        Kit.log("[VT] " + label + " the works: sunk " + shaft0[0] + " steps, headframe " + (shaft0[4] == 1) + ", a cage " + MineLift.has(v) + "; coal level Y" + coal);
+        WorksGoal.resetCountsForTests();
+        Blink.reset();
+        Blink.setOn(true);
+        MineWorksGameTests.fast(level);
+        level.setDayTime(1000);
+        final int[] tick = { 0 }, crowd = { 0 }, dusk = { -1 };
+        final int[] downAt = new int[n], upAt = new int[n];
+        java.util.Arrays.fill(downAt, -1);
+        java.util.Arrays.fill(upAt, -1);
+        BlockPos head = new BlockPos(r.sx() - 2, MineWorksGameTests.TOP, r.sz() - 2);      // the stair's head (its first step)
+        MineSiteGameTests.each(helper, () -> {
+            tick[0]++;
+            int knot = 0;
+            for (int i = 0; i < n; i++) {
+                VillageFolkEntity m = r.miners().get(i);
+                if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+                if (dusk[0] < 0) {
+                    if (tick[0] % 100 == 0) m.removeMatching(st -> !st.is(net.minecraft.tags.ItemTags.PICKAXES) && !st.is(Items.TORCH) && !st.is(Items.BREAD)
+                        && !st.is(Items.COBBLESTONE), 64 * 36);
+                    if (m.peekJob() != null && m.peekJob().type() != com.jrpetty.mcassistant.entity.Job.Type.MINE) m.clearQueue();
+                    MineWorksGameTests.keepAtIt(r, m);
+                }
+                boolean below = m.getY() <= MineWorksGameTests.TOP - 4, up = m.getY() >= MineWorksGameTests.TOP - 1;
+                if (below && downAt[i] < 0) downAt[i] = tick[0];
+                if (dusk[0] > 0 && up && upAt[i] < 0) upAt[i] = tick[0];
+                if (up && m.position().distanceTo(net.minecraft.world.phys.Vec3.atBottomCenterOf(head)) <= 2.5 && m.getDeltaMovement().horizontalDistanceSqr() < 0.003) knot++;
+            }
+            if (tick[0] > 100 && knot > crowd[0]) crowd[0] = knot;
+            if (tick[0] % 500 == 0) {
+                int[] sh = com.jrpetty.mcassistant.entity.MineWorks.shaftForTests(level, v);
+                Kit.log("[VT] " + label + " @" + tick[0] + ": sunk " + sh[0] + ", headframe " + (sh[4] == 1) + ", knot at the stair head now " + knot + " (most " + crowd[0]
+                    + "), seen jumps " + Blink.seenJumps() + ", leads " + WorksGoal.LEADS);
+                if (tick[0] % 1500 == 0) for (VillageFolkEntity m : r.miners()) Kit.log("[VT] " + label + "   " + m.getAssistantName() + " at " + m.blockPosition().toShortString()
+                    + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg()) + " works " + WorksGoal.stateForTests(m) + " | " + m.brainNoteForBooks());
+            }
+            if (dusk[0] < 0 && tick[0] >= dayTicks) {
+                dusk[0] = tick[0];
+                level.setDayTime(12100);
+                Kit.log("[VT] " + label + " dusk at " + tick[0]);
+            }
+            boolean allUp = dusk[0] > 0 && java.util.Arrays.stream(upAt).allMatch(t -> t > 0 || false);
+            if (!(allUp || dusk[0] > 0 && tick[0] - dusk[0] > 3000)) return false;
+            int[] sh = com.jrpetty.mcassistant.entity.MineWorks.shaftForTests(level, v);
+            int wentDown = (int) java.util.Arrays.stream(downAt).filter(t -> t > 0).count();
+            Kit.log("[VT] " + label + " jumps:\n" + Blink.report());
+            for (String l : Blink.seenLines()) Kit.log("[VT] " + label + " seen: " + l);
+            Kit.log("[VT] " + label + " sunk " + shaft0[0] + " -> " + sh[0] + ", headframe " + (sh[4] == 1) + "; went below " + wentDown + " of " + n + " "
+                + java.util.Arrays.toString(downAt) + "; up after dusk " + java.util.Arrays.toString(upAt) + "; most at the stair head at once " + crowd[0]
+                + "; leads " + WorksGoal.LEADS + " (digs " + WorksGoal.LEAD_DIGS + "), hops " + WorksGoal.TELEPORTS);
+            Kit.Expect ok = new Kit.Expect();
+            ok.that(Blink.seenJumps() == 0, "no jump in the player's sight: " + Blink.seenJumps());
+            ok.that(crowd[0] <= 4, "never more than four stood at the stair's head: " + crowd[0]);
+            if (sinkTo == 0) ok.that(sh[0] >= shaft0[0] + 4, "the shaft sunk on: " + shaft0[0] + " -> " + sh[0]);
+            else ok.that(wentDown == n, "every miner down the stair at work: " + wentDown + " of " + n);
+            ok.that(java.util.Arrays.stream(upAt).filter(t -> t > 0).count() >= n - 1, "up at the pithead again after dusk: " + java.util.Arrays.toString(upAt));
+            letGo(level, you);
+            level.setDayTime(1000);
+            helper.assertTrue(ok.clean(), ok.summary());
+            MineWorksGameTests.done(helper);
+            return true;
+        });
+    }
+
+    // ============================================================ bk06 / bk07: a mine over a river
+
+    /** bk06: the mine across a river with no crossing: the town bridges it first, then its miners walk to work over it. */
+    @GameTest(template = EMPTY, timeoutTicks = 40000, batch = "bk06_mine_over_the_river")
+    public static void bk06_mine_over_the_river(GameTestHelper helper) {
+        overTheRiver(helper, "bk06", 6760000, false);
+    }
+
+    /** bk07: the same with a footbridge already over the river on the way: nothing more is built, the miners walk over it. */
+    @GameTest(template = EMPTY, timeoutTicks = 40000, batch = "bk07_mine_river_bridged")
+    public static void bk07_mine_river_bridged(GameTestHelper helper) {
+        overTheRiver(helper, "bk07", 6764000, true);
+    }
+
+    /**
+     * [tp46] bk09: a pond beside the miners' way out to the mine (seven wide, thirty-six long, flush with the ground, across
+     * the straight line but not the whole way: round its end is dry and a little longer). A full day and night with the time
+     * running (out in the morning, home at dusk, errands and deposits between): not one tick in the water for any miner, not
+     * one jump in the player's sight, and nothing built.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 40000, batch = "bk09_pond_beside_the_way")
+    public static void bk09_pond_beside_the_way(GameTestHelper helper) {
+        overTheRiver(helper, "bk09", 6768000, false, true);
+    }
+
+    static void overTheRiver(GameTestHelper helper, String label, int cx, boolean bridged) {
+        overTheRiver(helper, label, cx, bridged, false);
+    }
+
+    static void overTheRiver(GameTestHelper helper, String label, int cx, boolean bridged, boolean pond) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
+        if (!bridged) com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        level.setDayTime(22000L);
+        int cz = 40_000, n = 6;
+        int reach = com.jrpetty.mcassistant.village.TownPlan.reach();
+        BuildAuditGameTests.shape(level, BuildAuditGameTests.Ground.MEADOW, cx, cz, reach + 16, 2805);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        Kit.log("[VT] " + label + " found 20: " + Kit.command(level, "village found 20 " + cx + " " + cz));
+        int rx = cx + reach + 30, sx = rx + 45;                       // the river (seven wide), and the mine beyond it
+        Kit.hold(level, rx, cz, 64);
+        Kit.hold(level, sx, cz, 32);
+        UUID[] id = { null };
+        BlockPos[] pit = { null };
+        long[] began = { -1 };
+        ServerPlayer[] you = { null };
+        List<VillageFolkEntity> miners = new java.util.ArrayList<>();
+        int[] wet = new int[n], reached = new int[n];
+        // What each miner was at over its last couple of seconds, told when it goes into the water (the log, to see how).
+        List<java.util.ArrayDeque<String>> trail = new java.util.ArrayList<>();
+        for (int i = 0; i < n; i++) trail.add(new java.util.ArrayDeque<>());
+        boolean[] wasWet = new boolean[n];
+        helper.onEachTick(() -> {
+            if (began[0] == -2) return;
+            if (id[0] == null) {
+                if (com.jrpetty.mcassistant.entity.Founding.near(level, heart, 8)) return;
+                com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.nearest(level, heart, 96);
+                if (v == null) { began[0] = -2; helper.fail("no village at " + heart); return; }
+                id[0] = v.id();
+                com.jrpetty.mcassistant.entity.Villages.ageForTests(v.id(), com.jrpetty.mcassistant.entity.Villages.Age.IRON);
+                Kit.stockForGrowth(level, v);
+                for (int i = 0; i < 16; i++) {
+                    String p = com.jrpetty.mcassistant.entity.AdminTools.nextProject(v.id());
+                    if (p == null) break;
+                    com.jrpetty.mcassistant.entity.AdminTools.buildProject(level, v, p, false);
+                }
+                Kit.stockForGrowth(level, v);
+                // The river: seven wide and three deep, a hundred and forty long, across the way out to the mine.
+                for (int x = rx; x < rx + 7; x++) for (int z = cz - (pond ? 30 : 70); z <= cz + (pond ? 5 : 70); z++) {
+                    BlockPos top = Kit.surface(level, x, z);
+                    for (int dy = 1; dy <= 3; dy++) level.setBlock(top.below(dy), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 2);
+                    for (int dy = 0; dy <= 3; dy++) level.setBlock(top.above(dy), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                }
+                if (bridged) {                                              // a plank footbridge, flush on the water, three wide
+                    for (int x = rx - 1; x < rx + 8; x++) for (int dz = -1; dz <= 1; dz++) {
+                        BlockPos top = Kit.surface(level, x, cz + dz);
+                        level.setBlock(top.below(), net.minecraft.world.level.block.Blocks.SPRUCE_PLANKS.defaultBlockState(), 2);
+                    }
+                }
+                BlockPos site = Kit.surface(level, sx, cz);
+                pit[0] = site;
+                com.jrpetty.mcassistant.village.Ledger.note(v.id(), "mine.site", sx + "," + cz);
+                for (com.jrpetty.mcassistant.entity.AssistantEntity a : com.jrpetty.mcassistant.entity.Villages.folkOf(v.id())) {
+                    if (miners.size() >= n || !(a instanceof VillageFolkEntity f) || f.isBaby()) continue;
+                    f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+                    f.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(site, 6, site.getY() - 3), "Mine");
+                    MineWorksGameTests.kit(f, Items.IRON_PICKAXE);
+                    miners.add(f);
+                }
+                level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 1000L);
+                you[0] = watcher(helper, level, rx - 6.5, heart.getY() + 1, cz + 4.5);
+                MineWorksGameTests.fast(level);
+                Blink.reset();
+                Blink.setOn(true);
+                began[0] = level.getGameTime();
+                Kit.log("[VT] " + label + " " + com.jrpetty.mcassistant.entity.Villages.name(v.id()) + ": " + miners.size() + " miners, the mine at " + site.toShortString()
+                    + " over the river at x " + rx + ".." + (rx + 6) + (bridged ? " (bridged)" : " (no crossing)"));
+                return;
+            }
+            long ran = level.getGameTime() - began[0];
+            if (!pond && level.getDayTime() % 24000L > 10500L) level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 1000L);   // by day
+            if (ran % 6000 == 0) Kit.stockForGrowth(level, com.jrpetty.mcassistant.entity.Villages.get(id[0]));   // the stores kept up, as by a day's trade
+            for (int i = 0; i < miners.size(); i++) {
+                VillageFolkEntity m = miners.get(i);
+                java.util.ArrayDeque<String> tr = trail.get(i);
+                if (m.isInWater() && !wasWet[i]) {
+                    Kit.log("[VT] " + label + " INTO THE WATER " + m.getAssistantName() + " at " + String.format("%.2f %.2f %.2f", m.getX(), m.getY(), m.getZ()) + "; the ticks before:\n  " + String.join("\n  ", tr)
+                        + "\n  path " + pathNodes(m));
+                    if (java.util.stream.IntStream.range(0, n).allMatch(k -> wet[k] == 0)) {     // the first: the ground there
+                        StringBuilder g = new StringBuilder();
+                        for (int y = m.getBlockY() + 5; y >= m.getBlockY() - 1; y--) {
+                            g.append("\n  y").append(y).append(' ');
+                            for (int z = m.getBlockZ() - 3; z <= m.getBlockZ() + 3; z++) {
+                                g.append(" z").append(z % 1000).append(':');
+                                for (int x = m.getBlockX() - 6; x <= m.getBlockX() + 6; x++) {
+                                    net.minecraft.world.level.block.state.BlockState st = level.getBlockState(new BlockPos(x, y, z));
+                                    g.append(st.isAir() ? '.' : !st.getFluidState().isEmpty() ? '~' : st.getCollisionShape(level, new BlockPos(x, y, z)).isEmpty() ? ',' : '#');
+                                }
+                            }
+                        }
+                        Kit.log("[VT] " + label + " the ground round it (x " + (m.getBlockX() - 6) % 1000 + ".." + (m.getBlockX() + 6) % 1000 + "):" + g);
+                    }
+                }
+                wasWet[i] = m.isInWater();
+                tr.addLast(ran + " " + String.format("%.2f %.2f %.2f", m.getX(), m.getY(), m.getZ()) + (m.onGround() ? " g" : " -") + (m.isInWater() ? " WET" : "")
+                    + " path " + pathLine(m) + (m.getNavigation() instanceof com.jrpetty.mcassistant.entity.FolkNavigation fn && fn.mustSwim() ? " MUSTSWIM" : "")
+                    + " goals " + running(m) + " | " + m.brainNoteForBooks());
+                if (tr.size() > 40) tr.removeFirst();
+                if (m.isInWater()) {
+                    if (wet[i]++ % 40 == 0) Kit.log("[VT] " + label + " WET " + m.getAssistantName() + " at " + m.blockPosition().toShortString() + " goals " + running(m)
+                        + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg()) + " nav " + m.getNavigation().getTargetPos()
+                        + " | " + m.brainNoteForBooks());
+                }
+                if (reached[i] == 0 && m.getX() > rx + 10 && Math.abs(m.getX() - sx) <= 8 && Math.abs(m.getZ() - cz) <= 8) reached[i] = (int) ran;
+                // Kept at the mine: its trade, and its ground with it ([tp47] the town short of a ferryman took one of the six on,
+                // the trade was put back and the ferry's ground was left: a "miner" walking back to a plot out on the river).
+                if (m.stationTask() != com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE) {
+                    m.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+                    m.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pit[0], 6, pit[0].getY() - 3), "Mine");
+                }
+            }
+            if (ran % 250 == 0 && ran <= 3000) for (VillageFolkEntity m : miners) Kit.log("[VT] " + label + "   " + m.getAssistantName() + " at "
+                + m.blockPosition().toShortString() + (m.isInWater() ? " IN WATER" : "") + " goals " + running(m) + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg())
+                + " lent " + (m.isPassenger() ? "riding" : "") + " | " + m.brainNoteForBooks());
+            if (ran % 1000 == 0) Kit.log("[VT] " + label + " @" + ran + ": " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]) + "; bridges " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0])
+                + "; reached " + java.util.Arrays.toString(reached) + "; in the water " + java.util.Arrays.toString(wet) + "; seen jumps " + Blink.seenJumps()
+                + "; the ferry " + (com.jrpetty.mcassistant.entity.Ferries.crossing(id[0]) == null ? "none" : com.jrpetty.mcassistant.entity.Ferries.crossing(id[0]).state().words)
+                + "; wet ways held dry " + com.jrpetty.mcassistant.entity.FolkNavigation.HELD_DRY);
+            // [tp47] Once the way is open, where each miner not yet at the pithead is and what it is at (the log).
+            if (ran % 1000 == 0 && !com.jrpetty.mcassistant.entity.MineWay.cutOff(id[0])) for (int i = 0; i < miners.size(); i++) {
+                VillageFolkEntity m = miners.get(i);
+                if (reached[i] == 0) Kit.log("[VT] " + label + "   not there yet: " + m.getAssistantName() + " at " + m.blockPosition().toShortString() + " path " + pathLine(m)
+                    + " goals " + running(m) + " job " + (m.peekJob() == null ? "-" : m.peekJob().type() + ":" + m.peekJob().arg()) + " | " + m.brainNoteForBooks());
+            }
+            boolean all = java.util.Arrays.stream(reached).limit(miners.size()).allMatch(t -> t > 0);
+            if (pond ? ran < 24000 : !all && ran < 30000) return;           // (the pond: a whole day and night)
+            began[0] = -2;
+            Kit.log("[VT] " + label + " jumps:\n" + Blink.report());
+            for (String l : Blink.seenLines()) Kit.log("[VT] " + label + " seen: " + l);
+            Kit.Expect ok = new Kit.Expect();
+            long dead = miners.stream().filter(m -> !m.isAlive()).count();
+            ok.that(all, "every miner walked to the pithead: " + java.util.Arrays.toString(reached));
+            // As bk03: every traced move out of sight; a residual of at most two untraced (the game's own push, a slab's step
+            // at a run, a hair over the detector's block and a half) let be.
+            long untraced = Blink.seenLines().stream().filter(l -> l.contains("untraced")).count();
+            long seen = Blink.seenJumps() - untraced + (untraced > 2 ? untraced : 0);
+            ok.that(seen == 0, "no jump in the player's sight: " + Blink.seenJumps() + " (" + untraced + " untraced)");
+            ok.that(dead == 0, "nobody drowned: " + dead + " dead");
+            ok.that(java.util.Arrays.stream(wet).allMatch(t -> t < 1), "nobody in the water (a dry way there): " + java.util.Arrays.toString(wet));
+            if (pond) ok.that(com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]) == 0, "nothing built where a dry way round stood: " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]));
+            else if (bridged) ok.that(com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]) == 0, "nothing more built where a crossing stood: " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]));
+            else ok.that(com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]) >= 1, "the town bridged the river: " + com.jrpetty.mcassistant.entity.MineWay.bridgedForTests(id[0]));
+            ok.that(!com.jrpetty.mcassistant.entity.MineWay.cutOff(id[0]), "the mine reached on foot: " + com.jrpetty.mcassistant.entity.MineWay.status(id[0]));
+            if (!bridged) com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            level.getServer().tickRateManager().setTickRate(20.0F);
+            letGo(level, you[0]);
+            if (ok.clean()) helper.succeed();
+            else helper.fail(ok.summary());
+        });
+    }
+}

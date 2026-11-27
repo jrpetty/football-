@@ -1,0 +1,103 @@
+{
+  "category": "camera",
+  "entries": [
+    {
+      "id": "camera_open",
+      "title": "The camera (K)",
+      "icon": "minecraft:spyglass",
+      "kind": "what",
+      "q": ["what does the camera do", "how do i film my town", "camera key", "how to record a video of my village", "cinematic camera", "what does k do", "how do i make a video", "film the village", "camera screen"],
+      "kw": ["camera", "film", "video", "cinematic", "camerakey", "k", "record"],
+      "answer": "Press K (or Camera on the U page) to film the town: orbit, fly-through, follow a folk, or jump to something happening. Esc always gives you your eyes back.",
+      "more": ["Four tabs: Orbit (round the heart, a folk or where you stand), Fly-through (a smooth flight through points you set), Follow (one folk over its shoulder through its day) and Happening (the busiest thing going on near you).", "Underneath: Clean shot, the lens and name tags."],
+      "steps": ["Press K.", "Pick a tab and set it up (radius, height, speed; points; a folk).", "Press play."],
+      "controls": ["[K]", "[U] → Camera", "Tabs: Orbit · Fly-through · Follow · Happening"],
+      "tips": ["Use your recording software (or the game's own screenshots) to capture it: the camera moves, you record.", "K over a running shot opens the screen to change it live."],
+      "warn": ["The camera sees only what your client has loaded: far shots show the edge of your render distance."],
+      "related": ["camera_orbit", "camera_flythrough", "camera_follow", "camera_happening", "camera_while_filming"],
+      "covers": ["screen:CameraScreen", "key:camera"]
+    },
+    {
+      "id": "camera_orbit",
+      "title": "Orbit shots",
+      "icon": "minecraft:ender_eye",
+      "kind": "howto",
+      "q": ["orbit shot", "circle the town with the camera", "orbit around a villager", "aerial shot of my town", "drone shot", "orbit radius height speed", "camera go round and round", "spin the camera around the town"],
+      "kw": ["orbit", "circle", "aerial", "drone", "radius"],
+      "answer": "Camera, then Orbit, circles the town's heart, a folk or where you stand. Set radius, height and speed, then play.",
+      "more": ["It glides in from your eyes, rises over hills, and on a close orbit stops short of walls and trees."],
+      "controls": ["[K] → Orbit → play", "While running: [↑][↓] height · [←][→] speed · [Scroll] distance"],
+      "related": ["camera_open", "camera_while_filming"],
+      "covers": []
+    },
+    {
+      "id": "camera_flythrough",
+      "title": "Fly-through shots",
+      "icon": "minecraft:elytra",
+      "kind": "howto",
+      "q": ["fly through camera", "camera path", "set camera points", "smooth camera flight", "how do i make a camera path", "add point camera"],
+      "kw": ["flythrough", "fly", "path", "points", "flight"],
+      "answer": "Stand where the shot should pass, press K and Add point (two to six), then play a smooth flight through them.",
+      "more": ["Then play: a smooth curve through every point at an even pace, easing in and out (or round and round), banking into the turns.", "Set how many seconds it lasts."],
+      "steps": ["Walk to the first spot, look the right way, press K → Fly-through → Add point.", "Repeat for each point (up to six).", "Set the length and once / loop, then play."],
+      "controls": ["[K] → Fly-through → Add point", "While running: [Space] play again · [Scroll] lens"],
+      "related": ["camera_open", "camera_while_filming"],
+      "covers": []
+    },
+    {
+      "id": "camera_follow",
+      "title": "Following a folk on camera",
+      "icon": "minecraft:lead",
+      "kind": "howto",
+      "q": ["follow a villager with the camera", "over the shoulder camera", "watch a folk's day", "follow cam", "camera follow mode"],
+      "kw": ["follow", "shoulder", "track", "day"],
+      "answer": "Camera, then Follow, films one folk over its shoulder through its day. Pick it from the list, favourites first.",
+      "more": ["Your favourites in reach are listed first (starred), then the folk nearest you.", "It swings round as the folk turns and pulls in short of walls; a folk lost from sight is circled where it was last seen."],
+      "controls": ["[K] → Follow → pick a folk"],
+      "related": ["camera_open", "folk_favourites"],
+      "covers": []
+    },
+    {
+      "id": "camera_happening",
+      "title": "Show me something happening, and time-lapses",
+      "icon": "minecraft:clock",
+      "kind": "howto",
+      "q": ["show me something happening", "time lapse", "timelapse of a building", "camera happening tab", "find something interesting to film", "how do i make a timelapse", "speed up time for filming", "speed up time and watch them build a house"],
+      "kw": ["happening", "timelapse", "busy", "interesting", "event"],
+      "answer": "'Show me something happening' takes the camera to the busiest thing near you. Operators can also run a time-lapse of a building going up.",
+      "more": ["Happening → 'Show me something happening' takes the camera to the busiest thing near you right now: a match, music and dancing, builders at work, buying and selling, children at play, the smithy, woodcutters...", "Press it again for another.", "Time-lapse (operators, or a single-player world's owner) runs the world 4 to 32 times faster for 5 to 60 seconds: the nearest building going up is raised from footing to roof by its builders within that time (or a house on the next free lot), the camera framing the site, and the old pace comes back by itself."],
+      "controls": ["[K] → Happening → Show me something happening · Time-lapse"],
+      "warn": ["On a server, only operators may run a time-lapse: it speeds up the whole world."],
+      "related": ["camera_open", "admin_time_speed"],
+      "covers": []
+    },
+    {
+      "id": "camera_while_filming",
+      "title": "Controls while a shot runs",
+      "icon": "minecraft:lever",
+      "kind": "howto",
+      "q": ["how do i stop the camera", "camera controls", "pause the camera", "exit camera mode", "camera stuck", "how do i get out of the camera", "hide camera hints"],
+      "kw": ["stop", "pause", "exit", "controls", "escape"],
+      "answer": "While a shot runs, Esc stops it, Space pauses, the arrows change speed and height, and the wheel the distance.",
+      "more": ["While a shot runs: Esc stops it and gives you your own eyes back (always), Space pauses (or replays a finished fly-through), the arrow keys change speed and height, the mouse wheel the distance (the lens on a fly-through), H hides or shows the key reminder, and K opens the camera screen over the shot to change it live."],
+      "controls": ["[Esc] stop · [Space] pause · [←][→][↑][↓] speed & height · [Scroll] distance · [H] hints · [K] change live"],
+      "tips": ["Your body, hand and crosshair are kept out of the picture; drop, use and swap keys do nothing while filming."],
+      "related": ["camera_open", "camera_clean"],
+      "covers": []
+    },
+    {
+      "id": "camera_clean",
+      "title": "Clean shots, the lens and name tags",
+      "icon": "minecraft:name_tag",
+      "kind": "howto",
+      "q": ["hide name tags", "turn off villager names", "clean shot", "hide the hud for filming", "field of view camera", "name tag settings", "too many name tags", "show only names over folk"],
+      "kw": ["clean", "nametags", "name tags", "hud", "lens", "fov", "labels", "plates"],
+      "answer": "The camera screen sets a clean shot (no HUD or labels), the lens, and how much of the folk's name tags show.",
+      "more": ["Under every camera tab: Clean shot (on by default: no HUD, name tags or the mod's labels, like F1), the lens (20 to 100 degrees), and the folk's name tags for ordinary play: all of the tag, names only, only the folk you look at, or none, and how far they show."],
+      "controls": ["[K] → Clean shot · Lens · Name tags", "[F1] hides every label of the mod's"],
+      "tips": ["By default a tag shows the name, a stuck folk's red warning and a hurt folk's health, out to 32 blocks.", "The same settings are in config/mc_assistant-client.toml under [town]."],
+      "related": ["camera_open", "admin_client_config"],
+      "covers": []
+    }
+  ]
+}

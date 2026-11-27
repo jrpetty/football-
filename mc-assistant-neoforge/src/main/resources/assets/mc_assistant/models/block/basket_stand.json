@@ -1,0 +1,309 @@
+{
+ "parent": "minecraft:block/block",
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "minecraft:block/stripped_bamboo_block",
+  "wicker": "minecraft:block/stripped_bamboo_block",
+  "rim": "minecraft:block/bamboo_planks",
+  "post": "minecraft:block/dark_oak_planks"
+ },
+ "elements": [
+  {
+   "name": "basket_0",
+   "from": [
+    3,
+    0,
+    3
+   ],
+   "to": [
+    13,
+    3.5,
+    13
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wicker"
+    },
+    "south": {
+     "texture": "#wicker"
+    },
+    "east": {
+     "texture": "#wicker"
+    },
+    "west": {
+     "texture": "#wicker"
+    },
+    "up": {
+     "texture": "#wicker"
+    },
+    "down": {
+     "texture": "#wicker"
+    }
+   }
+  },
+  {
+   "name": "rim_0",
+   "from": [
+    2.75,
+    3.5,
+    2.75
+   ],
+   "to": [
+    13.25,
+    4,
+    13.25
+   ],
+   "faces": {
+    "north": {
+     "texture": "#rim"
+    },
+    "south": {
+     "texture": "#rim"
+    },
+    "east": {
+     "texture": "#rim"
+    },
+    "west": {
+     "texture": "#rim"
+    },
+    "up": {
+     "texture": "#rim"
+    },
+    "down": {
+     "texture": "#rim"
+    }
+   }
+  },
+  {
+   "name": "basket_1",
+   "from": [
+    3.5,
+    4,
+    3.5
+   ],
+   "to": [
+    12.5,
+    7,
+    12.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wicker"
+    },
+    "south": {
+     "texture": "#wicker"
+    },
+    "east": {
+     "texture": "#wicker"
+    },
+    "west": {
+     "texture": "#wicker"
+    },
+    "up": {
+     "texture": "#wicker"
+    },
+    "down": {
+     "texture": "#wicker"
+    }
+   }
+  },
+  {
+   "name": "rim_1",
+   "from": [
+    3.25,
+    7,
+    3.25
+   ],
+   "to": [
+    12.75,
+    7.5,
+    12.75
+   ],
+   "faces": {
+    "north": {
+     "texture": "#rim"
+    },
+    "south": {
+     "texture": "#rim"
+    },
+    "east": {
+     "texture": "#rim"
+    },
+    "west": {
+     "texture": "#rim"
+    },
+    "up": {
+     "texture": "#rim"
+    },
+    "down": {
+     "texture": "#rim"
+    }
+   }
+  },
+  {
+   "name": "basket_2",
+   "from": [
+    4,
+    7.5,
+    4
+   ],
+   "to": [
+    12,
+    10,
+    12
+   ],
+   "faces": {
+    "north": {
+     "texture": "#wicker"
+    },
+    "south": {
+     "texture": "#wicker"
+    },
+    "east": {
+     "texture": "#wicker"
+    },
+    "west": {
+     "texture": "#wicker"
+    },
+    "up": {
+     "texture": "#wicker"
+    },
+    "down": {
+     "texture": "#wicker"
+    }
+   }
+  },
+  {
+   "name": "rim_2",
+   "from": [
+    3.75,
+    10,
+    3.75
+   ],
+   "to": [
+    12.25,
+    10.5,
+    12.25
+   ],
+   "faces": {
+    "north": {
+     "texture": "#rim"
+    },
+    "south": {
+     "texture": "#rim"
+    },
+    "east": {
+     "texture": "#rim"
+    },
+    "west": {
+     "texture": "#rim"
+    },
+    "up": {
+     "texture": "#rim"
+    },
+    "down": {
+     "texture": "#rim"
+    }
+   }
+  },
+  {
+   "name": "handle_l",
+   "from": [
+    4,
+    10.5,
+    7.5
+   ],
+   "to": [
+    5,
+    12.5,
+    8.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#post"
+    },
+    "south": {
+     "texture": "#post"
+    },
+    "east": {
+     "texture": "#post"
+    },
+    "west": {
+     "texture": "#post"
+    },
+    "up": {
+     "texture": "#post"
+    },
+    "down": {
+     "texture": "#post"
+    }
+   }
+  },
+  {
+   "name": "handle_r",
+   "from": [
+    11,
+    10.5,
+    7.5
+   ],
+   "to": [
+    12,
+    12.5,
+    8.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#post"
+    },
+    "south": {
+     "texture": "#post"
+    },
+    "east": {
+     "texture": "#post"
+    },
+    "west": {
+     "texture": "#post"
+    },
+    "up": {
+     "texture": "#post"
+    },
+    "down": {
+     "texture": "#post"
+    }
+   }
+  },
+  {
+   "name": "handle_top",
+   "from": [
+    4,
+    12,
+    7.5
+   ],
+   "to": [
+    12,
+    13,
+    8.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#post"
+    },
+    "south": {
+     "texture": "#post"
+    },
+    "east": {
+     "texture": "#post"
+    },
+    "west": {
+     "texture": "#post"
+    },
+    "up": {
+     "texture": "#post"
+    },
+    "down": {
+     "texture": "#post"
+    }
+   }
+  }
+ ]
+}

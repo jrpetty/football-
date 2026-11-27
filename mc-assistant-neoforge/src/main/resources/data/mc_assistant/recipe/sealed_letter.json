@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:paper"
+    },
+    [
+      {
+        "item": "minecraft:honeycomb"
+      },
+      {
+        "item": "minecraft:red_dye"
+      }
+    ]
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:sealed_letter"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
+  "textures": {
+    "top": "mc_assistant:block/dining/cake_top",
+    "side": "mc_assistant:block/dining/cake_side",
+    "particle": "mc_assistant:block/dining/cake_top"
+  },
+  "elements": [
+    {
+      "from": [
+        5,
+        2.0,
+        5
+      ],
+      "to": [
+        11,
+        5.5,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#side",
+          "uv": [
+            5,
+            11.5,
+            11,
+            15.0
+          ]
+        },
+        "south": {
+          "texture": "#side",
+          "uv": [
+            5,
+            11.5,
+            11,
+            15.0
+          ]
+        },
+        "east": {
+          "texture": "#side",
+          "uv": [
+            5,
+            11.5,
+            9,
+            15.0
+          ]
+        },
+        "west": {
+          "texture": "#side",
+          "uv": [
+            5,
+            11.5,
+            9,
+            15.0
+          ]
+        },
+        "up": {
+          "texture": "#top",
+          "uv": [
+            5,
+            5,
+            11,
+            9
+          ]
+        },
+        "down": {
+          "texture": "#side",
+          "uv": [
+            5,
+            5,
+            11,
+            9
+          ]
+        }
+      }
+    }
+  ]
+}

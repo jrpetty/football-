@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/root",
+  "display": {
+    "icon": {
+      "id": "mc_assistant:village_coin"
+    },
+    "title": {
+      "text": "A Fair Exchange"
+    },
+    "description": {
+      "text": "Trade with a folk for the first time"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

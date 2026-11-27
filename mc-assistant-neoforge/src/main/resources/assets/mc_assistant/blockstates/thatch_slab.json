@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "mc_assistant:block/thatch_slab"
+    },
+    "type=top": {
+      "model": "mc_assistant:block/thatch_slab_top"
+    },
+    "type=double": {
+      "model": "mc_assistant:block/thatch"
+    }
+  }
+}

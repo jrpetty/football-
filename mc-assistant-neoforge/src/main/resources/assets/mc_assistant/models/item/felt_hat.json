@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "mc_assistant:item/felt_hat",
+    "layer1": "mc_assistant:item/felt_hat_overlay"
+  }
+}
